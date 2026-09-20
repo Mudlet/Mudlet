@@ -1,0 +1,529 @@
+/***************************************************************************
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
+ *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
+ *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+// mapper-specific functions of TLuaInterpreter, split out separately
+// for convenience and to keep TLuaInterpreter.cpp size reasonable
+
+#include "TLuaInterpreter.h"
+
+#include "EAction.h"
+#include "Host.h"
+#include "TAlias.h"
+#include "TArea.h"
+#include "TCommandLine.h"
+#include "TConsole.h"
+#include "TDebug.h"
+#include "TEvent.h"
+#include "TFlipButton.h"
+#include "TForkedProcess.h"
+#include "TLabel.h"
+#include "TMap.h"
+#include "TMapLabel.h"
+#include "TMedia.h"
+#include "TRoomDB.h"
+#include "TTabBar.h"
+#include "TTextEdit.h"
+#include "TTimer.h"
+#include "discord.h"
+#include "dlgComposer.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgModuleManager.h"
+#include "dlgTriggerEditor.h"
+#include "mapInfoContributorManager.h"
+#include "mudlet.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget_integration.h"
+#endif
+
+#include <limits>
+#include <math.h>
+
+#include <QCollator>
+#include <QCoreApplication>
+#include <QDesktopServices>
+#include <QFileInfo>
+#include <QMovie>
+#include <QVector>
+#ifdef QT_TEXTTOSPEECH_LIB
+#include <QTextToSpeech>
+#endif // QT_TEXTTOSPEECH_LIB
+
+// No documentation available in wiki - internal function
+std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool writeAccess)
+{
+    if (!Discord::self()->libraryLoaded()) {
+        return {false, qsl("Discord API is not available")};
+    }
+
+    auto& host = getHostFromLua(L);
+    if (host.mDiscordMode == Host::DiscordDisabled) {
+        return {false, qsl("Discord is disabled in settings")};
+    }
+
+    if (writeAccess && !Discord::self()->discordUserIdMatch(&host)) {
+        return {false, qsl("Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile")};
+    }
+
+    return {true, QString()};
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#usingMudletsDiscordID
+int TLuaInterpreter::usingMudletsDiscordID(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    lua_pushboolean(L, Discord::self()->usingMudletsDiscordID(&host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordDetail
+int TLuaInterpreter::getDiscordDetail(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    // Pushed as data, never as a format string: presence text can come from the
+    // game server, and a '%' in it would otherwise be taken as a printf
+    // specifier. The same holds for the five other Discord text getters below.
+    lua_pushstring(L, Discord::self()->getDetailText(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIcon
+int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    lua_pushstring(L, Discord::self()->getLargeImage(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIconText
+int TLuaInterpreter::getDiscordLargeIconText(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    lua_pushstring(L, Discord::self()->getLargeImageText(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordParty
+int TLuaInterpreter::getDiscordParty(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    QPair<int, int> const partyValues = Discord::self()->getParty(&host);
+    lua_pushnumber(L, partyValues.first);
+    lua_pushnumber(L, partyValues.second);
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIcon
+int TLuaInterpreter::getDiscordSmallIcon(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    lua_pushstring(L, Discord::self()->getSmallImage(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIconText
+int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    lua_pushstring(L, Discord::self()->getSmallImageText(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordState
+int TLuaInterpreter::getDiscordState(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    lua_pushstring(L, Discord::self()->getStateText(&host).toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordTimeStamps
+int TLuaInterpreter::getDiscordTimeStamps(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    QPair<int64_t, int64_t> const timeStamps = Discord::self()->getTimeStamps(&host);
+    lua_pushnumber(L, timeStamps.first);
+    lua_pushnumber(L, timeStamps.second);
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetDiscordData
+int TLuaInterpreter::resetDiscordData(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    Discord::self()->resetData(&host);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordApplicationID
+int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    if (!lua_gettop(L)) {
+        Discord::self()->setApplicationID(&host, QString());
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    const QString inputText = getVerifiedString(L, __func__, 1, "Discord application ID").trimmed();
+    // Treat it as a UTF-8 string because although it is likely to be an
+    // unsigned long long integer (0 to 18446744073709551615) we want to
+    // be able to handle any input so we can report bad input strings back.
+    if (inputText.isEmpty()) {
+        // Empty string input - to reset to default the same as the no
+        // argument case:
+        Discord::self()->setApplicationID(&host, QString());
+        // This must always succeed
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    bool isOk = false;
+    quint64 const numericEquivalent = inputText.toULongLong(&isOk);
+    if (numericEquivalent && isOk) {
+        const QString appID = QString::number(numericEquivalent);
+        if (Discord::self()->setApplicationID(&host, appID)) {
+            lua_pushboolean(L, true);
+            return 1;
+        }
+        return warnArgumentValue(L, __func__, qsl("'%1' does not appear to be a valid Discord application ID").arg(inputText));
+    }
+    return warnArgumentValue(L, __func__, qsl("'%1' can not be converted to the expected numeric Discord application ID").arg(inputText));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordDetail
+int TLuaInterpreter::setDiscordDetail(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    Discord::self()->setDetailText(&host, discordText);
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetDetail);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordElapsedStartTime
+int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    const auto timeStamp = getVerifiedInt(L, __func__, 1, "epoch time");
+    if (timeStamp < 0) {
+        return warnArgumentValue(L, __func__, "the timestamp must be zero to clear the 'elapsed:' time or an epoch time value from the recent past");
+    }
+    Discord::self()->setStartTimeStamp(&host, static_cast<int64_t>(timeStamp));
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetTimeInfo);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGame
+int TLuaInterpreter::setDiscordGame(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    const QString gamename = getVerifiedString(L, __func__, 1, "game name");
+    Discord::self()->setDetailText(&host, tr("Playing %1").arg(gamename));
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetDetail);
+    Discord::self()->setLargeImage(&host, gamename.toLower());
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetLargeIcon);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGameUrl
+int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
+{
+    // The invite URL changes what the Discord button opens, and the name is
+    // what it displays on the button. It is not part of rich presence, so it
+    // does not have the API enabled check that those Discord functions need
+    // in order to respect privacy.
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+    const int args = lua_gettop(L);
+
+    if (!args) { // no args, blank the invite URL and game name
+        host.setDiscordInviteURL(QString());
+        host.setDiscordGameName(QString());
+        pMudlet->updateDiscordNamedIcon();
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    // argument 1 is applied before argument 2 is checked, as it was before:
+    // setDiscordInviteURL() persists to the profile, and hoisting the second
+    // check above it would stop a bad game name from saving the URL
+    if (!checkStringArg(L, __func__, 1, "url")) {
+        return lua_error(L);
+    }
+    {
+        const QString inviteUrl = QString{lua_tostring(L, 1)}.trimmed();
+        host.setDiscordInviteURL(inviteUrl.isEmpty() ? QString() : inviteUrl);
+    }
+    if (args > 1) {
+        if (!checkStringArg(L, __func__, 2, "game name")) {
+            return lua_error(L);
+        }
+        host.setDiscordGameName(QString{lua_tostring(L, 2)}.trimmed());
+    } else {
+        host.setDiscordGameName(QString());
+    }
+    pMudlet->updateDiscordNamedIcon();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordLargeIcon
+int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    Discord::self()->setLargeImage(&host, getVerifiedString(L, __func__, 1, "key").toLower());
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetLargeIcon);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordLargeIconText
+int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    Discord::self()->setLargeImageText(&host, discordText);
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetLargeIconText);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordParty
+int TLuaInterpreter::setDiscordParty(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    const auto partySize = getVerifiedInt(L, __func__, 1, "current party size");
+    if (partySize < 0) {
+        return warnArgumentValue(L, __func__, "the current party size must be zero or more");
+    }
+
+    int partyMax = -1;
+    if (lua_gettop(L) > 1) {
+        partyMax = getVerifiedInt(L, __func__, 2, "party maximum size", true);
+        if (partyMax < 0) {
+            return warnArgumentValue(L, __func__, "the optional party maximum size must be zero (to remove the party details) or more (to set the maximum)");
+        }
+
+        Discord::self()->setParty(&host, partySize, partyMax);
+    } else {
+        // Only got the partySize now
+        Discord::self()->setParty(&host, partySize);
+    }
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetPartyInfo);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordRemainingEndTime
+int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    const auto timeStamp = getVerifiedInt(L, __func__, 1, "epoch time");
+
+    if (timeStamp < 0) {
+        return warnArgumentValue(L, __func__, "the timestamp must be zero to clear the 'remaining:' time or an epoch time value in the recent future");
+    }
+    Discord::self()->setEndTimeStamp(&host, static_cast<int64_t>(timeStamp));
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetTimeInfo);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordSmallIcon
+int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    Discord::self()->setSmallImage(&host, getVerifiedString(L, __func__, 1, "key").toLower());
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetSmallIcon);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordSmallIconText
+int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    Discord::self()->setSmallImageText(&host, discordText);
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetSmallIconText);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordState
+int TLuaInterpreter::setDiscordState(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    auto result = discordApiEnabled(L, true);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second);
+    }
+
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    Discord::self()->setStateText(&host, discordText);
+    Discord::self()->clearServerOrigin(&host, Host::DiscordSetState);
+    lua_pushboolean(L, true);
+    return 1;
+}

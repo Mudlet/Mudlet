@@ -1,0 +1,606 @@
+-- Contract tests for the stt.* speech-to-text bridge.
+--
+-- Everything here runs without a microphone, a model or a recognition
+-- library, because that is the state the API spends most of its life in: a
+-- player who has never set speech up, and every CI runner. The bridge
+-- promises to be inert until called and to refuse clearly rather than crash
+-- or lie, and those promises are what these specs hold it to.
+--
+-- Where behaviour legitimately differs between a machine with an engine
+-- installed and one without, the spec branches on stt.available() rather
+-- than assuming either, so it passes in both places.
+
+describe("stt bridge", function()
+
+  describe("API surface", function()
+
+    it("registers the stt table whether or not an engine is installed", function()
+      assert.is_table(stt, "stt should exist even with no recognition engine present")
+    end)
+
+    it("provides every documented function", function()
+      local documented = {
+        "init", "start", "stop", "toggle", "close",
+        "available", "initialized", "listening",
+        "getInfo", "getModelPath", "getLibraryPath", "listModels",
+        "getPlatformKey", "reloadLibrary", "unloadLibrary",
+        "setSilenceTimeout", "setSensitivity", "setVocabulary",
+      }
+      for _, name in ipairs(documented) do
+        assert.is_function(stt[name], ("stt.%s should be a function"):format(name))
+      end
+    end)
+  end)
+
+  describe("state queries", function()
+
+    it("answers with booleans rather than nil", function()
+      assert.is_boolean(stt.available())
+      assert.is_boolean(stt.initialized())
+      assert.is_boolean(stt.listening())
+    end)
+
+    it("is not listening or initialized before anything has been set up", function()
+      if stt.initialized() then
+        -- A previous spec or the player left a model loaded; the claim below
+        -- only means anything from a clean start
+        return
+      end
+      assert.is_false(stt.listening(), "nothing should be listening before a model is loaded")
+    end)
+  end)
+
+  describe("getInfo", function()
+
+    it("returns a table with the documented keys and types", function()
+      local info = stt.getInfo()
+      assert.is_table(info)
+      assert.is_string(info.backend, "backend names the engine running, or none")
+      assert.is_boolean(info.available)
+      assert.is_boolean(info.initialized)
+      assert.is_boolean(info.listening)
+      assert.is_string(info.state)
+      assert.is_string(info.modelPath)
+      assert.is_table(info.searchPaths)
+    end)
+
+    it("answers every documented key, engine installed or not", function()
+      -- The keys a package probes before deciding what it can do must be
+      -- readable before anything is installed, which is exactly when it
+      -- probes. Only version and language are documented as appearing later.
+      local info = stt.getInfo()
+      assert.is_table(info.capabilities, "capabilities must be readable with no engine present")
+      assert.is_boolean(info.capabilities.biasing)
+      assert.is_boolean(info.capabilities.grammar)
+      assert.is_boolean(info.capabilities.words)
+      assert.is_boolean(info.capabilities.sensitivityTuning)
+      assert.is_boolean(info.capabilities.onDevice)
+      assert.is_number(info.silenceTimeout, "0 while disabled, not absent")
+      assert.is_number(info.audioLevel)
+      assert.is_string(info.sensitivity)
+    end)
+
+    it("reports a sensitivity from the documented set", function()
+      local modes = {short = true, default = true, long = true}
+      assert.is_true(modes[stt.getInfo().sensitivity] ~= nil,
+        "unexpected sensitivity: " .. tostring(stt.getInfo().sensitivity))
+    end)
+
+    it("reports a state from the documented set", function()
+      local states = {
+        uninitialized = true, ready = true, starting = true,
+        listening = true, processing = true, error = true,
+      }
+      assert.is_true(states[stt.getInfo().state] ~= nil,
+        "unexpected state: " .. tostring(stt.getInfo().state))
+    end)
+
+    it("agrees with the individual queries", function()
+      local info = stt.getInfo()
+      assert.are.equal(stt.available(), info.available)
+      assert.are.equal(stt.initialized(), info.initialized)
+      assert.are.equal(stt.listening(), info.listening)
+    end)
+
+    it("names the engine it would use", function()
+      -- Asserting "non-empty or the string none" was a test that could not
+      -- fail, since every string is one or the other. The contract worth
+      -- holding is that the name is one this build actually has - and that it
+      -- is empty rather than a guess before any engine has been built, since
+      -- this key names whichever engine is loaded rather than a fixed value.
+      local backend = stt.getInfo().backend
+      assert.is_string(backend)
+      -- The gate is not quite the question. backend is empty when no recognizer
+      -- object exists; initialized() is also false in Error, where one does
+      -- exist and does have a name. Nothing earlier in this file builds one, so
+      -- the two agree here - but that is an ordering the file does not state,
+      -- and a case added above this one that leaves a recognizer in Error would
+      -- send it down the wrong branch.
+      if stt.initialized() then
+        assert.is_truthy(backend == "Vosk" or backend == "sherpa-onnx" or backend == "Apple Speech",
+                         "backend should name an engine this build has, got: " .. backend)
+      else
+        -- Asserted rather than skipped: with no engine built this is the whole
+        -- contract, and CI runs with none. Allowing "" *or* "Vosk" - as this
+        -- did - meant reverting the fix that stopped it guessing "Vosk" left
+        -- the spec green, which is the one case it exists to catch.
+        assert.are.equal("", backend, "backend names an engine before one is built")
+      end
+    end)
+  end)
+
+  describe("capability announcements", function()
+
+    -- getInfo().capabilities and sysSTTCapabilitiesChanged have to describe the
+    -- same thing in both directions. docs/stt-api.md offers following the event
+    -- as an equivalent to re-reading after init(), so a package that follows it
+    -- must not be told about a change getInfo() cannot see, nor left unaware of
+    -- one it can. The asymmetry that broke this was a recognizer coming into
+    -- existence: every capability reads false while there is none, so the
+    -- transition is real to Lua even though the recognizer is not asked until
+    -- the next init(), long after Lua's answer changed.
+    --
+    -- With no engine installed nothing here creates a recognizer, so this
+    -- degrades to asserting that nothing was announced either - true, but
+    -- proving little. It bites where an engine exists.
+    it("agrees with getInfo about what counts as a change", function()
+      local events = 0
+      local handler = registerAnonymousEventHandler("sysSTTCapabilitiesChanged", function() events = events + 1 end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local function capabilities()
+        local current = stt.getInfo().capabilities
+        return ("%s|%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.sensitivityTuning), tostring(current.onDevice))
+      end
+
+      local before, announced = capabilities(), events
+      -- Enough to create the recognizer if nothing has yet, and harmless if
+      -- something already did
+      stt.setSilenceTimeout(1500)
+      local after = capabilities()
+
+      if after ~= before then
+        assert.is_true(events > announced, "capabilities changed with no sysSTTCapabilitiesChanged to say so")
+      else
+        assert.are.equal(announced, events, "sysSTTCapabilitiesChanged announced a change getInfo() cannot see")
+      end
+    end)
+  end)
+
+  describe("capability announcements", function()
+
+    -- getInfo().capabilities and sysSTTCapabilitiesChanged have to describe the
+    -- same thing in both directions. docs/stt-api.md offers following the event
+    -- as an equivalent to re-reading after init(), so a package that follows it
+    -- must not be told about a change getInfo() cannot see, nor left unaware of
+    -- one it can. The asymmetry that broke this was a recognizer coming into
+    -- existence: every capability reads false while there is none, so the
+    -- transition is real to Lua even though the recognizer is not asked until
+    -- the next init(), long after Lua's answer changed.
+    --
+    -- With no engine installed nothing here creates a recognizer, so this
+    -- degrades to asserting that nothing was announced either - true, but
+    -- proving little. It bites where an engine exists.
+    it("agrees with getInfo about what counts as a change", function()
+      local events = 0
+      local handler = registerAnonymousEventHandler("sysSTTCapabilitiesChanged", function() events = events + 1 end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local function capabilities()
+        local current = stt.getInfo().capabilities
+        return ("%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.onDevice))
+      end
+
+      local before, announced = capabilities(), events
+      -- Enough to create the recognizer if nothing has yet, and harmless if
+      -- something already did
+      stt.setSilenceTimeout(1500)
+      local after = capabilities()
+
+      if after ~= before then
+        assert.is_true(events > announced, "capabilities changed with no sysSTTCapabilitiesChanged to say so")
+      else
+        assert.are.equal(announced, events, "sysSTTCapabilitiesChanged announced a change getInfo() cannot see")
+      end
+    end)
+  end)
+
+  describe("refusals", function()
+
+    -- A raise through the binding must not strand anything it built first:
+    -- getVerifiedString ends in lua_error(), which longjmps past C++
+    -- destructors, and no spec reached that path until this one
+    it("raises on an argument of the wrong type without leaking what it built", function()
+      assert.has_error(function() stt.init({}) end)
+      assert.has_error(function() stt.init(true) end)
+    end)
+
+    -- QDir("") is Qt's spelling for the working directory, so an empty path
+    -- passes an existence check and the engine is handed wherever Mudlet was
+    -- started from
+    it("refuses an empty model path rather than reading the working directory", function()
+      local ok, err = stt.init("")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.is_truthy(err:find("empty"), "the refusal should name the empty path, got: " .. tostring(err))
+    end)
+
+    it("refuses a model path that does not exist, without crashing", function()
+      local ok, err = stt.init("/definitely/not/a/model/path/for/testing")
+      assert.is_nil(ok, "loading a missing model should fail")
+      assert.is_string(err, "a refusal should say why")
+    end)
+
+    -- "Refusals speak" has to hold with no engine installed too, which is
+    -- where there is no recognizer to emit through and so was the one place it
+    -- did not: a package driving the bridge from events alone saw nothing
+    -- happen and could not tell a missing engine from a quiet microphone.
+    it("tells a package listening for sysSTTError why it refused", function()
+      local seen
+      local handler = registerAnonymousEventHandler("sysSTTError", function(_, message) seen = message end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local _, err = stt.init("/definitely/not/a/model/path/for/testing")
+      assert.is_string(seen, "the refusal was returned to the caller but never announced")
+      assert.are.equal(err, seen, "the event and the return value should carry the same reason")
+    end)
+
+    -- A refusal that is the script's own mistake is not news for every package
+    -- on the profile - only what the engine could not do is
+    it("does not announce an argument mistake as an engine error", function()
+      local raised = false
+      local handler = registerAnonymousEventHandler("sysSTTError", function() raised = true end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      stt.setSilenceTimeout(-1)
+      assert.is_false(raised, "a bad argument is a script error, not something the engine reports")
+    end)
+
+    -- modelPath is what a package reads to decide whether setup already
+    -- happened, so a path that failed to load standing in it skips the init
+    -- that was needed
+    it("names no model after a failed load", function()
+      if stt.initialized() then return end
+      stt.init("/definitely/not/a/model/path/for/testing")
+      assert.are.equal("", stt.getInfo().modelPath, "a model that never loaded was reported as loaded")
+    end)
+
+    -- The message has to name the thing that is actually missing. When the
+    -- engine library is absent no backend is available, so no model can be
+    -- chosen however many are installed - and being told to install a model
+    -- you already have sends you looking in the wrong place.
+    it("names the missing engine library rather than blaming the models", function()
+      if stt.available() then return end
+      local ok, err = stt.init()
+      assert.is_nil(ok, "init with no engine library should fail")
+      assert.is_string(err)
+      assert.is_truthy(err:find("librar"), "the refusal should name the engine library, got: " .. tostring(err))
+    end)
+
+    -- With the library present and no model, the refusal has to name the
+    -- directory a model belongs in. It used to report a made-up default path
+    -- as missing, which named a directory the reader never created and left
+    -- the "install a model" message unreachable.
+    it("names where a model belongs when none is installed, or succeeds via a model-less backend", function()
+      if not stt.available() or #stt.listModels() > 0 then return end
+      local ok, err = stt.init()
+
+      -- stt.available() is true here with no model installed and no
+      -- listable models only when a model-less backend - the built-in macOS
+      -- one today - is what made it true. stt.init() must be able to reach
+      -- it with no argument, since it needs nothing installed to begin with.
+      if ok then
+        assert.is_true(ok)
+        assert.are.equal("Apple Speech", stt.getInfo().backend, "only a model-less backend should succeed with nothing installed")
+        return
+      end
+
+      assert.is_nil(ok, "init with no model installed should fail")
+      assert.is_string(err)
+      -- Two different refusals reach here, and only one has a directory to
+      -- name. A machine with a model-based engine and no model must name where
+      -- one belongs. A Mac whose built-in recogniser made available() true and
+      -- then could not start has no models directory in the picture at all -
+      -- that backend installs nothing - so requiring the path there asserts a
+      -- contract this refusal was never part of.
+      local namesADirectory = err:find("no language model is installed", 1, true)
+      local isModelLessRefusal = err:find("failed to initialize model", 1, true)
+      -- Total on purpose. Matching a literal from the C++ and doing nothing
+      -- when it misses means rewording that message turns this into a silent
+      -- pass, which is the failure mode both harnesses have.
+      assert.is_truthy(namesADirectory or isModelLessRefusal,
+                       "unrecognised refusal, so neither branch below was checked: " .. err)
+      if namesADirectory then
+        assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
+      end
+    end)
+
+    it("refuses to start before a model is loaded", function()
+      if stt.initialized() then return end
+      local ok, err = stt.start()
+      assert.is_nil(ok, "starting without a model should fail")
+      assert.is_string(err)
+    end)
+
+    it("refuses a negative silence timeout", function()
+      local ok, err = stt.setSilenceTimeout(-1)
+      assert.is_nil(ok, "a negative timeout is not a duration")
+      assert.is_string(err)
+    end)
+
+    it("refuses a sensitivity it does not have", function()
+      local ok, err = stt.setSensitivity("immediately")
+      assert.is_nil(ok, "an unknown sensitivity should be refused, not guessed at")
+      assert.is_string(err)
+    end)
+
+    -- toggle() is the one entry point a keybinding is usually wired to, so its
+    -- refusal has to reach the same place start()'s does: a player mashing a
+    -- key with nothing installed otherwise gets silence.
+    it("refuses to toggle before a model is loaded, and announces why", function()
+      if stt.initialized() then return end
+      local seen
+      local handler = registerAnonymousEventHandler("sysSTTError", function(_, message) seen = message end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local ok, err = stt.toggle()
+      assert.is_nil(ok, "toggling with nothing initialized should refuse rather than start")
+      assert.is_string(err)
+      assert.are.equal(err, seen, "the refusal was returned to the caller but never announced")
+      assert.is_false(stt.listening(), "a refused toggle must leave nothing listening")
+    end)
+
+    -- Semantics rule 2 has one exception: a sysSTTError handler's own calls
+    -- answer it through their return values. Raising a refusal from inside the handler would run
+    -- the handler again, making the same call, until Lua's C stack overflows.
+    -- Reachable on any machine: a path that is not there is refused, and
+    -- announced, before the bridge looks for an engine at all.
+    it("does not run a sysSTTError handler inside itself for its own refused call", function()
+      local depth, deepest, calls = 0, 0, 0
+      local innerOk, innerErr
+      local handler = registerAnonymousEventHandler("sysSTTError", function()
+        calls = calls + 1
+        depth = depth + 1
+        deepest = math.max(deepest, depth)
+        if calls < 20 then
+          innerOk, innerErr = stt.init("/no/such/speech/model")
+        end
+        depth = depth - 1
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      stt.init("/no/such/speech/model")
+
+      assert.are.equal(1, deepest, "the handler ran inside itself")
+      assert.are.equal(1, calls)
+      assert.is_nil(innerOk)
+      assert.is_string(innerErr, "the call inside the handler was refused without saying why")
+    end)
+
+    -- #10759. stt.init() reaches Lua before it returns: setState(Ready) raises
+    -- sysSTTStateChanged from inside the load, and a handler is free to call
+    -- stt.close(), to load another model, or to ask for another engine. Any of
+    -- those leaves the caller holding a bridge it was told was ready and is
+    -- not, so the next stt.start() fails on a session nothing loaded.
+    --
+    -- Checked at the bridge rather than in a backend, which is why these are
+    -- worth having as specs: there are three engines now, and the hazard is in
+    -- the events the bridge raises while one of them loads, not in anything
+    -- Vosk, sherpa or Apple does. A guard in one backend is a guard the other
+    -- two silently lack.
+    --
+    -- A named model rather than stt.init(), so this is the engine under test
+    -- rather than whichever one Auto settles on - on a Mac that is the built-in
+    -- recogniser, which loads no model and so cannot be asked this question.
+    it("refuses a load a handler closed while it was still loading", function()
+      -- Said rather than passed over: on a runner with nothing installed this
+      -- case cannot reach the bridge check it is about, and returning quietly
+      -- reported a green test for something nobody ran.
+      if not stt.available() then
+        pending("no speech engine is installed here, so no model can be loaded to be closed under")
+      end
+      local models = stt.listModels()
+      if #models < 1 then
+        pending("no speech model is installed here, so there is nothing to load")
+      end
+      stt.close()
+
+      local closed = false
+      local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
+        if state == "ready" and not closed then
+          closed = true
+          stt.close()
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        stt.close()
+      end)
+
+      local ok, err = stt.init(models[1].path)
+      -- The load never reached ready, so the handler never had its moment. A
+      -- refusal for some other reason is not what this is about.
+      if not closed then
+        pending("the load never reached ready here, so the handler this case needs never ran")
+      end
+
+      assert.is_nil(ok, "a load a handler closed under it reported success")
+      -- The wording, not merely that something was refused: a backend refusing
+      -- for its own reasons answers "failed to initialize model from ...", so
+      -- asserting is_string(err) alone would be satisfied without the bridge
+      -- ever asking the question this case is about.
+      assert.is_string(err)
+      assert.is_truthy(err:find("closed it before it could be used", 1, true), "the refusal did not come from the bridge's own check: " .. err)
+      assert.is_false(stt.initialized(), "initialized() stayed true with the model closed")
+      assert.are.equal("uninitialized", stt.getInfo().state, "the state outlived the model it described")
+    end)
+
+    -- The other half of #10759: a handler that loads a different model rather
+    -- than closing leaves a working engine behind, so state alone would call
+    -- the outer load a success. Only the path it was asked for settles it.
+    it("answers for the model it was asked for, not the one a handler loaded", function()
+      if not stt.available() then
+        pending("no speech engine is installed here, so no model can be loaded to be replaced")
+      end
+      local models = stt.listModels()
+      if #models < 2 then
+        pending("this case needs two installed models, so that a handler can load the other one")
+      end
+      stt.close()
+
+      local replaced = false
+      local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
+        if state == "ready" and not replaced then
+          replaced = true
+          stt.init(models[2].path)
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        stt.close()
+      end)
+
+      local ok, err = stt.init(models[1].path)
+      if not replaced then
+        pending("the load never reached ready here, so the handler this case needs never ran")
+      end
+
+      assert.is_nil(ok, "a load answered true for a model a handler had already replaced")
+      assert.is_truthy(err:find("replaced it with another", 1, true), "the refusal did not come from the bridge's own check: " .. tostring(err))
+      assert.are.equal(models[2].path, stt.getInfo().modelPath, "modelPath should name the model that is actually loaded")
+    end)
+
+    it("raises on a vocabulary that is not a table", function()
+      assert.has_error(function() stt.setVocabulary("kill") end)
+      assert.has_error(function() stt.setVocabulary(nil) end)
+    end)
+  end)
+
+  describe("safe when nothing is set up", function()
+
+    it("stops without complaint when nothing is listening", function()
+      -- Only from a state that is not error: "stopped" and "was never running
+      -- because it failed" are different answers, and the second one is
+      -- reported rather than dressed up as the first
+      if stt.getInfo().state == "error" then
+        local ok, err = stt.stop()
+        assert.is_nil(ok, "stopping in an error state should not claim a clean stop")
+        assert.is_string(err)
+        return
+      end
+      assert.is_true(stt.stop(), "stopping nothing is not an error")
+    end)
+
+    it("closes without complaint when nothing is initialized", function()
+      assert.is_true(stt.close(), "closing nothing is not an error")
+    end)
+
+    -- These three reach the engine, so with none installed they refuse
+    -- instead of succeeding. Both outcomes are the contract; which one
+    -- applies depends on the machine, so the spec checks the right one.
+
+    it("accepts a zero silence timeout, which means no timeout", function()
+      local ok, err = stt.setSilenceTimeout(0)
+      if stt.available() then
+        assert.is_true(ok)
+      else
+        assert.is_nil(ok, "with no engine there is nothing to set the timeout on")
+        assert.is_string(err)
+      end
+    end)
+
+    -- With an engine present the answer is either true, or a refusal because
+    -- this build of it cannot tune end-of-speech detection at all - an older
+    -- libvosk without the endpointer symbol is a supported configuration, not
+    -- a fault, and asserting true here would go red on a correct build
+    it("accepts each documented sensitivity, or says the engine cannot", function()
+      for _, mode in ipairs({"short", "default", "long"}) do
+        local ok, err = stt.setSensitivity(mode)
+        if stt.available() then
+          if ok == nil then
+            assert.is_string(err, mode .. " was refused without saying why")
+          else
+            assert.is_true(ok, mode .. " should be accepted")
+          end
+        else
+          assert.is_nil(ok, mode .. " has no engine to apply to")
+          assert.is_string(err)
+        end
+      end
+    end)
+
+    it("answers setVocabulary with whether the engine took the words", function()
+      local ok = stt.setVocabulary({"kill", "look", "inventory"})
+      if stt.available() then
+        -- False is not a failure: it is the documented signal that this
+        -- backend cannot bias, and the caller should correct results itself
+        assert.is_boolean(ok)
+      else
+        assert.is_nil(ok, "with no engine there is nothing to give the words to")
+      end
+    end)
+
+    -- unloadLibrary() latches the library out so the file can be replaced;
+    -- nothing but reloadLibrary() lifts that latch, so a spec that unloads and
+    -- walks away would leave every later stt spec looking at a machine with no
+    -- engine on it
+    it("unloads the engine library on request and hands it back on reload", function()
+      if stt.initialized() or stt.listening() then return end
+      local hadLibrary = stt.available()
+      finally(function() stt.reloadLibrary() end)
+
+      local unloaded, unloadError = stt.unloadLibrary()
+      assert.is_true(unloaded, "unloading with nothing in use should succeed, got: " .. tostring(unloadError))
+      -- The latch is about the library. Availability is not only about the
+      -- library on a Mac, where the built-in backend needs none and keeps
+      -- stt.available() true however completely Vosk's module is released -
+      -- so asserting it goes false there asks unloadLibrary() for something it
+      -- cannot deliver and was never meant to.
+      if hadLibrary and getOS() ~= "mac" then
+        -- the latch is the whole point: without it the next read-shaped call
+        -- maps the module straight back in and the file the caller meant to
+        -- replace is locked again
+        assert.is_false(stt.available(), "the library was mapped straight back in")
+        assert.is_false(stt.getInfo().available, "getInfo re-probed past the unload latch")
+      end
+
+      local reloaded = stt.reloadLibrary()
+      assert.are.equal(hadLibrary, reloaded, "reloadLibrary did not hand back the library that was there before")
+      assert.are.equal(reloaded, stt.available(), "reloadLibrary reports whether the library is available now")
+    end)
+  end)
+
+  describe("installation paths", function()
+
+    it("reports where models and the engine library belong", function()
+      assert.is_true(#stt.getModelPath() > 0, "models need somewhere to live")
+      assert.is_true(#stt.getLibraryPath() > 0, "the library needs somewhere to live")
+    end)
+
+    it("lists installed models without needing the engine library", function()
+      assert.is_table(stt.listModels(), "listing models must work before anything is installed")
+    end)
+
+    -- "nil or a string" is every value there is, so it could not fail. The key
+    -- is what an installer picks a download by, so a wrong one is worse than
+    -- none, and the platform running the spec is known.
+    it("names this platform with the key an installer would download by", function()
+      local key = stt.getPlatformKey()
+      -- The architecture is not visible from Lua, so each platform's keys are
+      -- named rather than one of them: Windows on ARM64 has no build and
+      -- correctly answers nil, which is the only nil this may be.
+      local allowed = {
+        mac = {["macos"] = true},
+        linux = {["linux-x86_64"] = true, ["linux-aarch64"] = true},
+        windows = {["windows-x64"] = true, ["windows-x86"] = true},
+      }
+      local keys = allowed[getOS()]
+      assert.is_table(keys, "this spec does not know the keys for " .. tostring(getOS()))
+      if getOS() == "windows" and key == nil then
+        return -- ARM64 Windows, which ships no engine build
+      end
+      assert.is_string(key, "a platform with a build should name its key")
+      assert.is_true(keys[key] == true, "unexpected platform key: " .. tostring(key))
+    end)
+  end)
+end)

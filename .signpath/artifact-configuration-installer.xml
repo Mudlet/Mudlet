@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GitHub Actions packages artifacts as ZIP files, so zip-file is the root element -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <!-- Wildcard matches both release and PTB installer filenames -->
+    <pe-file path="Mudlet-*-windows-64*.exe">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

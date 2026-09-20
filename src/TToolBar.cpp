@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2019-2020, 2023 by Stephen Lyons                  *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,15 +29,14 @@
 #include "TFlipButton.h"
 #include "mudlet.h"
 
+#include <QScopeGuard>
 
-TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
-: QDockWidget( pW )
-, mpTAction( pA )
-, mVerticalOrientation( false )
-, mpWidget( new QWidget( this ) )
-, mRecordMove( false )
-, mpLayout( nullptr )
-, mItemCount( 0 )
+
+TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
+: QDockWidget(pW)
+, mpTAction(pA)
+, mpWidget(new QWidget(this))
+, mpHost(pHost)
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);
@@ -59,16 +59,18 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
-    if (!mudlet::self()->mIsLoadingLayout) {
-        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
+    Q_UNUSED(e)
+    if (mpHost.isNull()) {
+        return;
     }
+    mpHost->setToolbarLayoutUpdated(this);
 }
 
 void TToolBar::setName(const QString& name)
 {
     mName = name;
-    QString hostName(mpTAction->mpHost->getName());
-    setObjectName(QStringLiteral("dockToolBar_%1_%2").arg(hostName, name));
+    const QString hostName(mpHost->getName());
+    setObjectName(qsl("dockToolBar_%1_%2").arg(hostName, name));
     // Actually put something in as the title so that the main window context
     // menu no longer has empty entries which are disabled:
     setWindowTitle(tr("Toolbar - %1 - %2").arg(hostName, name));
@@ -76,13 +78,11 @@ void TToolBar::setName(const QString& name)
 
 void TToolBar::moveEvent(QMoveEvent* e)
 {
-    if (!mpTAction) {
+    if (!mpTAction || mpHost.isNull()) {
         return;
     }
-    
-    if (!mudlet::self()->mIsLoadingLayout) {
-        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
-    }
+
+    mpHost->setToolbarLayoutUpdated(this);
 
     if (mRecordMove) {
         mpTAction->mPosX = e->pos().x();
@@ -115,16 +115,16 @@ void TToolBar::addButton(TFlipButton* pB)
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
     } else {
-        QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        const QSize size = pB->mpTAction->getSize();
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
         pB->setParent(mpWidget);
-        pB->setGeometry(pB->mpTAction->mPosX, pB->mpTAction->mPosY, pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        pB->setGeometry(pB->mpTAction->mPosX, pB->mpTAction->mPosY, pB->mpTAction->getSizeX(), pB->mpTAction->getSizeY());
     }
 
     pB->setStyleSheet(pB->mpTAction->css);
     pB->setFlat(pB->mpTAction->getButtonFlat());
-    int rotation = pB->mpTAction->getButtonRotation();
+    const int rotation = pB->mpTAction->getButtonRotation();
     switch (rotation) {
     case 0:
         pB->setOrientation(Qt::Horizontal);
@@ -141,19 +141,13 @@ void TToolBar::addButton(TFlipButton* pB)
     if (!mpTAction->mUseCustomLayout) {
         // tool bar mButtonColumns > 0 -> autolayout
         // case == 0: use individual button placement for user defined layouts
-        int columns = mpTAction->getButtonColumns();
-        if (columns <= 0) {
-            columns = 1;
-        }
-        if (columns > 0) {
-            mItemCount++;
-            int row = mItemCount / columns;
-            int col = mItemCount % columns;
-            if (mVerticalOrientation) {
-                mpLayout->addWidget(pB, row, col);
-            } else {
-                mpLayout->addWidget(pB, col, row);
-            }
+        int columns = std::max(1, mpTAction->getButtonColumns());
+        const int row = ++mItemCount / columns;
+        const int col = mItemCount % columns;
+        if (mVerticalOrientation) {
+            mpLayout->addWidget(pB, row, col);
+        } else {
+            mpLayout->addWidget(pB, col, row);
         }
     } else {
         pB->move(pB->mpTAction->mPosX, pB->mpTAction->mPosY);
@@ -166,34 +160,49 @@ void TToolBar::addButton(TFlipButton* pB)
 
 void TToolBar::finalize()
 {
-    if (mpTAction->mUseCustomLayout) {
+    if (mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
         return;
     }
-    auto fillerWidget = new QWidget;
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    fillerWidget->setSizePolicy(sizePolicy);
-    int columns = mpTAction->getButtonColumns();
-    if (columns <= 0) {
-        columns = 1;
+    auto fillerWidget = new QWidget(this);
+    QPushButton dummy;
+    fillerWidget->setMinimumSize(dummy.minimumSizeHint());
+    fillerWidget->setMaximumSize(dummy.minimumSizeHint());
+    if (mpLayout) {
+        if (mpTAction->mOrientation == 1) {
+            // The toolbar is to be filled with rows of mpTAction->getButtonColumns() wide
+            // The filler widget is to be one or more columns wide
+            mpLayout->addWidget(fillerWidget, 0, 0, mpTAction->getButtonFillerOffset(), 1);
+        } else {
+            // The toolbar is to be filled with columns of mpTAction->getButtonColumns() tall
+            // The filler widget is to be one or more rows tall
+            mpLayout->addWidget(fillerWidget, 0, 0, 1, mpTAction->getButtonFillerOffset());
+        }
     }
-    int row = (++mItemCount) / columns;
-    int column = (mItemCount - 1) % columns;
-    mpLayout->addWidget(fillerWidget, row, column);
-    // 3 lines above are to avoid order of operations problem of original line
-    // (-Wsequence-point warning on mItemCount) NEEDS TO BE CHECKED:
-    //    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
 }
 
 // Used by buttons directly on a TToolBar instance but NOT on sub-menu item - we
 // now retrieve the button state to ensure the visible representation is used.
 void TToolBar::slot_pressed(const bool isChecked)
 {
-    auto * pB = dynamic_cast<TFlipButton*>(sender());
+    auto* pB = dynamic_cast<TFlipButton*>(sender());
     if (!pB) {
         return;
     }
 
     TAction* pA = pB->mpTAction;
+
+    // Hold off ActionUnit deletes for this whole slot so a self-uninstall (the
+    // button's own script removing its package) cannot free pA out from under the
+    // dereferences below, even if a Host catch-all doCleanup() fires at depth 0
+    // mid-slot. The scope guard flushes once at the end, after pA's last use (see
+    // ActionUnit::uninstall()):
+    ActionUnit* pActionUnit = mpHost->getActionUnit();
+    pActionUnit->beginProcessing();
+    const auto processingGuard = qScopeGuard([pActionUnit] {
+        pActionUnit->endProcessing();
+        pActionUnit->doCleanup();
+    });
+
     // NOTE: This function blocks until an item is selected from the menu, and,
     // as the action to "pop-up" the menu is the same as "buttons" use to
     // perform their command/scripts is why "commands" are (no longer) permitted
@@ -202,13 +211,13 @@ void TToolBar::slot_pressed(const bool isChecked)
     // entries...
     pB->menu();
 
-    if (pA->mIsPushDownButton) {
+    if (pA->isPushDownButton()) {
         pA->mButtonState = isChecked;
-        pA->mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
+        mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
     } else {
         pA->mButtonState = false;
-        pB->setChecked(false);                   // This does NOT invoke the clicked()!
-        pA->mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
+        pB->setChecked(false);               // This does NOT invoke the clicked()!
+        mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
     }
 
     pA->execute();
@@ -225,7 +234,7 @@ void TToolBar::clear()
         mpLayout = new QGridLayout(mpWidget);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         mpWidget->setSizePolicy(sizePolicy);
     } else {
         mpLayout = nullptr;
@@ -234,4 +243,16 @@ void TToolBar::clear()
     mpWidget->setStyleSheet(mpTAction->css);
 
     mudlet::self()->removeDockWidget(this);
+}
+
+// Needed to detect mouse clicking on areas not covered by a button or menu:
+void TToolBar::mousePressEvent(QMouseEvent* e)
+{
+    if (mpHost.isNull()) {
+        return;
+    }
+    if (e->button() & Qt::AllButtons) {
+        // move focus back to the active console / command line
+        mpHost->setFocusOnHostActiveCommandLine();
+    }
 }

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -30,7 +30,7 @@
 #include "irccommand_p.h"
 #include "ircconnection.h"
 #include "ircmessage.h"
-#include <QTextCodec>
+#include "irccore_p.h"
 #include <QMetaEnum>
 #include <QDebug>
 
@@ -260,8 +260,10 @@ IRC_BEGIN_NAMESPACE
     \brief A whowas command (WHOWAS) is used to query information about a user that no longer exists.
  */
 
+extern bool irc_is_supported_encoding(const QByteArray& encoding); // ircmessagedecoder.cpp
+
 #ifndef IRC_DOXYGEN
-IrcCommandPrivate::IrcCommandPrivate() : type(IrcCommand::Custom), encoding("UTF-8")
+IrcCommandPrivate::IrcCommandPrivate() :  encoding("UTF-8")
 {
 }
 
@@ -323,7 +325,7 @@ IrcConnection* IrcCommand::connection() const
 IrcNetwork* IrcCommand::network() const
 {
     Q_D(const IrcCommand);
-    return d->connection ? d->connection->network() : 0;
+    return d->connection ? d->connection->network() : nullptr;
 }
 
 /*!
@@ -368,14 +370,11 @@ void IrcCommand::setParameters(const QStringList& parameters)
     This property holds the encoding that is used when
     sending the command via IrcConnection::sendCommand().
 
-    See QTextCodec::availableCodes() for the list of
-    supported encodings. The default value is \c "UTF-8".
+    The default value is \c "UTF-8".
 
     \par Access functions:
     \li QByteArray <b>encoding</b>() const
     \li void <b>setEncoding</b>(const QByteArray& encoding)
-
-    \sa QTextCodec::availableCodecs()
  */
 QByteArray IrcCommand::encoding() const
 {
@@ -386,7 +385,6 @@ QByteArray IrcCommand::encoding() const
 void IrcCommand::setEncoding(const QByteArray& encoding)
 {
     Q_D(IrcCommand);
-    extern bool irc_is_supported_encoding(const QByteArray& encoding); // ircmessagedecoder.cpp
     if (!irc_is_supported_encoding(encoding)) {
         qWarning() << "IrcCommand::setEncoding(): unsupported encoding" << encoding;
         return;
@@ -443,6 +441,7 @@ QString IrcCommand::toString() const
         case Whowas:        return QString("WHOWAS %1 %1").arg(p0); // user
 
         case Custom:        qWarning("Reimplement IrcCommand::toString() for IrcCommand::Custom");
+        Q_FALLTHROUGH();
         default:            return QString();
     }
 }
@@ -576,7 +575,7 @@ IrcCommand* IrcCommand::createJoin(const QString& channel, const QString& key)
  */
 IrcCommand* IrcCommand::createJoin(const QStringList& channels, const QStringList& keys)
 {
-    if (keys.join("").isEmpty())
+    if (keys.isEmpty() || keys.join("").isEmpty())
         return IrcCommandPrivate::createCommand(Join, QStringList() << channels.join(","));
     return IrcCommandPrivate::createCommand(Join, QStringList() << channels.join(",") << keys.join(","));
 }

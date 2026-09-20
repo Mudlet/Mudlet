@@ -4,6 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,30 +24,39 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "utils.h"
+
+#include <QCoreApplication>
+#include <QList>
+#include <QMap>
 #include <QMultiMap>
-#include <QMutex>
 #include <QPointer>
+#include <QSet>
 #include <QString>
-#include "post_guard.h"
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TAlias;
 
-
 class AliasUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(AliasUnit) // Needed so we can use tr() even though AliasUnit is NOT derived from QObject
+
     friend class XMLexport;
     friend class XMLimport;
 
 public:
-    AliasUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mModuleMember() { initStats(); }
+    explicit AliasUnit(Host*);
+    ~AliasUnit();
+
     std::list<TAlias*> getAliasRootNodeList() { return mAliasRootNodeList; }
     TAlias* getAlias(int id);
     void compileAll();
     TAlias* findFirstAlias(const QString& name);
+    std::vector<int> findItems(const QString& name, const bool exactMatch, const bool caseSensitive);
     bool enableAlias(const QString&);
     bool disableAlias(const QString&);
     bool killAlias(const QString& name);
@@ -55,37 +66,30 @@ public:
     void uninstall(const QString&);
     void _uninstall(TAlias* pChild, const QString& packageName);
     void reParentAlias(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     bool processDataStream(const QString&);
     void stopAllTriggers();
     void reenableAllTriggers();
-    QString assembleReport();
+    std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
     void markCleanup(TAlias* pT);
     void doCleanup();
+    int processingDepth() const { return mProcessingDepth; }
+    // Each nested alias expansion is a C++ stack frame; past this depth the
+    // command goes to the game unexpanded.
+    inline static const int scmMaxProcessingDepth = 50;
 
     QMultiMap<QString, TAlias*> mLookupTable;
-    std::list<TAlias*> mCleanupList;
-    QMutex mAliasUnitLock;
-    int statsAliasTotal;
-    int statsTempAliases;
-    int statsActiveAliases;
-    int statsActiveAliasesMax;
-    int statsActiveAliasesMin;
-    int statsActiveAliasesAverage;
-    int statsTempAliasesCreated;
-    int statsTempAliasesKilled;
-    int statsAverageLineProcessingTime;
-    int statsMaxLineProcessingTime;
-    int statsMinLineProcessingTime;
-    int statsRegexAliases;
+    QSet<TAlias*> mCleanupSet;
     QList<TAlias*> uninstallList;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
 
 private:
     AliasUnit() = default;
 
-    void initStats();
-    void _assembleReport(TAlias*);
+    void resetStats();
+    void assembleReport(TAlias*);
     TAlias* getAliasPrivate(int id);
     void addAliasRootNode(TAlias* pT, int parentPosition = -1, int childPosition = -1, bool moveAlias = false);
     void addAlias(TAlias* pT);
@@ -95,8 +99,13 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TAlias*> mAliasMap;
     std::list<TAlias*> mAliasRootNodeList;
-    int mMaxID;
-    bool mModuleMember;
+    int mMaxID = 0;
+    bool mModuleMember = false;
+    int statsItemsTotal = 0;
+    int statsTempItems = 0;
+    int statsActiveItems = 0;
+    // Counter for nested processing; cleanup deferred until 0
+    int mProcessingDepth = 0;
 };
 
 #endif // MUDLET_ALIASUNIT_H

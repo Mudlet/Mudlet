@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -48,8 +48,8 @@ class IRC_UTIL_EXPORT IrcCommandQueue : public QObject
     Q_PROPERTY(IrcConnection* connection READ connection WRITE setConnection)
 
 public:
-    explicit IrcCommandQueue(QObject* parent = 0);
-    virtual ~IrcCommandQueue();
+    explicit IrcCommandQueue(QObject* parent = nullptr);
+    ~IrcCommandQueue() override;
 
     int batch() const;
     void setBatch(int batch);

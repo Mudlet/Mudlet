@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -68,13 +68,14 @@ public:
         return network->d_ptr.data();
     }
 
-    IrcNetwork* q_ptr;
+    IrcNetwork* q_ptr = nullptr;
     QPointer<IrcConnection> connection;
-    bool initialized;
+    bool initialized = false;
     QString name;
     QStringList modes, prefixes, channelTypes, channelModes, statusPrefixes;
     QHash<QString, int> numericLimits, modeLimits, channelLimits, targetLimits;
     QSet<QString> availableCaps, requestedCaps, activeCaps;
+    bool skipCapabilityValidation = false;
 };
 
 IRC_END_NAMESPACE

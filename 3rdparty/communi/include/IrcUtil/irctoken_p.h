@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -38,7 +38,7 @@ IRC_BEGIN_NAMESPACE
 class IrcToken
 {
 public:
-    IrcToken() : idx(-1), pos(-1) { }
+    IrcToken()  { }
     IrcToken(int index, int position, const QString& text)
         : idx(index), pos(position), str(text) { }
 
@@ -49,8 +49,8 @@ public:
     QString text() const { return str; }
 
 private:
-    int idx;
-    int pos;
+    int idx = -1;
+    int pos = -1;
     QString str;
     friend class IrcTokenizer;
 };

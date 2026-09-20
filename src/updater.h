@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2017 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2017-2020 by Vadim Peretokin - vperetokin@gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,20 +20,28 @@
 #ifndef UPDATER_H
 #define UPDATER_H
 
-// FreeBSD does not support the updater and these missing files upset
-// clang-tidy / Clazy when they are run in an environment without them:
-#if defined (INCLUDE_UPDATER)
-#include "dblsqd/feed.h"
-#include "dblsqd/update_dialog.h"
-#endif
-
-#ifdef Q_OS_MACOS
-#include "../3rdparty/sparkle-glue/AutoUpdater.h"
-#endif
-
-#include "pre_guard.h"
+// QObject must be included before Q_OS_MACOS checks below
 #include <QObject>
-#include "post_guard.h"
+#include <QPointer>
+
+// Guard for builds without the updater (INCLUDE_UPDATER is defined by CMake when USE_UPDATER is ON):
+#if defined(INCLUDE_UPDATER)
+namespace dblsqd {
+class Feed;
+class Release;
+class UpdateDialog;
+}
+#if defined(Q_OS_MACOS)
+#include "sparkleupdater.h"
+#endif
+#endif
+
+#include <memory>
+
+class QAbstractButton;
+class QPushButton;
+class QSettings;
+class QTimer;
 
 class Updater : public QObject
 {
@@ -41,55 +49,79 @@ class Updater : public QObject
 
 public:
     Q_DISABLE_COPY(Updater)
-    explicit Updater(QObject* parent = nullptr, QSettings* settings = nullptr);
+    explicit Updater(QObject* parent = nullptr, QSettings* settings = nullptr, bool testVersion = false);
     virtual ~Updater();
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
+    void showFullChangelog() const;
     void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
     bool shouldShowChangelog();
+    bool ready() const;
+    // Removes update downloads and installers left behind by previous runs
+    // (#9985). Takes the directory so it can be pointed at a test one.
+    static void cleanupStaleUpdateFiles(const QString& directory, const QString& keepFilePath);
 
 private:
-    dblsqd::Feed* feed;
-    dblsqd::UpdateDialog* updateDialog;
+    std::unique_ptr<dblsqd::Feed> feed;
+    // Owned, but destroyed from QCoreApplication::aboutToQuit rather than in
+    // ~Updater: the Updater is parented to the application object, so its
+    // destructor runs during application teardown - too late to destroy a
+    // QWidget (#9122). The deletion is deferred, so this stays non-null for
+    // the rest of the quit cascade (#9967).
+    QPointer<dblsqd::UpdateDialog> updateDialog;
+#if !defined(Q_OS_MACOS)
     QPushButton* mpInstallOrRestart;
+#endif
     bool mUpdateInstalled;
-    QSettings* settings;
+    bool mManualCheckInProgress{false};
+    bool mRestartInProgress{false};
+    QSettings* mSettings;
+    std::unique_ptr<QTimer> mPeriodicCheck;
 
 #if defined(Q_OS_LINUX)
     void setupOnLinux();
     void untarOnLinux(const QString& fileName);
-#elif defined(Q_OS_WIN32)
+#elif defined(Q_OS_WINDOWS)
     void setupOnWindows();
     void prepareSetupOnWindows(const QString& fileName);
 #elif defined(Q_OS_MACOS)
     void setupOnMacOS();
 #endif
 
+#if !defined(Q_OS_MACOS)
+    void setupPlatformUpdater();
+#endif
     void recordUpdateTime() const;
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
+    QString readPreviousVersionFile(const bool removeAfterRead) const;
+    bool downloadReleaseIfValid(const dblsqd::Release& release);
     void finishSetup();
+    void showDialogManually() const;
 
 #if defined(Q_OS_LINUX)
-    QString unzippedBinaryName;
+    QString mUnzippedBinaryName;
+#elif defined(Q_OS_WINDOWS)
+    QString mDownloadedInstallerPath;
 #elif defined(Q_OS_MACOS)
-    AutoUpdater* msparkleUpdater;
+    // Only exists once checkUpdatesOnStart() has run - every use must cope with
+    // it still being null, see ready()
+    SparkleUpdater* msparkleUpdater = nullptr;
 #endif
 
 
 signals:
     void signal_updateInstalled();
-    // Argument is a count of updates available
     void signal_updateAvailable(const int);
     void signal_automaticUpdatesChanged(const bool);
+    void signal_updateCheckFailed(const QString& error);
 
 public slots:
-    void installOrRestartClicked(QAbstractButton* button, const QString& filePath);
+    void slot_installOrRestartClicked(QAbstractButton* button, const QString& filePath);
 #if defined(Q_OS_LINUX)
-    // might want to make these private
-    void updateBinaryOnLinux();
+    void slot_updateLinuxBinary();
 #endif
 };
 

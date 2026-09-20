@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-selfuninstall]]
+author = [[Mudlet test suite]]
+title = [[Fixture package that uninstalls itself from its own event handler]]
+version = [[1.0]]
+description = [[Regression fixture for the package self-uninstall crash (#9557).]]

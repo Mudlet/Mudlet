@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,13 +23,21 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QPointer>
 #include <QTreeWidget>
-#include "post_guard.h"
 
 class Host;
 
+enum class TreeType {
+    None,
+    Trigger,
+    Alias,
+    Timer,
+    Script,
+    Key,
+    Action,
+    Var
+};
 
 class TTreeWidget : public QTreeWidget
 {
@@ -36,9 +45,10 @@ class TTreeWidget : public QTreeWidget
 
 public:
     Q_DISABLE_COPY(TTreeWidget)
-    TTreeWidget(QWidget* pW);
+    explicit TTreeWidget(QWidget* pW);
     Qt::DropActions supportedDropActions() const override;
     void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;
     void startDrag(Qt::DropActions supportedActions) override;
@@ -48,28 +58,35 @@ public:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void setHost(Host* pH);
-    void setIsScriptTree();
-    void setIsTimerTree();
-    void setIsTriggerTree();
-    void setIsAliasTree();
-    void setIsActionTree();
-    void setIsVarTree();
-    void setIsKeyTree();
+    void setTreeType(TreeType type);
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
 
+    void updateTriggerIcon(QTreeWidgetItem* pItem, int triggerID);
+    void updateTriggerIconsRecursively(QTreeWidgetItem* pItem);
+    QTreeWidgetItem* findItemByTriggerID(QTreeWidgetItem* pParent, int triggerID);
+
+signals:
+    void itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition);
+    void batchMoveStarted();
+    void batchMoveEnded();
+
 private:
+    // Structure to hold information about items being moved
+    struct MoveInfo {
+        int childID;
+        int oldParentID;
+        int oldPosition;
+    };
+
     bool mIsDropAction;
     QPointer<Host> mpHost;
-    int mOldParentID;
-    int mChildID;
-    bool mIsTriggerTree;
-    bool mIsAliasTree;
-    bool mIsScriptTree;
-    bool mIsTimerTree;
-    bool mIsKeyTree;
-    bool mIsVarTree;
-    bool mIsActionTree;
+    QList<MoveInfo> mPendingMoves;  // Stores info for all items being moved
+    int mOldParentID;  // Deprecated: kept for compatibility, will be removed
+    int mOldPosition;  // Deprecated: kept for compatibility, will be removed
+    int mChildID;      // Deprecated: kept for compatibility, will be removed
+    TreeType mTreeType = TreeType::None;
+    // CHECK: Should this actually be a: QPersistentModelIndex ?
     QModelIndex mClickedItem;
 };
 

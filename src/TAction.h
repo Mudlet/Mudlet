@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2020-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,13 +26,19 @@
 
 #include "Tree.h"
 
-#include "pre_guard.h"
 #include <QColor>
+#include <QDebug>
+#include <QDebugStateSaver>
 #include <QIcon>
+#include <QObject>
 #include <QPointer>
-#include <QRegularExpression>
-#include "post_guard.h"
+#include <QSize>
+#include <QString>
+#include <QtGlobal>
 
+#include <algorithm>
+
+class EAction;
 class Host;
 class mudlet;
 class TEasyButtonBar;
@@ -52,94 +59,203 @@ public:
     TAction(TAction* parent, Host* pHost);
     TAction(const QString& name, Host* pHost);
     void compileAll();
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
     void setName(const QString& name);
-    void setButtonColor(QColor c) { if(c != mButtonColor) { setDataChanged(); mButtonColor = c; } }
-    QColor getButtonColor() { return mButtonColor; }
-    void setButtonRotation(int r) { if(r != mButtonRotation) { setDataChanged(); mButtonRotation = r; } }
-    int getButtonRotation() { return mButtonRotation; }
-    void setButtonColumns(int c) { if(c != mButtonColumns) { setDataChanged(); mButtonColumns = c; } }
-    int getButtonColumns() { return mButtonColumns; }
-    bool getButtonFlat() { return mButtonFlat; }
-    void setButtonFlat(bool flat) { if(flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
-
-    void setSizeX(int s) { if(s != mSizeX) { setDataChanged(); mSizeX = s; } }
-    int getSizeX() { return mSizeX; }
-    void setSizeY(int s) { if(s != mSizeY) { setDataChanged(); mSizeY = s; } }
-    int getSizeY() { return mSizeY; }
+    void setButtonRotation(int rotation) {
+        if (rotation != mButtonRotation) {
+            setDataChanged();
+            mButtonRotation = rotation;
+        }
+    }
+    int getButtonRotation() const { return mButtonRotation; }
+    void setButtonColumns(int columns) {
+        if (columns != mButtonColumns) {
+            setDataChanged();
+            mButtonColumns = columns;
+        }
+    }
+    int getButtonColumns() const { return mButtonColumns; }
+    bool getButtonFlat() const { return mButtonFlat; }
+    void setButtonFlat(bool flat) {
+        if (flat != mButtonFlat) {
+            setDataChanged();
+            mButtonFlat = flat;
+        }
+    }
+    // This should always be called AFTER setButtonColumns!
+    void setButtonFillerOffset(const int value)
+    {
+        const auto newValue = std::max(0, std::min(value, mButtonColumns - 1));
+        if (newValue != mButtonFillerOffset) {
+            setDataChanged();
+            mButtonFillerOffset = newValue;
+        }
+    }
+    int getButtonFillerOffset() const { return mButtonFillerOffset; }
+    void setSizeX(int size) {
+        if (size != mSizeX) {
+            setDataChanged();
+            mSizeX = size;
+        }
+    }
+    int getSizeX() const { return mSizeX; }
+    void setSizeY(int size) {
+        if (size != mSizeY) {
+            setDataChanged();
+            mSizeY = size;
+        }
+    }
+    int getSizeY() const { return mSizeY; }
+    QSize getSize() const { return {mSizeX, mSizeY}; }
 
     void fillMenu(TEasyButtonBar* pT, QMenu* menu);
     void compile();
     bool compileScript();
     void execute();
-    QString getIcon() { return mIcon; }
-    void setIcon(const QString& icon) { if(icon != mIcon) { mIcon = icon; } }
-    QString getScript() { return mScript; }
+    QString getIcon() const { return mIcon; }
+    void setIcon(const QString& icon) {
+        if (icon != mIcon) {
+            mIcon = icon;
+        }
+    }
+    QString getScript() const { return mScript; }
     bool setScript(const QString& script);
-    QString getCommandButtonUp() { return mCommandButtonUp; }
-    void setCommandButtonUp(const QString& cmd) { if(cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
-    void setCommandButtonDown(const QString& cmd) { if(cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
-    QString getCommandButtonDown() { return mCommandButtonDown; }
-    bool isPushDownButton() { return mIsPushDownButton; }
-    void setIsPushDownButton(bool b) { if(b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
+    QString getCommandButtonUp() const { return mCommandButtonUp; }
+    void setCommandButtonUp(const QString& cmd) {
+        if (cmd != mCommandButtonUp) {
+            setDataChanged();
+            mCommandButtonUp = cmd;
+        }
+    }
+    void setCommandButtonDown(const QString& cmd) {
+        if (cmd != mCommandButtonDown) {
+            setDataChanged();
+            mCommandButtonDown = cmd;
+        }
+    }
+    QString getCommandButtonDown() const { return mCommandButtonDown; }
+    bool isPushDownButton() const { return mIsPushDownButton; }
+    void setIsPushDownButton(const bool b) {
+        if (b != mIsPushDownButton) {
+            setDataChanged();
+            mIsPushDownButton = b;
+        }
+    }
 
-    void setIsFolder(bool b) { if(b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
+    void setIsFolder(bool b) {
+        if (b != isFolder()) {
+            setDataChanged();
+            this->Tree::setIsFolder(b);
+        }
+    }
 
     bool registerAction();
     void insertActions(TToolBar* pT, QMenu* menu);
     void expandToolbar(TToolBar* pT);
     void insertActions(TEasyButtonBar* pT, QMenu* menu);
     void expandToolbar(TEasyButtonBar* pT);
-    void setDataSaved() { if(mpParent) { mpParent->setDataSaved(); } mDataChanged = false; }
-    void setDataChanged() { if(mpParent) { mpParent->setDataChanged(); } mDataChanged = true; }
+    void setDataSaved() {
+        if (mpParent) {
+            mpParent->setDataSaved();
+        }
+        mDataChanged = false;
+    }
+    void setDataChanged() {
+        if (mpParent) {
+            mpParent->setDataChanged();
+        }
+        mDataChanged = true;
+    }
     bool isDataChanged() { return mDataChanged; }
+    QString packageName(TAction* pAction) const;
+    QString moduleName(TAction* pAction) const;
+
 
     QPointer<TToolBar> mpToolBar;
     QPointer<TEasyButtonBar> mpEasyButtonBar;
-    // The following was an int but there was confusion over:
-    // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down
-    // OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up
-    // The Wiki says it should be "1" and "2" but the code sort of did "0"/"1"
-    // in some places.
-    // Now uses a boolean:
-    // "true" = pressed/clicked/down & "false" = released/unclicked/up
-    bool mButtonState;
-    int mPosX;
-    int mPosY;
-    int mOrientation;
-    int mLocation;
-    QString mName;
-    QString mCommandButtonUp;
-    QString mCommandButtonDown;
-    QRegularExpression mRegex;
-    QString mScript;
-    bool mIsPushDownButton;
+    QPointer<EAction> mpEAction;
+    QPointer<TFlipButton> mpFButton;
+    /* The following was an int but there was confusion over:
+     * EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down,
+     * OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up.
+     * The Wiki says it should be "1" and "2" but the code sort of did "0"/"1"
+     * in some places.
+     * Now uses a boolean:
+     * "true" = pressed/clicked/down & "false" = released/unclicked/up.
+     * Only relevant for "push-down" buttons*/
+    bool mButtonState = false;
+    int mPosX = 0;
+    int mPosY = 0;
+    /* THIS class uses 0 = horizontal, 1 = vertical.
+     * c.f. TFlipButton class which uses Qt::Orientation enum
+     * (1 = Qt::Horizontal, 2 = Qt::Vertical).*/
+    int mOrientation = 0;
+    /* 0, 2, 3 are only applicable to the Easy Button Bar buttons/menus (around
+     * edge of main console):
+     * 0 = Top "Toolbar" (Easy Button Bar).
+     * 1 = Not used since 2009 in commit: c5f404729d46976c6b2c7cf89fd098f5806440c8.
+     * 2 = Left "Toolbar" (Easy Button Bar).
+     * 3 = Right "Toolbar" (Easy Button Bar).
+     * 4 = Dockable/floating Toolbar.*/
+    int mLocation = 0;
 
-    bool mNeedsToBeCompiled;
-    QString mIcon;
+    bool mNeedsToBeCompiled = true;
     QIcon mIconPix;
 
-    int mButtonRotation;
-    int mButtonColumns;
-    bool mButtonFlat;
-    int mSizeX;
-    int mSizeY;
-    bool mIsLabel;
-    bool mUseCustomLayout;
+    // Not currently user accessible but was previously and maintained in game
+    // saves - and applied to buttons when drawn:
+    bool mUseCustomLayout = false;
     QString css;
-    QColor mButtonColor;
     QPointer<Host> mpHost;
-    bool exportItem;
-    bool mModuleMasterFolder;
-    Qt::DockWidgetArea mToolbarLastDockArea;
-    bool mToolbarLastFloatingState;
+    bool exportItem = true;
+    bool mModuleMasterFolder = false;
+    Qt::DockWidgetArea mToolbarLastDockArea = Qt::LeftDockWidgetArea;
+    bool mToolbarLastFloatingState = true;
 
 private:
     TAction() = default;
 
+    QString mName;
+    QString mCommandButtonUp;
+    QString mCommandButtonDown;
+    QString mScript;
     QString mFuncName;
-    bool mModuleMember;
-    bool mDataChanged;
+    bool mModuleMember = false;
+    bool mDataChanged = true;
+    bool mIsPushDownButton = false; // Make private
+
+    QString mIcon;
+    // 0 = Horizontal
+    // 1 = Vertical
+    // 2 = Vertical + Mirrored
+    int mButtonRotation = 0;
+    int mButtonColumns = 1;
+    /* Maximum is one less than the above, and is the number of columns/rows
+     * the first button/menu in a toolbar must be offset. This replaces the
+     * prior arrangement that incremented this by one (modulus the
+     * mButtonColums) each time the toolbar was saved. Since that now happens
+     * a lot with the undo/redo and auto-save features that is no longer
+     * sustainable. */
+    int mButtonFillerOffset = 0;
+    /* Not currently user accessible but was previously and maintained in game
+     * saves - and applied to buttons when drawn: */
+    bool mButtonFlat = false; // Make private
+    int mSizeX = 0; // Make private
+    int mSizeY = 0; // Make private
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TAction* action)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver)
+    debug.nospace() << "TAction(" << action->getName() << ")";
+    debug.nospace() << ", commandButtonUp=" << action->getCommandButtonUp();
+    debug.nospace() << ", commandButtonDown=" << action->getCommandButtonDown();
+    debug.nospace() << ", script=" << action->getScript();
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TACTION_H

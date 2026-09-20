@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,24 +22,46 @@
 
 #include "dlgSystemMessageArea.h"
 
+#include "mudlet.h"
 
-dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pF) : QWidget(pF)
+
+dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
-    
+
     QPixmap holdPixmap;
-    
-    holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
+    holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelWarning->setPixmap(holdPixmap);
-    
-    holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
+    notificationAreaIconLabelWarning->setPixmap(holdPixmap);
+
+    holdPixmap = notificationAreaIconLabelError->pixmap(Qt::ReturnByValue);
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelError->setPixmap(holdPixmap);
-    
-    holdPixmap = *(this->notificationAreaIconLabelInformation->pixmap());
+    notificationAreaIconLabelError->setPixmap(holdPixmap);
+
+    holdPixmap = notificationAreaIconLabelInformation->pixmap(Qt::ReturnByValue);
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelInformation->setPixmap(holdPixmap);
-    
+    notificationAreaIconLabelInformation->setPixmap(holdPixmap);
+
+    slot_applyAppearance();
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgSystemMessageArea::slot_applyAppearance);
+}
+
+void dlgSystemMessageArea::slot_applyAppearance()
+{
+    const bool darkMode = mudlet::self()->inDarkMode();
+    const QString background = darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)");
+    const QString textColor = darkMode ? qsl("rgb(230, 230, 230)") : qsl("black");
+    frame_notificationArea->setStyleSheet(qsl("QFrame#frame_notificationArea {\n"
+                                              "  border: 3px solid;\n"
+                                              "  border-radius: 6px;\n"
+                                              "  background-color: %1;\n"
+                                              "}\n"
+                                              "\n"
+                                              "QLabel{\n"
+                                              "color: %2;\n"
+                                              "background-color: %1;\n"
+                                              "}")
+                                                  .arg(background, textColor));
 }

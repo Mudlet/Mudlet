@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018, 2020, 2022-2024, 2026 by Stephen Lyons       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,708 +23,444 @@
 
 #include "TBuffer.h"
 
-#include "mudlet.h"
+#include "Host.h"
+#include "LuaLiteral.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
+#include "TEvent.h"
+#include "THyperlinkCompactManager.h"
+#include "THyperlinkVisibilityManager.h"
+#include "THyperlinkSelectionManager.h"
+#include "TPrintSink.h"
+#include "TStringUtils.h"
+#include "TTextEdit.h"
+#include "UntrustedText.h"
+#include "TTextProperties.h"
+#include "widechar_width.h"
+#include "TEncodingHelper.h"
+#include "SentryWrapper.h"
 
-#include "pre_guard.h"
-#include <QTextBoundaryFinder>
-#include <QTextCodec>
+#include <QDateTime>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
 #include <QRegularExpression>
-#include "post_guard.h"
+#include <QTextBoundaryFinder>
+#include <QTime>
+#include <QTimer>
+#include <QUrlQuery>
 
-// Define this to get qDebug() messages about the decoding of UTF-8 data when it
-// is not the single bytes of pure ASCII text:
-// #define DEBUG_UTF8_PROCESSING
-// Define this to get qDebug() messages about the decoding of GB2312/GBK/GB18030
-// data when it is not the single bytes of pure ASCII text:
-// #define DEBUG_GB_PROCESSING
-// Define this to get qDebug() messages about the decoding of BIG5
-// data when it is not the single bytes of pure ASCII text:
-// #define DEBUG_BIG5_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI SGR sequences:
-// #define DEBUG_SGR_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI OSC sequences:
-// #define DEBUG_OSC_PROCESSING
-// Define this to get qDebug() messages about the decoding of ANSI MXP sequences
-// although there is not much against this item at present {only an announcement
-// of the type (?) of an `\x1b[?z` received}:
-//#define DEBUG_MXP_PROCESSING
+#include <algorithm>
+#include <iterator>
+#include <utility>
+#include <chrono>
 
+// for system physical memory info
+#if defined(Q_OS_WINDOWS)
+#include <Windows.h>
+#elif defined(Q_OS_MACOS)
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_OPENBSD)
+// OpenBSD doesn't have a sysinfo.h
+#include <sys/sysctl.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
+#else
+// Any other OS?
+#endif
 
-// These tables have been regenerated from examination of the Qt source code
-// particularly from:
-// https://gitorious.org/qt/qt?p=qt:qt.git;a=blob;f=src/corelib/codecs/qsimplecodec.cpp;h=cb52ce35f369f7fbe5b04ff2c2cf1600bd794f4e;hb=HEAD
-// It represents the Unicode codepoints that are to be used to represent
-// extended ASCII characters with the MS Bit set.  The name is one that will
-// be recognized as a valid encoding name to supply to:
-// QTextCodec::codecForName(...)
-// "ISO 885901" is not included here as it is inherent in Qt and has a straight
-// one for one mapping of characters in the range 128 to 255 to the
-// corresponding Unicode codepoint.
-// Note that the codepoint 0xFFFD is the Unicode replacement character and
-// is reserved to show, amongst other things, where a UTF-8 sequence of bytes
-// is not a known character or, in these tables, the fact that no character was
-// defined at that Extended ASCII character code.
+using namespace std::chrono_literals;
 
-// a map of computer-friendly encoding names as keys
-// values are a pair of human-friendly name + encoding data
+namespace {
 
-// clang-format off
-// Do not let code reformatting tool mess this around!
-// PLACEMARKER: Extended ASCII decoder Unicode codepoint lookup tables
-const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = {
-    {QStringLiteral("ISO 8859-2"),
-    qMakePair(tr("ISO 8859-2 (Central European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x0104), QChar(0x02D8), QChar(0x0141), QChar(0x00A4), QChar(0x013D), QChar(0x015A), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x0160), QChar(0x015E), QChar(0x0164), QChar(0x0179), QChar(0x00AD), QChar(0x017D), QChar(0x017B),  // A8-AF
-        QChar(0x00B0), QChar(0x0105), QChar(0x02DB), QChar(0x0142), QChar(0x00B4), QChar(0x013E), QChar(0x015B), QChar(0x02C7),  // B0-B7
-        QChar(0x00B8), QChar(0x0161), QChar(0x015F), QChar(0x0165), QChar(0x017A), QChar(0x02DD), QChar(0x017E), QChar(0x017C),  // B8-BF
-        QChar(0x0154), QChar(0x00C1), QChar(0x00C2), QChar(0x0102), QChar(0x00C4), QChar(0x0139), QChar(0x0106), QChar(0x00C7),  // C0-C7
-        QChar(0x010C), QChar(0x00C9), QChar(0x0118), QChar(0x00CB), QChar(0x011A), QChar(0x00CD), QChar(0x00CE), QChar(0x010E),  // C8-CF
-        QChar(0x0110), QChar(0x0143), QChar(0x0147), QChar(0x00D3), QChar(0x00D4), QChar(0x0150), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x0158), QChar(0x016E), QChar(0x00DA), QChar(0x0170), QChar(0x00DC), QChar(0x00DD), QChar(0x0162), QChar(0x00DF),  // D8-DF
-        QChar(0x0155), QChar(0x00E1), QChar(0x00E2), QChar(0x0103), QChar(0x00E4), QChar(0x013A), QChar(0x0107), QChar(0x00E7),  // E0-E7
-        QChar(0x010D), QChar(0x00E9), QChar(0x0119), QChar(0x00EB), QChar(0x011B), QChar(0x00ED), QChar(0x00EE), QChar(0x010F),  // E8-EF
-        QChar(0x0111), QChar(0x0144), QChar(0x0148), QChar(0x00F3), QChar(0x00F4), QChar(0x0151), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x0159), QChar(0x016F), QChar(0x00FA), QChar(0x0171), QChar(0x00FC), QChar(0x00FD), QChar(0x0163), QChar(0x02D9)}))}, // F8-FF
-    {QStringLiteral("ISO 8859-3"),
-    qMakePair(tr("ISO 8859-3 (South European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x0126), QChar(0x02D8), QChar(0x00A3), QChar(0x00A4), QChar(0xFFFD), QChar(0x0124), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x0130), QChar(0x015E), QChar(0x011E), QChar(0x0134), QChar(0x00AD), QChar(0xFFFD), QChar(0x017B),  // A8-AF
-        QChar(0x00B0), QChar(0x0127), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x0125), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x0131), QChar(0x015F), QChar(0x011F), QChar(0x0135), QChar(0x00BD), QChar(0xFFFD), QChar(0x017C),  // B8-BF
-        QChar(0x00C0), QChar(0x00C1), QChar(0x00C2), QChar(0xFFFD), QChar(0x00C4), QChar(0x010A), QChar(0x0108), QChar(0x00C7),  // C0-C7
-        QChar(0x00C8), QChar(0x00C9), QChar(0x00CA), QChar(0x00CB), QChar(0x00CC), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0xFFFD), QChar(0x00D1), QChar(0x00D2), QChar(0x00D3), QChar(0x00D4), QChar(0x0120), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x011C), QChar(0x00D9), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x016C), QChar(0x015C), QChar(0x00DF),  // D8-DF
-        QChar(0x00E0), QChar(0x00E1), QChar(0x00E2), QChar(0xFFFD), QChar(0x00E4), QChar(0x010B), QChar(0x0109), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x00EC), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0xFFFD), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x0121), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x011D), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x016D), QChar(0x015D), QChar(0x02D9)}))},// F8-FF
-    {QStringLiteral("ISO 8859-4"),
-    qMakePair(tr("ISO 8859-4 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x0104), QChar(0x0138), QChar(0x0156), QChar(0x00A4), QChar(0x0128), QChar(0x013B), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x0160), QChar(0x0112), QChar(0x0122), QChar(0x0166), QChar(0x00AD), QChar(0x017D), QChar(0x00AF),  // A8-AF
-        QChar(0x00B0), QChar(0x0105), QChar(0x02DB), QChar(0x0157), QChar(0x00B4), QChar(0x0129), QChar(0x013C), QChar(0x02C7),  // B0-B7
-        QChar(0x00B8), QChar(0x0161), QChar(0x0113), QChar(0x0123), QChar(0x0167), QChar(0x014A), QChar(0x017E), QChar(0x014B),  // B8-BF
-        QChar(0x0100), QChar(0x00C1), QChar(0x00C2), QChar(0x00C3), QChar(0x00C4), QChar(0x00C5), QChar(0x00C6), QChar(0x012E),  // C0-C7
-        QChar(0x010C), QChar(0x00C9), QChar(0x0118), QChar(0x00CB), QChar(0x0116), QChar(0x00CD), QChar(0x00CE), QChar(0x012A),  // C8-CF
-        QChar(0x0110), QChar(0x0145), QChar(0x014C), QChar(0x0136), QChar(0x00D4), QChar(0x00D5), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x00D8), QChar(0x0172), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x0168), QChar(0x016A), QChar(0x00DF),  // D8-DF
-        QChar(0x0101), QChar(0x00E1), QChar(0x00E2), QChar(0x00E3), QChar(0x00E4), QChar(0x00E5), QChar(0x00E6), QChar(0x012F),  // E0-E7
-        QChar(0x010D), QChar(0x00E9), QChar(0x0119), QChar(0x00EB), QChar(0x0117), QChar(0x00ED), QChar(0x00EE), QChar(0x012B),  // E8-EF
-        QChar(0x0111), QChar(0x0146), QChar(0x014D), QChar(0x0137), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x00F8), QChar(0x0173), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0169), QChar(0x016B), QChar(0x02D9)}))},// F8-FF
-    {QStringLiteral("ISO 8859-5"),
-    qMakePair(tr("ISO 8859-5 (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x0401), QChar(0x0402), QChar(0x0403), QChar(0x0404), QChar(0x0405), QChar(0x0406), QChar(0x0407),  // A0-A7
-        QChar(0x0408), QChar(0x0409), QChar(0x040A), QChar(0x040B), QChar(0x040C), QChar(0x00AD), QChar(0x040E), QChar(0x040F),  // A8-AF
-        QChar(0x0410), QChar(0x0411), QChar(0x0412), QChar(0x0413), QChar(0x0414), QChar(0x0415), QChar(0x0416), QChar(0x0417),  // B0-B7
-        QChar(0x0418), QChar(0x0419), QChar(0x041A), QChar(0x041B), QChar(0x041C), QChar(0x041D), QChar(0x041E), QChar(0x041F),  // B8-BF
-        QChar(0x0420), QChar(0x0421), QChar(0x0422), QChar(0x0423), QChar(0x0424), QChar(0x0425), QChar(0x0426), QChar(0x0427),  // C0-C7
-        QChar(0x0428), QChar(0x0429), QChar(0x042A), QChar(0x042B), QChar(0x042C), QChar(0x042D), QChar(0x042E), QChar(0x042F),  // C8-CF
-        QChar(0x0430), QChar(0x0431), QChar(0x0432), QChar(0x0433), QChar(0x0434), QChar(0x0435), QChar(0x0436), QChar(0x0437),  // D0-D7
-        QChar(0x0438), QChar(0x0439), QChar(0x043A), QChar(0x043B), QChar(0x043C), QChar(0x043D), QChar(0x043E), QChar(0x043F),  // D8-DF
-        QChar(0x0440), QChar(0x0441), QChar(0x0442), QChar(0x0443), QChar(0x0444), QChar(0x0445), QChar(0x0446), QChar(0x0447),  // E0-E7
-        QChar(0x0448), QChar(0x0449), QChar(0x044A), QChar(0x044B), QChar(0x044C), QChar(0x044D), QChar(0x044E), QChar(0x044F),  // E8-EF
-        QChar(0x2116), QChar(0x0451), QChar(0x0452), QChar(0x0453), QChar(0x0454), QChar(0x0455), QChar(0x0456), QChar(0x0457),  // F0=F7
-        QChar(0x0458), QChar(0x0459), QChar(0x045A), QChar(0x045B), QChar(0x045C), QChar(0x00A7), QChar(0x045E), QChar(0x045F)}))},// F8-FF
-    {QStringLiteral("ISO 8859-6"),
-    qMakePair(tr("ISO 8859-6 (Arabic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x00A4), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // A0-A7
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x060C), QChar(0x00AD), QChar(0xFFFD), QChar(0xFFFD),  // A8-AF
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // B0-B7
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x061B), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x061F),  // B8-BF
-        QChar(0xFFFD), QChar(0x0621), QChar(0x0622), QChar(0x0623), QChar(0x0624), QChar(0x0625), QChar(0x0626), QChar(0x0627),  // C0-C7
-        QChar(0x0628), QChar(0x0629), QChar(0x062A), QChar(0x062B), QChar(0x062C), QChar(0x062D), QChar(0x062E), QChar(0x062F),  // C8-CF
-        QChar(0x0630), QChar(0x0631), QChar(0x0632), QChar(0x0633), QChar(0x0634), QChar(0x0635), QChar(0x0636), QChar(0x0637),  // D0-D7
-        QChar(0x0638), QChar(0x0639), QChar(0x063A), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // D8-DF
-        QChar(0x0640), QChar(0x0641), QChar(0x0642), QChar(0x0643), QChar(0x0644), QChar(0x0645), QChar(0x0646), QChar(0x0647),  // E0-E7
-        QChar(0x0648), QChar(0x0649), QChar(0x064A), QChar(0x064B), QChar(0x064C), QChar(0x064D), QChar(0x064E), QChar(0x064F),  // E8-EF
-        QChar(0x0650), QChar(0x0651), QChar(0x0652), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // F0=F7
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD)}))},// F8-FF
-    {QStringLiteral("ISO 8859-7"),
-    qMakePair(tr("ISO 8859-7 (Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x2018), QChar(0x2019), QChar(0x00A3), QChar(0xFFFD), QChar(0xFFFD), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0xFFFD), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0xFFFD), QChar(0x2015),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x0384), QChar(0x0385), QChar(0x0386), QChar(0x00B7),  // B0-B7
-        QChar(0x0388), QChar(0x0389), QChar(0x038A), QChar(0x00BB), QChar(0x038C), QChar(0x00BD), QChar(0x038E), QChar(0x038F),  // B8-BF
-        QChar(0x0390), QChar(0x0391), QChar(0x0392), QChar(0x0393), QChar(0x0394), QChar(0x0395), QChar(0x0396), QChar(0x0397),  // C0-C7
-        QChar(0x0398), QChar(0x0399), QChar(0x039A), QChar(0x039B), QChar(0x039C), QChar(0x039D), QChar(0x039E), QChar(0x039F),  // C8-CF
-        QChar(0x03A0), QChar(0x03A1), QChar(0xFFFD), QChar(0x03A3), QChar(0x03A4), QChar(0x03A5), QChar(0x03A6), QChar(0x03A7),  // D0-D7
-        QChar(0x03A8), QChar(0x03A9), QChar(0x03AA), QChar(0x03AB), QChar(0x03AC), QChar(0x03AD), QChar(0x03AE), QChar(0x03AF),  // D8-DF
-        QChar(0x03B0), QChar(0x03B1), QChar(0x03B2), QChar(0x03B3), QChar(0x03B4), QChar(0x03B5), QChar(0x03B6), QChar(0x03B7),  // E0-E7
-        QChar(0x03B8), QChar(0x03B9), QChar(0x03BA), QChar(0x03BB), QChar(0x03BC), QChar(0x03BD), QChar(0x03BE), QChar(0x03BF),  // E8-EF
-        QChar(0x03C0), QChar(0x03C1), QChar(0x03C2), QChar(0x03C3), QChar(0x03C4), QChar(0x03C5), QChar(0x03C6), QChar(0x03C7),  // F0=F7
-        QChar(0x03C8), QChar(0x03C9), QChar(0x03CA), QChar(0x03CB), QChar(0x03CC), QChar(0x03CD), QChar(0x03CE), QChar(0xFFFD)}))},// F8-FF
-    {QStringLiteral("ISO 8859-8"),
-    qMakePair(tr("ISO 8859-8 (Hebrew Visual)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0xFFFD), QChar(0x00A2), QChar(0x00A3), QChar(0x00A4), QChar(0x00A5), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0x00D7), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x203E),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x00B9), QChar(0x00F7), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0xFFFD),  // B8-BF
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // C0-C7
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // C8-CF
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // D0-D7
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x2017),  // D8-DF
-        QChar(0x05D0), QChar(0x05D1), QChar(0x05D2), QChar(0x05D3), QChar(0x05D4), QChar(0x05D5), QChar(0x05D6), QChar(0x05D7),  // E0-E7
-        QChar(0x05D8), QChar(0x05D9), QChar(0x05DA), QChar(0x05DB), QChar(0x05DC), QChar(0x05DD), QChar(0x05DE), QChar(0x05DF),  // E8-EF
-        QChar(0x05E0), QChar(0x05E1), QChar(0x05E2), QChar(0x05E3), QChar(0x05E4), QChar(0x05E5), QChar(0x05E6), QChar(0x05E7),  // F0=F7
-        QChar(0x05E8), QChar(0x05E9), QChar(0x05EA), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD)}))},// F8-FF
-    {QStringLiteral("ISO 8859-9"),
-    qMakePair(tr("ISO 8859-9 (Turkish)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x00A1), QChar(0x00A2), QChar(0x00A3), QChar(0x00A4), QChar(0x00A5), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0x00AA), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00AF),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x00B9), QChar(0x00BA), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0x00BF),  // B8-BF
-        QChar(0x00C0), QChar(0x00C1), QChar(0x00C2), QChar(0x00C3), QChar(0x00C4), QChar(0x00C5), QChar(0x00C6), QChar(0x00C7),  // C0-C7
-        QChar(0x00C8), QChar(0x00C9), QChar(0x00CA), QChar(0x00CB), QChar(0x00CC), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0x011E), QChar(0x00D1), QChar(0x00D2), QChar(0x00D3), QChar(0x00D4), QChar(0x00D5), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x00D8), QChar(0x00D9), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x0130), QChar(0x015E), QChar(0x00DF),  // D8-DF
-        QChar(0x00E0), QChar(0x00E1), QChar(0x00E2), QChar(0x00E3), QChar(0x00E4), QChar(0x00E5), QChar(0x00E6), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x00EC), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x011F), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0131), QChar(0x015F), QChar(0x00FF)}))},// F8-FF
-    {QStringLiteral("ISO 8859-10"),
-    qMakePair(tr("ISO 8859-10 (Nordic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x0104), QChar(0x0112), QChar(0x0122), QChar(0x012A), QChar(0x0128), QChar(0x0136), QChar(0x00A7),  // A0-A7
-        QChar(0x013B), QChar(0x0110), QChar(0x0160), QChar(0x0166), QChar(0x017D), QChar(0x00AD), QChar(0x016A), QChar(0x014A),  // A8-AF
-        QChar(0x00B0), QChar(0x0105), QChar(0x0113), QChar(0x0123), QChar(0x012B), QChar(0x0129), QChar(0x0137), QChar(0x00B7),  // B0-B7
-        QChar(0x013C), QChar(0x0111), QChar(0x0161), QChar(0x0167), QChar(0x017E), QChar(0x2015), QChar(0x016B), QChar(0x014B),  // B8-BF
-        QChar(0x0100), QChar(0x00C1), QChar(0x00C2), QChar(0x00C3), QChar(0x00C4), QChar(0x00C5), QChar(0x00C6), QChar(0x012E),  // C0-C7
-        QChar(0x010C), QChar(0x00C9), QChar(0x0118), QChar(0x00CB), QChar(0x0116), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0x00D0), QChar(0x0145), QChar(0x014C), QChar(0x00D3), QChar(0x00D4), QChar(0x00D5), QChar(0x00D6), QChar(0x0168),  // D0-D7
-        QChar(0x00D8), QChar(0x0172), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x00DD), QChar(0x00DE), QChar(0x00DF),  // D8-DF
-        QChar(0x0101), QChar(0x00E1), QChar(0x00E2), QChar(0x00E3), QChar(0x00E4), QChar(0x00E5), QChar(0x00E6), QChar(0x012F),  // E0-E7
-        QChar(0x010D), QChar(0x00E9), QChar(0x0119), QChar(0x00EB), QChar(0x0117), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x00F0), QChar(0x0146), QChar(0x014D), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x0169),  // F0=F7
-        QChar(0x00F8), QChar(0x0173), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x00FD), QChar(0x00FE), QChar(0x0138)}))},// F8-FF
-    {QStringLiteral("ISO 8859-11"),
-    qMakePair(tr("ISO 8859-11 (Latin/Thai)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x2026), QChar(0xFFFD), QChar(0xFFFD),  // 80-87
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 98-9F
-        QChar(0xFFFD), QChar(0x0E01), QChar(0x0E02), QChar(0x0E03), QChar(0x0E04), QChar(0x0E05), QChar(0x0E06), QChar(0x0E07),  // A0-A7
-        QChar(0x0E08), QChar(0x0E09), QChar(0x0E0A), QChar(0x0E0B), QChar(0x0E0C), QChar(0x0E0D), QChar(0x0E0E), QChar(0x0E0F),  // A8-AF
-        QChar(0x0E10), QChar(0x0E11), QChar(0x0E12), QChar(0x0E13), QChar(0x0E14), QChar(0x0E15), QChar(0x0E16), QChar(0x0E17),  // B0-B7
-        QChar(0x0E18), QChar(0x0E19), QChar(0x0E1A), QChar(0x0E1B), QChar(0x0E1C), QChar(0x0E1D), QChar(0x0E1E), QChar(0x0E1F),  // B8-BF
-        QChar(0x0E20), QChar(0x0E21), QChar(0x0E22), QChar(0x0E23), QChar(0x0E24), QChar(0x0E25), QChar(0x0E26), QChar(0x0E27),  // C0-C7
-        QChar(0x0E28), QChar(0x0E29), QChar(0x0E2A), QChar(0x0E2B), QChar(0x0E2C), QChar(0x0E2D), QChar(0x0E2E), QChar(0x0E2F),  // C8-CF
-        QChar(0x0E30), QChar(0x0E31), QChar(0x0E32), QChar(0x0E33), QChar(0x0E34), QChar(0x0E35), QChar(0x0E36), QChar(0x0E37),  // D0-D7
-        QChar(0x0E38), QChar(0x0E39), QChar(0x0E3A), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x0E3F),  // D8-DF
-        QChar(0x0E40), QChar(0x0E41), QChar(0x0E42), QChar(0x0E43), QChar(0x0E44), QChar(0x0E45), QChar(0x0E46), QChar(0x0E47),  // E0-E7
-        QChar(0x0E48), QChar(0x0E49), QChar(0x0E4A), QChar(0x0E4B), QChar(0x0E4C), QChar(0x0E4D), QChar(0x0E4E), QChar(0x0E4F),  // E8-EF
-        QChar(0x0E50), QChar(0x0E51), QChar(0x0E52), QChar(0x0E53), QChar(0x0E54), QChar(0x0E55), QChar(0x0E56), QChar(0x0E57),  // F0=F7
-        QChar(0x0E58), QChar(0x0E59), QChar(0x0E5A), QChar(0x0E5B), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD)}))},// F8-FF
-    {QStringLiteral("ISO 8859-13"),
-    qMakePair(tr("ISO 8859-13 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x201D), QChar(0x00A2), QChar(0x00A3), QChar(0x00A4), QChar(0x201E), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00D8), QChar(0x00A9), QChar(0x0156), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00C6),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x201C), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00F8), QChar(0x00B9), QChar(0x0157), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0x00E6),  // B8-BF
-        QChar(0x0104), QChar(0x012E), QChar(0x0100), QChar(0x0106), QChar(0x00C4), QChar(0x00C5), QChar(0x0118), QChar(0x0112),  // C0-C7
-        QChar(0x010C), QChar(0x00C9), QChar(0x0179), QChar(0x0116), QChar(0x0122), QChar(0x0136), QChar(0x012A), QChar(0x013B),  // C8-CF
-        QChar(0x0160), QChar(0x0143), QChar(0x0145), QChar(0x00D3), QChar(0x014C), QChar(0x00D5), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x0172), QChar(0x0141), QChar(0x015A), QChar(0x016A), QChar(0x00DC), QChar(0x017B), QChar(0x017D), QChar(0x00DF),  // D8-DF
-        QChar(0x0105), QChar(0x012F), QChar(0x0101), QChar(0x0107), QChar(0x00E4), QChar(0x00E5), QChar(0x0119), QChar(0x0113),  // E0-E7
-        QChar(0x010D), QChar(0x00E9), QChar(0x017A), QChar(0x0117), QChar(0x0123), QChar(0x0137), QChar(0x012B), QChar(0x013C),  // E8-EF
-        QChar(0x0161), QChar(0x0144), QChar(0x0146), QChar(0x00F3), QChar(0x014D), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x0173), QChar(0x0142), QChar(0x015B), QChar(0x016B), QChar(0x00FC), QChar(0x017C), QChar(0x017E), QChar(0x2019)}))},// F8-FF
-    {QStringLiteral("ISO 8859-14"),
-    qMakePair(tr("ISO 8859-14 (Celtic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x1E02), QChar(0x1E03), QChar(0x00A3), QChar(0x010A), QChar(0x010B), QChar(0x1E0A), QChar(0x00A7),  // A0-A7
-        QChar(0x1E80), QChar(0x00A9), QChar(0x1E82), QChar(0x1E0B), QChar(0x1EF2), QChar(0x00AD), QChar(0x00AE), QChar(0x0178),  // A8-AF
-        QChar(0x1E1E), QChar(0x1E1F), QChar(0x0120), QChar(0x0121), QChar(0x1E40), QChar(0x1E41), QChar(0x00B6), QChar(0x1E56),  // B0-B7
-        QChar(0x1E81), QChar(0x1E57), QChar(0x1E83), QChar(0x1E60), QChar(0x1EF3), QChar(0x1E84), QChar(0x1E85), QChar(0x1E61),  // B8-BF
-        QChar(0x00C0), QChar(0x00C1), QChar(0x00C2), QChar(0x00C3), QChar(0x00C4), QChar(0x00C5), QChar(0x00C6), QChar(0x00C7),  // C0-C7
-        QChar(0x00C8), QChar(0x00C9), QChar(0x00CA), QChar(0x00CB), QChar(0x00CC), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0x0174), QChar(0x00D1), QChar(0x00D2), QChar(0x00D3), QChar(0x00D4), QChar(0x00D5), QChar(0x00D6), QChar(0x1E6A),  // D0-D7
-        QChar(0x00D8), QChar(0x00D9), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x00DD), QChar(0x0176), QChar(0x00DF),  // D8-DF
-        QChar(0x00E0), QChar(0x00E1), QChar(0x00E2), QChar(0x00E3), QChar(0x00E4), QChar(0x00E5), QChar(0x00E6), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x00EC), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x0175), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x1E6B),  // F0=F7
-        QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x00FD), QChar(0x0177), QChar(0x00FF)}))},// F8-FF
-    {QStringLiteral("ISO 8859-15"),
-    qMakePair(tr("ISO 8859-15 (Western)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x00A1), QChar(0x00A2), QChar(0x00A3), QChar(0x20AC), QChar(0x00A5), QChar(0x0160), QChar(0x00A7),  // A0-A7
-        QChar(0x0161), QChar(0x00A9), QChar(0x00AA), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00AF),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x017D), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x017E), QChar(0x00B9), QChar(0x00BA), QChar(0x00BB), QChar(0x0152), QChar(0x0153), QChar(0x0178), QChar(0x00BF),  // B8-BF
-        QChar(0x00C0), QChar(0x00C1), QChar(0x00C2), QChar(0x00C3), QChar(0x00C4), QChar(0x00C5), QChar(0x00C6), QChar(0x00C7),  // C0-C7
-        QChar(0x00C8), QChar(0x00C9), QChar(0x00CA), QChar(0x00CB), QChar(0x00CC), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0x00D0), QChar(0x00D1), QChar(0x00D2), QChar(0x00D3), QChar(0x00D4), QChar(0x00D5), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x00D8), QChar(0x00D9), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x00DD), QChar(0x00DE), QChar(0x00DF),  // D8-DF
-        QChar(0x00E0), QChar(0x00E1), QChar(0x00E2), QChar(0x00E3), QChar(0x00E4), QChar(0x00E5), QChar(0x00E6), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x00EC), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x00F0), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x00FD), QChar(0x00FE), QChar(0x00FF)}))},// F8-FF
-    {QStringLiteral("ISO 8859-16"),
-    qMakePair(tr("ISO 8859-16 (Romanian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
-        QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
-        QChar(0x0090), QChar(0x0091), QChar(0x0092), QChar(0x0093), QChar(0x0094), QChar(0x0095), QChar(0x0096), QChar(0x0097),  // 90-97
-        QChar(0x0098), QChar(0x0099), QChar(0x009A), QChar(0x009B), QChar(0x009C), QChar(0x009D), QChar(0x009E), QChar(0x009F),  // 98-9F
-        QChar(0x00A0), QChar(0x0104), QChar(0x0105), QChar(0x0141), QChar(0x20AC), QChar(0x201E), QChar(0x0160), QChar(0x00A7),  // A0-A7
-        QChar(0x0161), QChar(0x00A9), QChar(0x0218), QChar(0x00AB), QChar(0x0179), QChar(0x00AD), QChar(0x017A), QChar(0x017B),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x010C), QChar(0x0142), QChar(0x017D), QChar(0x201D), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x017E), QChar(0x010D), QChar(0x0219), QChar(0x00BB), QChar(0x0152), QChar(0x0153), QChar(0x0178), QChar(0x017C),  // B8-BF
-        QChar(0x00C0), QChar(0x00C1), QChar(0x00C2), QChar(0x0102), QChar(0x00C4), QChar(0x0106), QChar(0x00C6), QChar(0x00C7),  // C0-C7
-        QChar(0x00C8), QChar(0x00C9), QChar(0x00CA), QChar(0x00CB), QChar(0x00CC), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0x0110), QChar(0x0143), QChar(0x00D2), QChar(0x00D3), QChar(0x00D4), QChar(0x0150), QChar(0x00D6), QChar(0x015A),  // D0-D7
-        QChar(0x0170), QChar(0x00D9), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x0118), QChar(0x021A), QChar(0x00DF),  // D8-DF
-        QChar(0x00E0), QChar(0x00E1), QChar(0x00E2), QChar(0x0103), QChar(0x00E4), QChar(0x0107), QChar(0x00E6), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x00EC), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x0111), QChar(0x0144), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x0151), QChar(0x00F6), QChar(0x015B),  // F0=F7
-        QChar(0x0171), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0119), QChar(0x021B), QChar(0x00FF)}))},// F8-FF
-    {QStringLiteral("CP850"),
-    qMakePair(tr("CP850 (Western Europe)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x00C7), QChar(0x00FC), QChar(0x00E9), QChar(0x00E2), QChar(0x00E4), QChar(0x00E0), QChar(0x00E5), QChar(0x00E7),  // 80-87
-        QChar(0x00EA), QChar(0x00EB), QChar(0x00E8), QChar(0x00EF), QChar(0x00EE), QChar(0x00EC), QChar(0x00C4), QChar(0x00C5),  // 88-8F
-        QChar(0x00C9), QChar(0x00E6), QChar(0x00C6), QChar(0x00F4), QChar(0x00F6), QChar(0x00F2), QChar(0x00FB), QChar(0x00F9),  // 90-97
-        QChar(0x00FF), QChar(0x00D6), QChar(0x00DC), QChar(0x00F8), QChar(0x00A3), QChar(0x00D8), QChar(0x00D7), QChar(0x0192),  // 98-9F
-        QChar(0x00E1), QChar(0x00ED), QChar(0x00F3), QChar(0x00FA), QChar(0x00F1), QChar(0x00D1), QChar(0x00AA), QChar(0x00BA),  // A0-A7
-        QChar(0x00BF), QChar(0x00AE), QChar(0x00AC), QChar(0x00BD), QChar(0x00BC), QChar(0x00A1), QChar(0x00AB), QChar(0x00BB),  // A8-AF
-        QChar(0x2591), QChar(0x2592), QChar(0x2593), QChar(0x2502), QChar(0x2524), QChar(0x00C1), QChar(0x00C2), QChar(0x00C0),  // B0-B7
-        QChar(0x00A9), QChar(0x2563), QChar(0x2551), QChar(0x2557), QChar(0x255D), QChar(0x00A2), QChar(0x00A5), QChar(0x2510),  // B8-BF
-        QChar(0x2514), QChar(0x2534), QChar(0x252C), QChar(0x251C), QChar(0x2500), QChar(0x253C), QChar(0x00E3), QChar(0x00C3),  // C0-C7
-        QChar(0x255A), QChar(0x2554), QChar(0x2569), QChar(0x2566), QChar(0x2560), QChar(0x2550), QChar(0x256C), QChar(0x00A4),  // C8-CF
-        QChar(0x00F0), QChar(0x00D0), QChar(0x00CA), QChar(0x00CB), QChar(0x00C8), QChar(0x0131), QChar(0x00CD), QChar(0x00CE),  // D0-D7
-        QChar(0x00CF), QChar(0x2518), QChar(0x250C), QChar(0x2588), QChar(0x2584), QChar(0x00A6), QChar(0x00CC), QChar(0x2580),  // D8-DF
-        QChar(0x00D3), QChar(0x00DF), QChar(0x00D4), QChar(0x00D2), QChar(0x00F5), QChar(0x00D5), QChar(0x00B5), QChar(0x00FE),  // E0-E7
-        QChar(0x00DE), QChar(0x00DA), QChar(0x00DB), QChar(0x00D9), QChar(0x00FD), QChar(0x00DD), QChar(0x00AF), QChar(0x00B4),  // E8-EF
-        QChar(0x00AD), QChar(0x00B1), QChar(0x2017), QChar(0x00BE), QChar(0x00B6), QChar(0x00A7), QChar(0x00F7), QChar(0x00B8),  // F0=F7
-        QChar(0x00B0), QChar(0x00A8), QChar(0x00B7), QChar(0x00B9), QChar(0x00B3), QChar(0x00B2), QChar(0x25A0), QChar(0x00A0)}))},// F8-FF
-    {QStringLiteral("CP866"),
-    qMakePair(tr("CP866 (Cyrillic/Russian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0410), QChar(0x0411), QChar(0x0412), QChar(0x0413), QChar(0x0414), QChar(0x0415), QChar(0x0416), QChar(0x0417),  // 80-87
-        QChar(0x0418), QChar(0x0419), QChar(0x041A), QChar(0x041B), QChar(0x041C), QChar(0x041D), QChar(0x041E), QChar(0x041F),  // 88-8F
-        QChar(0x0420), QChar(0x0421), QChar(0x0422), QChar(0x0423), QChar(0x0424), QChar(0x0425), QChar(0x0426), QChar(0x0427),  // 90-97
-        QChar(0x0428), QChar(0x0429), QChar(0x042A), QChar(0x042B), QChar(0x042C), QChar(0x042D), QChar(0x042E), QChar(0x042F),  // 98-9F
-        QChar(0x0430), QChar(0x0431), QChar(0x0432), QChar(0x0433), QChar(0x0434), QChar(0x0435), QChar(0x0436), QChar(0x0437),  // A0-A7
-        QChar(0x0438), QChar(0x0439), QChar(0x043A), QChar(0x043B), QChar(0x043C), QChar(0x043D), QChar(0x043E), QChar(0x043F),  // A8-AF
-        QChar(0x2591), QChar(0x2592), QChar(0x2593), QChar(0x2502), QChar(0x2524), QChar(0x2561), QChar(0x2562), QChar(0x2556),  // B0-B7
-        QChar(0x2555), QChar(0x2563), QChar(0x2551), QChar(0x2557), QChar(0x255D), QChar(0x255C), QChar(0x255B), QChar(0x2510),  // B8-BF
-        QChar(0x2514), QChar(0x2534), QChar(0x252C), QChar(0x251C), QChar(0x2500), QChar(0x253C), QChar(0x255E), QChar(0x255F),  // C0-C7
-        QChar(0x255A), QChar(0x2554), QChar(0x2569), QChar(0x2566), QChar(0x2560), QChar(0x2550), QChar(0x256C), QChar(0x2567),  // C8-CF
-        QChar(0x2568), QChar(0x2564), QChar(0x2565), QChar(0x2559), QChar(0x2558), QChar(0x2552), QChar(0x2553), QChar(0x256B),  // D0-D7
-        QChar(0x256A), QChar(0x2518), QChar(0x250C), QChar(0x2588), QChar(0x2584), QChar(0x258C), QChar(0x2590), QChar(0x2580),  // D8-DF
-        QChar(0x0440), QChar(0x0441), QChar(0x0442), QChar(0x0443), QChar(0x0444), QChar(0x0445), QChar(0x0446), QChar(0x0447),  // E0-E7
-        QChar(0x0448), QChar(0x0449), QChar(0x044A), QChar(0x044B), QChar(0x044C), QChar(0x044D), QChar(0x044E), QChar(0x044F),  // E8-EF
-        QChar(0x0401), QChar(0x0451), QChar(0x0404), QChar(0x0454), QChar(0x0407), QChar(0x0457), QChar(0x040E), QChar(0x045E),  // F0=F7
-        QChar(0x00B0), QChar(0x2219), QChar(0x00B7), QChar(0x221A), QChar(0x2116), QChar(0x00A4), QChar(0x25A0), QChar(0x00A0)}))},// F8-FF
-    {QStringLiteral("CP874"),
-    qMakePair(tr("ISO 8859-3 (South European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x2026), QChar(0xFFFD), QChar(0xFFFD),  // 80-87
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 98-9F
-        QChar(0x00A0), QChar(0x0E01), QChar(0x0E02), QChar(0x0E03), QChar(0x0E04), QChar(0x0E05), QChar(0x0E06), QChar(0x0E07),  // A0-A7
-        QChar(0x0E08), QChar(0x0E09), QChar(0x0E0A), QChar(0x0E0B), QChar(0x0E0C), QChar(0x0E0D), QChar(0x0E0E), QChar(0x0E0F),  // A8-AF
-        QChar(0x0E10), QChar(0x0E11), QChar(0x0E12), QChar(0x0E13), QChar(0x0E14), QChar(0x0E15), QChar(0x0E16), QChar(0x0E17),  // B0-B7
-        QChar(0x0E18), QChar(0x0E19), QChar(0x0E1A), QChar(0x0E1B), QChar(0x0E1C), QChar(0x0E1D), QChar(0x0E1E), QChar(0x0E1F),  // B8-BF
-        QChar(0x0E20), QChar(0x0E21), QChar(0x0E22), QChar(0x0E23), QChar(0x0E24), QChar(0x0E25), QChar(0x0E26), QChar(0x0E27),  // C0-C7
-        QChar(0x0E28), QChar(0x0E29), QChar(0x0E2A), QChar(0x0E2B), QChar(0x0E2C), QChar(0x0E2D), QChar(0x0E2E), QChar(0x0E2F),  // C8-CF
-        QChar(0x0E30), QChar(0x0E31), QChar(0x0E32), QChar(0x0E33), QChar(0x0E34), QChar(0x0E35), QChar(0x0E36), QChar(0x0E37),  // D0-D7
-        QChar(0x0E38), QChar(0x0E39), QChar(0x0E3A), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x0E3F),  // D8-DF
-        QChar(0x0E40), QChar(0x0E41), QChar(0x0E42), QChar(0x0E43), QChar(0x0E44), QChar(0x0E45), QChar(0x0E46), QChar(0x0E47),  // E0-E7
-        QChar(0x0E48), QChar(0x0E49), QChar(0x0E4A), QChar(0x0E4B), QChar(0x0E4C), QChar(0x0E4D), QChar(0x0E4E), QChar(0x0E4F),  // E8-EF
-        QChar(0x0E50), QChar(0x0E51), QChar(0x0E52), QChar(0x0E53), QChar(0x0E54), QChar(0x0E55), QChar(0x0E56), QChar(0x0E57),  // F0=F7
-        QChar(0x0E58), QChar(0x0E59), QChar(0x0E5A), QChar(0x0E5B), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD)}))},// F8-FF
-    {QStringLiteral("KOI8-R"),
-    qMakePair(tr("KOI8-R (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x2500), QChar(0x2502), QChar(0x250C), QChar(0x2510), QChar(0x2514), QChar(0x2518), QChar(0x251C), QChar(0x2524),  // 80-87
-        QChar(0x252C), QChar(0x2534), QChar(0x253C), QChar(0x2580), QChar(0x2584), QChar(0x2588), QChar(0x258C), QChar(0x2590),  // 88-8F
-        QChar(0x2591), QChar(0x2592), QChar(0x2593), QChar(0x2320), QChar(0x25A0), QChar(0x2219), QChar(0x221A), QChar(0x2248),  // 90-97
-        QChar(0x2264), QChar(0x2265), QChar(0x00A0), QChar(0x2321), QChar(0x00B0), QChar(0x00B2), QChar(0x00B7), QChar(0x00F7),  // 98-9F
-        QChar(0x2550), QChar(0x2551), QChar(0x2552), QChar(0x0451), QChar(0x2553), QChar(0x2554), QChar(0x2555), QChar(0x2556),  // A0-A7
-        QChar(0x2557), QChar(0x2558), QChar(0x2559), QChar(0x255A), QChar(0x255B), QChar(0x255C), QChar(0x255D), QChar(0x255E),  // A8-AF
-        QChar(0x255F), QChar(0x2560), QChar(0x2561), QChar(0x0401), QChar(0x2562), QChar(0x2563), QChar(0x2564), QChar(0x2565),  // B0-B7
-        QChar(0x2566), QChar(0x2567), QChar(0x2568), QChar(0x2569), QChar(0x256A), QChar(0x256B), QChar(0x256C), QChar(0x00A9),  // B8-BF
-        QChar(0x044E), QChar(0x0430), QChar(0x0431), QChar(0x0446), QChar(0x0434), QChar(0x0435), QChar(0x0444), QChar(0x0433),  // C0-C7
-        QChar(0x0445), QChar(0x0438), QChar(0x0439), QChar(0x043A), QChar(0x043B), QChar(0x043C), QChar(0x043D), QChar(0x043E),  // C8-CF
-        QChar(0x043F), QChar(0x044F), QChar(0x0440), QChar(0x0441), QChar(0x0442), QChar(0x0443), QChar(0x0436), QChar(0x0432),  // D0-D7
-        QChar(0x044C), QChar(0x044B), QChar(0x0437), QChar(0x0448), QChar(0x044D), QChar(0x0449), QChar(0x0447), QChar(0x044A),  // D8-DF
-        QChar(0x042E), QChar(0x0410), QChar(0x0411), QChar(0x0426), QChar(0x0414), QChar(0x0415), QChar(0x0424), QChar(0x0413),  // E0-E7
-        QChar(0x0425), QChar(0x0418), QChar(0x0419), QChar(0x041A), QChar(0x041B), QChar(0x041C), QChar(0x041D), QChar(0x041E),  // E8-EF
-        QChar(0x041F), QChar(0x042F), QChar(0x0420), QChar(0x0421), QChar(0x0422), QChar(0x0423), QChar(0x0416), QChar(0x0412),  // F0=F7
-        QChar(0x042C), QChar(0x042B), QChar(0x0417), QChar(0x0428), QChar(0x042D), QChar(0x0429), QChar(0x0427), QChar(0x042A)}))},// F8-FF
-    {QStringLiteral("KOI8-U"),
-    qMakePair(tr("KOI8-U (Cyrillic/Ukrainian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x2500), QChar(0x2502), QChar(0x250C), QChar(0x2510), QChar(0x2514), QChar(0x2518), QChar(0x251C), QChar(0x2524),  // 80-87
-        QChar(0x252C), QChar(0x2534), QChar(0x253C), QChar(0x2580), QChar(0x2584), QChar(0x2588), QChar(0x258C), QChar(0x2590),  // 88-8F
-        QChar(0x2591), QChar(0x2592), QChar(0x2593), QChar(0x2320), QChar(0x25A0), QChar(0x2219), QChar(0x221A), QChar(0x2248),  // 90-97
-        QChar(0x2264), QChar(0x2265), QChar(0x00A0), QChar(0x2321), QChar(0x00B0), QChar(0x00B2), QChar(0x00B7), QChar(0x00F7),  // 98-9F
-        QChar(0x2550), QChar(0x2551), QChar(0x2552), QChar(0x0451), QChar(0x0454), QChar(0x2554), QChar(0x0456), QChar(0x0457),  // A0-A7
-        QChar(0x2557), QChar(0x2558), QChar(0x2559), QChar(0x255A), QChar(0x255B), QChar(0x0491), QChar(0x255D), QChar(0x255E),  // A8-AF
-        QChar(0x255F), QChar(0x2560), QChar(0x2561), QChar(0x0401), QChar(0x0404), QChar(0x2563), QChar(0x0406), QChar(0x0407),  // B0-B7
-        QChar(0x2566), QChar(0x2567), QChar(0x2568), QChar(0x2569), QChar(0x256A), QChar(0x0490), QChar(0x256C), QChar(0x00A9),  // B8-BF
-        QChar(0x044E), QChar(0x0430), QChar(0x0431), QChar(0x0446), QChar(0x0434), QChar(0x0435), QChar(0x0444), QChar(0x0433),  // C0-C7
-        QChar(0x0445), QChar(0x0438), QChar(0x0439), QChar(0x043A), QChar(0x043B), QChar(0x043C), QChar(0x043D), QChar(0x043E),  // C8-CF
-        QChar(0x043F), QChar(0x044F), QChar(0x0440), QChar(0x0441), QChar(0x0442), QChar(0x0443), QChar(0x0436), QChar(0x0432),  // D0-D7
-        QChar(0x044C), QChar(0x044B), QChar(0x0437), QChar(0x0448), QChar(0x044D), QChar(0x0449), QChar(0x0447), QChar(0x044A),  // D8-DF
-        QChar(0x042E), QChar(0x0410), QChar(0x0411), QChar(0x0426), QChar(0x0414), QChar(0x0415), QChar(0x0424), QChar(0x0413),  // E0-E7
-        QChar(0x0425), QChar(0x0418), QChar(0x0419), QChar(0x041A), QChar(0x041B), QChar(0x041C), QChar(0x041D), QChar(0x041E),  // E8-EF
-        QChar(0x041F), QChar(0x042F), QChar(0x0420), QChar(0x0421), QChar(0x0422), QChar(0x0423), QChar(0x0416), QChar(0x0412),  // F0=F7
-        QChar(0x042C), QChar(0x042B), QChar(0x0417), QChar(0x0428), QChar(0x042D), QChar(0x0429), QChar(0x0427), QChar(0x042A)}))},// F8-FF
-    {QStringLiteral("MACINTOSH"),
-    qMakePair(tr("MACINTOSH", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x00C4), QChar(0x00C5), QChar(0x00C7), QChar(0x00C9), QChar(0x00D1), QChar(0x00D6), QChar(0x00DC), QChar(0x00E1),  // 80-87
-        QChar(0x00E0), QChar(0x00E2), QChar(0x00E4), QChar(0x00E3), QChar(0x00E5), QChar(0x00E7), QChar(0x00E9), QChar(0x00E8),  // 88-8F
-        QChar(0x00EA), QChar(0x00EB), QChar(0x00ED), QChar(0x00EC), QChar(0x00EE), QChar(0x00EF), QChar(0x00F1), QChar(0x00F3),  // 90-97
-        QChar(0x00F2), QChar(0x00F4), QChar(0x00F6), QChar(0x00F5), QChar(0x00FA), QChar(0x00F9), QChar(0x00FB), QChar(0x00FC),  // 98-9F
-        QChar(0x2020), QChar(0x00B0), QChar(0x00A2), QChar(0x00A3), QChar(0x00A7), QChar(0x2022), QChar(0x00B6), QChar(0x00DF),  // A0-A7
-        QChar(0x00AE), QChar(0x00A9), QChar(0x2122), QChar(0x00B4), QChar(0x00A8), QChar(0x2260), QChar(0x00C6), QChar(0x00D8),  // A8-AF
-        QChar(0x221E), QChar(0x00B1), QChar(0x2264), QChar(0x2265), QChar(0x00A5), QChar(0x00B5), QChar(0x2202), QChar(0x2211),  // B0-B7
-        QChar(0x220F), QChar(0x03C0), QChar(0x222B), QChar(0x00AA), QChar(0x00BA), QChar(0x03A9), QChar(0x00E6), QChar(0x00F8),  // B8-BF
-        QChar(0x00BF), QChar(0x00A1), QChar(0x00AC), QChar(0x221A), QChar(0x0192), QChar(0x2248), QChar(0x2206), QChar(0x00AB),  // C0-C7
-        QChar(0x00BB), QChar(0x2026), QChar(0x00A0), QChar(0x00C0), QChar(0x00C3), QChar(0x00D5), QChar(0x0152), QChar(0x0153),  // C8-CF
-        QChar(0x2013), QChar(0x2014), QChar(0x201C), QChar(0x201D), QChar(0x2018), QChar(0x2019), QChar(0x00F7), QChar(0x25CA),  // D0-D7
-        QChar(0x00FF), QChar(0x0178), QChar(0x2044), QChar(0x20AC), QChar(0x2039), QChar(0x203A), QChar(0xFB01), QChar(0xFB02),  // D8-DF
-        QChar(0x2021), QChar(0x00B7), QChar(0x201A), QChar(0x201E), QChar(0x2030), QChar(0x00C2), QChar(0x00CA), QChar(0x00C1),  // E0-E7
-        QChar(0x00CB), QChar(0x00C8), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF), QChar(0x00CC), QChar(0x00D3), QChar(0x00D4),  // E8-EF
-        QChar(0xF8FF), QChar(0x00D2), QChar(0x00DA), QChar(0x00DB), QChar(0x00D9), QChar(0x0131), QChar(0x02C6), QChar(0x02DC),  // F0=F7
-        QChar(0x00AF), QChar(0x02D8), QChar(0x02D9), QChar(0x02DA), QChar(0x00B8), QChar(0x02DD), QChar(0x02DB), QChar(0x02C7)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1250"),
-    qMakePair(tr("WINDOWS-1250 (Central European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0xFFFD), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0xFFFD), QChar(0x2030), QChar(0x0160), QChar(0x2039), QChar(0x015A), QChar(0x0164), QChar(0x017D), QChar(0x0179),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0xFFFD), QChar(0x2122), QChar(0x0161), QChar(0x203A), QChar(0x015B), QChar(0x0165), QChar(0x017E), QChar(0x017A),  // 98-9F
-        QChar(0x00A0), QChar(0x02C7), QChar(0x02D8), QChar(0x0141), QChar(0x00A4), QChar(0x0104), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0x015E), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x017B),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x02DB), QChar(0x0142), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x0105), QChar(0x015F), QChar(0x00BB), QChar(0x013D), QChar(0x02DD), QChar(0x013E), QChar(0x017C),  // B8-BF
-        QChar(0x0154), QChar(0x00C1), QChar(0x00C2), QChar(0x0102), QChar(0x00C4), QChar(0x0139), QChar(0x0106), QChar(0x00C7),  // C0-C7
-        QChar(0x010C), QChar(0x00C9), QChar(0x0118), QChar(0x00CB), QChar(0x011A), QChar(0x00CD), QChar(0x00CE), QChar(0x010E),  // C8-CF
-        QChar(0x0110), QChar(0x0143), QChar(0x0147), QChar(0x00D3), QChar(0x00D4), QChar(0x0150), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x0158), QChar(0x016E), QChar(0x00DA), QChar(0x0170), QChar(0x00DC), QChar(0x00DD), QChar(0x0162), QChar(0x00DF),  // D8-DF
-        QChar(0x0155), QChar(0x00E1), QChar(0x00E2), QChar(0x0103), QChar(0x00E4), QChar(0x013A), QChar(0x0107), QChar(0x00E7),  // E0-E7
-        QChar(0x010D), QChar(0x00E9), QChar(0x0119), QChar(0x00EB), QChar(0x011B), QChar(0x00ED), QChar(0x00EE), QChar(0x010F),  // E8-EF
-        QChar(0x0111), QChar(0x0144), QChar(0x0148), QChar(0x00F3), QChar(0x00F4), QChar(0x0151), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x0159), QChar(0x016F), QChar(0x00FA), QChar(0x0171), QChar(0x00FC), QChar(0x00FD), QChar(0x0163), QChar(0x02D9)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1251"),
-    qMakePair(tr("WINDOWS-1251 (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x0402), QChar(0x0403), QChar(0x201A), QChar(0x0453), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0x20AC), QChar(0x2030), QChar(0x0409), QChar(0x2039), QChar(0x040A), QChar(0x040C), QChar(0x040B), QChar(0x040F),  // 88-8F
-        QChar(0x0452), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0xFFFD), QChar(0x2122), QChar(0x0459), QChar(0x203A), QChar(0x045A), QChar(0x045C), QChar(0x045B), QChar(0x045F),  // 98-9F
-        QChar(0x00A0), QChar(0x040E), QChar(0x045E), QChar(0x0408), QChar(0x00A4), QChar(0x0490), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x0401), QChar(0x00A9), QChar(0x0404), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x0407),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x0406), QChar(0x0456), QChar(0x0491), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x0451), QChar(0x2116), QChar(0x0454), QChar(0x00BB), QChar(0x0458), QChar(0x0405), QChar(0x0455), QChar(0x0457),  // B8-BF
-        QChar(0x0410), QChar(0x0411), QChar(0x0412), QChar(0x0413), QChar(0x0414), QChar(0x0415), QChar(0x0416), QChar(0x0417),  // C0-C7
-        QChar(0x0418), QChar(0x0419), QChar(0x041A), QChar(0x041B), QChar(0x041C), QChar(0x041D), QChar(0x041E), QChar(0x041F),  // C8-CF
-        QChar(0x0420), QChar(0x0421), QChar(0x0422), QChar(0x0423), QChar(0x0424), QChar(0x0425), QChar(0x0426), QChar(0x0427),  // D0-D7
-        QChar(0x0428), QChar(0x0429), QChar(0x042A), QChar(0x042B), QChar(0x042C), QChar(0x042D), QChar(0x042E), QChar(0x042F),  // D8-DF
-        QChar(0x0430), QChar(0x0431), QChar(0x0432), QChar(0x0433), QChar(0x0434), QChar(0x0435), QChar(0x0436), QChar(0x0437),  // E0-E7
-        QChar(0x0438), QChar(0x0439), QChar(0x043A), QChar(0x043B), QChar(0x043C), QChar(0x043D), QChar(0x043E), QChar(0x043F),  // E8-EF
-        QChar(0x0440), QChar(0x0441), QChar(0x0442), QChar(0x0443), QChar(0x0444), QChar(0x0445), QChar(0x0446), QChar(0x0447),  // F0=F7
-        QChar(0x0448), QChar(0x0449), QChar(0x044A), QChar(0x044B), QChar(0x044C), QChar(0x044D), QChar(0x044E), QChar(0x044F)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1252"),
-    qMakePair(tr("WINDOWS-1252 (Western)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0x02C6), QChar(0x2030), QChar(0x0160), QChar(0x2039), QChar(0x0152), QChar(0xFFFD), QChar(0x017D), QChar(0xFFFD),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0x02DC), QChar(0x2122), QChar(0x0161), QChar(0x203A), QChar(0x0153), QChar(0xFFFD), QChar(0x017E), QChar(0x0178),  // 98-9F
-        QChar(0x00A0), QChar(0x00A1), QChar(0x00A2), QChar(0x00A3), QChar(0x00A4), QChar(0x00A5), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0x00AA), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00AF),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x00B9), QChar(0x00BA), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0x00BF),  // B8-BF
-        QChar(0x00C0), QChar(0x00C1), QChar(0x00C2), QChar(0x00C3), QChar(0x00C4), QChar(0x00C5), QChar(0x00C6), QChar(0x00C7),  // C0-C7
-        QChar(0x00C8), QChar(0x00C9), QChar(0x00CA), QChar(0x00CB), QChar(0x00CC), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0x00D0), QChar(0x00D1), QChar(0x00D2), QChar(0x00D3), QChar(0x00D4), QChar(0x00D5), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x00D8), QChar(0x00D9), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x00DD), QChar(0x00DE), QChar(0x00DF),  // D8-DF
-        QChar(0x00E0), QChar(0x00E1), QChar(0x00E2), QChar(0x00E3), QChar(0x00E4), QChar(0x00E5), QChar(0x00E6), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x00EC), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x00F0), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x00FD), QChar(0x00FE), QChar(0x00FF)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1253"),
-    qMakePair(tr("WINDOWS-1253 (Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0xFFFD), QChar(0x2030), QChar(0xFFFD), QChar(0x2039), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0xFFFD), QChar(0x2122), QChar(0xFFFD), QChar(0x203A), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 98-9F
-        QChar(0x00A0), QChar(0x0385), QChar(0x0386), QChar(0x00A3), QChar(0x00A4), QChar(0x00A5), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0xFFFD), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x2015),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x0384), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x0388), QChar(0x0389), QChar(0x038A), QChar(0x00BB), QChar(0x038C), QChar(0x00BD), QChar(0x038E), QChar(0x038F),  // B8-BF
-        QChar(0x0390), QChar(0x0391), QChar(0x0392), QChar(0x0393), QChar(0x0394), QChar(0x0395), QChar(0x0396), QChar(0x0397),  // C0-C7
-        QChar(0x0398), QChar(0x0399), QChar(0x039A), QChar(0x039B), QChar(0x039C), QChar(0x039D), QChar(0x039E), QChar(0x039F),  // C8-CF
-        QChar(0x03A0), QChar(0x03A1), QChar(0xFFFD), QChar(0x03A3), QChar(0x03A4), QChar(0x03A5), QChar(0x03A6), QChar(0x03A7),  // D0-D7
-        QChar(0x03A8), QChar(0x03A9), QChar(0x03AA), QChar(0x03AB), QChar(0x03AC), QChar(0x03AD), QChar(0x03AE), QChar(0x03AF),  // D8-DF
-        QChar(0x03B0), QChar(0x03B1), QChar(0x03B2), QChar(0x03B3), QChar(0x03B4), QChar(0x03B5), QChar(0x03B6), QChar(0x03B7),  // E0-E7
-        QChar(0x03B8), QChar(0x03B9), QChar(0x03BA), QChar(0x03BB), QChar(0x03BC), QChar(0x03BD), QChar(0x03BE), QChar(0x03BF),  // E8-EF
-        QChar(0x03C0), QChar(0x03C1), QChar(0x03C2), QChar(0x03C3), QChar(0x03C4), QChar(0x03C5), QChar(0x03C6), QChar(0x03C7),  // F0=F7
-        QChar(0x03C8), QChar(0x03C9), QChar(0x03CA), QChar(0x03CB), QChar(0x03CC), QChar(0x03CD), QChar(0x03CE), QChar(0xFFFD)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1254"),
-    qMakePair(tr("WINDOWS-1254 (Turkish)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0x02C6), QChar(0x2030), QChar(0x0160), QChar(0x2039), QChar(0x0152), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0x02DC), QChar(0x2122), QChar(0x0161), QChar(0x203A), QChar(0x0153), QChar(0xFFFD), QChar(0xFFFD), QChar(0x0178),  // 98-9F
-        QChar(0x00A0), QChar(0x00A1), QChar(0x00A2), QChar(0x00A3), QChar(0x00A4), QChar(0x00A5), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0x00AA), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00AF),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x00B9), QChar(0x00BA), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0x00BF),  // B8-BF
-        QChar(0x00C0), QChar(0x00C1), QChar(0x00C2), QChar(0x00C3), QChar(0x00C4), QChar(0x00C5), QChar(0x00C6), QChar(0x00C7),  // C0-C7
-        QChar(0x00C8), QChar(0x00C9), QChar(0x00CA), QChar(0x00CB), QChar(0x00CC), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0x011E), QChar(0x00D1), QChar(0x00D2), QChar(0x00D3), QChar(0x00D4), QChar(0x00D5), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x00D8), QChar(0x00D9), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x0130), QChar(0x015E), QChar(0x00DF),  // D8-DF
-        QChar(0x00E0), QChar(0x00E1), QChar(0x00E2), QChar(0x00E3), QChar(0x00E4), QChar(0x00E5), QChar(0x00E6), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x00EC), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x011F), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0131), QChar(0x015F), QChar(0x00FF)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1255"),
-    qMakePair(tr("WINDOWS-1255 (Hebrew)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0x02C6), QChar(0x2030), QChar(0xFFFD), QChar(0x2039), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0x02DC), QChar(0x2122), QChar(0xFFFD), QChar(0x203A), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 98-9F
-        QChar(0x00A0), QChar(0x00A1), QChar(0x00A2), QChar(0x00A3), QChar(0x20AA), QChar(0x00A5), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0x00D7), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00AF),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x00B9), QChar(0x00F7), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0x00BF),  // B8-BF
-        QChar(0x05B0), QChar(0x05B1), QChar(0x05B2), QChar(0x05B3), QChar(0x05B4), QChar(0x05B5), QChar(0x05B6), QChar(0x05B7),  // C0-C7
-        QChar(0x05B8), QChar(0x05B9), QChar(0xFFFD), QChar(0x05BB), QChar(0x05BC), QChar(0x05BD), QChar(0x05BE), QChar(0x05BF),  // C8-CF
-        QChar(0x05C0), QChar(0x05C1), QChar(0x05C2), QChar(0x05C3), QChar(0x05F0), QChar(0x05F1), QChar(0x05F2), QChar(0x05F3),  // D0-D7
-        QChar(0x05F4), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // D8-DF
-        QChar(0x05D0), QChar(0x05D1), QChar(0x05D2), QChar(0x05D3), QChar(0x05D4), QChar(0x05D5), QChar(0x05D6), QChar(0x05D7),  // E0-E7
-        QChar(0x05D8), QChar(0x05D9), QChar(0x05DA), QChar(0x05DB), QChar(0x05DC), QChar(0x05DD), QChar(0x05DE), QChar(0x05DF),  // E8-EF
-        QChar(0x05E0), QChar(0x05E1), QChar(0x05E2), QChar(0x05E3), QChar(0x05E4), QChar(0x05E5), QChar(0x05E6), QChar(0x05E7),  // F0=F7
-        QChar(0x05E8), QChar(0x05E9), QChar(0x05EA), QChar(0xFFFD), QChar(0xFFFD), QChar(0x200E), QChar(0x200F), QChar(0xFFFD)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1256"),
-    qMakePair(tr("WINDOWS-1256 (Arabic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0x067E), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0x02C6), QChar(0x2030), QChar(0x0679), QChar(0x2039), QChar(0x0152), QChar(0x0686), QChar(0x0698), QChar(0x0688),  // 88-8F
-        QChar(0x06AF), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0x06A9), QChar(0x2122), QChar(0x0691), QChar(0x203A), QChar(0x0153), QChar(0x200C), QChar(0x200D), QChar(0x06BA),  // 98-9F
-        QChar(0x00A0), QChar(0x060C), QChar(0x00A2), QChar(0x00A3), QChar(0x00A4), QChar(0x00A5), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0x06BE), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00AF),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x00B9), QChar(0x061B), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0x061F),  // B8-BF
-        QChar(0x06C1), QChar(0x0621), QChar(0x0622), QChar(0x0623), QChar(0x0624), QChar(0x0625), QChar(0x0626), QChar(0x0627),  // C0-C7
-        QChar(0x0628), QChar(0x0629), QChar(0x062A), QChar(0x062B), QChar(0x062C), QChar(0x062D), QChar(0x062E), QChar(0x062F),  // C8-CF
-        QChar(0x0630), QChar(0x0631), QChar(0x0632), QChar(0x0633), QChar(0x0634), QChar(0x0635), QChar(0x0636), QChar(0x00D7),  // D0-D7
-        QChar(0x0637), QChar(0x0638), QChar(0x0639), QChar(0x063A), QChar(0x0640), QChar(0x0641), QChar(0x0642), QChar(0x0643),  // D8-DF
-        QChar(0x00E0), QChar(0x0644), QChar(0x00E2), QChar(0x0645), QChar(0x0646), QChar(0x0647), QChar(0x0648), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x0649), QChar(0x064A), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x064B), QChar(0x064C), QChar(0x064D), QChar(0x064E), QChar(0x00F4), QChar(0x064F), QChar(0x0650), QChar(0x00F7),  // F0=F7
-        QChar(0x0651), QChar(0x00F9), QChar(0x0652), QChar(0x00FB), QChar(0x00FC), QChar(0x200E), QChar(0x200F), QChar(0x06D2)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1257"),
-    qMakePair(tr("WINDOWS-1257 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0xFFFD), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0xFFFD), QChar(0x2030), QChar(0xFFFD), QChar(0x2039), QChar(0xFFFD), QChar(0x00A8), QChar(0x02C7), QChar(0x00B8),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0xFFFD), QChar(0x2122), QChar(0xFFFD), QChar(0x203A), QChar(0xFFFD), QChar(0x00AF), QChar(0x02DB), QChar(0xFFFD),  // 98-9F
-        QChar(0x00A0), QChar(0xFFFD), QChar(0x00A2), QChar(0x00A3), QChar(0x00A4), QChar(0xFFFD), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00D8), QChar(0x00A9), QChar(0x0156), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00C6),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00F8), QChar(0x00B9), QChar(0x0157), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0x00E6),  // B8-BF
-        QChar(0x0104), QChar(0x012E), QChar(0x0100), QChar(0x0106), QChar(0x00C4), QChar(0x00C5), QChar(0x0118), QChar(0x0112),  // C0-C7
-        QChar(0x010C), QChar(0x00C9), QChar(0x0179), QChar(0x0116), QChar(0x0122), QChar(0x0136), QChar(0x012A), QChar(0x013B),  // C8-CF
-        QChar(0x0160), QChar(0x0143), QChar(0x0145), QChar(0x00D3), QChar(0x014C), QChar(0x00D5), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x0172), QChar(0x0141), QChar(0x015A), QChar(0x016A), QChar(0x00DC), QChar(0x017B), QChar(0x017D), QChar(0x00DF),  // D8-DF
-        QChar(0x0105), QChar(0x012F), QChar(0x0101), QChar(0x0107), QChar(0x00E4), QChar(0x00E5), QChar(0x0119), QChar(0x0113),  // E0-E7
-        QChar(0x010D), QChar(0x00E9), QChar(0x017A), QChar(0x0117), QChar(0x0123), QChar(0x0137), QChar(0x012B), QChar(0x013C),  // E8-EF
-        QChar(0x0161), QChar(0x0144), QChar(0x0146), QChar(0x00F3), QChar(0x014D), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x0173), QChar(0x0142), QChar(0x015B), QChar(0x016B), QChar(0x00FC), QChar(0x017C), QChar(0x017E), QChar(0x02D9)}))},// F8-FF
-    {QStringLiteral("WINDOWS-1258"),
-    qMakePair(tr("WINDOWS-1258 (Vietnamese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
-        //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
-       {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
-        QChar(0x02C6), QChar(0x2030), QChar(0xFFFD), QChar(0x2039), QChar(0x0152), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
-        QChar(0xFFFD), QChar(0x2018), QChar(0x2019), QChar(0x201C), QChar(0x201D), QChar(0x2022), QChar(0x2013), QChar(0x2014),  // 90-97
-        QChar(0x02DC), QChar(0x2122), QChar(0xFFFD), QChar(0x203A), QChar(0x0153), QChar(0xFFFD), QChar(0xFFFD), QChar(0x0178),  // 98-9F
-        QChar(0x00A0), QChar(0x00A1), QChar(0x00A2), QChar(0x00A3), QChar(0x00A4), QChar(0x00A5), QChar(0x00A6), QChar(0x00A7),  // A0-A7
-        QChar(0x00A8), QChar(0x00A9), QChar(0x00AA), QChar(0x00AB), QChar(0x00AC), QChar(0x00AD), QChar(0x00AE), QChar(0x00AF),  // A8-AF
-        QChar(0x00B0), QChar(0x00B1), QChar(0x00B2), QChar(0x00B3), QChar(0x00B4), QChar(0x00B5), QChar(0x00B6), QChar(0x00B7),  // B0-B7
-        QChar(0x00B8), QChar(0x00B9), QChar(0x00BA), QChar(0x00BB), QChar(0x00BC), QChar(0x00BD), QChar(0x00BE), QChar(0x00BF),  // B8-BF
-        QChar(0x00C0), QChar(0x00C1), QChar(0x00C2), QChar(0x0102), QChar(0x00C4), QChar(0x00C5), QChar(0x00C6), QChar(0x00C7),  // C0-C7
-        QChar(0x00C8), QChar(0x00C9), QChar(0x00CA), QChar(0x00CB), QChar(0x0300), QChar(0x00CD), QChar(0x00CE), QChar(0x00CF),  // C8-CF
-        QChar(0x0110), QChar(0x00D1), QChar(0x0309), QChar(0x00D3), QChar(0x00D4), QChar(0x01A0), QChar(0x00D6), QChar(0x00D7),  // D0-D7
-        QChar(0x00D8), QChar(0x00D9), QChar(0x00DA), QChar(0x00DB), QChar(0x00DC), QChar(0x01AF), QChar(0x0303), QChar(0x00DF),  // D8-DF
-        QChar(0x00E0), QChar(0x00E1), QChar(0x00E2), QChar(0x0103), QChar(0x00E4), QChar(0x00E5), QChar(0x00E6), QChar(0x00E7),  // E0-E7
-        QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x0301), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
-        QChar(0x0111), QChar(0x00F1), QChar(0x0323), QChar(0x00F3), QChar(0x00F4), QChar(0x01A1), QChar(0x00F6), QChar(0x00F7),  // F0=F7
-        QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x01B0), QChar(0x20AB), QChar(0x00FF)}))}// F8-FF
-};
-// clang-format on
-
-// a map of supported MXP elements and attributes
-const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
-    {QStringLiteral("send"), {"href", "hint", "prompt"}},
-    {QStringLiteral("br"), {}},
-    {QStringLiteral("a"), {"href", "hint"}}
-};
-
-// Default constructor:
-TChar::TChar()
-: mFgColor(Qt::white)
-, mBgColor(Qt::black)
-, mFlags(None)
-, mIsSelected(false)
-, mLinkIndex(0)
+// credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
+int64_t physicalMemoryTotal()
 {
+#if defined(Q_OS_WINDOWS)
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    return static_cast<int64_t>(memInfo.ullTotalPhys);
+#elif defined(Q_OS_HURD)
+    // GNU/Hurd does not have a sysinfo struct  yet:
+    errno = 0;
+    int64_t pageSize = sysconf(_SC_PAGESIZE);
+    if (pageSize < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PAGESIZE).";
+        }
+        return -1;
+    }
+    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
+    if (pageCount < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PHYS_PAGES).";
+        }
+        return -1;
+    }
+    return pageSize * pageCount;
+#elif defined(Q_OS_MACOS)
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
+        return memInfo;
+    }
+
+    return -1;
+#elif defined(Q_OS_OPENBSD)
+    // Very similar to MacOS but uses a different second level name
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_PHYSMEM64; // Or do we really want HW_USERMEM64?
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
+        return memInfo;
+    }
+
+    return -1;
+#elif defined(Q_OS_UNIX)
+    // Including both GNU/Linux and FreeBSD:
+    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
+    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
+    struct sysinfo memInfo;
+    sysinfo(&memInfo);
+    int64_t const total = memInfo.totalram;
+    return total * static_cast<int64_t>(memInfo.mem_unit);
+#else
+    return -1;
+#endif
 }
 
-TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex)
-: mFgColor(fg)
-, mBgColor(bg)
+// Every line appended to a buffer is stamped with the time it arrived, and
+// QTime::currentTime() consults the timezone database on each call - which on
+// glibc means a stat() of /etc/localtime per line. The stamp has millisecond
+// resolution at best, so a burst of lines arriving within the same millisecond
+// all get the same string: work it out once and hand out copies until either
+// the millisecond or the (translated, so changeable) format moves on.
+QString currentTimeStamp()
+{
+    static qint64 cachedMSecs = 0;
+    static QString cachedFormat;
+    static QString cachedStamp;
+
+    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat != TBuffer::smTimeStampFormat) {
+        // The stamp is filed under the millisecond it was read in rather than
+        // the one the check above read, which can be the one before it if the
+        // clock ticks between the two. Filing it under the earlier one would
+        // stamp the rest of that millisecond's lines a millisecond early.
+        const QDateTime now = QDateTime::currentDateTime();
+        cachedMSecs = now.toMSecsSinceEpoch();
+        cachedFormat = TBuffer::smTimeStampFormat;
+        cachedStamp = now.time().toString(TBuffer::smTimeStampFormat);
+    }
+    return cachedStamp;
+}
+
+// How much of a string sequence (OSC, DCS, SOS, PM or APC) is held while
+// waiting for its terminator - beyond this the bytes are discarded as they
+// arrive rather than buffered, so a server that never terminates one cannot
+// grow mIncompleteSequenceBytes without bound
+constexpr size_t MAX_OSC_SEQUENCE_LENGTH = 4096;
+
+// How much of a discarded string sequence to quote in the warning about it
+constexpr size_t STRING_SEQUENCE_EXCERPT_LENGTH = 40;
+
+// Whether a byte ends the line a string sequence (OSC, DCS, SOS, PM or APC)
+// started on, and with it the sequence: everything CHAR_IS_COMMIT_CHAR() calls
+// the end of a line except the carriage return. cTelnet strips the game's own
+// carriage returns and injects one of its own once the game goes quiet, to
+// flush a line that is still arriving (cTelnet::slot_timerPosting()), so
+// treating that one as an ending would cut a payload short merely for being
+// bigger than one network packet timeout's worth of data
+bool endsStringSequence(const char byte)
+{
+    return byte != CHAR_CARRIAGE_RETURN && CHAR_IS_COMMIT_CHAR(byte);
+}
+
+// How much of a chunk of game data the multi-byte decoders may look at. cTelnet
+// strips every carriage return the game itself sends (cTelnet::readPipe()) and,
+// once the game has fallen quiet part way through a line, appends one of its own
+// as the last byte of the chunk to flush what has arrived so far
+// (cTelnet::slot_timerPosting()). So a carriage return reaching here is Mudlet's
+// own marker rather than data, and a multi-byte sequence must not be decoded
+// against it: it fails the continuation byte test, which loses the character to a
+// replacement mark and, in Big5 and the GB encodings, eats the byte that follows
+// it as well. Held out of the decoders' reach the marker behaves like any other
+// chunk boundary - the unfinished sequence waits for the rest of its bytes - and
+// it still commits the line it came to flush
+size_t decodableLength(const std::string& data, const size_t length, const bool isFromServer)
+{
+    if (isFromServer && length && data[length - 1] == CHAR_CARRIAGE_RETURN) {
+        return length - 1;
+    }
+    return length;
+}
+
+// A byte the decoder's main loop would turn into exactly one QChar of the same
+// value whatever the session's encoding, so runs of them can be copied in one
+// go. That is every 7-bit byte except the four the loop acts on itself: the
+// two line endings, End of Transmission and ESC. The remaining C0 controls are
+// deliberately included - none of them is special-cased on the text path, so
+// each decodes to itself like any printable character. DEL is excluded because
+// EUC-KR alone treats it as an invalid first byte and renders it as the
+// replacement character.
+bool bulkCopyableTextByte(const char byte)
+{
+    return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
+}
+
+// Maximum length for a CSI sequence's parameter string before aborting - a
+// valid one is only a handful of bytes, so this only trips on a malformed or
+// hostile sequence that never sends a final byte (defense against a server
+// growing mIncompleteSequenceBytes without bound across packets)
+constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
+// Enough inline room for any SGR parameter string a game actually sends,
+// so the common case is handed over without touching the heap:
+constexpr qsizetype SGR_INLINE_CHARS = 64;
+
+// Helper to interpret JSON values as boolean
+// Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
+bool jsonBoolValue(const QJsonValue& val)
+{
+    return val.toBool() || (val.isDouble() && val.toDouble() != 0);
+}
+
+// One parameter of an OSC 8 URI query, kept exactly as it arrived. The styling parser decodes
+// only the values it consumes and decodeOSC() rebuilds the URL it opens out of the rest, so
+// neither can work from a query that has already been decoded.
+struct RawQueryParameter
+{
+    QString text;  // the whole parameter as it appeared, for rebuilding the query
+    QString key;   // raw key, empty when the parameter has no separator
+    QString value; // raw value, empty when the parameter has no separator
+    bool hasSeparator = false;
+};
+
+// One character of a possibly percent-encoded value, with how much of the raw query it took up.
+// A server may encode part of a config object and leave the rest raw, so the scan below has to
+// recognise a brace whether it arrived as '{' or as %7B.
+struct DecodedChar
+{
+    QChar ch;
+    int width = 1;
+};
+
+DecodedChar decodedCharAt(const QString& text, const int index)
+{
+    if (text.at(index) == '%' && index + 2 < text.size()) {
+        bool ok = false;
+        const int code = QStringView{text}.mid(index + 1, 2).toInt(&ok, 16);
+        if (ok) {
+            return {QChar(code), 3};
+        }
+    }
+    return {text.at(index), 1};
+}
+
+// Splits a query into parameters without decoding any of it, so that an escaped parameter name
+// is not mistaken for a reserved one (RFC 3986 2.4). A config value sent as unencoded JSON can
+// carry '&' inside its strings, so the end of one is found by counting braces rather than at
+// the next '&' - both callers have to agree on that or one of them sees a parameter the other
+// does not. Mirrors QString::split('&') otherwise, empty parameters included.
+QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
+{
+    QList<RawQueryParameter> parameters;
+
+    int pos = 0;
+    while (true) {
+        const int nextAmp = query.indexOf('&', pos);
+        const int ampEnd = (nextAmp == -1) ? query.size() : nextAmp;
+
+        // Accept '%3D' as the key/value separator as well as '=', taking whichever comes first
+        const int literalEq = query.indexOf('=', pos);
+        const int encodedEq = query.indexOf(qsl("%3D"), pos, Qt::CaseInsensitive);
+        int eqPos = -1;
+        int eqLength = 0;
+        if (literalEq >= 0 && literalEq < ampEnd && (encodedEq < 0 || literalEq < encodedEq)) {
+            eqPos = literalEq;
+            eqLength = 1;
+        } else if (encodedEq >= 0 && encodedEq < ampEnd) {
+            eqPos = encodedEq;
+            eqLength = 3;
+        }
+
+        RawQueryParameter parameter;
+        int paramEnd = ampEnd;
+
+        if (eqPos >= 0) {
+            const int valueStart = eqPos + eqLength;
+            int valueEnd = ampEnd;
+            parameter.hasSeparator = true;
+            parameter.key = query.mid(pos, eqPos - pos);
+
+            // JSON allows insignificant whitespace before the object, so the brace the scan
+            // needs may not be the first character of the value
+            int objectStart = valueStart;
+            while (objectStart < query.size()) {
+                const DecodedChar decoded = decodedCharAt(query, objectStart);
+                if (!decoded.ch.isSpace()) {
+                    break;
+                }
+                objectStart += decoded.width;
+            }
+
+            if (parameter.key == qsl("config") && objectStart < query.size() && decodedCharAt(query, objectStart).ch == '{') {
+                int depth = 0;
+                bool inString = false;
+                bool escaped = false;
+                // valueEnd keeps its initial ampEnd if the scan finds no closing brace: the JSON
+                // is malformed, so the parser gets what there is and fails on it. Stopping at the
+                // next '&' rather than running to the end keeps one unterminated object from
+                // swallowing every parameter behind it and dropping them from the rebuilt URL
+
+                for (int i = objectStart; i < query.size();) {
+                    const DecodedChar decoded = decodedCharAt(query, i);
+                    const QChar ch = decoded.ch;
+                    i += decoded.width;
+
+                    if (escaped) {
+                        escaped = false;
+                        continue;
+                    }
+                    if (ch == '\\') {
+                        escaped = true;
+                        continue;
+                    }
+                    if (ch == '"') {
+                        inString = !inString;
+                        continue;
+                    }
+                    if (!inString) {
+                        if (ch == '{') {
+                            ++depth;
+                        } else if (ch == '}') {
+                            --depth;
+                            if (depth == 0) {
+                                valueEnd = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // The parameter still runs to the next '&', so that anything a server appended
+                // after the object goes with it rather than being left on the rebuilt URL
+                const int afterObject = query.indexOf('&', valueEnd);
+                paramEnd = (afterObject == -1) ? query.size() : afterObject;
+            }
+
+            parameter.value = query.mid(valueStart, valueEnd - valueStart);
+        }
+
+        parameter.text = query.mid(pos, paramEnd - pos);
+        parameters.append(parameter);
+
+        if (paramEnd >= query.size()) {
+            break;
+        }
+        pos = paramEnd + 1;
+    }
+
+    return parameters;
+}
+
+} // anonymous namespace
+
+TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
+: mFgColor(foreground.rgba())
+, mBgColor(background.rgba())
 , mFlags(flags)
-, mIsSelected(false)
 , mLinkIndex(linkIndex)
 {
 }
 
-TChar::TChar(Host* pH)
-: mFlags(None)
-, mIsSelected(false)
-, mLinkIndex(0)
+TChar::TChar(TConsole* pC)
+: mFgColor(pC ? pC->mFormatCurrent.mFgColor : QColorConstants::White.rgba())
+, mBgColor(pC ? pC->mFormatCurrent.mBgColor : QColorConstants::Black.rgba())
+, mFlags(pC ? pC->mFormatCurrent.allDisplayAttributes() : AttributeFlag::None)
 {
-    if (pH) {
-        mFgColor = pH->mFgColor;
-        mBgColor = pH->mBgColor;
-    } else {
-        mFgColor = Qt::white;
-        mBgColor = Qt::black;
-    }
 }
 
 // Note: this operator compares ALL aspects of 'this' against 'other' which may
 // not be wanted in every case:
 bool TChar::operator==(const TChar& other)
 {
-    if (mIsSelected != other.mIsSelected) {
-        return false;
-    }
-    if (mLinkIndex != other.mLinkIndex) {
-        return false;
-    }
-    if (mFgColor != other.mFgColor) {
-        return false;
-    }
-    if (mBgColor != other.mBgColor) {
-        return false;
-    }
-    if (mFlags != other.mFlags) {
-        return false;
-    }
-    return true;
+    return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags;
 }
 
-// Copy constructor:
-TChar::TChar(const TChar& copy)
-: mFgColor(copy.mFgColor)
-, mBgColor(copy.mBgColor)
-, mFlags(copy.mFlags)
-, mIsSelected(false)
-, mLinkIndex(copy.mLinkIndex)
+quint8 TChar::alternateFont() const
 {
+    // As this is the most likely case check it first:
+    if (!(mFlags & AltFontMask)) {
+        return 0;
+    }
+
+    if (mFlags & AltFont9) {
+        return 9;
+    }
+    if (mFlags & AltFont8) {
+        return 8;
+    }
+    if (mFlags & AltFont7) {
+        return 7;
+    }
+    if (mFlags & AltFont6) {
+        return 6;
+    }
+    if (mFlags & AltFont5) {
+        return 5;
+    }
+    if (mFlags & AltFont4) {
+        return 4;
+    }
+    if (mFlags & AltFont3) {
+        return 3;
+    }
+    if (mFlags & AltFont2) {
+        return 2;
+    }
+    return 1;
 }
 
-const QString timeStampFormat = QStringLiteral("hh:mm:ss.zzz ");
-const QString blankTimeStamp  = QStringLiteral("------------ ");
+#ifndef QT_NO_DEBUG
+static quint64 colorFingerprint(const std::vector<TChar>& line)
+{
+    quint64 hash = 14695981039346656037ULL;
+    for (const TChar& character : line) {
+        hash = (hash ^ character.foreground().rgba()) * 1099511628211ULL;
+        hash = (hash ^ character.background().rgba()) * 1099511628211ULL;
+    }
+    return hash;
+}
+#endif
 
-TBuffer::TBuffer(Host* pH)
-: mLinkID(0)
-, mLinesLimit(10000)
-, mBatchDeleteSize(1000)
-, mWrapAt(99999999)
-, mWrapIndent(0)
-, mCursorY(0)
-, mMXP(false)
-, mMXP_MODE(MXP_MODE_OPEN)
-, mMXP_DEFAULT(MXP_MODE_OPEN)
-, mAssemblingToken(false)
-, openT(0)
-, closeT(0)
-, mMXP_LINK_MODE(false)
-, mIgnoreTag(false)
-, mParsingVar(false)
-, mOpenMainQuote()
-, mMXP_SEND_NO_REF_MODE(false)
-, mEchoingText(false)
-, mGotESC(false)
-, mGotCSI(false)
-, mGotOSC(false)
-, mIsDefaultColor(true)
+// Store for text and attributes (such as character color) to be drawn on screen
+// Contents are rendered by a TTextEdit
+TBuffer::TBuffer(Host* pH, TConsole* pConsole)
+: mpConsole(pConsole)
 , mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
@@ -740,55 +477,279 @@ TBuffer::TBuffer(Host* pH)
 , mMagenta(pH->mMagenta)
 , mLightWhite(pH->mLightWhite)
 , mWhite(pH->mWhite)
-, mpHost(pH)
 , mForeGroundColor(pH->mFgColor)
 , mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
-, mBold(false)
-, mItalics(false)
-, mOverline(false)
-, mReverse(false)
-, mStrikeOut(false)
-, mUnderline(false)
-, mItalicBeforeBlink(false)
-, lastLoggedFromLine(0)
-, lastloggedToLine(0)
-, mEncoding()
-, mMainIncomingCodec(nullptr)
+, mpHost(pH)
+, mTagWatchdog(std::make_unique<QTimer>())
 {
+    mTagWatchdog->setSingleShot(true);
+    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() {
+        processMxpWatchdogCallback();
+    });
+    // All additions to the buffer must use append()/appendLine() to preserve formatting via TChar.
+    // Direct modification of the `buffer` vector may bypass formatting and should be avoided.
     clear();
-
-    TMxpElement _element;
-    _element.name = "SEND";
-    _element.href = "";
-    _element.hint = "";
-    mMXP_Elements["SEND"] = _element;
-
-    TMxpElement _aURL;
-    _aURL.name = "A";
-    _aURL.href = "";
-    _aURL.hint = "";
-    mMXP_Elements["A"] = _aURL;
 
 #ifdef QT_DEBUG
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
-    for (auto table : csmEncodingTable) {
-        Q_ASSERT_X(table.second.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
+    for (const auto& table : csmEncodingTable.getEncodings()) {
+        Q_ASSERT_X(table.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
 #endif
 }
 
-void TBuffer::setBufferSize(int s, int batch)
+TBuffer::~TBuffer()
 {
-    if (s < 100) {
-        s = 100;
+    if (mTagWatchdog) {
+        // The timeout lambda captures 'this', and so does the deferred
+        // continuation the watchdog queues against this timer. Destroying the
+        // timer with the buffer, just below, drops both:
+        mTagWatchdog->stop();
     }
-    if (batch >= s) {
-        batch = s / 10;
+    if (mpServerWrapFlushTimer) {
+        // The timeout lambda captures 'this':
+        mpServerWrapFlushTimer->stop();
+        QObject::disconnect(mpServerWrapFlushTimer, nullptr, nullptr, nullptr);
     }
-    mLinesLimit = s;
+}
+
+TBuffer::TBuffer(const TBuffer& other)
+: bufferLine(other.bufferLine)
+, buffer(other.buffer)
+, lineBuffer(other.lineBuffer)
+, timeBuffer(other.timeBuffer)
+, promptBuffer(other.promptBuffer)
+, mLinkStore(other.mLinkStore)
+, mLinesLimit(other.mLinesLimit)
+, mBatchDeleteSize(other.mBatchDeleteSize)
+, mWrapAt(other.mWrapAt)
+, mWrapIndent(other.mWrapIndent)
+, mWrapHangingIndent(other.mWrapHangingIndent)
+, mCursorY(other.mCursorY)
+, mEchoingText(other.mEchoingText)
+, mpConsole(other.mpConsole)
+, mGotESC(other.mGotESC)
+, mGotEscCharset(other.mGotEscCharset)
+, mGotCSI(other.mGotCSI)
+, mGotOSC(other.mGotOSC)
+, mGotString(other.mGotString)
+, mIsDefaultColor(other.mIsDefaultColor)
+, mBlack(other.mBlack)
+, mLightBlack(other.mLightBlack)
+, mRed(other.mRed)
+, mLightRed(other.mLightRed)
+, mLightGreen(other.mLightGreen)
+, mGreen(other.mGreen)
+, mLightBlue(other.mLightBlue)
+, mBlue(other.mBlue)
+, mLightYellow(other.mLightYellow)
+, mYellow(other.mYellow)
+, mLightCyan(other.mLightCyan)
+, mCyan(other.mCyan)
+, mLightMagenta(other.mLightMagenta)
+, mMagenta(other.mMagenta)
+, mLightWhite(other.mLightWhite)
+, mWhite(other.mWhite)
+, mForeGroundColor(other.mForeGroundColor)
+, mForeGroundColorLight(other.mForeGroundColorLight)
+, mBackGroundColor(other.mBackGroundColor)
+, mpHost(other.mpHost)
+, mBold(other.mBold)
+, mItalics(other.mItalics)
+, mOverline(other.mOverline)
+, mReverse(other.mReverse)
+, mStrikeOut(other.mStrikeOut)
+, mUnderline(other.mUnderline)
+, mUnderlineWavy(other.mUnderlineWavy)
+, mUnderlineDotted(other.mUnderlineDotted)
+, mUnderlineDashed(other.mUnderlineDashed)
+, mBlink(other.mBlink)
+, mFastBlink(other.mFastBlink)
+, mConcealed(other.mConcealed)
+, mAltFont(other.mAltFont)
+, mMudLine(other.mMudLine)
+, mMudBuffer(other.mMudBuffer)
+, mServerWrapPendingLine(other.mServerWrapPendingLine)
+, mServerWrapPendingBuffer(other.mServerWrapPendingBuffer)
+, mServerWrapPendingSegmentLength(other.mServerWrapPendingSegmentLength)
+, mServerWrapPendingSegmentStart(other.mServerWrapPendingSegmentStart)
+, mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
+, mLocalGotESC(other.mLocalGotESC)
+, mLocalGotEscCharset(other.mLocalGotEscCharset)
+, mLocalGotCSI(other.mLocalGotCSI)
+, mLocalGotOSC(other.mLocalGotOSC)
+, mLocalGotString(other.mLocalGotString)
+, mLocalIncompleteSequenceBytes(other.mLocalIncompleteSequenceBytes)
+, mProcessingLocalFeed(other.mProcessingLocalFeed)
+, lastLoggedFromLine(other.lastLoggedFromLine)
+, lastloggedToLine(other.lastloggedToLine)
+, lastTextToLog(other.lastTextToLog)
+, mEncoding(other.mEncoding)
+, mDecoder(other.mDecoder)
+, mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
+, mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
+, mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
+, mHyperlinkActive(other.mHyperlinkActive)
+, mWatchdogPhase(other.mWatchdogPhase)
+, mTagWatchdog(std::make_unique<QTimer>())
+, mWatchdogTagSnapshot(other.mWatchdogTagSnapshot)
+, mCurrentHyperlinkStyling(other.mCurrentHyperlinkStyling)
+, mCurrentHyperlinkMenu(other.mCurrentHyperlinkMenu)
+, mLinkStates(other.mLinkStates)
+, mVisitedLinks(other.mVisitedLinks)
+, mLinkOriginalBackgrounds(other.mLinkOriginalBackgrounds)
+, mLinkOriginalCharacters(other.mLinkOriginalCharacters)
+, mCurrentHoveredLinkIndex(other.mCurrentHoveredLinkIndex)
+, mCurrentActiveLinkIndex(other.mCurrentActiveLinkIndex)
+, mCurrentFocusedLinkIndex(other.mCurrentFocusedLinkIndex)
+{
+    mTagWatchdog->setSingleShot(true);
+    QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() {
+        processMxpWatchdogCallback();
+    });
+}
+
+TBuffer& TBuffer::operator=(const TBuffer& other)
+{
+    if (this != &other) {
+        bufferLine = other.bufferLine;
+        buffer = other.buffer;
+        lineBuffer = other.lineBuffer;
+        timeBuffer = other.timeBuffer;
+        promptBuffer = other.promptBuffer;
+        mLinkStore = other.mLinkStore;
+        mLinesLimit = other.mLinesLimit;
+        mBatchDeleteSize = other.mBatchDeleteSize;
+        mWrapAt = other.mWrapAt;
+        mWrapIndent = other.mWrapIndent;
+        mWrapHangingIndent = other.mWrapHangingIndent;
+        mCursorY = other.mCursorY;
+        mEchoingText = other.mEchoingText;
+        mpConsole = other.mpConsole;
+        mGotESC = other.mGotESC;
+        mGotEscCharset = other.mGotEscCharset;
+        mGotCSI = other.mGotCSI;
+        mGotOSC = other.mGotOSC;
+        mGotString = other.mGotString;
+        mIsDefaultColor = other.mIsDefaultColor;
+        mBlack = other.mBlack;
+        mLightBlack = other.mLightBlack;
+        mRed = other.mRed;
+        mLightRed = other.mLightRed;
+        mLightGreen = other.mLightGreen;
+        mGreen = other.mGreen;
+        mLightBlue = other.mLightBlue;
+        mBlue = other.mBlue;
+        mLightYellow = other.mLightYellow;
+        mYellow = other.mYellow;
+        mLightCyan = other.mLightCyan;
+        mCyan = other.mCyan;
+        mLightMagenta = other.mLightMagenta;
+        mMagenta = other.mMagenta;
+        mLightWhite = other.mLightWhite;
+        mWhite = other.mWhite;
+        mForeGroundColor = other.mForeGroundColor;
+        mForeGroundColorLight = other.mForeGroundColorLight;
+        mBackGroundColor = other.mBackGroundColor;
+        mpHost = other.mpHost;
+        mBold = other.mBold;
+        mItalics = other.mItalics;
+        mOverline = other.mOverline;
+        mReverse = other.mReverse;
+        mStrikeOut = other.mStrikeOut;
+        mUnderline = other.mUnderline;
+        mUnderlineWavy = other.mUnderlineWavy;
+        mUnderlineDotted = other.mUnderlineDotted;
+        mUnderlineDashed = other.mUnderlineDashed;
+        mBlink = other.mBlink;
+        mFastBlink = other.mFastBlink;
+        mConcealed = other.mConcealed;
+        mAltFont = other.mAltFont;
+        mMudLine = other.mMudLine;
+        mMudBuffer = other.mMudBuffer;
+        mServerWrapPendingLine = other.mServerWrapPendingLine;
+        mServerWrapPendingBuffer = other.mServerWrapPendingBuffer;
+        mServerWrapPendingSegmentLength = other.mServerWrapPendingSegmentLength;
+        mServerWrapPendingSegmentStart = other.mServerWrapPendingSegmentStart;
+        mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
+        mLocalGotESC = other.mLocalGotESC;
+        mLocalGotEscCharset = other.mLocalGotEscCharset;
+        mLocalGotCSI = other.mLocalGotCSI;
+        mLocalGotOSC = other.mLocalGotOSC;
+        mLocalGotString = other.mLocalGotString;
+        mLocalIncompleteSequenceBytes = other.mLocalIncompleteSequenceBytes;
+        mProcessingLocalFeed = other.mProcessingLocalFeed;
+        lastLoggedFromLine = other.lastLoggedFromLine;
+        lastloggedToLine = other.lastloggedToLine;
+        lastTextToLog = other.lastTextToLog;
+        mEncoding = other.mEncoding;
+        mDecoder = other.mDecoder;
+        mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
+        mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
+        mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
+        mHyperlinkActive = other.mHyperlinkActive;
+        mWatchdogPhase = other.mWatchdogPhase;
+        mWatchdogTagSnapshot = other.mWatchdogTagSnapshot;
+        mCurrentHyperlinkStyling = other.mCurrentHyperlinkStyling;
+        mCurrentHyperlinkMenu = other.mCurrentHyperlinkMenu;
+        mLinkStates = other.mLinkStates;
+        mVisitedLinks = other.mVisitedLinks;
+        mLinkOriginalBackgrounds = other.mLinkOriginalBackgrounds;
+        mLinkOriginalCharacters = other.mLinkOriginalCharacters;
+        mCurrentHoveredLinkIndex = other.mCurrentHoveredLinkIndex;
+        mCurrentActiveLinkIndex = other.mCurrentActiveLinkIndex;
+        mCurrentFocusedLinkIndex = other.mCurrentFocusedLinkIndex;
+
+        mTagWatchdog = std::make_unique<QTimer>();
+        mTagWatchdog->setSingleShot(true);
+        QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() {
+            processMxpWatchdogCallback();
+        });
+    }
+    return *this;
+}
+
+void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
+{
+    if (requestedLinesLimit < 100) {
+        requestedLinesLimit = 100;
+    }
+    if (batch >= requestedLinesLimit) {
+        batch = requestedLinesLimit / 10;
+    }
+    // shrinkBuffer() pops one line per batch step, so a batch of none at all
+    // switches trimming off and lets the buffer grow past its limit
+    if (batch < 1) {
+        batch = 1;
+    }
+    // clip the maximum to something reasonable that the machine can handle
+    auto max = getMaxBufferSize();
+    if (requestedLinesLimit > max) {
+        qWarning().nospace() << "setBufferSize(): " << requestedLinesLimit << "lines for buffer requested but your computer can only handle " << max << ", clipping it";
+        mLinesLimit = max;
+    } else {
+        mLinesLimit = requestedLinesLimit;
+    }
+
     mBatchDeleteSize = batch;
+}
+
+// naive calculation to get a reasonable limit for a maximum buffer size
+int TBuffer::getMaxBufferSize()
+{
+    const int64_t memoryTotal = physicalMemoryTotal();
+    // Mudlet is 32bit mainly on Windows, see where the practical limit for a process 2GB:
+    // https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-and-address-space-limits
+    // 64bit: set to 80% of what is available to us, swap not included
+    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (memoryTotal * 0.80);
+    auto maxLines = (maxProcessMemoryBytes / TCHAR_IN_BYTES) / mpHost->mWrapAt;
+    // now we've calculated how many lines can we fit in 80% of memory, ignoring memory use for other things like triggers/aliases, Lua scripts, etc
+    // so shave that down by 20%
+    maxLines = (maxLines / 100) * 80;
+
+    return maxLines;
 }
 
 void TBuffer::updateColors()
@@ -840,22 +801,18 @@ int TBuffer::getLastLineNumber()
 {
     if (static_cast<int>(buffer.size()) > 0) {
         return static_cast<int>(buffer.size()) - 1;
-    } else {
-        return 0; //-1;
     }
+    return 0; //-1;
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
+void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference)
 {
-    if (++mLinkID > scmMaxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = command;
-    mHintStore[mLinkID] = hint;
+    const int id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
+
     if (!trigMode) {
-        append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, mLinkID);
+        append(text, 0, text.length(), format.foreground(), format.background(), format.mFlags, id);
     } else {
-        appendLine(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, mLinkID);
+        appendLine(text, 0, text.length(), format.foreground(), format.background(), format.mFlags, id);
     }
 }
 
@@ -936,19 +893,93 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
       elements at the end can be omitted.
  */
 
+void TBuffer::resetSequenceParserState()
+{
+    mGotESC = false;
+    mGotEscCharset = false;
+    mGotCSI = false;
+    mGotOSC = false;
+    mGotString = false;
+    mIncompleteSequenceBytes.clear();
+    mLocalGotESC = false;
+    mLocalGotEscCharset = false;
+    mLocalGotCSI = false;
+    mLocalGotOSC = false;
+    mLocalGotString = false;
+    mLocalIncompleteSequenceBytes.clear();
+    mWarnedAboutStringSequence = false;
+}
+
+void TBuffer::warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd)
+{
+    // A game that gets this wrong usually gets it wrong on every line, and in
+    // a release build every warning also becomes a Sentry breadcrumb, so say
+    // it once per connection and quote enough of the payload to identify which
+    // of the game's features misbehaved:
+    if (mWarnedAboutStringSequence) {
+        return;
+    }
+    mWarnedAboutStringSequence = true;
+    const size_t excerptLength = std::min(spanEnd - spanStart, STRING_SEQUENCE_EXCERPT_LENGTH);
+    qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - " << (mGotString ? "a DCS/SOS/PM/APC" : "an OSC") << " sequence " << what
+                                   << ", discarding it to recover. It began \"" << QString::fromLatin1(localBuffer.data() + spanStart, static_cast<int>(excerptLength))
+                                   << "\". Further such sequences on this connection are not reported.";
+}
+
+void TBuffer::swapParserSequenceState()
+{
+    std::swap(mGotESC, mLocalGotESC);
+    std::swap(mGotEscCharset, mLocalGotEscCharset);
+    std::swap(mGotCSI, mLocalGotCSI);
+    std::swap(mGotOSC, mLocalGotOSC);
+    std::swap(mGotString, mLocalGotString);
+    std::swap(mIncompleteSequenceBytes, mLocalIncompleteSequenceBytes);
+}
+
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
-    // What can appear in a CSI Parameter String (Ps) byte or at least for it
-    // to be something we can handle:
-    const QByteArray cParameter("0123456789;:");
-    // What can appear in the initial position of a CSI Parameter String (Ps) byte:
-    const QByteArray cParameterInitial("0123456789;:<=>?");
+    // The mGot... latches and mIncompleteSequenceBytes persist between calls so
+    // that a sequence split across Game Server packets still parses.
+    // Locally generated text (feedTriggers(), MMCP chat messages, MXP
+    // insertions) runs through the same parser, so swap in a separate set of
+    // that state for the duration of such a feed - otherwise local text
+    // arriving between two packets would consume or clear a latch that the
+    // server stream is still relying on (and vice versa). The flag keeps a
+    // nested local feed (e.g. an MXP <HR> inside locally fed text) from
+    // swapping the server state back in part way through:
+    if (isFromServer || mProcessingLocalFeed) {
+        translateToPlainTextInner(incoming, isFromServer);
+        return;
+    }
+
+    mProcessingLocalFeed = true;
+    swapParserSequenceState();
+    translateToPlainTextInner(incoming, false);
+    swapParserSequenceState();
+    mProcessingLocalFeed = false;
+}
+
+void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
+{
+    // What can appear anywhere in a CSI Parameter String (Ps): ECMA-48 5.4
+    // puts every byte of one in the range 0x30 to 0x3F, so '<', '=', '>' and
+    // '?' do not end the parameter string when they turn up after the first
+    // byte - games do emit them there and every other terminal consumes them:
+    const QByteArray cParameter = QByteArrayLiteral("0123456789;:<=>?");
+    // Which of those, in the FIRST position only, marks the whole sequence as
+    // private/reserved and so not something Mudlet can interpret:
+    const QByteArray cParameterPrivateIntroducer = QByteArrayLiteral("<=>?");
     // What can appear in a CSI Intermediate byte (includes a quote character in
     // the middle of the text here which has to be escaped with a backslash):
-    const QByteArray cIntermediate(" !\"#$%&'()*+,-./");
+    const QByteArray cIntermediate = QByteArrayLiteral(" !\"#$%&'()*+,-./");
     // What can appear in a CSI final byte position - (includes a backslash
     // which has to be doubled to include it in here):
-    const QByteArray cFinal("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
+    // ST) that games do send and that Mudlet has to swallow. Only these: any
+    // other byte after an ESC is text, and printing it is no worse than what
+    // Mudlet has always done, whereas eating it loses real output:
+    const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to
@@ -963,7 +994,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     }
 
     // Check this each packet
-    QString usedEncoding = mpHost->mTelnet.getEncoding();
+    const QByteArray usedEncoding = mpHost->mTelnet.getEncoding();
     if (mEncoding != usedEncoding) {
         encodingChanged(usedEncoding);
         // Will have to dump any stored bytes as they will be in the old
@@ -973,10 +1004,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         // sequences that were not complete at the end of the last packet:
         if (!mIncompleteSequenceBytes.empty()) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
-            qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no longer be usable!";
+            qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no "
+                        "longer be usable!";
 #endif
-            mIncompleteSequenceBytes.clear();;
+            mIncompleteSequenceBytes.clear();
         }
+        // The other channel's held-over bytes are equally stale:
+        mLocalIncompleteSequenceBytes.clear();
     }
 
     if (isFromServer && !mIncompleteSequenceBytes.empty()) {
@@ -989,20 +1023,54 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         localBuffer = incoming;
     }
 
-    const QVector<QChar> encodingLookupTable = csmEncodingTable.value(mEncoding).second;
-    // If the encoding is "ASCII", "ISO 8859-1", "UTF-8", "GBK", "GB18030" or "Big5"
-    // (which are not in the table) encodingLookupTable will be empty otherwise
-    // the 128 values in the returned table will be used for all the text data
-    // that gets through the following ANSI code and other out-of-band data
-    // processing - doing this mean that a (fast) lookup in the QVector can be
-    // done as opposed to a a repeated switch(...) and branch to one of a series
-    // of decoding methods each with another up to 128 value switch()
+    crashIfRequested();
+
+    // Fixup table for our own, substitute QTextCodecs:
+    QByteArray encodingTableToUse{mEncoding};
+    if (mEncoding == "M_CP437") {
+        encodingTableToUse = "CP437";
+    } else if (mEncoding == "M_CP667") {
+        encodingTableToUse = "CP667";
+    } else if (mEncoding == "M_CP737") {
+        encodingTableToUse = "CP737";
+    } else if (mEncoding == "M_CP869") {
+        encodingTableToUse = "CP869";
+    } else if (mEncoding == "M_MEDIEVIA") {
+        encodingTableToUse = "MEDIEVIA";
+    }
+
+    const QVector<QChar> encodingLookupTable = csmEncodingTable.getLookupTable(encodingTableToUse);
+    // If the encoding is "ASCII", "ISO 8859-1", "UTF-8", "GBK", "GB18030",
+    // "BIG5", "BIG5-HKSCS" or "EUC-KR" (which are not in the table)
+    // encodingLookupTable will be empty otherwise the 128 values in the
+    // returned table will be used for all the text data that gets through the
+    // following ANSI code and other out-of-band data processing - doing this
+    // means that a (fast) lookup in the QVector can be done as opposed to a
+    // repeated switch(...) and branch to one of a series of decoding methods
+    // each with another up to 128 value switch()
 
     size_t localBufferLength = localBuffer.length();
     size_t localBufferPosition = 0;
     if (!localBufferLength) {
         return;
     }
+    // Kept in step with localBufferLength - see decodableLength():
+    size_t localBufferDecodableLength = decodableLength(localBuffer, localBufferLength, isFromServer);
+
+    // If we are resolving/interpolating an MXP entity, the interpolated text
+    // ends at localBuffer[endOfMXPEntity - 1]. This variable used to avoid an
+    // (infinite) recursion like <!EN E "foobar&E;>&E;
+    // Recursively interpolating a predefined entity like <!EN E "foobar&frac12;>&E;
+    // will work though.
+    size_t endOfMXPEntity = 0;
+
+    // A similar index which points behind the name of a literal entity name like
+    // &unknown; which does not exist and will be printed literal, w/o
+    // any MXP interpretation. Again, this avoid endless recursion trying to
+    // resolve an unsolvable entity. We need the hassle in both cases, as the
+    // the resolved values may be in a character encoding that must be decoded by
+    // Mudlet.
+    size_t endOfLiteralEntity = 0;
 
     while (true) {
         if (localBufferPosition >= localBufferLength) {
@@ -1010,68 +1078,151 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         }
 
         char& ch = localBuffer[localBufferPosition];
+        // Set when a line break is synthesised (MXP <br>/&newline;) rather
+        // than being a genuine newline in the game's output stream:
+        bool forcedLineBreak = false;
         if (ch == '\033') {
             if (!mGotOSC) {
                 // The terminator for an OSC is the String Terminator but that
                 // is the ESC character followed by (the single character)
                 // '\\' so must not respond to an ESC here - though the code
-                // arrangement should avoid looping around this loop whilst
+                // arrangement should avoid looping around this loop while
                 // seeking this character pair anyhow...
+
+                // If MXP is building a tag when we see ESC, the tag is invalid
+                // because ANSI escape sequences cannot be part of MXP tags.
+                // Output the partial tag as literal text before processing ESC.
+                if (mpHost->mMxpProcessor.isEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                    attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                    TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                    const QString literalText = mpHost->mMxpProcessor.abortCurrentTag();
+                    mMudLine.append(literalText);
+                    for (int i = 0; i < literalText.length(); ++i) {
+                        mMudBuffer.push_back(c);
+                    }
+
+                    mTagWatchdog->stop();
+                    mWatchdogPhase = WatchdogPhase::None;
+                }
+
                 mGotESC = true;
+                mGotEscCharset = false;
                 ++localBufferPosition;
                 continue;
             }
         }
 
-        if (mGotESC && (ch == '[' || ch == ']')) {
+        if (mGotEscCharset) {
+            mGotEscCharset = false;
+            if (static_cast<unsigned char>(ch) >= 0x30 && static_cast<unsigned char>(ch) <= 0x7E) {
+                ++localBufferPosition;
+                continue;
+            }
+            // Only a final byte can name a character set, so this was a stray
+            // ESC after all and the byte is text.
+        }
+
+        if (mGotESC) {
             mGotESC = false;
-            mGotCSI = (ch == '[');
-            mGotOSC = (ch == ']');
-            ++localBufferPosition;
-            continue;
+            if (ch == '[' || ch == ']') {
+                mGotCSI = (ch == '[');
+                mGotOSC = (ch == ']');
+                ++localBufferPosition;
+                continue;
+            }
+            if (ch == 'P' || ch == 'X' || ch == '^' || ch == '_') {
+                // DCS, SOS, PM and APC string sequences carry data that
+                // Mudlet does not use - consume them with the OSC code below
+                // but skip decoding the payload:
+                mGotOSC = true;
+                mGotString = true;
+                ++localBufferPosition;
+                continue;
+            }
+            if (ch == '(' || ch == ')' || ch == '*' || ch == '+') {
+                // An ISO 2022 character set designation such as ESC ( B; the
+                // byte after this one names the set:
+                mGotEscCharset = true;
+                ++localBufferPosition;
+                continue;
+            }
+            if (cShortEscape.indexOf(ch) >= 0) {
+                ++localBufferPosition;
+                continue;
+            }
+            // Any other byte is text: a stray ESC in the game's output must
+            // not swallow it, and consuming a multibyte character's lead byte
+            // would orphan its continuation bytes.
         }
 
         if (mGotCSI) {
-            // Lookahead and try and see what we are processing
-            // At the start of a CSI sequence the only valid character is one of:
-            // "0-9:;<=>?" if it is one of "0-9:;" then it is a
-            // "parameter-string" ELSE if it is one of '<', '=', '>' or '?' it
-            // IS a private/experimental and not covered by the ECMA-48
-            // specifications..
-            // After the first character the remaining characters of the
-            // parameter string will be in the range "0-9:;" only
-            size_t spanStart = localBufferPosition;
+            // Lookahead and try and see what we are processing. The parameter
+            // string runs over "0-9:;<=>?" - if its FIRST byte is one of '<',
+            // '=', '>' or '?' the whole sequence is private/experimental and
+            // not covered by the ECMA-48 specifications, but those same bytes
+            // later on are just parameter bytes to be consumed.
+            size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
-            while (spanEnd < localBufferLength
-                   && ((((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0))
-                      ||((spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0))) {
+            while (spanEnd < localBufferLength && cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
                 ++spanEnd;
             }
 
-            // Test whether the first byte is within the usable subset of the
-            // allowed value - or not:
-            if (cParameter.indexOf(localBuffer[spanStart]) == -1 && cParameterInitial.indexOf(localBuffer[spanStart]) >= 0) {
-                // Oh dear, the CSI parameter string sequence begins with one of
-                // the reserved characters ('<', '=', '>' or '?') which we
-                // can/do not handle
-
-                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
-                // So skip over it as far as we can - will still possibly have
-                // garbage beyond the end which will still be shown...
+            if (spanEnd - spanStart >= MAX_CSI_SEQUENCE_LENGTH) {
+                // The parameter string is far longer than any valid CSI (which
+                // is only a handful of bytes): discard it instead of buffering
+                // it without bound while waiting for a final byte that a hostile
+                // server may never send.
+                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence exceeded " << MAX_CSI_SEQUENCE_LENGTH
+                                               << " bytes without a final byte, discarding it to recover.";
                 localBufferPosition += 1 + spanEnd - spanStart;
                 mGotCSI = false;
                 // Go around while loop again:
                 continue;
             }
 
-            if (spanEnd >= localBufferLength || cParameter.indexOf(localBuffer[spanEnd]) >=0) {
-                // We have gone to the end of the buffer OR the last character
-                // in the buffer is still within a CSI sequence - therefore we
-                // have got a split between data packets and are not in a
-                // position to process the current line further...
+            if (spanEnd >= localBufferDecodableLength) {
+                // We ran to the end of the buffer while still inside a CSI
+                // sequence - therefore we have got a split between data packets
+                // and are not in a position to process the current line further.
+                // A flush marker is not part of the sequence and is not held
+                // with it (decodableLength()), the same way the OSC path below
+                // drops one out of its own payload: kept, it would never match
+                // a parameter byte when the rest of the sequence arrives, and
+                // the colour or cursor move the game asked for would be thrown
+                // away and the rest of its sequence printed as text.
 
-                mIncompleteSequenceBytes = localBuffer.substr(spanStart);
+                mIncompleteSequenceBytes = localBuffer.substr(spanStart, localBufferDecodableLength - spanStart);
+                if (localBufferDecodableLength < localBufferLength) {
+                    // The text ahead of the sequence is still a line the marker
+                    // came to flush. It cannot be left to the loop to notice:
+                    // this pass is inside a CSI, so going round again would
+                    // feed the marker back into the scan above:
+                    size_t markerPosition = localBufferDecodableLength;
+                    commitLine(CHAR_CARRIAGE_RETURN, markerPosition, isFromServer, false);
+                }
                 return;
+            }
+
+            // Only now that a complete sequence is in hand, test whether the
+            // first byte is within the usable subset of the allowed value - or
+            // not. Doing this any earlier would consume a sequence split across
+            // packets without leaving the trailing bytes for the next one.
+            if (cParameterPrivateIntroducer.indexOf(localBuffer[spanStart]) >= 0) {
+                // Oh dear, the CSI parameter string sequence begins with one of
+                // the reserved characters ('<', '=', '>' or '?') which we
+                // can/do not handle
+#if defined(DEBUG_CSI_PROCESSING)
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI"
+                                             << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
+#endif
+                // So skip over it as far as we can - will still possibly have
+                // garbage beyond the end which will still be shown...
+                localBufferPosition += 1 + spanEnd - spanStart;
+                mGotCSI = false;
+                // Go around while loop again:
+                continue;
             }
 
             // Now we can take a peek at what the next character is, it could
@@ -1087,9 +1238,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // afterwards is as it might help to debug things
                 if (spanEnd + 1 < localBufferLength) {
                     // Yeah there is another byte we can report as the final byte
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd] << "') and a 'final' byte ('" << localBuffer[spanEnd+1] << "') which Mudlet cannot interpret.";
+                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
+                                                 << "') and a 'final' byte ('" << localBuffer[spanEnd + 1] << "') which Mudlet cannot interpret.";
                 } else {
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd] << "') which Mudlet cannot interpret.";
+                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
+                                                 << "') which Mudlet cannot interpret.";
                 }
                 // So skip over it as far as we can - will still be possible to
                 // have garbage beyond the end which will still be shown...
@@ -1105,597 +1258,384 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // Zuggsoft's MXP protocol:
                 const quint8 modeChar = static_cast<unsigned char>(localBuffer[spanEnd]);
                 switch (modeChar) {
-                case static_cast<quint8>('m'):
+                case static_cast<quint8>('m'): {
                     // We have a complete SGR sequence:
 #if defined(DEBUG_SGR_PROCESSING)
-                    qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
+                    qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    decodeSGR(QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str()));
-                    break;
+                    // Only bytes from cParameter can be here - the four that
+                    // may open a private sequence were turned away above - so
+                    // each one widens to a single UTF-16 code unit and the
+                    // parameter string can be handed over without building a
+                    // QString for it:
+                    QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
+                    for (size_t i = spanStart; i < spanEnd; ++i) {
+                        sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
+                    }
+                    decodeSGR(QStringView(sgrChars));
+                } break;
 
                 case static_cast<quint8>('z'):
                     // We have a control sequence for MXP
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF && mpHost->mServerMXPenabled && isFromServer) {
+                    if (isFromServer && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn())) {
                         mGotCSI = false;
 
-                        bool isOk = false;
-                        QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
-                        int modeCode = code.toInt(&isOk);
-                        if (isOk) {
-                            // we really do not handle these well...
-                            // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
-                            mMXP = true; // some servers don't negotiate, they assume!
-
-                            switch (modeCode) {
-                            case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
-                                mMXP_MODE = MXP_MODE_OPEN;
-                                break;
-                            case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-                                mMXP_MODE = MXP_MODE_SECURE;
-                                break;
-                            case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-                                mMXP_MODE = MXP_MODE_LOCKED;
-                                break;
-                            case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
-                                closeT = 0;
-                                openT = 0;
-                                mAssemblingToken = false;
-                                mMXP_MODE = mMXP_DEFAULT;
-                                currentToken.clear();
-                                mParsingVar = false;
-                                break;
-                            case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
-                                mMXP_MODE = MXP_MODE_TEMP_SECURE;
-                                break;
-                            case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
-                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
-                                break;
-                            case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
-                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
-                                break;
-                            case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
-                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
-                                break;
-                            default:
-                                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
-                            }
-                        } else {
-                            // isOk is false here as toInt(...) failed
-                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
-                        }
+                        const QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
+                        mpHost->mMxpProcessor.setMode(code);
                     }
-                    // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
-                    // We have manually disabled MXP negotiation
+
                     break;
+
+                case static_cast<quint8>('C'): {
+                    // A workaround for the ONE cursor movement command we CAN
+                    // emulate - the CUF Cursor forward one:
+                    // Needed for mud.durismud.com see forum message topic:
+                    // https://forums.mudlet.org/viewtopic.php?f=9&t=22887
+                    const int dataLength = spanEnd - spanStart;
+                    // fromRawData() does not copy, so the bytes have to outlive temp:
+                    // point it into localBuffer rather than at any temporary
+                    const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
+                    bool isOk = false;
+                    const int spacesNeeded = temp.toInt(&isOk);
+                    if (isOk && spacesNeeded > 0) {
+                        // Note: we are using the background color for the
+                        // foreground color as well so that we are transparent:
+                        const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+                        for (int spaceCount = 0; spaceCount < spacesNeeded; ++spaceCount) {
+                            mMudLine.append(QChar::Space);
+                            mMudBuffer.push_back(c);
+                        }
+                        // For debugging:
+                        //                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - CUF (cursor forward) sequence of form CSI" << temp << "C received, converting into " << spacesNeeded << " spaces.";
+                    } else {
+                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp
+                                                     << "C received, that is supposed to be a CUF (cursor forward) sequence but doesn't make sense, Mudlet will ignore it.";
+                    }
+
+                } break;
+
+                case static_cast<quint8>('J'): {
+                    /*
+                     * Also seen in output from mud.durismud.com see 'C' case above:
+                     * Is ED 'Erase Display' command and has three variants:
+                     * * 0 (or omitted): clear from cursor to end of screen
+                     *   - which is a NOP for us!
+                     * * 1: clear from cursor to beginning of screen
+                     *   - which is a NWIH for us!
+                     * * 2: clear entire screen and delete all lines saved in
+                     *   scrollback buffer - which is again a NWIH for us...!
+                     */
+                    const int dataLength = spanEnd - spanStart;
+                    // fromRawData() does not copy, so the bytes have to outlive temp:
+                    // point it into localBuffer rather than at any temporary
+                    const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
+                    bool isOk = false;
+                    const int argValue = temp.toInt(&isOk);
+                    if (isOk) {
+                        if (argValue >= 0 && argValue < 3) {
+                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - ED (erase in display) sequence of form CSI" << temp
+                                                         << "J received,\nrejecting as incompatible with Mudlet.";
+                        } else {
+                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Invalid ED (erase in display) sequence of form CSI" << temp
+                                                         << "J received,\nwhich Mudlet will ignore.";
+                        }
+                    } else {
+                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp
+                                                     << "J received, that is supposed to\nbe a ED (erase in display) sequence but it doesn't make sense, Mudlet will ignore it.";
+                    }
+                } break;
 
                 default: // Unhandled other (valid) CSI final byte sequences will end up here
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << localBuffer[spanEnd] << " received, Mudlet will ignore it.";
 
                 } // End of switch(modeChar) {}
             } else {
-                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected an invalid CSI sequence beginning with \"CSI" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << " which Mudlet will ignore.";
-            }  // End of (isAValidFinalByte) {}
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected an invalid CSI sequence beginning with \"CSI"
+                                             << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << " which Mudlet will ignore.";
+            } // End of the isAValidFinalByte test
 
             mGotCSI = false;
-            localBufferPosition += 1 + spanEnd - spanStart;
+            // Step over the parameter string and the byte that ended it, unless
+            // that byte is a control one - a sequence with no final byte at all
+            // never owned the newline or escape that stopped the scan, and
+            // eating it would join two lines or drop the sequence after it:
+            localBufferPosition += spanEnd - spanStart + (static_cast<unsigned char>(localBuffer[spanEnd]) < ' ' ? 0 : 1);
             // Go around while loop again:
             continue;
 
         } // End of if (mGotCSI)
 
         if (mGotOSC) {
-            // Lookahead and find end of sequence (the ST string terminator)
-            // DANGER, WILL ROBINSON! Should an OSC be received without a
-            // terminator then all data will just be swallowed into the buffer
+            // Also reached - with mGotString set - whenever the payload is to
+            // be consumed but not decoded: a DCS, SOS, PM or APC sequence, or
+            // an OSC already truncated by the length cap below.
+            // Lookahead and find the end of the sequence, which is whichever
+            // comes first of:
+            // - ST (String Terminator): ESC followed by '\' (backslash)
+            // - BEL (0x07): Common alternative used by xterm and many MUDs
+            // - the end of the line it started on. ECMA-48 does allow an <LF>
+            //   inside a "command string", but honouring that lets a single
+            //   unterminated sequence blacken the rest of the session
 
-            // Valid characters inside an OSC are: a "command string" or a
-            // "character string".
-            // A "command string" is a sequence of bit combinations in the range
-            // <BS><TAB><LF><VT><FF><CR> and ASCII printables from Space to '~'
             // A "character string" is a sequence of any character except Start
             // of String (SOS) or String Terminator (ST) and the latter is ESC
             // followed by '\\' (a single \ BTW) in the 7-bit code case (the
             // former is encoded as ESC followed by 'X'):
-            size_t spanStart = localBufferPosition;
+            size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
-            // It is safe to look at spanEnd-1 even at the starting position
-            // because we already know that the localBuffer extends backwards
-            // that far (it will be the ']' character!)
-            while (spanEnd < localBufferLength
-                   && (localBuffer[spanEnd-1] != '\033')
-                   && (localBuffer[spanEnd] != '\\')) {
+            // Looking at spanEnd-1 at the starting position is safe: either
+            // the sequence started earlier in this buffer, so the byte behind
+            // is its introducer (or, after a trip round the length cap below,
+            // more of its payload), or spanStart is 0 and the spanEnd > 0
+            // guard keeps the read in bounds.
+            while (spanEnd < localBufferLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07' && !endsStringSequence(localBuffer[spanEnd])
+                   && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
                 ++spanEnd;
             }
 
-            if (localBuffer[spanEnd] != '\\') {
-                // The last character in the buffer is NOT the expected ST
-                // - therefore we have probably got a split between
-                // data packets and are not in a position to process the
-                // current line further...
+            // Determine what terminated the loop
+            const bool foundBEL = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
+            const bool foundST = (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
+            const bool foundLineEnding = (spanEnd < localBufferLength && endsStringSequence(localBuffer[spanEnd]));
+            const bool exceededLength = ((spanEnd - spanStart) >= MAX_OSC_SEQUENCE_LENGTH);
 
-                mIncompleteSequenceBytes = localBuffer.substr(spanStart);
-                return;
+            if (foundBEL) {
+                // BEL terminator - sequence content excludes the BEL
+                if (!mGotString) {
+                    decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart).c_str()));
+                }
+                mGotOSC = false;
+                mGotString = false;
+                localBufferPosition = spanEnd + 1; // Skip past BEL
+                continue;
             }
 
-            decodeOSC(QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart - 1).c_str()));
-            mGotOSC = false;
-            localBufferPosition += 1 + spanEnd - spanStart;
-            // Go around while loop again:
-            continue;
+            if (foundST) {
+                // ST terminator (ESC \) - sequence content excludes the ESC before backslash
+                if (!mGotString) {
+                    decodeOSC(QString(localBuffer.substr(spanStart, spanEnd - spanStart - 1).c_str()));
+                }
+                mGotOSC = false;
+                mGotString = false;
+                localBufferPosition = spanEnd + 1; // Skip past backslash
+                continue;
+            }
+
+            if (foundLineEnding) {
+                // A stray introducer - a game that emits one would otherwise
+                // black out every line that followed it for the rest of the
+                // session, so give up on the sequence at the end of the line
+                // and leave the line ending itself to be processed as usual:
+                warnAboutDiscardedStringSequence(qsl("was not terminated before the end of its line"), localBuffer, spanStart, spanEnd);
+                mGotOSC = false;
+                mGotString = false;
+                localBufferPosition = spanEnd;
+                continue;
+            }
+
+            if (exceededLength) {
+                if (!mGotString) {
+                    // An OSC is the only one of these whose payload Mudlet
+                    // acts on, so it is the only one that loses anything by
+                    // being consumed rather than decoded. A DCS or APC over
+                    // the cap is ordinary - a Sixel image or a Kitty graphic
+                    // legitimately runs to many times it:
+                    warnAboutDiscardedStringSequence(qsl("passed %1 bytes, so its command will be ignored").arg(MAX_OSC_SEQUENCE_LENGTH), localBuffer, spanStart, spanEnd);
+                }
+                // Stay in the sequence and consume the rest as it arrives, but
+                // what is left is no longer the whole payload so it must not
+                // reach the OSC decoder when the terminator turns up:
+                mGotString = true;
+                // Hold on to a trailing ESC so that a String Terminator that
+                // straddles this boundary is still recognised:
+                localBufferPosition = (localBuffer[spanEnd - 1] == '\033') ? spanEnd - 1 : spanEnd;
+                continue;
+            }
+
+            // This is safe because we're under the length limit. The only
+            // carriage returns that reach here are the ones cTelnet injects to
+            // flush a line that is still arriving, and they are always the
+            // last byte of the chunk that carried them: drop them rather than
+            // keep them as payload, or one landing between the ESC and the
+            // backslash of a String Terminator would hide that terminator:
+            mIncompleteSequenceBytes.clear();
+            std::remove_copy(localBuffer.cbegin() + spanStart, localBuffer.cend(), std::back_inserter(mIncompleteSequenceBytes), CHAR_CARRIAGE_RETURN);
+            return;
         }
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mMXP && mpHost->mServerMXPenabled && (mMXP_MODE != MXP_MODE_LOCKED)) {
-
-            // ignore < and > inside of parameter strings
-            if (openT == 1) {
-                if (ch == '\'' || ch == '\"') {
-                    if (!mParsingVar) {
-                        mOpenMainQuote = ch;
-                        mParsingVar = true;
-                    } else {
-                        if (ch == mOpenMainQuote) {
-                            mParsingVar = false;
-                        }
+        if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
+            if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
+                if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
+                    // The comparison signals to the processor, if custom entities may be resolved
+                    // (countermeasure against infinite recursion)
+                    TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+                    if (!mTagWatchdog->isActive() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag() && !mpHost->mMxpProcessor.getMxpTagBuilder().getRawTagContent().empty()) {
+                        mWatchdogPhase = WatchdogPhase::Phase1_Snapshot;
+                        mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
                     }
-                }
-            }
 
-            if (ch == '<') {
-                if (!mParsingVar) {
-                    ++openT;
-                    if (!currentToken.empty()) {
-                        currentToken += ch;
-                    }
-                    mAssemblingToken = true;
-                    ++localBufferPosition;
-                    continue;
-                }
-            }
-
-            if (ch == '>') {
-                if (!mParsingVar) {
-                    ++closeT;
-                }
-
-                // sanity check
-                if (closeT > openT) {
-                    closeT = 0;
-                    openT = 0;
-                    mAssemblingToken = false;
-                    currentToken.clear();
-                    mParsingVar = false;
-                }
-
-                if ((openT > 0) && (closeT == openT)) {
-                    mAssemblingToken = false;
-                    // If we were in temp secure mode, then we switch back to default after the next tag
-                    if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
-                       mMXP_MODE = mMXP_DEFAULT;
-                    }
-                    std::string::size_type _pfs = currentToken.find_first_of(' ');
-                    QString _tn;
-                    if (_pfs == std::string::npos) {
-                        _tn = currentToken.c_str();
-                    } else {
-                        _tn = currentToken.substr(0, _pfs).c_str();
-                    }
-                    _tn = _tn.toUpper();
-                    if (_tn == "VERSION") {
-                        QString payload = QStringLiteral("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=%1%2>\n").arg(APP_VERSION, APP_BUILD);
-                        mpHost->mTelnet.sendData(payload);
-                    } else if (_tn == QLatin1String("SUPPORT")) {
-                        auto response = processSupportsRequest(currentToken.c_str());
-                        QString payload = QStringLiteral("\n\x1b[1z<SUPPORTS %1>\n").arg(response);
-                        mpHost->mTelnet.sendData(payload);
-                    }
-                    if (_tn == "BR") {
-                        // a <BR> is a newline, but doesn't reset the MXP mode
+                    switch (result) {
+                    case HANDLER_NEXT_CHAR:
+                        localBufferPosition++;
+                        continue;
+                    case HANDLER_COMMIT_LINE: // BR tag or &newline;
                         ch = '\n';
-                        openT = 0;
-                        closeT = 0;
-                        currentToken.clear();
-                        goto COMMIT_LINE; // jump ahead of the part that resets MXP mode on newline
-                    }
-                    if (_tn.startsWith("!EL")) {
-                        QString _tp = currentToken.substr(currentToken.find_first_of(' ')).c_str();
-                        _tn = _tp.section(' ', 1, 1).toUpper();
-                        _tp = _tp.section(' ', 2).toUpper();
-                        if ((_tp.indexOf("<SEND") != -1)) {
-                            QString _t2 = _tp;
-                            int pRef = _t2.indexOf("HREF=");
-                            bool _got_ref = false;
-                            // wenn kein href angegeben ist, dann gilt das 1. parameter als href
-                            if (pRef == -1) {
-                                pRef = _t2.indexOf("<SEND ") + 1;
+                        forcedLineBreak = true;
+                        goto COMMIT_LINE;
+                    case HANDLER_INSERT_ENTITY_CUST:
+                        // custom entity value set with <!EN>, recurse except for other custom entities
+                        [[fallthrough]];
+                    case HANDLER_INSERT_ENTITY_LIT: {
+                        // Unknown entity name like &unknown; push back into buffer for codeset interpretation,
+                        // but no MXP parsing.
+
+                        // We replace the already processed text with the entity value into the buffer and restart
+                        // processing it for charset encoding but with limited MXP handling.
+                        // A CUST value is decoded text, so encode it with the session's encoding
+                        // (not toLatin1(), which would flatten non-Latin1 characters to '?') for the
+                        // re-decode below. A LIT value is the raw, undecoded entity bytes held as one
+                        // Latin1 code unit per byte (see TEntityHandler::handle()), so toLatin1() is
+                        // an exact byte passthrough - re-encoding it would double-encode those bytes
+                        // and orphan any continuation bytes still ahead in the buffer. Either way the
+                        // byte length, not the QString length, is what the offset bookkeeping needs.
+                        const QByteArray entityValueBytes =
+                                result == HANDLER_INSERT_ENTITY_CUST ? TEncodingHelper::encode(mpHost->mMxpProcessor.getEntityValue(), mEncoding) : mpHost->mMxpProcessor.getEntityValue().toLatin1();
+                        size_t valueLength = entityValueBytes.size();
+                        localBuffer.replace(0, localBufferPosition + 1, entityValueBytes.constData(), entityValueBytes.size());
+
+                        if (result == HANDLER_INSERT_ENTITY_LIT) {
+                            if (localBufferPosition < endOfMXPEntity) {
+                                // This is a special case, our unknown entity might actually be a custom one
+                                // inside a custom one which we refused to resolve to avoid an endless recursion.
+                                // So we carefully adjust the end marker s.t. custom entities are not reenabled
+                                // too early
+                                endOfMXPEntity -= localBufferPosition + 1 - valueLength;
+                                endOfLiteralEntity = valueLength;
                             } else {
-                                _got_ref = true;
+                                endOfMXPEntity = valueLength;
                             }
-
-                            if (pRef == -1) {
-                                return;
-                            }
-                            pRef += 5;
-
-                            QChar _quote_type = _t2[pRef];
-                            int pRef2;
-                            if (_quote_type != '&') {
-                                pRef2 = _t2.indexOf(_quote_type, pRef + 1); //' ', pRef );
-                            } else {
-                                pRef2 = _t2.indexOf(' ', pRef + 1);
-                            }
-                            QString _ref = _t2.mid(pRef, pRef2 - pRef);
-
-                            // gegencheck, ob es keine andere variable ist
-
-                            if (_ref.startsWith('\'')) {
-                                int pRef3 = _t2.indexOf('\'', _t2.indexOf('\'', pRef) + 1);
-                                int pRef4 = _t2.indexOf('=');
-                                if (((pRef4 == -1) || (pRef4 != 0 && pRef4 > pRef3)) || (_got_ref)) {
-                                    _ref = _t2.mid(pRef, pRef2 - pRef);
-                                }
-                            } else if (_ref.startsWith('\"')) {
-                                int pRef3 = _t2.indexOf('\"', _t2.indexOf('\"', pRef) + 1);
-                                int pRef4 = _t2.indexOf('=');
-                                if (((pRef4 == -1) || (pRef4 != 0 && pRef4 > pRef3)) || (_got_ref)) {
-                                    _ref = _t2.mid(pRef, pRef2 - pRef);
-                                }
-                            } else if (_ref.startsWith('&')) {
-                                _ref = _t2.mid(pRef, _t2.indexOf(' ', pRef + 1) - pRef);
-                            } else {
-                                _ref = "";
-                            }
-                            _ref = _ref.replace(';', "");
-                            _ref = _ref.replace("&quot", "");
-                            _ref = _ref.replace("&amp", "&");
-                            _ref = _ref.replace('\'', ""); //NEU
-                            _ref = _ref.replace('\"', ""); //NEU
-                            _ref = _ref.replace("&#34", R"(")");
-
-                            pRef = _t2.indexOf("HINT=");
-                            QString _hint;
-                            if (pRef != -1) {
-                                pRef += 5;
-                                int pRef2 = _t2.indexOf(' ', pRef);
-                                _hint = _t2.mid(pRef, pRef2 - pRef);
-                                if (_hint.startsWith('\'') || pRef2 < 0) {
-                                    pRef2 = _t2.indexOf('\'', _t2.indexOf('\'', pRef) + 1);
-                                    _hint = _t2.mid(pRef, pRef2 - pRef);
-                                } else if (_hint.startsWith('\"') || pRef2 < 0) {
-                                    pRef2 = _t2.indexOf('\"', _t2.indexOf('\"', pRef) + 1);
-                                    _hint = _t2.mid(pRef, pRef2 - pRef);
-                                }
-                                _hint = _hint.replace(';', "");
-                                _hint = _hint.replace("&quot", "");
-                                _hint = _hint.replace("&amp", "&");
-                                _hint = _hint.replace('\'', ""); //NEU
-                                _hint = _hint.replace('\"', ""); //NEU
-                                _hint = _hint.replace("&#34", R"(")");
-                            }
-                            TMxpElement _element;
-                            _element.name = _tn;
-                            _element.href = _ref;
-                            _element.hint = _hint;
-                            mMXP_Elements[_tn] = _element;
+                            endOfLiteralEntity = valueLength;
+                        } else {
+                            // HANDLER_INSERT_ENTITY_CUST
+                            endOfMXPEntity = valueLength;
+                            endOfLiteralEntity = 0;
                         }
-                        openT = 0;
-                        closeT = 0;
-                        currentToken.clear();
-                        ++localBufferPosition;
+
+                        // Now restart the loop to parse the newly inserted text
+                        localBufferLength = localBuffer.length();
+                        localBufferDecodableLength = decodableLength(localBuffer, localBufferLength, isFromServer);
+                        localBufferPosition = 0;
                         continue;
                     }
+                    case HANDLER_INSERT_ENTITY_SYS: {
+                        // System entities are literal QString / UTF values which we just 'print'
+                        // There is no further MXP or Codeset evaluation
 
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
-                    if (mMXP_LINK_MODE) {
-                        if (_tn.indexOf('/') != -1) {
-                            mMXP_LINK_MODE = false;
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        // We also need to set the color attributes for the special character
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
                         }
+                        // We already handled the input, go to the next character
+                        localBufferPosition++;
+                        continue;
                     }
+                    case HANDLER_INSERT_AND_REPROCESS: {
+                        // Insert text like HANDLER_INSERT_ENTITY_SYS, but don't increment position.
+                        // Used for error recovery: output the rejected/incomplete tag as literal
+                        // text, then reprocess the current character (which may be a newline,
+                        // an ANSI escape, or the character after an unrecognized tag name)
 
-                    if (mMXP_SEND_NO_REF_MODE) {
-                        if (_tn.indexOf('/') != -1) {
-                            mMXP_SEND_NO_REF_MODE = false;
-                            if (mLinkStore[mLinkID].front() == "send([[]])") {
-                                QString _t_ref = "send([[";
-                                _t_ref.append(mAssembleRef.c_str());
-                                _t_ref.append("]])");
-                                QStringList _t_ref_list;
-                                _t_ref_list << _t_ref;
-                                mLinkStore[mLinkID] = _t_ref_list;
-                            } else {
-                                mLinkStore[mLinkID].replaceInStrings("&text;", mAssembleRef.c_str());
-                            }
-                            mAssembleRef.clear();
-                        }
-                    } else if (mMXP_Elements.contains(_tn)) {
-                        QString _tp;
-                        std::string::size_type _fs = currentToken.find_first_of(' ');
-                        if (_fs != std::string::npos) {
-                            _tp = currentToken.substr(_fs).c_str();
-                        }
-                        QString _t1 = _tp.toUpper();
-                        const TMxpElement& _element =  mMXP_Elements[_tn];
-                        QString _t2 = _element.href;
-                        QString _t3 = _element.hint;
-                        bool _userTag = true;
-                        if (_t2.size() < 1) {
-                            _userTag = false;
-                        }
-                        QRegularExpression _rex;
-                        QStringList _rl1, _rl2;
-                        int _ki1 = _tp.indexOf('\'');
-                        int _ki2 = _tp.indexOf('\"');
-                        int _ki3 = _tp.indexOf('=');
-                        // is the first parameter to send given in the form
-                        // send "what" hint="bla" or send href="what" hint="bla"
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
-                        // handle the first case without a variable assignment
-                        if ((_ki3 == -1)                                           // no = whatsoever
-                            || ((_ki3 != -1) && ((_ki2 < _ki3) || (_ki1 < _ki3)))) // first parameter is given without =
-                        {
-                            if ((_ki1 < _ki2 && _ki1 != -1) || (_ki2 == -1 && _ki1 != -1)) {
-                                if (_ki1 < _ki3 || _ki3 == -1) {
-                                    _rl1 << "HREF";
-                                    int _cki1 = _tp.indexOf('\'', _ki1 + 1);
-                                    if (_cki1 > -1) {
-                                        _rl2 << _tp.mid(_ki1 + 1, _cki1 - (_ki1 + 1));
-                                    }
-                                }
-                            } else if ((_ki2 < _ki1 && _ki2 != -1) || (_ki1 == -1 && _ki2 != -1)) {
-                                if (_ki2 < _ki3 || _ki3 == -1) {
-                                    _rl1 << "HREF";
-                                    int _cki2 = _tp.indexOf('\"', _ki2 + 1);
-                                    if (_cki2 > -1) {
-                                        _rl2 << _tp.mid(_ki2 + 1, _cki2 - (_ki2 + 1));
-                                    }
-                                }
-                            }
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
                         }
-                        // parse parameters in the form var="val" or var='val' where val can be given in the form "foo'b'ar" or 'foo"b"ar'
-                        if (_tp.contains(QStringLiteral(R"(=')"))) {
-                            _rex = QRegularExpression(QStringLiteral(R"(\b(\w+)=\'([^\']*) ?)"));
-                        } else {
-                            _rex = QRegularExpression(QStringLiteral(R"(\b(\w+)=\"([^\"]*) ?)"));
-                        }
-
-                        int _rpos = 0;
-                        QRegularExpressionMatch match = _rex.match(_tp, _rpos);
-                        while ((_rpos = match.capturedStart()) != -1) {
-                            _rl1 << match.captured(1).toUpper();
-                            _rl2 << match.captured(2);
-                            _rpos += match.capturedLength();
-
-                            match = _rex.match(_tp, _rpos);
-                        }
-
-                        if ((_rl1.size() == _rl2.size()) && (!_rl1.empty())) {
-                            for (int i = 0; i < _rl1.size(); i++) {
-                                QString _var = _rl1[i];
-                                _var.prepend('&');
-                                if (_userTag || _t2.indexOf(_var) != -1) {
-                                    _t2 = _t2.replace(_var, _rl2[i]);
-                                    _t3 = _t3.replace(_var, _rl2[i]);
-                                } else {
-                                    if (_rl1[i] == QStringLiteral("HREF")) {
-                                        _t2 = _rl2[i];
-                                    }
-                                    if (_rl1[i] == QStringLiteral("HINT")) {
-                                        _t3 = _rl2[i];
-                                    }
-                                }
-                            }
-                        }
-
-                        // handle print to prompt feature PROMPT
-                        bool _send_to_command_line = false;
-                        if (_t1.endsWith("PROMPT")) {
-                            _send_to_command_line = true;
-                        }
-
-
-                        mMXP_LINK_MODE = true;
-                        if (_t2.size() < 1 || _t2.contains("&text;")) {
-                            mMXP_SEND_NO_REF_MODE = true;
-                        }
-                        mLinkID++;
-                        if (mLinkID > scmMaxLinks) {
-                            mLinkID = 1;
-                        }
-                        QStringList _tl = _t2.split('|');
-                        for (int i = 0, total = _tl.size(); i < total; ++i) {
-                            _tl[i].replace("|", "");
-                            if (_element.name == "A") {
-                                _tl[i] = "openUrl([[" + _tl[i] + "]])";
-                            }
-                            else if (!_send_to_command_line) {
-                                _tl[i] = "send([[" + _tl[i] + "]])";
-                            } else {
-                                _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
-                            }
-                        }
-
-                        mLinkStore[mLinkID] = _tl;
-
-                        _t3 = _t3.replace("&quot;", R"(")");
-                        _t3 = _t3.replace("&amp;", "&");
-                        _t3 = _t3.replace("&apos;", "'");
-                        _t3 = _t3.replace("&#34;", R"(")");
-
-                        QStringList _tl2 = _t3.split('|');
-                        _tl2.replaceInStrings("|", "");
-                        if (_tl2.size() >= _tl.size() + 1) {
-                            _tl2.pop_front();
-                        }
-                        mHintStore[mLinkID] = _tl2;
+                        // Do NOT increment position - the current character needs to be reprocessed
+                        continue;
                     }
-                    openT = 0;
-                    closeT = 0;
-                    currentToken.clear();
-                }
-                ++localBufferPosition;
-                continue;
-            }
+                    default:
+                        //HANDLER_FALL_THROUGH -> do nothing
+                        assert(localBuffer[localBufferPosition] == ch);
+                    }
+                } else if (mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    // Mode is LOCKED but we're inside a tag that started in a different mode.
+                    // We need to continue feeding characters to the tag builder to complete the tag.
+                    TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
 
-            if (mAssemblingToken) {
-                if (ch == '\n') {
-                    closeT = 0;
-                    openT = 0;
-                    mAssemblingToken = false;
-                    currentToken.clear();
-                    mParsingVar = false;
+                    switch (result) {
+                    case HANDLER_NEXT_CHAR:
+                        localBufferPosition++;
+                        continue;
+                    case HANDLER_INSERT_ENTITY_SYS: {
+                        // Tag was not handled, output as text
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        localBufferPosition++;
+                        continue;
+                    }
+                    case HANDLER_INSERT_AND_REPROCESS: {
+                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
+                        }
+                        continue;
+                    }
+                    default:
+                        localBufferPosition++;
+                        continue;
+                    }
                 } else {
-                    currentToken += ch;
-                    ++localBufferPosition;
-                    continue;
+                    mpHost->mMxpProcessor.processRawInput(ch);
                 }
             }
 
-            if (ch == '&' || mIgnoreTag) {
-                if ((localBufferPosition + 4 < localBufferLength) && (mSkip.empty())) {
-                    if (localBuffer.substr(localBufferPosition, 4) == "&gt;") {
-                        localBufferPosition += 3;
-                        ch = '>';
-                        mIgnoreTag = false;
-                    } else if (localBuffer.substr(localBufferPosition, 4) == "&lt;") {
-                        localBufferPosition += 3;
-                        ch = '<';
-                        mIgnoreTag = false;
-                    } else if (localBuffer.substr(localBufferPosition, 5) == "&amp;") {
-                        mIgnoreTag = false;
-                        localBufferPosition += 4;
-                        ch = '&';
-                    } else if (localBuffer.substr(localBufferPosition, 6) == "&quot;") {
-                        localBufferPosition += 5;
-                        mIgnoreTag = false;
-                        mSkip.clear();
-                        ch = '"';
-                    }
-                }
-                // if the content is split across package borders
-                else if (mSkip == "&gt" && ch == ';') {
-                    mIgnoreTag = false;
-                    mSkip.clear();
-                    ch = '>';
-                } else if (mSkip == "&lt" && ch == ';') {
-                    mIgnoreTag = false;
-                    mSkip.clear();
-                    ch = '<';
-                } else if (mSkip == "&amp" && ch == ';') {
-                    mIgnoreTag = false;
-                    mSkip.clear();
-                    ch = '&';
-                } else if (mSkip == "&quot" && ch == ';' ) {
-                    mIgnoreTag = false;
-                    mSkip.clear();
-                    ch = '"';
-                } else {
-                    mIgnoreTag = true;
-                    mSkip += ch;
-                    // sanity check
-                    if (mSkip.size() > 7) {
-                        mIgnoreTag = false;
-                        mSkip.clear();
-                    }
-                    ++localBufferPosition;
-                    continue;
+            if (CHAR_IS_COMMIT_CHAR(ch)) {
+                // after a newline (but not a <br>) return to default mode
+                // BUT only if we're not in the middle of parsing a tag (tags can span lines)
+                if (!mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                    mpHost->mMxpProcessor.resetToDefaultMode();
                 }
             }
         }
 
-
-        if (mMXP_SEND_NO_REF_MODE) {
-            mAssembleRef += ch;
-        }
-
-        if (mMXP && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
-            // after a newline (but not a <br>) return to default mode
-            mMXP_MODE = mMXP_DEFAULT;
-        }
-
-COMMIT_LINE:
-        if ((ch == '\n') || (ch == '\xff') || (ch == '\r')) {
-            // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
-            // EN: MUD lines are always written at the beginning of the line
-
-            // FIXME: This is the point where we should renormalise the new text
-            // data - of course there is the theoretical chance that the new
-            // text would alter the prior contents but as that is on a separate
-            // line there should not be any changes to text before a line feed
-            // which sort of seems to be implied by the current value of ch:
-
-            if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
-                qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
-                              "data character and attribute data items!";
-            }
-
-            if (!lineBuffer.back().isEmpty()) {
-                if (mMudLine.size() > 0) {
-                    lineBuffer << mMudLine;
-                } else {
-                    if (ch == '\r') {
-                        ++localBufferPosition;
-                        continue; //empty timer posting
-                    }
-                    lineBuffer << QString();
-                }
-                buffer.push_back(mMudBuffer);
-                dirty << true;
-                timeBuffer << QTime::currentTime().toString(timeStampFormat);
-                if (ch == '\xff') {
-                    promptBuffer.append(true);
-                } else {
-                    promptBuffer.append(false);
-                }
-            } else {
-                if (mMudLine.size() > 0) {
-                    lineBuffer.back().append(mMudLine);
-                } else {
-                    if (ch == '\r') {
-                        ++localBufferPosition;
-                        continue; //empty timer posting
-                    }
-                    lineBuffer.back().append(QString());
-                }
-                buffer.back() = mMudBuffer;
-                dirty.back() = true;
-                timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
-                if (ch == '\xff') {
-                    promptBuffer.back() = true;
-                } else {
-                    promptBuffer.back() = false;
-                }
-            }
-
-            mMudLine.clear();
-            mMudBuffer.clear();
-            int line = lineBuffer.size() - 1;
-            mpHost->mpConsole->runTriggers(line);
-            // Only use of TBuffer::wrap(), breaks up new text
-            // NOTE: it MAY have been clobbered by the trigger engine!
-            wrap(lineBuffer.size() - 1);
-
-            // Start a new, but empty line in the various buffers
-            ++localBufferPosition;
-            std::deque<TChar> newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer.push_back(QString());
-            promptBuffer << false;
-            dirty << true;
-            if (static_cast<int>(buffer.size()) > mLinesLimit) {
-                shrinkBuffer();
-            }
+    COMMIT_LINE:
+        if (commitLine(ch, localBufferPosition, isFromServer, forcedLineBreak)) {
             continue;
         }
-
         // PLACEMARKER: Incoming text decoding
         // Used to double up the TChars for Utf-8 byte sequences that produce
         // a surrogate pair (non-BMP):
         bool isTwoTCharsNeeded = false;
+        // Set when a decoder has run out of bytes part way through a sequence
+        // and stored the ones it had for the next chunk to complete:
+        bool heldIncompleteSequence = false;
 
         if (!encodingLookupTable.isEmpty()) {
             auto index = static_cast<quint8>(ch);
@@ -1704,32 +1644,18 @@ COMMIT_LINE:
             } else {
                 mMudLine.append(encodingLookupTable.at(index - 128));
             }
-        } else if (mEncoding == QLatin1String("ISO 8859-1")) {
-            mMudLine.append(QString(QChar::fromLatin1(ch)));
-        } else if (mEncoding == QLatin1String("GBK")) {
-            if (!processGBSequence(localBuffer, isFromServer, false, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
-        } else if (mEncoding == QLatin1String("GB18030")) {
-            if (!processGBSequence(localBuffer, isFromServer, true, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
-        } else if (mEncoding == QLatin1String("Big5")) {
-            if (!processBig5Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
-        } else if (mEncoding == QLatin1String("UTF-8")) {
-            if (!processUtf8Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
+        } else if (mDecoder == Decoder::Latin1) {
+            mMudLine.append(QChar::fromLatin1(ch));
+        } else if (mDecoder == Decoder::Gbk) {
+            heldIncompleteSequence = !processGBSequence(localBuffer, isFromServer, false, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
+        } else if (mDecoder == Decoder::Gb18030) {
+            heldIncompleteSequence = !processGBSequence(localBuffer, isFromServer, true, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
+        } else if (mDecoder == Decoder::EucKr) {
+            heldIncompleteSequence = !processEUC_KRSequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
+        } else if (mDecoder == Decoder::Big5) {
+            heldIncompleteSequence = !processBig5Sequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
+        } else if (mDecoder == Decoder::Utf8) {
+            heldIncompleteSequence = !processUtf8Sequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
         } else {
             // Default - no encoding case - reject anything that has MS Bit set
             // as that isn't ASCII which is what no encoding specifies!
@@ -1745,52 +1671,853 @@ COMMIT_LINE:
             }
         }
 
-        const TChar::AttributeFlags attributeFlags =
-                ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
-                | (mItalics ? TChar::Italic : TChar::None)
-                | (mOverline ? TChar::Overline : TChar::None)
-                | (mReverse ? TChar::Reverse : TChar::None)
-                | (mStrikeOut ? TChar::StrikeOut : TChar::None)
-                | (mUnderline ? TChar::Underline : TChar::None);
+        if (heldIncompleteSequence) {
+            // Nothing more can be decoded from this chunk - the rest of the
+            // sequence is in the next one. A flush marker kept out of the
+            // decoder's reach still has this line to commit though, so go round
+            // once more for it rather than bailing out with it unread:
+            if (localBufferDecodableLength < localBufferLength) {
+                localBufferPosition = localBufferDecodableLength;
+                continue;
+            }
+            return;
+        }
 
-        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
 
-        if (mMXP_LINK_MODE) {
-            c.mLinkIndex = mLinkID;
+        if (mHyperlinkActive) {
+            c.mLinkIndex = mCurrentHyperlinkLinkId;
+
+            // Store the original ANSI-formatted character before applying JSON styling
+            // This is needed for ANSI base restoration when pseudo-classes are inactive
+            if (!mLinkOriginalCharacters.contains(mCurrentHyperlinkLinkId)) {
+                mLinkOriginalCharacters[mCurrentHyperlinkLinkId] = c;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug().nospace().noquote() << "TBuffer::translateToPlainText(): Stored original character for link " << mCurrentHyperlinkLinkId << " with ANSI colors: fg=" << c.foreground().name()
+                                             << " bg=" << c.background().name() << " flags=" << c.mFlags;
+#endif
+            }
+
+            // Apply base styling first (if any)
+            if (mCurrentHyperlinkStyling.hasForegroundColor) {
+                c.setForeground(mCurrentHyperlinkStyling.foregroundColor);
+            }
+
+            if (mCurrentHyperlinkStyling.hasBackgroundColor) {
+                c.setBackground(mCurrentHyperlinkStyling.backgroundColor);
+            }
+
+            // For preset-only links, base styling may be empty but pseudo-class styling exists
+            // Apply effective styling with :link pseudo-class to ensure preset colors show
+            Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(mCurrentHyperlinkLinkId);
+            if (effectiveStyling.hasCustomStyling) {
+                if (effectiveStyling.hasForegroundColor) {
+                    c.setForeground(effectiveStyling.foregroundColor);
+                }
+                if (effectiveStyling.hasBackgroundColor) {
+                    c.setBackground(effectiveStyling.backgroundColor);
+                }
+                if (effectiveStyling.isBold) {
+                    c.mFlags |= TChar::Bold;
+                }
+                if (effectiveStyling.isItalic) {
+                    c.mFlags |= TChar::Italic;
+                }
+                if (effectiveStyling.isUnderlined) {
+                    c.mFlags |= TChar::Underline;
+                    switch (effectiveStyling.underlineStyle) {
+                    case Mudlet::HyperlinkStyling::UnderlineWavy:
+                        c.mFlags |= TChar::UnderlineWavy;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDotted:
+                        c.mFlags |= TChar::UnderlineDotted;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDashed:
+                        c.mFlags |= TChar::UnderlineDashed;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineSolid:
+                    case Mudlet::HyperlinkStyling::UnderlineNone:
+                    default:
+                        break;
+                    }
+                }
+                if (effectiveStyling.isOverlined) {
+                    c.mFlags |= TChar::Overline;
+                }
+                if (effectiveStyling.isStrikeOut) {
+                    c.mFlags |= TChar::StrikeOut;
+                }
+            }
+
+            // Only re-apply base styling if effective pseudo-class styling is not present
+            // This prevents base decoration flags from overriding pseudo-class cascade decisions
+            if (!effectiveStyling.hasCustomStyling) {
+                if (mCurrentHyperlinkStyling.isUnderlined) {
+                    c.mFlags |= TChar::Underline;
+
+                    switch (mCurrentHyperlinkStyling.underlineStyle) {
+                    case Mudlet::HyperlinkStyling::UnderlineWavy:
+                        c.mFlags |= TChar::UnderlineWavy;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDotted:
+                        c.mFlags |= TChar::UnderlineDotted;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDashed:
+                        c.mFlags |= TChar::UnderlineDashed;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineSolid:
+                    case Mudlet::HyperlinkStyling::UnderlineNone:
+                    default:
+                        break;
+                    }
+                }
+
+                if (mCurrentHyperlinkStyling.isOverlined) {
+                    c.mFlags |= TChar::Overline;
+                }
+
+                if (mCurrentHyperlinkStyling.isStrikeOut) {
+                    c.mFlags |= TChar::StrikeOut;
+                }
+
+                if (mCurrentHyperlinkStyling.isBold) {
+                    c.mFlags |= TChar::Bold;
+                }
+
+                if (mCurrentHyperlinkStyling.isItalic) {
+                    c.mFlags |= TChar::Italic;
+                }
+            }
+
+            // Only apply underline if explicitly set in styling (respects OSC 8 default of no underline)
+            // Note: This differs from other Mudlet hyperlinks which default to underlined
+        }
+
+        if (mpHost->mMxpClient.isInLinkMode()) {
+            c.mLinkIndex = mLinkStore.getCurrentLinkID();
             c.mFlags |= TChar::Underline;
+        }
+
+        if (mpHost->mMxpClient.hasFgColor()) {
+            c.setForeground(mpHost->mMxpClient.getFgColor());
+        }
+
+        if (mpHost->mMxpClient.hasBgColor()) {
+            c.setBackground(mpHost->mMxpClient.getBgColor());
         }
 
         if (isTwoTCharsNeeded) {
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE - yes I think we do:
             mMudBuffer.push_back(c);
             mMudBuffer.push_back(c);
+            if (mHyperlinkActive) {
+                // Capture the column position when the first character of the hyperlink is added
+                if (mCurrentHyperlinkText.isEmpty()) {
+                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 2; // -2 because we just added 2 chars
+                }
+                mCurrentHyperlinkText += QString(QChar(ch));
+                mCurrentHyperlinkText += QString(QChar(ch));
+            }
         } else {
             mMudBuffer.push_back(c);
+            if (mHyperlinkActive) {
+                // Capture the column position when the first character of the hyperlink is added
+                if (mCurrentHyperlinkText.isEmpty()) {
+                    mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1; // -1 because we just added 1 char
+                }
+                mCurrentHyperlinkText += QString(QChar(ch));
+            } else if (!(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
+                // A plain text byte only ever decodes to itself and takes the
+                // format just computed, so the whole run of them can be copied
+                // in one append and one fill. MXP has to see every byte, and a
+                // hyperlink's text is accumulated a character at a time, so
+                // neither takes this path.
+                size_t runEnd = localBufferPosition + 1;
+                while (runEnd < localBufferLength && bulkCopyableTextByte(localBuffer[runEnd])) {
+                    ++runEnd;
+                }
+                const size_t runLength = runEnd - (localBufferPosition + 1);
+                if (runLength) {
+                    mMudLine.append(QLatin1StringView(localBuffer.data() + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
+                    mMudBuffer.insert(mMudBuffer.cend(), runLength, c);
+                    localBufferPosition = runEnd - 1;
+                }
+            }
         }
 
         ++localBufferPosition;
     }
 }
 
-void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
+void TBuffer::flushPendingDestinationContent()
+{
+    if (!mpHost || mMudLine.isEmpty()) {
+        return;
+    }
+
+    if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+        if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
+            destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            mMudLine.clear();
+            mMudBuffer.clear();
+        }
+    }
+}
+
+void TBuffer::resetCurrentTextFormat()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    // Reset to default colors and attributes - equivalent to SGR 0
+    mIsDefaultColor = true;
+    mForeGroundColor = mpHost->mFgColor;
+    mForeGroundColorLight = mpHost->mFgColor;
+    mBackGroundColor = mpHost->mBgColor;
+    mBold = false;
+    mItalics = false;
+    mOverline = false;
+    mReverse = false;
+    mStrikeOut = false;
+    mUnderline = false;
+    mUnderlineWavy = false;
+    mUnderlineDotted = false;
+    mUnderlineDashed = false;
+    mBlink = false;
+    mFastBlink = false;
+    mConcealed = false;
+    mAltFont = 0;
+}
+
+bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFromServer, const bool forcedLineBreak)
+{
+    if (!CHAR_IS_COMMIT_CHAR(ch)) {
+        return false;
+    }
+
+    // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
+    // EN: MUD lines are always written at the beginning of the line
+
+    // FIXME: This is the point where we should renormalise the new text
+    // data - of course there is the theoretical chance that the new
+    // text would alter the prior contents but as that is on a separate
+    // line there should not be any changes to text before a line feed
+    // which sort of seems to be implied by the current value of ch:
+
+    // Check if there's an active MXP DEST - route to destination frame
+    if (mpHost->mMxpFrameManager.hasActiveDestination()) {
+        if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
+            flushPendingServerWrapJoin();
+            if (!mMudLine.isEmpty()) {
+                destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            }
+            mMudLine.clear();
+            mMudBuffer.clear();
+            ++localBufferPosition;
+            // Skip creating lines in main console while destination is active
+            return true;
+        }
+    }
+
+    if (mpHost->mUndoServerWrap && isFromServer && ch == '\n' && !forcedLineBreak && !mMudLine.isEmpty()) {
+        // The game wraps its own output and this is a genuine newline from
+        // it: a segment that runs right up to the game's wrap column is
+        // probably not a whole line, so hold it back and join its
+        // continuation on instead of committing it. Everything else -
+        // prompts ('\xff' from GA/EOR), timer-flushed fragments ('\r'),
+        // MXP <br> breaks and blank lines - is a real line boundary.
+        const bool proseSegment = looksLikeWrappedProse(mMudLine);
+        if (!mServerWrapPendingLine.isEmpty()) {
+            // A held segment was only wrapped if what follows continues it:
+            // prose rather than art, not a list entry, indented by no more
+            // than the single space some games move the break to instead of
+            // swallowing it, not opening with the words the held segment
+            // opened with, and opening with a word that would not have fitted
+            // on the line above. Anything else means the held line was
+            // complete after all:
+            const bool deeplyIndented = mMudLine.at(0).isSpace() && mMudLine.size() > 1 && mMudLine.at(1).isSpace();
+            if (deeplyIndented || !proseSegment || startsWithListMarker(mMudLine) || continuationRepeatsSegmentOpening() || pendingLineHadRoomForNextWord()) {
+                flushPendingServerWrapJoin();
+            }
+        }
+        // Deliberately judged before the pending line is joined on: ending at
+        // the game's wrap column is a property of the segment as the game
+        // sent it, not of the longer joined line. A segment that finished a
+        // sentence there is not held at all, see
+        // segmentEndsSettledSentence().
+        const bool segmentLooksWrapped = endsAtServerWrapColumn() && proseSegment && !segmentEndsSettledSentence(mMudLine);
+        const qsizetype segmentLength = mMudLine.size();
+        const QString segmentStart = segmentLooksWrapped ? mMudLine.left(csmServerWrapSegmentStartChars) : QString();
+        joinPendingServerWrapOntoCurrent();
+        if (segmentLooksWrapped && mMudLine.size() <= csmServerWrapMaxJoinedLength) {
+            mServerWrapPendingLine.swap(mMudLine);
+            mServerWrapPendingBuffer.swap(mMudBuffer);
+            mServerWrapPendingSegmentLength = segmentLength;
+            mServerWrapPendingSegmentStart = segmentStart;
+            startServerWrapFlushTimer();
+            ++localBufferPosition;
+            return true;
+        }
+    } else {
+        // Any other kind of line ending means held text was a complete line
+        // after all - commit it on its own first:
+        flushPendingServerWrapJoin();
+    }
+
+    // Copy out and empty rather than swap, so that both accumulators keep
+    // their allocation for the next line. Swapping leaves them empty, and
+    // grown back from empty they reallocate several times per line - which
+    // costs more than the single copy each of these makes. The copies are also
+    // exactly the size of the line, where the accumulators have grown to fit
+    // the longest line ever seen, so this is what keeps the stored lines from
+    // each holding a worst-case block - and past csmMaxRetainedLineCapacity
+    // the accumulator itself is let go rather than kept. Emptying them before
+    // the commit rather than after leaves them usable by any nested pass that
+    // the trigger engine starts from within commitLineData().
+    // The characters are moved out rather than copied: nothing still in the
+    // accumulator can be selected, so the copy constructor's clearing of that
+    // flag on every character would be wasted work.
+    QString line;
+    if (!mMudLine.isEmpty()) {
+        line = QString(mMudLine.constData(), mMudLine.size());
+        mMudLine.resize(0);
+    }
+    std::vector<TChar> chars(std::make_move_iterator(mMudBuffer.begin()), std::make_move_iterator(mMudBuffer.end()));
+    mMudBuffer.clear();
+    if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
+        QString().swap(mMudLine);
+    }
+    if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
+        std::vector<TChar>().swap(mMudBuffer);
+    }
+    commitLineData(std::move(line), std::move(chars), ch);
+    ++localBufferPosition;
+    return true;
+}
+
+void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char ch)
+{
+    // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
+    // https://bugreports.qt.io/browse/QTBUG-105035
+    if (Q_UNLIKELY(line.isEmpty())) {
+        if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+            return;
+        } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) { // NOLINT(readability-else-after-return)
+            // Note: we are using the background color for the
+            // foreground color as well so that we are transparent:
+            const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+            line.append(QChar::Space);
+            chars.push_back(c);
+        }
+    }
+
+    if (static_cast<size_t>(line.size()) != chars.size()) {
+        qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
+                      "data character and attribute data items!";
+    }
+    if (lineBuffer.isEmpty()) {
+        appendEmptyLine();
+    }
+    if (!lineBuffer.back().isEmpty()) {
+        if (!line.isEmpty()) {
+            lineBuffer << line;
+        } else {
+            if (ch == '\r') {
+                return; //empty timer posting
+            }
+            lineBuffer << QString();
+        }
+        buffer.push_back(std::move(chars));
+        timeBuffer << currentTimeStamp();
+        if (ch == '\xff') {
+            promptBuffer.append(true);
+        } else {
+            promptBuffer.append(false);
+        }
+    } else {
+        if (!line.isEmpty()) {
+            lineBuffer.back().append(line);
+        } else {
+            if (ch == '\r') {
+                return; //empty timer posting
+            }
+            lineBuffer.back().append(QString());
+        }
+        // A commit re-entered from inside a pass - feedTriggers(), MXP - fills
+        // the empty last line, which can be the one the enclosing pass is still
+        // running over:
+        materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
+        buffer.back() = std::move(chars);
+        timeBuffer.back() = currentTimeStamp();
+        if (ch == '\xff') {
+            promptBuffer.back() = true;
+        } else {
+            promptBuffer.back() = false;
+        }
+    }
+    const int lineIndex = lineBuffer.size() - 1;
+    mCommitLineIndices.append(lineIndex);
+    if (!mSkipTriggerProcessing) {
+        // Color triggers match against the colors as received from the game, so
+        // a line an earlier trigger in this pass recolored has to keep its
+        // originals somewhere. materialisePreTriggerPassLine() copies them out
+        // when something first overwrites them rather than up front, because
+        // most lines are never touched and the copy is a whole line of TChars.
+        // Any pass already running is about to lose the pass state to this one,
+        // so its line has to be copied out now - a recolor made from inside this
+        // pass would aim the barrier at this line instead:
+        materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
+        // The save/restore gives each nested pass its own snapshot; the spare
+        // member keeps that snapshot's allocation in circulation instead of one
+        // being made and freed for every line:
+        std::vector<TChar> savedPassLine;
+        savedPassLine.swap(mPreTriggerPassLine);
+        const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
+        const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
+        mPreTriggerPassLine.swap(mSpareTriggerPassLine);
+        mPreTriggerPassLine.clear();
+        mPreTriggerPassSnapshotTaken = false;
+        mPreTriggerPassLineNumber = lineIndex;
+        mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+#ifndef QT_NO_DEBUG
+        const quint64 committedColors = colorFingerprint(buffer.back());
+#endif
+        mpHost->runTriggers(lineIndex);
+#ifndef QT_NO_DEBUG
+        // A write that reaches the committed line without passing
+        // materialisePreTriggerPassLine() leaves no trace at runtime - color
+        // triggers just quietly match the recolored text - so catch it here
+        // instead of in a bug report:
+        if (!mPreTriggerPassSnapshotTaken && mPreTriggerPassLineNumber == lineIndex && lineIndex < static_cast<int>(buffer.size())) {
+            Q_ASSERT_X(colorFingerprint(buffer[lineIndex]) == committedColors, "TBuffer::commitLineData", "a trigger recolored the line without going through materialisePreTriggerPassLine()");
+        }
+#endif
+        mSpareTriggerPassLine.swap(mPreTriggerPassLine);
+        if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
+            std::vector<TChar>().swap(mSpareTriggerPassLine);
+        }
+        mPreTriggerPassLine.swap(savedPassLine);
+        mPreTriggerPassLineNumber = savedPassLineNumber;
+        mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
+        mPreTriggerPassLineUniformity = savedPassLineUniformity;
+    }
+
+    // Only use of TBuffer::wrap(), breaks up new text
+    // NOTE: it MAY have been clobbered by the trigger engine!
+    // If deleteLine() was called in a trigger, 'lineIndex' may now be past the
+    // end of the buffer; clamp to the last valid line so that any text
+    // inserted via echo() into the preceding line (which may contain embedded
+    // '\n' characters from insertInLine) is still wrapped correctly.
+    const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
+    const int wrapStartLine = (lastValidLine >= 0) ? std::min(lineIndex, lastValidLine) : 0;
+    const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
+
+    // Skip logging if a trigger deleted the line that was being committed;
+    // deleteLines() has already adjusted the deferred logging state
+    if (mCommitLineIndices.takeLast() >= 0) {
+        log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+    }
+
+    // Suppress new empty line IFF echoes already created a new empty line
+    // i.e. add newline if no added lines or the lastline isn't empty
+    if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
+        buffer.emplace_back();
+        lineBuffer.push_back(QString());
+        timeBuffer.push_back(QString());
+        promptBuffer << false;
+    }
+
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
+        // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
+        // in all other methods where the following is used (because
+        // both need to monitor the number of lines of text in the
+        // buffer) the event that the former may be required to
+        // generate is NOT used for the TMainConsole case whereas this
+        // (translateToPlainText(...)) method is ONLY for that one:
+        shrinkBuffer();
+    }
+
+    applyPendingSelectionStyling();
+}
+
+// A line whose length is within csmServerWrapSlack characters below the
+// configured column could have been broken there by the game's own word wrap
+// (which breaks at the last space that fits, so wrapped segments fall up to a
+// word short of the column); pendingLineHadRoomForNextWord() settles whether
+// it really was once the continuation is in:
+bool TBuffer::endsAtServerWrapColumn() const
+{
+    const qsizetype width = mpHost->mUndoServerWrapWidth;
+    const qsizetype len = mMudLine.size();
+    return len <= width && len >= width - csmServerWrapSlack;
+}
+
+namespace {
+// What the end of a sentence looks like, closing quotes and brackets
+// included. The two checks below have to agree on it: one takes a wide
+// trailing gap after such a mark as a wrap the game kept the break space of,
+// the other refuses to hold a segment that ends on one:
+constexpr QStringView SENTENCE_FINALS = u".!?'\")";
+} // anonymous namespace
+
+// Word-wrapped prose breaks between words, so a wrapped segment ends in a
+// word (or a sentence mark that happened to fall on the wrap column) and
+// consists mostly of letters. ASCII art, dividers and table borders - which
+// also run right up to the screen width - end in and are full of symbols;
+// those must not be glued back together:
+bool TBuffer::looksLikeWrappedProse(const QString& line) const
+{
+    // Some games keep the space they broke the line at rather than
+    // swallowing it - but only ever the one, except right after the end of
+    // a sentence: games that put two spaces after a full stop keep both
+    // when the wrap point lands there. Any longer run of trailing
+    // whitespace means padding (or a blank line), which word wrap never
+    // produces:
+    qsizetype end = line.size();
+    while (end > 0 && line.at(end - 1).isSpace()) {
+        --end;
+    }
+    if (end == 0) {
+        return false;
+    }
+    static const QString allowedFinals = qsl(".,;:!?'\")");
+    const QChar last = line.at(end - 1);
+    const qsizetype trailingSpaces = line.size() - end;
+    if (trailingSpaces > 2 || (trailingSpaces == 2 && !SENTENCE_FINALS.contains(last))) {
+        return false;
+    }
+    if (!last.isLetterOrNumber() && !allowedFinals.contains(last)) {
+        return false;
+    }
+    qsizetype letters = 0;
+    qsizetype nonSpace = 0;
+    for (const QChar& c : line) {
+        if (c.isSpace()) {
+            continue;
+        }
+        ++nonSpace;
+        if (c.isLetterOrNumber()) {
+            ++letters;
+        }
+    }
+    return nonSpace > 0 && letters * 10 >= nonSpace * 6;
+}
+
+// Where a game swallows the space it breaks at, a segment that finishes a
+// sentence right on the wrap column looks exactly like one the game ended
+// there itself - and games end lines on sentences all the time: a room
+// description, the exits line below it, the object line below that. Joining
+// those runs separate lines into one and breaks triggers anchored to their
+// starts. A kept break space is the one piece of evidence
+// that settles it, so only a sentence with nothing at all after it is
+// refused. What that costs is a genuine wrap landing exactly after a sentence
+// staying split, which reads as a break at a sentence boundary - far cheaper
+// than the joins it prevents; the closing quotes and brackets in the set take
+// a mid-sentence one landing on the column with them, at the same cost and in
+// the same direction. The hold decision is the only place this belongs:
+// continuations legitimately end sentences, so looksLikeWrappedProse() must
+// keep accepting them.
+bool TBuffer::segmentEndsSettledSentence(const QString& line)
+{
+    if (line.isEmpty()) {
+        return false;
+    }
+    return SENTENCE_FINALS.contains(line.back());
+}
+
+// A list entry reads exactly like wrapped prose: a sentence that can end
+// right at the wrap column. Only its marker tells the list apart from a
+// paragraph, so every form accepted here has to be one that word wrap would
+// not itself produce at the start of a continuation. The ambiguous ones are
+// left out on purpose: a spaced dash opens a continuation whenever the wrap
+// lands on it, and a parenthesised number is as often an aside as a label,
+// so it is capped like a bare one.
+bool TBuffer::startsWithListMarker(const QString& line)
+{
+    qsizetype start = 0;
+    while (start < line.size() && line.at(start).isSpace()) {
+        ++start;
+    }
+    if (start >= line.size()) {
+        return false;
+    }
+
+    static const QString bullets = qsl("*+•·●◦");
+    if (bullets.contains(line.at(start))) {
+        return start + 1 < line.size() && line.at(start + 1) == QChar::Space;
+    }
+
+    static const QString openers = qsl("[(");
+    static const QString closers = qsl("])");
+    const qsizetype bracket = openers.indexOf(line.at(start));
+    const qsizetype numberStart = (bracket < 0) ? start : start + 1;
+    qsizetype numberEnd = numberStart;
+    while (numberEnd < line.size() && line.at(numberEnd).isDigit()) {
+        ++numberEnd;
+    }
+    const qsizetype digits = numberEnd - numberStart;
+    if (!digits || numberEnd >= line.size()) {
+        return false;
+    }
+    const bool numberFitsAList = digits <= csmMaxListNumberDigits || line.at(start) == QChar('[');
+    const bool closed = (bracket >= 0) ? line.at(numberEnd) == closers.at(bracket) : (line.at(numberEnd) == QChar('.') || line.at(numberEnd) == QChar(')'));
+    return numberFitsAList && closed && numberEnd + 1 < line.size() && line.at(numberEnd + 1) == QChar::Space;
+}
+
+// Word wrap breaks a line for one reason only: the next word did not fit. So
+// a continuation whose first word would have gone on the game line above it
+// is not a continuation at all - the game ended that line itself. Without
+// this two sentences that each stop short of the wrap column read exactly
+// like one wrapped paragraph. Only clear room counts, see
+// csmServerWrapFitTolerance.
+bool TBuffer::pendingLineHadRoomForNextWord() const
+{
+    // Measured against the last game line joined into the held text rather
+    // than the held text itself, which by then may be a whole paragraph:
+    qsizetype trailingSpaces = 0;
+    while (trailingSpaces < mServerWrapPendingLine.size() && mServerWrapPendingLine.at(mServerWrapPendingLine.size() - trailingSpaces - 1).isSpace()) {
+        ++trailingSpaces;
+    }
+    const qsizetype heldEnd = mServerWrapPendingSegmentLength - trailingSpaces;
+    qsizetype wordStart = 0;
+    while (wordStart < mMudLine.size() && mMudLine.at(wordStart).isSpace()) {
+        ++wordStart;
+    }
+    qsizetype wordEnd = wordStart;
+    while (wordEnd < mMudLine.size() && !mMudLine.at(wordEnd).isSpace()) {
+        ++wordEnd;
+    }
+    // The word starts past whatever the join will put between the two: the
+    // spaces the game left on either side of the break, or the single one
+    // added for it when the game swallowed it:
+    const qsizetype separator = std::max<qsizetype>(1, trailingSpaces + wordStart);
+    return heldEnd + separator + (wordEnd - wordStart) + csmServerWrapFitTolerance <= mpHost->mUndoServerWrapWidth;
+}
+
+// Games that wrap a tell, say or channel message themselves put the whole
+// prefix back on every physical line of it ("Anne teilt Dir mit: ..."). Those
+// lines break mid-sentence at the wrap column and leave no room for the next
+// word, so every other check reads them as one wrapped paragraph and the join
+// buries the prefix in the middle of it. The repeated opening is what gives
+// them away. Two words of it, because prose starts line after line with the
+// same article or pronoun and one proves nothing.
+bool TBuffer::continuationRepeatsSegmentOpening() const
+{
+    const qsizetype comparable = std::min(mServerWrapPendingSegmentStart.size(), mMudLine.size());
+    qsizetype i = 0;
+    // A held segment can open with the space the game moved the break to
+    // rather than swallowing it, and that space begins no word:
+    while (i < comparable && mServerWrapPendingSegmentStart.at(i).isSpace()) {
+        ++i;
+    }
+    int repeatedWords = 0;
+    for (; i < comparable; ++i) {
+        if (mServerWrapPendingSegmentStart.at(i) != mMudLine.at(i)) {
+            break;
+        }
+        // A word is over at the first space after it, so a run of them counts
+        // once - two words shared, not one and a wide gap:
+        if (mServerWrapPendingSegmentStart.at(i).isSpace() && !mServerWrapPendingSegmentStart.at(i - 1).isSpace()) {
+            ++repeatedWords;
+        }
+    }
+    return repeatedWords >= csmServerWrapRepeatedWords;
+}
+
+void TBuffer::joinPendingServerWrapOntoCurrent()
+{
+    if (mServerWrapPendingLine.isEmpty()) {
+        return;
+    }
+    // The game's wrapper swallowed the space it broke the line at:
+    if (!mServerWrapPendingLine.endsWith(QChar::Space) && !mMudLine.startsWith(QChar::Space)) {
+        mServerWrapPendingLine.append(QChar::Space);
+        mServerWrapPendingBuffer.push_back(mServerWrapPendingBuffer.empty() ? TChar(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()) : mServerWrapPendingBuffer.back());
+    }
+    mMudLine.prepend(mServerWrapPendingLine);
+    mMudBuffer.insert(mMudBuffer.begin(), mServerWrapPendingBuffer.begin(), mServerWrapPendingBuffer.end());
+    mServerWrapPendingLine.clear();
+    mServerWrapPendingBuffer.clear();
+}
+
+void TBuffer::flushPendingServerWrapJoin()
+{
+    if (mServerWrapPendingLine.isEmpty()) {
+        return;
+    }
+    QString line;
+    std::vector<TChar> chars;
+    line.swap(mServerWrapPendingLine);
+    chars.swap(mServerWrapPendingBuffer);
+    commitLineData(std::move(line), std::move(chars), '\n');
+}
+
+void TBuffer::startServerWrapFlushTimer()
+{
+    if (!mpServerWrapFlushTimer) {
+        if (!mpConsole) {
+            return;
+        }
+        mpServerWrapFlushTimer = new QTimer(mpConsole);
+        // Named so that a test can find it on the console and observe the state
+        // it leaves behind, which no polling assertion can catch: the posting
+        // timer in cTelnet::slot_timerPosting() calls finalize() too and hides
+        // an unpainted line within a tick of it being committed
+        mpServerWrapFlushTimer->setObjectName(qsl("serverWrapFlushTimer"));
+        mpServerWrapFlushTimer->setSingleShot(true);
+        mpServerWrapFlushTimer->setInterval(csmServerWrapFlushDelayMs);
+        QObject::connect(mpServerWrapFlushTimer, &QTimer::timeout, mpConsole, [this]() {
+            if (!mpHost || !mpHost->mpConsole) {
+                return;
+            }
+            // Mimic TMainConsole::printOnDisplay() so that trigger-context
+            // functions behave the same as for any other committed line:
+            mpHost->mpConsole->mTriggerEngineMode = true;
+            flushPendingServerWrapJoin();
+            mpHost->mpConsole->mTriggerEngineMode = false;
+            mpHost->finalizeMainConsole();
+        });
+    }
+    mpServerWrapFlushTimer->start();
+}
+
+const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
+{
+    if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
+        return &mPreTriggerPassLine;
+    }
+    return nullptr;
+}
+
+// A structural edit to the trigger-pass line makes the edited text the new
+// baseline for color matching:
+void TBuffer::syncPreTriggerPassLine(int y)
+{
+    if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
+        mPreTriggerPassLine = buffer[y];
+        mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+        mPreTriggerPassSnapshotTaken = true;
+    }
+}
+
+void TBuffer::materialisePreTriggerPassLine(int y)
+{
+    if (!mPreTriggerPassSnapshotTaken && y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
+        mPreTriggerPassLine.assign(buffer[y].cbegin(), buffer[y].cend());
+        mPreTriggerPassSnapshotTaken = true;
+    }
+}
+
+const TChar* TBuffer::preTriggerPassLineUniformColors(int lineNumber)
+{
+    if (lineNumber < 0 || lineNumber != mPreTriggerPassLineNumber || lineNumber >= static_cast<int>(buffer.size())) {
+        return nullptr;
+    }
+    // Until a write materialises the snapshot the line still holds the colors
+    // the game sent, so it answers for them itself - which is most lines:
+    const std::vector<TChar>& passLine = mPreTriggerPassSnapshotTaken ? mPreTriggerPassLine : buffer[lineNumber];
+    if (passLine.empty()) {
+        return nullptr;
+    }
+    const TChar& first = passLine.front();
+    if (mPreTriggerPassLineUniformity == PassLineUniformity::Unknown) {
+        // The first character only stands in for the rest of them while this
+        // compares colors the same way the trigger it answers for does
+        const bool uniform = std::all_of(passLine.cbegin() + 1, passLine.cend(), [&first](const TChar& character) {
+            return first.foregroundRgba() == character.foregroundRgba() && first.backgroundRgba() == character.backgroundRgba();
+        });
+        mPreTriggerPassLineUniformity = uniform ? PassLineUniformity::Uniform : PassLineUniformity::Mixed;
+    }
+    if (mPreTriggerPassLineUniformity == PassLineUniformity::Uniform) {
+        return &first;
+    }
+    return nullptr;
+}
+
+void TBuffer::processMxpWatchdogCallback()
+{
+    if (!mpHost) {
+        mWatchdogPhase = WatchdogPhase::None;
+        return;
+    }
+
+    TMxpNodeBuilder& tagBuilder = mpHost->mMxpProcessor.getMxpTagBuilder();
+    std::string currentTagContent = tagBuilder.getRawTagContent();
+    bool isMxpParserFrozen = !currentTagContent.empty() && currentTagContent.starts_with(mWatchdogTagSnapshot) && tagBuilder.isInsideTag();
+
+    if (mWatchdogPhase == WatchdogPhase::Phase1_Snapshot) {
+        mWatchdogTagSnapshot = currentTagContent;
+        mWatchdogPhase = WatchdogPhase::Phase2_Unfreeze;
+        mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
+    } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
+        if (isMxpParserFrozen && mpConsole) {
+            mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
+            const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+            QPointer<Host> hostGuard = mpHost;
+            QPointer<TConsole> consoleGuard = mpConsole;
+            // The continuation writes into this buffer through the captured
+            // 'this', so what has to cancel it is this buffer going away - not
+            // the console going away, which is a different and longer life. The
+            // watchdog timer is owned by the buffer, so naming it as the context
+            // object ties the two together: destroying the buffer destroys the
+            // timer, and that drops any continuation still queued against it.
+            QTimer::singleShot(0ms, mTagWatchdog.get(), [this, style, hostGuard, consoleGuard]() {
+                // commitLine() and finalize() below both reach the main console
+                // through the host, and that pointer empties on its own when the
+                // profile's console goes:
+                if (!hostGuard || !consoleGuard || !hostGuard->mpConsole) {
+                    return;
+                }
+                QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
+                size_t unusedBufferPosition = 0;
+
+                mMudLine.append(lastEntityValue);
+                for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
+                    mMudBuffer.push_back(style);
+                }
+                commitLine('\r', unusedBufferPosition);
+                hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
+                hostGuard->finalizeMainConsole();
+            });
+        }
+        mWatchdogPhase = WatchdogPhase::None;
+    }
+}
+
+TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const
+{
+    return ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None) | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
+           | (mOverline ? TChar::Overline : TChar::None) | (mReverse ? TChar::Reverse : TChar::None) | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+           | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None) | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
+           | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None) | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
+           | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink : TChar::None)) | (TChar::alternateFontFlag(mAltFont)) | (mConcealed ? TChar::Concealed : TChar::None);
+}
+
+void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
-    qDebug() << "    TBuffer::decodeSGR38(" << parameters << "," << isColonSeparated <<") INFO - called";
+    qDebug() << "    TBuffer::decodeSGR38(" << parameters << "," << isColonSeparated << ") INFO - called";
 #endif
     if (parameters.at(1) == QLatin1String("5")) {
         int tag = 0;
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-#if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
+#if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2) << ":...;...m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
+                                                 << ":...;...m sequence, leaving the colour as it was!";
                 } else {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2) << ";...m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
+                                                 << ";...m sequence, leaving the colour as it was!";
                 }
-            }
 #endif
+                // An index we cannot read is not a request for colour zero:
+                return;
+            }
         } else {
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
@@ -1850,66 +2577,18 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             // because color 1-15 behave like normal ANSI colors
             tag -= 16;
             // 6x6x6 RGB color space
-            quint8 r = tag / 36;
-            quint8 g = (tag - (r * 36)) / 6;
-            quint8 b = (tag - (r * 36)) - (g * 6);
-            // Did use 42 as a factor but that isn't right
-            // as it yields:
-            // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
-            // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
-            // Instead we use 51:
-            // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mForeGroundColor = QColor(r * 51, g * 51, b * 51);
+            quint8 const r = tag / 36;
+            quint8 const g = (tag - (r * 36)) / 6;
+            quint8 const b = (tag - (r * 36)) - (g * 6);
+            // Adjusted from previously linear gradient for the blocks.
+            // To match the common terminal palettes, the values are
+            // scaled as follows:
+            // 0: 0, 1: 95, 2:135, 3:175, 4:215, 5:255
+            mForeGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95, g == 0 ? 0 : (g - 1) * 40 + 95, b == 0 ? 0 : (b - 1) * 40 + 95);
             mForeGroundColorLight = mForeGroundColor;
 
         } else {
-            // black + 23 tone grayscale from dark to light
-            // gray. Similar to RGB case the multiplier was
-            // a bit off we had been using 10 but:
-            // 23 x 10 = 230
-            // whereas 23 should map to 255, this requires
-            // a non-integer multiplier, instead of
-            // multiplying and rounding we, for speed, can
-            // use a look-up table:
-            int value = 0;
-            // clang-format off
-            switch (tag) {
-                case 232:   value =   0; break; //   0.000
-                case 233:   value =  11; break; //  11.087
-                case 234:   value =  22; break; //  22.174
-                case 235:   value =  33; break; //  33.261
-                case 236:   value =  44; break; //  44.348
-                case 237:   value =  55; break; //  55.435
-                case 238:   value =  67; break; //  66.522
-                case 239:   value =  78; break; //  77.609
-                case 240:   value =  89; break; //  88.696
-                case 241:   value = 100; break; //  99.783
-                case 242:   value = 111; break; // 110.870
-                case 243:   value = 122; break; // 121.957
-                case 244:   value = 133; break; // 133.043
-                case 245:   value = 144; break; // 144.130
-                case 246:   value = 155; break; // 155.217
-                case 247:   value = 166; break; // 166.304
-                case 248:   value = 177; break; // 177.391
-                case 249:   value = 188; break; // 188.478
-                case 250:   value = 200; break; // 199.565
-                case 251:   value = 211; break; // 210.652
-                case 252:   value = 222; break; // 221.739
-                case 253:   value = 233; break; // 232.826
-                case 254:   value = 244; break; // 243.913
-                case 255:   value = 255; break; // 255.000
-                default:
-                    value = 192;
-#if defined(DEBUG_SGR_PROCESSING)
-                    if (isColonSeparated) {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2) << ";..m sequence treating it as 192!";
-                    } else {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38;5;" << parameters.at(2) << ";..m sequence treating it as 192!";
-                    }
-#endif
-            }
-
-             // clang-format on
+            const int value = (tag - 232) * 10 + 8;
             mForeGroundColor = QColor(value, value, value);
             mForeGroundColorLight = mForeGroundColor;
         }
@@ -1929,7 +2608,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             // but green and blue components are
             // zero
             mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
-        } else  {
+        } else {
             // No codes left for any colour
             // components so colour must be black,
             // as all of red, green and blue
@@ -1939,22 +2618,22 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
             if (!isColonSeparated) {
-#if ! defined(DEBUG_SGR_PROCESSING)
-                qDebug() << "Unhandled color space identifier in a SGR...;38;2;" << parameters.at(2) << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special Options tab of the preferences when it is not needed!";
+#if !defined(DEBUG_SGR_PROCESSING)
+                qDebug() << "Unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
+                         << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special "
+                            "Options tab of the preferences when it is not needed!";
 #else
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38;2;" << parameters.at(2) << ";...m sequence treating it as the default (empty) case!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
+                                             << ";...m sequence treating it as the default (empty) case!";
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38:2:" << parameters.at(2) << ":...;...m sequence treating it as the default (empty) case!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38:2:" << parameters.at(2)
+                                             << ":...;...m sequence treating it as the default (empty) case!";
 #endif
             }
         }
         mForeGroundColorLight = mForeGroundColor;
 
-    } else if (parameters.at(1) == QLatin1String("4")
-            || parameters.at(1) == QLatin1String("3")
-            || parameters.at(1) == QLatin1String("1")
-            || parameters.at(1) == QLatin1String("0")) {
-
+    } else if (parameters.at(1) == QLatin1String("4") || parameters.at(1) == QLatin1String("3") || parameters.at(1) == QLatin1String("1") || parameters.at(1) == QLatin1String("0")) {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
             qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
@@ -1964,22 +2643,20 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 #endif
 
     } else {
-
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpected SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpected SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
-
     }
 }
 
-void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
+void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
-    qDebug() << "    TBuffer::decodeSGR48(" << parameters << "," << isColonSeparated <<") INFO - called";
+    qDebug() << "    TBuffer::decodeSGR48(" << parameters << "," << isColonSeparated << ") INFO - called";
 #endif
     bool useLightColor = false;
 
@@ -1988,15 +2665,19 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-#if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
+#if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2) << ":...;...m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
+                                                 << ":...;...m sequence, leaving the colour as it was!";
                 } else {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2) << ";...m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
+                                                 << ";...m sequence, leaving the colour as it was!";
                 }
-            }
 #endif
+                // An index we cannot read is not a request for colour zero:
+                return;
+            }
         } else {
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
@@ -2060,64 +2741,17 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
             // because color 1-15 behave like normal ANSI colors
             tag -= 16;
             // 6x6x6 RGB color space
-            quint8 r = tag / 36;
-            quint8 g = (tag - (r * 36)) / 6;
-            quint8 b = (tag - (r * 36)) - (g * 6);
-            // Did use 42 as a factor but that isn't right
-            // as it yields:
-            // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
-            // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
-            // Instead we use 51:
-            // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mBackGroundColor = QColor(r * 51, g * 51, b * 51);
+            quint8 const r = tag / 36;
+            quint8 const g = (tag - (r * 36)) / 6;
+            quint8 const b = (tag - (r * 36)) - (g * 6);
+            // Adjusted from previously linear gradient for the blocks.
+            // To match the common terminal palettes, the values are
+            // scaled as follows:
+            // 0: 0, 1: 95, 2:135, 3:175, 4:215, 5:255
+            mBackGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95, g == 0 ? 0 : (g - 1) * 40 + 95, b == 0 ? 0 : (b - 1) * 40 + 95);
 
         } else {
-            // black + 23 tone grayscale from dark to light
-            // gray. Similar to RGB case the multiplier was
-            // a bit off we had been using 10 but:
-            // 23 x 10 = 230
-            // whereas 23 should map to 255, this requires
-            // a non-integer multiplier, instead of
-            // multiplying and rounding we, for speed, can
-            // use a look-up table:
-            int value = 0;
-            // clang-format off
-            switch (tag) {
-                case 232:   value =   0; break; //   0.000
-                case 233:   value =  11; break; //  11.087
-                case 234:   value =  22; break; //  22.174
-                case 235:   value =  33; break; //  33.261
-                case 236:   value =  44; break; //  44.348
-                case 237:   value =  55; break; //  55.435
-                case 238:   value =  67; break; //  66.522
-                case 239:   value =  78; break; //  77.609
-                case 240:   value =  89; break; //  88.696
-                case 241:   value = 100; break; //  99.783
-                case 242:   value = 111; break; // 110.870
-                case 243:   value = 122; break; // 121.957
-                case 244:   value = 133; break; // 133.043
-                case 245:   value = 144; break; // 144.130
-                case 246:   value = 155; break; // 155.217
-                case 247:   value = 166; break; // 166.304
-                case 248:   value = 177; break; // 177.391
-                case 249:   value = 188; break; // 188.478
-                case 250:   value = 200; break; // 199.565
-                case 251:   value = 211; break; // 210.652
-                case 252:   value = 222; break; // 221.739
-                case 253:   value = 233; break; // 232.826
-                case 254:   value = 244; break; // 243.913
-                case 255:   value = 255; break; // 255.000
-                default:
-                    value = 64;
-#if defined(DEBUG_SGR_PROCESSING)
-                    if (isColonSeparated) {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2) << ";..m sequence treating it as 64!";
-                    } else {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48;5;" << parameters.at(2) << ";..m sequence treating it as 64!";
-                    }
-#endif
-            }
-             // clang-format on
+            const int value = (tag - 232) * 10 + 8;
             mBackGroundColor = QColor(value, value, value);
         }
 
@@ -2139,7 +2773,7 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
             // zero
             mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
 
-        } else  {
+        } else {
             // No codes left for any colour
             // components so colour must be black,
             // as all of red, green and blue
@@ -2149,21 +2783,21 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
             if (!isColonSeparated) {
-#if ! defined(DEBUG_SGR_PROCESSING)
-                qDebug() << "Unhandled color space identifier in a SGR...;48;2;" << parameters.at(2) << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special Options tab of the preferences when it is not needed!";
+#if !defined(DEBUG_SGR_PROCESSING)
+                qDebug() << "Unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
+                         << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special "
+                            "Options tab of the preferences when it is not needed!";
 #else
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48;2;" << parameters.at(2) << ";...m sequence treating it as the default (empty) case!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
+                                             << ";...m sequence treating it as the default (empty) case!";
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48:2:" << parameters.at(2) << ":...;...m sequence treating it as the default (empty) case!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48:2:" << parameters.at(2)
+                                             << ":...;...m sequence treating it as the default (empty) case!";
 #endif
             }
         }
 
-    } else if (parameters.at(1) == QLatin1String("4")
-            || parameters.at(1) == QLatin1String("3")
-            || parameters.at(1) == QLatin1String("1")
-            || parameters.at(1) == QLatin1String("0")) {
-
+    } else if (parameters.at(1) == QLatin1String("4") || parameters.at(1) == QLatin1String("3") || parameters.at(1) == QLatin1String("1") || parameters.at(1) == QLatin1String("0")) {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
             qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
@@ -2173,19 +2807,17 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 #endif
 
     } else {
-
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpected SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpected SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
     }
-
 }
 
-void TBuffer::decodeSGR(const QString& sequence)
+void TBuffer::decodeSGR(const QStringView sequence)
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2193,17 +2825,23 @@ void TBuffer::decodeSGR(const QString& sequence)
         return;
     }
 
-    bool haveColorSpaceId = pHost->getHaveColorSpaceId();
+    const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
 
-    QStringList parameterStrings = sequence.split(QChar(';'));
+    SgrParameters parameterStrings;
+    for (const QStringView parameter : sequence.tokenize(u';')) {
+        parameterStrings.append(parameter);
+    }
     for (int paraIndex = 0, total = parameterStrings.count(); paraIndex < total; ++paraIndex) {
-        QString allParameterElements = parameterStrings.at(paraIndex);
-        if (allParameterElements.contains(QLatin1String(":"))) {
+        const QStringView allParameterElements = parameterStrings.at(paraIndex);
+        if (allParameterElements.contains(u':')) {
             /******************************************************************
              * Parameter string with colon separated Parameter (sub) elements *
              ******************************************************************/
             // We have colon separated parameter elements, so we must have at least 2 members
-            QStringList parameterElements(allParameterElements.split(QChar(':')));
+            SgrParameters parameterElements;
+            for (const QStringView element : allParameterElements.tokenize(u':')) {
+                parameterElements.append(element);
+            }
             if (parameterElements.at(0) == QLatin1String("38")) {
                 if (parameterElements.count() >= 2) {
                     decodeSGR38(parameterElements, true);
@@ -2221,11 +2859,11 @@ void TBuffer::decodeSGR(const QString& sequence)
 
                     // Okay we have one more parameter at least - so examine it
                     // and grab the needed number of arguments:
-                    QStringList madeElements;
-                    madeElements << parameterStrings.at(paraIndex); // "38"
+                    SgrParameters madeElements;
+                    madeElements << parameterStrings.at(paraIndex);     // "38"
                     madeElements << parameterStrings.at(paraIndex + 1); // "2" or "5" hopefully
                     bool isOk = false;
-                    int sgr38_type = madeElements.at(1).toInt(&isOk);
+                    const int sgr38_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
                         // Oh dear that parameter is empty or equivalent to zero
                         // so we cannot do anything more
@@ -2243,17 +2881,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2273,7 +2911,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                             }
                         } else {
                             // Fake an empty colour space id
-                            madeElements << QString();
+                            madeElements << QStringView();
                             if (paraIndex + 2 < total) {
                                 // We have the red component
                                 madeElements << parameterStrings.at(paraIndex + 2);
@@ -2293,14 +2931,13 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
                     }
-
                 }
-            // End of if (parameterElements.at(0) == QLatin1String("38"))
+                // End of if (parameterElements.at(0) == QLatin1String("38"))
             } else if (parameterElements.at(0) == QLatin1String("48")) {
                 if (parameterElements.count() >= 2) {
                     decodeSGR48(parameterElements, true);
@@ -2318,11 +2955,11 @@ void TBuffer::decodeSGR(const QString& sequence)
 
                     // Okay we have one more parameter at least - so examine it
                     // and grab the needed number of arguments:
-                    QStringList madeElements;
+                    SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
                     bool isOk = false;
-                    int sgr48_type = madeElements.at(1).toInt(&isOk);
+                    const int sgr48_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
                         // Oh dear that parameter is empty or equivalent to zero
                         // so we cannot do anything more
@@ -2340,17 +2977,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2370,7 +3007,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                             }
                         } else {
                             // Fake an empty colour space id
-                            madeElements << QString();
+                            madeElements << QStringView();
                             if (paraIndex + 2 < total) {
                                 // We have the red component
                                 madeElements << parameterStrings.at(paraIndex + 2);
@@ -2390,47 +3027,81 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
                     }
-
                 }
-            // End of if (parameterElements.at(0) == QLatin1String("48"))
+                // End of if (parameterElements.at(0) == QLatin1String("48"))
             } else if (parameterElements.at(0) == QLatin1String("4")) {
                 // New way of controlling underline
                 bool isOk = false;
-                int value = parameterElements.at(1).toInt(&isOk);
+                const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
+                                                 << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
                 }
+                // Sub-parameter values follow the widely-adopted kitty/VTE
+                // convention: 0 none, 1 single, 2 double, 3 curly, 4 dotted,
+                // 5 dashed. Mudlet has no distinct double-underline style so
+                // 2 is shown as a plain single underline.
                 switch (value) {
                 case 0: // Underline off
                     mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
-                case 1: // Underline on
+                case 1: // Single (straight) underline
                     mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
-                case 2: // Double underline - not supported, treat as single
-                    [[fallthrough]];
-                case 3: // Wavey underline - not supported, treat as single
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unsupported underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a one!";
+                case 2: // Double underline - unsupported, show as single
                     mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    break;
+                case 3: // Curly (wavy) underline
+                    mUnderline = true;
+                    mUnderlineWavy = true;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    break;
+                case 4: // Dotted underline
+                    mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = true;
+                    mUnderlineDashed = false;
+                    break;
+                case 5: // Dashed underline
+                    mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = true;
                     break;
                 default: // Something unexpected
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
+                                                 << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1)
+                                                 << ";../m sequence treating it as a zero!";
                     mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
                 }
             } else if (parameterElements.at(0) == QLatin1String("3")) {
                 // New way of controlling italics
                 bool isOk = false;
-                int value = parameterElements.at(1).toInt(&isOk);
+                const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - failed to detect italic parameter element (the second part) in a SGR...;3:?;../m sequence assuming it is a zero!";
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
+                                                 << "\") ERROR - failed to detect italic parameter element (the second part) in a SGR...;3:?;../m sequence assuming it is a zero!";
                 }
                 switch (value) {
                 case 0: // Italics/Slant off
@@ -2440,16 +3111,20 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mItalics = true;
                     break;
                 case 2: // Slant on - not supported, treat as italics
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unsupported italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1) << ";../m sequence treating it as a one!";
-                    mUnderline = true;
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
+                                                 << "\") ERROR - unsupported italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
+                                                 << ";../m sequence treating it as a one!";
+                    mItalics = true;
                     break;
                 default: // Something unexpected
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1) << ";../m sequence treating it as a zero!";
-                    mUnderline = false;
+                    qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
+                                                 << ";../m sequence treating it as a zero!";
+                    mItalics = false;
                     break;
                 }
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - parameter string with an unexpected initial parameter element in a SGR...;" << parameterElements.at(0) << ":" << parameterElements.at(1) << "...;.../m sequence, ignoring it!";
+                qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - parameter string with an unexpected initial parameter element in a SGR...;"
+                                             << parameterElements.at(0) << ":" << parameterElements.at(1) << "...;.../m sequence, ignoring it!";
             }
         } else {
             /******************************************************************
@@ -2477,6 +3152,13 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mReverse = false;
                     mStrikeOut = false;
                     mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
+                    mBlink = false;
+                    mFastBlink = false;
+                    mConcealed = false;
+                    mAltFont = 0;
                     break;
                 case 1:
                     mBold = true;
@@ -2490,44 +3172,74 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 3:
                     // There is a proposal by the "VTE" terminal
                     // emulator to use a (sub)parameter entry to
-                    // destinguish between italics and slanted text by
+                    // distinguish between italics and slanted text by
                     // using ESC[...;3:1;...m and ESC[...;3:2;...m
                     // respectively - that is handled above in the colon
                     // sub-string separated part:
                     mItalics = true;
                     break;
                 case 4:
-                    // There is a implimention by some terminal
+                    // There is a implementation by some terminal
                     // emulators ("Kitty" and "VTE") to use a
                     // (sub)parameter entry of 3 for a wavy underline
                     // {presumably 2 would be a double underline and 1
                     // the normal single underline) by sending e.g.:
                     // ESC[...;4:3;...m - that is handled above in the colon
-                    // sub-string separated part:
+                    // sub-string separated part. Plain 4 is that convention's
+                    // single underline, so it has to drop any style already set:
                     mUnderline = true;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
-                 case 5:
-                     if (mItalics) {
-                         mItalicBeforeBlink = true;
-                     }
-                     mItalics = true;
-                     break; //slow-blinking, represented as italics instead
-                 case 6:
-                     if (mItalics) {
-                         mItalicBeforeBlink = true;
-                     }
-                     mItalics = true;
-                     break; //fast blinking, represented as italics instead
+                case 5:
+                    mBlink = true;
+                    mFastBlink = false;
+                    break; //slow-blinking, display as italics instead for the moment
+                case 6:
+                    mBlink = false;
+                    mFastBlink = true;
+                    break; //fast blinking, display as italics instead for the moment
                 case 7:
                     mReverse = true;
                     break;
-                // case 8: // Concealed characters (set foreground to be the same as background?)
-                //    break;
+                case 8: // Concealed characters (set foreground to be the same as background?)
+                    mConcealed = true;
+                    break;
                 case 9:
                     mStrikeOut = true;
                     break;
-                // case 10:
-                //    break; //default font
+                case 10: //default font
+                    mAltFont = 0;
+                    break;
+                case 11: // 11 to 19 are alternate fonts, what and where those
+                         // are set is not so well specified
+                    mAltFont = 1;
+                    break;
+                case 12:
+                    mAltFont = 2;
+                    break;
+                case 13:
+                    mAltFont = 3;
+                    break;
+                case 14:
+                    mAltFont = 4;
+                    break;
+                case 15:
+                    mAltFont = 5;
+                    break;
+                case 16:
+                    mAltFont = 6;
+                    break;
+                case 17:
+                    mAltFont = 7;
+                    break;
+                case 18:
+                    mAltFont = 8;
+                    break;
+                case 19:
+                    mAltFont = 9;
+                    break;
                 // case 21: // Double underline according to specs
                 //    break;
                 case 22:
@@ -2538,18 +3250,20 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 24:
                     mUnderline = false;
+                    mUnderlineWavy = false;
+                    mUnderlineDotted = false;
+                    mUnderlineDashed = false;
                     break;
-                 case 25:
-                     if (!mItalicBeforeBlink) {
-                         mItalics = false;
-                     }
-                     mItalicBeforeBlink = false;
+                case 25:
+                    mBlink = false;
+                    mFastBlink = false;
                     break; // blink off
                 case 27:
                     mReverse = false;
                     break;
-                // case 28: // Revealed characters (undoes the effect of "8")
-                //    break;
+                case 28: // Revealed characters (undoes the effect of "8")
+                    mConcealed = false;
+                    break;
                 case 29:
                     mStrikeOut = false;
                     break;
@@ -2604,11 +3318,11 @@ void TBuffer::decodeSGR(const QString& sequence)
 
                     // Okay we have one more parameter at least - so examine it
                     // and grab the needed number of arguments:
-                    QStringList madeElements;
+                    SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
                     bool isOk = false;
-                    int sgr38_type = madeElements.at(1).toInt(&isOk);
+                    const int sgr38_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
                         // Oh dear that parameter is empty or equivalent to zero
                         // so we cannot do anything more
@@ -2626,17 +3340,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2656,7 +3370,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                             }
                         } else {
                             // Fake an empty colour space id
-                            madeElements << QString();
+                            madeElements << QStringView();
                             if (paraIndex + 2 < total) {
                                 // We have the red component
                                 madeElements << parameterStrings.at(paraIndex + 2);
@@ -2678,15 +3392,16 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
                     }
-                }
-                    break;
+                } break;
                 case 39: //default foreground color
+                    mIsDefaultColor = true;
                     mForeGroundColor = pHost->mFgColor;
+                    mForeGroundColorLight = pHost->mFgColor;
                     break;
                 case 40:
                     mBackGroundColor = mBlack;
@@ -2723,11 +3438,11 @@ void TBuffer::decodeSGR(const QString& sequence)
 
                     // Okay we have one more parameter at least - so examine it
                     // and grab the needed number of arguments:
-                    QStringList madeElements;
+                    SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
                     bool isOk = false;
-                    int sgr48_type = madeElements.at(1).toInt(&isOk);
+                    const int sgr48_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
                         // Oh dear that parameter is empty or equivalent to zero
                         // so we cannot do anything more
@@ -2745,17 +3460,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += 2;
                         break;
                     case 4: // Not handled but we still should skip its arguments
-                            // Uses four or five depending on whether there is
-                            // the colour space id first
-                            // Move the index to consume the used values
+                        // Uses four or five depending on whether there is
+                        // the colour space id first
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 6 : 5);
                         break;
                     case 3: // Not handled but we still should skip its arguments
-                            // Move the index to consume the used values
+                        // Move the index to consume the used values
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 2: // Need three or four depending on whether there is
-                            // the colour space id first
+                        // the colour space id first
                         if (haveColorSpaceId) {
                             if (paraIndex + 2 < total) {
                                 // We have the color space id
@@ -2775,7 +3490,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                             }
                         } else {
                             // Fake an empty colour space id
-                            madeElements << QString();
+                            madeElements << QStringView();
                             if (paraIndex + 2 < total) {
                                 // We have the red component
                                 madeElements << parameterStrings.at(paraIndex + 2);
@@ -2795,13 +3510,12 @@ void TBuffer::decodeSGR(const QString& sequence)
                         paraIndex += (haveColorSpaceId ? 5 : 4);
                         break;
                     case 1: // This uses no extra arguments and, as it means
-                            // transparent, is no use to us
+                        // transparent, is no use to us
                         [[fallthrough]];
                     default:
                         break;
                     }
-                }
-                    break;
+                } break;
                 case 49: // default background color
                     mBackGroundColor = pHost->mBgColor;
                     break;
@@ -2904,18 +3618,26 @@ void TBuffer::decodeSGR(const QString& sequence)
 
 void TBuffer::decodeOSC(const QString& sequence)
 {
+    if (sequence.isEmpty()) {
+        qWarning() << "TBuffer::decodeOSC(...) WARNING - Received empty OSC sequence, ignoring.";
+        return;
+    }
+
     Host* pHost = mpHost;
     if (!pHost) {
         qWarning() << "TBuffer::decodeOSC(...) ERROR - Called when mpHost pointer is nullptr";
         return;
     }
 
-    bool serverMayRedefineDefaultColors = pHost->getMayRedefineColors();
+    const bool serverMayRedefineDefaultColors = pHost->getMayRedefineColors();
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
+    // Only log sequences that aren't just OSC 8 terminators to reduce noise
+    if (!(sequence.startsWith("8;;") && sequence.length() == 3)) {
+        qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
+    }
 #endif
-    unsigned short ch = sequence.at(0).unicode();
-    switch (ch) {
+    const uint16_t character = sequence.at(0).unicode();
+    switch (character) {
     case static_cast<quint8>('P'):
         if (serverMayRedefineDefaultColors) {
             if (sequence.size() == 8) {
@@ -2924,14 +3646,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Uses mid(...) rather than at(...) because we want the return to
                 // be a (single character) QString and not a QChar so we can use
                 // QString::toUInt(...):
-                quint8 colorNumber = sequence.midRef(1,1).toUInt(&isOk, 16);
+                quint8 const colorNumber = sequence.mid(1, 1).toUInt(&isOk, 16);
                 quint8 rr = 0;
                 if (isOk) {
-                    rr = sequence.midRef(2, 2).toUInt(&isOk, 16);
+                    rr = sequence.mid(2, 2).toUInt(&isOk, 16);
                 }
                 quint8 gg = 0;
                 if (isOk) {
-                    gg = sequence.midRef(4, 2).toUInt(&isOk, 16);
+                    gg = sequence.mid(4, 2).toUInt(&isOk, 16);
                 }
                 quint8 bb = 0;
                 if (isOk) {
@@ -2994,9 +3716,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (isValid) {
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
-                        // changed by this method:
-                        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-                            mudlet::self()->mConsoleMap[pHost]->changeColors();
+                        // changed by this method. With no console there is
+                        // nothing to restyle, but this buffer's own copy of the
+                        // palette still has to be refreshed - it is what stamps
+                        // the text, not the Host's:
+                        if (pHost->mpConsole) {
+                            pHost->mpConsole->changeColors();
+                        } else {
+                            pHost->refreshMainConsoleColors();
                         }
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
@@ -3004,12 +3731,14 @@ void TBuffer::decodeOSC(const QString& sequence)
 
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Unable to parse this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
+                    qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence
+                                                 << "\") ERROR - Unable to parse this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
 #endif
                 }
             } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Wrong length of string, unable to decode this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
+                qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence
+                                             << "\") ERROR - Wrong length of string, unable to decode this as a <OSC>P<I><RR><GG><BB><ST> string to redefined one of the 16 ANSI colors.";
 #endif
             }
         }
@@ -3019,9 +3748,1358 @@ void TBuffer::decodeOSC(const QString& sequence)
             resetColors();
         }
         break;
+    case static_cast<quint8>('8'): {
+        QStringView rest = QStringView(sequence).mid(1); // skip selector "8"
+        int firstSemi = rest.indexOf(';');
+
+        if (firstSemi == -1) {
+            qWarning() << "OSC 8: Missing first semicolon";
+            return;
+        }
+
+        int secondSemi = rest.indexOf(';', firstSemi + 1);
+
+        if (secondSemi == -1) {
+            qWarning() << "OSC 8: Missing second semicolon";
+            return;
+        }
+
+        QString param = rest.left(firstSemi).toString();
+
+        // Parameters are available but not used by Mudlet currently
+#if defined(DEBUG_OSC_PROCESSING)
+        if (!param.isEmpty()) {
+            qDebug().noquote().nospace() << "[OSC 8] Params provided (not used by Mudlet but shown for debugging): \"" << param << "\"";
+        }
+#endif
+        QString rawUrl = rest.mid(secondSemi + 1).toString();
+
+#if defined(DEBUG_OSC_PROCESSING)
+        if (!rawUrl.isEmpty()) {
+            qDebug().noquote().nospace() << "[OSC] Received OSC 8 sequence with URL (length=" << rawUrl.length() << "): " << (rawUrl.length() > 80 ? rawUrl.left(80) + "..." : rawUrl);
+        }
+#endif
+
+        // OSC 8 ;; closes the hyperlink
+        if ((param.isEmpty() && rawUrl.isEmpty())) {
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug().noquote() << "[OSC] Hyperlink terminator - closing active hyperlink";
+#endif
+
+            // Apply initial selection/disabled state styling when link closes (from selection branch)
+            // OR apply :link pseudo-class styling for preset-only links (from compact branch)
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId << "selected:" << mCurrentHyperlinkStyling.selection.selected
+                         << "disabled:" << mCurrentHyperlinkStyling.selection.disabled << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
+#endif
+                if (mCurrentHyperlinkStyling.selection.selected) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
+                    mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+                } else if (mCurrentHyperlinkStyling.selection.disabled) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+                    mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+                }
+            } else if (mCurrentHyperlinkLinkId > 0) {
+                // Set initial :link pseudo-class state for regular links
+                setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDefault);
+                // DON'T call updateLinkCharacters() here - the link text hasn't been added to
+                // the buffer yet! It gets added later during COMMIT_LINE. Calling it now would
+                // scan the entire buffer looking for characters that don't exist yet, causing
+                // severe performance degradation with many links.
+                // The :link styling will be applied when characters are created in COMMIT_LINE.
+            }
+
+            // For spoilers, capture original text BEFORE any visibility concealment
+            // This ensures spoiler reveal works even when combined with visibility actions
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+                int currentColumn = mMudLine.length();
+                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+
+                if (linkLength > 0) {
+                    // Store the original text before any replacements
+                    QString originalText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+                    mLinkOriginalText[mCurrentHyperlinkLinkId] = originalText;
+
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Spoiler link" << mCurrentHyperlinkLinkId << "- storing original text:" << originalText << "and replacing with spaces, length:" << linkLength;
+#endif
+                    // Replace spoiler text with spaces to hide it
+                    QString spaces(linkLength, ' ');
+                    mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                }
+            }
+
+            // Register with visibility manager if visibility settings exist
+            // Visibility currently only supports single-line hyperlinks
+            // Multi-line links will not have visibility management applied
+            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mpConsole && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
+                int currentColumn = mMudLine.length();
+                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+
+                if (linkLength > 0) {
+                    // Only register if we have a valid link range
+                    QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Registering hyperlink" << mCurrentHyperlinkLinkId << "line:" << mCurrentHyperlinkStartLine << "col:" << mCurrentHyperlinkStartColumn << "length:" << linkLength
+                             << "text:" << linkText;
+#endif
+                    bool shouldStartConcealed = mpConsole->getHyperlinkVisibilityManager().registerHyperlink(
+                            mCurrentHyperlinkLinkId, mCurrentHyperlinkStartLine, mCurrentHyperlinkStartColumn, linkLength, linkText, mCurrentHyperlinkStyling);
+
+                    // If link should start concealed, replace its text with spaces in mMudLine
+                    // Skip if spoiler already did this to avoid double-replacement
+                    if (shouldStartConcealed && !mCurrentHyperlinkStyling.isSpoiler) {
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC] Link starts concealed - replacing text with spaces";
+#endif
+                        // CRITICAL: Maintain exact character length to preserve buffer consistency
+                        // Even though emojis have different visual widths, we must keep the same
+                        // character count to avoid disrupting buffer indices and causing crashes.
+                        QString spaces(linkLength, ' ');
+                        mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+                    }
+                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Skipping registration for hyperlink with invalid length:" << linkLength;
+#endif
+                }
+            } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Skipping visibility registration for multi-line hyperlink" << "(visibility only applies to single-line links)" << "- started on line" << mCurrentHyperlinkStartLine
+                         << "ending on line" << static_cast<int>(lineBuffer.size()) - 1;
+#endif
+            }
+
+            mCurrentHyperlinkCommand.clear();
+            mCurrentHyperlinkHint.clear();
+            mCurrentHyperlinkLinkId = 0;
+            mHyperlinkActive = false;
+            // Reset enhanced styling
+            mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
+            mCurrentHyperlinkMenu.clear();
+            // Reset visibility tracking
+            mCurrentHyperlinkStartLine = 0;
+            mCurrentHyperlinkStartColumn = 0;
+            mCurrentHyperlinkText.clear();
+            break;
+        }
+
+        // Deliberately below the terminator branch above: the close is the only
+        // thing that clears mHyperlinkActive, so refusing it would leave a link
+        // open forever and mark the rest of the session clickable. Turning the
+        // preference off mid-link must still let that link finish.
+        if (!mpHost->mEnableOSC8Hyperlinks) {
+            return;
+        }
+
+        if (!rawUrl.isEmpty()) {
+            if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
+                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
+                return;
+            }
+
+            if (rawUrl.startsWith(qsl("preset:"))) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Detected preset: URL:" << rawUrl;
+#endif
+                // Extract preset name (between "preset:" and "?")
+                int queryStart = rawUrl.indexOf('?');
+                QString presetName = (queryStart > 7) ? rawUrl.mid(7, queryStart - 7) : rawUrl.mid(7);
+
+                // Extract config parameter manually to avoid QUrl parsing issues with custom schemes
+                QString configParam;
+                if (queryStart != -1) {
+                    QString queryString = rawUrl.mid(queryStart + 1);
+                    QUrlQuery query(queryString);
+                    configParam = query.queryItemValue(qsl("config"), QUrl::FullyDecoded);
+                }
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Preset name extracted:" << presetName;
+                qDebug() << "[OSC] Config param length:" << configParam.length();
+                qDebug() << "[OSC] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
+#endif
+
+                if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole) {
+                    // Parse the JSON configuration
+                    QJsonParseError parseError;
+                    QJsonDocument doc = QJsonDocument::fromJson(configParam.toUtf8(), &parseError);
+
+                    if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
+                        mpConsole->getHyperlinkCompactManager().registerPreset(presetName, doc.object());
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC] Successfully registered preset:" << presetName;
+#endif
+                    } else {
+                        qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Failed to parse preset JSON for \"" << presetName << "\": " << parseError.errorString();
+#if defined(DEBUG_OSC_PROCESSING)
+                        qDebug() << "[OSC] Failed JSON:" << configParam;
+#endif
+                    }
+                } else {
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() << "configParam empty:" << configParam.isEmpty()
+                             << "mpConsole:" << (mpConsole != nullptr) << "mpHyperlinkCompactManager:" << (mpConsole != nullptr);
+#endif
+                }
+                // Preset definitions don't create visible hyperlinks
+                return;
+            }
+
+            // Parse query parameters for enhanced functionality
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Raw URL for parameter parsing:" << rawUrl;
+#endif
+            // Reset styling to defaults before parsing
+            mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
+            QMap<QString, QString> queryParams;
+            parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
+#endif
+
+            // Extract menu parameters
+            if (queryParams.contains(qsl("menu"))) {
+                QString menuString = queryParams.value(qsl("menu"));
+                mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Menu parameter found:" << menuString;
+                qDebug() << "[OSC] Menu items parsed:" << mCurrentHyperlinkMenu;
+                qDebug() << "[OSC] Menu items count:" << mCurrentHyperlinkMenu.size();
+#endif
+            } else {
+                mCurrentHyperlinkMenu.clear();
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] No menu parameter found";
+#endif
+            }
+
+            // Extract custom tooltip parameter
+            QString customTooltip;
+
+            if (queryParams.contains(qsl("tooltip"))) {
+                customTooltip = UntrustedText::forAuthoredText(queryParams.value(qsl("tooltip")));
+            }
+
+            // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
+
+            QString baseUrl = rawUrl;
+
+            if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
+                int queryStart = baseUrl.indexOf('?');
+                if (queryStart != -1) {
+                    // Strip reserved parameters when corresponding OSC 8 features are enabled
+                    // (currently always true; will reflect NEW-ENVIRON negotiation once fully implemented)
+                    const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
+                    const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
+
+                    // Mudlet only removes what the style parser claims, which leaves two kinds of
+                    // parameter in place: one whose name is percent-encoded (%63%6F%6E%66%69%67
+                    // for "config"), since keys are compared as literal strings, and one with no
+                    // '=' at all, since the split gives that no key and the style parser passes
+                    // over it. Both are the server's own URL data.
+                    QStringList kept;
+                    for (const auto& parameter : splitOscQueryParameters(baseUrl.mid(queryStart + 1))) {
+                        if (parameter.hasSeparator && ((stripConfig && parameter.key == qsl("config")) || (stripPreset && parameter.key == qsl("preset")))) {
+                            continue;
+                        }
+                        kept.append(parameter.text);
+                    }
+
+                    baseUrl = baseUrl.left(queryStart);
+                    if (!kept.isEmpty()) {
+                        baseUrl += '?' + kept.join('&');
+                    }
+                }
+            } else {
+                // For send: and prompt: commands, remove all query parameters
+                int queryStart = baseUrl.indexOf('?');
+                if (queryStart != -1) {
+                    baseUrl = baseUrl.left(queryStart);
+                }
+            }
+
+            QStringList command;
+            QStringList hint;
+
+            if (baseUrl.startsWith(qsl("send:"))) {
+                QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
+                mCurrentHyperlinkStyling.baseCommand = innerCommand;
+                command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
+                hint = {qsl("%1: %2").arg(QObject::tr("Send"), UntrustedText::forTarget(innerCommand))};
+            } else if (baseUrl.startsWith(qsl("prompt:"))) {
+                QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
+                mCurrentHyperlinkStyling.baseCommand = innerCommand;
+                command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
+                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
+            } else {
+                QUrl qurl(baseUrl);
+                QString scheme = qurl.scheme().toLower();
+
+                if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
+                    mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
+                    mCurrentHyperlinkStyling.baseCommand = baseUrl;
+                    command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
+                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), UntrustedText::forTarget(baseUrl))};
+                } else {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
+                    return;
+                }
+            }
+
+            // Add standalone tooltip support (for links without menus)
+            if (!customTooltip.isEmpty() && (mCurrentHyperlinkMenu.isEmpty() || mCurrentHyperlinkMenu.size() < 2)) {
+                // Replace the default hint with the custom tooltip
+                hint = {customTooltip};
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Added standalone tooltip:" << customTooltip;
+#endif
+            }
+
+            // Handle menu functionality by extending commands and hints
+            if (!mCurrentHyperlinkMenu.isEmpty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
+#endif
+                QStringList menuCommands;
+                QStringList menuHints;
+
+                // Add menu items in pairs (label, command)
+                // The first menu item becomes the primary left-click action (index 0)
+                // All items (including first) appear in the right-click menu (index 1+)
+                for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
+                    QString menuLabel = mCurrentHyperlinkMenu[i];
+                    QString menuCommand = mCurrentHyperlinkMenu[i + 1];
+
+                    // Determine command type based on prefix
+                    if (menuCommand.startsWith(qsl("send:"))) {
+                        QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
+                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    } else if (menuCommand.startsWith(qsl("prompt:"))) {
+                        QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
+                        menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    } else if (menuCommand == qsl("-")) {
+                        // Special case: "-" creates a menu separator
+                        menuCommands.append(QString());
+                        menuHints.append(QString());
+                    } else {
+                        // Treat as direct command
+                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    }
+                }
+
+                // Set the tooltip for the link (what shows on hover)
+                // Use custom tooltip if provided, otherwise show "Right-click for menu" message
+                QString linkTooltip;
+                if (!customTooltip.isEmpty()) {
+                    // Custom tooltip explicitly provided
+                    linkTooltip = customTooltip;
+                } else {
+                    // Default tooltip for menu links
+                    linkTooltip = QObject::tr("Right-click for menu");
+                }
+
+                // For menus, we need tooltip as first hint, then menu labels
+                // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
+                // But menu labels are available for right-click menu display
+                QStringList finalHints;
+                finalHints.append(linkTooltip); // First: tooltip for hover
+                finalHints.append(menuHints);   // Rest: menu labels for right-click menu
+
+                command = menuCommands;
+                hint = finalHints;
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Final menu commands:" << command;
+                qDebug() << "[OSC] Final menu hints:" << hint;
+#endif
+            }
+
+            mCurrentHyperlinkCommand = command;
+            mCurrentHyperlinkHint = hint;
+            mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
+
+            // Store the styling for this link so it can be retrieved later
+            mLinkStore.setStyling(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling);
+
+            // Store the original background color for this link so we can restore it later
+            // when the link styling doesn't specify a background
+            mLinkOriginalBackgrounds[mCurrentHyperlinkLinkId] = mBackGroundColor;
+
+            // Initialize selection state if this link has selection settings
+            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpConsole) {
+                const QString& group = mCurrentHyperlinkStyling.selection.group;
+                const QString& value = mCurrentHyperlinkStyling.selection.value;
+
+                // Configure group exclusivity mode
+                mpConsole->getHyperlinkSelectionManager().setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
+
+                // Register the link with the selection manager
+                mpConsole->getHyperlinkSelectionManager().setSelected(group, value, mCurrentHyperlinkStyling.selection.selected);
+
+                // Update link selection state (visual styling will be applied when link closes)
+                setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
+                if (mCurrentHyperlinkStyling.selection.selected) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
+                } else if (mCurrentHyperlinkStyling.selection.disabled) {
+                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+                }
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:" << "group=" << group << "value=" << value
+                         << "selected=" << mCurrentHyperlinkStyling.selection.selected << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
+#endif
+            }
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug().noquote() << "[OSC] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
+#endif
+            mHyperlinkActive = true;
+
+            // Record start position for visibility manager registration
+            // Use mMudLine.length() since that's where link text will be added
+            // (mMudLine is the current line being built, lineBuffer contains completed lines)
+            mCurrentHyperlinkStartLine = static_cast<int>(lineBuffer.size()) - 1;
+            mCurrentHyperlinkStartColumn = mMudLine.length();
+            mCurrentHyperlinkText.clear();
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Hyperlink start position: line" << mCurrentHyperlinkStartLine << "column" << mCurrentHyperlinkStartColumn;
+#endif
+        }
+        break;
+    }
     default:
         qDebug().noquote().nospace() << "TBuffer::decodeOSC(\"" << sequence << "\") ERROR - Unhandled <OSC>?...<ST> code, Mudlet will ignore it.";
     }
+}
+
+QString TBuffer::appendQueryParameters(const QString& uri, const QMap<QString, QString>& parameters)
+{
+    if (parameters.isEmpty()) {
+        return uri;
+    }
+
+    QString result = uri;
+    bool hasExistingParams = uri.contains(qsl("?"));
+    QString separator = hasExistingParams ? qsl("&") : qsl("?");
+
+    QStringList paramStrings;
+    for (auto it = parameters.constBegin(); it != parameters.constEnd(); ++it) {
+        QString key = QUrl::toPercentEncoding(it.key());
+        QString value = QUrl::toPercentEncoding(it.value());
+        paramStrings.append(qsl("%1=%2").arg(key, value));
+    }
+
+    if (!paramStrings.isEmpty()) {
+        result += separator + paramStrings.join(qsl("&"));
+    }
+
+    return result;
+}
+
+bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyling& styling, QMap<QString, QString>& parameters)
+{
+    parameters.clear();
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] parseUriQueryParameters called with uri:" << uri;
+#endif
+
+    // Find the query string part after '?'
+    int queryStart = uri.indexOf('?');
+    if (queryStart == -1) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] No query parameters found in URI";
+#endif
+        return true; // No query parameters is not an error
+    }
+
+    QString queryString = uri.mid(queryStart + 1);
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Query string:" << queryString;
+#endif
+
+    // Extract config= and preset= from the query string. The split leaves the query undecoded
+    // and only the values taken from it are decoded (RFC 3986 2.4): decoding the whole query
+    // first would turn an escaped name - %63%6F%6E%66%69%67, the escape servers are told to use
+    // for a literal "config" in a web URL - back into "config" and consume it as styling. So a
+    // key counts as reserved only when it is raw and literal, which is the same key decodeOSC()
+    // compares when deciding what to strip out of the URL it opens.
+    QString configJson;
+    QString presetName;
+
+    for (const auto& parameter : splitOscQueryParameters(queryString)) {
+        if (!parameter.hasSeparator) {
+            continue;
+        }
+        if (parameter.key == qsl("config")) {
+            // Only an object counts, which is the same thing the split brace-scans for. Without
+            // this a second "config" carrying anything else - an empty value, or a word - would
+            // overwrite a valid one earlier in the query and take its styling with it
+            const QString value = QUrl::fromPercentEncoding(parameter.value.toUtf8());
+            if (value.trimmed().startsWith('{')) {
+                configJson = value;
+            }
+        } else if (parameter.key == qsl("preset")) {
+            presetName = QUrl::fromPercentEncoding(parameter.value.toUtf8());
+        }
+    }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    if (!configJson.isEmpty()) {
+        qDebug() << "[OSC] Extracted config JSON:" << configJson;
+    }
+    if (!presetName.isEmpty()) {
+        qDebug() << "[OSC] Found preset:" << presetName;
+    }
+#endif
+
+    if (!presetName.isEmpty() || !configJson.isEmpty()) {
+        QJsonObject baseConfig;
+
+        if (!presetName.isEmpty() && mpConsole) {
+            baseConfig = mpConsole->getHyperlinkCompactManager().getPreset(presetName);
+#if defined(DEBUG_OSC_PROCESSING)
+            if (!baseConfig.isEmpty()) {
+                qDebug() << "[OSC] Resolved preset" << presetName;
+            } else {
+                qDebug() << "[OSC] Preset" << presetName << "not found or empty";
+            }
+#endif
+        } else {
+#if defined(DEBUG_OSC_PROCESSING)
+            if (!presetName.isEmpty()) {
+                qDebug() << "[OSC] Cannot resolve preset - missing console or manager";
+            }
+#endif
+        }
+
+        // Merge with override config if present
+        if (!configJson.isEmpty()) {
+            QJsonParseError parseError;
+            QJsonDocument overrideDoc = QJsonDocument::fromJson(configJson.toUtf8(), &parseError);
+
+            if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
+                QJsonObject overrideConfig = overrideDoc.object();
+
+                if (!baseConfig.isEmpty() && mpConsole) {
+                    // Deep merge: override takes precedence
+                    baseConfig = mpConsole->getHyperlinkCompactManager().mergeConfigs(baseConfig, overrideConfig);
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Merged preset with override config";
+#endif
+                } else {
+                    baseConfig = overrideConfig;
+                }
+            }
+        }
+
+        // Parse the final merged config
+        if (!baseConfig.isEmpty()) {
+            QJsonDocument finalDoc(baseConfig);
+            QString finalJson = QString::fromUtf8(finalDoc.toJson(QJsonDocument::Compact));
+            return parseJsonHyperlinkConfig(finalJson, parameters, styling);
+        }
+    }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Parsed JSON parameters:" << parameters;
+#endif
+
+    return true;
+}
+
+QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
+{
+    if (!mpConsole) {
+        return obj; // No manager available, return unchanged
+    }
+
+    QJsonObject result;
+
+    for (auto it = obj.begin(); it != obj.end(); ++it) {
+        QString originalKey = it.key();
+        QJsonValue value = it.value();
+
+        QMap<QString, QString> singleKeyMap;
+        singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
+        QMap<QString, QString> expandedMap = mpConsole->getHyperlinkCompactManager().expandShorthand(singleKeyMap);
+
+        // Guard against empty or multi-key expanded maps to prevent assertion/UB
+        QString resultKey;
+        if (expandedMap.isEmpty()) {
+            // No expansion occurred - use original key
+            resultKey = originalKey;
+        } else if (expandedMap.size() == 1) {
+            // Normal case - single expanded key
+            resultKey = expandedMap.firstKey();
+        } else {
+            // Unexpected: multiple keys from single input - use first deterministically and log
+            resultKey = expandedMap.firstKey();
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] expandShorthand returned multiple keys for single input:" << originalKey << "-> expanded to:" << expandedMap.keys() << "using first key:" << resultKey;
+#endif
+        }
+
+        // Recursively expand nested objects
+        QJsonValue resultValue = value.isObject() ? expandJsonShorthands(value.toObject()) : value;
+
+        // Handle duplicate keys by merging objects (e.g., both "style" and "s" -> "style")
+        if (result.contains(resultKey) && result[resultKey].isObject() && resultValue.isObject()) {
+            // Merge the objects using the compact manager's deep merge functionality
+            QJsonObject existing = result[resultKey].toObject();
+            QJsonObject toAdd = resultValue.toObject();
+
+            // When both shorthand and full names exist, shorthand takes precedence
+            result[resultKey] = mpConsole->getHyperlinkCompactManager().mergeConfigs(toAdd, existing);
+        } else {
+            result[resultKey] = resultValue;
+        }
+    }
+
+    return result;
+}
+
+bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, QString>& parameters, Mudlet::HyperlinkStyling& styling, QString* errorDetails)
+{
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] parseJsonHyperlinkConfig called with jsonString:" << jsonString;
+#endif
+
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
+
+    if (parseError.error != QJsonParseError::NoError) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] JSON parse error:" << parseError.errorString();
+#endif
+        return false;
+    }
+
+    if (!doc.isObject()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] JSON root is not an object";
+#endif
+        return false;
+    }
+
+    QJsonObject root = doc.object();
+
+    // Expand shorthands in the JSON object (recursive)
+    root = expandJsonShorthands(root);
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] After expansion, root contains:" << root.keys();
+    qDebug() << "[OSC] Has 'menu':" << root.contains(qsl("menu"));
+    qDebug() << "[OSC] Has 'tooltip':" << root.contains(qsl("tooltip"));
+#endif
+
+    if (root.contains(qsl("style")) && root[qsl("style")].isObject()) {
+        QJsonObject styleObj = root[qsl("style")].toObject();
+        parseJsonStyleToHyperlinkStyling(styleObj, styling);
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Style parsed directly from JSON";
+#endif
+    }
+
+    if (root.contains(qsl("menu")) && root[qsl("menu")].isArray()) {
+        QJsonArray menuArray = root[qsl("menu")].toArray();
+        QString menuString = jsonMenuArrayToString(menuArray);
+        if (!menuString.isEmpty()) {
+            parameters.insert(qsl("menu"), menuString);
+            // Enable custom styling for links with menus
+            styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Menu parameter added:" << menuString;
+#endif
+        }
+    }
+
+    if (root.contains(qsl("tooltip")) && root[qsl("tooltip")].isString()) {
+        parameters.insert(qsl("tooltip"), root[qsl("tooltip")].toString());
+        // Enable custom styling for links with tooltips
+        styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Tooltip parameter added:" << root[qsl("tooltip")].toString();
+#endif
+    }
+
+    if (root.contains(qsl("title"))) {
+        QJsonValue titleValue = root[qsl("title")];
+        if (titleValue.isString()) {
+            styling.menuTitle = UntrustedText::forAuthoredText(titleValue.toString());
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Title parameter added:" << titleValue.toString();
+#endif
+        } else if (titleValue.isObject()) {
+            QJsonObject titleObj = titleValue.toObject();
+            if (titleObj.contains(qsl("text")) && titleObj[qsl("text")].isString()) {
+                styling.menuTitle = UntrustedText::forAuthoredText(titleObj[qsl("text")].toString());
+            }
+            if (titleObj.contains(qsl("style")) && titleObj[qsl("style")].isObject()) {
+                parseJsonStateStyle(titleObj[qsl("style")].toObject(), styling.menuTitleStyle);
+            }
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Title object parsed - text:" << styling.menuTitle << "hasColor:" << styling.menuTitleStyle.hasForegroundColor;
+#endif
+        }
+    }
+
+    if (root.contains(qsl("selection")) && root[qsl("selection")].isObject()) {
+        QJsonObject selectionObj = root[qsl("selection")].toObject();
+        parseJsonSelectionConfig(selectionObj, styling.selection);
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Selection config parsed from JSON";
+#endif
+    }
+
+    if (root.contains(qsl("visibility")) && root[qsl("visibility")].isObject()) {
+        QJsonObject visibilityObj = root[qsl("visibility")].toObject();
+        if (!parseVisibilityFromJson(visibilityObj, styling.visibility)) {
+            qWarning() << "TBuffer::parseJsonHyperlinkConfig: Failed to parse visibility settings (continuing with other config)";
+            // Non-fatal: visibility settings ignored but other config parts still apply
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Visibility config parsed from JSON";
+#endif
+    }
+
+    if (root.contains(qsl("spoiler"))) {
+        styling.isSpoiler = jsonBoolValue(root[qsl("spoiler")]);
+        if (styling.isSpoiler) {
+            styling.hasCustomStyling = true;
+
+            if (!styling.hasBackgroundColor) {
+                QColor spoilerBackground = mBackGroundColor;
+
+                qreal luminance = 0.2126 * spoilerBackground.redF() + 0.7152 * spoilerBackground.greenF() + 0.0722 * spoilerBackground.blueF();
+
+                QColor originalBackground = spoilerBackground;
+
+                if (luminance < 0.5) {
+                    if (luminance < 0.1) {
+                        spoilerBackground = QColor(40, 40, 40);
+                    } else {
+                        spoilerBackground = spoilerBackground.lighter(140);
+                    }
+                } else {
+                    spoilerBackground = spoilerBackground.darker(140);
+                }
+
+                styling.backgroundColor = spoilerBackground;
+                styling.hasBackgroundColor = true;
+
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] EARLY SPOILER BACKGROUND: Generated" << spoilerBackground.name() << "from original" << originalBackground.name() << "luminance:" << luminance;
+#endif
+            }
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Spoiler config parsed from JSON:" << styling.isSpoiler;
+#endif
+    }
+
+    if (root.contains(qsl("disabled"))) {
+        styling.selection.disabled = jsonBoolValue(root[qsl("disabled")]);
+        if (styling.selection.disabled) {
+            styling.hasCustomStyling = true;
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Disabled config parsed from JSON:" << styling.selection.disabled;
+#endif
+    }
+
+    if (styling.isSpoiler) {
+        if (!parameters.contains(qsl("tooltip"))) {
+            parameters.insert(qsl("tooltip"), QObject::tr("Click to reveal"));
+            styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Auto-generated spoiler tooltip: Click to reveal for link - disabled:" << styling.selection.disabled;
+#endif
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        // NOLINTNEXTLINE(readability/braces) - else is conditional on DEBUG_OSC_PROCESSING
+        else {
+            qDebug() << "[OSC] Spoiler link has explicit tooltip:" << parameters.value(qsl("tooltip"));
+        }
+#endif
+    }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] JSON converted to parameters:" << parameters;
+#endif
+
+    return true;
+}
+
+QString TBuffer::jsonMenuArrayToString(const QJsonArray& menuArray)
+{
+    QStringList menuItems;
+
+    for (const QJsonValue& item : menuArray) {
+        if (item.isString() && item.toString() == qsl("-")) {
+            // Separator
+            menuItems << qsl("Separator|-");
+        } else if (item.isObject()) {
+            QJsonObject menuObj = item.toObject();
+            // Each menu object should have one key-value pair: label -> command
+            for (auto it = menuObj.begin(); it != menuObj.end(); ++it) {
+                if (it.value().isString()) {
+                    menuItems << it.key() + qsl("|") + it.value().toString();
+                }
+            }
+        }
+    }
+
+    return menuItems.join(qsl("|"));
+}
+
+void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::HyperlinkStyling::StateStyle& stateStyle)
+{
+    bool hasAnyCustomStyling = false;
+
+    if (stateObj.contains(qsl("color")) && stateObj[qsl("color")].isString()) {
+        QColor color = parseColorValue(stateObj[qsl("color")].toString());
+        if (color.isValid()) {
+            stateStyle.foregroundColor = color;
+            stateStyle.hasForegroundColor = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("bg")) && stateObj[qsl("bg")].isString()) {
+        QColor color = parseColorValue(stateObj[qsl("bg")].toString());
+        if (color.isValid()) {
+            stateStyle.backgroundColor = color;
+            stateStyle.hasBackgroundColor = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    // Also support full CSS property name
+    if (stateObj.contains(qsl("background-color")) && stateObj[qsl("background-color")].isString()) {
+        QColor color = parseColorValue(stateObj[qsl("background-color")].toString());
+        if (color.isValid()) {
+            stateStyle.backgroundColor = color;
+            stateStyle.hasBackgroundColor = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("bold"))) {
+        stateStyle.isBold = jsonBoolValue(stateObj[qsl("bold")]);
+        hasAnyCustomStyling = true;
+    }
+
+    if (stateObj.contains(qsl("italic"))) {
+        stateStyle.isItalic = jsonBoolValue(stateObj[qsl("italic")]);
+        hasAnyCustomStyling = true;
+    }
+
+    if (stateObj.contains(qsl("underline"))) {
+        QJsonValue underlineVal = stateObj[qsl("underline")];
+        if (underlineVal.isBool() || underlineVal.isDouble()) {
+            stateStyle.isUnderlined = jsonBoolValue(underlineVal);
+            if (stateStyle.isUnderlined) {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
+            }
+            hasAnyCustomStyling = true;
+        } else if (underlineVal.isString()) {
+            stateStyle.isUnderlined = true;
+            QString style = underlineVal.toString().toLower();
+            if (style == qsl("wavy")) {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineWavy;
+            } else if (style == qsl("dotted")) {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
+            } else if (style == qsl("dashed")) {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDashed;
+            } else {
+                stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
+            }
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("overline"))) {
+        QJsonValue overlineVal = stateObj[qsl("overline")];
+        if (overlineVal.isBool() || overlineVal.isDouble()) {
+            stateStyle.isOverlined = jsonBoolValue(overlineVal);
+            hasAnyCustomStyling = true;
+        } else if (overlineVal.isString()) {
+            stateStyle.isOverlined = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("strikethrough"))) {
+        QJsonValue strikeVal = stateObj[qsl("strikethrough")];
+        if (strikeVal.isBool() || strikeVal.isDouble()) {
+            stateStyle.isStrikeOut = jsonBoolValue(strikeVal);
+            hasAnyCustomStyling = true;
+        } else if (strikeVal.isString()) {
+            stateStyle.isStrikeOut = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    if (stateObj.contains(qsl("text-decoration-color")) && stateObj[qsl("text-decoration-color")].isString()) {
+        QColor decorationColor = parseColorValue(stateObj[qsl("text-decoration-color")].toString());
+        if (decorationColor.isValid()) {
+            stateStyle.underlineColor = decorationColor;
+            stateStyle.hasUnderlineColor = true;
+            stateStyle.overlineColor = decorationColor;
+            stateStyle.hasOverlineColor = true;
+            stateStyle.strikeoutColor = decorationColor;
+            stateStyle.hasStrikeoutColor = true;
+            hasAnyCustomStyling = true;
+        }
+    }
+
+    stateStyle.hasCustomStyling = hasAnyCustomStyling;
+}
+
+void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings)
+{
+    if (selectionObj.contains(qsl("group")) && selectionObj[qsl("group")].isString()) {
+        settings.group = selectionObj[qsl("group")].toString();
+        settings.hasSelectionSettings = true;
+    }
+
+    if (selectionObj.contains(qsl("value")) && selectionObj[qsl("value")].isString()) {
+        settings.value = selectionObj[qsl("value")].toString();
+    }
+
+    if (selectionObj.contains(qsl("toggle"))) {
+        settings.toggle = jsonBoolValue(selectionObj[qsl("toggle")]);
+    }
+
+    if (selectionObj.contains(qsl("selected"))) {
+        settings.selected = jsonBoolValue(selectionObj[qsl("selected")]);
+    }
+
+    if (selectionObj.contains(qsl("exclusive"))) {
+        settings.exclusive = jsonBoolValue(selectionObj[qsl("exclusive")]);
+    }
+}
+
+bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling::VisibilitySettings& settings)
+{
+    if (!visibilityObj.contains(qsl("action"))) {
+        return true; // No action specified = no visibility settings
+    }
+
+    // Parse action field (can be string or array of strings)
+    QJsonValue actionValue = visibilityObj[qsl("action")];
+#if defined(DEBUG_OSC_PROCESSING)
+    qWarning() << "[OSC] Visibility action value:" << actionValue << "isString:" << actionValue.isString();
+#endif
+    if (actionValue.isString()) {
+        QString actionStr = actionValue.toString().toLower();
+#if defined(DEBUG_OSC_PROCESSING)
+        qWarning() << "[OSC] Action string:" << actionStr;
+#endif
+        if (actionStr == qsl("conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Conceal;
+            settings.isConcealed = false; // Start visible, will be concealed later
+        } else if (actionStr == qsl("reveal")) {
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] FOUND REVEAL ACTION - setting isConcealed=true";
+#endif
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::Reveal;
+            settings.isConcealed = true; // Start concealed, will be revealed later
+#if defined(DEBUG_OSC_PROCESSING)
+            qWarning() << "[OSC] Setting reveal action: isConcealed=true, action=Reveal";
+#endif
+        } else if (actionStr == qsl("revealthenconceal") || actionStr == qsl("reveal-then-conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
+            settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
+        } else {
+            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action string:" << actionStr << "(ignoring visibility settings)";
+            settings.hasVisibilitySettings = false;
+            return true; // Non-fatal: allow other config parts to apply
+        }
+    } else if (actionValue.isArray()) {
+        QJsonArray actionArray = actionValue.toArray();
+        if (actionArray.size() == 2 && actionArray[0].isString() && actionArray[0].toString().toLower() == qsl("reveal") && actionArray[1].isString()
+            && actionArray[1].toString().toLower() == qsl("conceal")) {
+            settings.action = Mudlet::HyperlinkStyling::VisibilitySettings::Action::RevealThenConceal;
+            settings.isConcealed = true; // Start concealed, reveal after delay, then conceal on click
+        } else {
+            qWarning() << "TBuffer::parseVisibilityFromJson: Invalid action array (expected [\"reveal\", \"conceal\"]) (ignoring visibility settings)";
+            settings.hasVisibilitySettings = false;
+            return true; // Non-fatal: allow other config parts to apply
+        }
+    } else {
+        qWarning() << "TBuffer::parseVisibilityFromJson: Action must be string or array (ignoring visibility settings)";
+        settings.hasVisibilitySettings = false;
+        return true; // Non-fatal: allow other config parts to apply
+    }
+
+    settings.hasVisibilitySettings = true;
+
+    // Parse delay (optional)
+    if (visibilityObj.contains(qsl("delay"))) {
+        QJsonValue delayValue = visibilityObj[qsl("delay")];
+        if (delayValue.isDouble()) {
+            double delayDouble = delayValue.toDouble();
+            if (delayDouble < 0) {
+                qWarning() << "TBuffer::parseVisibilityFromJson: Delay cannot be negative:" << delayDouble << "(using 0)";
+                settings.delayMs = 0;
+            } else if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                qWarning() << "TBuffer::parseVisibilityFromJson: Delay exceeds maximum (" << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble
+                           << "(clamping to maximum)";
+                settings.delayMs = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+            } else {
+                settings.delayMs = static_cast<quint32>(delayDouble);
+            }
+        }
+    }
+
+    // Parse wholeline (optional)
+    if (visibilityObj.contains(qsl("wholeline"))) {
+        settings.deletesEntireLine = jsonBoolValue(visibilityObj[qsl("wholeline")]);
+    }
+
+    // Parse expire triggers (optional)
+    if (visibilityObj.contains(qsl("expire")) && visibilityObj[qsl("expire")].isObject()) {
+        QJsonObject expireObj = visibilityObj[qsl("expire")].toObject();
+
+        if (expireObj.contains(qsl("input"))) {
+            settings.expireOnInput = jsonBoolValue(expireObj[qsl("input")]);
+        }
+
+        if (expireObj.contains(qsl("prompt"))) {
+            settings.expireOnPrompt = jsonBoolValue(expireObj[qsl("prompt")]);
+        }
+
+        if (expireObj.contains(qsl("output"))) {
+            settings.expireOnOutput = jsonBoolValue(expireObj[qsl("output")]);
+        }
+
+        if (expireObj.contains(qsl("outputDelay"))) {
+            QJsonValue outputDelayValue = expireObj[qsl("outputDelay")];
+            if (outputDelayValue.isDouble()) {
+                double delayDouble = outputDelayValue.toDouble();
+                if (delayDouble < 0) {
+                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay cannot be negative:" << delayDouble << "(using 0)";
+                    settings.outputDelayMs = 0;
+                } else if (delayDouble > Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs) {
+                    qWarning() << "TBuffer::parseVisibilityFromJson: outputDelay exceeds maximum (" << Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs << "ms):" << delayDouble
+                               << "(clamping to maximum)";
+                    settings.outputDelayMs = Mudlet::HyperlinkStyling::VisibilitySettings::MaxDelayMs;
+                } else {
+                    settings.outputDelayMs = static_cast<quint32>(delayDouble);
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool TBuffer::parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling::VisibilitySettings& settings, QString* errorDetails)
+{
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
+
+    if (parseError.error != QJsonParseError::NoError) {
+        if (errorDetails) {
+            *errorDetails = qsl("JSON parse error: %1").arg(parseError.errorString());
+        }
+        return false;
+    }
+
+    if (!doc.isObject()) {
+        if (errorDetails) {
+            *errorDetails = qsl("Root must be a JSON object");
+        }
+        return false;
+    }
+
+    QJsonObject root = doc.object();
+    if (!root.contains(qsl("visibility"))) {
+        // No visibility settings = success
+        return true;
+    }
+
+    if (!root[qsl("visibility")].isObject()) {
+        if (errorDetails) {
+            *errorDetails = qsl("'visibility' field must be an object");
+        }
+        return false;
+    }
+
+    bool success = parseVisibilityFromJson(root[qsl("visibility")].toObject(), settings);
+    if (!success) {
+        if (errorDetails) {
+            if (errorDetails->isEmpty()) {
+                *errorDetails = qsl("Failed to parse visibility settings (non-fatal)");
+            }
+            // When errorDetails is provided, treat as warning only
+            return true;
+        }
+    }
+
+    return success;
+}
+
+void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] clearLinkIndices: invalid line number" << lineNumber << "buffer size:" << buffer.size();
+#endif
+        return;
+    }
+
+    if (length <= 0) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] clearLinkIndices: non-positive length" << length << "- returning early";
+#endif
+        return;
+    }
+
+    materialisePreTriggerPassLine(lineNumber);
+    std::vector<TChar>& line = buffer[lineNumber];
+
+    // Extra safety: ensure we don't go out of bounds
+    if (line.empty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] clearLinkIndices: line" << lineNumber << "is empty";
+#endif
+        return;
+    }
+
+    startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
+
+    int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] clearLinkIndices: line" << lineNumber << "startCol" << startColumn << "length" << length << "endCol" << endColumn << "lineSize" << line.size();
+#endif
+
+    for (int col = startColumn; col < endColumn; ++col) {
+        // Additional bounds check inside the loop
+        if (col >= static_cast<int>(line.size())) {
+            break;
+        }
+        int oldLinkIndex = line[col].mLinkIndex;
+        line[col].mLinkIndex = 0;
+#if defined(DEBUG_OSC_PROCESSING)
+        if (oldLinkIndex != 0) {
+            qDebug() << "[OSC] clearLinkIndices: cleared column" << col << "from linkIndex" << oldLinkIndex << "to 0";
+        }
+#endif
+    }
+}
+
+void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, int linkId)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+        return;
+    }
+
+    if (length <= 0) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] restoreLinkIndices: non-positive length" << length << "- returning early";
+#endif
+        return;
+    }
+
+    materialisePreTriggerPassLine(lineNumber);
+    std::vector<TChar>& line = buffer[lineNumber];
+
+    // Extra safety: ensure we don't go out of bounds
+    if (line.empty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] restoreLinkIndices: line" << lineNumber << "is empty";
+#endif
+        return;
+    }
+
+    startColumn = std::max(0, std::min(startColumn, static_cast<int>(line.size())));
+
+    int endColumn = std::min(static_cast<int>(line.size()), startColumn + std::max(0, length));
+
+    for (int col = startColumn; col < endColumn; ++col) {
+        // Additional bounds check inside the loop
+        if (col >= static_cast<int>(line.size())) {
+            break;
+        }
+        line[col].mLinkIndex = linkId;
+    }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Link" << linkId << "restored";
+#endif
+}
+
+void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudlet::HyperlinkStyling& styling)
+{
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] parseJsonStyleToHyperlinkStyling called with JSON object";
+#endif
+
+    // Parse base style properties directly into the default state
+    Mudlet::HyperlinkStyling::StateStyle baseStyle;
+    parseJsonStateStyle(styleObj, baseStyle);
+
+    // Apply base style to the main styling object
+    if (baseStyle.hasForegroundColor) {
+        styling.foregroundColor = baseStyle.foregroundColor;
+        styling.hasForegroundColor = true;
+    }
+
+    if (baseStyle.hasBackgroundColor) {
+        styling.backgroundColor = baseStyle.backgroundColor;
+        styling.hasBackgroundColor = true;
+    }
+
+    styling.isBold = baseStyle.isBold;
+    styling.isItalic = baseStyle.isItalic;
+    styling.isUnderlined = baseStyle.isUnderlined;
+    styling.underlineStyle = baseStyle.underlineStyle;
+    styling.isOverlined = baseStyle.isOverlined;
+
+    // CRITICAL: Set custom styling flags if any base properties were found
+    if (baseStyle.hasCustomStyling) {
+        styling.hasCustomStyling = true;
+        styling.hasBaseCustomStyling = true;
+    }
+    styling.isStrikeOut = baseStyle.isStrikeOut;
+
+    if (baseStyle.hasUnderlineColor) {
+        styling.underlineColor = baseStyle.underlineColor;
+        styling.hasUnderlineColor = true;
+    }
+
+    if (baseStyle.hasOverlineColor) {
+        styling.overlineColor = baseStyle.overlineColor;
+        styling.hasOverlineColor = true;
+    }
+
+    if (baseStyle.hasStrikeoutColor) {
+        styling.strikeoutColor = baseStyle.strikeoutColor;
+        styling.hasStrikeoutColor = true;
+    }
+
+    // Parse pseudo-class states
+    if (styleObj.contains(qsl("link")) && styleObj[qsl("link")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("link")].toObject(), styling.linkStyle);
+    }
+
+    if (styleObj.contains(qsl("visited")) && styleObj[qsl("visited")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("visited")].toObject(), styling.visitedStyle);
+    }
+
+    if (styleObj.contains(qsl("hover")) && styleObj[qsl("hover")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("hover")].toObject(), styling.hoverStyle);
+    }
+
+    if (styleObj.contains(qsl("active")) && styleObj[qsl("active")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("active")].toObject(), styling.activeStyle);
+    }
+
+    if (styleObj.contains(qsl("focus")) && styleObj[qsl("focus")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("focus")].toObject(), styling.focusStyle);
+    }
+
+    if (styleObj.contains(qsl("focus-visible")) && styleObj[qsl("focus-visible")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("focus-visible")].toObject(), styling.focusVisibleStyle);
+    }
+
+    if (styleObj.contains(qsl("any-link")) && styleObj[qsl("any-link")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("any-link")].toObject(), styling.anyLinkStyle);
+    }
+
+    if (styleObj.contains(qsl("selected")) && styleObj[qsl("selected")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("selected")].toObject(), styling.selectedStyle);
+    }
+
+    if (styleObj.contains(qsl("disabled")) && styleObj[qsl("disabled")].isObject()) {
+        parseJsonStateStyle(styleObj[qsl("disabled")].toObject(), styling.disabledStyle);
+    }
+
+    // Update hasCustomStyling flag if any pseudo-class states have custom styling
+    if (styling.linkStyle.hasCustomStyling || styling.visitedStyle.hasCustomStyling || styling.hoverStyle.hasCustomStyling || styling.activeStyle.hasCustomStyling
+        || styling.focusStyle.hasCustomStyling || styling.focusVisibleStyle.hasCustomStyling || styling.anyLinkStyle.hasCustomStyling || styling.selectedStyle.hasCustomStyling
+        || styling.disabledStyle.hasCustomStyling) {
+        styling.hasCustomStyling = true;
+    }
+
+    applyAccessibilityEnhancements(styling);
+}
+
+QColor TBuffer::parseColorValue(const QString& value)
+{
+    QString cleanValue = value.trimmed().toLower();
+
+    // Handle hex colors: #rrggbb (6-digit) or #rgb (3-digit shorthand)
+    // Qt's QColor constructor automatically expands 3-digit format (e.g., #f00 -> #ff0000)
+    if (cleanValue.startsWith('#')) {
+        QColor color(cleanValue);
+
+        if (color.isValid()) {
+            return color;
+        }
+    }
+
+    // Handle named colors
+    QColor namedColor(cleanValue);
+
+    if (namedColor.isValid()) {
+        return namedColor;
+    }
+
+    // Handle rgb() format: rgb(255, 0, 0) or rgb(100%, 0%, 0%)
+    // Supports both integer (0-255) and percentage (0%-100%) values
+    // Spaces after commas are optional: rgb(255,0,0) works too
+    if (cleanValue.startsWith("rgb(") && cleanValue.endsWith(')')) {
+        QString rgbContent = cleanValue.mid(4, cleanValue.length() - 5);
+        QStringList components = rgbContent.split(',');
+
+        if (components.size() == 3) {
+            auto parseComponent = [](const QString& comp, bool& ok) -> int {
+                QString trimmed = comp.trimmed();
+
+                if (trimmed.endsWith('%')) {
+                    // Percentage value: convert 0-100% to 0-255
+                    trimmed.chop(1); // Remove '%'
+                    double percent = trimmed.toDouble(&ok);
+
+                    if (ok && percent >= 0.0 && percent <= 100.0) {
+                        return qRound(percent * 2.55);
+                    }
+
+                    return -1;
+                }
+                // Integer value: 0-255
+                int value = trimmed.toInt(&ok);
+
+                if (ok && value >= 0 && value <= 255) {
+                    return value;
+                }
+                return -1;
+            };
+
+            bool ok1, ok2, ok3;
+            int r = parseComponent(components[0], ok1);
+            int g = parseComponent(components[1], ok2);
+            int b = parseComponent(components[2], ok3);
+
+            if (ok1 && ok2 && ok3 && r >= 0 && g >= 0 && b >= 0) {
+                return QColor(r, g, b);
+            }
+        }
+    }
+
+    return QColor(); // Invalid color
 }
 
 void TBuffer::resetColors()
@@ -3033,7 +5111,7 @@ void TBuffer::resetColors()
     }
 
     // These should match the corresponding settings in
-    // dlgProfilePreferences::resetColors() :
+    // dlgProfilePreferences::slot_resetColors() :
     pHost->mBlack = Qt::black;
     pHost->mLightBlack = Qt::darkGray;
     pHost->mRed = Qt::darkRed;
@@ -3053,298 +5131,303 @@ void TBuffer::resetColors()
 
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
-    // decodeOSC(...) method:
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    // decodeOSC(...) method. With no console there is nothing to restyle, but
+    // this buffer's own copy of the palette still has to be refreshed - it is
+    // what stamps the text, not the Host's:
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
+    } else {
+        pHost->refreshMainConsoleColors();
     }
 
     // Also need to update the Lua sub-system's "color_table"
     pHost->updateAnsi16ColorsInTable();
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const TChar& format, int linkID)
 {
-    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = QStringLiteral(",.- ");
+    append(text, sub_start, sub_end, format.foreground(), format.background(), format.mFlags, linkID);
+}
+
+// A link index only means anything to the store that issued it, so an index from
+// another buffer is registered here and swapped for one of ours. The caller owns
+// remappedLinkIds, so one source index maps to one of ours for the whole of the
+// text being brought over, however many separate runs of it that text has.
+int TBuffer::remapLinkId(const TLinkStore& sourceLinkStore, const int sourceLinkId, QHash<int, int>& remappedLinkIds)
+{
+    if (sourceLinkId <= 0) {
+        return 0;
+    }
+
+    int destLinkId = remappedLinkIds.value(sourceLinkId);
+    if (destLinkId > 0) {
+        return destLinkId;
+    }
+
+    // a reference of this store's own, so freeing either store's leaves the other link working
+    QVector<int> luaReference;
+    for (const int sourceReference : sourceLinkStore.getReference(sourceLinkId)) {
+        luaReference.append(mpHost && sourceReference > 0 ? mpHost->mLuaInterpreter.duplicateLuaRegistryIndex(sourceReference) : 0);
+    }
+
+    destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), mpHost, luaReference, sourceLinkStore.getExpireName(sourceLinkId));
+    if (sourceLinkStore.hasStyling(sourceLinkId)) {
+        mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
+    }
+    return remappedLinkIds.insert(sourceLinkId, destLinkId).value();
+}
+
+void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+
+    // Ensure we have a line to append to BEFORE computing line indices
+    if (buffer.empty()) {
+        appendEmptyLine();
+    }
+
+    // Check for text/formatting size mismatch - this is a programming error
+    if (text.size() != static_cast<qsizetype>(formatting.size())) {
+        qWarning() << "TBuffer::appendFormatted: text size" << text.size() << "differs from formatting size" << formatting.size()
+                   << "- using longer length with default formatting for missing entries";
+    }
+
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+
+    materialisePreTriggerPassLine(lastLineBeforeWrap);
+
+    bool firstChar = lineBuffer.back().isEmpty();
+    QHash<int, int> remappedLinkIds;
+    const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
+    const TChar defaultChar;
+
+    for (qsizetype i = 0; i < length; ++i) {
+        if (i >= text.size()) {
+            break;
+        }
+
+        const QChar ch = text.at(i);
+        if (ch == QChar::LineFeed) {
+            firstChar = true;
+            appendEmptyLine();
+            continue;
+        }
+
+        const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
+
+        const int destLinkId = remapLinkId(sourceLinkStore, srcChar.linkIndex(), remappedLinkIds);
+
+        lineBuffer.back().append(ch);
+        TChar destChar(srcChar);
+        destChar.mLinkIndex = destLinkId;
+        buffer.back().push_back(destChar);
+
+        if (firstChar) {
+            timeBuffer.back() = currentTimeStamp();
+            firstChar = false;
+        }
+    }
+
+    appendEmptyLine();
+
+    if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
+        log(lastLineBeforeWrap, lastLineBeforeWrap);
+        wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    } else {
+        wrapLine(lastLineBeforeWrap, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    }
 
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
-    int last = buffer.size() - 1;
-    if (last < 0) {
-        // buffer is completely empty
-        std::deque<TChar> newLine;
-        // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
-        TChar c(format.mFgColor,
-                format.mBgColor,
-                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
-                 : (format.mFlags & TChar::TestMask)));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
-        promptBuffer << false;
-        dirty << true;
-        last = 0;
-    }
-    bool firstChar = (lineBuffer.back().size() == 0);
-    int length = text.size();
-    if (length < 1) {
-        return;
-    }
-    if (sub_end >= length) {
-        sub_end = text.size() - 1;
-    }
 
-    for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
-        if (text.at(i) == QChar::LineFeed) {
-            log(size() - 1, size() - 1);
-            std::deque<TChar> newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer << blankTimeStamp;
-            promptBuffer << false;
-            dirty << true;
-            firstChar = true;
-            continue;
-        }
-
-        // FIXME: (I18n) Need to measure painted line width and compare that
-        // to "unit" character width (whatever we work THAT out to be)
-        // multiplied by mWrap:
-        if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    QString tmp = lineBuffer.back().mid(0, i + 1);
-                    QString lineRest = lineBuffer.back().mid(i + 1);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            k--;
-                        }
-                    }
-
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
-                    }
-                    timeBuffer << blankTimeStamp;
-                    promptBuffer << false;
-                    dirty << true;
-                    log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
-                    break;
-                }
-            }
-        }
-        lineBuffer.back().append(text.at(i));
-        TChar c(format.mFgColor,
-                format.mBgColor,
-                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
-                 : (format.mFlags & TChar::TestMask)),
-                linkID);
-        buffer.back().push_back(c);
-        if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
-            firstChar = false;
-        }
+    if (!mpConsole.isNull()) {
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
     }
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const QString& timeStampOverride)
 {
-    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = QStringLiteral(",.- ");
-
+    if (buffer.empty()) {
+        appendEmptyLine();
+    }
+    const int lastLineBeforeWrap = buffer.size() - 1;
+    const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+    appendLine(text, sub_start, sub_end, fgColor, bgColor, flags, linkID, timeStampOverride);
+    if (text.isEmpty()) {
+        return;
+    }
+    // optimization: if the lastLine length hasn't changed,
+    // skip it and wrap subsequent lines
+    if (lastLineLength == lineBuffer.at(lastLineBeforeWrap).size()) {
+        log(lastLineBeforeWrap, lastLineBeforeWrap);
+        wrapLine(lastLineBeforeWrap + 1, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    } else {
+        wrapLine(lastLineBeforeWrap, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    }
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
-    int last = buffer.size() - 1;
-    if (last < 0) {
-        std::deque<TChar> newLine;
-        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
-        promptBuffer << false;
-        dirty << true;
-        last = 0;
-    }
-    bool firstChar = (lineBuffer.back().size() == 0);
-    int length = text.size();
-    if (length < 1) {
-        return;
-    }
-    if (sub_end >= length) {
-        sub_end = text.size() - 1;
-    }
-
-    for (int i = sub_start; i < length; ++i) {
-        if (text.at(i) == '\n') {
-            log(size() - 1, size() - 1);
-            std::deque<TChar> newLine;
-            buffer.push_back(newLine);
-            lineBuffer.push_back(QString());
-            timeBuffer << blankTimeStamp;
-            promptBuffer << false;
-            dirty << true;
-            firstChar = true;
-            continue;
-        }
-
-        // FIXME: (I18n) Need to measure painted line width and compare that
-        // to "unit" character width (whatever we work THAT out to be)
-        // multiplied by mWrap:
-        if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    QString tmp = lineBuffer.back().mid(0, i + 1);
-                    QString lineRest = lineBuffer.back().mid(i + 1);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            k--;
-                        }
-                    }
-
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
-                    }
-                    timeBuffer << blankTimeStamp;
-                    promptBuffer << false;
-                    dirty << true;
-                    log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
-                    break;
-                }
-            }
-        }
-        lineBuffer.back().append(text.at(i));
-        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(c);
-        if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
-            firstChar = false;
-        }
+    // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
+    // limit to prevent it growing beyond a "reasonable" size we also
+    // want to check - for TConsoles that have been set to be "non-scrollable"
+    // - that the content has not exceeded the number of lines that can be
+    // shown in the upper pane and to raise an event if it has
+    if (!mpConsole.isNull()) {
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
     }
 }
 
-void TBuffer::appendLine(const QString& text, const int sub_start, const int sub_end,
-                         const QColor& fgColor, const QColor& bgColor,
-                         const TChar::AttributeFlags flags, const int linkID)
+void TBuffer::appendLine(const QString& text,
+                         const int sub_start,
+                         const int sub_end,
+                         const QColor& fgColor,
+                         const QColor& bgColor,
+                         const TChar::AttributeFlags flags,
+                         const int linkID,
+                         const QString& timeStampOverride)
 {
     if (sub_end < 0) {
         return;
     }
-    if (static_cast<int>(buffer.size()) > mLinesLimit) {
-        shrinkBuffer();
-    }
-    int lastLine = buffer.size() - 1;
-    if (Q_UNLIKELY(lastLine < 0)) {
-        // There are NO lines in the buffer - so initialize with a new empty line
-        std::deque<TChar> newLine;
-        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
-        newLine.push_back(c);
-        buffer.push_back(newLine);
-        lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(timeStampFormat);
-        promptBuffer << false;
-        dirty << true;
-        lastLine = 0;
+
+    // Use a 1-second debounce to prevent duplicate injection from echo + server response
+    if (text.contains("!osc8-docs")) {
+        if (mpHost.isNull()) {
+            return; // Still don't display the trigger phrase itself
+        }
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        // The examples always go to the main console. Ask the model for it
+        // rather than the view: the injection is pure buffer work, so it still
+        // works when the profile has no main console widget.
+        TBuffer& mainBuffer = mpHost->mainConsoleModel().buffer;
+
+        if (now - mainBuffer.mLastOSC8DocsInjectionTime > 1000) {
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Documentation examples trigger phrase detected";
+#endif
+            mainBuffer.mLastOSC8DocsInjectionTime = now;
+            mainBuffer.injectOSC8DocumentationExamples();
+        }
+        return; // Don't display the trigger phrase itself
     }
 
-    bool firstChar = (lineBuffer.back().size() == 0);
-    int length = text.size();
-    if (length < 1) {
+    int lastLine = buffer.size() - 1;
+    materialisePreTriggerPassLine(lastLine);
+
+    if (Q_UNLIKELY(lastLine < 0)) {
+        // There are NO lines in the buffer - so initialize with a new empty line
+        appendEmptyLine();
+        lastLine = 0;
+        // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
+        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | (flags & TChar::TestMask)) : (flags & TChar::TestMask)));
+        buffer.back().push_back(styling);
+    }
+
+    if (text.isEmpty()) {
         return;
     }
+
+    bool firstChar = (lineBuffer.back().isEmpty());
+    const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
     int lineEndPos = sub_end;
+
     if (lineEndPos >= length) {
-        lineEndPos = text.size() - 1;
+        lineEndPos = length - 1;
     }
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
-        lineBuffer.back().append(text.at(i));
-        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(c);
+        const QChar thisChar = text.at(i);
+
+        if (thisChar == QChar::LineFeed) {
+            firstChar = true;
+            appendEmptyLine();
+            continue;
+        }
+
+        lineBuffer.back().append(thisChar);
+        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+        buffer.back().push_back(styling);
+
+        // Note: Original character storage for ANSI-styled OSC 8 links happens in
+        // translateToPlainText() where the TChar is created with ANSI formatting
+        // before JSON styling is applied
+
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+            // A caller replaying held-back content supplies the time the text
+            // actually arrived, rather than the time it is being shown:
+            timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
             firstChar = false;
         }
     }
 }
 
+void TBuffer::appendEmptyLine()
+{
+    buffer.emplace_back();
+    lineBuffer.push_back(QString());
+    timeBuffer << currentTimeStamp();
+    promptBuffer << false;
+}
+
 // This was called "insert" but that is commonly used for built in methods and
 // it makes it harder to pick out usages of this specific method:
-bool TBuffer::insertInLine(QPoint& P, const QString& text, TChar& format)
+bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
 {
     if (text.isEmpty()) {
         return false;
     }
-    int x = P.x();
-    int y = P.y();
+    // Bound a single insert to the same limit the echo/append path uses
+    // (see appendLine()), so an oversized insertText() cannot consume unbounded
+    // memory or processing time.
+    const QString insertedText = (text.size() > MAX_CHARACTERS_PER_ECHO) ? text.left(MAX_CHARACTERS_PER_ECHO) : text;
+    const int x = P.x();
+    const int y = P.y();
     if ((y >= 0) && (y < static_cast<int>(buffer.size()))) {
         if (x < 0) {
             return false;
         }
         if (x >= static_cast<int>(buffer.at(y).size())) {
-            TChar c;
+            TChar c(mpConsole);
             expandLine(y, x - buffer.at(y).size(), c);
         }
-        for (int i = 0, total = text.size(); i < total; ++i) {
-            lineBuffer[y].insert(x + i, text.at(i));
-            TChar c = format;
-            auto it = buffer[y].begin();
-            buffer[y].insert(it + x + i, c);
-        }
+        // Insert the whole run in one operation. Inserting one character at a
+        // time into the middle of the QString/std::vector is O(n) per character,
+        // which is quadratic for large inserts.
+        lineBuffer[y].insert(x, insertedText);
+        buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
+        syncPreTriggerPassLine(y);
     } else {
-        appendLine(text, 0, text.size(), format.mFgColor, format.mBgColor, format.mFlags);
+        appendLine(insertedText, 0, insertedText.size(), format.foreground(), format.background(), format.mFlags);
     }
     return true;
 }
 
-// This is very poorly designed as P2 is used to determine the last character to
-// copy BUT no consideration is given to P2.y() != p1.y() i.e. a copy of more
-// than a single line - and it copys a single QChar at a time....
+// P2 is exclusive: P2.x() is one past the last character copied, matching every
+// other consumer of a P_begin/P_end pair. Still poorly designed in that no
+// consideration is given to P2.y() != P1.y(), i.e. a copy of more than one line.
 TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 {
     TBuffer slice(mpHost);
     slice.clear();
-    int y = P1.y();
+    const int y = P1.y();
     int x = P1.x();
     if (y < 0 || y >= static_cast<int>(buffer.size())) {
         return slice;
     }
 
-    if ((x < 0) || (x >= static_cast<int>(buffer.at(y).size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer.at(y).size()))) {
-        x = 0;
+    // Ensure x starts within the valid range, and adjust P2.x() if it's out of bounds
+    if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
+        x = 0; // Reset x to start of line if out of bounds
     }
+    int P2x_corrected = std::min(P2.x(), static_cast<int>(buffer.at(y).size())); // Correct P2.x() to prevent out-of-bounds
 
-    for (int total = P2.x(); x < total; ++x) {
-        // This is rather inefficient as s is only ever one QChar long
-        QString s(lineBuffer.at(y).at(x));
-        slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags);
+    if (x < P2x_corrected) {
+        const std::vector<TChar> formatting(buffer.at(y).cbegin() + x, buffer.at(y).cbegin() + P2x_corrected);
+        slice.appendFormatted(lineBuffer.at(y).mid(x, P2x_corrected - x), formatting, mLinkStore);
     }
     return slice;
 }
@@ -3353,50 +5436,36 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
 {
     TBuffer slice = copy(P1, P2);
-    TChar format;
+    TChar format(mpConsole);
     replaceInLine(P1, P2, QString(), format);
     return slice;
 }
 
-// This only copies the first line of chunk's contents:
-void TBuffer::paste(QPoint& P, TBuffer chunk)
+// Only the first line of chunk is pasted, and it goes in at P:
+void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 {
-    bool needAppend = false;
-    bool hasAppended = false;
-    int y = P.y();
-    int x = P.x();
-    if (chunk.buffer.empty()) {
+    const int x = P.x();
+    if (chunk.buffer.empty() || x < 0) {
         return;
     }
+    int y = P.y();
     if (y < 0 || y > getLastLineNumber()) {
         y = getLastLineNumber();
     }
-    // FIXME: RISK OF EXCEPTION getLastLineNumber() returns zero (not -1) if
-    // the buffer is empty, so y can never be less than zero here - however that
-    // will cause an exception with std::deque::at(size_t) - previously
-    // std::deque::operator[size_t] was used and that exhibits UNDEFINED
-    // BEHAVIOUR in the same situation:
-    if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
-        return;
-    }
 
+    // Copying a link index across verbatim would resolve it against whatever
+    // this store holds at that id, which is a different link or none at all
+    QHash<int, int> remappedLinkIds;
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
-        // This is rather inefficient as s is only ever one QChar long
-        QPoint P_current(cx, y);
-        if ((y < getLastLineNumber()) && (!needAppend)) {
-            TChar& format = chunk.buffer.at(0).at(cx);
-            QString s = QString(chunk.lineBuffer.at(0).at(cx));
-            insertInLine(P_current, s, format);
-        } else {
-            hasAppended = true;
-            QString s(chunk.lineBuffer.at(0).at(cx));
-            append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
-        }
-    }
-
-    if (hasAppended && y != -1) {
-        TChar format;
-        wrapLine(y, mWrapAt, mWrapIndent, format);
+        // Character at a time because insertInLine() applies a single TChar to
+        // the whole run it is given, and every character here can differ
+        QPoint P_current(x + cx, y);
+        insertInLine(P_current,
+                     QString(chunk.lineBuffer.at(0).at(cx)),
+                     TChar(chunk.buffer.at(0).at(cx).foreground(),
+                           chunk.buffer.at(0).at(cx).background(),
+                           chunk.buffer.at(0).at(cx).mFlags,
+                           remapLinkId(chunk.mLinkStore, chunk.buffer.at(0).at(cx).linkIndex(), remappedLinkIds)));
     }
 }
 
@@ -3406,21 +5475,22 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     if (chunk.buffer.empty()) {
         return;
     }
-    for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
-        QString s(chunk.lineBuffer.at(0).at(cx));
-        append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
+    if (chunk.lineBuffer.at(0).isEmpty()) {
+        // appendFormatted() ignores empty text, but a chunk holding one empty
+        // line still has to terminate the destination's current line
+        append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
+        return;
     }
-
-    append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
+    appendFormatted(chunk.lineBuffer.at(0), chunk.buffer.at(0), chunk.mLinkStore);
 }
 
 int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
 {
-    const QString lineBreaks = QStringLiteral("- \n");
+    const QString lineBreaks = qsl("- \n");
     if (lineBuffer.size() < lineNumber) {
         return 0;
     }
-    int lineSize = static_cast<int>(lineBuffer[lineNumber].size()) - 1;
+    const int lineSize = static_cast<int>(lineBuffer[lineNumber].size()) - 1;
     if (lineSize < end) {
         end = lineSize;
     }
@@ -3430,14 +5500,15 @@ int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
             return i;
         }
     }
-    return 0;
+
+    return lineSize;
 }
 
-inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
+int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 {
     int offset = 0;
     int position = column;
-    int endOfLinePosition = lineBuffer.at(row).size();
+    const int endOfLinePosition = lineBuffer.at(row).size();
     while (position < endOfLinePosition) {
         if (buffer.at(row).at(position).mFlags & TChar::Echo) {
             break;
@@ -3452,117 +5523,145 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
     return offset;
 }
 
-inline int TBuffer::wrap(int startLine)
+// find lindbreaks and indents (if not necessary, return empty list)
+inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent)
 {
-    if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
-        return 0;
-    }
-    std::queue<std::deque<TChar>> queue;
-    QStringList tempList;
-    QStringList timeList;
-    QList<bool> promptList;
-    int lineCount = 0;
-    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
-        bool isPrompt = promptBuffer[i];
-        std::deque<TChar> newLine;
-        QString lineText = "";
-        QString time = timeBuffer[i];
-        int indent = 0;
-        if (static_cast<int>(buffer[i].size()) >= mWrapAt) {
-            for (int i3 = 0; i3 < mWrapIndent; ++i3) {
-                TChar pSpace;
-                newLine.push_back(pSpace);
-                lineText.append(" ");
-            }
-            indent = mWrapIndent;
-        }
-        int lastSpace = 0;
-        int wrapPos = 0;
-        int length = buffer[i].size();
-        if (length == 0) {
-            tempList.append(QString());
-            std::deque<TChar> emptyLine;
-            queue.push(emptyLine);
-            timeList.append(time);
-        }
-        for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
-            if (length - i2 > mWrapAt - indent) {
-                wrapPos = calculateWrapPosition(i, i2, i2 + mWrapAt - indent);
-                lastSpace = qMax(0, wrapPos);
-            } else {
-                lastSpace = 0;
-            }
-            int wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
-            for (int i3 = 0; i3 < wrapPosition; ++i3) {
-                if (lastSpace > 0) {
-                    if (i2 > lastSpace) {
-                        break;
-                    }
-                }
-                if (i2 >= static_cast<int>(buffer[i].size())) {
-                    break;
-                }
-                if (lineBuffer[i].at(i2) == '\n') {
-                    i2++;
-                    break;
-                }
-                newLine.push_back(buffer[i][i2]);
-                lineText.append(lineBuffer[i].at(i2));
-                i2++;
-            }
-            if (newLine.empty()) {
-                tempList.append(QString());
-                std::deque<TChar> emptyLine;
-                queue.push(emptyLine);
-                timeList.append(QString());
-                promptList.append(false);
-            } else {
-                queue.push(newLine);
-                tempList.append(lineText);
-                timeList.append(time);
-                promptList.append(isPrompt);
-            }
-            newLine.clear();
-            lineText = "";
-            indent = 0;
-            i2 += skipSpacesAtBeginOfLine(i, i2);
-        }
-        lineCount++;
-    }
-    for (int i = 0; i < lineCount; ++i) {
-        buffer.pop_back();
-        lineBuffer.pop_back();
-        timeBuffer.pop_back();
-        promptBuffer.pop_back();
-        dirty.pop_back();
+    QList<WrapInfo> output;
+    if (lineText.isEmpty()) {
+        return output;
     }
 
-    int insertedLines = queue.size() - 1;
-    while (!queue.empty()) {
-        buffer.push_back(queue.front());
-        queue.pop();
-    }
-    for (int i = 0, total = tempList.size(); i < total; ++i) {
-        if (tempList[i].size() < 1) {
-            lineBuffer.append(QString());
-            timeBuffer.append(QString());
-            promptBuffer.push_back(false);
-        } else {
-            lineBuffer.append(tempList[i]);
-            timeBuffer.append(timeList[i]);
-            promptBuffer.push_back(promptList[i]);
-        }
-        dirty.push_back(true);
+    // Safety check: during destruction, mpHost might be null
+    if (!mpHost) {
+        // Return a simple wrap info without character width calculations
+        output.append(WrapInfo(isNewline, false, 0, lineText.length()));
+        return output;
     }
 
-    log(startLine, startLine + tempList.size());
-    return insertedLines > 0 ? insertedLines : 0;
+    // Building the boundary finders below runs a full Unicode analysis over the
+    // line, which is the single most expensive part of appending one. Most game
+    // output cannot wrap at all and needs none of it: every printable ASCII
+    // character is its own grapheme cluster exactly one column wide, so such a
+    // line's width is its length, and a line no wider than the wrap column has
+    // no break point to find. LineFeed and Tab are outside that range, so a
+    // line needing an embedded break never takes this path.
+    const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+    if (lineText.size() <= widthAvailable) {
+        bool plainAscii = true;
+        for (const QChar c : lineText) {
+            if (c.unicode() < u' ' || c.unicode() > u'~') {
+                plainAscii = false;
+                break;
+            }
+        }
+        if (plainAscii) {
+            return output;
+        }
+    }
+    // No grapheme cluster renders wider than graphemeInfo::maxWidth columns -
+    // graphemeInfo::getWidth() in TTextProperties.h holds its return to that -
+    // and none is shorter than one QChar, so a line with at most that fraction
+    // of the width in QChars cannot reach the wrap column whatever it holds.
+    // Only an embedded line feed can still break it.
+    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable && !lineText.contains(QChar::LineFeed)) {
+        return output;
+    }
+
+    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+    QTextBoundaryFinder lineBreakFinder(QTextBoundaryFinder::Line, lineText);
+    int xPos = 0;
+    int totalWidth = 0;
+    int firstChar = 0;
+    bool needsIndent = isNewline;
+    bool hasNewline = false;
+
+    // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
+    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total and indexOfChar >= 0;) {
+        const QChar c = lineText.at(indexOfChar);
+        // skip leading spaces for any wrapped lines
+        if (xPos == 0 and !isNewline and !output.isEmpty() and c == QChar::Space) {
+            indexOfChar++;
+            firstChar = indexOfChar;
+            boundaryFinder.setPosition(indexOfChar);
+            continue;
+        }
+        // handle embedded linefeed
+        if (c == QChar::LineFeed) {
+            hasNewline = true;
+            output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
+            indexOfChar++;
+            boundaryFinder.setPosition(indexOfChar);
+            firstChar = indexOfChar;
+            isNewline = true;
+            needsIndent = false;
+            xPos = 0;
+            continue;
+        }
+        const int nextBoundary = boundaryFinder.toNextBoundary();
+        const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
+        // Safety check: during destruction, mpHost might be null
+        const int charWidth = mpHost ? graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs()) : graphemeInfo::getWidth(unicode, false);
+        const int indentationHere = isNewline ? indent : hangingIndent;
+        if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
+            if (isNewline) {
+                needsIndent = true;
+            }
+            lineBreakFinder.setPosition(indexOfChar);
+            // we check c == QChar::Space since we are happy to break at -any- space,
+            // unlike the indirect-linebreak permission of QTextBoundaryFinder::Line
+            // (see: https://www.unicode.org/reports/tr14/#LD9) which will only break at
+            // at the first char after 1+ space(s)
+            const int firstNonIndentChar = firstChar + (needsIndent ? 0 : indentationHere);
+            if (c == QChar::Space or lineBreakFinder.isAtBoundary() or lineBreakFinder.toPreviousBoundary() <= firstNonIndentChar) {
+                boundaryFinder.setPosition(indexOfChar);
+            } else {
+                indexOfChar = lineBreakFinder.position();
+                boundaryFinder.setPosition(indexOfChar);
+            }
+            if (indexOfChar <= firstChar) {
+                // no room for even one grapheme - either the wrap width is too
+                // narrow (or zero) or the indentation eats all of it. Breaking
+                // here would produce an empty segment and leave indexOfChar
+                // where it was, looping forever, so keep one grapheme on the
+                // line to guarantee the scan moves on
+                indexOfChar = (nextBoundary > firstChar) ? nextBoundary : firstChar + 1;
+                boundaryFinder.setPosition(indexOfChar);
+                totalWidth += charWidth;
+            }
+            output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
+            isNewline = false;
+            needsIndent = true;
+            xPos = 0;
+            firstChar = indexOfChar;
+            continue;
+        }
+        xPos += charWidth;
+        totalWidth += charWidth;
+        indexOfChar = nextBoundary;
+    }
+    // it's possible that no wrapping is needed
+    if (totalWidth <= mWrapAt && !hasNewline) {
+        output.clear();
+        return output;
+    }
+    // if the line has been wrapped, append last remaining bit
+    if (!output.isEmpty()) {
+        output.append(WrapInfo(isNewline, !isNewline, firstChar, lineText.size()));
+    }
+    return output;
 }
 
+// This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
-    TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+    // The log file, its stream and the on/off flag are core model state, so
+    // this needs a Host but no view - which is what lets a profile with no main
+    // console widget write a log at all. The one thing that still notices a
+    // missing view is the HTML timestamp background in bufferToHtml().
+    // See TBuffer::clear() on why the model is reached through the
+    // null-tolerant accessor.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
         return;
     }
 
@@ -3579,147 +5678,244 @@ void TBuffer::log(int fromLine, int toLine)
     // if we've been called to log the same line - which can happen when the user
     // enters a command after in-game text - then skip recording the last line
     if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
-        mpHost->mpConsole->mLogStream << lastTextToLog;
-        mpHost->mpConsole->mLogStream.flush();
+        pModel->mLogStream << lastTextToLog;
+        pModel->mLogStream.flush();
     }
 
+    // record the last log call into a temporary buffer - we'll actually log
+    // on the next iteration after duplication detection has run
+    lastTextToLog = assembleLog(fromLine, toLine);
+    lastLoggedFromLine = fromLine;
+    lastloggedToLine = toLine;
+}
+
+QString TBuffer::assembleLog(int fromLine, int toLine)
+{
     QStringList linesToLog;
     for (int i = fromLine; i <= toLine; ++i) {
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             // This only handles a single line of logged text at a time:
             linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(timeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(TBuffer::smTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
-
-    // record the last log call into a temporary buffer - we'll actually log
-    // on the next iteration after duplication detection has run
-    lastTextToLog = std::move(linesToLog.join(QString()));
-    lastLoggedFromLine = fromLine;
-    lastloggedToLine = toLine;
+    return linesToLog.join(QString());
 }
 
 // logs the remaining output when logging gets stopped, without duplication checks
 void TBuffer::logRemainingOutput()
 {
-    mpHost->mpConsole->mLogStream << lastTextToLog;
-    mpHost->mpConsole->mLogStream.flush();
+    // Reset the deferred logging state up front, before any bail-out: it is
+    // buffer state and needs no view, and leaving it behind would let a
+    // successor view replay this pending line and let the stale line indexes
+    // suppress a real flush in log()
+    const QString pendingText = lastTextToLog;
+    lastTextToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
+
+    // No mLogToLogFile test on purpose: both callers have already decided the
+    // pending line must be flushed - toggleLogging() once it has cleared the
+    // flag, clear() while it is still set. The file being open is tested
+    // instead, because a QTextStream written to after its device closed latches
+    // WriteFailed and then silently keeps every later write in its own buffer,
+    // to be replayed into the next log file the moment setDevice() rearms it.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogFile.isOpen()) {
+        return;
+    }
+
+    pModel->mLogStream << pendingText;
+    pModel->mLogStream.flush();
 }
 
-// returns how many new lines have been inserted by the wrapping action
-int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format)
+// logs a string directly to the log file
+void TBuffer::appendLog(const QString& text)
 {
-    if (startLine < 0) {
+    // See TBuffer::log() on why the model is reached this way:
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
+        return;
+    }
+
+    pModel->mLogStream << text;
+}
+
+// Rewraps everything from startLine to the end of the buffer, and answers where
+// the last line of the result sits relative to startLine: 0 for a single line
+// that needed no wrapping, 2 for one split into three, and for a range of
+// several lines its length less one whether any of them were split or not.
+// TConsole::insertLink() and TConsole::printCommand() add it to startLine to
+// place the cursor and the repaint range.
+int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize)
+{
+    if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
         return 0;
     }
-    if (static_cast<int>(buffer.size()) <= startLine) {
+
+    // The Lua wrapLine() reaches here from inside a trigger pass, and rebuilding
+    // the line replaces the characters the pass is matching against:
+    materialisePreTriggerPassLine(startLine);
+
+    // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
+    // a negative indent needs discarding too: the insert() applying it below
+    // takes an unsigned count, so it would ask for a huge allocation
+    const int indent = (indentSize > 0 && indentSize < maxWidth) ? indentSize : 0;
+    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+    const int total = static_cast<int>(buffer.size());
+
+    // Leading lines that getWrapInfo() finds no break points in stay where they
+    // are. The loop below reproduces such a line unchanged, but only after
+    // moving it out of the buffer into a queue and back again and standing up
+    // four temporary containers to do it. A line with no TChars or no text is
+    // not left alone: the loop turns that one into appendEmptyLine(), which
+    // drops its TChars, restamps it and clears its prompt flag.
+    int firstRewrappedLine = startLine;
+    QList<WrapInfo> lineBreaks;
+    while (firstRewrappedLine < total) {
+        if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
+            break;
+        }
+        // a blank timestamp indicates a wrapped line
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::smBlankTimeStamp, maxWidth, indent, hangingIndent);
+        if (!lineBreaks.isEmpty()) {
+            break;
+        }
+        ++firstRewrappedLine;
+    }
+    const int keptLines = firstRewrappedLine - startLine;
+    if (firstRewrappedLine >= total) {
+        const int lastLineOffset = keptLines - 1;
+        if (lastLineOffset > 0) {
+            // log all lines but the last one (in case further text is appended later)
+            log(startLine, startLine + lastLineOffset - 1);
+            return lastLineOffset;
+        }
         return 0;
     }
-    std::queue<std::deque<TChar>> queue;
+
+    std::queue<std::vector<TChar>> queue;
     QStringList tempList;
+    QStringList timeList;
+    QList<bool> promptList;
     int lineCount = 0;
-
-    for (int line = startLine, total = static_cast<int>(buffer.size()); line < total; ++line) {
-        if (line > startLine) {
-            break; //only wrap one line of text
-        }
-        std::deque<TChar> newLine;
-        QString lineText;
-
-        int indent = 0;
-        if (static_cast<int>(buffer[line].size()) >= screenWidth) {
-            for (int prependSpaces = 0; prependSpaces < indentSize; ++prependSpaces) {
-                TChar pSpace = format;
-                newLine.push_back(pSpace);
-                lineText.append(QChar::Space);
-            }
-            indent = indentSize;
-        }
-        int lastSpace = -1;
-        int wrapPos = -1;
-        auto lineLength = static_cast<int>(buffer[line].size());
-
-        for (int characterPosition = 0, total = static_cast<int>(buffer[line].size()); characterPosition < total;) {
-            if (lineLength - characterPosition > screenWidth - indent) {
-                wrapPos = calculateWrapPosition(line, characterPosition, characterPosition + screenWidth - indent);
-                lastSpace = qMax(-1, wrapPos);
-            } else {
-                lastSpace = -1;
-            }
-            for (int i3 = 0, total = screenWidth - indent; i3 < total; ++i3) {
-                if (lastSpace > 0) {
-                    if (characterPosition >= lastSpace) {
-                        characterPosition++;
-                        break;
-                    }
-                }
-                if (characterPosition >= static_cast<int>(buffer[line].size())) {
-                    break;
-                }
-                if (lineBuffer[line][characterPosition] == QChar::LineFeed) {
-                    characterPosition++;
-
-                    if (newLine.empty()) {
-                        tempList.append(QString());
-                        std::deque<TChar> emptyLine;
-                        queue.push(emptyLine);
-                    } else {
-                        queue.push(newLine);
-                        tempList.append(lineText);
-                    }
-                    goto OPT_OUT_CLEAN;
-                }
-                newLine.push_back(buffer[line][characterPosition]);
-                lineText.append(lineBuffer[line].at(characterPosition));
-                characterPosition++;
-            }
-            queue.push(newLine);
-            tempList.append(lineText);
-
-        OPT_OUT_CLEAN:
-            newLine.clear();
-            lineText.clear();
-            indent = 0;
-        }
+    for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
+        std::vector<TChar> newBufferLine;
+        QString newLineText;
+        const QString time = timeBuffer[i];
+        // trivial case
+        if (buffer[i].empty()) {
+            tempList.append(newLineText);
+            queue.push(std::move(newBufferLine));
+            timeList.append(time);
+            promptList.append(false);
+            continue;
+        }
+
+        // consider wrapping line
+        int newBufferCharPosition = 0;
+        const bool isPrompt = promptBuffer[i];
+        const QString lineText = lineBuffer[i];
+        // a blank timestamp indicates a wrapped line
+        const bool isNewline = (time != TBuffer::smBlankTimeStamp);
+        // The scan above computed this for the line it stopped on. It can also
+        // stop before computing anything, but only on a line with no TChars
+        // (which never reaches here) or with no text, and getWrapInfo() answers
+        // an empty list for empty text too - so the stale value is the right
+        // one either way.
+        if (i != firstRewrappedLine) {
+            lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
+        }
+        if (lineBreaks.isEmpty()) {
+            tempList.append(lineText);
+            queue.push(std::move(buffer[i]));
+            timeList.append(time);
+            promptList.append(isPrompt);
+            continue;
+        }
+        const QString qIndent(indent, QChar::Space);
+        const QString qHangingIndent(hangingIndent, QChar::Space);
+        // The source line is read through a cursor rather than consumed from
+        // its front, which a vector cannot do without shuffling every
+        // remaining TChar down one place per character. It is therefore left
+        // fully populated here; the loop below this one pops the whole range
+        // off the back of the buffer, which is what discards it.
+        const std::vector<TChar>& sourceChars = buffer[i];
+        const int sourceSize = static_cast<int>(sourceChars.size());
+        for (const WrapInfo w : std::as_const(lineBreaks)) {
+            // skip TChars as needed
+            if (newBufferCharPosition < w.firstChar) {
+                newBufferCharPosition = std::min(w.firstChar, sourceSize);
+            }
+            if (w.needsIndent && newBufferCharPosition < sourceSize) {
+                // indentation takes the styling of the character it precedes, so
+                // that it reads as part of the same run of text
+                const TChar& indentSpace = sourceChars[newBufferCharPosition];
+                // add indentation to TChar buffer and newLineText
+                if (w.isNewline) {
+                    newBufferLine.insert(newBufferLine.end(), indent, indentSpace);
+                    newLineText.append(qIndent);
+                } else {
+                    newBufferLine.insert(newBufferLine.end(), hangingIndent, indentSpace);
+                    newLineText.append(qHangingIndent);
+                }
+            }
+            // append TChars of the wrapped lineText to TChar buffer
+            const int copyEnd = std::min(w.lastChar, sourceSize);
+            if (newBufferCharPosition < copyEnd) {
+                newBufferLine.insert(newBufferLine.end(), sourceChars.cbegin() + newBufferCharPosition, sourceChars.cbegin() + copyEnd);
+                newBufferCharPosition = copyEnd;
+            }
+            // everything else
+            newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
+            tempList.append(newLineText);
+            if (w.isNewline) {
+                timeList.append(time);
+            } else {
+                timeList.append(TBuffer::smBlankTimeStamp);
+            }
+            queue.push(std::move(newBufferLine));
+            promptList.append(isPrompt);
+            newBufferLine.clear();
+            newLineText = QString();
+        }
+    }
+    for (int i = 0; i < lineCount; ++i) {
+        buffer.pop_back();
+        lineBuffer.pop_back();
+        timeBuffer.pop_back();
+        promptBuffer.pop_back();
     }
 
-    if (lineCount < 1) {
-        log(startLine, startLine);
-        return 0;
+    const int rewrappedLines = static_cast<int>(queue.size());
+    for (int i = 0; i < rewrappedLines; ++i) {
+        if (tempList[i].isEmpty()) {
+            queue.pop();
+            appendEmptyLine();
+        } else {
+            buffer.push_back(std::move(queue.front()));
+            queue.pop();
+            lineBuffer.append(tempList[i]);
+            timeBuffer.append(timeList[i]);
+            promptBuffer.push_back(promptList[i]);
+        }
     }
 
-    buffer.erase(buffer.begin() + startLine);
-    lineBuffer.removeAt(startLine);
-    QString time = timeBuffer.at(startLine);
-    timeBuffer.removeAt(startLine);
-    bool isPrompt = promptBuffer.at(startLine);
-    promptBuffer.removeAt(startLine);
-    dirty.removeAt(startLine);
-
-    int insertedLines = queue.size() - 1;
-    int i = 0;
-    while (!queue.empty()) {
-        buffer.insert(buffer.begin() + startLine + i, queue.front());
-        queue.pop();
-        i++;
+    const int lastLineOffset = keptLines + rewrappedLines - 1;
+    if (lastLineOffset > 0) {
+        // log all lines but the last one (in case further text is appended later)
+        log(startLine, startLine + lastLineOffset - 1);
+        return lastLineOffset;
     }
-
-    for (int i = 0, total = tempList.size(); i < total; ++i) {
-        lineBuffer.insert(startLine + i, tempList[i]);
-        timeBuffer.insert(startLine + i, time);
-        promptBuffer.insert(startLine + i, isPrompt);
-        dirty.insert(startLine + i, true);
-    }
-    log(startLine, startLine + tempList.size() - 1);
-    return insertedLines > 0 ? insertedLines : 0;
+    return 0;
 }
 
 bool TBuffer::moveCursor(QPoint& where)
 {
-    int x = where.x();
-    int y = where.y();
+    const int x = where.x();
+    const int y = where.y();
     if (y < 0) {
         return false;
     }
@@ -3728,7 +5924,7 @@ bool TBuffer::moveCursor(QPoint& where)
     }
 
     if (static_cast<int>(buffer[y].size()) - 1 > x) {
-        TChar c;
+        TChar c(mpConsole);
         // CHECKME: should "buffer[cookedY].size() - 1" be bracketed - which would change the -1 to +1 in the following:
         expandLine(y, x - buffer[y].size() - 1, c);
     }
@@ -3737,14 +5933,14 @@ bool TBuffer::moveCursor(QPoint& where)
 
 // Needed, at least, as a filler for missing lines past end of the lineBuffer
 // requested by lua function getLines(...):
-QString badLineError = QStringLiteral("ERROR: invalid line number");
+QString badLineError = qsl("ERROR: invalid line number");
 
-QString& TBuffer::line(int n)
+QString& TBuffer::line(int lineNumber)
 {
-    if ((n >= lineBuffer.size()) || (n < 0)) {
+    if ((lineNumber < 0) || (lineNumber >= lineBuffer.size())) {
         return badLineError;
     }
-    return lineBuffer[n];
+    return lineBuffer[lineNumber];
 }
 
 int TBuffer::find(int line, const QString& what, int pos = 0)
@@ -3779,7 +5975,8 @@ QStringList TBuffer::split(int line, const QRegularExpression& splitter)
 
 void TBuffer::expandLine(int y, int count, TChar& pC)
 {
-    int size = buffer[y].size() - 1;
+    materialisePreTriggerPassLine(y);
+    const int size = buffer[y].size() - 1;
     for (int i = size, total = size + count; i < total; ++i) {
         buffer[y].push_back(pC);
         lineBuffer[y].append(QChar::Space);
@@ -3788,10 +5985,10 @@ void TBuffer::expandLine(int y, int count, TChar& pC)
 
 bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with, TChar& format)
 {
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
     if ((y1 >= static_cast<int>(buffer.size())) || (y2 >= static_cast<int>(buffer.size()))) {
         return false;
     }
@@ -3801,33 +5998,34 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     if (x1 < 0 || x2 < 0) {
         return false;
     }
-
-    int xb, xe, yb, ye;
-    if (y1 <= y2) {
-        yb = y1;
-        ye = y2;
-        xb = x1;
-        xe = x2;
-    } else {
-        yb = y2;
-        ye = y1;
-        xb = x2;
-        xe = x1;
+    // the erase() below is undefined behaviour when the start is past the end:
+    // it moves a range of negative length, writing beyond the allocation
+    if (y1 > y2 || (y1 == y2 && x1 > x2)) {
+        return false;
     }
 
-    for (int y = yb; y <= ye; y++) {
+    for (int y = y1; y <= y2; y++) {
         int x = 0;
-        if (y == yb) {
-            x = xb;
+        if (y == y1) {
+            x = x1;
         }
         int x_end = buffer[y].size() - 1;
-        if (y == ye) {
-            x_end = xe;
+        if (y == y2) {
+            x_end = x2;
+        }
+        // the guard above orders the range as a whole, but a line inside a
+        // multi-line one can still start past its own end: an empty line has
+        // an x_end of -1, and a first line selected from its very last column
+        // leaves x at buffer[y].size(). Either way there is nothing on the line
+        // to remove, and erase() over that range is the same reversed move.
+        if (x > x_end) {
+            continue;
         }
         lineBuffer[y].remove(x, x_end - x);
         auto it1 = buffer[y].begin() + x;
         auto it2 = buffer[y].begin() + x_end;
         buffer[y].erase(it1, it2);
+        syncPreTriggerPassLine(y);
     }
 
     // insert replacement
@@ -3835,19 +6033,167 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     return true;
 }
 
+// Both branches check that this buffer is the one the manager tracks: a
+// scratch buffer can carry a console back-pointer, and every model builds its
+// buffer before a view attaches, so reaching a manager on the strength of the
+// pointer alone would let one buffer drop another's links.
+THyperlinkVisibilityManager* TBuffer::hyperlinkVisibilityManagerOrNull()
+{
+    if (mpConsole) {
+        return (this == &mpConsole->buffer) ? &mpConsole->getHyperlinkVisibilityManager() : nullptr;
+    }
+    // The main console's model outlives the view built on it and keeps taking
+    // lines meanwhile, so stopping at mpConsole would give up maintaining its
+    // links too early. mainConsoleModelOrNull() rather than mainConsoleModel()
+    // because this also runs from the TBuffer constructor, before Host holds
+    // the model.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    return (pModel && this == &pModel->buffer) ? &pModel->mHyperlinkVisibilityManager : nullptr;
+}
+
 void TBuffer::clear()
 {
+    // Clearing the display is not gagging: flush any deferred log text before
+    // the deleteLines() calls below would discard it, so a received line that
+    // was still pending for logging is not lost from the log file.
+    // mainConsoleModelOrNull() rather than mainConsoleModel() because this runs
+    // from the TBuffer constructor, and the main console's buffer is built
+    // inside the very model Host has not taken hold of yet.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (pModel && this == &pModel->buffer && pModel->mLogToLogFile) {
+        logRemainingOutput();
+
+        // A line whose own trigger calls clearWindow() has been committed and
+        // displayed, but commitLine() defers its log() call until runTriggers()
+        // returns - and the deleteLines() below will reset its commit index to
+        // -1, suppressing that call. Log those still-pending lines now so they
+        // are not lost. mCommitLineIndices holds them in display order.
+        for (const int commitLineIndex : mCommitLineIndices) {
+            if (commitLineIndex >= 0 && commitLineIndex < static_cast<int>(lineBuffer.size())) {
+                pModel->mLogStream << assembleLog(commitLineIndex, commitLineIndex);
+            }
+        }
+        pModel->mLogStream.flush();
+
+        lastTextToLog.clear();
+        lastLoggedFromLine = -1;
+        lastloggedToLine = -1;
+    }
+
+    mCurrentHyperlinkCommand.clear();
+    mCurrentHyperlinkHint.clear();
+    mCurrentHyperlinkLinkId = 0;
+    mHyperlinkActive = false;
+
+    // every line is about to go, so the tracked links and any announcement queued for them go with it
+    if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
+        pHyperlinkManager->clear();
+    }
+
     while (!buffer.empty()) {
         if (!deleteLines(0, 0)) {
             break;
         }
     }
-    std::deque<TChar> newLine;
-    buffer.push_back(newLine);
+
+    // After deleting all lines, clear all links (none are referenced)
+    clearLinkState();
+
+    buffer.emplace_back();
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
-    dirty.push_back(true);
+}
+
+void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
+{
+    if (mLinkStore.pristine() && mLinkStates.isEmpty() && mVisitedLinks.isEmpty() && mLinkSelectionState.isEmpty() && mLinkOriginalBackgrounds.isEmpty() && mLinkOriginalCharacters.isEmpty()
+        && mLinkOriginalText.isEmpty() && mPendingSelectionStyling.isEmpty() && !mCurrentHoveredLinkIndex && !mCurrentActiveLinkIndex && !mCurrentFocusedLinkIndex && !mLastClickedLinkIndex) {
+        return;
+    }
+
+    Host* pH = mpHost;
+    const QSet<int> activeLinkIds = collectActiveLinkIds() | stillLiveLinkIds;
+
+    if (pH) {
+        mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
+    } else {
+        qWarning() << "TBuffer::clearLinkState() WARNING - mpHost is null, cannot remove unreferenced links from store";
+    }
+
+    QSet<int> staleIds;
+
+    auto collectStale = [&activeLinkIds, &staleIds](const auto& map) {
+        for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+            if (!activeLinkIds.contains(it.key())) {
+                staleIds.insert(it.key());
+            }
+        }
+    };
+
+    collectStale(mLinkStates);
+    collectStale(mVisitedLinks);
+    collectStale(mLinkSelectionState);
+    collectStale(mLinkOriginalBackgrounds);
+    collectStale(mLinkOriginalCharacters);
+    collectStale(mLinkOriginalText);
+
+    for (int key : staleIds) {
+        mLinkStates.remove(key);
+        mVisitedLinks.remove(key);
+        mLinkSelectionState.remove(key);
+        mLinkOriginalBackgrounds.remove(key);
+        mLinkOriginalCharacters.remove(key);
+        mLinkOriginalText.remove(key);
+    }
+
+    // Prevent applyPendingSelectionStyling from updating non-existent links
+    mPendingSelectionStyling &= activeLinkIds;
+
+    // Reset hover/active/focus state if those links are gone
+    if (!activeLinkIds.contains(mCurrentHoveredLinkIndex)) {
+        mCurrentHoveredLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mCurrentActiveLinkIndex)) {
+        mCurrentActiveLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mCurrentFocusedLinkIndex)) {
+        mCurrentFocusedLinkIndex = 0;
+    }
+
+    if (!activeLinkIds.contains(mLastClickedLinkIndex)) {
+        mLastClickedLinkIndex = 0;
+    }
+}
+
+QSet<int> TBuffer::collectActiveLinkIds() const
+{
+    QSet<int> activeLinkIds;
+
+    for (const auto& line : buffer) {
+        for (const TChar& tchar : line) {
+            int linkId = tchar.linkIndex();
+
+            if (linkId > 0) {
+                activeLinkIds.insert(linkId);
+            }
+        }
+    }
+
+    return activeLinkIds;
+}
+
+void TBuffer::clearLastLine()
+{
+    if (!buffer.empty()) {
+        materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
+        buffer.back().clear();
+        if (!lineBuffer.isEmpty()) {
+            lineBuffer.back().clear();
+        }
+    }
 }
 
 bool TBuffer::deleteLine(int y)
@@ -3861,38 +6207,129 @@ void TBuffer::shrinkBuffer()
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
-        dirty.pop_front();
         buffer.pop_front();
         mCursorY--;
+    }
+    // We need to adjust the search result line as some lines have now gone
+    // away - there is nothing to adjust when the model has no view attached:
+    if (mpConsole) {
+        mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    }
+    mPreTriggerPassLineNumber = -1;
+
+    // The removed leading lines shift every remaining index down; keep the
+    // deferred logging state pointing at the same lines
+    if (lastloggedToLine >= mBatchDeleteSize) {
+        lastLoggedFromLine = qMax(0, lastLoggedFromLine - mBatchDeleteSize);
+        lastloggedToLine -= mBatchDeleteSize;
+    } else if (lastLoggedFromLine >= 0) {
+        lastLoggedFromLine = -1;
+        lastloggedToLine = -1;
+    }
+    for (auto& commitLineIndex : mCommitLineIndices) {
+        if (commitLineIndex >= 0) {
+            commitLineIndex = (commitLineIndex < mBatchDeleteSize) ? -1 : commitLineIndex - mBatchDeleteSize;
+        }
+    }
+
+    // Tracked OSC 8 hyperlinks are addressed by line number, so they shift with
+    // everything else - any whose line just went away are dropped
+    QSet<int> trackedLinkIds;
+    if (mpConsole) {
+        auto& hyperlinkManager = mpConsole->getHyperlinkVisibilityManager();
+        hyperlinkManager.adjustLineNumbers(0, mBatchDeleteSize);
+        trackedLinkIds = hyperlinkManager.trackedLinkIds();
+    }
+
+    // Clean up unreferenced links after removing old lines. A concealed link's
+    // characters carry no index, so it has to be named to survive the sweep
+    clearLinkState(trackedLinkIds);
+
+    // Everything below needs the Host, whether or not there is a view: on app
+    // quit the profile is destroyed while its widgets are still only queued for
+    // deletion, so a live view is no promise that mpHost survived with it.
+    if (mpHost.isNull()) {
+        return;
+    }
+
+    // Scripts keep their own line-index bookkeeping, so they have to be told
+    // the indexes shifted whether or not anyone is watching the text. The
+    // console's name and type still live on the view, but a buffer without one
+    // can only be the main console's model - every other model is owned by the
+    // view built on it - and that console is always named "main":
+    const bool namedConsole =
+            mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) : (this == &mpHost->mainConsoleModel().buffer);
+    if (namedConsole) {
+        // Signal to lua subsystem that indexes into the Console will need adjusting
+        TEvent bufferShrinkEvent{};
+        bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        bufferShrinkEvent.mArgumentList.append(mpConsole ? mpConsole->mConsoleName : qsl("main"));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(bufferShrinkEvent);
     }
 }
 
 bool TBuffer::deleteLines(int from, int to)
 {
-    if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to >= 0) && (to < static_cast<int>(buffer.size()))) {
-        int delta = to - from + 1;
+    if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to < static_cast<int>(buffer.size()))) {
+        const int delta = to - from + 1;
 
         for (int i = from, total = from + delta; i < total; ++i) {
             lineBuffer.removeAt(i);
             timeBuffer.removeAt(i);
             promptBuffer.removeAt(i);
-            dirty.removeAt(i);
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
+        if (mPreTriggerPassLineNumber >= from) {
+            mPreTriggerPassLineNumber = -1;
+        }
+
+        // Keep the deferred logging state in step with the removed lines so
+        // pending text is only dropped when the lines it holds were deleted
+        if (lastloggedToLine >= from && lastLoggedFromLine <= to) {
+            if ((from <= lastLoggedFromLine && lastloggedToLine <= to) || lastTextToLog.isEmpty() || mpHost.isNull()) {
+                lastTextToLog.clear();
+                lastLoggedFromLine = -1;
+                lastloggedToLine = -1;
+            } else {
+                // only part of the pending range was deleted - rebuild the
+                // pending text from the lines that survived
+                lastLoggedFromLine = (lastLoggedFromLine < from) ? lastLoggedFromLine : from;
+                lastloggedToLine = (lastloggedToLine > to) ? lastloggedToLine - delta : from - 1;
+                lastTextToLog = assembleLog(lastLoggedFromLine, lastloggedToLine);
+            }
+        } else if (lastLoggedFromLine > to) {
+            lastLoggedFromLine -= delta;
+            lastloggedToLine -= delta;
+        }
+        for (auto& commitLineIndex : mCommitLineIndices) {
+            if (commitLineIndex >= from && commitLineIndex <= to) {
+                commitLineIndex = -1;
+            } else if (commitLineIndex > to) {
+                commitLineIndex -= delta;
+            }
+        }
+
+        // Tracked OSC 8 hyperlinks are addressed by line number too, so they
+        // shift with everything else - any whose line just went away are dropped
+        if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
+            pHyperlinkManager->adjustLineNumbers(from, delta);
+        }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
-bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint)
+bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, QVector<int> luaReference)
 {
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
-    bool incLinkID = false;
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
     int linkID = 0;
 
     // clang-format off
@@ -3909,6 +6346,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
          * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
          */
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 x = x1;
@@ -3919,23 +6357,15 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                         return true;
                     }
                 }
-                if (!incLinkID) {
-                    incLinkID = true;
-                    mLinkID++;
-                    linkID = mLinkID;
-                    if (mLinkID > scmMaxLinks) {
-                        mLinkID = 1;
-                    }
-                    mLinkStore[mLinkID] = linkFunction;
-                    mHintStore[mLinkID] = linkHint;
+                if (linkID == 0) {
+                    linkID = mLinkStore.addLinks(linkFunction, linkHint, mpHost, luaReference);
                 }
                 buffer.at(y).at(x++).mLinkIndex = linkID;
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 // Replaces (bool)TBuffer::applyXxxx(QPoint& P_begin, QPoint& P_end, bool state)
@@ -3943,10 +6373,10 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
 // Can set multiple attributes to given state
 bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const TChar::AttributeFlags attributes, const bool state)
 {
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
 
     // clang-format off
     if ((x1 >= 0)
@@ -3962,6 +6392,10 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
          * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
          */
 
+        // Deliberately no materialisePreTriggerPassLine() here: color matching
+        // reads only foreground()/background(), so a display attribute leaves the
+        // retained colors valid, and snapshotting would put a copy back on every
+        // line for a script that styles all of them.
         for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
@@ -3973,22 +6407,21 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                         return true;
                     }
                 }
-                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags &~(attributes)) | (state ? attributes : TChar::None);
+                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags & ~(attributes)) | (state ? attributes : TChar::None);
                 ++x;
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
 {
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
 
     // clang-format off
     if ((x1 >= 0)
@@ -4005,6 +6438,7 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
          */
 
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 // Override position start column if on first line to given start column
@@ -4016,21 +6450,20 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
                     return true;
                 }
 
-                buffer.at(y).at(x++).mFgColor = newColor;
+                buffer.at(y).at(x++).setForeground(newColor);
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
 {
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
 
     // clang-format off
     if ((x1 >= 0)
@@ -4047,6 +6480,7 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
          */
 
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 // Override position start column if on first line to given start column
@@ -4058,13 +6492,12 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
                     return true;
                 }
 
-                buffer.at(y).at(x++).mBgColor = newColor;
+                buffer.at(y).at(x++).setBackground(newColor);
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 QStringList TBuffer::getEndLines(int n)
@@ -4084,9 +6517,7 @@ QStringList TBuffer::getEndLines(int n)
 // Note: spacePadding is expected to be non-zero on ONLY the first call to this
 // method - it is needed to pad the first line out when the first line of a
 // selection is not a complete line of text and there are more lines to follow
-QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int row /*= -1*/,
-                              const int endColumn /*= -1*/, const int startColumn /*= 0*/,
-                              int spacePadding /*= 0*/)
+QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int row /*= -1*/, const int endColumn /*= -1*/, const int startColumn /*= 0*/, int spacePadding /*= 0*/)
 {
     int pos = startColumn;
     QString s;
@@ -4095,9 +6526,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         return s;
     }
 
-    // std:deque uses std::deque:size_type as index type which is an unsigned
-    // long int, but row (and pos) are signed ints...!
-    auto cookedRow = static_cast<unsigned long>(row);
+    // std:deque uses std::deque:size_type as index type which is unsigned,
+    // but row (and pos) are signed ints...!
+    auto cookedRow = static_cast<size_t>(row);
 
     if ((pos < 0) || (pos >= static_cast<int>(buffer.at(cookedRow).size()))) {
         pos = 0;
@@ -4111,8 +6542,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     }
 
     TChar::AttributeFlags currentFlags = TChar::None;
-    QColor currentFgColor(Qt::black);
-    QColor currentBgColor(Qt::black);
+    QRgb currentFgColor = qRgb(0, 0, 0);
+    QRgb currentBgColor = qRgb(0, 0, 0);
+    int currentLinkIndex = 0;
     // This combination of color values (black on black) cannot usefully be used in practice
     // - so use as initialization values
 
@@ -4124,12 +6556,14 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // <span timestamp format>Timestamp (13 chars)</span><span default>___padding spaces___</span><span first chunk style>first chunk...
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
-        // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
-        s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(timeStampFormat.length())));
+        // Use the console's background so the timestamp blends in with the
+        // rest of the text, as done in TTextEdit::layoutLine(...).
+        const QColor timeStampBgColor{mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)};
+        s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(TBuffer::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
-        currentFgColor = QColor(200,150,0);
-        currentBgColor = QColor(22,22,22);
+        currentFgColor = qRgb(200, 150, 0);
+        currentBgColor = timeStampBgColor.rgba();
         currentFlags = TChar::None;
         // We are no longer before the first span - so we need to flag that
         // there will be one to close:
@@ -4147,51 +6581,103 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         }
 
         // Pad out with spaces to the right so a partial first line lines up
-        s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
+        s.append(qsl("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
-    for (auto cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
+    for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
+        const int charLinkIndex = buffer.at(cookedRow).at(cookedPos).linkIndex();
         // Do we need to start a new span?
-        if (firstSpan
-            || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor
-            || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
-            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags) {
-
+        if (firstSpan || buffer.at(cookedRow).at(cookedPos).foregroundRgba() != currentFgColor || buffer.at(cookedRow).at(cookedPos).backgroundRgba() != currentBgColor
+            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
                 s.append(QLatin1String("</span>"));
             }
-            currentFgColor = buffer.at(cookedRow).at(cookedPos).mFgColor;
-            currentBgColor = buffer.at(cookedRow).at(cookedPos).mBgColor;
+            currentFgColor = buffer.at(cookedRow).at(cookedPos).foregroundRgba();
+            currentBgColor = buffer.at(cookedRow).at(cookedPos).backgroundRgba();
             currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
+            currentLinkIndex = charLinkIndex;
 
             // clang-format off
+            // Determine blink class if any (only when blink is enabled in settings)
+            QString blinkClass;
+            const bool enableBlink = (mpHost != nullptr) && mpHost->getEnableBlinkText();
+
+            if (enableBlink) {
+                if (currentFlags & TChar::FastBlink) {
+                    blinkClass = qsl(" class='blink-fast'");
+                } else if (currentFlags & TChar::Blink) {
+                    blinkClass = qsl(" class='blink-slow'");
+                }
+            }
+
+            // Build text-decoration CSS including decoration colors from TLinkStore
+            QString textDecorationCss;
+            if (currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline)) {
+                QString decorations;
+                if (currentFlags & TChar::Underline) {
+                    decorations.append(QLatin1String(" underline"));
+                }
+                if (currentFlags & TChar::StrikeOut) {
+                    decorations.append(QLatin1String(" line-through"));
+                }
+                if (currentFlags & TChar::Overline) {
+                    decorations.append(QLatin1String(" overline"));
+                }
+                textDecorationCss = qsl(" text-decoration:%1;").arg(decorations);
+
+                // Look up decoration color from TLinkStore if available
+                if (currentLinkIndex > 0 && mLinkStore.hasStyling(currentLinkIndex)) {
+                    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(currentLinkIndex);
+                    styling.currentState = getLinkState(currentLinkIndex);
+                    Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+
+                    // CSS text-decoration-color applies a single color to all
+                    // decoration lines, so pick the most visually prominent one
+                    // (underline > strikeout > overline). The render path in
+                    // drawCustomDecorations can apply each color independently.
+                    QColor decorationColor;
+                    bool hasDecorationColor = false;
+                    if (effectiveStyle.hasUnderlineColor && (currentFlags & TChar::Underline)) {
+                        decorationColor = effectiveStyle.underlineColor;
+                        hasDecorationColor = true;
+                    } else if (effectiveStyle.hasStrikeoutColor && (currentFlags & TChar::StrikeOut)) {
+                        decorationColor = effectiveStyle.strikeoutColor;
+                        hasDecorationColor = true;
+                    } else if (effectiveStyle.hasOverlineColor && (currentFlags & TChar::Overline)) {
+                        decorationColor = effectiveStyle.overlineColor;
+                        hasDecorationColor = true;
+                    }
+
+                    if (hasDecorationColor) {
+                        textDecorationCss.append(qsl(" text-decoration-color: rgb(%1,%2,%3);")
+                            .arg(QString::number(decorationColor.red()),
+                                 QString::number(decorationColor.green()),
+                                 QString::number(decorationColor.blue())));
+                    }
+                }
+            }
+
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
-                         .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
-                              QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
+                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
+                         .arg(QString::number(qRed(currentBgColor)), QString::number(qGreen(currentBgColor)), QString::number(qBlue(currentBgColor)), // args 1 to 3
+                              QString::number(qRed(currentFgColor)), QString::number(qGreen(currentFgColor)), QString::number(qBlue(currentFgColor)), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
-                              ? QStringLiteral(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
-                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
-                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString()));
+                              blinkClass) // arg 9
+                         + textDecorationCss
+                         + qsl("\">"));
             } else {
-                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
-                         .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
-                              QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
+                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
+                         .arg(QString::number(qRed(currentFgColor)), QString::number(qGreen(currentFgColor)), QString::number(qBlue(currentFgColor)), // args 1 to 3
+                              QString::number(qRed(currentBgColor)), QString::number(qGreen(currentBgColor)), QString::number(qBlue(currentBgColor)), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
-                              ? QStringLiteral(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
-                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
-                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
-                              : QString()));
+                              blinkClass) // arg 9
+                         + textDecorationCss
+                         + qsl("\">"));
             }
             // clang-format on
         }
@@ -4227,32 +6713,6 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     return s;
 }
 
-const QList<QString> TBuffer::getFriendlyEncodingNames() {
-    QList<QString> encodings;
-    for (auto pair: csmEncodingTable) {
-        encodings << pair.first;
-    }
-
-    return encodings;
-}
-
-// returns the computer encoding name given a human-friendly one
-const QString& TBuffer::getComputerEncoding(const QString& encoding) {
-    QMapIterator<QString, QPair<QString, QVector<QChar>>> iterator(csmEncodingTable);
-    while (iterator.hasNext()) {
-        iterator.next();
-        // check the friendly name (stored as the map value pair's first item)
-        // against the input - if found, return the map key which is the computer
-        // encoding name
-        if (iterator.value().first == encoding) {
-            return iterator.key();
-        }
-    }
-
-    // return the original encoding if none is found
-    return encoding;
-}
-
 bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFromServer, const size_t len, size_t& pos, bool& isNonBMPCharacter)
 {
     // In Utf-8 mode we have to process the data more than one byte at a
@@ -4283,15 +6743,16 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // Not enough bytes left in bufferData to complete the utf-8
             // sequence - need to save and prepend onto incoming data next
             // time around.
-            // The absence of a second argument takes all the available
-            // bytes - this is only for data from the Server NOT from
+            // Everything the decoder was allowed to look at is taken - see
+            // decodableLength() for why that can stop short of the end of
+            // bufferData. This is only for data from the Server NOT from
             // locally generated material from Lua feedTriggers(...)
             if (isFromServer) {
 #if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) Insufficent bytes in buffer to complate UTF-8 sequence, need:" << utf8SequenceLength
-                         << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                qDebug() << "TBuffer::processUtf8Sequence(...) Insufficient bytes in buffer to complete UTF-8 sequence, need:" << utf8SequenceLength
+                         << " but we currently only have: " << bufferData.substr(pos, len - pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
         }
@@ -4302,6 +6763,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
         switch (utf8SequenceLength) {
         case 4:
+            // Check the 4th byte is a valid continuation byte (2 MS-Bits are 10)
             if ((bufferData.at(pos + 3) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 4th byte in UTF-8 sequence is invalid!";
@@ -4309,19 +6771,19 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isValid = false;
                 isToUseReplacementMark = true;
             } else if (((bufferData.at(pos) & 0x07) > 0x04) || (((bufferData.at(pos) & 0x07) == 0x04) && ((bufferData.at(pos + 1) & 0x3F) > 0x0F))) {
-// For 4 byte values the bits are distributed:
-//  Byte 1    Byte 2    Byte 3    Byte 4
-// 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
-// U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
-// So this (the maximum valid character) is:
-//      ABC    DEFGHI    JKLMNO    PQRSTU
-//      100    001111    111111    111111
-// So if the first byte bufferData.at(pos] & 0x07 is:
-//  < 0x04 then must be in range
-//  > 0x04 then must be out of range
-// == 0x04 then consider bufferData.at(pos+1] & 0x3F:
-//     <= 001111 0x0F then must be in range
-//      > 001111 0x0F then must be out of range
+                // For 4 byte values the bits are distributed:
+                //  Byte 1    Byte 2    Byte 3    Byte 4
+                // 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
+                // U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
+                // So this (the maximum valid character) is:
+                //      ABC    DEFGHI    JKLMNO    PQRSTU
+                //      100    001111    111111    111111
+                // So if the first byte bufferData.at(pos] & 0x07 is:
+                //  < 0x04 then must be in range
+                //  > 0x04 then must be out of range
+                // == 0x04 then consider bufferData.at(pos+1] & 0x3F:
+                //     <= 001111 0x0F then must be in range
+                //      > 001111 0x0F then must be out of range
 
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 4 byte UTF-8 sequence is valid but is beyond range of legal codepoints!";
@@ -4330,16 +6792,17 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
 
-        // Fall-through
+            // Fall-through
             [[fallthrough]];
         case 3:
+            // Check the 3rd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 3rd byte in UTF-8 sequence is invalid!";
 #endif
                 isValid = false;
                 isToUseReplacementMark = true;
-            } else if ((bufferData.at(pos) & 0x0F) == 0x0D) {
+            } else if ((bufferData.at(pos) & 0x0F) == 0x0D && (bufferData.at(pos + 1) & 0x20) == 0x20) {
 // For 3 byte values the bits are distributed:
 //  Byte 1    Byte 2    Byte 3
 // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
@@ -4366,18 +6829,24 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
     * followed by a low surrogate). The majority of UTF-16 encoder and decoder
     * implementations translate between encodings as though this were the case
     * and Windows allows such sequences in filenames."
+    *
+    * So test for and, considering the LS Nibble of first byte:
+    * * accept if LS Nibble of first byte is             less than 0xD
+    * * accept if LS Nibble of first byte is greater than/equal to 0xE
+    * * otherwise (if LS Nibble of first byte IS 0xD)
+    *   * accept if 6 LS Bits of second byte is 0x1F of or less
+    * Conversely this can be stated as:
+    * * reject if LS Nibble of first byte is 0xD AND 6th MS Bit of second byte is set
     */
-// So test for and reject if LSN of first byte is 0xD!
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
 #endif
                 isValid = false;
                 isToUseReplacementMark = true;
-            } else if (   (static_cast<quint8>(bufferData.at(pos + 2)) == 0xBF)
-                       && (static_cast<quint8>(bufferData.at(pos + 1)) == 0xBB)
-                       && (static_cast<quint8>(bufferData.at(pos    )) == 0xEF)) {
-// Got caught out by this one - it is the UTF-8 BOM and
-// needs to be ignored as it transcodes to NO codepoints!
+            } else if ((static_cast<quint8>(bufferData.at(pos + 2)) == 0xBF) && (static_cast<quint8>(bufferData.at(pos + 1)) == 0xBB) && (static_cast<quint8>(bufferData.at(pos)) == 0xEF)) {
+                // Got caught out by this one - it is the UTF-8 BOM (or
+                // Zero-Width No-Break Space) and needs to be detected specially
+                // as Qt's codec ignores it and transcodes it to NO codepoints!
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) UTF-8 BOM sequence seen and handled!";
 #endif
@@ -4385,9 +6854,10 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseByteOrderMark = true;
             }
 
-        // Fall-through
+            // Fall-through
             [[fallthrough]];
-        case 2:
+        case 2: {
+            // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
             if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) 2nd byte in UTF-8 sequence is invalid!";
@@ -4396,16 +6866,18 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
 
-            // clang-format off
-            // Disable code reformatting as it would destroy layout that helps
-            // to explain the grouping of the tests
-            // Also test for (and reject) overlong sequences - don't
-            // need to check 5 or 6 ones as those are already rejected:
-            if (  ( ((static_cast<quint8>(bufferData.at(pos    )) & 0xFE) == 0xC0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) == 0x80) )
-                ||( ( static_cast<quint8>(bufferData.at(pos    )        ) == 0xE0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xE0) == 0x80) )
-                ||( ( static_cast<quint8>(bufferData.at(pos    )        ) == 0xF0) && ( ( static_cast<quint8>(bufferData.at(pos + 1)) & 0xF0) == 0x80) ) ) {
-// clang-format on
+            // Also test for (and reject) overlong sequences - don't need to check
+            // 5 or 6 byte ones as those are already rejected above
+            const auto firstByte = static_cast<quint8>(bufferData.at(pos));
+            const auto secondByte = static_cast<quint8>(bufferData.at(pos + 1));
+            // Overlong 2-byte: C0/C1 xx (could be encoded in 1 byte)
+            const bool twoByteOverlong = ((firstByte & 0xFE) == 0xC0) && ((secondByte & 0xC0) == 0x80);
+            // Overlong 3-byte: E0 80-9F xx (could be encoded in 2 bytes)
+            const bool threeByteOverlong = (firstByte == 0xE0) && ((secondByte & 0xE0) == 0x80);
+            // Overlong 4-byte: F0 80-8F xx xx (could be encoded in 3 bytes)
+            const bool fourByteOverlong = (firstByte == 0xF0) && ((secondByte & 0xF0) == 0x80);
 
+            if (twoByteOverlong || threeByteOverlong || fourByteOverlong) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug().nospace() << "TBuffer::processUtf8Sequence(...) Overlong " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
 #endif
@@ -4413,6 +6885,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
             break;
+        }
 
         default:
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -4424,31 +6897,26 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
         // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
         if (isValid) {
-            QString codePoint = QString(bufferData.substr(pos, utf8SequenceLength).c_str());
-            switch (codePoint.size()) {
-            default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, and it encoded to " << codePoint.size()
-                                     << " QChars which does not make sense!!!";
-                isValid = false;
-                isToUseReplacementMark = true;
-                break;
-            case 2:
-                isNonBMPCharacter = true;
-                // Fall-through
-                [[fallthrough]];
-            case 1:
+            // Every way of being malformed - a bad continuation byte, an
+            // overlong form, a surrogate, a codepoint past U+10FFFF, a 5 or 6
+            // byte sequence and the BOM - has already been rejected above, so
+            // the bits can be gathered here rather than paying for a QString
+            // per character:
+            char32_t codePoint = static_cast<quint8>(bufferData.at(pos)) & (utf8SequenceLength == 2 ? 0x1F : (utf8SequenceLength == 3 ? 0x0F : 0x07));
+            for (size_t i = 1; i < utf8SequenceLength; ++i) {
+                codePoint = (codePoint << 6) | (static_cast<quint8>(bufferData.at(pos + i)) & 0x3F);
+            }
+            const bool nonBMP = QChar::requiresSurrogates(codePoint);
 #if defined(DEBUG_UTF8_PROCESSING)
-                qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long [" << codePoint
-                                   << "]";
+            qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << (nonBMP ? 2 : 1) << " QChar(s) long [U+" << Qt::hex
+                               << static_cast<quint32>(codePoint) << Qt::dec << "]";
 #endif
-                mMudLine.append(codePoint);
-                break;
-            case 0:
-                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, but it did not encode to "
-                                                                                                      "ANY QChar(s)!!!";
-                isValid = false;
-                isToUseReplacementMark = true;
+            if (nonBMP) {
+                isNonBMPCharacter = true;
+                mMudLine.append(QChar(QChar::highSurrogate(codePoint)));
+                mMudLine.append(QChar(QChar::lowSurrogate(codePoint)));
+            } else {
+                mMudLine.append(QChar(static_cast<char16_t>(codePoint)));
             }
         }
 
@@ -4456,9 +6924,9 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_UTF8_PROCESSING)
             QString debugMsg;
             for (size_t i = 0; i < utf8SequenceLength; ++i) {
-                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+                debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
             }
-            qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
+            qDebug().nospace() << "    Sequence bytes are: " << debugMsg;
 #endif
             if (isToUseReplacementMark) {
                 mMudLine.append(QChar::ReplacementCharacter);
@@ -4480,15 +6948,15 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
 bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFromServer, const bool isGB18030, const size_t len, size_t& pos, bool& isNonBmpCharacter)
 {
-// In GBK/GB18030 mode we have to process the data more than one byte at a
-// time because there is not necessarily a one-byte to one TChar
-// mapping, instead we use one TChar per QChar - and that has to be
-// tweaked for non-BMP characters that use TWO QChars per codepoint.
-// GB2312 is the predecessor to both and - according to Wikipedia (EN) covers
-// over 99% of the characters of contempory usage.
-// GBK is a sub-set of GB18030 so can be processed in the same method
-// Assume we are at the first byte of a single (ASCII), pair (GBK/GB18030)
-// or four byte (GB18030) sequence
+    // In GBK/GB18030 mode we have to process the data more than one byte at a
+    // time because there is not necessarily a one-byte to one TChar
+    // mapping, instead we use one TChar per QChar - and that has to be
+    // tweaked for non-BMP characters that use TWO QChars per codepoint.
+    // GB2312 is the predecessor to both and - according to Wikipedia (EN) covers
+    // over 99% of the characters of contemporary usage.
+    // GBK is a sub-set of GB18030 so can be processed in the same method
+    // Assume we are at the first byte of a single (ASCII), pair (GBK/GB18030)
+    // or four byte (GB18030) sequence
 
 #if defined(DEBUG_GB_PROCESSING)
     std::string dataIdentity;
@@ -4509,7 +6977,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // there is no need to tweak pos in THIS case
 
         return true;
-    } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80) {
+    } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80) { // NOLINT(readability-else-after-return)
         // Invalid as first byte
         isValid = false;
         isToUseReplacementMark = true;
@@ -4524,101 +6992,78 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // As we are not in GB18030 mode treat it as if it is a 2 byte sequence
         gbSequenceLength = 2;
         if ((pos + gbSequenceLength - 1) < len) {
-            // We have enough bytes to look at the second one - lets see which
+            // We have enough bytes to look at the second one - let's see which
             // range it is in:
-            // clang-format off
-            if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-// clang-format on
-// GBK Area 3 sequence
+            const auto byte1 = static_cast<quint8>(bufferData.at(pos));
+            const auto byte2 = static_cast<quint8>(bufferData.at(pos + 1));
 
+            // GBK Area 3: byte1 81-A0, byte2 40-FE (excluding 7F)
+            const bool gbkArea3 = (byte1 >= 0x81) && (byte1 <= 0xA0) && (byte2 >= 0x40) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+            // GBK Area 1 (& GB2312): byte1 A1-A9, byte2 A1-FE
+            const bool gbkArea1 = (byte1 >= 0xA1) && (byte1 <= 0xA9) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            // GBK Area 2 (& GB2312): byte1 B0-F7, byte2 A1-FE
+            const bool gbkArea2 = (byte1 >= 0xB0) && (byte1 <= 0xF7) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            // GBK Area 5: byte1 A8-A9, byte2 40-A0 (excluding 7F)
+            const bool gbkArea5 = (byte1 >= 0xA8) && (byte1 <= 0xA9) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+            // GBK Area 4: byte1 AA-FE, byte2 40-A0 (excluding 7F)
+            const bool gbkArea4 = (byte1 >= 0xAA) && (byte1 <= 0xFE) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+            // User Defined (PU) Area 1: byte1 AA-AF, byte2 A1-FE
+            const bool userArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
+            const bool userArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+            // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
+            const bool userArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+            // Looks like first pair of 4-byte GB18030 non-BMP sequence: byte1 90-E3, byte2 30-39
+            const bool looksLikeGB18030NonBMP = (byte1 >= 0x90) && (byte1 <= 0xE3) && (byte2 >= 0x30) && (byte2 <= 0x39);
+            // Looks like first pair of 4-byte GB18030 Private Use sequence: byte1 FD-FE, byte2 30-39
+            const bool looksLikeGB18030PrivateUse = (byte1 >= 0xFD) && (byte1 <= 0xFE) && (byte2 >= 0x30) && (byte2 <= 0x39);
+
+            if (gbkArea3) {
+                // GBK Area 3 sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 3";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-// clang-format on
-// GBK Area 1 (& GB2312) sequence
-
+            } else if (gbkArea1) {
+                // GBK Area 1 (& GB2312) sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 1 (or GB2312)";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xB0) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xF7)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-// clang-format on
-// GBK Area 2 (& GB2312) sequence
-
+            } else if (gbkArea2) {
+                // GBK Area 2 (& GB2312) sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 2 (or GB2312)";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-// clang-format on
-// GBK/5 sequence
-
+            } else if (gbkArea5) {
+                // GBK/5 sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 5";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-// clang-format on
-// GBK/4 sequence
-
+            } else if (gbkArea4) {
+                // GBK/4 sequence
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "GBK Area 4";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xAF)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-// clang-format on
-// User Defined 1 sequence - possibly invalid for us but if the
-// MUD supplies their own font it could be used:
-
+            } else if (userArea1) {
+                // User Defined 1 sequence - possibly invalid for us but if the
+                // MUD supplies their own font it could be used:
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 1";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xF8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-// clang-format on
-// User Defined 2 sequence - possibly invalid for us but if the
-// MUD supplies their own font it could be used:
-
+            } else if (userArea2) {
+                // User Defined 2 sequence - possibly invalid for us but if the
+                // MUD supplies their own font it could be used:
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 2";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA7)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-// clang-format on
-// User Defined 3 sequence - possibly invalid for us but if the
-// MUD supplies their own font it could be used:
-
+            } else if (userArea3) {
+                // User Defined 3 sequence - possibly invalid for us but if the
+                // MUD supplies their own font it could be used:
 #if defined(DEBUG_GB_PROCESSING)
                 dataIdentity = "User Defined (PU) Area 3";
 #endif
-
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x90) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xE3)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
-// clang-format on
-// First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
-// codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
+            } else if (looksLikeGB18030NonBMP) {
+                // First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
+                // codepoint if byte 3 is within 0x81-0xFE and byte 4 is within 0x30-0x39
                 isValid = false;
                 isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -4626,12 +7071,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                                       "GB2312/GBK rejected because it is seems to be the "
                                       "first pair of a 4-byte GB18030 non-BMP Unicode sequence!";
 #endif
-                // clang-format off
-            } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xFD) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                      && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
-// clang-format on
-// First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
-// codepoint if byte 3 is within 0x81-00xFE and byte 4 is within 0x30-0x39
+            } else if (looksLikeGB18030PrivateUse) {
+                // First two bytes of a 4-byte GB18030 sequence - for a non-BMP mapped Unicode
+                // codepoint if byte 3 is within 0x81-0xFE and byte 4 is within 0x30-0x39
                 isValid = false;
                 isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -4641,7 +7083,6 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #endif
             } else {
                 // Outside expected ranges
-
                 isValid = false;
                 isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -4656,11 +7097,12 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             // Not enough bytes to process yet - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to "
-                                      "complate GB2312/GBK sequence, need at least: "
-                                   << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to "
+                                      "complete GB2312/GBK sequence, need at least: "
+                                   << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos, len - pos).length()
+                                   << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
         }
@@ -4674,42 +7116,45 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 
         gbSequenceLength = 2;
         if ((pos + gbSequenceLength - 1) < len) {
-            // We have enough bytes to look at the second one - lets see which
+            // We have enough bytes to look at the second one - let's see which
             // range it is in:
-            // clang-format off
-            if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-               && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0x39) ) {
-                // clang-format on
-                // This IS a 4-byte sequence
+            const auto byte1 = static_cast<quint8>(bufferData.at(pos));
+            const auto byte2 = static_cast<quint8>(bufferData.at(pos + 1));
 
+            // Check if this is a 4-byte sequence: byte1 81-FE, byte2 30-39
+            const bool fourByteSequence = (byte1 >= 0x81) && (byte1 <= 0xFE) && (byte2 >= 0x30) && (byte2 <= 0x39);
+
+            if (fourByteSequence) {
+                // This IS a 4-byte sequence
                 gbSequenceLength = 4;
 
                 if ((pos + gbSequenceLength - 1) >= len) {
                     // Not enough bytes to process yet - so store what we have and return
                     if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                        qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to "
-                                              "complate GB18030 sequence, need at least: "
-                                           << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                        qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to "
+                                              "complete GB18030 sequence, need at least: "
+                                           << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos, len - pos).length()
+                                           << " bytes (which we will store for next call to this method)...";
 #endif
-                        mIncompleteSequenceBytes = bufferData.substr(pos);
+                        mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
                     }
 
                     return false; // Bail out
                 }
 
-                // clang-format off
                 // Continue with four-byte sequence validation processing as we
                 // have all four bytes to work with:
-                if (   ((  /* 1st group low limit 0x81 is already done*/        (static_cast<quint8>(bufferData.at(pos    )) <= 0x84))
-                        ||((static_cast<quint8>(bufferData.at(pos)) >= 0x90) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xE3)))
-                    /*
-                     * Only the above 1st byte ranges are currently used - others are reserved
-                     * Second byte range is 0x30-0x39 for all and has already been checked
-                     */
-                    && (static_cast<quint8>(bufferData.at(pos + 2)) >= 0x81) && (static_cast<quint8>(bufferData.at(pos + 2)) <= 0xFE)
-                    && (static_cast<quint8>(bufferData.at(pos + 3)) >= 0x30) && (static_cast<quint8>(bufferData.at(pos + 3)) <= 0x39) ) {
+                const auto byte3 = static_cast<quint8>(bufferData.at(pos + 2));
+                const auto byte4 = static_cast<quint8>(bufferData.at(pos + 3));
 
+                // Valid 4-byte: byte1 in (81-84 or 90-E3), byte2 30-39 (already checked),
+                // byte3 81-FE, byte4 30-39
+                const bool byte1InValidRange = (byte1 <= 0x84) || ((byte1 >= 0x90) && (byte1 <= 0xE3));
+                const bool byte3Valid = (byte3 >= 0x81) && (byte3 <= 0xFE);
+                const bool byte4Valid = (byte4 >= 0x30) && (byte4 <= 0x39);
+
+                if (byte1InValidRange && byte3Valid && byte4Valid) {
                     // Okay we should have a valid four byte sequence now
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "Non-BMP mapped Unicode";
@@ -4719,8 +7164,6 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // unicode codepoint but it is academic as it is not
                     // currently defined as a valid codepoint value and will be
                     // substituted with the replacement character anyway:
-                    // clang-format on
-
                     isValid = false;
                     isToUseReplacementMark = true;
 
@@ -4735,96 +7178,69 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             } else {
                 // Looks as though it is a two-byte sequence after all - so
                 // validate it as that:
-                // clang-format off
-                if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                    // clang-format on
-                    // GBK/3 sequence
 
+                // GBK Area 3: byte1 81-A0, byte2 40-FE (excluding 7F)
+                const bool isGBKArea3 = (byte1 >= 0x81) && (byte1 <= 0xA0) && (byte2 >= 0x40) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+                // GBK Area 1 (& GB2312): byte1 A1-A9, byte2 A1-FE
+                const bool isGBKArea1 = (byte1 >= 0xA1) && (byte1 <= 0xA9) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+                // GBK Area 2 (& GB2312): byte1 B0-F7, byte2 A1-FE
+                const bool isGBKArea2 = (byte1 >= 0xB0) && (byte1 <= 0xF7) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+                // GBK Area 5: byte1 A8-A9, byte2 40-A0 (excluding 7F)
+                const bool isGBKArea5 = (byte1 >= 0xA8) && (byte1 <= 0xA9) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+                // GBK Area 4: byte1 AA-FE, byte2 40-A0 (excluding 7F)
+                const bool isGBKArea4 = (byte1 >= 0xAA) && (byte1 <= 0xFE) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
+                // User Defined (PU) Area 1: byte1 AA-AF, byte2 A1-FE
+                const bool isUserArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+                // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
+                const bool isUserArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
+                // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
+                const bool isUserArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+
+                if (isGBKArea3) {
+                    // GBK/3 sequence
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 3";
 #endif
-
-                // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                    // clang-format on
+                } else if (isGBKArea1) {
                     // GBK/1 (& GB2312) sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 1";
 #endif
-
-                // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xB0) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xF7)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                    // clang-format on
+                } else if (isGBKArea2) {
                     // GBK/2 (& GB2312) sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 2";
 #endif
-
-                // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA9)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                    // clang-format on
+                } else if (isGBKArea5) {
                     // GBK/5 sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 5";
 #endif
-
-                // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0x40) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xA0)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                    // clang-format on
+                } else if (isGBKArea4) {
                     // GBK/4 sequence
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "GBK Area 4";
 #endif
-
-                // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xAA) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xAF)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                    // clang-format on
+                } else if (isUserArea1) {
                     // User Defined 1 sequence - possibly invalid for us but if the
                     // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "User Defined (PU) Area 1";
 #endif
-
-                // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xF8) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE) ) {
-                    // clang-format on
+                } else if (isUserArea2) {
                     // User Defined 2 sequence - possibly invalid for us but if the
                     // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "User Defined (PU) Area 2";
 #endif
-
-                // clang-format off
-                } else if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA7)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) >= 0xA1) && (static_cast<quint8>(bufferData.at(pos + 1)) <= 0xFE)
-                          && (static_cast<quint8>(bufferData.at(pos + 1)) != 0x7F) ) {
-                    // clang-format on
+                } else if (isUserArea3) {
                     // User Defined 3 sequence - possibly invalid for us but if the
                     // MUD supplies their own font it could be used:
-
 #if defined(DEBUG_GB_PROCESSING)
                     dataIdentity = "User Defined (PU) Area 3";
 #endif
-
                 } else {
                     // Outside expected range
-
                     isValid = false;
                     isToUseReplacementMark = true;
 #if defined(DEBUG_GB_PROCESSING)
@@ -4841,11 +7257,10 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             // we only have one - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to complate GB18030 sequence, need at least:"
-                                   << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length()
-                                   << " bytes (which we will store for next call to this method)...";
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to complete GB18030 sequence, need at least:" << gbSequenceLength
+                                   << " but we currently only have: " << bufferData.substr(pos, len - pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
         }
@@ -4859,13 +7274,11 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, gbSequenceLength).c_str(), static_cast<int>(gbSequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, gbSequenceLength), mEncoding);
             switch (codePoint.size()) {
             default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or gbSequenceLength wrong
                 qWarning().nospace() << "TBuffer::processGBSequence(...) " << gbSequenceLength << "-byte " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " sequence accepted, and it encoded to "
                                      << codePoint.size() << " QChars which does not make sense!!!";
                 isValid = false;
@@ -4873,7 +7286,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 break;
             case 2:
                 isNonBmpCharacter = true;
-            // Fall-through
+                // Fall-through
                 [[fallthrough]];
             case 1:
 #if defined(DEBUG_GB_PROCESSING)
@@ -4899,9 +7312,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #if defined(DEBUG_GB_PROCESSING)
         QString debugMsg;
         for (size_t i = 0; i < gbSequenceLength; ++i) {
-            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+            debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
-        qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
+        qDebug().nospace() << "    Sequence bytes are: " << debugMsg;
 #endif
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);
@@ -4935,7 +7348,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // there is no need to tweak pos in THIS case
 
         return true;
-    } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80 || static_cast<quint8>(bufferData.at(pos)) > 0xFE) {
+    } else if (static_cast<quint8>(bufferData.at(pos)) == 0x80 || static_cast<quint8>(bufferData.at(pos)) > 0xFE) { // NOLINT(readability-else-after-return)
         // Invalid as first byte
         isValid = false;
         isToUseReplacementMark = true;
@@ -4949,14 +7362,15 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
             // Not enough bytes to process yet - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_BIG5_PROCESSING)
-                qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficent bytes in buffer to "
+                qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficient bytes in buffer to "
                                       "complete Big5 sequence, need at least: "
-                                   << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                                   << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos, len - pos).length()
+                                   << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
-        } else {
+        } else {          // NOLINT(readability-else-after-return)
             // check if second byte range is valid
             auto val2 = static_cast<quint8>(bufferData.at(pos + 1));
             if (val2 < 0x40 || (val2 > 0x7E && val2 < 0xA1) || val2 > 0xFE) {
@@ -4965,7 +7379,6 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
                 isToUseReplacementMark = true;
             }
         }
-
     }
 
     // At this point we know how many bytes to consume, and whether they are in
@@ -4976,39 +7389,36 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (mMainIncomingCodec) {
-            // Third argument is 0 to indicate we do NOT wish to store the state:
-            codePoint = mMainIncomingCodec->toUnicode(bufferData.substr(pos, big5SequenceLength).c_str(), static_cast<int>(big5SequenceLength),
-                                                      nullptr);
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, big5SequenceLength), mEncoding);
             switch (codePoint.size()) {
-                default:
-                    Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                    qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, and it encoded to "
-                                         << codePoint.size() << " QChars which does not make sense!!!";
+            default:
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or big5SequenceLength wrong
+                qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, and it encoded to " << codePoint.size()
+                                     << " QChars which does not make sense!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+                break;
+            case 2:
+                // Fall-through
+                [[fallthrough]];
+            case 1:
+                // If Qt's decoder found bad characters, update status flags to reflect that.
+                if (codePoint.contains(QChar::ReplacementCharacter)) {
                     isValid = false;
                     isToUseReplacementMark = true;
                     break;
-                case 2:
-                    // Fall-through
-                    [[fallthrough]];
-                case 1:
-                    // If Qt's decoder found bad characters, update status flags to reflect that.
-                    if (codePoint.contains(QChar::ReplacementCharacter)) {
-                        isValid = false;
-                        isToUseReplacementMark = true;
-                        break;
-                    }
+                }
 #if defined(DEBUG_BIG5_PROCESSING)
-                    qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size()
-                                   << " QChar(s) long [" << codePoint << "] and is in the " << dataIdentity.c_str() << " range";
+                qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size() << " QChar(s) long [" << codePoint
+                                   << "] and is in the " << dataIdentity.c_str() << " range";
 #endif
-                    mMudLine.append(codePoint);
-                    break;
-                case 0:
-                    qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5"
-                                   << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
-                    isValid = false;
-                    isToUseReplacementMark = true;
+                mMudLine.append(codePoint);
+                break;
+            case 0:
+                qWarning().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5" << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
             }
         } else {
             // Unable to decode it - no Qt decoder...!
@@ -5024,9 +7434,9 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_BIG5_PROCESSING)
         QString debugMsg;
         for (size_t i = 0; i < big5SequenceLength; ++i) {
-            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+            debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
-        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg.toLatin1().constData();
+        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg;
 #endif
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);
@@ -5040,91 +7450,164 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
     return true;
 }
 
-void TBuffer::encodingChanged(const QString& newEncoding)
+bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool isFromServer, const size_t len, size_t& pos, bool& isNonBmpCharacter)
+{
+#if defined(DEBUG_EUC_KR_PROCESSING)
+    std::string dataIdentity;
+#endif
+
+    // The encoding standard are taken from https://en.wikipedia.org/wiki/Extended_Unix_Code
+    size_t eucSequenceLength = 1;
+    bool isValid = true;
+    bool isToUseReplacementMark = false;
+    // Only set this if we are adding more than one code-point to
+    // mCurrentLineCharacters:
+    isNonBmpCharacter = false;
+    if (static_cast<quint8>(bufferData.at(pos)) < 0x7F) {
+        // Is ASCII - single byte character, straight forward for a "first" byte case
+        mMudLine.append(bufferData.at(pos));
+        // As there is already a unit increment at the bottom of caller's loop
+        // there is no need to tweak pos in THIS case
+
+        return true;
+    } else if (static_cast<quint8>(bufferData.at(pos)) < 0xA1 || static_cast<quint8>(bufferData.at(pos)) == 0xFF) { // NOLINT(readability-else-after-return)
+        // Invalid as first byte
+        isValid = false;
+        isToUseReplacementMark = true;
+#if defined(DEBUG_EUC_KR_PROCESSING)
+        qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) 1-byte sequence as EUC-KR rejected!";
+#endif
+    } else {
+        // We have two bytes
+        eucSequenceLength = 2;
+        if ((pos + eucSequenceLength - 1) >= len) {
+            // Not enough bytes to process yet - so store what we have and return
+            if (isFromServer) {
+#if defined(DEBUG_EUC_KR_PROCESSING)
+                qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) Insufficient bytes in buffer to "
+                                      "complete EUC-KR sequence, need at least: "
+                                   << eucSequenceLength << " but we currently only have: " << bufferData.substr(pos, len - pos).length()
+                                   << " bytes (which we will store for next call to this method)...";
+#endif
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
+            }
+            return false; // Bail out
+        } else {          // NOLINT(readability-else-after-return)
+            // check if second byte range is valid
+            auto val2 = static_cast<quint8>(bufferData.at(pos + 1));
+            if (val2 < 0xA1 || val2 == 0xFF) {
+                // second byte range is invalid
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+        }
+    }
+
+    // At this point we know how many bytes to consume, and whether they are in
+    // the right ranges of individual values to be valid
+
+    if (isValid) {
+        // Try and convert two byte sequence to Unicode using Qts own
+        // decoder - and check number of codepoints returned
+
+        QString codePoint;
+        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, eucSequenceLength), mEncoding);
+            switch (codePoint.size()) {
+            default:
+                Q_UNREACHABLE(); // This can't happen, unless we got pos or eucSequenceLength wrong
+                qWarning().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, and it encoded to " << codePoint.size()
+                                     << " QChars which does not make sense!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+                break;
+            case 2:
+                // Fall-through
+                [[fallthrough]];
+            case 1:
+                // If Qt's decoder found bad characters, update status flags to reflect that.
+                if (codePoint.contains(QChar::ReplacementCharacter)) {
+                    isValid = false;
+                    isToUseReplacementMark = true;
+                    break;
+                }
+#if defined(DEBUG_EUC_KR_PROCESSING)
+                qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, it is " << codePoint.size() << " QChar(s) long [" << codePoint
+                                   << "] and is in the " << dataIdentity.c_str() << " range";
+#endif
+                mMudLine.append(codePoint);
+                break;
+            case 0:
+                qWarning().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR" << "sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                isValid = false;
+                isToUseReplacementMark = true;
+            }
+        } else {
+            // Unable to decode it - no Qt decoder...!
+#if defined(DEBUG_EUC_KR_PROCESSING)
+            qDebug().nospace() << "No Qt decoder found...";
+#endif
+            isValid = false;
+            isToUseReplacementMark = true;
+        }
+    }
+
+    if (!isValid) {
+#if defined(DEBUG_EUC_KR_PROCESSING)
+        QString debugMsg;
+        for (size_t i = 0; i < eucSequenceLength; ++i) {
+            debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+        }
+        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg;
+#endif
+        if (isToUseReplacementMark) {
+            mMudLine.append(QChar::ReplacementCharacter);
+        }
+    }
+
+    // As there is already a unit increment at the bottom of loop
+    // add one less than the sequence length:
+    pos += eucSequenceLength - 1;
+
+    return true;
+}
+
+TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
+{
+    if (encoding == "UTF-8") {
+        return Decoder::Utf8;
+    }
+    if (encoding == "ISO 8859-1") {
+        return Decoder::Latin1;
+    }
+    if (encoding == "GBK") {
+        return Decoder::Gbk;
+    }
+    if (encoding == "GB18030") {
+        return Decoder::Gb18030;
+    }
+    if (encoding == "EUC-KR") {
+        return Decoder::EucKr;
+    }
+    if (encoding == "BIG5" || encoding == "BIG5-HKSCS") {
+        return Decoder::Big5;
+    }
+    return Decoder::Ascii;
+}
+
+void TBuffer::encodingChanged(const QByteArray& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
-        if (mEncoding == QLatin1String("GBK") || mEncoding == QLatin1String("GB18030") || mEncoding == QLatin1String("Big5")) {
-            mMainIncomingCodec = QTextCodec::codecForName(mEncoding.toLatin1().constData());
-            if (!mMainIncomingCodec) {
+        mDecoder = decoderFor(mEncoding);
+        if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
+            if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {
-                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Installing a codec that can handle:" << mMainIncomingCodec->aliases();
-            }
-        } else if (mMainIncomingCodec) {
-            qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Uninstall a codec that can handle:" << mMainIncomingCodec->aliases() << " as the new encoding setting of: "
-                               << mEncoding << " does not need a dedicated one explicitly set...";
-            mMainIncomingCodec = nullptr;
-        }
-    }
-}
-
-QString TBuffer::processSupportsRequest(const QString& elements)
-{
-    // strip initial SUPPORT and tokenize all of the requested elements
-    auto elementsList = elements.trimmed().remove(0, 7).split(QStringLiteral(" "), QString::SkipEmptyParts);
-    QStringList result;
-
-    auto reportEntireElement = [](auto element, auto& result) {
-        result.append("+" + element);
-
-        for (const auto& attribute : mSupportedMxpElements.value(element)) {
-            result.append("+" + element + QStringLiteral(".") + attribute);
-        }
-
-        return result;
-    };
-
-    auto reportAllElements = [reportEntireElement](auto& result) {
-        auto elementsIterator = mSupportedMxpElements.constBegin();
-        while (elementsIterator != mSupportedMxpElements.constEnd()) {
-            result = reportEntireElement(elementsIterator.key(), result);
-            ++elementsIterator;
-        }
-
-        return result;
-    };
-
-    // empty <SUPPORT> - report all known elements
-    if (elementsList.isEmpty()) {
-        result = reportAllElements(result);
-    } else {
-        // otherwise it's <SUPPORT element1 element2 element3>
-        for (auto& element : elementsList) {
-            // prune any enclosing quotes
-            if (element.startsWith(QChar('"'))) {
-                element = element.remove(0, 1);
-            }
-            if (element.endsWith(QChar('"'))) {
-                element.chop(1);
-            }
-
-            if (!element.contains(QChar('.'))) {
-                if (mSupportedMxpElements.contains(element)) {
-                    result = reportEntireElement(element, result);
-                } else {
-                    result.append("-" + element);
-                }
-            } else {
-                auto elementName = element.section(QChar('.'), 0, 0);
-                auto attributeName = element.section(QChar('.'), 1, 1);
-
-                if (!mSupportedMxpElements.contains(elementName)) {
-                    result.append("-" + element);
-                } else if (attributeName == QLatin1String("*")) {
-                    result = reportEntireElement(elementName, result);
-                } else {
-                    if (mSupportedMxpElements.value(elementName).contains(attributeName)) {
-                        result.append("+" + element + "." + attributeName);
-                    } else {
-                        result.append("-" + element + "." + attributeName);
-                    }
-                }
+                qDebug().nospace() << "encodingChanged(" << newEncoding << ") INFO: Encoding is available and will be used.";
             }
         }
     }
-
-    return result.join(QLatin1String(" "));
 }
 
 // Count the graphemes in a QString - returning its length in terms of those:
@@ -5142,4 +7625,1047 @@ int TBuffer::lengthInGraphemes(const QString& text)
         pos = graphemeFinder.toNextBoundary();
     }
     return count;
+}
+
+const QList<QByteArray> TBuffer::getEncodingNames()
+{
+    return csmEncodingTable.getEncodingNames();
+}
+
+void TBuffer::clearSearchHighlights()
+{
+    for (auto& line : buffer) {
+        for (auto& character : line) {
+            character.mFlags &= ~TChar::AttributeFlag::Found;
+        }
+    }
+}
+
+void TBuffer::injectOSC8DocumentationExamples()
+{
+    // Inject OSC 8 hyperlink examples - concise, progressive, matching wiki docs
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] injectOSC8DocumentationExamples() called";
+#endif
+
+    QString output = "\n";
+    output += "╔══════════════════════════════════════════════════════════════════════╗\n";
+    output += "║              OSC 8 Hyperlink Examples - Try them all!                ║\n";
+    output += "╚══════════════════════════════════════════════════════════════════════╝\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 1. FUNDAMENTALS - Basic links with color
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── FUNDAMENTALS ───────────────────────────────────────────────────────\n";
+    output += "Basic: ";
+    output += "\x1b]8;;send:look\x1b\\\x1b[34mLook\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;prompt:cast%20fireball\x1b\\\x1b[33mCast Spell\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;https://mudlet.org\x1b\\\x1b[36mWebsite\x1b[0m\x1b]8;;\x1b\\\n";
+    output += "       send:CMD  prompt:CMD (editable)  https://URL (browser)\n";
+    output += "URLs:  ";
+    output += "\x1b]8;;https://mudlet.org/?id=42&lang=en\x1b\\\x1b[36mWith params\x1b[0m\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;https://mudlet.org/?%63%6F%6E%66%69%67=value\x1b\\\x1b[36mEncoded config\x1b[0m\x1b]8;;\x1b\\\n";
+    output += "       query params preserved (?id=42&lang=en)  percent-encoded reserved names kept\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 2. JSON CONFIGURATION - Show the structure early
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── JSON CONFIG (append ?config={...} to URI) ───────────────────────────\n";
+    output += "Structure: send:cmd?config={\"style\":{...},\"menu\":[...],\"tooltip\":\"...\"}\n";
+    output += "Example:   \x1b]8;;send:attack?config={\"style\":{\"color\":\"red\",\"bold\":true}}\x1b\\Attack\x1b]8;;\x1b\\ ← ";
+    output += "{\"style\":{\"color\":\"red\",\"bold\":true}}\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 3. STYLING - Colors, decorations, states
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── STYLING ────────────────────────────────────────────────────────────\n";
+    output += "Colors: ";
+    output += "\x1b]8;;send:c1?config={\"style\":{\"color\":\"red\"}}\x1b\\red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c2?config={\"style\":{\"color\":\"#0066ff\"}}\x1b\\#0066ff\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c3?config={\"style\":{\"color\":\"rgb(0,200,100)\"}}\x1b\\rgb()\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:c4?config={\"style\":{\"bg\":\"yellow\",\"color\":\"black\"}}\x1b\\bg:yellow\x1b]8;;\x1b\\\n";
+    output += "Text:   ";
+    output += "\x1b]8;;send:t1?config={\"style\":{\"bold\":true}}\x1b\\bold\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t2?config={\"style\":{\"italic\":true}}\x1b\\italic\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t3?config={\"style\":{\"underline\":true}}\x1b\\underline\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t4?config={\"style\":{\"underline\":\"wavy\",\"text-decoration-color\":\"red\"}}\x1b\\wavy-red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:t5?config={\"style\":{\"strikethrough\":true}}\x1b\\strike\x1b]8;;\x1b\\\n";
+    output += "States: ";
+    output += "\x1b]8;;send:s1?config={\"style\":{\"color\":\"blue\",\"hover\":{\"color\":\"red\"}}}\x1b\\hover:red\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:s2?config={\"style\":{\"bg\":\"green\",\"active\":{\"bg\":\"darkgreen\"}}}\x1b\\active:dark\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:s3?config={\"style\":{\"link\":{\"color\":\"blue\"},\"visited\":{\"color\":\"purple\"}}}\x1b\\visited:purple\x1b]8;;\x1b\\\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 4. MENUS & TOOLTIPS
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── MENUS & TOOLTIPS ───────────────────────────────────────────────────\n";
+    output += "Menu: \x1b]8;;send:attack?config={\"menu\":[{\"Strike\":\"send:strike\"},{\"Power\":\"send:power\"},\"-\",{\"Flee\":\"send:flee\"}]}\x1b\\⚔️ Combat\x1b]8;;\x1b\\ ← right-click "
+              "(left=primary, \"-\"=separator)\n";
+    output += "Tip:  \x1b]8;;send:item?config={\"tooltip\":\"Legendary sword +5 damage\",\"style\":{\"color\":\"orange\"}}\x1b\\🗡️ Flaming Blade\x1b]8;;\x1b\\ ← hover for tooltip\n";
+    output += "Both: \x1b]8;;send:spell?config={\"menu\":[{\"Fire\":\"send:fireball\"},{\"Ice\":\"send:icebolt\"}],\"tooltip\":\"Magic spells\",\"style\":{\"color\":\"#9966ff\"}}\x1b\\✨ "
+              "Magic\x1b]8;;\x1b\\\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 5. VISIBILITY - Hide/reveal
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── VISIBILITY (auto-hide/reveal) ──────────────────────────────────────\n";
+    output += "Click-hide: \x1b]8;;send:h1?config={\"style\":{\"color\":\"yellow\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\I vanish 2s after click\x1b]8;;\x1b\\\n";
+    output += "Expire:     \x1b]8;;send:h2?config={\"style\":{\"color\":\"cyan\"},\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}}}\x1b\\Send any command to hide\x1b]8;;\x1b\\\n";
+    output += "Reveal:     Wait... \x1b]8;;send:h3?config={\"style\":{\"color\":\"lime\",\"bold\":true},\"visibility\":{\"action\":\"reveal\",\"delay\":5000}}\x1b\\I APPEAR!\x1b]8;;\x1b\\ (5 "
+              "seconds)\n";
+    output += "Wide chars: \x1b]8;;send:h4?config={\"style\":{\"bg\":\"blue\"},\"visibility\":{\"action\":\"conceal\",\"delay\":2000}}\x1b\\🎉🚀💎\x1b]8;;\x1b\\ ← emojis handled correctly\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 6. SPOILERS - Click to reveal
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── SPOILERS (click-to-reveal) ─────────────────────────────────────────\n";
+    output += "The answer is: \x1b]8;;send:sp1?config={\"spoiler\":true,\"disabled\":true}\x1b\\42\x1b]8;;\x1b\\  ";
+    output += "Secret code: \x1b]8;;https://www.mudlet.org?config={\"spoiler\":true,\"style\":{\"color\":\"yellow\"}}\x1b\\XYZZY\x1b]8;;\x1b\\  ";
+    output += "Emoji secret: \x1b]8;;send:sp3?config={\"spoiler\":true,\"disabled\":true}\x1b\\🔮💀🗝️\x1b]8;;\x1b\\\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 7. DISABLED - Non-clickable
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── DISABLED LINKS ─────────────────────────────────────────────────────\n";
+    output += "\x1b]8;;send:d1?config={\"disabled\":true,\"style\":{\"color\":\"gray\",\"strikethrough\":true}}\x1b\\Locked\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:d2?config={\"disabled\":true,\"style\":{\"color\":\"#666\"},\"tooltip\":\"Requires level 10\"}\x1b\\Premium\x1b]8;;\x1b\\ ";
+    output += "← click/right-click blocked, tooltip works\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 8. SELECTION - Toggle states
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── SELECTION (stateful toggles) ───────────────────────────────────────\n";
+    output += "Radio:    ";
+    output += "\x1b]8;;send:easy?config={\"selection\":{\"group\":\"diff\",\"value\":\"easy\",\"exclusive\":true},\"style\":{\"color\":\"#8f8\",\"selected\":{\"bg\":\"green\",\"bold\":true}}}"
+              "\x1b\\Easy\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:hard?config={\"selection\":{\"group\":\"diff\",\"value\":\"hard\",\"exclusive\":true},\"style\":{\"color\":\"#f88\",\"selected\":{\"bg\":\"red\",\"bold\":true}}}"
+              "\x1b\\Hard\x1b]8;;\x1b\\ (one at a time)\n";
+    output += "Checkbox: ";
+    output += "\x1b]8;;send:b1?config={\"selection\":{\"group\":\"buffs\",\"value\":\"str\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#f60\",\"bold\":true}}}\x1b\\[STR]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:b2?config={\"selection\":{\"group\":\"buffs\",\"value\":\"dex\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#08f\",\"bold\":true}}}\x1b\\[DEX]\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:b3?config={\"selection\":{\"group\":\"buffs\",\"value\":\"int\",\"exclusive\":false},\"style\":{\"selected\":{\"bg\":\"#a0f\",\"bold\":true}}}\x1b\\[INT]\x1b]8;;\x1b\\ "
+              "(multi-select)\n";
+    output += "Server receives: &selected=true/false in callback\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 9. COMPACT SYNTAX - Shorthand keys
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── COMPACT SYNTAX (shorthand) ─────────────────────────────────────────\n";
+    output += "Full:  {\"style\":{\"color\":\"red\",\"bold\":true},\"tooltip\":\"info\"}\n";
+    output += "Short: {\"s\":{\"c\":\"red\",\"b\":true},\"t\":\"info\"}  ";
+    output += "\x1b]8;;send:sh1?config={\"s\":{\"c\":\"red\",\"b\":true},\"t\":\"Shorthand!\"}\x1b\\Try me\x1b]8;;\x1b\\\n";
+    output += "Keys: s=style c=color bg=bg b=bold i=italic u=underline t=tooltip m=menu\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 10. PRESETS - Reusable styles
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── PRESETS (define once, reuse) ───────────────────────────────────────\n";
+    // Define presets (invisible)
+    output += "\x1b]8;;preset:btn?config={\"s\":{\"bg\":\"#07f\",\"c\":\"white\",\"b\":true},\"t\":\"Button preset\"}\x1b\\\x1b]8;;\x1b\\";
+    output += "\x1b]8;;preset:warn?config={\"s\":{\"bg\":\"orange\",\"c\":\"black\",\"b\":true}}\x1b\\\x1b]8;;\x1b\\";
+    output += "\x1b]8;;preset:danger?config={\"s\":{\"bg\":\"red\",\"c\":\"white\",\"b\":true}}\x1b\\\x1b]8;;\x1b\\";
+    output += "Define: preset:NAME?config={...}  Use: ?preset=NAME\n";
+    output += "Usage:  ";
+    output += "\x1b]8;;send:p1?preset=btn\x1b\\Button\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p2?preset=warn\x1b\\Warning\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p3?preset=danger\x1b\\Danger\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:p4?preset=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Override\x1b]8;;\x1b\\\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
+    // REAL-WORLD SHOWCASE
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── REAL-WORLD EXAMPLE ─────────────────────────────────────────────────\n";
+    output += "Nav: ";
+    output += "\x1b]8;;send:north?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\North\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:south?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\South\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:east?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\East\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;send:west?config={\"s\":{\"c\":\"#0af\",\"b\":true,\"h\":{\"u\":true}}}\x1b\\West\x1b]8;;\x1b\\\n";
+    output += "Item: "
+              "\x1b]8;;send:sword?config={\"style\":{\"color\":\"#f80\",\"bold\":true,\"hover\":{\"bg\":\"#fc9\",\"color\":\"black\"}},\"menu\":[{\"Equip\":\"send:equip\"},{\"Examine\":\"send:exam\"}"
+              ",\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"+5 Fire Damage\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
+
+    output += "───────────────────────────────────────────────────────────────────────\n";
+    output += "Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol\n";
+
+    // Process the output through the normal text processing pipeline
+    // Skip trigger processing to avoid re-entrancy issues during injection
+    std::string outputBytes = output.toStdString();
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] About to process documentation examples through translateToPlainText, length:" << outputBytes.length();
+#endif
+    mSkipTriggerProcessing = true;
+    translateToPlainText(outputBytes, true); // Mark as from server
+    mSkipTriggerProcessing = false;
+}
+
+// ============================================================================
+// Link States Implementation with Accessibility Best Practices
+// ============================================================================
+
+Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle() const
+{
+    Mudlet::HyperlinkStyling::StateStyle effective;
+
+    // Start with base/default styling
+    effective.foregroundColor = foregroundColor;
+    effective.backgroundColor = backgroundColor;
+    effective.underlineColor = underlineColor;
+    effective.overlineColor = overlineColor;
+    effective.strikeoutColor = strikeoutColor;
+    effective.hasForegroundColor = hasForegroundColor;
+    effective.hasBackgroundColor = hasBackgroundColor;
+    effective.hasUnderlineColor = hasUnderlineColor;
+    effective.hasOverlineColor = hasOverlineColor;
+    effective.hasStrikeoutColor = hasStrikeoutColor;
+    effective.isBold = isBold;
+    effective.isItalic = isItalic;
+    effective.isUnderlined = isUnderlined;
+    effective.isStrikeOut = isStrikeOut;
+    effective.isOverlined = isOverlined;
+    effective.underlineStyle = underlineStyle;
+
+    // Apply :any-link styles (applies to both :link and :visited)
+    if (anyLinkStyle.hasCustomStyling) {
+        if (anyLinkStyle.hasForegroundColor)
+            effective.foregroundColor = anyLinkStyle.foregroundColor;
+        if (anyLinkStyle.hasBackgroundColor)
+            effective.backgroundColor = anyLinkStyle.backgroundColor;
+        if (anyLinkStyle.hasUnderlineColor)
+            effective.underlineColor = anyLinkStyle.underlineColor;
+        if (anyLinkStyle.hasOverlineColor)
+            effective.overlineColor = anyLinkStyle.overlineColor;
+        if (anyLinkStyle.hasStrikeoutColor)
+            effective.strikeoutColor = anyLinkStyle.strikeoutColor;
+        effective.isBold = anyLinkStyle.isBold;
+        effective.isItalic = anyLinkStyle.isItalic;
+        effective.isUnderlined = anyLinkStyle.isUnderlined;
+        effective.isStrikeOut = anyLinkStyle.isStrikeOut;
+        effective.isOverlined = anyLinkStyle.isOverlined;
+        effective.underlineStyle = anyLinkStyle.underlineStyle;
+    }
+
+    // Apply state-specific styles with proper cascade order
+    // Priority: disabled > selected > active > focus-visible > focus > hover > visited > link > default
+    const StateStyle* stateStyle = nullptr;
+
+    switch (currentState) {
+    case StateDisabled:
+        if (disabledStyle.hasCustomStyling) {
+            stateStyle = &disabledStyle;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Using disabled style - hasCustomStyling:" << disabledStyle.hasCustomStyling << "hasForegroundColor:" << disabledStyle.hasForegroundColor
+                     << "foregroundColor:" << (disabledStyle.hasForegroundColor ? disabledStyle.foregroundColor.name() : "none") << "hasBackgroundColor:" << disabledStyle.hasBackgroundColor
+                     << "backgroundColor:" << (disabledStyle.hasBackgroundColor ? disabledStyle.backgroundColor.name() : "none") << "isBold:" << disabledStyle.isBold
+                     << "isStrikeOut:" << disabledStyle.isStrikeOut;
+#endif
+        } else {
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Disabled style has no custom styling - hasCustomStyling:" << disabledStyle.hasCustomStyling;
+#endif
+        }
+        break;
+    case StateSelected:
+        if (selectedStyle.hasCustomStyling) {
+            stateStyle = &selectedStyle;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Using selected style - hasCustomStyling:" << selectedStyle.hasCustomStyling << "hasForegroundColor:" << selectedStyle.hasForegroundColor
+                     << "foregroundColor:" << (selectedStyle.hasForegroundColor ? selectedStyle.foregroundColor.name() : "none") << "hasBackgroundColor:" << selectedStyle.hasBackgroundColor
+                     << "backgroundColor:" << (selectedStyle.hasBackgroundColor ? selectedStyle.backgroundColor.name() : "none") << "isBold:" << selectedStyle.isBold;
+#endif
+        } else {
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Selected style has no custom styling - hasCustomStyling:" << selectedStyle.hasCustomStyling;
+#endif
+        }
+        break;
+    case StateVisited:
+        if (visitedStyle.hasCustomStyling)
+            stateStyle = &visitedStyle;
+        break;
+    case StateHover:
+        if (hoverStyle.hasCustomStyling)
+            stateStyle = &hoverStyle;
+        break;
+    case StateActive:
+        if (activeStyle.hasCustomStyling)
+            stateStyle = &activeStyle;
+        break;
+    case StateFocus:
+        if (focusStyle.hasCustomStyling)
+            stateStyle = &focusStyle;
+        break;
+    case StateFocusVisible:
+        if (focusVisibleStyle.hasCustomStyling)
+            stateStyle = &focusVisibleStyle;
+        break;
+    case StateDefault:
+    default:
+        if (linkStyle.hasCustomStyling)
+            stateStyle = &linkStyle;
+        break;
+    }
+
+    // Apply the selected state style
+    if (stateStyle) {
+        if (stateStyle->hasForegroundColor) {
+            effective.foregroundColor = stateStyle->foregroundColor;
+            effective.hasForegroundColor = true;
+        }
+        if (stateStyle->hasBackgroundColor) {
+            effective.backgroundColor = stateStyle->backgroundColor;
+            effective.hasBackgroundColor = true;
+        }
+        if (stateStyle->hasUnderlineColor) {
+            effective.underlineColor = stateStyle->underlineColor;
+            effective.hasUnderlineColor = true;
+        }
+        if (stateStyle->hasOverlineColor) {
+            effective.overlineColor = stateStyle->overlineColor;
+            effective.hasOverlineColor = true;
+        }
+        if (stateStyle->hasStrikeoutColor) {
+            effective.strikeoutColor = stateStyle->strikeoutColor;
+            effective.hasStrikeoutColor = true;
+        }
+        effective.isBold = stateStyle->isBold;
+        effective.isItalic = stateStyle->isItalic;
+        effective.isUnderlined = stateStyle->isUnderlined;
+        effective.isStrikeOut = stateStyle->isStrikeOut;
+        effective.isOverlined = stateStyle->isOverlined;
+        effective.underlineStyle = stateStyle->underlineStyle;
+        effective.hasCustomStyling = true;
+    }
+
+    // Even if the current state doesn't have custom styling, we need to mark that
+    // the link has SOME pseudo-class styling so updateLinkCharacters() processes it.
+    // This ensures ANSI base links with only :hover (but no :link) styling get updated.
+    if (!effective.hasCustomStyling) {
+        // Check if ANY pseudo-class state has custom styling
+        if (linkStyle.hasCustomStyling || visitedStyle.hasCustomStyling || hoverStyle.hasCustomStyling || activeStyle.hasCustomStyling || focusStyle.hasCustomStyling
+            || focusVisibleStyle.hasCustomStyling || anyLinkStyle.hasCustomStyling || selectedStyle.hasCustomStyling || disabledStyle.hasCustomStyling) {
+            effective.hasCustomStyling = true;
+        }
+    }
+
+    return effective;
+}
+
+void TBuffer::applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling)
+{
+    // Ensure focus states are appropriately visible
+    if (!styling.focusStyle.hasCustomStyling && !styling.focusVisibleStyle.hasCustomStyling) {
+        // Provide default focus styling for accessibility
+        styling.focusStyle.hasCustomStyling = true;
+        styling.focusStyle.isUnderlined = true;
+        styling.focusStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
+        styling.focusStyle.hasUnderlineColor = true;
+        styling.focusStyle.underlineColor = QColor(0, 120, 215); // Windows accent blue
+
+        styling.focusVisibleStyle = styling.focusStyle; // Copy focus style to focus-visible
+    }
+}
+
+// Link state management methods for interactive pseudo-classes
+void TBuffer::setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState state)
+{
+    if (linkIndex <= 0) {
+        return; // Invalid link index
+    }
+
+    mLinkStates[linkIndex] = state;
+
+#if defined(DEBUG_OSC_PROCESSING)
+    QString stateName;
+    switch (state) {
+    case Mudlet::HyperlinkStyling::StateDefault:
+        stateName = "Default";
+        break;
+    case Mudlet::HyperlinkStyling::StateVisited:
+        stateName = "Visited";
+        break;
+    case Mudlet::HyperlinkStyling::StateHover:
+        stateName = "Hover";
+        break;
+    case Mudlet::HyperlinkStyling::StateActive:
+        stateName = "Active";
+        break;
+    case Mudlet::HyperlinkStyling::StateFocus:
+        stateName = "Focus";
+        break;
+    case Mudlet::HyperlinkStyling::StateFocusVisible:
+        stateName = "FocusVisible";
+        break;
+    case Mudlet::HyperlinkStyling::StateSelected:
+        stateName = "Selected";
+        break;
+    case Mudlet::HyperlinkStyling::StateDisabled:
+        stateName = "Disabled";
+        break;
+    }
+    qDebug() << "[OSC] Link" << linkIndex << "state changed to:" << stateName;
+#endif
+}
+
+Mudlet::HyperlinkStyling::LinkState TBuffer::getLinkState(int linkIndex) const
+{
+    if (linkIndex <= 0) {
+        return Mudlet::HyperlinkStyling::StateDefault;
+    }
+    return mLinkStates.value(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+}
+
+Mudlet::HyperlinkStyling TBuffer::getEffectiveHyperlinkStyling(int linkIndex) const
+{
+    if (linkIndex <= 0) {
+        return Mudlet::HyperlinkStyling(); // Return default styling
+    }
+    // Get the stored styling for this link from mLinkStore
+    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+
+    // Update the current state based on tracked state
+    styling.currentState = getLinkState(linkIndex);
+
+    // The HyperlinkStyling::getEffectiveStyle() method will compute the
+    // effective styling based on currentState, cascading from base -> :any-link -> state-specific
+    // However, for rendering we need to apply it to the base styling properties
+    // so the rendering code can use it directly
+
+    auto effective = styling.getEffectiveStyle();
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] getEffectiveHyperlinkStyling for link" << linkIndex << "state:" << styling.currentState << "isSpoiler:" << styling.isSpoiler
+             << "base hasBackgroundColor:" << styling.hasBackgroundColor << "base backgroundColor:" << (styling.hasBackgroundColor ? styling.backgroundColor.name() : "none")
+             << "effective hasForegroundColor:" << effective.hasForegroundColor << "effective foregroundColor:" << (effective.hasForegroundColor ? effective.foregroundColor.name() : "none")
+             << "effective hasBackgroundColor:" << effective.hasBackgroundColor << "effective backgroundColor:" << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none")
+             << "effective isBold:" << effective.isBold;
+#endif
+
+    // Copy effective state back to base properties for rendering
+    styling.foregroundColor = effective.foregroundColor;
+    styling.backgroundColor = effective.backgroundColor;
+    styling.underlineColor = effective.underlineColor;
+    styling.overlineColor = effective.overlineColor;
+    styling.strikeoutColor = effective.strikeoutColor;
+    styling.hasForegroundColor = effective.hasForegroundColor;
+    styling.hasBackgroundColor = effective.hasBackgroundColor;
+    styling.hasUnderlineColor = effective.hasUnderlineColor;
+    styling.hasOverlineColor = effective.hasOverlineColor;
+    styling.hasStrikeoutColor = effective.hasStrikeoutColor;
+    styling.isBold = effective.isBold;
+    styling.isItalic = effective.isItalic;
+    styling.isUnderlined = effective.isUnderlined;
+    styling.isStrikeOut = effective.isStrikeOut;
+    styling.isOverlined = effective.isOverlined;
+    styling.underlineStyle = effective.underlineStyle;
+    styling.hasCustomStyling = effective.hasCustomStyling; // CRITICAL: Copy hasCustomStyling flag
+
+    // SPOILER FIX: Ensure spoiler backgrounds are always applied regardless of pseudo-class cascade
+    // This fixes the issue where spoilers show background on hover but not on initial display
+    if (styling.isSpoiler) {
+        // Get the base styling directly from link store to ensure spoiler background is preserved
+        Mudlet::HyperlinkStyling baseStyling = mLinkStore.getStyling(linkIndex);
+        if (baseStyling.hasBackgroundColor) {
+            // For spoilers, ALWAYS use the base background that was auto-generated
+            // Ignore whatever the pseudo-class cascade decided
+            styling.backgroundColor = baseStyling.backgroundColor;
+            styling.hasBackgroundColor = true;
+            styling.hasCustomStyling = true;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] SPOILER FIX: Forced spoiler background" << baseStyling.backgroundColor.name() << "over effective background"
+                     << (effective.hasBackgroundColor ? effective.backgroundColor.name() : "none") << "for link" << linkIndex;
+#endif
+        }
+    }
+
+    return styling;
+}
+
+void TBuffer::setHoveredLink(int linkIndex)
+{
+    int previousHoveredLink = mCurrentHoveredLinkIndex;
+    mCurrentHoveredLinkIndex = linkIndex;
+
+    // Reset previous hovered link to its base state (default, visited, or selected)
+    if (previousHoveredLink > 0 && previousHoveredLink != linkIndex) {
+        auto currentState = getLinkState(previousHoveredLink);
+
+        if (currentState == Mudlet::HyperlinkStyling::StateHover) {
+            // Return to the appropriate base state:
+            // Priority: disabled > selected > visited > default
+            // Disabled links should stay disabled
+            Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousHoveredLink);
+            if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDisabled);
+            } else if (isLinkSelected(previousHoveredLink)) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateSelected);
+            } else if (isLinkVisited(previousHoveredLink)) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateVisited);
+            } else {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDefault);
+            }
+
+            updateLinkCharacters(previousHoveredLink); // Update displayed characters
+        }
+    }
+
+    // Set new link to hover state
+    if (linkIndex > 0) {
+        auto currentState = getLinkState(linkIndex);
+        // Don't override active or disabled states with hover
+        // Disabled links should stay disabled and show their disabled styling
+        if (currentState != Mudlet::HyperlinkStyling::StateActive && currentState != Mudlet::HyperlinkStyling::StateDisabled) {
+            setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateHover);
+            updateLinkCharacters(linkIndex); // Update displayed characters
+        }
+    }
+}
+
+void TBuffer::setActiveLink(int linkIndex)
+{
+    int previousActiveLink = mCurrentActiveLinkIndex;
+    mCurrentActiveLinkIndex = linkIndex;
+
+    // Reset previous active link
+    if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
+        // Return to appropriate state based on priority: disabled > hover > selected > visited > default
+        Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
+        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDisabled);
+        } else if (previousActiveLink == mCurrentHoveredLinkIndex) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
+        } else if (isLinkSelected(previousActiveLink)) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateSelected);
+        } else if (isLinkVisited(previousActiveLink)) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateVisited);
+        } else {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDefault);
+        }
+
+        updateLinkCharacters(previousActiveLink); // Update displayed characters
+    }
+
+    // Set new link to active state
+    if (linkIndex > 0) {
+        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateActive);
+        updateLinkCharacters(linkIndex); // Update displayed characters
+    }
+}
+
+void TBuffer::setFocusedLink(int linkIndex)
+{
+    int previousFocusedLink = mCurrentFocusedLinkIndex;
+    mCurrentFocusedLinkIndex = linkIndex;
+
+    // Reset previous focused link to appropriate base state
+    if (previousFocusedLink > 0 && previousFocusedLink != linkIndex) {
+        // Preserve disabled state, otherwise return to base state
+        Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousFocusedLink);
+        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDisabled);
+        } else if (isLinkSelected(previousFocusedLink)) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateSelected);
+        } else if (isLinkVisited(previousFocusedLink)) {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateVisited);
+        } else {
+            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDefault);
+        }
+    }
+
+    // Set new link to focus state
+    if (linkIndex > 0) {
+        // Determine if focus came from keyboard (would use StateFocusVisible)
+        // For now, we use StateFocus
+        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocus);
+    }
+}
+
+void TBuffer::markLinkAsVisited(int linkIndex)
+{
+    if (linkIndex > 0) {
+        mVisitedLinks[linkIndex] = true;
+
+        // If the link is not in an interactive state (hover/active/focus),
+        // update it to visited state immediately
+        auto currentState = getLinkState(linkIndex);
+
+        if (currentState == Mudlet::HyperlinkStyling::StateDefault) {
+            setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateVisited);
+            updateLinkCharacters(linkIndex);
+        }
+
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Link" << linkIndex << "marked as visited";
+#endif
+    }
+}
+
+bool TBuffer::isLinkVisited(int linkIndex) const
+{
+    return mVisitedLinks.value(linkIndex, false);
+}
+
+void TBuffer::setLinkSelected(int linkIndex, bool selected)
+{
+    mLinkSelectionState[linkIndex] = selected;
+}
+
+bool TBuffer::isLinkSelected(int linkIndex) const
+{
+    return mLinkSelectionState.value(linkIndex, false);
+}
+
+void TBuffer::revealSpoilerLink(int linkIndex)
+{
+    if (!mLinkOriginalText.contains(linkIndex)) {
+        return;
+    }
+
+    QString originalText = mLinkOriginalText[linkIndex];
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Revealing spoiler link" << linkIndex << "with text:" << originalText;
+#endif
+
+    if (!mLinkStore.hasStyling(linkIndex)) {
+        return;
+    }
+
+    Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+
+    if (styling.isSpoiler) {
+        QStringList hints = mLinkStore.getHintsConst(linkIndex);
+        if (!hints.isEmpty() && hints.first() == QObject::tr("Click to reveal")) {
+            mLinkStore.getHints(linkIndex).clear();
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Cleared auto-generated 'Click to reveal' tooltip for spoiler link" << linkIndex;
+#endif
+        }
+
+        if (styling.hasBackgroundColor && mLinkOriginalBackgrounds.contains(linkIndex)) {
+            QColor originalBackground = mLinkOriginalBackgrounds[linkIndex];
+            styling.backgroundColor = originalBackground;
+
+            mLinkStore.setStyling(linkIndex, styling);
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Restored original background color for spoiler link" << linkIndex;
+#endif
+        }
+    }
+
+    // Find all characters with this link index and restore their original text
+    int charIndex = 0;
+    for (size_t lineNum = 0; lineNum < buffer.size(); ++lineNum) {
+        materialisePreTriggerPassLine(static_cast<int>(lineNum));
+        auto& line = buffer[lineNum];
+        QString lineText = lineBuffer.at(static_cast<int>(lineNum));
+        bool lineModified = false;
+
+        for (size_t charPos = 0; charPos < line.size(); ++charPos) {
+            if (line[charPos].linkIndex() == linkIndex && charIndex < originalText.length()) {
+                // Replace the space character with the original character
+                QChar originalChar = originalText[charIndex];
+                if (charPos < static_cast<size_t>(lineText.length())) {
+                    lineText[static_cast<int>(charPos)] = originalChar;
+                    lineModified = true;
+                }
+                charIndex++;
+            }
+        }
+
+        if (lineModified) {
+            lineBuffer[static_cast<int>(lineNum)] = lineText;
+        }
+    }
+
+    updateLinkCharacters(linkIndex);
+
+    mLinkOriginalText.remove(linkIndex);
+
+    if (mpConsole) {
+        mpConsole->update();
+    }
+}
+
+void TBuffer::clearGroupSelection(const QString& group, const QString& exceptValue)
+{
+    int maxLinkId = mLinkStore.getCurrentLinkID();
+    int clearedCount = 0;
+
+    for (int linkIndex = 1; linkIndex <= maxLinkId; ++linkIndex) {
+        if (!mLinkStore.hasStyling(linkIndex)) {
+            continue;
+        }
+
+        auto styling = mLinkStore.getStyling(linkIndex);
+        if (styling.selection.hasSelectionSettings && styling.selection.group == group && styling.selection.value != exceptValue) {
+            if (mpConsole) {
+                mpConsole->getHyperlinkSelectionManager().setSelected(styling.selection.group, styling.selection.value, false);
+            }
+
+            setLinkSelected(linkIndex, false);
+            if (styling.selection.disabled) {
+                setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+            } else {
+                setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDefault);
+            }
+
+            updateLinkCharacters(linkIndex);
+            clearedCount++;
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] clearGroupSelection: Deselected link" << linkIndex << "group:" << group << "value:" << styling.selection.value;
+#endif
+        }
+    }
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] clearGroupSelection: Cleared" << clearedCount << "links in group" << group;
+#endif
+}
+
+void TBuffer::applyPendingSelectionStyling()
+{
+    if (!mPendingSelectionStyling.isEmpty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
+#endif
+        for (const int linkId : std::as_const(mPendingSelectionStyling)) {
+            updateLinkCharacters(linkId);
+        }
+        mPendingSelectionStyling.clear();
+    }
+}
+
+int TBuffer::getLinkIndexAt(int line, int column) const
+{
+    // Validate line bounds
+    if (line < 0 || line >= lineBuffer.size()) {
+        return 0;
+    }
+
+    const auto& bufferLine = buffer.at(line);
+
+    // Validate column bounds
+    if (column < 0 || column >= static_cast<int>(bufferLine.size())) {
+        return 0;
+    }
+
+    return bufferLine.at(column).linkIndex();
+}
+
+bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped) const
+{
+    if (buffer.empty()) {
+        return false;
+    }
+
+    const int lineCount = static_cast<int>(buffer.size());
+    if (fromLine < 0 || fromLine >= lineCount) {
+        return false;
+    }
+    fromColumn = qBound(-1, fromColumn, static_cast<int>(buffer.at(fromLine).size()) - 1);
+
+    if (wrapped) {
+        *wrapped = false;
+    }
+
+    int currentLinkAtStart = getLinkIndexAt(fromLine, fromColumn);
+
+    for (int line = fromLine; line < lineCount; ++line) {
+        const auto& bufferLine = buffer.at(line);
+        int startCol = (line == fromLine) ? fromColumn + 1 : 0;
+
+        for (int col = startCol; col < static_cast<int>(bufferLine.size()); ++col) {
+            int linkIdx = bufferLine.at(col).linkIndex();
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+                outLine = line;
+                outColumn = col;
+                return true;
+            }
+        }
+    }
+
+    // Wrap around: search from the beginning up to the starting position
+    for (int line = 0; line <= fromLine; ++line) {
+        const auto& bufferLine = buffer.at(line);
+        int endCol = (line == fromLine) ? qMin(fromColumn + 1, static_cast<int>(bufferLine.size())) : static_cast<int>(bufferLine.size());
+
+        for (int col = 0; col < endCol; ++col) {
+            int linkIdx = bufferLine.at(col).linkIndex();
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+                outLine = line;
+                outColumn = col;
+                if (wrapped) {
+                    *wrapped = true;
+                }
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped) const
+{
+    if (buffer.empty()) {
+        return false;
+    }
+
+    const int lineCount = static_cast<int>(buffer.size());
+    if (fromLine < 0 || fromLine >= lineCount) {
+        return false;
+    }
+    if (buffer.at(fromLine).empty()) {
+        fromColumn = -1;
+    } else {
+        fromColumn = qBound(0, fromColumn, static_cast<int>(buffer.at(fromLine).size()) - 1);
+    }
+
+    if (wrapped) {
+        *wrapped = false;
+    }
+
+    int currentLinkAtStart = getLinkIndexAt(fromLine, fromColumn);
+
+    for (int line = fromLine; line >= 0; --line) {
+        const auto& bufferLine = buffer.at(line);
+        int startCol = (line == fromLine) ? fromColumn - 1 : static_cast<int>(bufferLine.size()) - 1;
+
+        for (int col = startCol; col >= 0; --col) {
+            int linkIdx = bufferLine.at(col).linkIndex();
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+                // Found a different link — now find its start (first column with this linkIdx on this line)
+                int linkStart = col;
+                while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
+                    --linkStart;
+                }
+                outLine = line;
+                outColumn = linkStart;
+                return true;
+            }
+        }
+    }
+
+    // Wrap around: search from the end back to the starting position
+    for (int line = lineCount - 1; line >= fromLine; --line) {
+        const auto& bufferLine = buffer.at(line);
+        int startCol = (line == fromLine) ? qMin(fromColumn, static_cast<int>(bufferLine.size()) - 1) : static_cast<int>(bufferLine.size()) - 1;
+
+        for (int col = startCol; col >= 0; --col) {
+            int linkIdx = bufferLine.at(col).linkIndex();
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+                int linkStart = col;
+                while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
+                    --linkStart;
+                }
+                outLine = line;
+                outColumn = linkStart;
+                if (wrapped) {
+                    *wrapped = true;
+                }
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+QString TBuffer::getLinkTooltip(int linkIndex) const
+{
+    if (linkIndex <= 0) {
+        return QString();
+    }
+
+    // When hints outnumber commands by one, the extra leading hint is the tooltip/title (not a menu item)
+    const QStringList hints = mLinkStore.getHintsConst(linkIndex);
+    const QStringList commands = mLinkStore.getLinksConst(linkIndex);
+    if (hints.size() > commands.size() && !hints.isEmpty()) {
+        return hints.first();
+    }
+
+    // If there's exactly one hint, use it
+    if (hints.size() == 1 && !hints.first().isEmpty()) {
+        return hints.first();
+    }
+
+    return QString();
+}
+
+// Update all TChar objects in the buffer that have the specified linkIndex
+// with the effective styling for the current state
+void TBuffer::updateLinkCharacters(int linkIndex)
+{
+    if (linkIndex <= 0) {
+        return;
+    }
+
+    // Get the effective styling for this link's current state
+    Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Link" << linkIndex << "effective styling:" << "hasFg:" << effectiveStyling.hasForegroundColor
+             << "fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none") << "hasBg:" << effectiveStyling.hasBackgroundColor
+             << "bold:" << effectiveStyling.isBold << "underline:" << effectiveStyling.isUnderlined << "hasCustom:" << effectiveStyling.hasCustomStyling;
+#endif
+
+    // IMPORTANT: If this link has no custom styling at all (neither base nor pseudo-class),
+    // don't modify the characters. This preserves ANSI formatting for links without styling.
+    if (!effectiveStyling.hasCustomStyling) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Link" << linkIndex << "has no custom styling - preserving ANSI formatting";
+#endif
+        return; // Don't modify characters - preserve original ANSI formatting
+    }
+
+    // Never restore ANSI base when effective styling has custom properties.
+    // This includes both base-level styling AND pseudo-class styling.
+    // If the cascade resolved custom colors/formatting from :link, :hover, etc.,
+    // use those instead of reverting to ANSI.
+    bool useAnsiBase = false;
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Updating link" << linkIndex << "- hasBaseCustomStyling:" << effectiveStyling.hasBaseCustomStyling << "currentState:" << effectiveStyling.currentState
+             << "useAnsiBase:" << useAnsiBase;
+#endif
+
+    // Debug: Count how many characters we're checking and how many match
+#if defined(DEBUG_OSC_PROCESSING)
+    int totalCharacters = 0;
+    int matchingCharacters = 0;
+#endif
+
+    // Iterate through all lines in the buffer
+    for (size_t lineNumber = 0; lineNumber < buffer.size(); ++lineNumber) {
+        auto& line = buffer[lineNumber];
+        // Iterate through all characters in the line
+        for (auto& tchar : line) {
+#if defined(DEBUG_OSC_PROCESSING)
+            totalCharacters++;
+#endif
+            // Check if this character belongs to the link we're updating
+            if (tchar.linkIndex() == linkIndex) {
+                materialisePreTriggerPassLine(static_cast<int>(lineNumber));
+#if defined(DEBUG_OSC_PROCESSING)
+                matchingCharacters++;
+                static int charUpdateCount = 0;
+                if (charUpdateCount++ < 2) { // Only log first 2 characters to avoid spam
+                    qDebug() << "[OSC] Before update - char with linkIndex" << linkIndex << "- FgColor:" << tchar.foreground().name() << "hasFg:" << effectiveStyling.hasForegroundColor
+                             << "new fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none");
+                }
+#endif
+                // Apply the effective styling to this character
+
+                // If we should use ANSI base (no base styling but in default/visited state),
+                // restore the original ANSI colors and formatting as a BASE,
+                // then let pseudo-class styling override it
+                if (useAnsiBase && mLinkOriginalCharacters.contains(linkIndex)) {
+                    TChar originalChar = mLinkOriginalCharacters.value(linkIndex);
+#if defined(DEBUG_OSC_PROCESSING)
+                    qDebug() << "[OSC] Restoring ANSI base for link" << linkIndex << "- Original FgColor:" << originalChar.foreground().name()
+                             << "Original BgColor:" << originalChar.background().name() << "Original Bold:" << bool(originalChar.mFlags & TChar::Bold)
+                             << "Current FgColor:" << tchar.foreground().name() << "Current Bold:" << bool(tchar.mFlags & TChar::Bold);
+#endif
+                    // Restore ANSI base - these will be overridden below if styling specifies them
+                    tchar.mFgColor = originalChar.mFgColor;
+                    tchar.mBgColor = originalChar.mBgColor;
+                    // Restore ALL ANSI formatting flags including decorations,
+                    // keeping the character selected if it is now
+                    tchar.mFlags = (tchar.mFlags & TChar::Selected) | (originalChar.mFlags & ~TChar::Selected);
+
+                    // DON'T continue here - let the pseudo-class styling below override the ANSI base
+                    // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting
+                }
+
+                // Apply styling
+
+                // Update foreground color
+                if (effectiveStyling.hasForegroundColor) {
+                    tchar.setForeground(effectiveStyling.foregroundColor);
+#if defined(DEBUG_OSC_PROCESSING)
+                    static int fgUpdateCount = 0;
+                    if (fgUpdateCount++ < 2) {
+                        qDebug() << "[OSC] Applied FG color to link" << linkIndex << "- New FgColor:" << tchar.foreground().name();
+                    }
+#endif
+                }
+
+                // Update background color - restore original if not specified in styling
+                if (effectiveStyling.hasBackgroundColor) {
+                    tchar.setBackground(effectiveStyling.backgroundColor);
+                } else {
+                    // Restore the original background color from when the link was created
+                    tchar.setBackground(mLinkOriginalBackgrounds.value(linkIndex, mBackGroundColor));
+                }
+
+                // Update text decorations (only for CSS styling, not ANSI-base)
+                if (effectiveStyling.isUnderlined) {
+                    tchar.mFlags |= TChar::Underline;
+
+                    // Apply underline style
+                    // First clear any existing underline style flags
+                    tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
+
+                    switch (effectiveStyling.underlineStyle) {
+                    case Mudlet::HyperlinkStyling::UnderlineWavy:
+                        tchar.mFlags |= TChar::UnderlineWavy;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDotted:
+                        tchar.mFlags |= TChar::UnderlineDotted;
+                        break;
+                    case Mudlet::HyperlinkStyling::UnderlineDashed:
+                        tchar.mFlags |= TChar::UnderlineDashed;
+                        break;
+                    default:
+                        break;
+                    }
+                } else {
+                    tchar.mFlags &= ~TChar::Underline;
+                    tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
+                }
+
+                if (effectiveStyling.isOverlined) {
+                    tchar.mFlags |= TChar::Overline;
+                } else {
+                    tchar.mFlags &= ~TChar::Overline;
+                }
+
+                if (effectiveStyling.isStrikeOut) {
+                    tchar.mFlags |= TChar::StrikeOut;
+                } else {
+                    tchar.mFlags &= ~TChar::StrikeOut;
+                }
+
+                // Update bold and italic
+                if (effectiveStyling.isBold) {
+                    tchar.mFlags |= TChar::Bold;
+                } else {
+                    tchar.mFlags &= ~TChar::Bold;
+                }
+
+                if (effectiveStyling.isItalic) {
+                    tchar.mFlags |= TChar::Italic;
+                } else {
+                    tchar.mFlags &= ~TChar::Italic;
+                }
+            }
+        }
+    }
+
+    // Debug: Report search results
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Character search completed for link" << linkIndex << "- Total characters searched:" << totalCharacters << "- Matching characters found:" << matchingCharacters;
+#endif
+
+    // Refresh the display to show the updated character styling
+    // Use updateScreenView and repaint for immediate Qt rendering
+    if (mpConsole) {
+        mpConsole->mUpperPane->updateScreenView();
+        mpConsole->mUpperPane->repaint();
+        mpConsole->mLowerPane->updateScreenView();
+        mpConsole->mLowerPane->repaint();
+    }
 }

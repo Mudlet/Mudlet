@@ -21,17 +21,17 @@
 
 
 #include "FontManager.h"
-#include "mudlet.h"
+#include "MudletPaths.h"
+#include "utils.h"
 
-#include "pre_guard.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QDesktopServices>
-#include "post_guard.h"
+#include <QFontDatabase>
 
 void FontManager::addFonts()
 {
-    QDir dir(mudlet::getMudletPath(mudlet::mainFontsPath));
+    const QDir dir(MudletPaths::getMudletPath(enums::mainFontsPath));
 
     if (!dir.exists()) {
         return;
@@ -41,8 +41,8 @@ void FontManager::addFonts()
     loadFonts(dir.absolutePath());
 
     // load all fonts in subfolders (of the 'font' folder)
-    foreach (QString fontfolder, dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
-        loadFonts(QStringLiteral("%1/%2").arg(dir.absolutePath(), fontfolder));
+    for (auto fontfolder : dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
+        loadFonts(qsl("%1/%2").arg(dir.absolutePath(), fontfolder));
     }
 }
 
@@ -51,48 +51,115 @@ void FontManager::loadFonts(const QString& folder)
 {
     // Check what happens with this: "Adding application fonts on Unix/X11 platforms without fontconfig is currently not supported."
     QStringList filters;
-    filters << QStringLiteral("*.ttf") << QStringLiteral("*.otf");
+    filters << qsl("*.ttf") << qsl("*.otf");
     QDir dir = folder;
     dir.setNameFilters(filters);
 
-    foreach (QString fontFile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
-        QString fontFilePathName = QStringLiteral("%1/%2").arg(dir.absolutePath(), fontFile);
-        loadFont(fontFilePathName);
+    for (auto fontFile : dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
+        const QString fontFilePathName = qsl("%1/%2").arg(dir.absolutePath(), fontFile);
+        // Global built-in fonts are not profile-specific — use empty profileName
+        loadFont(fontFilePathName, QString());
     }
 }
 
-void FontManager::loadFont(const QString& filePath)
+void FontManager::loadFont(const QString& filePath, const QString& profileName, const QString& belongsTo)
 {
-    if (fontAlreadyLoaded(filePath)) {
+    if (fontAlreadyLoaded(filePath, profileName)) {
         return;
     }
 
-    auto fontID = QFontDatabase::addApplicationFont(filePath);
+    int fontID;
+    // Reuse existing Qt font ID if another profile already loaded this file — Qt's global
+    // font database is shared, so calling addApplicationFont twice returns the same ID,
+    // and a later removeApplicationFont by the first profile would orphan the second.
+    const int sharedId = sharedFontPaths.value(filePath, -2);
+    if (sharedId > -1) {
+        fontID = sharedId;
+    } else {
+        fontID = QFontDatabase::addApplicationFont(filePath);
+        if (fontID == -1) {
+            qWarning() << "FontManager::loadFont() WARNING - Could not load the font(s) in the file: " << filePath;
+        }
+    }
 
     // remember even if the font failed to load so we don't spam messages on fonts that repeat
-    rememberFont(filePath, fontID);
-
-    if (fontID == -1) {
-        qWarning() << "FontManager::loadFonts() warning - Could not load the font(s) in the file: " << filePath;
-    }
+    rememberFont(filePath, fontID, profileName, belongsTo);
 }
 
-bool FontManager::fontAlreadyLoaded(const QString& filePath)
+bool FontManager::fontAlreadyLoaded(const QString& filePath, const QString& profileName)
 {
-    QFileInfo fontFile(filePath);
-    auto fileName = fontFile.fileName();
-
-    return loadedFonts.contains(fileName);
+    // Use the full path prefixed by profile name as the key so that different profiles
+    // loading a font file with the same filename are tracked independently.
+    const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
+    return loadedFontPaths.contains(key);
 }
 
-void FontManager::rememberFont(const QString& filePath, int fontID)
+void FontManager::rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo)
 {
-    QFileInfo fontFile(filePath);
-    auto fileName = fontFile.fileName();
+    const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
 
-    if (loadedFonts.contains(fileName)) {
+    if (loadedFontPaths.contains(key)) {
         return;
     }
 
-    loadedFonts.insert(fileName, fontID);
+    loadedFontPaths.insert(key, fontID);
+
+    if (fontID != -1 && !sharedFontPaths.contains(filePath)) {
+        sharedFontPaths.insert(filePath, fontID);
+    }
+
+    // Affiliation key combines profile and package so that unloading one profile's
+    // fonts does not affect another profile's copy of the same package.
+    const QString affiliationKey = profileName.isEmpty() ? belongsTo : qsl("%1/%2").arg(profileName, belongsTo);
+    loadedFontAffiliation.insert(affiliationKey, fontID);
+}
+
+void FontManager::unloadFonts(const QString& profileName, const QString& belongsTo)
+{
+    const QString affiliationKey = profileName.isEmpty() ? belongsTo : qsl("%1/%2").arg(profileName, belongsTo);
+    const auto fontIds = loadedFontAffiliation.values(affiliationKey);
+    loadedFontAffiliation.remove(affiliationKey);
+
+    for (const int id : fontIds) {
+        if (id == -1) {
+            continue;
+        }
+        // Only remove from Qt when no other profile still references this font ID.
+        if (!loadedFontAffiliation.values().contains(id)) {
+            QFontDatabase::removeApplicationFont(id);
+            for (auto it = sharedFontPaths.begin(); it != sharedFontPaths.end();) {
+                if (it.value() == id) {
+                    it = sharedFontPaths.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+    }
+
+    // Remove stale path entries for this profile+package so fonts can be reloaded
+    // correctly if the package is reinstalled later. Exclude -1 entries from the
+    // predicate to avoid matching failed-load entries from unrelated packages.
+    const QString pathPrefix = profileName.isEmpty() ? QString() : qsl("%1/").arg(profileName);
+    auto it = loadedFontPaths.begin();
+    while (it != loadedFontPaths.end()) {
+        if (it.value() != -1 && fontIds.contains(it.value()) && (pathPrefix.isEmpty() || it.key().startsWith(pathPrefix))) {
+            it = loadedFontPaths.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void FontManager::addEmojiFont()
+{
+#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    // Use the new Qt 6.9 function for emoji fonts
+    QFontDatabase::addApplicationEmojiFontFamily(qsl("Noto Color Emoji"));
+#else
+    // Fallback for older Qt versions - this will be handled by individual components
+    // using QFont::insertSubstitution as before
+#endif
+#endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 }

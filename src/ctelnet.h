@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019, 2021-2022, 2025-2026 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,11 +25,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+// (1 of 2) This must be included before any Qt library tries to include
+// windows.h which pulls in winsock.h to avoid (multiple):
+// "#warning Please include winsock2.h before windows.h [-Wcpp]" warnings
+#if defined(INCLUDE_WINSOCK2)
+#include <winsock2.h>
+#endif
 
-#include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -37,15 +44,18 @@
 #include <QSslSocket>
 #endif
 #include <QTime>
-#include "post_guard.h"
+#include <QVector>
 
 #include <zlib.h>
 
+#include <bitset>
 #include <iostream>
+#include <memory>
 #include <queue>
 #include <string>
+#include <utility>
 
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else
@@ -61,12 +71,11 @@
 
 #endif
 
+class QJsonDocument;
+class QSaveFile;
+class QJsonObject;
 class QNetworkAccessManager;
 class QNetworkReply;
-class QProgressDialog;
-class QTextCodec;
-class QTextDecoder;
-class QTextEncoder;
 class QTimer;
 
 class Host;
@@ -79,7 +88,7 @@ const char TN_EOR = static_cast<char>(239);
 const char TN_SE = static_cast<char>(240);
 const char TN_NOP = static_cast<char>(241);
 const char TN_DM = static_cast<char>(242);
-const char TN_B = static_cast<char>(243);
+const char TN_BRK = static_cast<char>(243);
 const char TN_IP = static_cast<char>(244);
 const char TN_AO = static_cast<char>(245);
 const char TN_AYT = static_cast<char>(246);
@@ -98,20 +107,33 @@ const char TNSB_SEND = 1;
 
 
 const char OPT_ECHO = 1;
+const char OPT_SUPPRESS_GO_AHEAD = 3;
 const char OPT_STATUS = 5;
 const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
+const char OPT_LINEMODE = 34;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
-const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
-const char OPT_MSSP = static_cast<char>(70); // https://tintin.sourceforge.io/protocols/mssp/
+// https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
+const char OPT_NEW_ENVIRON = 39;
+const char OPT_CHARSET = 42;
+const char OPT_MSDP = 69;                    // https://tintin.mudhalla.net/protocols/msdp/
+const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char OPT_102 = 102;
-const char OPT_ATCP = static_cast<char>(200);
-const char OPT_GMCP = static_cast<char>(201);
+const auto OPT_ATCP = static_cast<unsigned char>(200);
+const auto OPT_GMCP = static_cast<unsigned char>(201);
+
+const char CHARSET_REQUEST = 1;
+const char CHARSET_ACCEPTED = 2;
+const char CHARSET_REJECTED = 3;
+const char CHARSET_TTABLE_IS = 4;
+const char CHARSET_TTABLE_REJECTED = 5;
+const char CHARSET_TTABLE_ACK = 6;
+const char CHARSET_TTABLE_NAK = 7;
 
 const char MSSP_VAR = 1;
 const char MSSP_VAL = 2;
@@ -123,6 +145,28 @@ const char MSDP_TABLE_CLOSE = 4;
 const char MSDP_ARRAY_OPEN = 5;
 const char MSDP_ARRAY_CLOSE = 6;
 
+// https://tintin.mudhalla.net/protocols/mtts/
+const int MTTS_STD_ANSI = 1;               // Client supports all common ANSI color codes.
+const int MTTS_STD_VT100 = 2;              // Client supports all common VT100 codes.
+const int MTTS_STD_UTF_8 = 4;              // Client is using UTF-8 character encoding.
+const int MTTS_STD_256_COLORS = 8;         // Client supports all 256 color codes.
+const int MTTS_STD_MOUSE_TRACKING = 16;    // Client supports xterm mouse tracking.
+const int MTTS_STD_OSC_COLOR_PALETTE = 32; // Client supports the OSC color palette.
+const int MTTS_STD_SCREEN_READER = 64;     // Client is using a screen reader.
+const int MTTS_STD_PROXY = 128;            // Client is a proxy allowing different users to connect from the same IP address.
+const int MTTS_STD_TRUECOLOR = 256;        // Client supports truecolor codes using semicolon notation.
+const int MTTS_STD_MNES = 512;             // Client supports the Mud New Environment Standard for information exchange.
+const int MTTS_STD_MSLP = 1024;            // Client supports the Mud Server Link Protocol for clickable link handling.
+const int MTTS_STD_SSL = 2048;             // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
+
+// https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
+const char NEW_ENVIRON_IS = 0;
+const char NEW_ENVIRON_SEND = 1;
+const char NEW_ENVIRON_INFO = 2;
+const char NEW_ENVIRON_VAR = 0;
+const char NEW_ENVIRON_VAL = 1;
+const char NEW_ENVIRON_ESC = 2;
+const char NEW_ENVIRON_USERVAR = 3;
 
 class cTelnet : public QObject
 {
@@ -136,73 +180,147 @@ public:
     void reconnect();
     void disconnectIt();
     void abortConnection();
-    bool sendData(QString& data);
+    // Second argument needs to be set false when sending password to prevent
+    // it being sniffed by scripts/packages. Third argument marks game commands
+    // (whether typed at the command line or sent by a script) as opposed to
+    // internal protocol replies that also route through here (e.g. MXP) or the
+    // auto-login credentials, so only game commands can arm character-at-a-time
+    // detection:
+    bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false);
+    QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
+    bool isMNESVariable(const QString&);
+    void sendInfoNewEnvironValue(const QString&);
+    void sendInfoNewEnvironValues(const QStringList&);
+    void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
+    bool isIPAddress(const QString&);
+    std::pair<bool, QString> purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
-    void setDisplayDimensions();
+    void checkNAWS();
     void setAutoReconnect(bool status);
-    void encodingChanged(const QString&);
+    void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
-    void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
-    void recordReplay();
+    void cacheHostSettings();
+    void setDontReconnect(bool b) { mDontReconnect = b; }
+    bool recordingReplay() const { return mRecordReplay; }
+    bool startReplayRecording(const QString& fileName);
+    bool stopReplayRecording();
+    QString replayRecordingFileName() const;
+    QString replayRecordingErrorString() const;
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
-    const QString & getEncoding() const { return mEncoding; }
-    QPair<bool, QString> setEncoding(const QString &, bool saveValue = true);
+    const QByteArray& getEncoding() const { return mEncoding; }
+    QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
-    const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
-    const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
-    const QString& getComputerEncoding(const QString& encoding);
-    const QString& getFriendlyEncoding() const;
-    QAbstractSocket::SocketError error();
+    const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
+    std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
+    bool oscHyperlinkConfigFeatureEnabled();
+    bool oscHyperlinkPresetsEnabled();
 #if !defined(QT_NO_SSL)
     QSslCertificate getPeerCertificate();
     QList<QSslError> getSslErrors();
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
+    static std::string escapeIac(std::string data);
+
+    // Wraps a two-byte Aardwolf 102 subchannel payload in its subnegotiation
+    static std::string buildChannel102Message(const std::string& payload);
+    bool isNewEnvironEnabled() const { return enableNewEnviron; }
+    bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
     bool isMSSPEnabled() const { return enableMSSP; }
+    bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSPEnabled() const { return enableMSP; }
+    bool isMXPEnabled() const { return enableMXP; }
     bool isChannel102Enabled() const { return enableChannel102; }
-    void requestDiscordInfo();
+    void trackMXPElementDetection(const std::string&);
+    void sendDiscordHello();
+    void sendDiscordGet();
+    void sendGMCPSupportsAdd(const QString& package);
+    void sendGMCPSupportsRemove(const QString& package);
     QString decodeOption(const unsigned char) const;
-    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
-    std::pair<QString, int> getConnectionInfo() const;
+    QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
+    QAbstractSocket::SocketState getConnectionState() const;
+    std::tuple<QString, int, bool> getConnectionInfo() const;
+    void setPostingTimeout(const int);
+    int getPostingTimeout() const { return mTimeOut; }
+    void loopbackTest(QByteArray& data)
+    {
+        ++mLoopbackProcessingDepth;
+        const auto loopbackGuard = qScopeGuard([this] {
+            --mLoopbackProcessingDepth;
+        });
+        processSocketData(data.data(), data.size(), true);
+    }
+    int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
+    // Every feedTelnet() level nests inside processSocketData(), so it also
+    // counts against scmMaxDecompressionRecursion; keep this below it, or a
+    // runaway loop reports as dropped data instead of the trigger-named Lua error.
+    inline static const int scmMaxLoopbackProcessingDepth = 5;
+    // How deep processSocketData() may nest (the outermost call counts as one)
+    // while draining data left over after a decompression pass (compressed input that did not fit in one
+    // output buffer, or plain data following the compressed stream). Each level
+    // inflates at most one output buffer, so this caps decompressed output at
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read, which bounds
+    // a decompression bomb.
+    inline static const int scmMaxDecompressionRecursion = 8;
+    void cancelLoginTimers();
+    void terminateConnection();
+    bool currentlySecure() const
+    {
+#if defined(QT_NO_SSL)
+        return false;
+#else
+        return mCurrent_sslTsl;
+#endif
+    }
+    static bool isRawIPv4Address(const QString&);
+    static bool isRawIPv6Address(const QString&);
+    QString assembleTelnetOptionsReport() const;
 
 
     QMap<int, bool> supportedTelnetOptions;
-    bool mResponseProcessed;
-    double networkLatency;
-    QTime networkLatencyTime;
-    bool mAlertOnNewData;
-    bool mGA_Driver;
-    bool mFORCE_GA_OFF;
-    dlgComposer* mpComposer;
-    QNetworkAccessManager* mpDownloader;
-    QProgressDialog* mpProgressDialog;
+    bool mResponseProcessed = true;
+    // The last round trip that could be measured - a reading taken while Mudlet
+    // was too busy to notice the reply arriving is dropped rather than
+    // published, so this can be older than the last command sent. See
+    // NETWORK_LATENCY_BEAT in ctelnet.cpp:
+    double networkLatencyTime = 0.0;
+    QElapsedTimer networkLatencyTimer;
+    bool mGA_Driver = false;
+    bool mFORCE_GA_OFF = false;
+    QPointer<dlgComposer> mpComposer;
+    QNetworkAccessManager* mpDownloader = nullptr;
     QString mServerPackage;
     QString mProfileName;
 
 
 public slots:
-    void setDownloadProgress(qint64, qint64);
-    void replyFinished(QNetworkReply*);
+    void slot_setDownloadProgress(qint64, qint64);
+    void slot_cancelPackageDownload();
+    void slot_replyFinished(QNetworkReply*);
+#if !defined(QT_NO_SSL)
+    void slot_tlsUpgradeResponse(const bool accepted);
+#endif
     void slot_processReplayChunk();
-    void handle_socket_signal_hostFound(QHostInfo);
-    void handle_socket_signal_connected();
-    void handle_socket_signal_disconnected();
-    void handle_socket_signal_readyRead();
-    void handle_socket_signal_error();
+    void slot_socketHostFound(QHostInfo);
+    void slot_socketConnected();
+    void slot_socketDisconnected();
+    void slot_socketReadyToBeRead();
+    void slot_socketError();
+#if !defined(QT_NO_SSL)
+    void slot_socketSslError(const QList<QSslError>&);
+#endif
     void slot_timerPosting();
     void slot_send_login();
     void slot_send_pass();
@@ -212,110 +330,313 @@ signals:
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
+    // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
+    // Used by hyperlink visibility manager to trigger expire actions
+    void signal_promptReceived();
+
+    void signal_bell();
+
+    void signal_packageDownloadStarted(const QString& title, const QString& cancelText);
+    void signal_packageDownloadProgress(qint64 got, qint64 total);
+    void signal_packageDownloadFinished();
+
+#if !defined(QT_NO_SSL)
+    // The frontend must answer this modal question by calling back slot_tlsUpgradeResponse()
+    void signal_promptTlsAvailable(const QString& text, const QString& informativeText);
+#endif
 
 
 private:
     cTelnet() = default;
 
-    void processSocketData(char *data, int size);
+    // Lets the functional test drive the real download entry point and inspect
+    // the in-flight reply, reproducing the dialog-swap cancellation cascade.
+    friend class TelnetTlsPromptTest;
+
+    // Needs to call processSocketData() with a buffer it laid out itself, which
+    // the public loopbackTest() cannot express - see issue #1065 - and to seed
+    // mDecompressionRecursionDepth so the over-limit refusal can be reached
+    // without a real decompression bomb.
+    friend class cTelnetBufferTest;
+
+    // Calls reset() from its constructor. It has to be the Host that does that,
+    // and not cTelnet itself, because reset() clears Host members declared after
+    // cTelnet, which do not exist yet while cTelnet is being constructed.
+    friend class Host;
+
+#if defined(QT_NO_SSL)
+    void abortLosingSocket(QTcpSocket* losingSocket);
+#else
+    void abortLosingSocket(QSslSocket* losingSocket);
+#endif
+
+    void abandonHostLookup();
+
+    // loopbackTesting is for internal testing whilst OFF-LINE using the
+    // feedTelnet(...) Lua function.
+    void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
+    void handleFailedConnection();
+    void sendLoginAndPass();
 
-    void processTelnetCommand(const std::string& command);
-    void sendTelnetOption(char type, char option);
+    QByteArray prepareNewEnvironData(const QString&);
+    QString getNewEnvironValueUser();
+    QString getNewEnvironValueSystemType();
+    QString getNewEnvironCharset();
+    QString getNewEnvironClientName();
+    QString getNewEnvironClientVersion();
+    QString getNewEnvironTerminalType();
+    QString getNewEnvironMTTS();
+    QString getNewEnvironANSI();
+    QString getNewEnvironVT100();
+    QString getNewEnviron256Colors();
+    QString getNewEnvironUTF8();
+    QString getNewEnvironOSCColorPalette();
+    QString getNewEnvironOSCHyperlinks();
+    QString getNewEnvironOSCHyperlinksSend();
+    QString getNewEnvironOSCHyperlinksPrompt();
+    QString getNewEnvironOSCHyperlinksStyleBasic();
+    QString getNewEnvironOSCHyperlinksStyleStates();
+    QString getNewEnvironOSCHyperlinksTooltip();
+    QString getNewEnvironOSCHyperlinksMenu();
+    QString getNewEnvironOSCHyperlinksCompact();
+    QString getNewEnvironOSCHyperlinksPresets();
+    QString getNewEnvironOSCHyperlinksVisibility();
+    QString getNewEnvironOSCHyperlinksSelection();
+    QString getNewEnvironOSCHyperlinksSpoiler();
+    QString getNewEnvironOSCHyperlinksDisabled();
+    QString getNewEnvironScreenReader();
+    QString getNewEnvironTruecolor();
+    QString getNewEnvironTLS();
+    QString getNewEnvironLanguage();
+    QString getNewEnvironFont();
+    QString getNewEnvironFontSize();
+    QString getNewEnvironWordWrap();
+    void appendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
+    void appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
+    void sendIsNewEnvironValues(const QByteArray&);
+    void sendAllMNESValues();
+    void sendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
+    void sendIsMNESValues(const QByteArray&);
+
+    void processTelnetCommand(const std::string& telnetCommand);
+    void sendTelnetOption(char type, unsigned char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
     void postData();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
+    void beginNetworkLatencyMeasurement();
+    void finishNetworkLatencyMeasurement();
+    void abandonNetworkLatencyMeasurement();
     void setKeepAlive(int socketHandle);
     void processChunks();
 
+private slots:
+    void slot_networkLatencyBeat();
+
+private:
+#if !defined(QT_NO_SSL)
+    void promptTlsConnectionAvailable();
+#endif
+    void sendNAWS(int width, int height);
+    void sendCurrentNAWS();
+    void readPendingSocketData();
+    QString parseGUIVersionFromJSON(const QJsonObject& json);
+    QString parseGUIUrlFromJSON(const QJsonObject& json);
+    bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
+    void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
+    void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
+
+    static std::pair<bool, bool> testReadReplayFile();
+
+    void trackKaVirNegotiation(unsigned char option);
+    void autoEnableMXPProcessor();
+    void autoEnableTTYPEVersion();
+    QByteArray encodingForCharacterSet(const QByteArray& characterSet) const;
 
     QPointer<Host> mpHost;
+    // The first one will point to one of the two instances following one of
+    // them having been connected - or will be a nullptr otherwise
 #if defined(QT_NO_SSL)
-    QTcpSocket socket;
+    QTcpSocket* mpSocket = nullptr;
+    QTcpSocket mSocket_ipV4;
+    QTcpSocket mSocket_ipV6;
 #else
-    QSslSocket socket;
+    QSslSocket* mpSocket = nullptr;
+    QSslSocket mSocket_ipV4;
+    QSslSocket mSocket_ipV6;
+    // This copies the state of Host::mSslTsl at the point that connection(s)
+    // is/are attempted but at no other time so that the signals/slots
+    // interconnections are not switched between the different patterns until
+    // it is safe to do so:
+    bool mCurrent_sslTsl = false;
+    // Stores SSL errors received in slot_socketSslError() so they can be
+    // reported in slot_socketDisconnected() even when mpSocket is null
+    // (which happens when the SSL handshake fails before mpSocket is assigned):
+    QList<QSslError> mSslErrors;
+    // Stores the peer certificate from slot_socketSslError() so it can be
+    // used by getPeerCertificate() when mpSocket is null:
+    QSslCertificate mPeerCertificate;
+    // Latched true while a TLS-upgrade question is pending or open in the
+    // frontend. The dialog is delivered via a queued connection and so outlives
+    // the emit; this stops a hostile server stacking further prompts by
+    // re-advertising its secure MSSP port while the modal is up. Cleared when the
+    // user answers (slot_tlsUpgradeResponse()).
+    bool mTlsUpgradePromptInFlight = false;
 #endif
-    QHostAddress mHostAddress;
-//    QTextCodec* incomingDataCodec;
-    QTextCodec* mpOutOfBandDataIncomingCodec;
-    QTextCodec* outgoingDataCodec;
-//    QTextDecoder* incomingDataDecoder;
-    QTextEncoder* outgoingDataEncoder;
-    QString hostName;
-    int hostPort;
-    double networkLatencyMin;
-    double networkLatencyMax;
-    bool mWaitingForResponse;
+    // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
+    // IPv6 address ("2001:db8::1"):
+    QString mHostUrl;
+    int mHostPort = 0;
+    bool mWaitingForResponse = false;
+    // True between connectIt() and slot_socketHostFound, so
+    // getConnectionState() reports HostLookupState during DNS lookup.
+    bool mLookingUpHost = false;
+    // How many of the connection attempts started for the current connect - one per address
+    // family the lookup turned up - have yet to succeed or fail.
+    int mPendingConnectionAttempts = 0;
+    // Connects that failed in a row, which is how long the wait before the next automatic retry
+    // is. Reset by a connection being made and by the user connecting or disconnecting.
+    int mFailedConnectionCount = 0;
+    // The lookup connectIt() is waiting on, or -1. mHostUrl and mHostPort move
+    // on with every connectIt(), so a callback from a lookup a later call
+    // superseded would pair its own host name with the newer port.
+    int mHostLookupId = -1;
+    int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 
-    z_stream mZstream;
+    z_stream mZstream = {};
 
-    bool mNeedDecompression;
+    bool mNeedDecompression = false;
+    // Re-entry depth of processSocketData() while draining leftover
+    // (de)compressed data; bounds stack use and decompression-bomb output.
+    int mDecompressionRecursionDepth = 0;
     std::string command;
-    bool iac, iac2, insb;
+    bool iac = false;
+    bool iac2 = false;
+    bool insb = false;
+    // Set once a subnegotiation passes the size cap: drop the rest of it until
+    // IAC SE instead of buffering or leaking the unterminated payload.
+    bool mDiscardingOversizedSubnegotiation = false;
+    // Set between the KaVir handshake pattern being spotted and the reconnect it
+    // schedules: no more data from the connection being dropped may be acted on,
+    // as it would land on the connection replacing it.
+    bool mDeferredReconnect = false;
     // Set if we have negotiated the use of the option by us:
-    bool myOptionState[256];
+    std::bitset<256> myOptionState;
     // Set if he has negotiated the use of the option by him:
-    bool hisOptionState[256];
+    std::bitset<256> hisOptionState;
     // Set if we have tried to negotiate the use of the option by us:
-    bool announcedState[256];
+    std::bitset<256> announcedState;
     // Set if the Server tried to negotiate the use of the option by him:
-    bool heAnnouncedState[256];
+    std::bitset<256> heAnnouncedState;
     // BUG: never set to be true - but seems to hold our intention to want to
     // enable our use of the option!
-    bool triedToEnable[256];
-    bool recvdGA;
+    std::bitset<256> triedToEnable;
+    bool recvdGA = false;
 
-    int curX, curY;
     QString termType;
-    QString mEncoding;
-    QTimer* mpPostingTimer;
-    bool mUSE_IRE_DRIVER_BUGFIX;
-    bool mLF_ON_GA;
+    QByteArray mEncoding;
+    QTimer* mpPostingTimer = nullptr;
+    // We do not directly adjust the interval for the above because doing so
+    // while it is active changes the timerId which might have unforeseen
+    // effects - so instead we change the following and the revised value is
+    // then used the next time the timer is stopped and then started:
+    int mTimeOut = 300;
+    bool mUSE_IRE_DRIVER_BUGFIX = false;
 
-    int mCommands;
-    bool mMCCP_version_1;
-    bool mMCCP_version_2;
+    QNetworkReply* mpPackageDownloadReply = nullptr;
+
+    bool mMCCP_version_1 = false;
+    bool mMCCP_version_2 = false;
 
 
     std::string mMudData;
-    bool mIsTimerPosting;
-    QTimer* mTimerLogin;
-    QTimer* mTimerPass;
-    QTime timeOffset;
-    QTime mConnectionTime;
-    int lastTimeOffset;
-    bool enableATCP;
-    bool enableGMCP;
-    bool enableMSSP;
-    bool enableMSP;
-    bool enableChannel102;
-    bool mDontReconnect;
-    bool mAutoReconnect;
+    bool mIsTimerPosting = false;
+    // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
+    // ctelnet.cpp:
+    QTimer* mpNetworkLatencyBeatTimer = nullptr;
+    qint64 mNetworkLatencyLastBeatNs = 0;
+    // The worst single gap between beats in the measurement running now, not
+    // the stall time accumulated across it:
+    qint64 mNetworkLatencyWorstStallNs = 0;
+
+    QTimer* mTimerLogin = nullptr;
+    QTimer* mTimerPass = nullptr;
+    QTimer* mTimerPasswordModeTimeout = nullptr;
+    QTimer* mTimerFailedConnectionRetry = nullptr;
+    QElapsedTimer mRecordingChunkTimer;
+    QElapsedTimer mConnectionTimer;
+    qint32 mRecordLastChunkMSecTimeOffset = 0;
+    int mRecordingChunkCount = 0;
+    std::unique_ptr<QSaveFile> mpReplayFile;
+    bool mRecordReplay = false;
+    int mCycleCountMTTS = 0;
+    QSet<QString> newEnvironVariablesSent;
+    bool mReplayHasFaultyFormat = false;
+    // Negotiated afresh with each game, so anything added here also has to be cleared in reset():
+    bool enableNewEnviron = false;
+    bool enableCHARSET = false;
+    bool enableATCP = false;
+    bool enableGMCP = false;
+    bool enableMSSP = false;
+    bool enableMSDP = false;
+    bool enableMSP = false;
+    bool enableMXP = false;
+    bool enableChannel102 = false;
+    // Inhibit mAutoReconnect from taking effect for one connection cycle,
+    // either because the user wanted to disconnect or an SSL/TLS error occurred:
+    bool mDontReconnect = false;
+    bool mAutoReconnect = false;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
-    bool loadingReplay;
+    bool loadingReplay = false;
     // Used to disable the TConsole ending messages if run from lua:
-    bool mIsReplayRunFromLua;
-    QStringList mAcceptableEncodings;
-    QStringList mFriendlyEncodings;
+    bool mIsReplayRunFromLua = false;
+    QByteArrayList mAcceptableEncodings;
     // Used to prevent more than one warning being shown in the event of a bad
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
-    bool mEncodingWarningIssued;
+    bool mEncodingWarningIssued = false;
+    // Same sort of thing if an encoder fails to be found/loaded:
+    bool mEncoderFailureNoticeIssued = false;
 
     // Set if the current connection is via a proxy
-    bool mConnectViaProxy;
+    bool mConnectViaProxy = false;
 
-private slots:
-#if !defined(QT_NO_SSL)
-    void handle_socket_signal_sslError(const QList<QSslError> &errors);
-#endif
+    // server problem w/ not terminating IAC SB: only warn once
+    bool mIncompleteSB = false;
 
+    // Need to track the current width and height of the TMainConsole so that
+    // we can send NAWS data when it changes:
+    int mNaws_x = 0;
+    int mNaws_y = 0;
+
+    bool mServerRequestedSGA = false;
+    QElapsedTimer mEchoToggleTimer;
+    int mEchoToggleCount = 0;
+    bool mEchoAnomalyDetected = false;
+    static constexpr int ECHO_ANOMALY_THRESHOLD = 5;
+    static constexpr int ECHO_ANOMALY_WINDOW_MS = 5000;
+
+    // Character-at-a-time (ECHO + SGA) detection. A server that only masks a
+    // password produces the exact same negotiation, so we do not conclude
+    // character-at-a-time until ECHO+SGA has outlived a submitted input line:
+    // a password mask releases ECHO (WONT ECHO) right after the masked line and
+    // stops the timer before it fires, whereas a real character-at-a-time server
+    // never releases it. See cTelnet::checkCharacterModePattern().
+    bool mCharacterModeDetected = false;
+    QTimer* mTimerCharacterModeDetect = nullptr;
+    QTimer* mTimerNawsUpdate = nullptr;
+
+    // KaVir protocol negotiation tracking
+    QVector<unsigned char> mNegotiationOrder;
+
+    void checkCharacterModePattern();
+    bool checkEchoAnomalyPattern();
 };
 
 #endif // MUDLET_CTELNET_H

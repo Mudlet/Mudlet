@@ -1,0 +1,313 @@
+/***************************************************************************
+ *   Copyright (C) 2011 by Chris Mitchell                                  *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2025 by Lecker Kebap - Leris@mudlet.org                 *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+
+#include "dlgModuleManager.h"
+
+#include "mudlet.h"
+
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QSettings>
+#include <QTimer>
+
+using namespace std::chrono_literals;
+
+
+dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
+: QDialog(parent)
+, mpHost(pHost)
+{
+    setupUi(this);
+
+    // nothing is selected yet, so there is no help to show
+    helpButton->setDisabled(true);
+
+    layoutModules();
+    connect(uninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstallModule);
+    connect(installButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
+    connect(helpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
+    connect(moduleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
+    connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
+    connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
+    connect(mpHost, &Host::signal_packageListChanged, this, &dlgModuleManager::layoutModules);
+    setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
+    setAttribute(Qt::WA_DeleteOnClose);
+}
+
+dlgModuleManager::~dlgModuleManager() {}
+
+void dlgModuleManager::layoutModules()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    QMapIterator<QString, QStringList> it(mpHost->mInstalledModules);
+    QStringList sl;
+    sl << tr("Module Name") << tr("Priority") << tr("Sync") << tr("Module Location");
+    moduleTable->setHorizontalHeaderLabels(sl);
+    moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    moduleTable->verticalHeader()->hide();
+    moduleTable->setShowGrid(true);
+    // every row has to go, not every other one: removing a row moves the ones
+    // below it up, so a loop that advances as it removes leaves half of what
+    // was listed behind for the rebuilt listing to be added on top of
+    moduleTable->setRowCount(0);
+    //order modules by priority and then alphabetically
+    QMap<int, QStringList> mOrder;
+    while (it.hasNext()) {
+        it.next();
+        const int priority = mpHost->mModulePriorities[it.key()];
+        if (mOrder.contains(priority)) {
+            mOrder[priority].append(it.key());
+        } else {
+            mOrder[priority] = QStringList(it.key());
+        }
+    }
+    QMapIterator<int, QStringList> it2(mOrder);
+    while (it2.hasNext()) {
+        it2.next();
+        QStringList pModules = it2.value();
+        pModules.sort();
+        for (const QString& pModule : pModules) {
+            const int row = moduleTable->rowCount();
+            moduleTable->insertRow(row);
+            auto masterModule = new QTableWidgetItem();
+            auto itemEntry = new QTableWidgetItem();
+            auto itemLocation = new QTableWidgetItem();
+            auto itemPriority = new QTableWidgetItem();
+            QStringList moduleInfo = mpHost->mInstalledModules[pModule];
+
+            if (moduleInfo.at(1).toInt()) {
+                masterModule->setCheckState(Qt::Checked);
+            } else {
+                masterModule->setCheckState(Qt::Unchecked);
+            }
+            masterModule->setText(QString());
+            //: Tooltip for master module checkbox
+            masterModule->setToolTip(utils::richText(tr("Master module: saved and resynchronized across all sessions on Save Profile or session end.")));
+
+            // Although there is now no text used here this may help to make the
+            // checkbox more central in the column
+            masterModule->setTextAlignment(Qt::AlignCenter);
+
+            const QString moduleName = pModule;
+            itemEntry->setText(moduleName);
+            itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+            itemLocation->setText(moduleInfo[0]);
+            itemLocation->setToolTip(utils::richText(moduleInfo[0]));         // show the full path in a tooltip, in case it doesn't fit in the table
+            itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
+            itemPriority->setData(Qt::EditRole, mpHost->mModulePriorities[moduleName]);
+            moduleTable->setItem(row, 0, itemEntry);
+            moduleTable->setItem(row, 1, itemPriority);
+            moduleTable->setItem(row, 2, masterModule);
+            moduleTable->setItem(row, 3, itemLocation);
+        }
+    }
+    moduleTable->resizeColumnsToContents();
+}
+
+void dlgModuleManager::slot_installModule()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    QSettings& settings = *mudlet::getQSettings();
+    QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
+
+    //: Module manager - import modules from file dialog (multi-select enabled)
+    //: Module manager - file filter for supported module types (mpackage, zip, xml)
+    const QStringList fileNames = QFileDialog::getOpenFileNames(this, tr("Load Mudlet Module"), lastDir, tr("Mudlet Packages (*.mpackage *.zip *.xml)"));
+    if (fileNames.isEmpty()) {
+        return;
+    }
+
+    lastDir = QFileInfo(fileNames.first()).absolutePath();
+    settings.setValue(qsl("lastFileDialogLocation"), lastDir);
+
+    QStringList failedModules;
+
+    for (const QString& fileName : fileNames) {
+        if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
+            mpHost->waitForProfileSave();
+        } else {
+            const QString baseName = QFileInfo(fileName).fileName();
+            failedModules << baseName;
+            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName;
+        }
+    }
+
+    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
+        moduleTable->removeRow(i);
+    }
+
+    layoutModules();
+
+    if (!failedModules.isEmpty()) {
+        //: Module manager - status message shown when some modules failed to import. %1 is a comma-separated list of module names
+        showImportStatus(tr("Failed to import: %1").arg(failedModules.join(qsl(", "))));
+    }
+}
+
+void dlgModuleManager::slot_uninstallModule()
+{
+    if (!mpHost) {
+        return;
+    }
+
+    const int cRow = moduleTable->currentRow();
+    QTableWidgetItem* pI = moduleTable->item(cRow, 0);
+    if (!pI) {
+        return;
+    }
+    // Read before the uninstall, not after: it pumps the event loop while it waits
+    // a profile save out, and a handler that takes a module away rebuilds this
+    // table - which deletes the item this row is holding.
+    const QString moduleName = pI->text();
+    if (!mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
+        // a save in progress is the one the user can do something about; the other
+        // is a row that outlived its module, which the rebuild below clears up, so
+        // it says that rather than blaming a save that is not running
+        QString msg;
+        if (mpHost->currentlySavingProfile()) {
+            //: %1 is the name of the module the user asked to remove
+            msg = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(moduleName);
+        } else {
+            //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
+            msg = tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(moduleName);
+        }
+        //: Title of the dialog that says why a module the user asked to remove was not removed
+        QMessageBox::warning(this, tr("Removal failed"), msg);
+    }
+    // rebuilt whether the removal took or not: refused, this puts back what is
+    // actually installed, which is the only thing that clears a stale row
+    layoutModules();
+}
+
+void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
+{
+    if (!mpHost) {
+        return;
+    }
+
+    const int i = pItem->row();
+
+    QTableWidgetItem* entry = moduleTable->item(i, 0);
+    QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
+    QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
+    //  Not used programmatically now: QTableWidgetItem* itemPath = moduleTable->item(i, 3);
+    if (!entry || !checkStatus || !itemPriority || !mpHost->mInstalledModules.contains(entry->text())) {
+        helpButton->setDisabled(true);
+        if (checkStatus) {
+            checkStatus->setCheckState(Qt::Unchecked);
+            checkStatus->setFlags(Qt::NoItemFlags);
+        }
+        return;
+    }
+
+    helpButton->setDisabled(moduleHelpUrl(entry->text()).isEmpty());
+}
+
+QString dlgModuleManager::moduleHelpUrl(const QString& moduleName) const
+{
+    const QString url = mpHost->mModuleInfo.value(moduleName).value(qsl("helpURL"));
+    if (!url.isEmpty()) {
+        return url;
+    }
+    // fall back to the legacy source populated by XML-imported <HelpPackage> data
+    return mpHost->moduleHelp.value(moduleName).value(qsl("helpURL"));
+}
+
+void dlgModuleManager::slot_moduleChanged(QTableWidgetItem* pItem)
+{
+    if (!mpHost) {
+        return;
+    }
+
+    const int i = pItem->row();
+
+    QStringList moduleStringList;
+    QTableWidgetItem* entry = moduleTable->item(i, 0);
+    QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
+    QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
+    if (!entry || !checkStatus || !itemPriority || !mpHost->mInstalledModules.contains(entry->text())) {
+        return;
+    }
+    moduleStringList = mpHost->mInstalledModules.value(entry->text());
+    if (checkStatus->checkState() == Qt::Checked) {
+        moduleStringList[1] = QLatin1String("1");
+    } else {
+        moduleStringList[1] = QLatin1String("0");
+    }
+    mpHost->mInstalledModules[entry->text()] = moduleStringList;
+    mpHost->mModulePriorities[entry->text()] = itemPriority->text().toInt();
+}
+
+void dlgModuleManager::slot_helpModule()
+{
+    if (!mpHost) {
+        return;
+    }
+    const int cRow = moduleTable->currentRow();
+    QTableWidgetItem* pI = moduleTable->item(cRow, 0);
+    if (!pI) {
+        return;
+    }
+    const QString helpUrl = moduleHelpUrl(pI->text());
+    if (helpUrl.isEmpty()) {
+        return;
+    }
+    if (!mudlet::self()->openWebPage(helpUrl)) {
+        //failed first open, try for a module related path
+        QTableWidgetItem* item = moduleTable->item(cRow, 3);
+        if (!item) {
+            return;
+        }
+        const QString itemPath = item->text();
+        QStringList path = itemPath.split(QDir::separator());
+        path.pop_back();
+        path.append(QDir::separator());
+        path.append(helpUrl);
+        const QString path2 = path.join(QString());
+        if (!mudlet::self()->openWebPage(path2)) {
+            helpButton->setDisabled(true);
+        }
+    }
+}
+
+void dlgModuleManager::showImportStatus(const QString& message)
+{
+    label_importStatus->setText(message);
+    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
+    label_importStatus->show();
+    QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
+}
+
+void dlgModuleManager::closeEvent(QCloseEvent* event)
+{
+    if (mpHost) {
+        emit moduleManagerClosing(mpHost->getName());
+    }
+    QDialog::closeEvent(event);
+}

@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-resources]]
+author = [[Mudlet test suite]]
+title = [[Fixture package carrying a resources folder]]
+version = [[2.5]]
+description = [[Ships non-Mudlet files so a spec can check they land on disk.]]

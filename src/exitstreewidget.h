@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2012 by Vadim Peretokin - vperetokin@gmail.com          *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,18 +23,39 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include <QTreeWidget>
-#include "post_guard.h"
 
 
 class ExitsTreeWidget : public QTreeWidget
 {
     Q_OBJECT
 
+    friend class RoomIdLineEditDelegate;
+    friend class dlgRoomExits;
+    friend class RoomExitsDeletedEditItemTest;
+
+    // The indexes that are used to identify the columns in the special exits
+    // treewidget have been collected into an enumeration so that we can
+    // tweak them and change all of them correctly - and the friend classes
+    // above can use the same set as defined here.
+    // Note that if any of these numbers are modified/extended the
+    // corresponding headings in the ./src/ui/room_exits.ui file will need
+    // to be adjusted as well - and visa versa:
+    enum ExitsTreeColumn : int {
+        colIndex_exitRoomId = 0,
+        colIndex_exitStatus = 1,
+        colIndex_lockExit = 2,
+        colIndex_exitWeight = 3,
+        colIndex_doorNone = 4,
+        colIndex_doorOpen = 5,
+        colIndex_doorClosed = 6,
+        colIndex_doorLocked = 7,
+        colIndex_command = 8,
+    };
+
 public:
     Q_DISABLE_COPY(ExitsTreeWidget)
-    ExitsTreeWidget(QWidget* pW);
+    explicit ExitsTreeWidget(QWidget* pParent);
     void keyPressEvent(QKeyEvent* event) override;
 };
 

@@ -1,10 +1,43 @@
+-- Convert output from runs of Qt lrelease for each language into statistics
+--[[
+ ############################################################################
+ #    Copyright (C) 2018-2019, 2022 by Vadim Peretokin - vperetokin@hey.com #
+ #    Copyright (C) 2018 by Florian Scheel - keneanung@googlemail.com       #
+ #    Copyright (C) 2019-2020 by Stephen Lyons - slysven@virginmedia.com    #
+ #                                                                          #
+ #    This program is free software; you can redistribute it and/or modify  #
+ #    it under the terms of the GNU General Public License as published by  #
+ #    the Free Software Foundation; either version 2 of the License, or     #
+ #    (at your option) any later version.                                   #
+ #                                                                          #
+ #    This program is distributed in the hope that it will be useful,       #
+ #    but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+ #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+ #    GNU General Public License for more details.                          #
+ #                                                                          #
+ #    You should have received a copy of the GNU General Public License     #
+ #    along with this program; if not, write to the                         #
+ #    Free Software Foundation, Inc.,                                       #
+ #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
+ ############################################################################
+]]
+
 local status, result = pcall(require, 'yajl')
 if not status then
-  print("warning: lua-yajl not available - translation statistics in settings won't be shown.")
+  print("warning: lua-yajl not available - translation statistics in settings won't be shown.\nError loading yajl was: ".. result)
   io.output("translation-stats.json")
   io.write("{}")
 
   return
+end
+
+
+local github_workspace = os.getenv("GITHUB_WORKSPACE")
+if github_workspace then
+  -- the script struggles to load the load files relatively in CI
+  loadfile(github_workspace.."/src/mudlet-lua/lua/TableUtils.lua")()
+else
+  loadfile("../../src/mudlet-lua/lua/TableUtils.lua")()
 end
 
 local yajl = result
@@ -32,11 +65,11 @@ local file = 'lrelease_output.txt'
 local lines = lines_from(file)
 
 local line = 1
-local stats = {}
+local stats, keyvaluestats, statsindex = {}, {}, {}
 
 while line <= #lines do
   local currentLine = lines[line]
-  local lang = currentLine:match("Updating 'mudlet_([a-z]+_[A-Z]+)%.qm'...")
+  local lang = currentLine:match("Updating '.*mudlet_([a-z]+_[A-Z]+)%.qm'...")
   line = line + 1
   if lang then
     local translated = 0
@@ -71,23 +104,55 @@ while line <= #lines do
     stats[#stats + 1] = {
       lang = lang,
       translated = translated,
-      untranslated = untranslated,
+      untranslated = untranslated or 0,
       finished = finished,
       unfinished = unfinished,
-      total = translated + untranslated,
-      translatedpc = math.floor((100/(translated + untranslated)) * translated)
+      total = translated + (untranslated or 0),
+      translated_fraction = (100 * translated)/(translated + (untranslated or 0))
     }
+    stats[#stats].translated_percent = math.floor(stats[#stats].translated_fraction)
+    keyvaluestats[lang] = {
+      translated = stats[#stats].translated,
+      untranslated = stats[#stats].untranslated,
+      finished = stats[#stats].finished,
+      unfinished = stats[#stats].unfinished,
+      total = stats[#stats].total,
+      translated_fraction = stats[#stats].translated_fraction,
+      translated_percent = stats[#stats].translated_percent
+    }
+    statsindex[lang] = keyvaluestats[lang].translated_fraction
   end
 end
 
-print("lang", "trnsl", "utrnsl", "finish", "unfin", "total", "percentage")
-for _, stat in ipairs(stats) do
-  print(stat.lang, stat.translated, stat.untranslated, stat.finished, stat.unfinished, stat.total, stat.translatedpc)
+print()
+print("We have statistics for " .. #stats .. " languages:")
+print()
+print("   lang_CNTRY    trnsl  utrnsl  finish  unfin  total  done")
+for lang, _ in spairs(statsindex, function(t,a,b) return t[a] > t[b] end) do
+  local star = ' '
+  if keyvaluestats[lang].translated_percent > 94 then
+    star = '*'
+  end
+  print(string.format("%1s    %-10s  %5d   %5d   %5d  %5d  %5d  %3d%%",
+    star,
+    lang,
+    keyvaluestats[lang].translated,
+    keyvaluestats[lang].untranslated,
+    keyvaluestats[lang].finished,
+    keyvaluestats[lang].unfinished,
+    keyvaluestats[lang].total,
+    keyvaluestats[lang].translated_percent))
 end
+print()
 
 serialise_stats = {}
 for _, stat in ipairs(stats) do
-  serialise_stats[stat.lang] = {translated = stat.translated, untranslated = stat.untranslated, total = stat.total, translatedpc = stat.translatedpc}
+  serialise_stats[stat.lang] = {
+    translated = stat.translated,
+    untranslated = stat.untranslated,
+    total = stat.total,
+    translated_percent = stat.translated_percent
+  }
 end
 
 io.output("translation-stats.json")

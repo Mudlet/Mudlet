@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016, 2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2016, 2019-2020, 2022, 2026 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2026 by Ethan Hussong - ethan@ethanhussong.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,47 +24,49 @@
 
 #include "dlgMapper.h"
 
-
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "mapInfoContributorManager.h"
+#include "mudlet.h"
 
-#include "pre_guard.h"
+#include <QElapsedTimer>
+#include <QEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFrame>
+#include <QLabel>
 #include <QListWidget>
+#include <QMenu>
 #include <QMessageBox>
+#include <QPainter>
+#include <QProgressBar>
 #include <QProgressDialog>
-#include "post_guard.h"
+#include <QPushButton>
+#include <QSettings>
+#include <QTimer>
+#include <QVBoxLayout>
 
+using namespace std::chrono_literals;
 
-dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
-: QWidget( parent )
-, mpMap( pM )
-, mpHost( pH )
-, mShowDefaultArea( true )
+dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
+: QWidget(parent)
+, mpMap(pM)
+, mpHost(pH)
 {
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
-    if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
-        mpHost->mpMap->mpM->update();
-    }
     QSurfaceFormat fmt;
+#ifndef NDEBUG
+    fmt.setOption(QSurfaceFormat::DebugContext);
+#endif
     fmt.setSamples(10);
     QSurfaceFormat::setDefaultFormat(fmt);
-    glWidget = new GLWidget(widget);
-    glWidget->setObjectName(QString::fromUtf8("glWidget"));
-
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    sizePolicy.setHorizontalStretch(0);
-    sizePolicy.setVerticalStretch(0);
-    sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
-    glWidget->setSizePolicy(sizePolicy);
-    verticalLayout_2->insertWidget(0, glWidget);
-
-    glWidget->mpMap = pM;
 #endif
-
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
     // Have to do this here rather than in the T2DMap constructor because that
@@ -75,270 +78,564 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     QMap<QString, QString> areaNames;
     while (it.hasNext()) {
         it.next();
-        QString name = it.value();
+        const QString name = it.value();
         areaNames.insert(name.toLower(), name);
     }
     //areaNames.sort();
     QMapIterator<QString, QString> areaIt(areaNames);
     while (areaIt.hasNext()) {
         areaIt.next();
-        showArea->addItem(areaIt.value());
+        comboBox_showArea->addItem(areaIt.value());
     }
-    bubbles->setChecked(mpHost->mBubbleMode);
-    mp2dMap->mBubbleMode = mpHost->mBubbleMode;
-    d3buttons->setVisible(false);
-    roomSize->setValue(mpHost->mRoomSize * 10);
-    lineSize->setValue(mpHost->mLineSize);
-    showInfo->setChecked(mpHost->mShowInfo);
-    mp2dMap->mShowInfo = mpHost->mShowInfo;
-
-    showRoomIDs->setChecked(mpHost->mShowRoomID);
+    slot_toggleRoundRooms(mpHost->mBubbleMode);
+    widget_3DControls->setVisible(false);
+    widget_playerIconControls->setVisible(false);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
-    panel->setVisible(mpHost->mShowPanel);
-    connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
-    connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
-    connect(shiftZup, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZup);
-    connect(shiftZdown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZdown);
-    connect(shiftLeft, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftLeft);
-    connect(shiftRight, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftRight);
-    connect(shiftUp, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftUp);
-    connect(shiftDown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftDown);
-    connect(lineSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_lineSize);
-    connect(roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
-    connect(togglePanel, &QAbstractButton::pressed, this, &dlgMapper::slot_togglePanel);
-    connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
-    connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
-    connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
-
+    widget_panel->setVisible(mpHost->mShowPanel);
+    connect(toolButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
+    connect(toolButton_shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
+    connect(toolButton_mapperMenu, &QToolButton::clicked, this, &dlgMapper::slot_setupMapperMenu);
+    connect(toolButton_saveWarning, &QToolButton::clicked, this, &dlgMapper::slot_showSaveWarningMenu);
+    connect(mpMap, &TMap::signal_saveErrorChanged, this, &dlgMapper::slot_saveErrorChanged);
+    connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
+    connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 #if defined(INCLUDE_3DMAPPER)
-    connect(ortho, &QAbstractButton::pressed, glWidget, &GLWidget::fullView);
-    connect(singleLevel, &QAbstractButton::pressed, glWidget, &GLWidget::singleView);
-    connect(increaseTop, &QAbstractButton::pressed, glWidget, &GLWidget::increaseTop);
-    connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
-    connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
-    connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);
-    connect(shiftZup, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZup);
-    connect(shiftZdown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZdown);
-    connect(shiftLeft, &QAbstractButton::pressed, glWidget, &GLWidget::shiftLeft);
-    connect(shiftRight, &QAbstractButton::pressed, glWidget, &GLWidget::shiftRight);
-    connect(shiftUp, &QAbstractButton::pressed, glWidget, &GLWidget::shiftUp);
-    connect(shiftDown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftDown);
-    connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
-    connect(defaultView, &QAbstractButton::pressed, glWidget, &GLWidget::defaultView);
-    connect(sideView, &QAbstractButton::pressed, glWidget, &GLWidget::sideView);
-    connect(topView, &QAbstractButton::pressed, glWidget, &GLWidget::topView);
-    connect(scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setScale);
-    connect(xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setXRotation);
-    connect(yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setYRotation);
-    connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
-
-    glWidget->hide();
-#else
-    dim2->setDisabled(true);
-    dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
+    mIs3DMode = mpHost->mShow3DView;
+    if (mpHost->mShow3DView) {
+        // Defer 3D view initialization until widget is fully constructed and added to parent
+        QTimer::singleShot(0ms, this, [this]() {
+            slot_toggle3DView(true);
+        });
+    }
 #endif
 
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
-    QFont mapperFont = QFont(mpHost->getDisplayFont().family());
-    if (mpHost->mNoAntiAlias) {
-        mapperFont.setStyleStrategy(QFont::NoAntialias);
-    } else {
-        mapperFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality));
-    }
-    setFont(mapperFont);
-    mp2dMap->mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
-    mpMap->customEnvColors[257] = mpHost->mRed_2;
-    mpMap->customEnvColors[258] = mpHost->mGreen_2;
-    mpMap->customEnvColors[259] = mpHost->mYellow_2;
-    mpMap->customEnvColors[260] = mpHost->mBlue_2;
-    mpMap->customEnvColors[261] = mpHost->mMagenta_2;
-    mpMap->customEnvColors[262] = mpHost->mCyan_2;
-    mpMap->customEnvColors[263] = mpHost->mWhite_2;
-    mpMap->customEnvColors[264] = mpHost->mBlack_2;
-    mpMap->customEnvColors[265] = mpHost->mLightRed_2;
-    mpMap->customEnvColors[266] = mpHost->mLightGreen_2;
-    mpMap->customEnvColors[267] = mpHost->mLightYellow_2;
-    mpMap->customEnvColors[268] = mpHost->mLightBlue_2;
-    mpMap->customEnvColors[269] = mpHost->mLightMagenta_2;
-    mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
-    mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
-    mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
+    // Previous code set this to the main console one (before it was read from
+    // the game save file, apparently) so it was actually the initial value
+    // specified in the Host class. Revising the code to make it use the
+    // selected font for the main console meant that all the controls at the
+    // bottom took on that font which was glaringly inconsistent with the
+    // overall GUI appearance - instead now it adopts the "default" application
+    // font:
+    setFont(qApp->font());
+    mpMap->restore16ColorSet();
+
     if (mpHost) {
-        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
+        qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
         mp2dMap->init();
     } else {
-        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
+        qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
+    //stops inheritance of palette from mpConsole->mpMainFrame
+    setPalette(QApplication::palette());
+
+    connect(mpMap->mMapInfoContributorManager, &MapInfoContributorManager::signal_contributorsUpdated, this, &dlgMapper::slot_updateInfoContributors);
+    slot_updateInfoContributors();
+
+    setupEmptyStateOverlay();
+    setupProgressOverlay();
+    connect(mpMap, &TMap::signal_mmpMapLocationChanged, this, &dlgMapper::updateEmptyStateOverlay);
+    connect(mpMap, &TMap::signal_areaChanged, this, [this](int) {
+        updateEmptyStateOverlay();
+    });
+    updateEmptyStateOverlay();
+}
+
+static QFrame* createOverlayFrame(QWidget* parent, const QString& objectName)
+{
+    auto* frame = new QFrame(parent);
+    frame->setObjectName(objectName);
+    frame->setAutoFillBackground(true);
+    frame->setFrameShape(QFrame::StyledPanel);
+    frame->setStyleSheet(qsl("QFrame#%1 {"
+                             " background-color: palette(window);"
+                             " border: 1px solid palette(mid);"
+                             " border-radius: 8px;"
+                             "}")
+                                 .arg(objectName));
+    return frame;
+}
+
+static void centerOverlayIn(QFrame* overlay, QWidget* parent, int minWidth)
+{
+    if (!overlay || !parent) {
+        return;
+    }
+    const QSize hint = overlay->sizeHint();
+    const int available = qMax(20, parent->width() - 20);
+    const int w = qMin(qMax(hint.width(), minWidth), available);
+    const int h = hint.height();
+    overlay->setGeometry((parent->width() - w) / 2, (parent->height() - h) / 2, w, h);
+}
+
+void dlgMapper::setupEmptyStateOverlay()
+{
+    mpEmptyStateOverlay = createOverlayFrame(mp2dMap, qsl("emptyStateOverlay"));
+
+    //: Empty-state text shown in the mapper when the profile has no local map yet.
+    auto* label = new QLabel(tr("No map yet for this profile."), mpEmptyStateOverlay);
+    label->setAlignment(Qt::AlignCenter);
+    label->setWordWrap(true);
+
+    //: Button in the mapper empty-state. Downloads a shared map offered by the game server via MMP.
+    mpEmptyStateDownloadButton = new QPushButton(tr("Download from game"), mpEmptyStateOverlay);
+    mpEmptyStateDownloadButton->setDefault(true);
+    mpEmptyStateDownloadButton->setAutoDefault(true);
+
+    //: Button in the mapper empty-state. Opens a file dialog to load a .dat/.json/.xml map saved on disk.
+    auto* loadFileButton = new QPushButton(tr("Load map..."), mpEmptyStateOverlay);
+    loadFileButton->setAutoDefault(false);
+
+    //: Button in the mapper empty-state. Dismisses the prompt so the user can map from scratch.
+    auto* startBlankButton = new QPushButton(tr("Create new map"), mpEmptyStateOverlay);
+    startBlankButton->setAutoDefault(false);
+
+    auto* layout = new QVBoxLayout(mpEmptyStateOverlay);
+    layout->setContentsMargins(20, 16, 20, 16);
+    layout->setSpacing(10);
+    layout->addWidget(label);
+    layout->addWidget(mpEmptyStateDownloadButton);
+    layout->addWidget(loadFileButton);
+    layout->addWidget(startBlankButton);
+
+    connect(mpEmptyStateDownloadButton, &QPushButton::clicked, this, [this]() {
+        mEmptyStateDismissed = true;
+        if (mpMap) {
+            mpMap->downloadMap();
+        }
+        updateEmptyStateOverlay();
+    });
+    connect(loadFileButton, &QPushButton::clicked, this, [this]() {
+        loadMapFromFile();
+    });
+    connect(startBlankButton, &QPushButton::clicked, this, [this]() {
+        mEmptyStateDismissed = true;
+        if (mp2dMap) {
+            mp2dMap->slot_newMap();
+        }
+        updateEmptyStateOverlay();
+    });
+
+    mpEmptyStateOverlay->hide();
+    mp2dMap->installEventFilter(this);
+}
+
+void dlgMapper::setupProgressOverlay()
+{
+    mpProgressOverlay = createOverlayFrame(mp2dMap, qsl("mapProgressOverlay"));
+
+    mpProgressLabel = new QLabel(mpProgressOverlay);
+    mpProgressLabel->setAlignment(Qt::AlignCenter);
+    mpProgressLabel->setWordWrap(true);
+
+    mpProgressBar = new QProgressBar(mpProgressOverlay);
+    mpProgressBar->setRange(0, 0);
+    mpProgressBar->setValue(0);
+    mpProgressBar->setTextVisible(false);
+
+    //: Button label to abort an in-progress map download or import.
+    mpProgressCancelButton = new QPushButton(tr("Abort"), mpProgressOverlay);
+    mpProgressCancelButton->setAutoDefault(false);
+
+    auto* layout = new QVBoxLayout(mpProgressOverlay);
+    layout->setContentsMargins(20, 16, 20, 16);
+    layout->setSpacing(10);
+    layout->addWidget(mpProgressLabel);
+    layout->addWidget(mpProgressBar);
+    layout->addWidget(mpProgressCancelButton, 0, Qt::AlignHCenter);
+
+    connect(mpProgressCancelButton, &QPushButton::clicked, this, [this]() {
+        emit signal_mapProgressCanceled();
+    });
+
+    mpProgressOverlay->hide();
+}
+
+void dlgMapper::repositionProgressOverlay()
+{
+    centerOverlayIn(mpProgressOverlay, mp2dMap, 320);
+}
+
+void dlgMapper::showMapProgress(const QString& label, bool cancelable)
+{
+    if (!mpProgressOverlay) {
+        return;
+    }
+    if (mpEmptyStateOverlay) {
+        mpEmptyStateOverlay->hide();
+    }
+    if (mp2dMap) {
+        mp2dMap->mSuppressEmptyStateMessage = true;
+        mp2dMap->update();
+    }
+    mpProgressLabel->setText(label);
+    mpProgressBar->setRange(0, 0);
+    mpProgressBar->setValue(0);
+    mpProgressCancelButton->setVisible(cancelable);
+    mpProgressOverlay->show();
+    repositionProgressOverlay();
+    mpProgressOverlay->raise();
+}
+
+void dlgMapper::setMapProgressLabel(const QString& text)
+{
+    if (!mpProgressLabel || mpProgressLabel->text() == text) {
+        return;
+    }
+    mpProgressLabel->setText(text);
+    if (mpProgressOverlay && mpProgressOverlay->sizeHint().height() != mpProgressOverlay->height()) {
+        repositionProgressOverlay();
+    }
+}
+
+void dlgMapper::setMapProgressRange(int minimum, int maximum)
+{
+    if (mpProgressBar) {
+        mpProgressBar->setRange(minimum, maximum);
+    }
+}
+
+void dlgMapper::setMapProgressValue(int value)
+{
+    if (mpProgressBar) {
+        mpProgressBar->setValue(value);
+    }
+}
+
+int dlgMapper::mapProgressMaximum() const
+{
+    return mpProgressBar ? mpProgressBar->maximum() : 0;
+}
+
+void dlgMapper::setMapProgressCancelable(bool cancelable)
+{
+    if (mpProgressCancelButton) {
+        mpProgressCancelButton->setVisible(cancelable);
+    }
+}
+
+void dlgMapper::hideMapProgress()
+{
+    if (mpProgressOverlay) {
+        mpProgressOverlay->hide();
+    }
+    updateEmptyStateOverlay();
+}
+
+bool dlgMapper::isMapProgressVisible() const
+{
+    return mpProgressOverlay && mpProgressOverlay->isVisible();
+}
+
+void dlgMapper::loadMapFromFile()
+{
+    if (!mpHost) {
+        return;
+    }
+    //: File dialog filter. Keep the extensions (in braces) unchanged - they are used programmatically.
+    auto filters = QStringList() << tr("Any map file (*.dat *.json *.xml)") << tr("Mudlet binary map (*.dat)") << tr("Mudlet JSON map (*.json)") << tr("Mudlet XML map (*.xml)") << tr("Any file (*)");
+
+    auto* dialog = new QFileDialog(this);
+    //: Title of the file dialog used to pick a map file to load.
+    dialog->setWindowTitle(tr("Load Mudlet map"));
+    QSettings& settings = *mudlet::getQSettings();
+    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    dialog->setDirectory(lastDir);
+    dialog->setNameFilter(filters.join(qsl(";;")));
+    connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
+        dialog->deleteLater();
+        if (result != QDialog::Accepted || dialog->selectedFiles().isEmpty()) {
+            return;
+        }
+        const QString fileName = dialog->selectedFiles().constFirst();
+        Host* pHost = mpHost;
+        if (!pHost || !pHost->mpConsole) {
+            return;
+        }
+        bool success = false;
+        if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+            success = pHost->mpConsole->importMap(fileName);
+        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+            success = ok;
+            if (!ok) {
+                pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
+            }
+        } else {
+            success = pHost->mpConsole->loadMap(fileName);
+        }
+        if (success) {
+            pHost->mpMap->audit();
+            mEmptyStateDismissed = true;
+            mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+        }
+        updateEmptyStateOverlay();
+    });
+    dialog->open();
+}
+
+void dlgMapper::repositionEmptyStateOverlay()
+{
+    centerOverlayIn(mpEmptyStateOverlay, mp2dMap, 0);
+}
+
+void dlgMapper::updateEmptyStateOverlay()
+{
+    if (!mpEmptyStateOverlay || !mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    if (!mpMap->mpRoomDB->isEmpty()) {
+        mEmptyStateDismissed = false;
+    }
+    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed;
+    const bool canDownload = !mpMap->getMmpMapLocation().isEmpty();
+    if (mpEmptyStateDownloadButton) {
+        mpEmptyStateDownloadButton->setVisible(canDownload);
+    }
+    if (shouldShow) {
+        repositionEmptyStateOverlay();
+        mpEmptyStateOverlay->raise();
+        mpEmptyStateOverlay->show();
+        if (canDownload && mpEmptyStateDownloadButton) {
+            mpEmptyStateDownloadButton->setFocus();
+        }
+    } else {
+        mpEmptyStateOverlay->hide();
+    }
+    // Don't clobber the progress overlay's own suppression of the empty-state text.
+    if (mp2dMap && !isMapProgressVisible() && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
+        mp2dMap->mSuppressEmptyStateMessage = shouldShow;
+        mp2dMap->update();
+    }
+}
+
+bool dlgMapper::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == mp2dMap && event->type() == QEvent::Resize) {
+        if (mpEmptyStateOverlay && mpEmptyStateOverlay->isVisible()) {
+            repositionEmptyStateOverlay();
+        }
+        if (mpProgressOverlay && mpProgressOverlay->isVisible()) {
+            repositionProgressOverlay();
+        }
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
+int dlgMapper::getCurrentShownAreaIndex()
+{
+    return comboBox_showArea->currentIndex();
 }
 
 void dlgMapper::updateAreaComboBox()
 {
-    QString oldValue = showArea->currentText(); // Remember where we were
+    if (!mpMap) {
+        // We do not have a valid TMap instance pointer so doing anything now
+        // is pointless - just leave the widget empty and disabled
+        comboBox_showArea->clear();
+        comboBox_showArea->setEnabled(false);
+        return;
+    }
+
+    const QString oldValue = comboBox_showArea->currentText(); // Remember where we were
     QMapIterator<int, QString> itAreaNamesA(mpMap->mpRoomDB->getAreaNamesMap());
     //insert sort them alphabetically (case INsensitive)
-    QMap<QString, QString> _areaNames;
+    QMap<QString, QString> areaNames;
     while (itAreaNamesA.hasNext()) {
         itAreaNamesA.next();
-        if (itAreaNamesA.key() == -1 && !mShowDefaultArea) {
+        if (itAreaNamesA.key() == -1 && !mpMap->getDefaultAreaShown()) {
             continue; // Skip the default area from the listing if so directed
         }
 
         uint deduplicate = 0;
-        QString _name;
+        QString name;
         do {
-            _name = QStringLiteral("%1+%2").arg(itAreaNamesA.value().toLower(), QString::number(++deduplicate));
+            name = qsl("%1+%2").arg(itAreaNamesA.value().toLower(), QString::number(++deduplicate));
             // Use a different suffix separator to one that area names
             // deduplication uses ('_') - makes debugging easier?
-        } while (_areaNames.contains(_name));
-        _areaNames.insert(_name, itAreaNamesA.value());
+        } while (areaNames.contains(name));
+        areaNames.insert(name, itAreaNamesA.value());
     }
 
-    showArea->clear();
-    QMapIterator<QString, QString> itAreaNamesB(_areaNames);
+    comboBox_showArea->clear();
+
+    if (areaNames.isEmpty() || (mpMap && areaNames.count() == 1 && (*areaNames.constBegin() == mpMap->getDefaultAreaName()) && !mpMap->getDefaultAreaShown())) {
+        // IF there are no area names to show - should be impossible as there
+        // should always be the "Default Area" one
+        // OR there is only one sorted name
+        //    AND it is the "Default Area"
+        //    AND we are not supposed to show it
+        // THEN
+        //    We do not have ANYTHING to go in the QComboBox - so leave the
+        // control empty and disabled:
+        comboBox_showArea->setEnabled(false);
+        return;
+    }
+
+    if (areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mpMap->getDefaultAreaShown()) ? 2 : 1)) {
+        // IF we have exactly 2 (if we are NOT showing the default area AND the names include it)
+        //         OR exactly 1 otherwise
+        // THEN
+        //    We only have one item to show - so show it but disable the control
+        comboBox_showArea->setEnabled(false);
+    } else {
+        comboBox_showArea->setEnabled(true);
+    }
+
+    QMapIterator<QString, QString> itAreaNamesB(areaNames);
     while (itAreaNamesB.hasNext()) {
         itAreaNamesB.next();
-        showArea->addItem(itAreaNamesB.value());
+        comboBox_showArea->addItem(itAreaNamesB.value());
     }
-    showArea->setCurrentText(oldValue); // Try and reset to previous value
+    comboBox_showArea->setCurrentText(oldValue); // Try and reset to previous value
 }
 
-void dlgMapper::slot_toggleShowRoomIDs(int s)
+void dlgMapper::slot_toggleShowRoomIDs(int toggle)
 {
-    if (s == Qt::Checked) {
-        mp2dMap->mShowRoomID = true;
-    } else {
-        mp2dMap->mShowRoomID = false;
-    }
+    mp2dMap->mShowRoomID = (toggle == Qt::Checked);
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
     mp2dMap->update();
 }
 
-void dlgMapper::slot_toggleStrongHighlight(int v)
+void dlgMapper::slot_toggleStrongHighlight(int toggle)
 {
-    mpHost->mMapStrongHighlight = v == Qt::Checked ? true : false;
+    mpHost->mMapStrongHighlight = (toggle == Qt::Checked);
     mp2dMap->update();
 }
 
 void dlgMapper::slot_togglePanel()
 {
-    panel->setVisible(!panel->isVisible());
-    mpHost->mShowPanel = panel->isVisible();
+    // The host holds the setting; widget_panel->isVisible() is also false while
+    // the whole map dock is hidden, which would make this a no-op:
+    const bool show = !mpHost->mShowPanel;
+    // This widget is not necessarily the one the host knows as mpMap->mpMapper,
+    // which is all the setter pushes the change to:
+    slot_setMapperPanelVisible(show);
+    mpHost->setMapperPanelVisible(show);
 }
 
-void dlgMapper::show2dView()
+void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
+{
+    widget_panel->setVisible(panelVisible);
+}
+
+void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
-    glWidget->setVisible(!glWidget->isVisible());
-    mp2dMap->setVisible(!mp2dMap->isVisible());
-    if (glWidget->isVisible()) {
-        d3buttons->setVisible(true);
+    mIs3DMode = is3DMode;
+    if (glWidget) {
+        glWidget->update();
     } else {
-        d3buttons->setVisible(false);
+        glWidget = GLWidgetFactory::createGLWidget(mpMap, mpHost, this);
+        glWidget->setObjectName("glWidget");
+
+        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
+        glWidget->setSizePolicy(sizePolicy);
+        verticalLayout_mapper->insertWidget(0, glWidget);
+        mpMap->mpM = glWidget;
+        connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
+        connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
+        connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
+        connect(pushButton_increaseBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreLowerLevels()));
+        connect(pushButton_reduceTop, SIGNAL(clicked()), glWidget, SLOT(slot_showLessUpperLevels()));
+        connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
+        connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
+        connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
+        connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
+        connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
+        connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
+        connect(slider_scale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setScale(int)));
+        connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
+        connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
+        connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
+
+        // Player icon adjustment controls
+        connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
+        connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
+        connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
+        connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
+        connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
+        connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
+
+        // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
+        if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+            connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
+                slider_playerIconHeight->setValue(height);
+                slider_playerIconRotX->setValue(rotX);
+                slider_playerIconRotY->setValue(rotY);
+                slider_playerIconRotZ->setValue(rotZ);
+                slider_playerIconScale->setValue(scale);
+            });
+        }
     }
+
+
+    mp2dMap->setVisible(!is3DMode);
+    glWidget->setVisible(is3DMode);
+    if (glWidget->isVisible()) {
+        widget_3DControls->setVisible(true);
+        widget_playerIconControls->setVisible(mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")
+#ifdef DEBUG_PLAYER_ICON_CONTROLS
+                                              && true
 #else
+                                              && false
+#endif
+        );
+    } else {
+        // workaround for buttons reloading oddly
+        QTimer::singleShot(100ms, this, [this]() {
+            widget_3DControls->setVisible(false);
+            widget_playerIconControls->setVisible(false);
+        });
+    }
+    mpHost->mShow3DView = is3DMode;
+#else
+    Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);
-    d3buttons->setVisible(false);
+    widget_3DControls->setVisible(false);
+    widget_playerIconControls->setVisible(false);
 #endif
 }
 
-void dlgMapper::choseRoom(QListWidgetItem* pT)
+void dlgMapper::slot_roomSize(int size)
 {
-    QString txt = pT->text();
+    const float floatSize = static_cast<float>(size / 10.0);
+    mp2dMap->setRoomSize(floatSize);
+    mp2dMap->update();
+}
 
-    QHashIterator<int, TRoom*> it(mpMap->mpRoomDB->getRoomMap());
-    while (it.hasNext()) {
-        it.next();
-        int i = it.key();
-        TRoom* pR = mpMap->mpRoomDB->getRoom(i);
-        if (!pR) {
-            continue;
-        }
-        if (pR->name == txt) {
-            qDebug() << "found room id=" << i;
-            mpMap->mTargetID = i;
-            if (!mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), i)) {
-                mpHost->mpConsole->printSystemMessage(tr("Cannot find a path to this room.\n"));
-            } else {
-                mpMap->mpHost->startSpeedWalk();
-            }
-            break;
-        }
+void dlgMapper::slot_exitSize(int size)
+{
+    mp2dMap->setExitSize(size);
+    mp2dMap->update();
+}
+
+
+void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
+{
+    dlgMapper::slot_toggleShowRoomIDs(showRoomIds ? Qt::Checked : Qt::Unchecked);
+}
+
+void dlgMapper::slot_setShowGrid(bool showGrid)
+{
+    mp2dMap->mShowGrid = showGrid;
+    mp2dMap->mpHost->mMapperShowGrid = showGrid;
+    mp2dMap->update();
+}
+
+void dlgMapper::slot_toggleRoundRooms(const bool state)
+{
+    if (mp2dMap->mpHost->mBubbleMode != state) {
+        mp2dMap->mpHost->mBubbleMode = state;
     }
-    mpHost->mpConsole->setFocus();
-}
-
-void dlgMapper::goRoom()
-{
-    //    QString txt = roomID->text();
-    //    searchList->clear();
-    //    int id = txt.toInt();
-
-    //    if( id != 0 && mpMap->rooms.contains( id ) )
-    //    {
-    //        mpMap->mTargetID = id;
-    //        if( mpMap->findPath(0,0) )
-    //        {
-    //            qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
-    //            mpMap->mpHost->startSpeedWalk();
-    //        }
-    //        else
-    //        {
-    //            QString msg = "Cannot find a path to this room.\n";
-    //            mpHost->mpConsole->printSystemMessage(msg);
-    //        }
-    //    }
-    //    else
-    //    {
-    //        QMapIterator<int, TRoom *> it( mpMap->rooms );
-    //        while( it.hasNext() )
-    //        {
-    //            it.next();
-    //            int i = it.key();
-    //            if( mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive ) )
-    //            {
-    //                qDebug()<<"inserting match:"<<i;
-    //                searchList->addItem( mpMap->rooms[i]->name );
-    //            }
-    //        }
-    //    }
-    //    mpHost->mpConsole->setFocus();
-}
-
-
-void dlgMapper::slot_roomSize(int d)
-{
-    float s = (float)d / 10.0;
-    mp2dMap->setRoomSize(s);
-    mp2dMap->update();
-}
-
-void dlgMapper::slot_lineSize(int d)
-{
-    mp2dMap->setExitSize(d);
-    mp2dMap->update();
-}
-
-void dlgMapper::slot_bubbles()
-{
-    mp2dMap->mBubbleMode = bubbles->isChecked();
-    mp2dMap->mpHost->mBubbleMode = mp2dMap->mBubbleMode;
-    mp2dMap->update();
-}
-
-void dlgMapper::slot_info()
-{
-    mp2dMap->mShowInfo = showInfo->isChecked();
-    mp2dMap->mpHost->mShowInfo = mp2dMap->mShowInfo;
-    mp2dMap->update();
-}
-
-void dlgMapper::setDefaultAreaShown(bool state)
-{
-    if (mShowDefaultArea != state) {
-        mShowDefaultArea = state;
-        updateAreaComboBox();
+    if (mp2dMap->mBubbleMode != state) {
+        mp2dMap->mBubbleMode = state;
+        mp2dMap->update();
     }
 }
 
@@ -351,19 +648,367 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
 
     TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
     if (pR) {
-        int playerRoomArea = pR->getArea();
+        const int playerRoomArea = pR->getArea();
         TArea* pA = mpMap->mpRoomDB->getArea(playerRoomArea);
         if (pA) {
-            QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
+            const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
             if (!areaName.isEmpty()) {
-                showArea->setCurrentText(areaName);
+                comboBox_showArea->setCurrentText(areaName);
             } else {
                 qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area name not valid.";
             }
         } else {
-            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area valid.";
+            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area not valid.";
         }
     } else {
         qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room not valid.";
     }
+}
+
+void dlgMapper::slot_switchArea(const int index)
+{
+    const QString areaName{comboBox_showArea->itemText(index)};
+    mp2dMap->switchArea(areaName);
+}
+
+void dlgMapper::slot_updateInfoContributors()
+{
+    updateInfoMenu();
+    mp2dMap->update();
+}
+
+// Is the mapper contained inside a floating/dockable QDockWidget?
+bool dlgMapper::isFloatAndDockable() const
+{
+    // The class name should be a const char* - no QString wrapper is needed:
+    if (parentWidget() && parentWidget()->inherits("QDockWidget")) {
+        return true;
+    }
+    return false;
+}
+
+void dlgMapper::setFont(const QFont& newFont)
+{
+    QWidget::setFont(newFont);
+    mp2dMap->setFont(newFont);
+    mp2dMap->mFontHeight = mp2dMap->fontMetrics().height();
+}
+
+void dlgMapper::recreate3DWidget()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (!glWidget) {
+        return;
+    }
+
+    if (GLWidgetFactory::isCorrectWidgetType(glWidget, mpHost.data())) {
+        return;
+    }
+
+    bool was3DMode = glWidget->isVisible();
+
+    glWidget->setParent(nullptr);
+    glWidget->deleteLater();
+    glWidget = nullptr;
+    mpMap->mpM = nullptr;
+
+    glWidget = GLWidgetFactory::createGLWidget(mpMap, mpHost.data(), this);
+    glWidget->setObjectName("glWidget");
+
+    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    sizePolicy.setHorizontalStretch(0);
+    sizePolicy.setVerticalStretch(0);
+    sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
+    glWidget->setSizePolicy(sizePolicy);
+    verticalLayout_mapper->insertWidget(0, glWidget);
+    mpMap->mpM = glWidget;
+
+    connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
+    connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
+    connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
+    connect(pushButton_increaseBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreLowerLevels()));
+    connect(pushButton_reduceTop, SIGNAL(clicked()), glWidget, SLOT(slot_showLessUpperLevels()));
+    connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
+    connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
+    connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
+    connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
+    connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
+    connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
+    connect(slider_scale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setScale(int)));
+    connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
+    connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
+    connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
+
+    // Player icon adjustment controls
+    connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
+    connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
+    connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
+    connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
+    connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
+    connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
+
+    // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
+    if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+        connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
+            slider_playerIconHeight->setValue(height);
+            slider_playerIconRotX->setValue(rotX);
+            slider_playerIconRotY->setValue(rotY);
+            slider_playerIconRotZ->setValue(rotZ);
+            slider_playerIconScale->setValue(scale);
+        });
+    }
+
+    glWidget->setVisible(was3DMode);
+#endif
+}
+
+void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
+                             QPainter& painter,
+                             Host* pHost,
+                             TMap* pMap,
+                             int roomID,
+                             int displayAreaId,
+                             int selectionSize,
+                             QColor& infoColor,
+                             int xOffset,
+                             int yOffset,
+                             int widgetWidth,
+                             int fontHeight)
+{
+    if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
+        return;
+    }
+
+    QList<QString> contributorList = pMap->mMapInfoContributorManager->getContributorKeys();
+    QSet<QString> const contributorKeys{contributorList.begin(), contributorList.end()};
+    if (!contributorKeys.intersects(pHost->mMapInfoContributors)) {
+        return;
+    }
+
+    TRoom* pRoom = pMap->mpRoomDB->getRoom(roomID);
+    if (!pRoom) {
+        return;
+    }
+
+    const int initialYOffset = yOffset;
+
+    painter.save();
+    painter.setFont(pHost->getDisplayFont());
+
+    for (const auto& key : pMap->mMapInfoContributorManager->getContributorKeys()) {
+        if (pHost->mMapInfoContributors.contains(key)) {
+            auto properties = pMap->mMapInfoContributorManager->getContributor(key)(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
+            if (!properties.color.isValid()) {
+                properties.color = infoColor;
+            }
+            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties, pHost->mMapInfoBg, fontHeight, widgetWidth);
+        }
+    }
+
+#ifdef QT_DEBUG
+    yOffset += paintMapInfoContributor(
+            painter, xOffset, yOffset, {false, false, QObject::tr("render time: %1S").arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3), infoColor}, pHost->mMapInfoBg, fontHeight, widgetWidth);
+#else
+    Q_UNUSED(renderTimer)
+#endif
+
+    painter.restore();
+
+    if (yOffset > initialYOffset) {
+        painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, pHost->mMapInfoBg);
+    }
+}
+
+int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth)
+{
+    if (properties.text.isEmpty()) {
+        return 0;
+    }
+
+    painter.save();
+    auto infoText = properties.text.trimmed();
+    auto font = painter.font();
+    font.setBold(properties.isBold);
+    font.setItalic(properties.isItalic);
+    painter.setFont(font);
+    // Set the pen before calling boundingRect: Qt6's drawTextItem early-returns
+    // when pen().style() == Qt::NoPen, which causes boundingRect to return
+    // height=0 and makes drawText render nothing (grey box with no text).
+    painter.setPen(properties.color);
+    const int infoHeight = fontHeight;
+    QRect testRect;
+    QRect mapInfoRect = QRect(xOffset, yOffset, widgetWidth - 10 - xOffset, infoHeight);
+    testRect = painter.boundingRect(mapInfoRect.left() + 10,
+                                    mapInfoRect.top(),
+                                    mapInfoRect.width() - 20,
+                                    mapInfoRect.height() - 20,
+                                    Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
+                                    infoText);
+    mapInfoRect.setHeight(testRect.height() + 10);
+    painter.fillRect(mapInfoRect, bgColor);
+    painter.drawText(mapInfoRect.left() + 10,
+                     mapInfoRect.top(),
+                     mapInfoRect.width() - 20,
+                     mapInfoRect.height() - 10,
+                     Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
+                     infoText);
+    painter.restore();
+    return mapInfoRect.height();
+}
+
+void dlgMapper::slot_setupMapperMenu()
+{
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto* upperLowerLevelsAction = new QAction(tr("Draw rooms on upper and lower levels"), this);
+    upperLowerLevelsAction->setCheckable(true);
+    upperLowerLevelsAction->setChecked(mudlet::self()->mDrawUpperLowerLevels);
+    upperLowerLevelsAction->setToolTip(tr("When enabled, rooms on floors above and below the current level will be drawn with a lighter color to show the map layout context."));
+
+    connect(upperLowerLevelsAction, &QAction::toggled, this, &dlgMapper::slot_toggleUpperLowerLevels);
+    menu->addAction(upperLowerLevelsAction);
+
+    auto* roundRoomsAction = new QAction(tr("Round rooms"), this);
+    roundRoomsAction->setCheckable(true);
+    roundRoomsAction->setChecked(mpHost->mBubbleMode);
+    roundRoomsAction->setToolTip(tr("When enabled, rooms will be drawn with round corners instead of square corners."));
+
+    connect(roundRoomsAction, &QAction::toggled, this, &dlgMapper::slot_toggleRoundRooms);
+    menu->addAction(roundRoomsAction);
+
+    auto* showRoomIdsAction = new QAction(tr("Show room IDs"), this);
+    showRoomIdsAction->setCheckable(true);
+    showRoomIdsAction->setChecked(mpHost->mShowRoomID);
+    showRoomIdsAction->setToolTip(tr("When enabled, room IDs will be displayed on the map."));
+
+    connect(showRoomIdsAction, &QAction::toggled, this, &dlgMapper::slot_toggleShowRoomIDsFromMenu);
+    menu->addAction(showRoomIdsAction);
+
+    auto* showRoomNamesAction = new QAction(tr("Show room names"), this);
+    showRoomNamesAction->setCheckable(true);
+    showRoomNamesAction->setChecked(mpMap->getRoomNamesShown());
+    showRoomNamesAction->setToolTip(tr("When enabled, room names will be displayed on the map."));
+
+    connect(showRoomNamesAction, &QAction::toggled, this, &dlgMapper::slot_toggleShowRoomNames);
+    menu->addAction(showRoomNamesAction);
+
+    auto* showMapGrid = new QAction(tr("Show map grid"), this);
+    showMapGrid->setCheckable(true);
+    showMapGrid->setChecked(mpHost->mMapperShowGrid);
+    showMapGrid->setToolTip(tr("When enabled, grid will be shown on mapper."));
+
+    connect(showMapGrid, &QAction::toggled, this, &dlgMapper::slot_setShowGrid);
+    menu->addAction(showMapGrid);
+
+#if defined(INCLUDE_3DMAPPER)
+    auto* show3DMapAction = new QAction(tr("Show map in 3D"), this);
+    show3DMapAction->setCheckable(true);
+    show3DMapAction->setChecked(mIs3DMode);
+    show3DMapAction->setToolTip(tr("When enabled, the map will be displayed in 3D mode."));
+    connect(show3DMapAction, &QAction::toggled, this, &dlgMapper::slot_toggle3DView);
+    menu->addAction(show3DMapAction);
+#endif
+
+    // Add separator and Info submenu
+    menu->addSeparator();
+    mpInfoMenu = menu->addMenu(tr("Info overlays"));
+    updateInfoMenu();
+
+    menu->addSeparator();
+    auto* newMapWindowAction = new QAction(tr("New map window"), this);
+    newMapWindowAction->setToolTip(tr("Open an additional map view"));
+    connect(newMapWindowAction, &QAction::triggered, mudlet::self(), &mudlet::slot_newMapWindow);
+    menu->addAction(newMapWindowAction);
+
+    menu->exec(toolButton_mapperMenu->mapToGlobal(toolButton_mapperMenu->rect().bottomLeft()));
+}
+
+void dlgMapper::slot_toggleUpperLowerLevels(bool enabled)
+{
+    mudlet::self()->mDrawUpperLowerLevels = enabled;
+    if (mp2dMap) {
+        mp2dMap->update();
+    }
+}
+
+void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
+{
+    mp2dMap->mShowRoomID = enabled;
+    mp2dMap->mpHost->mShowRoomID = enabled;
+    mp2dMap->update();
+}
+
+void dlgMapper::slot_toggleShowRoomNames(const bool enabled)
+{
+    mpMap->setRoomNamesShown(enabled);
+    mp2dMap->update();
+}
+
+void dlgMapper::updateInfoMenu()
+{
+    if (!mpInfoMenu) {
+        return;
+    }
+
+    mpInfoMenu->clear();
+
+    //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
+    auto* clearAction = new QAction(tr("None"), mpInfoMenu);
+    mpInfoMenu->addAction(clearAction);
+    connect(clearAction, &QAction::triggered, this, [=, this]() {
+        for (auto action : mpInfoMenu->actions()) {
+            action->setChecked(false);
+        }
+    });
+
+    for (const auto& name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
+        auto* action = new QAction(name, mpInfoMenu);
+        action->setCheckable(true);
+        action->setChecked(mpHost->mMapInfoContributors.contains(name));
+        connect(action, &QAction::toggled, this, [=, this](bool isToggled) {
+            if (isToggled) {
+                mpHost->mMapInfoContributors.insert(name);
+            } else {
+                mpHost->mMapInfoContributors.remove(name);
+            }
+            mp2dMap->update();
+        });
+        mpInfoMenu->addAction(action);
+    }
+}
+
+void dlgMapper::slot_saveErrorChanged(bool hasError)
+{
+    toolButton_saveWarning->setVisible(hasError);
+}
+
+void dlgMapper::slot_showSaveWarningMenu()
+{
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto* infoAction = new QAction(tr("Map autosave failed"), this);
+    infoAction->setEnabled(false);
+    menu->addAction(infoAction);
+
+    menu->addSeparator();
+
+    auto* retryAction = new QAction(tr("Retry save"), this);
+    connect(retryAction, &QAction::triggered, this, [this]() {
+        if (mpHost && mpHost->mpConsole) {
+            if (mpHost->mpConsole->saveMap(QString())) {
+                mpMap->setSaveError(false);
+            }
+        }
+    });
+    menu->addAction(retryAction);
+
+    auto* dismissAction = new QAction(tr("Dismiss warning"), this);
+    connect(dismissAction, &QAction::triggered, this, [this]() {
+        mpMap->setSaveError(false);
+    });
+    menu->addAction(dismissAction);
+
+    menu->exec(toolButton_saveWarning->mapToGlobal(toolButton_saveWarning->rect().bottomLeft()));
 }

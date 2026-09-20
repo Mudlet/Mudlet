@@ -1,5 +1,7 @@
 ############################################################################
 #    Copyright (C) 2018 by Vadim Peretokin - vperetokin@gmail.com          #
+#    Copyright (C) 2020, 2023, 2025 by Stephen Lyons                       #
+#                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -21,25 +23,33 @@
 
 message(STATUS "Building translations")
 
-find_package(Qt5LinguistTools REQUIRED)
-get_target_property(LRELEASE_LOCATION Qt5::lrelease LOCATION)
+find_package(Qt6LinguistTools 6.8.2 REQUIRED)
+get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
 
 file(GLOB TS_FILES *.ts)
 string(REPLACE ".ts" "" TS_FILES_NOEXT "${TS_FILES}")
 
 file(REMOVE "${CMAKE_CURRENT_SOURCE_DIR}/lrelease_output.txt")
+
 foreach(ts_file ${TS_FILES_NOEXT})
   string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" qm_file ${ts_file})
   execute_process(
           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-          COMMAND LANG=C ${LRELEASE_LOCATION} ${ts_file}.ts -compress -qm ${qm_file}.qm
+          COMMAND ${LRELEASE_LOCATION} ${ts_file}.ts -compress -qm ${qm_file}.qm
           OUTPUT_VARIABLE "lrelease_output")
+#  message(STATUS ${lrelease_output})
   file(APPEND "${CMAKE_CURRENT_SOURCE_DIR}/lrelease_output.txt" ${lrelease_output})
 endforeach()
 
-find_program(LUA_LOCATION lua5.1)
+find_program(LUA_LOCATION lua-5.1)
 if(NOT LUA_LOCATION)
-  find_program(LUA_LOCATION lua)
+  find_program(LUA_LOCATION lua5.1)
+  if(NOT LUA_LOCATION)
+    find_program(LUA_LOCATION lua51)
+    if(NOT LUA_LOCATION)
+      find_program(LUA_LOCATION lua)
+    endif()
+  endif()
 endif()
 
 execute_process(

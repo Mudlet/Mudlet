@@ -1,0 +1,114 @@
+name: Update autocompletion in Mudlet
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * fri'
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  update-autocompletion:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: leafo/gh-actions-lua@v13
+      with:
+        luaVersion: "5.1.5"
+    - uses: actions/setup-node@v7
+    - uses: leafo/gh-actions-luarocks@v6
+
+    - name: install Lua dependencies
+      run: |
+        luarocks install http
+        luarocks install lunajson
+
+    - name: update autocompletion data
+      id: update
+      run: |
+        set -o pipefail
+        lua CI/update-autocompletion.lua src/lua-function-list.json | tee update.log
+
+        duplicates=$(sed -n 's/^::warning:://p' update.log)
+        if [ -n "$duplicates" ]; then
+          {
+            echo "### :warning: Duplicate function headings in the wiki manual"
+            echo ""
+            echo "$duplicates" | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            echo "duplicates<<PRBODY"
+            echo "#### :warning: Duplicate function headings in the wiki manual"
+            echo "$duplicates" | sed 's/^/- /'
+            echo "PRBODY"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "duplicate_count=$(echo "$duplicates" | wc --lines)" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: sort autocompletion data
+      run: |
+          npm install jsonabc
+
+          cat > sort.js <<EOT
+            const fs = require('fs');
+            const jsonabc = require('jsonabc');
+            const data = fs.readFileSync('src/lua-function-list.json');
+            const parseddata = JSON.parse(data);
+            const sorted = jsonabc.sortObj(parseddata);
+            fs.writeFileSync('src/lua-function-list.json', JSON.stringify(sorted, null, '    ') + '\n');
+          EOT
+
+          node sort.js
+
+    - name: check if any autocompletion data was modified
+      id: getdiff
+      run: |
+        lines_changed=$(git diff --patch --unified=0 src/lua-function-list.json | wc --lines)
+        echo "$lines_changed lines changed."
+        echo "lines_changed=$lines_changed" >> "$GITHUB_OUTPUT"
+
+    - name: send in a pull request
+      uses: peter-evans/create-pull-request@v8
+      if: steps.getdiff.outputs.lines_changed > 0
+      with:
+        token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+        add-paths: src/
+        branch: update-autocompletion-data
+        commit-message: (autocommit) Updated autocompletion data
+        title: "Infrastructure: Update autocompletion data in Mudlet"
+        body: |
+          #### Brief overview of PR changes/additions
+          :crown: An automated PR to update autocompletion data in Mudlet from ${{ github.ref }} (${{ github.sha }}).
+          #### Motivation for adding to Mudlet
+          So autocompletion works as expected.
+          ${{ steps.update.outputs.duplicates }}
+        author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
+    # GitHub Actions cannot conclude a run as anything but success or failure, so raise the
+    # duplicates as a separate check run - 'neutral' is what shows up as a yellow warning
+    - name: flag duplicate functions in the manual
+      if: steps.update.outputs.duplicates != ''
+      uses: actions/github-script@v9
+      env:
+        DUPLICATE_COUNT: ${{ steps.update.outputs.duplicate_count }}
+        DUPLICATES: ${{ steps.update.outputs.duplicates }}
+      with:
+        script: |
+          await github.rest.checks.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            name: 'wiki manual duplicates',
+            head_sha: context.sha,
+            status: 'completed',
+            conclusion: 'neutral',
+            output: {
+              title: `${process.env.DUPLICATE_COUNT} duplicate function heading(s) in the wiki manual`,
+              summary: process.env.DUPLICATES,
+            },
+          });

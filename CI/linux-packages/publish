@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+# Turns built packages into signed apt and dnf repositories and uploads them.
+#
+#   publish sign DIR           sign every .rpm in DIR
+#   publish assemble DIR SITE  lay out DIR's packages as repositories in SITE
+#   publish upload SITE        mirror SITE to the R2 bucket, replacing its contents
+#
+# Signing uses the first secret key in the gpg keyring. assemble needs BASE_URL,
+# the address SITE is served from; upload needs R2_ACCOUNT_ID, R2_BUCKET,
+# AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+set -euo pipefail
+shopt -s nullglob globstar
+
+HERE="$(dirname "$(readlink -f "$0")")"
+
+signing_key() {
+  local key
+  key="$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')"
+  [[ -n "$key" ]] || { echo "no secret key in the gpg keyring" >&2; exit 1; }
+  printf '%s' "$key"
+}
+
+sign() {
+  local dir="$1" key rpm
+  key="$(signing_key)"
+  for rpm in "$dir"/*.rpm; do
+    # Debian's rpm looks for a gpg2 binary that no longer exists
+    rpmsign --addsign --define "__gpg $(command -v gpg)" --define "_gpg_name $key" "$rpm"
+  done
+}
+
+assemble_apt() {
+  local key="$1" suite arch archs deb listed
+  cd "$SITE/deb"
+  for suite in pool/*; do
+    suite="${suite#pool/}"
+    archs="$(for deb in "pool/$suite"/*.deb; do dpkg-deb -f "$deb" Architecture; done | sort -u | xargs)"
+    for arch in $archs; do
+      mkdir -p "dists/$suite/main/binary-$arch"
+      apt-ftparchive --arch "$arch" packages "pool/$suite" > "dists/$suite/main/binary-$arch/Packages"
+      # --arch picks packages by the _<arch>.deb in their filename, not their control file
+      listed="$(for deb in "pool/$suite"/*.deb; do dpkg-deb -f "$deb" Architecture; done | grep -cxE "$arch|all")"
+      if [[ "$(grep -c '^Package: ' "dists/$suite/main/binary-$arch/Packages")" -ne "$listed" ]]; then
+        echo "the $suite $arch index does not list every package in pool/$suite" >&2
+        exit 1
+      fi
+      gzip -9nk "dists/$suite/main/binary-$arch/Packages"
+    done
+    # written outside dists/ because apt-ftparchive would hash its own output
+    apt-ftparchive \
+      -o APT::FTPArchive::Release::Origin=Mudlet \
+      -o APT::FTPArchive::Release::Label=Mudlet \
+      -o APT::FTPArchive::Release::Suite="$suite" \
+      -o APT::FTPArchive::Release::Codename="$suite" \
+      -o APT::FTPArchive::Release::Architectures="$archs" \
+      -o APT::FTPArchive::Release::Components=main \
+      release "dists/$suite" > Release.tmp
+    mv Release.tmp "dists/$suite/Release"
+    gpg --batch --yes --local-user "$key" --clearsign --output "dists/$suite/InRelease" "dists/$suite/Release"
+    gpg --batch --yes --local-user "$key" --armor --detach-sign --output "dists/$suite/Release.gpg" "dists/$suite/Release"
+  done
+}
+
+assemble() {
+  local incoming="$1" key deb rpm version release dir rpmdb
+  SITE="$2"
+  : "${BASE_URL:?}"
+  local packages=("$incoming"/*.deb "$incoming"/*.rpm)
+  # an empty site would make upload delete every package from the bucket
+  [[ ${#packages[@]} -gt 0 ]] || { echo "no packages in $incoming" >&2; exit 1; }
+  key="$(signing_key)"
+  rm -rf "$SITE"
+  mkdir -p "$SITE"
+  SITE="$(readlink -f "$SITE")"
+
+  for deb in "$incoming"/*.deb; do
+    version="$(dpkg-deb -f "$deb" Version)"
+    [[ "$version" == *~* ]] || { echo "$deb has no ~codename in its version" >&2; exit 1; }
+    mkdir -p "$SITE/deb/pool/${version##*~}"
+    cp "$deb" "$SITE/deb/pool/${version##*~}/$(dpkg-deb -f "$deb" Package)_${version}_$(dpkg-deb -f "$deb" Architecture).deb"
+  done
+
+  rpmdb="$(mktemp -d)"
+  gpg --batch --armor --export "$key" > "$rpmdb/key.asc"
+  rpmkeys --dbpath "$rpmdb" --import "$rpmdb/key.asc"
+  for rpm in "$incoming"/*.rpm; do
+    if [[ "$(rpmkeys --dbpath "$rpmdb" --checksig "$rpm")" != *": digests signatures OK" ]]; then
+      echo "$rpm is not signed by $key - run: $0 sign $incoming" >&2
+      exit 1
+    fi
+    release="$(rpm -qp --qf '%{RELEASE}' "$rpm" 2>/dev/null)"
+    [[ "$release" =~ \.fc([0-9]+)$ ]] || { echo "$rpm is not a Fedora package" >&2; exit 1; }
+    dir="$SITE/rpm/fedora/${BASH_REMATCH[1]}/$(rpm -qp --qf '%{ARCH}' "$rpm" 2>/dev/null)"
+    mkdir -p "$dir"
+    cp "$rpm" "$dir/"
+  done
+  rm -rf "$rpmdb"
+
+  if [[ -d "$SITE/deb" ]]; then
+    (assemble_apt "$key")
+  fi
+
+  for dir in "$SITE"/rpm/fedora/*/*; do
+    createrepo_c --quiet "$dir"
+    gpg --batch --yes --local-user "$key" --armor --detach-sign --output "$dir/repodata/repomd.xml.asc" "$dir/repodata/repomd.xml"
+  done
+  if [[ -d "$SITE/rpm" ]]; then
+    cat > "$SITE/rpm/mudlet.repo" <<EOF
+[mudlet]
+name=Mudlet
+baseurl=${BASE_URL}/rpm/fedora/\$releasever/\$basearch/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=${BASE_URL}/mudlet.asc
+EOF
+  fi
+
+  gpg --batch --armor --export "$key" > "$SITE/mudlet.asc"
+  sed "s|@BASE_URL@|${BASE_URL}|g" "$HERE/install.sh.in" > "$SITE/install.sh"
+  write_indexes
+}
+
+# R2 lists no directories and serves no index documents, so each directory gets
+# a page and links name index.html explicitly
+write_indexes() {
+  local dir path entry name
+  for dir in "$SITE"/**/; do
+    path="${dir#"$SITE"}"
+    {
+      printf '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+      printf '<title>Mudlet packages %s</title>\n</head>\n<body>\n<h1>Mudlet packages %s</h1>\n' "$path" "$path"
+      if [[ "$path" == / ]]; then
+        printf '<p>Install with <code>curl -fsSL %s/install.sh | sudo sh</code></p>\n' "$BASE_URL"
+      fi
+      printf '<ul>\n'
+      if [[ "$path" != / ]]; then
+        printf '<li><a href="../index.html">../</a></li>\n'
+      fi
+      for entry in "$dir"*/; do
+        name="$(basename "$entry")"
+        printf '<li><a href="%s/index.html">%s/</a></li>\n' "$name" "$name"
+      done
+      for entry in "$dir"*; do
+        name="$(basename "$entry")"
+        [[ -f "$entry" && "$name" != index.html ]] || continue
+        printf '<li><a href="%s">%s</a> %s</li>\n' "$name" "$name" "$(numfmt --to=iec-i --suffix=B "$(stat -c %s "$entry")")"
+      done
+      printf '</ul>\n</body>\n</html>\n'
+    } > "${dir}index.html"
+  done
+}
+
+upload() {
+  local site="$1"
+  : "${R2_ACCOUNT_ID:?}" "${R2_BUCKET:?}" "${AWS_ACCESS_KEY_ID:?}" "${AWS_SECRET_ACCESS_KEY:?}"
+  # R2 rejects the checksum headers newer aws cli versions send by default
+  export AWS_DEFAULT_REGION=auto AWS_REQUEST_CHECKSUM_CALCULATION=when_required AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
+  local s3=(aws s3 --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" --only-show-errors)
+  local bucket="s3://${R2_BUCKET}"
+  local signed=(--include '*InRelease' --include '*Release' --include '*Release.gpg' --include '*repomd.xml' --include '*repomd.xml.asc')
+
+  # Each file lands before anything that names it, and nothing is deleted until
+  # the new signed indexes are live, so a client mid-update never hits a 404
+  "${s3[@]}" cp "$site" "$bucket" --recursive --exclude '*' --include '*.deb' --include '*.rpm'
+  "${s3[@]}" cp "$site" "$bucket" --recursive --exclude '*.deb' --exclude '*.rpm' \
+    --exclude '*InRelease' --exclude '*Release' --exclude '*Release.gpg' --exclude '*repomd.xml' --exclude '*repomd.xml.asc' \
+    --cache-control no-cache
+  "${s3[@]}" cp "$site" "$bucket" --recursive --exclude '*' "${signed[@]}" --cache-control no-cache
+  "${s3[@]}" sync "$site" "$bucket" --delete
+}
+
+case "${1:-}" in
+  sign) sign "${2:?package directory}" ;;
+  assemble) assemble "${2:?package directory}" "${3:?site directory}" ;;
+  upload) upload "${2:?site directory}" ;;
+  *) sed -n '2,11p' "$0" | sed 's/^# \?//' >&2; exit 2 ;;
+esac

@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-emptyname/]]
+author = [[Mudlet test suite]]
+title = [[Fixture whose config.lua asks for a name that trims away to nothing]]
+version = [[1.0]]
+description = [[A trailing slash leaves nothing behind once the name is trimmed of what a package file is called, so there is no name to install under and no name to file the details beneath.]]

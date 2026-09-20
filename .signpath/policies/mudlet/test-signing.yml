@@ -1,0 +1,12 @@
+# SignPath Policy for Test Signing
+# This policy is used with the self-signed test certificate during setup verification
+#
+# Policy enforcements:
+# - Artifacts must be built by GitHub Actions workflows
+# - Build must originate from the Mudlet/Mudlet repository
+# - Only GitHub-hosted runners are allowed (for open source verification)
+
+github-policies:
+  runners:
+    allowed_groups:
+      - 'GitHub Actions'
