@@ -40,6 +40,9 @@
 
 #include <QLineEdit>
 #include <QListWidget>
+#include <chrono>
+#include <filesystem>
+#include <system_error>
 
 #include "GroupedTest.h"
 
@@ -73,6 +76,27 @@ private:
     bool makeProfileFolder(const QString& name) const { return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, name)); }
     bool makeSavedGame(const QString& name) const { return QDir().mkpath(MudletPaths::getMudletPath(enums::profileXmlFilesPath, name)); }
     bool removeProfile(const QString& name) const { return QDir(MudletPaths::getMudletPath(enums::profileHomePath, name)).removeRecursively(); }
+
+    // fillout_form() dates a save by the modification time of the profile's
+    // current/ folder, and two folders made one after the other can carry the
+    // same time - QFileInfo reads no finer than a millisecond, and a
+    // filesystem's own clock can be coarser still - so a case that needs one
+    // save to be older than another dates them itself rather than waiting and
+    // hoping they land apart. Qt can only set the time of a file it has open
+    // and a directory cannot be opened, hence the standard library here
+    bool dateSaveHoursAgo(const QString& name, const int hours) const
+    {
+        // cleanPath() drops the trailing separator getMudletPath() leaves on
+        // a directory, which not every platform takes when opening one
+        const std::filesystem::path save(QDir::cleanPath(MudletPaths::getMudletPath(enums::profileXmlFilesPath, name)).toStdU16String());
+        std::error_code error;
+        const auto written = std::filesystem::last_write_time(save, error);
+        if (error) {
+            return false;
+        }
+        std::filesystem::last_write_time(save, written - std::chrono::hours(hours), error);
+        return !error;
+    }
 
     void showGamesTab(const int tab) const { mudlet::self()->mpSettings->setValue(qsl("connectionDialogActiveTab"), tab); }
 
@@ -167,8 +191,9 @@ private slots:
     void test_theMostRecentlySavedProfileIsStillPicked()
     {
         QVERIFY(makeSavedGame(mOlderSavedProfile));
-        QTest::qWait(50);
         QVERIFY(makeSavedGame(mNewerSavedProfile));
+        QVERIFY(dateSaveHoursAgo(mOlderSavedProfile, 2));
+        QVERIFY(dateSaveHoursAgo(mNewerSavedProfile, 1));
         const auto olderSave = QFileInfo(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mOlderSavedProfile)).lastModified();
         const auto newerSave = QFileInfo(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mNewerSavedProfile)).lastModified();
         QVERIFY2(newerSave > olderSave, "The two saved games cannot be told apart by date, so this case would prove nothing");
