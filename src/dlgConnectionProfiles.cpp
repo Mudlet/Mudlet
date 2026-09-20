@@ -2681,11 +2681,6 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     if (!hasCustomIcon(mudServer)) {
         const QPixmap pixmap(iconFileName);
         if (pixmap.isNull()) {
-            // The "Mudlet self-test" entry carries no artwork on purpose, so it
-            // arrives here and keeps its blank row: listed and selectable, but
-            // not shown to players. Leave it that way - standing a generated
-            // name plate in for missing artwork would reveal it to everybody.
-            // See https://github.com/Mudlet/Mudlet/issues/6443
             qWarning() << mudServer << "doesn't have a valid icon";
             return;
         }
