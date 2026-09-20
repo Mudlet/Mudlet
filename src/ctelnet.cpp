@@ -3389,9 +3389,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         // to network issues or bugs, while not affecting legitimate
                         // password prompts later in the session (e.g., admin commands).
                         // Skip this if the user has disabled password masking entirely.
-                        constexpr auto LOGIN_PHASE_MS = 5min;
-                        constexpr auto PASSWORD_TIMEOUT_MS = 60s;
-                        if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
+                        // Compared as durations rather than through .count(): elapsed() answers in
+                        // milliseconds while 5min.count() is 5, so the original test was
+                        // `elapsed_ms < 5` - a five-millisecond login phase that no real connect,
+                        // banner and WILL ECHO fits inside, leaving this timer never armed and the
+                        // recovery below it unreachable. durationElapsed() makes the units the
+                        // compiler's problem instead of the reader's.
+                        constexpr auto loginPhase = 5min;
+                        constexpr auto passwordTimeout = 60s;
+                        if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.durationElapsed() < loginPhase) {
                             if (!mTimerPasswordModeTimeout) {
                                 mTimerPasswordModeTimeout = new QTimer(this);
                                 mTimerPasswordModeTimeout->setSingleShot(true);
@@ -3402,7 +3408,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                     }
                                 });
                             }
-                            mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
+                            mTimerPasswordModeTimeout->start(passwordTimeout);
                         }
                     }
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {

@@ -246,6 +246,33 @@ private slots:
     // the official names, the unofficial ones, and the UNKNOWN fallback for the
     // numbers with no name. heAnnouncedState is set before any option-specific
     // handling, so an option Mudlet refuses is reported just the same.
+    // The password-mode timeout is the only recovery when a server takes ECHO and
+    // never releases it: masking otherwise stays on for the rest of the connection.
+    // It is armed only inside the login phase, and that window was written as
+    // `elapsed() < 5min.count()` - elapsed() answers in milliseconds while
+    // 5min.count() is 5, so the window was five milliseconds and the timer never
+    // armed at all. Nothing observed it arming, so nothing failed.
+    void test_thePasswordModeTimeoutArmsAcrossTheLoginPhase()
+    {
+        QVERIFY(mpHost);
+        // Past the five milliseconds the broken comparison allowed, far inside the
+        // five minutes it meant. Without this the test sits in the buggy window too
+        // and passes either way.
+        QTest::qWait(50);
+
+        QVERIFY2(!mpHost->mTelnet.mTimerPasswordModeTimeout || !mpHost->mTelnet.mTimerPasswordModeTimeout->isActive(), "the password-mode timeout was already running before any password prompt");
+
+        announce(TN_WILL, OPT_ECHO);
+        QVERIFY2(mpHost->isRemoteEchoingActive(), "the server's WILL ECHO was refused, so this case cannot say anything about the timer");
+        QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout, "no password-mode timeout was created for the prompt");
+        QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout->isActive(), "the password-mode timeout did not arm, so a server that never sends WONT ECHO would leave masking stuck for the connection");
+
+        // Released here rather than in a cleanup hook: the suppression is per-Host
+        // and this class shares one across its cases.
+        announce(TN_WONT, OPT_ECHO);
+        QVERIFY2(!mpHost->isRemoteEchoingActive(), "echo suppression outlived the prompt");
+    }
+
     void test_everyAnnouncedOptionIsNamedInTheReport()
     {
         QVERIFY(mpHost);

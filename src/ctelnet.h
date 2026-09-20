@@ -363,6 +363,9 @@ private:
     // mDecompressionRecursionDepth so the over-limit refusal can be reached
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
+    // Reads mTimerPasswordModeTimeout: whether that timer arms is the only
+    // observable difference the login-phase window makes, and nothing else exposes it.
+    friend class TelnetOptionsReportTest;
 
     // Calls reset() from its constructor. It has to be the Host that does that,
     // and not cTelnet itself, because reset() clears Host members declared after
