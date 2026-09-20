@@ -63,6 +63,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     NotepadTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
+    DetachedWindowToolBarVisibilityTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp

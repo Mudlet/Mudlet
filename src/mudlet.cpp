@@ -4938,8 +4938,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (!isVisible && mMenuBarVisibility == enums::visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
-        const int hostCount = mHostManager.getHostCount();
-        if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
+        if (toolBarShouldBeVisible()) {
             mpMainToolBar->show();
         }
     }
@@ -4974,13 +4973,30 @@ void mudlet::slot_toolbarToggleActionTriggered(bool checked)
     synchronizeToolBarVisibility(checked);
 }
 
-void mudlet::adjustToolBarVisibility()
+bool mudlet::toolBarShouldBeVisible()
 {
     const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
-        mpMainToolBar->show();
-    } else {
-        mpMainToolBar->hide();
+    return (hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally));
+}
+
+void mudlet::adjustToolBarVisibility()
+{
+    const bool toolBarVisible = toolBarShouldBeVisible();
+    mpMainToolBar->setVisible(toolBarVisible);
+
+    // A detached window is handed the toolbar state once, in its constructor,
+    // and otherwise only hears the toolbar's own toggle through
+    // synchronizeToolBarVisibility(). Without this the settings path stops at
+    // the main window and a window detached before the setting changed keeps
+    // the state it was built with until it is reattached and detached again.
+    // Detached windows deliberately mirror the main window here, including a
+    // hide that synchronizeToolBarVisibility() would refuse under
+    // canHideToolBar(): a detached window always keeps its own menu bar, and
+    // letting it disagree with the main window is the very fault this fixes.
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->setToolBarVisibility(toolBarVisible);
+        }
     }
 }
 
@@ -7060,12 +7076,9 @@ void mudlet::synchronizeToolBarVisibility(bool visible)
         }
     }
 
-    // Update all detached windows
-    for (auto& detachedWindow : mDetachedWindows) {
-        if (detachedWindow) {
-            detachedWindow->setToolBarVisibility(visible);
-        }
-    }
+    // The detached windows are not updated here: setToolBarVisibility() above
+    // resolves to exactly this state and adjustToolBarVisibility() pushes it to
+    // every one of them
 }
 
 void mudlet::slot_showTabContextMenu(const QPoint& position)
