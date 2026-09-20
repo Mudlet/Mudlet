@@ -1592,41 +1592,6 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 {
     data.remove(QChar::LineFeed);
 
-    // A masked line is on its way to the game, so the server now owes a WONT ECHO.
-    // This timeout is the only thing that lifts the mask if that never arrives: a
-    // server that takes ECHO and forgets to release it would otherwise leave the
-    // command line masked for the rest of the connection, and with it every guard
-    // that reads the same echo state.
-    //
-    // Armed on submission rather than when WILL ECHO arrived, because an unanswered
-    // prompt is not a failure to recover from. Expiring under a player who is still
-    // fetching their password would unmask the command line before they type it -
-    // showing the password on screen, and handing it to the sysDataSendRequest
-    // handlers that Host::maskedPasswordPromptActive() would no longer withhold it
-    // from. Still only inside the login phase, so a legitimate prompt later in the
-    // session (an admin command, say) is left alone.
-    //
-    // The window is compared as a duration rather than through .count(): elapsed()
-    // answers in milliseconds while 5min.count() is 5, so written that way the test
-    // is `elapsed_ms < 5` - a five-millisecond login phase that no real connect,
-    // banner and password entry fits inside, leaving the timer never armed and this
-    // recovery unreachable. durationElapsed() makes the units the compiler's problem
-    // instead of the reader's.
-    if (mpHost->isRemoteEchoingActive() && !mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.durationElapsed() < 5min) {
-        constexpr auto passwordTimeout = 60s;
-        if (!mTimerPasswordModeTimeout) {
-            mTimerPasswordModeTimeout = new QTimer(this);
-            mTimerPasswordModeTimeout->setSingleShot(true);
-            connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
-                if (mpHost && mpHost->isRemoteEchoingActive()) {
-                    qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
-                    mpHost->setRemoteEchoingActive(false);
-                }
-            });
-        }
-        mTimerPasswordModeTimeout->start(passwordTimeout);
-    }
-
     if (Q_LIKELY(permitDataSendRequestEvent)) {
         TEvent event{};
         event.mArgumentList.append(qsl("sysDataSendRequest"));
@@ -1699,6 +1664,29 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // server's WONT ECHO cancels it first.
         const bool armCharacterModeDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
 
+        // A masked line is about to go to the game, after which the server owes a
+        // WONT ECHO. The timeout below is the only thing that lifts the mask if that
+        // never arrives: a server that takes ECHO and forgets to release it would
+        // otherwise leave the command line masked for the rest of the connection, and
+        // with it every guard that reads the same echo state.
+        //
+        // Armed on submission rather than when WILL ECHO arrived, because an
+        // unanswered prompt is not a failure to recover from. Expiring under a player
+        // who is still fetching their password would unmask the command line before
+        // they type it - showing the password on screen, and handing it to the
+        // sysDataSendRequest handlers that Host::maskedPasswordPromptActive() would no
+        // longer withhold it from. Still only inside the login phase, so a legitimate
+        // prompt later in the session (an admin command, say) is left alone.
+        //
+        // The window is compared as a duration rather than through .count(): elapsed()
+        // answers in milliseconds while 5min.count() is 5, so written that way the test
+        // is `elapsed_ms < 5` - a five-millisecond login phase that no real connect,
+        // banner and password entry fits inside, leaving the timer never armed and this
+        // recovery unreachable. durationElapsed() makes the units the compiler's
+        // problem instead of the reader's.
+        constexpr auto loginPhase = 5min;
+        const bool armPasswordModeTimeout = mpHost->isRemoteEchoingActive() && !mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.durationElapsed() < loginPhase;
+
         const bool sent = socketOutRaw(outData);
 
         if (sent && armCharacterModeDetection) {
@@ -1710,6 +1698,27 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
                 });
             }
             mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT);
+        }
+
+        // Gated on `sent` for the same reason as the timer above: a line the socket
+        // never took is a line the server never saw, so it owes no WONT ECHO and
+        // there is nothing for this timeout to recover from. Arming it anyway would
+        // lift the mask under a player whose send was merely blocked - by
+        // denyCurrentSend() from a sysDataSendRequest handler, say - or dropped by a
+        // failed write.
+        if (sent && armPasswordModeTimeout) {
+            constexpr auto passwordTimeout = 60s;
+            if (!mTimerPasswordModeTimeout) {
+                mTimerPasswordModeTimeout = new QTimer(this);
+                mTimerPasswordModeTimeout->setSingleShot(true);
+                connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
+                    if (mpHost && mpHost->isRemoteEchoingActive()) {
+                        qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
+                        mpHost->setRemoteEchoingActive(false);
+                    }
+                });
+            }
+            mTimerPasswordModeTimeout->start(passwordTimeout);
         }
 
         return sent;

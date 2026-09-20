@@ -150,6 +150,19 @@ private:
         mpHost->mTelnet.loopbackTest(data);
     }
 
+    // mEchoAnomalyDetected latches for the rest of the connection once enough ECHO
+    // toggles land inside the anomaly window, and every case here toggles ECHO
+    // within milliseconds of the last - so without this the later cases have their
+    // WILL ECHO refused and assert nothing about what they meant to cover. Clearing
+    // it keeps them independent of each other's order. That the latch has no
+    // in-session reset is the second defect recorded in #10969.
+    void resetEchoAnomalyDetection()
+    {
+        mpHost->mTelnet.mEchoAnomalyDetected = false;
+        mpHost->mTelnet.mEchoToggleCount = 0;
+        mpHost->mTelnet.mEchoToggleTimer.invalidate();
+    }
+
 private slots:
     void initTestCase()
     {
@@ -258,6 +271,7 @@ private slots:
     void test_anUnansweredPasswordPromptKeepsItsMask()
     {
         QVERIFY(mpHost);
+        resetEchoAnomalyDetection();
         // Past the five milliseconds the broken comparison allowed, far inside the
         // five minutes it meant. Without this the test sits in the buggy window too
         // and passes either way.
@@ -281,6 +295,7 @@ private slots:
     void test_thePasswordModeTimeoutArmsWhenAMaskedLineIsSent()
     {
         QVERIFY(mpHost);
+        resetEchoAnomalyDetection();
         QTest::qWait(50);
 
         announce(TN_WILL, OPT_ECHO);
@@ -291,6 +306,66 @@ private slots:
 
         QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout, "no password-mode timeout was created when the password was sent");
         QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout->isActive(), "the password-mode timeout did not arm, so a server that never sends WONT ECHO would leave masking stuck for the connection");
+
+        announce(TN_WONT, OPT_ECHO);
+        QVERIFY2(!mpHost->isRemoteEchoingActive(), "echo suppression outlived the prompt");
+    }
+
+    // A line the socket never took is a line the server never saw, so it owes no
+    // WONT ECHO and there is nothing for the timeout to recover from. Arming it
+    // anyway would lift the mask under a player whose password never left the
+    // client - the same disclosure the arm point was moved to avoid, through a
+    // different door. Both ways a send can come to nothing are covered here.
+    //
+    // First: blocked before the socket. This is what denyCurrentSend() does, so a
+    // sysDataSendRequest handler can block the very line the timer is about.
+    void test_aBlockedSendDoesNotArmThePasswordModeTimeout()
+    {
+        QVERIFY(mpHost);
+        resetEchoAnomalyDetection();
+        QTest::qWait(50);
+
+        announce(TN_WILL, OPT_ECHO);
+        QVERIFY2(mpHost->isRemoteEchoingActive(), "the server's WILL ECHO was refused, so this case cannot say anything about the timer");
+
+        // sendData() restores this before returning, so it needs no undoing.
+        mpHost->mAllowToSendCommand = false;
+        QString password = qsl("hunter2");
+        QVERIFY2(!mpHost->mTelnet.sendData(password, false, true), "the blocked send reported success");
+
+        QVERIFY2(!mpHost->mTelnet.mTimerPasswordModeTimeout || !mpHost->mTelnet.mTimerPasswordModeTimeout->isActive(),
+                 "a send that was blocked before the socket armed the password-mode timeout, so the mask would be lifted although no password was sent");
+        QVERIFY2(mpHost->isRemoteEchoingActive(), "the blocked send cleared echo suppression by itself");
+
+        announce(TN_WONT, OPT_ECHO);
+        QVERIFY2(!mpHost->isRemoteEchoingActive(), "echo suppression outlived the prompt");
+    }
+
+    // Second: reached the socket and the write failed. socketOutRaw() answers false
+    // on a socket it cannot use, which a null mpSocket reproduces exactly - and
+    // without disconnecting the real one, whose teardown would reset the Host state
+    // these assertions read. Restored immediately, so the shared connection this
+    // class depends on survives the case.
+    void test_aFailedSocketWriteDoesNotArmThePasswordModeTimeout()
+    {
+        QVERIFY(mpHost);
+        resetEchoAnomalyDetection();
+        QTest::qWait(50);
+
+        announce(TN_WILL, OPT_ECHO);
+        QVERIFY2(mpHost->isRemoteEchoingActive(), "the server's WILL ECHO was refused, so this case cannot say anything about the timer");
+
+        auto* const pSavedSocket = mpHost->mTelnet.mpSocket;
+        QVERIFY2(pSavedSocket, "the profile had no socket, so this case cannot make a write fail");
+        mpHost->mTelnet.mpSocket = nullptr;
+        QString password = qsl("hunter2");
+        const bool sent = mpHost->mTelnet.sendData(password, false, true);
+        mpHost->mTelnet.mpSocket = pSavedSocket;
+
+        QVERIFY2(!sent, "the failed write reported success");
+        QVERIFY2(!mpHost->mTelnet.mTimerPasswordModeTimeout || !mpHost->mTelnet.mTimerPasswordModeTimeout->isActive(),
+                 "a send the socket refused armed the password-mode timeout, so the mask would be lifted although no password reached the game");
+        QVERIFY2(mpHost->isRemoteEchoingActive(), "the failed write cleared echo suppression by itself");
 
         announce(TN_WONT, OPT_ECHO);
         QVERIFY2(!mpHost->isRemoteEchoingActive(), "echo suppression outlived the prompt");
