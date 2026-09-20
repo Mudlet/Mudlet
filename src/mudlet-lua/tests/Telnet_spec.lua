@@ -1660,12 +1660,19 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
     assert.is_true(table.contains(seen, "specOrdinaryCommandBeforeThePrompt"),
                    "an ordinary command should still raise sysDataSendRequest")
 
-    serverEcho(true)
     -- Without this a refused negotiation would fail the assertion below with a
     -- message blaming the guard, when the real cause was that no prompt opened.
-    -- Clearing the line is the only Lua-visible consequence of echo suppression
-    -- (there is no getter for it), and is what CommandLine_spec.lua keys off too.
+    -- There is no getter for echo suppression, so this keys off the one thing it
+    -- does that Lua can see, exactly as CommandLine_spec.lua does: the text on the
+    -- line when the prompt opens is put aside. It has to be selected first. An
+    -- unselected line that does not match the history is read as password
+    -- characters the player had already started typing and is deliberately left in
+    -- place, so the probe would sit there and the assertion would blame the guard
+    -- for it. Masking itself is painted over the document rather than applied to
+    -- it, so text printed after this point stays readable and cannot be probed.
     printCmdLine("main", "specPromptEngagedProbe")
+    selectCmdLineText("main")
+    serverEcho(true)
     assert.are.equal("", getCmdLine("main"), "echo suppression did not engage, so this case proves nothing")
 
     send("specPasswordAtThePrompt", false)
@@ -1693,10 +1700,19 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
   -- the script of every alias whose pattern matches.
   it("does not hand the password to an alias or to the command global", function()
     local aliasSaw = {}
+    local commandSaw = {}
     -- Matches only the sentinel, so it cannot swallow anything else a spec sends.
     -- A matching alias makes Host::send skip sendData entirely.
+    --
+    -- `command` is read here, inside the pass, rather than after expandAlias()
+    -- returns. expandAlias() parks the caller's `command` and puts it back when the
+    -- pass ends, so that a script calling it does not resume holding the nested
+    -- command - which means the value the pass set is gone by the time it returns,
+    -- and an assertion made out here would be reading the parked value whether the
+    -- guard held or not.
     local aliasId = tempAlias("^specAliasSentinel", function()
       aliasSaw[#aliasSaw + 1] = matches[1]
+      commandSaw[#commandSaw + 1] = command
     end)
     finally(function() killAlias(aliasId) end)
 
@@ -1704,18 +1720,23 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
     -- below cannot come from the alias never having matched anything.
     expandAlias("specAliasSentinelBeforeThePrompt", false)
     assert.are.equal(1, #aliasSaw, "the alias did not fire outside a password prompt, so this case proves nothing")
-    assert.are.equal("specAliasSentinelBeforeThePrompt", command,
+    assert.are.equal("specAliasSentinelBeforeThePrompt", commandSaw[1],
                      "the alias pass did not set the command global outside a password prompt")
 
-    serverEcho(true)
+    -- Same probe as the case above, and selected for the same reason.
     printCmdLine("main", "specPromptEngagedProbe")
+    selectCmdLineText("main")
+    serverEcho(true)
     assert.are.equal("", getCmdLine("main"), "echo suppression did not engage, so this case proves nothing")
 
     expandAlias("specAliasSentinelAtThePrompt", false)
     serverEcho(false)
 
-    assert.are.equal(1, #aliasSaw, "the password typed at the game's prompt was matched by an alias")
-    assert.are_not.equal("specAliasSentinelAtThePrompt", command,
-                         "the password typed at the game's prompt was left in the Lua global `command`")
+    -- One assertion rather than two: the guard skips the whole alias pass, so the
+    -- script not running and `command` not being set are one event seen from Lua.
+    -- Nothing observes `command` without an alias having matched it first, which
+    -- is why the control above is where the `command` half is pinned.
+    assert.are.equal(1, #aliasSaw,
+                     "the password typed at the game's prompt was matched by an alias, and the Lua global `command` held it")
   end)
 end)
