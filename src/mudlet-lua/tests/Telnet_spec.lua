@@ -1683,4 +1683,39 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
     assert.is_true(table.contains(seen, "specOrdinaryCommandAfterThePrompt"),
                    "sysDataSendRequest stopped firing after the password prompt ended")
   end)
+
+  -- The case above drives send(), which is sendRaw and passes dontExpandAliases
+  -- true, so it never reaches the alias pass and would stay green if the
+  -- Host::send() guard were removed. expandAlias() is the Lua way in: it calls
+  -- Host::send(..., false), the same third argument the command line uses, so the
+  -- alias pass really runs. That pass is the worse of the two leaks - it writes
+  -- what it is given to the global `command` before matching anything, and runs
+  -- the script of every alias whose pattern matches.
+  it("does not hand the password to an alias or to the command global", function()
+    local aliasSaw = {}
+    -- Matches only the sentinel, so it cannot swallow anything else a spec sends.
+    -- A matching alias makes Host::send skip sendData entirely.
+    local aliasId = tempAlias("^specAliasSentinel", function()
+      aliasSaw[#aliasSaw + 1] = matches[1]
+    end)
+    finally(function() killAlias(aliasId) end)
+
+    -- The control: outside a prompt the alias pass runs and sees it, so a pass
+    -- below cannot come from the alias never having matched anything.
+    expandAlias("specAliasSentinelBeforeThePrompt", false)
+    assert.are.equal(1, #aliasSaw, "the alias did not fire outside a password prompt, so this case proves nothing")
+    assert.are.equal("specAliasSentinelBeforeThePrompt", command,
+                     "the alias pass did not set the command global outside a password prompt")
+
+    serverEcho(true)
+    printCmdLine("main", "specPromptEngagedProbe")
+    assert.are.equal("", getCmdLine("main"), "echo suppression did not engage, so this case proves nothing")
+
+    expandAlias("specAliasSentinelAtThePrompt", false)
+    serverEcho(false)
+
+    assert.are.equal(1, #aliasSaw, "the password typed at the game's prompt was matched by an alias")
+    assert.are_not.equal("specAliasSentinelAtThePrompt", command,
+                         "the password typed at the game's prompt was left in the Lua global `command`")
+  end)
 end)
