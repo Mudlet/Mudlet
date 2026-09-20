@@ -37,6 +37,7 @@
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletPaths.h"
+#include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TDetachedWindow.h"
@@ -44,13 +45,19 @@
 #include "TEvent.h"
 #include "TFeatureCallout.h"
 #include "TKey.h"
+#include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TUiTour.h"
+#include "VoskRecognizer.h"
 #include "XMLimport.h"
+
+#if defined(Q_OS_MACOS)
+#include "AppleSpeechRecognizer.h"
+#endif
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgMapper.h"
@@ -93,6 +100,7 @@
 #include <QSplitter>
 #include <QSslConfiguration>
 #include <QStyleFactory>
+#include <QSvgRenderer>
 #include <QStyleHints>
 #include <QTableWidget>
 #include <QTextBoundaryFinder>
@@ -157,8 +165,49 @@ SpeechRecognizer* mudlet::speechRecognizer() const
 
 void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
 {
-    Host* pHost = getActiveHost();
+    // The owner outranks the active profile: with the microphone held, every
+    // result, state change and fault belongs to the session that is running,
+    // whatever the player has since tabbed to. Only with nobody listening does
+    // "the profile in front" become the right answer - that is where a refusal
+    // from stt.init() goes. Capability changes are not here at all: they
+    // describe the engine rather than a session, so announceSpeechCapabilities-
+    // IfChanged() raises them on every profile.
+    //
+    // With one exception, and it is worth exactly one sentence. An engine that
+    // ends a session says so in two steps - the state first, so that a handler
+    // is never told the microphone is still open, and then what became of the
+    // phrase that was in flight - and the release rides on the first of them.
+    // The second step is the one that says the words are lost, and it belongs
+    // to the profile that spoke them rather than to whoever is in front now. So
+    // the state handler leaves that profile behind for the next event and this
+    // spends it, once: a release with no session ending behind it - the
+    // ordinary stop - leaves nothing here, and routing goes straight back to
+    // the profile in front.
+    Host* pHost = mpMicrophoneOwner.data();
+    if (!pHost && mpMicrophoneOwnerEnding) {
+        pHost = mpMicrophoneOwnerEnding.data();
+        mpMicrophoneOwnerEnding = nullptr;
+    }
     if (!pHost) {
+        pHost = getActiveHost();
+    }
+    raiseSpeechEventOn(pHost, name, value);
+}
+
+void mudlet::raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value)
+{
+    if (!pHost) {
+        // A fault landing as the last profile closes has nowhere to be raised,
+        // and dropping it silently leaves no trace of it anywhere. Only the
+        // error path is logged: the result and state events are ordinary
+        // traffic, and warning on every one of those would bury this.
+        if (name == qsl("sysSTTError")) {
+            qWarning().noquote() << "speech recognition error with no active profile to report it to:" << value;
+        }
+        return;
+    }
+    const bool error = (name == qsl("sysSTTError"));
+    if (error && mSpeechErrorsBeingDelivered > 0) {
         return;
     }
     TEvent event{};
@@ -166,53 +215,165 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(value);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    if (error) {
+        ++mSpeechErrorsBeingDelivered;
+    }
     pHost->raiseEvent(event);
+    if (error) {
+        --mSpeechErrorsBeingDelivered;
+    }
 }
 
-void mudlet::initSpeechRecognition()
+Host* mudlet::microphoneOwner() const
+{
+    return mpMicrophoneOwner;
+}
+
+bool mudlet::claimMicrophoneFor(Host* pHost)
+{
+    if (!pHost) {
+        return false;
+    }
+    if (mpMicrophoneOwner == pHost) {
+        return true;
+    }
+
+    // A phrase still being decoded is owed to the profile that spoke it, and
+    // the claim is what routes it there - so the microphone cannot change hands
+    // until that has landed. Taking it here would orphan the phrase: the owner
+    // would move, the result would arrive for a profile that never said it, and
+    // the one that did would be left with a session that simply stopped.
+    //
+    // Refused rather than waited for, because a decode can outlive the call. It
+    // is the same answer docs/stt-api.md already gives a stop-then-start on a
+    // backend that finalises asynchronously - try again in a moment - and the
+    // caller passes that on rather than a session of somebody else's being
+    // destroyed for a start that was going to be refused anyway.
+    if (mpSpeechRecognizer && mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing) {
+        return false;
+    }
+
+
+    // Told before the microphone moves, and through the old owner by name
+    // rather than through raiseSpeechEvent(): a moment later the owner is the
+    // profile that asked for it, and the notice would arrive at the game that is
+    // about to start listening instead of the one that just stopped.
+    Host* pLosing = mpMicrophoneOwner;
+    if (pLosing) {
+        raiseSpeechEventOn(pLosing, qsl("sysSTTHandover"), pHost->getName());
+        // Ended rather than merely renamed. One decoder means the audio the old
+        // profile was collecting cannot be kept while the new one records over
+        // it, and leaving it running would route the rest of a half-spoken
+        // phrase to a game that never asked for it. The stop happens while the
+        // old owner still holds the claim, so the state changes it raises are
+        // its news too - and the release that triggers is why the assignment
+        // below comes last.
+        if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting())) {
+            mpSpeechRecognizer->stopListening();
+        }
+    }
+
+    mpMicrophoneOwner = pHost;
+    refreshMicrophoneMarkers();
+    return true;
+}
+
+void mudlet::releaseMicrophone()
+{
+    if (!mpMicrophoneOwner) {
+        return;
+    }
+    mpMicrophoneOwner = nullptr;
+    refreshMicrophoneMarkers();
+}
+
+// Which Backend enum value corresponds to a live recognizer's concrete type.
+// Not kept as a member: the object's own type already says which backend
+// built it, so a second, parallel note of the same fact could only drift from
+// it. Returns Auto for a null recognizer or a type this does not recognise,
+// which initSpeechRecognition() below treats as "nothing to compare against".
+static SpeechRecognizerFactory::Backend currentSpeechBackend(SpeechRecognizer* pRecognizer)
+{
+    if (qobject_cast<SherpaRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Sherpa;
+    }
+    if (qobject_cast<VoskRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Vosk;
+    }
+#if defined(Q_OS_MACOS)
+    if (qobject_cast<AppleSpeechRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Platform;
+    }
+#endif
+    return SpeechRecognizerFactory::Backend::Auto;
+}
+
+void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
 {
     if (mpSpeechRecognizer) {
+        // Auto and "the backend already built" both keep what is there:
+        // stt.start() and the other Lua setters pass Auto or an on-demand
+        // choice on every call, and rebuilding on every one of those would
+        // tear down a working recognizer under a caller who never asked to
+        // switch engines.
+        if (backend == SpeechRecognizerFactory::Backend::Auto || backend == currentSpeechBackend(mpSpeechRecognizer)) {
+            return;
+        }
+    }
+
+    // Build the replacement before touching what is already working. The
+    // backend is derived from the model directory's layout, so a mistyped path
+    // on a machine with only one engine installed resolves to the other one and
+    // create() answers nullptr - and tearing down first would have cost the
+    // caller their loaded model to answer a call that could not be honoured.
+    SpeechRecognizer* pReplacement = SpeechRecognizerFactory::create(backend, this);
+    if (!pReplacement) {
         return;
     }
 
-    mpSpeechRecognizer = SpeechRecognizerFactory::create(SpeechRecognizerFactory::Backend::Auto, this);
-    if (!mpSpeechRecognizer) {
-        return;
-    }
-
+    // Everything about the replacement is established - wired up, then
+    // published - before the old engine is touched. Retiring it first raised
+    // sysSTTStateChanged from its releaseResources() while mpSpeechRecognizer
+    // still pointed at it, so a Lua handler calling stt.init() from that event
+    // built and initialised an engine the outer frame then threw away: three
+    // consecutive statements acting on three different objects. A re-entrant
+    // caller now finds the new engine already in place and fully connected.
     // Bridge glue only: recognizer signals surface as Lua events on the active
     // profile. Text routing, UI state and policy all belong to the packages
     // consuming these events, not to the core.
-    connect(mpSpeechRecognizer, &SpeechRecognizer::partialResult, this, [this](const QString& text) {
+    connect(pReplacement, &SpeechRecognizer::partialResult, this, [this](const QString& text) {
         raiseSpeechEvent(qsl("sysSTTPartialResult"), text);
     });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::finalResult, this, [this](const QString& text) {
+    connect(pReplacement, &SpeechRecognizer::finalResult, this, [this](const QString& text) {
+        // Counted while it is delivered, so that a handler closing the engine on
+        // the strength of this very phrase is not told the phrase was lost -
+        // see sttClose(). Counted rather than flagged: a handler is free to
+        // finalise another one from inside this one.
+        ++mSpeechResultsBeingDelivered;
         raiseSpeechEvent(qsl("sysSTTResult"), text);
+        --mSpeechResultsBeingDelivered;
     });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::errorOccurred, this, [this](const QString& message) {
+    connect(pReplacement, &SpeechRecognizer::errorOccurred, this, [this](const QString& message) {
         raiseSpeechEvent(qsl("sysSTTError"), message);
     });
     // Word-level detail travels as one JSON string argument: table arguments
     // need per-Host Lua registry bookkeeping this glue should not own, and a
     // string is the one type every client's event system carries
-    connect(mpSpeechRecognizer, &SpeechRecognizer::wordsResult, this, [this](const QVariantList& words) {
+    connect(pReplacement, &SpeechRecognizer::wordsResult, this, [this](const QVariantList& words) {
         QJsonArray array;
         for (const QVariant& word : words) {
             array.append(QJsonObject::fromVariantMap(word.toMap()));
         }
         raiseSpeechEvent(qsl("sysSTTWords"), QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact)));
     });
-    // Documented as re-readable rather than cached, so the change has to reach
-    // a consumer that did read it once - which is the obvious thing to do
-    connect(mpSpeechRecognizer, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities newCapabilities) {
-        QJsonObject capabilities;
-        capabilities.insert(qsl("biasing"), newCapabilities.biasing);
-        capabilities.insert(qsl("grammar"), newCapabilities.grammar);
-        capabilities.insert(qsl("words"), newCapabilities.wordResults);
-        capabilities.insert(qsl("onDevice"), newCapabilities.onDevice);
-        raiseSpeechEvent(qsl("sysSTTCapabilitiesChanged"), QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact)));
+    // Documented as re-readable rather than cached, so the change has to reach a
+    // consumer that did read it once. The recognizer noticing its own view move
+    // is a trigger, not the decision: whether Lua saw a change is decided
+    // against what Lua was last told, which is what the engine cannot know.
+    connect(pReplacement, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities) {
+        announceSpeechCapabilitiesIfChanged();
     });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
+    connect(pReplacement, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
         QString stateName;
         switch (newState) {
         case SpeechRecognizer::State::Ready:
@@ -235,27 +396,205 @@ void mudlet::initSpeechRecognition()
             break;
         }
         raiseSpeechEvent(qsl("sysSTTStateChanged"), stateName);
+        // Released only once the event above has gone to the profile that owned
+        // the session, so the state change that ends a session is still the old
+        // owner's news. Processing keeps the claim: the phrase is still being
+        // decoded and its result is owed to the same profile.
+        //
+        // Against the state the engine is in now rather than the one the event
+        // described: a handler of that event can have started a session of its
+        // own - "ready" is exactly where a package waits to start listening -
+        // and it took the microphone as it did. Releasing on the older state
+        // would leave that session running with nobody holding it, which
+        // stt.listening() answers for by saying no.
+        const SpeechRecognizer::State settledState = mpSpeechRecognizer ? mpSpeechRecognizer->state() : newState;
+        switch (settledState) {
+        case SpeechRecognizer::State::Ready:
+        case SpeechRecognizer::State::Error:
+        case SpeechRecognizer::State::Uninitialized:
+            // Left for whatever the engine says next, and for that alone - see
+            // raiseSpeechEvent(). An engine that ends a session mid-phrase
+            // reports the loss immediately after this state change, and the
+            // profile that was speaking is the one that needs to hear it.
+            mpMicrophoneOwnerEnding = mpMicrophoneOwner;
+            QTimer::singleShot(0ms, this, [this]() {
+                mpMicrophoneOwnerEnding = nullptr;
+            });
+            releaseMicrophone();
+            break;
+        case SpeechRecognizer::State::Starting:
+        case SpeechRecognizer::State::Listening:
+        case SpeechRecognizer::State::Processing:
+            break;
+        }
     });
+
+    // Latched, then swapped, then retired: the old engine is only released
+    // once mpSpeechRecognizer already names its replacement. It is parented to
+    // this and has live signal connections - releaseResources() drops its
+    // native resources, disconnect() detaches the connections made above for
+    // it, and deleteLater() - rather than delete - defers the destruction,
+    // since a handler reached through one of those connections may still be on
+    // the stack (the same reentrancy hazard SherpaRecognizer::slot_pcmReady()
+    // guards against).
+    SpeechRecognizer* pRetiring = mpSpeechRecognizer;
+    mpSpeechRecognizer = pReplacement;
+    if (pRetiring) {
+        // Disconnected first: releaseResources() sets the state and, on a
+        // backend whose capabilities follow the model, announces the change -
+        // and mpSpeechRecognizer already names the replacement by now, so a
+        // handler reached from either event would read the new engine while
+        // being told about the dead one. The retirement is meant to be silent.
+        // Said before releaseResources() below, which is what resets the state
+        // this reads - not before the disconnect, which has no bearing on it:
+        // raiseSpeechEvent() goes to the microphone's owner rather than over
+        // the retiring engine's connections. An engine swap reached from
+        // stt.init() while a phrase is in flight takes that phrase with it,
+        // and rule 1 allows recognised speech to be dropped only by a path
+        // that reports.
+        if (pRetiring->listening() || pRetiring->state() == SpeechRecognizer::State::Processing) {
+            raiseSpeechEvent(qsl("sysSTTError"), qsl("changing the speech engine stopped the listening session that was under way - anything said during it is lost"));
+        }
+        pRetiring->disconnect();
+        pRetiring->releaseResources();
+        pRetiring->deleteLater();
+    }
+
+    // Last, once mpSpeechRecognizer names the engine Lua will read and the old
+    // one is released and detached - it is awaiting deleteLater() rather than
+    // already destroyed, which is what lets stt.init() compare against it. A recognizer existing at all changes what getInfo() answers,
+    // and so does replacing one engine with another that can do different
+    // things - neither of which any recognizer is in a position to announce for
+    // itself. Reached whenever an engine is created or swapped - any stt call
+    // that finds none built, or asks for a different one - so a package
+    // following the event rather than re-reading no longer believes an engine's
+    // first answer for ever (#10760).
+    announceSpeechCapabilitiesIfChanged();
+}
+
+// The capabilities payload as stt.getInfo() would report them: with no
+// recognizer every one is false, which is what sttGetInfo() pushes and so what
+// a consumer reads before anything has created one.
+static QString speechCapabilitiesPayload(const SpeechRecognizer* pRecognizer)
+{
+    const SpeechRecognizer::Capabilities current = pRecognizer ? pRecognizer->capabilities() : SpeechRecognizer::Capabilities{};
+    QJsonObject capabilities;
+    capabilities.insert(qsl("biasing"), current.biasing);
+    capabilities.insert(qsl("grammar"), current.grammar);
+    capabilities.insert(qsl("words"), current.wordResults);
+    // Carried like the rest: docs/stt-api.md promises this event the same keys
+    // as getInfo().capabilities, and a package rebuilding from the event would
+    // otherwise read a missing key as "this engine never can" - on Vosk,
+    // exactly the flag that moves when the library is unloaded or reloaded.
+    capabilities.insert(qsl("sensitivityTuning"), current.sensitivityTuning);
+    capabilities.insert(qsl("onDevice"), current.onDevice);
+    return QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact));
+}
+
+void mudlet::announceSpeechCapabilitiesIfChanged()
+{
+    if (mAnnouncedSpeechCapabilities.isEmpty()) {
+        // What Lua has been reading from getInfo() all along, so that a
+        // recognizer coming into existence registers as the change it is
+        mAnnouncedSpeechCapabilities = speechCapabilitiesPayload(nullptr);
+    }
+
+    const QString current = speechCapabilitiesPayload(mpSpeechRecognizer);
+    if (current == mAnnouncedSpeechCapabilities) {
+        return;
+    }
+    // Every profile, not just the microphone's owner - the one event here that
+    // is broadcast. Results, state and faults belong to the session that is
+    // running, so they go to whoever holds the microphone. Capabilities are not
+    // a property of a session at all: they describe the engine, and every
+    // profile reads the same ones back from stt.getInfo(). Sending this to the
+    // owner alone would change what the other profiles read while telling only
+    // one of them, which is the same fault this function exists to fix.
+    //
+    // Over a copy of the list, because each raise runs Lua and a handler may
+    // open or close a profile while this is walking it.
+    const QList<QSharedPointer<Host>> profiles = mHostManager.hostList();
+    // Nothing to deliver to means nothing is announced and nothing is recorded:
+    // the baseline must only ever name what was actually delivered. Recording an
+    // announcement that went nowhere would leave every later comparison finding
+    // the baseline already equal, and the change would never be made good.
+    if (profiles.isEmpty()) {
+        return;
+    }
+    // Recorded before the first raise, not after the last: a handler reached
+    // from one of these is free to call back in here, and an unrecorded
+    // baseline would let it announce the same move again.
+    mAnnouncedSpeechCapabilities = current;
+    for (const auto& pHost : profiles) {
+        // Each raise runs Lua, and reacting to a capability change by calling
+        // stt.reloadLibrary() or stt.init() is the documented thing to do - so a
+        // handler can land back in here, announce a newer payload to every
+        // profile, and return. Carrying on would then deliver this older one to
+        // the profiles the outer loop has not reached, leaving them holding a
+        // value nothing will correct: the baseline already names the newer one.
+        // The same shape as toggleMute()'s guard over this list.
+        if (mAnnouncedSpeechCapabilities != current) {
+            break;
+        }
+        if (pHost) {
+            raiseSpeechEventOn(pHost.data(), qsl("sysSTTCapabilitiesChanged"), current);
+        }
+    }
+}
+
+QToolBar* mudlet::addonToolBarFor(QMainWindow* pContainer) const
+{
+    if (pContainer == this) {
+        return mpMainToolBar;
+    }
+    auto* pDetached = qobject_cast<TDetachedWindow*>(pContainer);
+    return pDetached ? pDetached->toolBar() : nullptr;
+}
+
+QMenu* mudlet::addonOptionsMenuFor(QMainWindow* pContainer) const
+{
+    if (pContainer == this) {
+        return menuOptions;
+    }
+    auto* pDetached = qobject_cast<TDetachedWindow*>(pContainer);
+    return pDetached ? pDetached->optionsMenu() : nullptr;
 }
 
 // Where a command's menu item hangs, building the path's submenus as needed.
 // A path part that names an existing leaf item is refused rather than
 // duplicated: two entries with one label, one a command and one a submenu, is
 // not something a package can have meant.
-QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error)
+//
+// That refusal is for a command being created, which is the one moment a
+// package can hear it and choose another path. A command already placed has to
+// arrive wherever it is moved to: a pinned one follows the player into a window
+// its package never asked about, and the same profile can have put a command
+// there whose name is one of this path's parts - by making it while the pinned
+// one was in another window, which is where the submenu went with it. Refusing
+// then takes the menu item off a command that is doing nothing wrong and does
+// not give it back. The two labels sit side by side instead, for as long as the
+// visit lasts.
+QMenu* mudlet::addonMenuForPath(QMainWindow* pContainer, const QString& menuPath, const Host* pHost, QString& error, const AddonPlacement placement)
 {
-    if (!mpAddonsMenu) {
+    AddonChrome& chrome = mAddonChrome[pContainer];
+    if (!chrome.addonsMenu) {
+        QMenu* pOptionsMenu = addonOptionsMenuFor(pContainer);
+        if (!pOptionsMenu) {
+            //: Refusal shown to a package whose profile is in a window with no menu of its own to place commands in
+            error = tr("this window has no menu for commands to be placed in");
+            return nullptr;
+        }
         //: Name of the menu that packages add their own commands to, shown inside the Options menu
-        mpAddonsMenu = menuOptions->addMenu(tr("Extensions"));
+        chrome.addonsMenu = pOptionsMenu->addMenu(tr("Extensions"));
         // QMenu::toolTipsVisible is false by default and is not inherited from
         // the menu above, which is why Mudlet sets it on its own menus too.
         // Without it the menu half of every command's tooltip never appears,
         // leaving a documented property that only works on the toolbar.
-        mpAddonsMenu->setToolTipsVisible(true);
+        chrome.addonsMenu->setToolTipsVisible(true);
     }
-    mpAddonsMenu->menuAction()->setVisible(true);
+    chrome.addonsMenu->menuAction()->setVisible(true);
 
-    QMenu* targetMenu = mpAddonsMenu;
+    QMenu* targetMenu = chrome.addonsMenu;
     for (const QString& part : menuPath.split(qsl("/"), Qt::SkipEmptyParts)) {
         QMenu* submenu = nullptr;
         for (QAction* action : targetMenu->actions()) {
@@ -267,13 +606,16 @@ QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QStr
             // something this package can see or clear, so it must not decide
             // whether this placement succeeds.
             if (QMenu* existingSubmenu = action->menu()) {
-                if (mAddonSubmenuOwners.value(existingSubmenu) != pHost) {
+                if (chrome.submenuOwners.value(existingSubmenu) != pHost) {
                     continue;
                 }
                 submenu = existingSubmenu;
                 break;
             }
             if (addonCommandOwning(action) != pHost) {
+                continue;
+            }
+            if (placement == AddonPlacement::Moving) {
                 continue;
             }
             //: Refusal shown to a package, %1 is one part of the menu path it asked for
@@ -283,7 +625,7 @@ QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QStr
         if (!submenu) {
             submenu = targetMenu->addMenu(addonLabel(part));
             submenu->setToolTipsVisible(true);
-            mAddonSubmenuOwners.insert(submenu, pHost);
+            chrome.submenuOwners.insert(submenu, pHost);
         }
         targetMenu = submenu;
     }
@@ -413,15 +755,28 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
         }
     }
 
-    for (const QAction* action : findChildren<QAction*>()) {
+    // Every window's actions, not only this one's. A command now lives in the
+    // window holding its profile, and a detached window is parentless by
+    // design - so scanning this window's children alone stopped seeing a
+    // detached profile's commands, and two profiles in different windows could
+    // both be granted the same key. They collide the moment one is pinned into
+    // the other's window, and Qt answers an ambiguous shortcut by disabling
+    // both, which no release build ever prints a word about.
+    QList<QAction*> candidates = findChildren<QAction*>();
+    for (auto it = mDetachedWindows.constBegin(); it != mDetachedWindows.constEnd(); ++it) {
+        if (it.value()) {
+            candidates.append(it.value()->findChildren<QAction*>());
+        }
+    }
+
+    for (const QAction* action : candidates) {
         if (action->shortcut() != sequence) {
             continue;
         }
-        // Menu actions are shared between profiles, so the holder can be a
-        // command another profile placed. Its name is that package's business
-        // and nothing this one can act on, so the key is reported as taken
-        // without saying by whom - the alternative leaks a label out of a
-        // profile the caller cannot see.
+        // The holder can be a command another profile placed, in this window or
+        // another. Its name is that package's business and nothing this one can
+        // act on, so the key is reported as taken without saying by whom - the
+        // alternative leaks a label out of a profile the caller cannot see.
         const Host* pOwner = addonCommandOwning(action);
         if (pOwner && pOwner != pHost) {
             //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that a command belonging to a different profile already uses
@@ -496,6 +851,14 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
 // unescaped '<' silently eats the rest of the tooltip as markup. Wrapping
 // empty text would defeat the "no tooltip" case, because "<p></p>" is not an
 // empty string and Qt shows an empty tooltip box for it.
+// One spelling of what a pulsing button looks like. It was written out at each
+// of the three places that paint one, so a change to the appearance would have
+// shown up on a button only until its profile was dragged to another window.
+QString mudlet::addonPulseStyleSheet(const QString& colour)
+{
+    return qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(colour);
+}
+
 QString mudlet::addonTooltip(const QString& tooltip)
 {
     if (tooltip.isEmpty()) {
@@ -590,75 +953,333 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
         }
     }
 
-    QMenu* targetMenu = nullptr;
+    // Resolved here rather than in placeAddonCommand() below because the two
+    // menu refusals are the package's to hear, and only a first placement can
+    // refuse: once a command exists, moving it between windows must always
+    // succeed. Calling it twice for the same window is harmless - the second
+    // call finds the submenus the first built and returns the same menu.
+    QMainWindow* pContainer = addonHomeContainerFor(pHost);
     if (wantsMenu) {
-        targetMenu = addonMenuForPath(request.menuPath, pHost, error);
+        QMenu* targetMenu = addonMenuForPath(pContainer, request.menuPath, pHost, error, AddonPlacement::Creating);
         if (!targetMenu) {
             return -1;
+        }
+        // The inverse of the menuPath check: a label may not be both a command
+        // and a submenu in one menu, or a later menuPath naming it cannot say
+        // which was meant - and the player sees the label twice. Two commands
+        // sharing a label is fine, and stays fine; ids are the identity.
+        for (const QAction* existing : targetMenu->actions()) {
+            if (existing->menu() && existing->text() == addonLabel(request.name) && mAddonChrome[pContainer].submenuOwners.value(existing->menu()) == pHost) {
+                //: Refusal shown to a package, %1 is the name it gave its command
+                error = tr("\"%1\" is already a submenu here, so a command cannot take that label too").arg(request.name);
+                return -1;
+            }
         }
     }
 
     const int commandId = mNextAddonCommandId++;
     AddonCommand command;
     command.pHost = pHost;
+    command.request = request;
+    command.icon = request.icon;
+    command.tooltip = request.tooltip;
 
-    if (wantsMenu) {
-        // The inverse of the menuPath check: a label may not be both a command
-        // and a submenu in one menu, or a later menuPath naming it cannot say
-        // which was meant - and the player sees the label twice. Two commands
-        // sharing a label is fine, and stays fine; ids are the identity.
-        for (const QAction* existing : targetMenu->actions()) {
-            if (existing->menu() && existing->text() == addonLabel(request.name) && mAddonSubmenuOwners.value(existing->menu()) == pHost) {
-                //: Refusal shown to a package, %1 is the name it gave its command
-                error = tr("\"%1\" is already a submenu here, so a command cannot take that label too").arg(request.name);
-                return -1;
-            }
-        }
-
-        QAction* action = targetMenu->addAction(addonLabel(request.name));
-        action->setToolTip(addonTooltip(request.tooltip));
-        if (!shortcut.isEmpty()) {
-            action->setShortcut(shortcut);
-        }
-        command.menuAction = action;
-        connect(action, &QAction::triggered, this, [this, commandId](const bool checked) {
-            mirrorAddonCommandChecked(commandId, checked);
-            raiseAddonCommandEvent(commandId);
-        });
-    }
-
-    if (wantsToolbar && mpMainToolBar) {
-        if (!mpAddonToolbarSeparator) {
-            mpAddonToolbarSeparator = mpMainToolBar->addSeparator();
-        }
-        auto* button = new QToolButton(this);
-        button->setText(addonLabel(request.name));
-        button->setObjectName(qsl("addon_%1").arg(request.name));
-        button->setToolTip(addonTooltip(request.tooltip));
-        button->setAutoRaise(true);
-        // Both, and not the style alone: a widget added through addWidget()
-        // inherits neither, so a button took Qt's 16px default beside Mudlet's
-        // own at whatever size the toolbar was on - until the user next changed
-        // the icon size, which is the only thing that called the helper below.
-        button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
-        button->setIconSize(mpMainToolBar->iconSize());
-        command.button = button;
-        command.toolbarAction = mpMainToolBar->addWidget(button);
-        connect(button, &QToolButton::clicked, this, [this, commandId](const bool checked) {
-            mirrorAddonCommandChecked(commandId, checked);
-            raiseAddonCommandEvent(commandId);
-        });
-    }
-
-    applyAddonIcon(command.button, command.menuAction, request.icon);
+    placeAddonCommand(commandId, command, pContainer);
     mAddonCommands[commandId] = command;
-    warnProfilesLosingBindingTo(shortcut, pHost, request.name);
+    // A package places its commands when it loads, which is not necessarily a
+    // moment its profile is the one on screen - so a new command is shown or
+    // hidden by the same rule as every other rather than arriving visible.
+    refreshAddonPlacement();
     return commandId;
 }
 
-// The command went onto a menu of this window, so its key fires whichever
-// profile is in front: a binding another profile has on that key stops working
-// too. Refusing the command over it is not the answer - a package's success
+// Which window a command belongs in: the one holding the profile that created
+// it. A profile dragged out of the main window takes its commands with it.
+QMainWindow* mudlet::addonHomeContainerFor(Host* pHost) const
+{
+    if (pHost) {
+        for (auto it = mDetachedWindows.constBegin(); it != mDetachedWindows.constEnd(); ++it) {
+            if (it.value() && it.value()->getProfileNames().contains(pHost->getName())) {
+                return it.value();
+            }
+        }
+    }
+    return const_cast<mudlet*>(this);
+}
+
+// Which profile a window is currently showing. A window holds several profiles
+// as tabs and shows one of them, and that one decides whose commands its chrome
+// carries. The main window's answer is its current tab rather than the active
+// host: with a detached window in front, the active host is the profile in that
+// window, while the main window is still showing whatever tab it was left on.
+Host* mudlet::addonShownProfileIn(QMainWindow* pContainer)
+{
+    if (auto* pDetached = qobject_cast<TDetachedWindow*>(pContainer)) {
+        return mHostManager.getHost(pDetached->getCurrentProfileName());
+    }
+    if (!mpTabBar || mpTabBar->currentIndex() < 0) {
+        return nullptr;
+    }
+    return mHostManager.getHost(mpTabBar->tabName(mpTabBar->currentIndex()));
+}
+
+// Depth first, so an inner submenu is decided before the one holding it is
+// asked whether anything visible is left.
+void mudlet::hideEmptyAddonSubmenus(QMenu* pMenu)
+{
+    if (!pMenu) {
+        return;
+    }
+    for (QAction* pAction : pMenu->actions()) {
+        if (QMenu* pSubmenu = pAction->menu()) {
+            hideEmptyAddonSubmenus(pSubmenu);
+            pAction->setVisible(!pSubmenu->isEmpty());
+        }
+    }
+}
+
+// A detached window deletes itself when it closes, and its entry here would
+// otherwise sit on a freed address for the rest of the run - taking with it a
+// submenuOwners map whose QMenu keys and Host values died with the window. A
+// later window or menu allocated onto one of those addresses would then match a
+// dead entry and be judged against a profile that no longer exists.
+//
+// Keys are compared, never dereferenced, so testing them against the windows
+// that are still open is safe. Pruning here rather than on a destroyed() signal
+// keeps it to one rule in one place: every path that could have closed a window
+// reaches this before it next places anything.
+void mudlet::forgetChromeOfClosedWindows()
+{
+    if (mAddonChrome.size() <= 1) {
+        return;
+    }
+    QList<QMainWindow*> doomed;
+    for (auto it = mAddonChrome.constBegin(); it != mAddonChrome.constEnd(); ++it) {
+        if (it.key() == this) {
+            continue;
+        }
+        bool stillOpen = false;
+        for (auto windowIt = mDetachedWindows.constBegin(); windowIt != mDetachedWindows.constEnd(); ++windowIt) {
+            if (windowIt.value() == it.key()) {
+                stillOpen = true;
+                break;
+            }
+        }
+        if (!stillOpen) {
+            doomed.append(it.key());
+        }
+    }
+    for (QMainWindow* pClosed : doomed) {
+        mAddonChrome.remove(pClosed);
+    }
+}
+
+// Focus changes are frequent and placement depends on them only while something
+// is pinned, so the scan is what keeps an unpinned session from re-placing every
+// command each time a window comes forward.
+void mudlet::refreshAddonPlacementIfAnyPinned()
+{
+    for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
+        if (it.value().pinned) {
+            refreshAddonPlacement();
+            return;
+        }
+    }
+}
+
+// The window the player is working in, when that is one of ours. Null for the
+// script editor, for Preferences, and for another application entirely.
+QMainWindow* mudlet::addonFocusedContainer()
+{
+    QWidget* pActive = QApplication::activeWindow();
+    if (!pActive) {
+        return nullptr;
+    }
+    if (pActive == this) {
+        return this;
+    }
+    return qobject_cast<TDetachedWindow*>(pActive);
+}
+
+// Puts every command where it belongs and shows only the ones whose profile its
+// window is showing. Cheap enough to call on any change that could move one: a
+// command already in the right window is only shown or hidden, and rebuilding
+// is reserved for a profile that has actually changed windows.
+void mudlet::refreshAddonPlacement()
+{
+    forgetChromeOfClosedWindows();
+
+    for (auto it = mAddonCommands.begin(); it != mAddonCommands.end(); ++it) {
+        AddonCommand& command = it.value();
+        if (!command.pHost) {
+            continue;
+        }
+        // A pinned command is one the package says the player must be able to
+        // reach while it is doing something - a microphone that is open. It
+        // goes to the window they are actually in, and is shown there whatever
+        // profile that window is showing. Everything else stays home.
+        QMainWindow* pTarget = addonHomeContainerFor(command.pHost);
+        if (command.pinned) {
+            // The last Mudlet window the player was in, not necessarily the one
+            // with focus now: focus goes to the script editor, to Preferences,
+            // and out of Mudlet altogether, and none of those mean "put this
+            // back with its own profile". Dropping it home on those would take
+            // a live microphone's control off the window the player is working
+            // in at the moment they most need it - alt-tabbed to a browser is
+            // the case a keep-listening setting exists for.
+            if (mpLastFocusedContainer) {
+                pTarget = mpLastFocusedContainer;
+            }
+        }
+        if (command.container != pTarget) {
+            unplaceAddonCommand(command);
+            placeAddonCommand(it.key(), command, pTarget);
+        }
+
+        // Hidden rather than destroyed: switching tabs is something a player
+        // does constantly, and tearing menus down and rebuilding them each time
+        // would churn the submenu bookkeeping for no visible gain. A hidden
+        // QAction's shortcut stops firing, which is the point - a key that
+        // raises another game's event while you are looking at this one is the
+        // same mistake as a button that does.
+        const bool visible = command.pinned || (addonShownProfileIn(pTarget) == command.pHost);
+        if (command.toolbarAction) {
+            command.toolbarAction->setVisible(visible);
+        }
+        if (command.menuAction) {
+            command.menuAction->setVisible(visible);
+        }
+    }
+
+    // A submenu whose contents are all hidden is an empty popup the player can
+    // still open: QMenu::isEmpty() counts visible actions, so hiding a
+    // command's own item is not enough to take the "Speech" it sits under off
+    // the menu with it. Walked outermost-in so that a submenu of submenus
+    // settles in one pass.
+    for (auto it = mAddonChrome.constBegin(); it != mAddonChrome.constEnd(); ++it) {
+        if (it.value().addonsMenu) {
+            hideEmptyAddonSubmenus(it.value().addonsMenu);
+        }
+    }
+
+    // A separator with nothing after it is a line hanging off the end of the
+    // toolbar, so it follows the commands it divides.
+    for (auto it = mAddonChrome.begin(); it != mAddonChrome.end(); ++it) {
+        bool anyVisible = false;
+        for (auto commandIt = mAddonCommands.constBegin(); commandIt != mAddonCommands.constEnd(); ++commandIt) {
+            const AddonCommand& command = commandIt.value();
+            if (command.container == it.key() && command.toolbarAction && command.toolbarAction->isVisible()) {
+                anyVisible = true;
+                break;
+            }
+        }
+        if (it.value().toolbarSeparator) {
+            it.value().toolbarSeparator->setVisible(anyVisible);
+        }
+        if (it.value().addonsMenu) {
+            it.value().addonsMenu->menuAction()->setVisible(!it.value().addonsMenu->isEmpty());
+        }
+    }
+}
+
+// Builds the widgets for one command in one window and puts everything the
+// package has set onto them. Nothing here can refuse: the request was accepted
+// when the command was created, and a command that has been moved must arrive.
+void mudlet::placeAddonCommand(const int commandId, AddonCommand& command, QMainWindow* pContainer)
+{
+    // A command is in one window or none. Placing one that is still placed
+    // would strand its old widgets: the pointers here are overwritten, the
+    // ghost button stays in the old window answering to nothing, and the
+    // separator that window keeps is decided by scanning for commands whose
+    // container matches - which the ghost's no longer does.
+    if (command.container) {
+        unplaceAddonCommand(command);
+    }
+
+    const CommandRequest& request = command.request;
+    const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
+    const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
+    command.container = pContainer;
+
+    if (wantsMenu) {
+        QString error;
+        if (QMenu* targetMenu = addonMenuForPath(pContainer, request.menuPath, command.pHost, error, AddonPlacement::Moving)) {
+            QAction* action = targetMenu->addAction(addonLabel(request.name));
+            if (!request.shortcut.isEmpty()) {
+                action->setShortcut(QKeySequence(request.shortcut));
+            }
+            command.menuAction = action;
+            connect(action, &QAction::triggered, this, [this, commandId](const bool checked) {
+                mirrorAddonCommandChecked(commandId, checked);
+                raiseAddonCommandEvent(commandId);
+            });
+        } else {
+            // A window with no menu of its own is what reaches this - every
+            // other refusal belongs to a command being created, and this is
+            // never that. The command still has its toolbar half. Said out loud
+            // rather than dropped: a command that quietly lost a surface it was
+            // placed on looks to the package like one that was never there.
+            qWarning().noquote() << "mudlet::placeAddonCommand() INFO - no menu in this window for" << request.name << "-" << error;
+        }
+    }
+
+    if (wantsToolbar) {
+        if (QToolBar* pToolBar = addonToolBarFor(pContainer)) {
+            AddonChrome& chrome = mAddonChrome[pContainer];
+            if (!chrome.toolbarSeparator) {
+                chrome.toolbarSeparator = pToolBar->addSeparator();
+            }
+            auto* button = new QToolButton(pContainer);
+            button->setText(addonLabel(request.name));
+            button->setObjectName(qsl("addon_%1").arg(request.name));
+            button->setAutoRaise(true);
+            // Both, and not the style alone: a widget added through addWidget()
+            // inherits neither, so a button took Qt's 16px default beside Mudlet's
+            // own at whatever size the toolbar was on - until the user next changed
+            // the icon size, which is the only thing that called the helper below.
+            button->setToolButtonStyle(pToolBar->toolButtonStyle());
+            button->setIconSize(pToolBar->iconSize());
+            command.button = button;
+            command.toolbarAction = pToolBar->addWidget(button);
+            connect(button, &QToolButton::clicked, this, [this, commandId](const bool checked) {
+                mirrorAddonCommandChecked(commandId, checked);
+                raiseAddonCommandEvent(commandId);
+            });
+        }
+    }
+
+    applyAddonCommandState(command);
+}
+
+// Everything a package has set since the command was created, put onto whatever
+// widgets it has now. The widgets are rebuilt on a move, so this is what keeps a
+// checked, disabled, pulsing command the same command afterwards.
+void mudlet::applyAddonCommandState(AddonCommand& command)
+{
+    applyAddonIcon(command.button, command.menuAction, command.icon);
+    if (command.button) {
+        command.button->setToolTip(addonTooltip(command.tooltip));
+        command.button->setEnabled(command.enabled);
+        command.button->setCheckable(command.checkable);
+        command.button->setChecked(command.checkable && command.checked);
+        // Cleared as well as set: this has to be able to put a widget into the
+        // state the record describes, not only add to whatever it already had,
+        // or it cannot be the one place that agreement is made.
+        command.button->setStyleSheet(command.pulseEnabled ? addonPulseStyleSheet(command.pulseState ? command.pulseColor1 : command.pulseColor2) : QString());
+    }
+    if (command.menuAction) {
+        command.menuAction->setToolTip(addonTooltip(command.tooltip));
+        command.menuAction->setEnabled(command.enabled);
+        command.menuAction->setCheckable(command.checkable);
+        command.menuAction->setChecked(command.checkable && command.checked);
+    }
+}
+
+// A pinned command stays on the menu of whichever window the player is in, so
+// its key fires whichever profile is in front: a binding another profile has on
+// that key stops working too. An unpinned one is hidden while any other profile
+// is in front, and a hidden action's shortcut does not fire, so pinning is the
+// moment the key is taken from anyone else. Refusing the command over it is not the answer - a package's success
 // would then depend on which other profiles the player happens to have open,
 // which its author can neither see nor diagnose - so the command is placed and
 // the profile losing its binding is told, the same call the buffer search makes
@@ -710,7 +1331,12 @@ void mudlet::mirrorAddonCommandChecked(const int commandId, const bool checked)
         return;
     }
 
-    const AddonCommand& command = mAddonCommands[commandId];
+    AddonCommand& command = mAddonCommands[commandId];
+    // The record moves with the surfaces: a command the user ticked and whose
+    // profile is then dragged to another window must arrive there ticked.
+    if (command.checkable) {
+        command.checked = checked;
+    }
     if (command.button && command.button->isCheckable() && command.button->isChecked() != checked) {
         // Nothing to raise from the surface that did not move: the event for
         // this activation is about to go out once, from the caller
@@ -758,6 +1384,24 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         delete command.pulseTimer;
     }
 
+    unplaceAddonCommand(command);
+    mAddonCommands.remove(commandId);
+    return true;
+}
+
+// Takes a command's widgets down and tidies what they leave behind in the
+// window they were in. Used both by removeCommand() and by a move between
+// windows, which is why it neither touches mAddonCommands nor the pulse timer:
+// a moved command keeps both.
+void mudlet::unplaceAddonCommand(AddonCommand& command)
+{
+    QMainWindow* pContainer = command.container;
+    if (!pContainer) {
+        return;
+    }
+    AddonChrome& chrome = mAddonChrome[pContainer];
+    QToolBar* pToolBar = addonToolBarFor(pContainer);
+
     if (command.toolbarAction) {
         // removeAction() only detaches the QWidgetAction that addWidget() created,
         // leaving it parented to the toolbar; deleting it here stops one accruing
@@ -765,8 +1409,12 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         // owns its default widget.
         // deleteLater(), because the usual caller is a Lua handler running from
         // this very command's click, with Qt still inside the event handling.
-        mpMainToolBar->removeAction(command.toolbarAction);
+        if (pToolBar) {
+            pToolBar->removeAction(command.toolbarAction);
+        }
         command.toolbarAction->deleteLater();
+        command.toolbarAction = nullptr;
+        command.button = nullptr;
     }
 
     QMenu* parentMenu = command.menuAction ? qobject_cast<QMenu*>(command.menuAction->parent()) : nullptr;
@@ -782,17 +1430,23 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         // than whenever Qt gets round to the deletion.
         command.menuAction->setShortcut(QKeySequence());
         command.menuAction->deleteLater();
+        command.menuAction = nullptr;
     }
 
-    mAddonCommands.remove(commandId);
-
-    // Discard the menuPath submenus once they hold no visible items, otherwise
+    // Discard the menuPath submenus once they hold nothing at all, otherwise
     // repeated add/remove cycles leave a trail of empty menus behind.
     // Everything here is deleteLater(), not delete: the usual caller is a Lua
     // handler running from the command's own click, and Qt is still inside
     // QMenu's activation machinery, which touches the menu after the handler
     // returns.
-    while (parentMenu && parentMenu != mpAddonsMenu && parentMenu->isEmpty()) {
+    //
+    // actions() rather than QMenu::isEmpty(), which answers for the visible
+    // ones alone: a profile whose tab is not in front has every one of its
+    // items hidden, so a menu still holding that profile's other commands
+    // reads as empty - and destroying it destroys them, item and shortcut, for
+    // the rest of the session. Hiding a menu nobody can use is
+    // hideEmptyAddonSubmenus()' job, and it goes by the visible ones.
+    while (parentMenu && parentMenu != chrome.addonsMenu && parentMenu->actions().isEmpty()) {
         QMenu* grandParentMenu = qobject_cast<QMenu*>(parentMenu->parent());
         // Detached from the menu above rather than merely hidden: a handler
         // that empties a menuPath and adds another command at that same path
@@ -804,13 +1458,13 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         } else {
             parentMenu->menuAction()->setVisible(false);
         }
-        mAddonSubmenuOwners.remove(parentMenu);
+        chrome.submenuOwners.remove(parentMenu);
         parentMenu->deleteLater();
         parentMenu = grandParentMenu;
     }
 
-    if (mpAddonsMenu && mpAddonsMenu->isEmpty()) {
-        mpAddonsMenu->menuAction()->setVisible(false);
+    if (chrome.addonsMenu && chrome.addonsMenu->isEmpty()) {
+        chrome.addonsMenu->menuAction()->setVisible(false);
     }
 
     // Remove the separator once no command is left on the toolbar. addSeparator()
@@ -818,18 +1472,20 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
     // it needs deleting too or one accumulates per empty-to-occupied cycle.
     bool anyOnToolbar = false;
     for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
-        if (it.value().toolbarAction) {
+        if (it.value().toolbarAction && it.value().container == pContainer) {
             anyOnToolbar = true;
             break;
         }
     }
-    if (!anyOnToolbar && mpAddonToolbarSeparator) {
-        mpMainToolBar->removeAction(mpAddonToolbarSeparator);
-        mpAddonToolbarSeparator->deleteLater();
-        mpAddonToolbarSeparator = nullptr;
+    if (!anyOnToolbar && chrome.toolbarSeparator) {
+        if (pToolBar) {
+            pToolBar->removeAction(chrome.toolbarSeparator);
+        }
+        chrome.toolbarSeparator->deleteLater();
+        chrome.toolbarSeparator = nullptr;
     }
 
-    return true;
+    command.container = nullptr;
 }
 
 QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const
@@ -876,6 +1532,7 @@ bool mudlet::setAddonCommandEnabled(int commandId, bool enabled, Host* pHost)
     }
 
     AddonCommand& command = mAddonCommands[commandId];
+    command.enabled = enabled;
     if (command.button) {
         command.button->setEnabled(enabled);
     }
@@ -892,6 +1549,8 @@ bool mudlet::setAddonCommandChecked(int commandId, bool checked, Host* pHost)
     }
 
     AddonCommand& command = mAddonCommands[commandId];
+    command.checkable = true;
+    command.checked = checked;
     if (command.button) {
         command.button->setCheckable(true);
         command.button->setChecked(checked);
@@ -910,6 +1569,7 @@ bool mudlet::setAddonCommandIcon(int commandId, const QString& icon, Host* pHost
     }
 
     AddonCommand& command = mAddonCommands[commandId];
+    command.icon = icon;
     applyAddonIcon(command.button, command.menuAction, icon);
     return true;
 }
@@ -921,11 +1581,28 @@ bool mudlet::setAddonCommandTooltip(int commandId, const QString& tooltip, Host*
     }
 
     AddonCommand& command = mAddonCommands[commandId];
+    command.tooltip = tooltip;
     if (command.button) {
         command.button->setToolTip(addonTooltip(tooltip));
     }
     if (command.menuAction) {
         command.menuAction->setToolTip(addonTooltip(tooltip));
+    }
+    return true;
+}
+
+bool mudlet::setAddonCommandPinned(int commandId, bool pinned, Host* pHost)
+{
+    if (!mAddonCommands.contains(commandId) || mAddonCommands[commandId].pHost != pHost) {
+        return false;
+    }
+
+    const bool newlyPinned = pinned && !mAddonCommands[commandId].pinned;
+    const CommandRequest request = mAddonCommands[commandId].request;
+    mAddonCommands[commandId].pinned = pinned;
+    refreshAddonPlacement();
+    if (newlyPinned && !request.shortcut.isEmpty()) {
+        warnProfilesLosingBindingTo(QKeySequence(request.shortcut), pHost, request.name);
     }
     return true;
 }
@@ -959,6 +1636,7 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
         command.pulseColor1 = color1;
         command.pulseColor2 = color2;
         command.pulseState = true;
+        command.pulseEnabled = true;
 
         if (!command.pulseTimer) {
             command.pulseTimer = new QTimer(this);
@@ -972,14 +1650,15 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
                 }
                 pulsing.pulseState = !pulsing.pulseState;
                 const QString& colour = pulsing.pulseState ? pulsing.pulseColor1 : pulsing.pulseColor2;
-                pulsing.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(colour));
+                pulsing.button->setStyleSheet(addonPulseStyleSheet(colour));
             });
         }
 
         command.pulseTimer->setInterval(interval);
         command.pulseTimer->start();
-        command.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(color1));
+        command.button->setStyleSheet(addonPulseStyleSheet(color1));
     } else {
+        command.pulseEnabled = false;
         if (command.pulseTimer) {
             command.pulseTimer->stop();
         }
@@ -989,19 +1668,41 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
     return true;
 }
 
+// Focus moving anywhere, including out of Mudlet altogether. A named slot
+// rather than a lambda so a test can put the application through the case that
+// matters - focus leaving every window of ours - which nothing else can reach:
+// the alternative is calling refreshAddonPlacement() directly, and that skips
+// the line below that decides where a pinned command goes.
+void mudlet::slot_focusWindowChanged(QWindow* pWindow)
+{
+    // Named and discarded rather than left unnamed: cppcheck reads the bare
+    // (QWindow*) of an unnamed parameter as a C-style cast and reports it
+    Q_UNUSED(pWindow)
+    // Only a window of ours is remembered. Focus goes to the script editor, to
+    // Preferences, and out of the application entirely, and none of those mean
+    // "put this back with its own profile" - doing that would take a live
+    // microphone's control off the window the player is working in at the
+    // moment they most need it.
+    if (QMainWindow* pFocused = addonFocusedContainer()) {
+        mpLastFocusedContainer = pFocused;
+    }
+    refreshAddonPlacementIfAnyPinned();
+}
+
 // QToolBar does not propagate its button style to widgets added with
 // addWidget(), which is why setToolBarIconSize() re-applies it to Mudlet's own
 // buttons by name. Addon buttons need the same or they keep the style they were
 // born with and end up towering over everything around them.
 void mudlet::applyToolBarStyleToAddonCommands()
 {
-    if (!mpMainToolBar) {
-        return;
-    }
     for (auto it = mAddonCommands.begin(); it != mAddonCommands.end(); ++it) {
-        if (it.value().button) {
-            it.value().button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
-            it.value().button->setIconSize(mpMainToolBar->iconSize());
+        // The toolbar of the window this command is actually in - a detached
+        // window carries its own icon size, and reading the main window's here
+        // would resize a button sitting in somebody else's toolbar.
+        QToolBar* pToolBar = addonToolBarFor(it.value().container);
+        if (it.value().button && pToolBar) {
+            it.value().button->setToolButtonStyle(pToolBar->toolButtonStyle());
+            it.value().button->setIconSize(pToolBar->iconSize());
         }
     }
 }
@@ -1043,6 +1744,13 @@ void mudlet::init()
     // another window.
     mApplicationActive = qGuiApp->applicationState() == Qt::ApplicationActive;
     connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, &mudlet::slot_applicationStateChanged);
+    // A pinned command sits in whichever window the player is in, so moving
+    // between Mudlet's own windows moves it. applicationStateChanged is not
+    // that signal: Mudlet stays ApplicationActive while the player moves from
+    // the main window to a detached one, so a pinned command hung where it was
+    // - in the one case pinning exists for. Only asked when something is
+    // actually pinned, since unpinned placement does not depend on focus.
+    connect(qGuiApp, &QGuiApplication::focusWindowChanged, this, &mudlet::slot_focusWindowChanged);
     readEarlySettings(*mpSettings);
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
@@ -2915,6 +3623,22 @@ void mudlet::closeHost(const QString& name)
     // Every command this profile placed, on whichever surface
     removeAddonCommandsForHost(pH);
 
+    // A profile that closes while holding the microphone takes its session with
+    // it. Left running, the owner pointer would clear with the Host and every
+    // further result would fall through to whichever profile is now in front -
+    // a game that never asked to listen, receiving the tail of someone else's
+    // phrase. The all-profiles-gone case below is the same rule with nobody
+    // left to hand back to.
+    if (mpMicrophoneOwner == pH) {
+        // Processing counts: a phrase still decoding for the profile that is
+        // going away has nowhere to be delivered, and the release below would
+        // otherwise let it fall through to whichever profile is now in front.
+        if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting() || mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing)) {
+            mpSpeechRecognizer->cancel();
+        }
+        releaseMicrophone();
+    }
+
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
     mDiscord.resetData(pH);
@@ -3509,10 +4233,52 @@ void mudlet::updateMainWindowTitle()
 
     // Set window title based on whether we have an active profile in the main window
     if (!mainWindowActiveProfileName.isEmpty()) {
-        setWindowTitle(qsl("%1 - %2").arg(mainWindowActiveProfileName, scmVersion));
+        setWindowTitle(qsl("%1%2 - %3").arg(mainWindowActiveProfileName, mainWindowMicrophoneMarker(), scmVersion));
     } else {
         // No active profiles in main window, show just the version
         setWindowTitle(scmVersion);
+    }
+}
+
+// Any profile the main window holds, not only the tab it is showing - the same
+// rule a detached window follows. Asking only about the shown tab left the
+// commonest arrangement of all unmarked: two games open here, the one in the
+// background listening, and nothing anywhere saying the microphone was live.
+QString mudlet::mainWindowMicrophoneMarker() const
+{
+    if (!mpMicrophoneOwner || mDetachedWindows.contains(mpMicrophoneOwner->getName())) {
+        return QString();
+    }
+    return microphoneMarkerFor(mpMicrophoneOwner->getName());
+}
+
+// An open microphone said where the window manager will show it. Every other
+// signal Mudlet has - a button, a menu item, a pulsing icon - needs the window
+// to be on screen, and the one moment a player most needs to know a microphone
+// is open is when it is not: minimised, or behind a browser, which is exactly
+// the case "stt focus keep" is for.
+//
+// It marks the device rather than the purpose. Core knows a microphone is open
+// for this profile; what it is open *for* is the package's business, and a
+// title is no place to guess at it.
+QString mudlet::microphoneMarkerFor(const QString& profileName) const
+{
+    if (!mpMicrophoneOwner || mpMicrophoneOwner->getName() != profileName) {
+        return QString();
+    }
+    //: Added to the title of the window whose profile has the microphone open, after the profile name
+    return tr(" (listening)");
+}
+
+// Titles carry the marker, so every window has to be asked again whenever the
+// microphone changes hands - including the one that just lost it.
+void mudlet::refreshMicrophoneMarkers()
+{
+    updateMainWindowTitle();
+    for (auto it = mDetachedWindows.constBegin(); it != mDetachedWindows.constEnd(); ++it) {
+        if (it.value()) {
+            it.value()->updateWindowTitle();
+        }
     }
 }
 
@@ -3774,6 +4540,16 @@ void mudlet::hideEvent(QHideEvent* event)
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
+    // QImage reads an SVG only where the qsvg image plugin is deployed, so the
+    // document's own reader answers first; anything it cannot read - a raster
+    // under a .svg name included - falls through to QImage
+    if (TLabel::svgCandidate(imageLocation)) {
+        QSvgRenderer renderer;
+        if (TLabel::loadSvg(renderer, imageLocation) && !renderer.defaultSize().isEmpty()) {
+            return renderer.defaultSize();
+        }
+    }
+
     const QImage image(imageLocation);
 
     if (image.isNull()) {
@@ -4102,8 +4878,12 @@ void mudlet::setToolBarIconSize(const int s)
         mpToolBarReplay->setIconSize(mpMainToolBar->iconSize());
         mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
     }
-    applyToolBarStyleToAddonCommands();
+    // The signal first: a detached window sets its own toolbar's size from it,
+    // and the buttons below are sized from the toolbar of whichever window each
+    // command is in. Applying them first reads the size that window is about to
+    // stop using, so every detached button trails one change behind.
     emit signal_setToolBarIconSize(s);
+    applyToolBarStyleToAddonCommands();
 }
 
 void mudlet::setEditorTreeWidgetIconSize(const int s)
@@ -4158,8 +4938,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (!isVisible && mMenuBarVisibility == enums::visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
-        const int hostCount = mHostManager.getHostCount();
-        if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
+        if (toolBarShouldBeVisible()) {
             mpMainToolBar->show();
         }
     }
@@ -4194,13 +4973,30 @@ void mudlet::slot_toolbarToggleActionTriggered(bool checked)
     synchronizeToolBarVisibility(checked);
 }
 
-void mudlet::adjustToolBarVisibility()
+bool mudlet::toolBarShouldBeVisible()
 {
     const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
-        mpMainToolBar->show();
-    } else {
-        mpMainToolBar->hide();
+    return (hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally));
+}
+
+void mudlet::adjustToolBarVisibility()
+{
+    const bool toolBarVisible = toolBarShouldBeVisible();
+    mpMainToolBar->setVisible(toolBarVisible);
+
+    // A detached window is handed the toolbar state once, in its constructor,
+    // and otherwise only hears the toolbar's own toggle through
+    // synchronizeToolBarVisibility(). Without this the settings path stops at
+    // the main window and a window detached before the setting changed keeps
+    // the state it was built with until it is reattached and detached again.
+    // Detached windows deliberately mirror the main window here, including a
+    // hide that synchronizeToolBarVisibility() would refuse under
+    // canHideToolBar(): a detached window always keeps its own menu bar, and
+    // letting it disagree with the main window is the very fault this fixes.
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->setToolBarVisibility(toolBarVisible);
+        }
     }
 }
 
@@ -6192,6 +6988,10 @@ void mudlet::slot_compactInputLine(const bool state)
 
 mudlet::~mudlet()
 {
+    // qGuiApp outlives this object, and the windows torn down below hand focus
+    // around as they go. QObject only drops these connections once every member
+    // is gone, so the focus handler would otherwise walk a destroyed command list.
+    disconnect(qGuiApp, nullptr, this, nullptr);
     if (mpHunspell_sharedDictionary) {
         saveDictionary(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         Hunspell_destroy(mpHunspell_sharedDictionary);
@@ -6276,12 +7076,9 @@ void mudlet::synchronizeToolBarVisibility(bool visible)
         }
     }
 
-    // Update all detached windows
-    for (auto& detachedWindow : mDetachedWindows) {
-        if (detachedWindow) {
-            detachedWindow->setToolBarVisibility(visible);
-        }
-    }
+    // The detached windows are not updated here: setToolBarVisibility() above
+    // resolves to exactly this state and adjustToolBarVisibility() pushes it to
+    // every one of them
 }
 
 void mudlet::slot_showTabContextMenu(const QPoint& position)
@@ -6298,8 +7095,10 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
         }
     }
 
-    // If we right-clicked on a specific tab, add tab-specific actions
-    if (tabIndex >= 0) {
+    // If we right-clicked on a specific tab, add tab-specific actions. Detaching
+    // is only offered while another tab would be left behind, since detachTab()
+    // refuses to empty the main window
+    if (tabIndex >= 0 && mpTabBar->count() > 1) {
         const QString profileName = mpTabBar->tabData(tabIndex).toString();
 
         // Add "Detach Tab" option
@@ -6340,7 +7139,7 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
 }
 
 // Called from the ctelnet instance for the host concerned:
-bool mudlet::replayStart()
+bool mudlet::replayStart(Host* pHost)
 {
     // Do not proceed if there is a problem with the main toolbar (it isn't there)
     // OR if there is already a replay toolbar in existence (a replay is already
@@ -6357,6 +7156,8 @@ bool mudlet::replayStart()
     mpActionReplay->setToolTip(utils::richText(tr("Cannot load a replay as one is already in progress in this or another profile.")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 
+    mpReplayingHost = pHost;
+
     mpToolBarReplay = new QToolBar(this);
     mpToolBarReplay->setIconSize(QSize(8 * mToolbarIconSize, 8 * mToolbarIconSize));
     mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
@@ -6369,7 +7170,25 @@ bool mudlet::replayStart()
                                     // small, NON-zero time to initiase it...!
 
     mpLabelReplayTime = new QLabel(this);
+    mpLabelReplayTime->setObjectName(qsl("replay_time_label"));
     mpActionReplayTime = mpToolBarReplay->addWidget(mpLabelReplayTime);
+
+    //: Button on the replay toolbar that holds the replay where it is
+    mpActionReplayPause = new QAction(style()->standardIcon(QStyle::SP_MediaPause), tr("Pause"), this);
+    mpActionReplayPause->setObjectName(qsl("replay_pause_action"));
+    mpActionReplayPause->setCheckable(true);
+    //: Tooltip on the replay toolbar's Pause button
+    mpActionReplayPause->setToolTip(utils::richText(tr("Hold the replay where it is. It carries on from the same point when you resume.")));
+    mpToolBarReplay->addAction(mpActionReplayPause);
+    mpToolBarReplay->widgetForAction(mpActionReplayPause)->setObjectName(mpActionReplayPause->objectName());
+
+    //: Button on the replay toolbar that ends the replay early
+    mpActionReplayStop = new QAction(style()->standardIcon(QStyle::SP_MediaStop), tr("Stop"), this);
+    mpActionReplayStop->setObjectName(qsl("replay_stop_action"));
+    //: Tooltip on the replay toolbar's Stop button
+    mpActionReplayStop->setToolTip(utils::richText(tr("End the replay now, without playing the rest of it.")));
+    mpToolBarReplay->addAction(mpActionReplayStop);
+    mpToolBarReplay->widgetForAction(mpActionReplayStop)->setObjectName(mpActionReplayStop->objectName());
 
     mpActionReplaySpeedUp = new QAction(QIcon(qsl(":/icons/export.png")), tr("Faster"), this);
     mpActionReplaySpeedUp->setObjectName(qsl("replay_speed_up_action"));
@@ -6386,6 +7205,8 @@ bool mudlet::replayStart()
     mpLabelReplaySpeedDisplay = new QLabel(this);
     mpActionSpeedDisplay = mpToolBarReplay->addWidget(mpLabelReplaySpeedDisplay);
 
+    connect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
+    connect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
     connect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     connect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
 
@@ -6394,9 +7215,9 @@ bool mudlet::replayStart()
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1s);
     mpTimerReplay->setSingleShot(false);
-    connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::slot_replayTimeChanged);
+    connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::updateReplayTimeLabel);
 
-    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+    updateReplayTimeLabel();
 
     mpLabelReplaySpeedDisplay->show();
     mpLabelReplayTime->show();
@@ -6408,27 +7229,85 @@ bool mudlet::replayStart()
     return true;
 }
 
-void mudlet::slot_replayTimeChanged()
+void mudlet::updateReplayTimeLabel()
 {
-    // This can get called by a QTimer after mpLabelReplayTime has been destroyed:
-    if (mpLabelReplayTime) {
-        mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
-        mpLabelReplayTime->show();
+    // Callers can reach this after replayOver() has taken the toolbar down -
+    // the replay tick in particular keeps firing:
+    if (!mpLabelReplayTime) {
+        return;
+    }
+
+    //: Elapsed time readout on the replay toolbar. %1 is the time itself
+    QString text = tr("Time: %1").arg(mReplayTime.toString(mTimeFormat));
+    // A replay can have long quiet stretches in it, so a clock that has simply
+    // stopped is not on its own a sign that the replay is held. Read that from
+    // the profile rather than from the button, so that the readout reports what
+    // playback is doing instead of confirming what the button was set to:
+    if (mpReplayingHost && mpReplayingHost->mTelnet.replayPaused()) {
+        //: Replaces the elapsed-time readout on the replay toolbar while the replay is held. %1 is the already translated and formatted "Time: ..." text, so do not add a time prefix of your own
+        text = tr("%1 (paused)").arg(text);
+    }
+    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(text));
+    mpLabelReplayTime->show();
+}
+
+void mudlet::slot_replayPauseToggled(const bool paused)
+{
+    // Tell playback first, so that the readout below reports what it did:
+    if (mpReplayingHost) {
+        if (paused) {
+            mpReplayingHost->mTelnet.pauseReplay();
+        } else {
+            mpReplayingHost->mTelnet.resumeReplay();
+        }
+    }
+
+    if (mpActionReplayPause) {
+        if (paused) {
+            mpActionReplayPause->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+            //: Button on the replay toolbar that lets a held replay carry on
+            mpActionReplayPause->setText(tr("Resume"));
+        } else {
+            mpActionReplayPause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+            //: Button on the replay toolbar that holds the replay where it is
+            mpActionReplayPause->setText(tr("Pause"));
+        }
+    }
+    updateReplayTimeLabel();
+}
+
+void mudlet::slot_replayStop()
+{
+    if (mpReplayingHost) {
+        // This ends up in replayOver(), which is what takes this toolbar down:
+        mpReplayingHost->mTelnet.stopReplay();
     }
 }
 
 void mudlet::replayOver()
 {
+    // Ownership of the pointer should not hinge on the widget teardown below
+    // running, so let it go first:
+    mpReplayingHost = nullptr;
+
     if ((!mpMainToolBar) || (!mpToolBarReplay)) {
         return;
     }
 
+    disconnect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
+    disconnect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
     disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
+    mpToolBarReplay->removeAction(mpActionReplayPause);
+    mpToolBarReplay->removeAction(mpActionReplayStop);
     mpToolBarReplay->removeAction(mpActionReplaySpeedUp);
     mpToolBarReplay->removeAction(mpActionReplaySpeedDown);
     mpToolBarReplay->removeAction(mpActionSpeedDisplay);
     removeToolBar(mpToolBarReplay);
+    mpActionReplayPause->deleteLater();
+    mpActionReplayPause = nullptr;
+    mpActionReplayStop->deleteLater();
+    mpActionReplayStop = nullptr;
     mpActionReplaySpeedUp->deleteLater(); // Had previously omitted these, causing a resource leak!
     mpActionReplaySpeedUp = nullptr;
     mpActionReplaySpeedDown->deleteLater();
@@ -6443,6 +7322,11 @@ void mudlet::replayOver()
     mpLabelReplayTime = nullptr;
     mpToolBarReplay->deleteLater();
     mpToolBarReplay = nullptr;
+    // replayStart() makes a new one each time, so without this every replay
+    // leaves another 1Hz timer running for the life of the application:
+    mpTimerReplay->stop();
+    mpTimerReplay->deleteLater();
+    mpTimerReplay = nullptr;
 
     // Unlock/uncheck the replay button/menu item
     mpActionReplay->setChecked(false);
@@ -7806,6 +8690,8 @@ void mudlet::activateProfile(Host* pHost)
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
 
+    refreshAddonPlacement();
+
     // Reset the styles to reflect those of the now active profile:
     mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
     mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
@@ -8051,6 +8937,11 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     }
 }
 
+
+void mudlet::alertUser(int milliseconds)
+{
+    QApplication::alert(this, milliseconds);
+}
 
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
@@ -8321,11 +9212,6 @@ void mudlet::saveDetachedWindowsGeometry()
 
 void mudlet::slot_tabDetachRequested(int index, const QPoint& globalPos)
 {
-    // ensure at least one tab is present in the main window
-    if (index < 1 || index >= mpTabBar->count()) {
-        return;
-    }
-
     detachTab(index, globalPos);
 }
 
@@ -8389,7 +9275,10 @@ void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
 
 void mudlet::detachTab(int tabIndex, const QPoint& position)
 {
-    if (tabIndex < 0 || tabIndex >= mpTabBar->count()) {
+    // The main window keeps at least one tab: which tab is being taken out of
+    // it does not matter, only how many would be left. Every route to a detach
+    // comes through here, so this is the one place the rule has to hold
+    if (tabIndex < 0 || tabIndex >= mpTabBar->count() || mpTabBar->count() < 2) {
         return;
     }
 
@@ -8527,6 +9416,11 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
 
     // Update main window title to reflect changed tab state
     updateMainWindowTitle();
+
+    // Asked for here because the window was built with the profile already in
+    // its map, so TDetachedWindow::addProfile() - which would otherwise cover
+    // this - is never called on the way out.
+    refreshAddonPlacement();
 
     // Only show connection dialog if there are no profiles loaded anywhere,
     // not just when the main window is empty (profiles might be in detached windows)
@@ -8703,6 +9597,8 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
 
     // Update main window title to reflect the reattached profile
     updateMainWindowTitle();
+
+    refreshAddonPlacement();
 }
 
 TMainConsole* mudlet::removeConsoleFromSplitter(const QString& profileName)
@@ -8939,6 +9835,12 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
 
     // Update tab bar auto-hide behavior
     updateMainWindowTabBarAutoHide();
+
+    // The main window is now showing a different profile, or none - and the
+    // profile that left may have been the one holding the microphone, whose
+    // marker belongs to whichever window draws it. Detaching into a new window
+    // asks for this; moving into one that already exists has to as well.
+    updateMainWindowTitle();
 
     // Only show connection dialog if there are no profiles loaded anywhere,
     // not just when the main window is empty (profiles might be in detached windows)

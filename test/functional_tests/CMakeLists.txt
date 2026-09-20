@@ -46,6 +46,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     HostConsolePrintTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
+    LabelSvgBackgroundTest.cpp
     CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
@@ -53,6 +54,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainWindowSizeReportTest.cpp
     CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
+    SpeechAcrossProfilesTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -61,6 +63,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     NotepadTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
+    DetachedWindowToolBarVisibilityTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
@@ -83,7 +86,9 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
+    CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
@@ -118,11 +123,14 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetOptionsReportTest.cpp
+    ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
+    MirrorToStdOutTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
 )
 
@@ -135,6 +143,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
+    TriggerMatchPoolTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
@@ -187,6 +196,7 @@ set(MAP_GROUP_TEST_SOURCES
 # Packages and modules: installing them, saving them and removing them
 set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
+    ActionToolbarMenuTest.cpp
     DefaultPackagesTest.cpp
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
@@ -202,7 +212,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
 )
 
 # Onboarding and in-app guidance: the starter UI, the tutorial invitation,
-# the feature callouts and the experienced-player gate
+# the interface tour, the feature callouts and the experienced-player gate
 set(STARTERUI_GROUP_TEST_SOURCES
     ExperiencedPlayerGateTest.cpp
     FeatureCalloutTest.cpp
@@ -213,6 +223,7 @@ set(STARTERUI_GROUP_TEST_SOURCES
     TutorialInvitationFocusTest.cpp
     TutorialInvitationGateTest.cpp
     TutorialInvitationLayoutTest.cpp
+    UiTourKeyboardTest.cpp
 )
 
 # The settings dialog: its sidebar-and-cards shell, the deep links into it, how
@@ -236,6 +247,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
 set(TEARDOWN_GROUP_TEST_SOURCES
     AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
+    HeadlessVersionTest.cpp
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -243,6 +255,8 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SpeechBridgeLuaTest.cpp
+    SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
@@ -359,11 +373,61 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
-# AppStartupTeardownTest runs the shipped application instead of linking it, so it
-# needs that binary's path and needs it built by the time ctest runs. Naming the
-# target literally is deliberate: EXE_MUDLET_TARGET is a plain variable local to
-# src/CMakeLists.txt, so a rename there fails generation here rather than quietly
-# depending on nothing.
+# A stand-in libvosk, so SpeechRecognizerContractTest and SpeechBridgeLuaTest can
+# reach the code below VoskRecognizer's library guard on a machine with no speech
+# engine - which is every CI runner. Named exactly as the real library is on each platform,
+# because VoskRecognizer looks it up by filename along librarySearchPaths().
+# The test copies it into its own redirected config dir, the first of those
+# paths, so nothing outside the test's temporary directory is touched.
+#
+# Deliberately not linked into anything: it is dlopen()ed by path, which is the
+# whole point, and linking it would put a second set of these symbols in the
+# test binary.
+add_library(vosk_stub SHARED stubs/vosk_stub.cpp)
+set_target_properties(vosk_stub PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "libvosk"
+    # No "lib" prefix from CMake and no version decoration: the name has to be
+    # the one the real release ships, which VoskRecognizer hardcodes.
+    # A subdirectory, NOT beside the test executables. loadVoskLibrary() asks for
+    # the bare name "vosk" before it tries any search path, and the dynamic
+    # loader answers that from the executable's own directory - so a stub built
+    # next to the binaries is found by every test in it, from process start,
+    # whether or not the test installed one - which decides the answer for every
+    # case in that binary before any of them runs.
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
+    # The stub's entry points are plain extern "C" with no __declspec(dllexport),
+    # so without this a Windows build produces a DLL that loads and resolves
+    # nothing - QLibrary::resolve() returns null for every symbol, and a test
+    # would fail for a reason that has nothing to do with what it is checking.
+    WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(APPLE)
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".dylib")
+elseif(WIN32)
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".dll")
+else()
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".so")
+endif()
+# Both groups: SpeechAcrossProfilesTest builds a recognizer with it, and
+# SpeechRecognizerContractTest needs it to get below the library guard at all -
+# without it that binary's one case reaching live model handles skipped on every
+# runner, which is the same as not having it.
+add_dependencies(functional_window_tests vosk_stub)
+add_dependencies(functional_media_tests vosk_stub)
+# Passed rather than reconstructed in the test: the suffix rules above are the
+# only place the platform naming is decided, and a test guessing at it would
+# silently skip instead of failing when they change.
+foreach(stubUser functional_window_tests functional_media_tests)
+    target_compile_definitions(${stubUser} PRIVATE
+        MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
+endforeach()
+
+# AppStartupTeardownTest and HeadlessVersionTest run the shipped application
+# instead of linking it, so they need that binary's path and need it built by the
+# time ctest runs. Naming the target literally is deliberate: EXE_MUDLET_TARGET is
+# a plain variable local to src/CMakeLists.txt, so a rename there fails generation
+# here rather than quietly depending on nothing.
 add_dependencies(functional_teardown_tests mudlet_executable)
 target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
 
@@ -427,6 +491,10 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 # AppStartupTeardownTest starts the whole application eight times over, and a
 # sanitiser build spends seconds on each of those start-ups
 set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
+
+# HeadlessVersionTest runs the application once per row of its matrix, for the
+# same reason
+set_tests_properties(HeadlessVersionTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)

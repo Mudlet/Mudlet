@@ -81,6 +81,12 @@ public:
     // retrieved value), so callers such as UI code need not materialize the secret just to test presence.
     void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback);
 
+    // Where this manager's own last store left a secret that other accounts on the machine can
+    // still read, empty when it left none. Asked by the caller that reports the store to the
+    // user, so that what it reports is the store it is reporting on and not a narrowing that
+    // failed somewhere else in the meantime.
+    QString unprotectedSecretPath() const { return mUnprotectedSecretPath; }
+
     // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
     static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
     static QString retrieveCredential(const QString& profileName, const QString& key);
@@ -127,6 +133,7 @@ private:
     static QString generateLegacyServiceName(const QString& profileName, const QString& key);
     static bool isValidKeyName(const QString& key);
     static bool storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential);
+    bool storeCredentialToFileForThisOperation(const QString& profileName, const QString& key, const QString& credential);
     static QString retrieveCredentialFromFile(const QString& profileName, const QString& key);
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
 
@@ -171,7 +178,7 @@ private:
     // Re-files under the current name, then removes every colliding-format entry for the key.
     void migrateCollidingEntry(const QString& profileName, const QString& key, const QString& legacyService, const QString& password);
     void migrateLegacyEntry(const QString& profileName, const QString& key, const QString& password);
-    static void deleteLegacyKeychainEntry(const QString& profileName, const std::function<void(QKeychain::Job*)>& hook, int timeoutMs);
+    static void deleteLegacyKeychainEntry(const QString& profileName, const std::function<bool(QKeychain::Job*)>& hook, int timeoutMs);
 
     // Current operation state
     QPointer<QKeychain::Job> mCurrentJob{nullptr};
@@ -180,10 +187,17 @@ private:
     AvailabilityCallback mCurrentAvailabilityCallback;
     // What mCurrentJob is doing, for the log line if it is abandoned before it answers.
     QString mCurrentOperationDescription;
+    // What the file fallback of this manager's last store could not narrow; see
+    // unprotectedSecretPath().
+    QString mUnprotectedSecretPath;
 
     int mOperationTimeoutMs = OPERATION_TIMEOUT_MS;
     // Called with each keychain job just before it starts, so a test can make one stall or fail.
-    std::function<void(QKeychain::Job*)> mJobStartHook;
+    // Returning false leaves the job unstarted and hands it to the hook to answer: a credential
+    // store call cannot be cancelled, so a job that has reached the store has to be answered - and
+    // outlived - by the store alone, and a test that answers one itself would be deleting a job the
+    // store still holds a pointer to.
+    std::function<bool(QKeychain::Job*)> mJobStartHook;
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;
