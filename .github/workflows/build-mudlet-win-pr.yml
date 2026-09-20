@@ -101,7 +101,7 @@ jobs:
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
         CCACHE_MAXSIZE: 500M
-        CCACHE_COMPRESSLEVEL: 5
+        CCACHE_COMPRESSLEVEL: 19
       run: |
         ccache --zero-stats --show-stats -v
         ccache --show-compression
@@ -127,7 +127,7 @@ jobs:
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
         CCACHE_MAXSIZE: 500M
-        CCACHE_COMPRESSLEVEL: 5
+        CCACHE_COMPRESSLEVEL: 19
       run: |
         ccache --show-stats -v
         ccache --show-compression
