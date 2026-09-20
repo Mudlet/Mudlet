@@ -2666,22 +2666,26 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     setItemName(pItem, mudServer);
 
     listWidget_profiles->addItem(pItem);
-    // An entry with no artwork of its own is not a failure and is not warned
-    // about; one whose artwork was named but would not load is, because
-    // nothing else would show that the icon is broken rather than absent
+    // An entry the catalog names no artwork for keeps a blank row, which is
+    // neither a failure nor worth warning about: the "Mudlet self-test" entry
+    // is the only one, and it is a testing aid that is deliberately left where
+    // players do not run into it (https://github.com/Mudlet/Mudlet/issues/6443).
+    // Artwork that was named but would not load is a fault, so that entry gets
+    // a name plate to be seen by and a warning - nothing else would show that
+    // its icon is broken rather than absent
     bool iconLoaded = true;
     if (hasCustomIcon(mudServer)) {
         iconLoaded = setCustomIcon(mudServer, pItem);
-    } else if (const QPixmap pixmap(iconFileName); pixmap.isNull()) {
-        iconLoaded = iconFileName.isEmpty();
-        if (!iconLoaded) {
+    } else if (!iconFileName.isEmpty()) {
+        if (const QPixmap pixmap(iconFileName); pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
+            iconLoaded = false;
+            pItem->setIcon(customIcon(mudServer, getCustomColor(mudServer)));
+        } else if (pixmap.width() != 120) {
+            pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        } else {
+            pItem->setIcon(QIcon(iconFileName));
         }
-        pItem->setIcon(customIcon(mudServer, getCustomColor(mudServer)));
-    } else if (pixmap.width() != 120) {
-        pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-    } else {
-        pItem->setIcon(QIcon(iconFileName));
     }
     setItemTooltip(pItem, serverDescription, iconLoaded);
 }

@@ -21,10 +21,23 @@
 /*
  * The connection dialog draws each entry of its games list as an icon and
  * nothing else - the name is carried in the item's data, not its text. An entry
- * whose icon never gets set is therefore an empty row: still selectable, still
+ * whose icon never gets set is therefore a blank row: still selectable, still
  * filling in the connection details beside the list, but with nothing at all to
- * see or click. The "Mudlet self-test" entry has no artwork of its own, so that
- * is exactly what it was, and so is any entry whose artwork cannot be read.
+ * see or click.
+ *
+ * For the "Mudlet self-test" entry that is the intent. It is a testing aid
+ * rather than a game - it runs on Busted, which players do not have installed -
+ * so it is listed and can be selected, yet is given no artwork of its own and
+ * so is not put in front of players; a developer reaches it with
+ * --profile="Mudlet self-test" or from the extra "My games" entry a debug build
+ * offers. See https://github.com/Mudlet/Mudlet/issues/6443.
+ *
+ * Artwork that is named but cannot be read is a different matter: that row is
+ * blank because something is broken, so the entry is given a plate carrying its
+ * name, a tooltip line saying why, and a warning in the log.
+ *
+ * So this test pins both halves: no plate where artwork was never offered, a
+ * plate where it was offered and would not load.
  *
  * A spec cannot reach this: the connection dialog is C++ only, with no Lua way
  * to open it or to read its list.
@@ -67,16 +80,23 @@ private:
         return items.isEmpty() ? nullptr : items.first();
     }
 
-    void verifyEntryIsVisible(dlgConnectionProfiles* pDialog, const QString& game, const QString& where)
+    void verifyEntryIsListedWithoutArtwork(dlgConnectionProfiles* pDialog, const QString& game, const QString& where)
     {
         QListWidgetItem* pItem = listedItem(pDialog, game);
         QVERIFY2(pItem, qPrintable(qsl("'%1' is not listed under %2 at all").arg(game, where)));
+        QVERIFY2(pItem->icon().isNull(), qPrintable(qsl("'%1' is drawn under %2, which shows a developers' testing aid to everybody").arg(game, where)));
+        QVERIFY2(!pItem->toolTip().contains(qsl("could not be read")),
+                 qPrintable(qsl("'%1' is reported under %2 as having artwork that broke, but it is meant to have none: '%3'").arg(game, where, pItem->toolTip())));
+    }
+
+    void verifyPlateCanBeReadFrom(const QListWidgetItem* pItem, const QString& what)
+    {
         const QIcon icon = pItem->icon();
-        QVERIFY2(!icon.isNull(), qPrintable(qsl("'%1' is listed under %2 without an icon, so its row is blank").arg(game, where)));
+        QVERIFY2(!icon.isNull(), qPrintable(qsl("%1 was left without an icon, so its row is blank").arg(what)));
 
         // a plate the user can read the entry from, rather than a flat fill:
         // the list draws no text, so this is all there is to tell rows apart
-        const QImage plate = icon.pixmap(pDialog->listWidget_profiles->iconSize()).toImage();
+        const QImage plate = icon.pixmap(QSize(120, 30)).toImage();
         QCOMPARE(plate.size(), QSize(120, 30));
         QSet<QRgb> colors;
         for (int y = 0; y < plate.height(); ++y) {
@@ -84,7 +104,7 @@ private:
                 colors.insert(plate.pixel(x, y));
             }
         }
-        QVERIFY2(colors.size() > 4, qPrintable(qsl("'%1' draws %2 color(s) under %3, so its row still identifies nothing").arg(game, QString::number(colors.size()), where)));
+        QVERIFY2(colors.size() > 4, qPrintable(qsl("%1 draws %2 color(s), so its row still identifies nothing").arg(what, QString::number(colors.size()))));
     }
 
 private slots:
@@ -109,7 +129,7 @@ private slots:
 
         QVERIFY2(TGameDetails::keys().contains(mSelfTest), "the self-test entry is missing from the games catalog");
         if (!(*TGameDetails::findGame(mSelfTest)).icon.isEmpty()) {
-            QSKIP("the self-test entry now has artwork of its own, so the fallback plate is no longer reachable from it");
+            QSKIP("the self-test entry has been given artwork of its own, so it is no longer the artwork-less case this checks");
         }
     }
 
@@ -122,8 +142,8 @@ private slots:
     }
 
     // with the profile on disk the entry comes from the games catalog, which is
-    // where an entry without artwork was left iconless
-    void test_theSelfTestEntryIsVisibleWithProfileDataOnDisk()
+    // where an entry without artwork is left without an icon
+    void test_theSelfTestEntryIsListedWithoutArtworkWithProfileDataOnDisk()
     {
         // an entry the catalog gives no artwork is not a failure, so it must
         // not be reported as one
@@ -137,20 +157,21 @@ private slots:
 
         pTabBar->setCurrentIndex(0); // "My games"
         pDialog->fillout_form();
-        verifyEntryIsVisible(pDialog, mSelfTest, qsl("'My games'"));
+        verifyEntryIsListedWithoutArtwork(pDialog, mSelfTest, qsl("'My games'"));
 
         pTabBar->setCurrentIndex(1); // "All games"
         pDialog->fillout_form();
-        verifyEntryIsVisible(pDialog, mSelfTest, qsl("'All games'"));
+        verifyEntryIsListedWithoutArtwork(pDialog, mSelfTest, qsl("'All games'"));
 
         pDialog->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
     // and with nothing on disk it is added by the debug-build-only branch of
-    // fillout_form(), which built its item by hand
-    void test_theSelfTestEntryIsVisibleWithNoProfileDataOnDisk()
+    // fillout_form(), which must leave it just as unadorned
+    void test_theSelfTestEntryIsListedWithoutArtworkWithNoProfileDataOnDisk()
     {
+        QTest::failOnWarning(QRegularExpression(qsl("doesn't have a valid icon")));
         QDir(MudletPaths::getMudletPath(enums::profileHomePath, mSelfTest)).removeRecursively();
         QVERIFY(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, mSelfTest)).exists());
 
@@ -162,7 +183,7 @@ private slots:
         pTabBar->setCurrentIndex(0); // "My games"
         pDialog->fillout_form();
 #if defined(QT_DEBUG)
-        verifyEntryIsVisible(pDialog, mSelfTest, qsl("'My games'"));
+        verifyEntryIsListedWithoutArtwork(pDialog, mSelfTest, qsl("'My games'"));
 #else
         QVERIFY2(!listedItem(pDialog, mSelfTest), "outside a debug build 'My games' lists the self-test entry only once it has profile data on disk - 'All games' lists it either way");
 #endif
@@ -170,7 +191,7 @@ private slots:
         // "All games" offers it from the catalog in every build
         pTabBar->setCurrentIndex(1); // "All games"
         pDialog->fillout_form();
-        verifyEntryIsVisible(pDialog, mSelfTest, qsl("'All games'"));
+        verifyEntryIsListedWithoutArtwork(pDialog, mSelfTest, qsl("'All games'"));
 
         pDialog->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
@@ -199,8 +220,8 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
-    // artwork that fails to load is now drawn as a plate rather than as a
-    // blank row, so nothing in the dialog would show that a game lost its own
+    // artwork that fails to load is drawn as a plate rather than as a blank
+    // row, so nothing in the dialog would show that a game lost its own
     void test_everyGameInTheCatalogHasArtworkThatLoads()
     {
         for (const auto& game : TGameDetails::scmDefaultGames) {
@@ -223,7 +244,7 @@ private slots:
         auto* pItem = new QListWidgetItem();
         pDialog->setupMudProfile(pItem, qsl("Broken Artwork Game"), QString(), qsl(":/icons/there-is-no-such-icon.png"));
 
-        QVERIFY2(!pItem->icon().isNull(), "a game whose artwork could not be read was left without an icon");
+        verifyPlateCanBeReadFrom(pItem, qsl("a game whose artwork could not be read"));
         QVERIFY2(pItem->toolTip().contains(qsl("artwork")), qPrintable(qsl("nothing in the entry says its artwork is broken, only the tooltip '%1'").arg(pItem->toolTip())));
 
         pDialog->deleteLater();
@@ -248,10 +269,30 @@ private slots:
         auto* pItem = new QListWidgetItem();
         pDialog->setupMudProfile(pItem, profileName, QString(), QString());
 
-        QVERIFY2(!pItem->icon().isNull(), "a profile whose stored icon could not be read was left without one");
+        verifyPlateCanBeReadFrom(pItem, qsl("a profile whose stored icon could not be read"));
         QVERIFY2(pItem->toolTip().contains(qsl("artwork")), qPrintable(qsl("nothing in the entry says its icon is broken, only the tooltip '%1'").arg(pItem->toolTip())));
 
         QDir(MudletPaths::getMudletPath(enums::profileHomePath, profileName)).removeRecursively();
+        pDialog->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // an entry with no artwork named is left alone, wherever it comes from -
+    // the self-test entry is the catalog's only one today, and a plate here
+    // would show it, and any later one, to everybody
+    void test_anEntryWithNoArtworkNamedIsNotGivenAPlate()
+    {
+        QTest::failOnWarning(QRegularExpression(qsl("doesn't have a valid icon")));
+
+        auto* pDialog = new dlgConnectionProfiles();
+        pDialog->show();
+
+        auto* pItem = new QListWidgetItem();
+        pDialog->setupMudProfile(pItem, qsl("Game Without Artwork"), qsl("A game that brought no artwork"), QString());
+
+        QVERIFY2(pItem->icon().isNull(), "an entry that named no artwork was given a plate, so it is drawn after all");
+        QVERIFY2(!pItem->toolTip().contains(qsl("could not be read")), qPrintable(qsl("an entry that named no artwork is reported as having broken artwork: '%1'").arg(pItem->toolTip())));
+
         pDialog->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
