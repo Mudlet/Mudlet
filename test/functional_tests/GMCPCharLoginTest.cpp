@@ -1123,6 +1123,31 @@ private slots:
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
+    void testResumeHintIsNotSentToAServerThatDoesNotOfferOauth()
+    {
+        // Replaying a reconnect token is not OAuth-scoped, so that rung is deliberately ungated - but a
+        // resume asks the game to restart a provider's browser sign-in, which a game offering only
+        // password-credentials cannot do. Sending it there would spend the one sign-in attempt on a
+        // frame the game cannot answer, after attemptReconnect() has already cancelled the login
+        // timers, and tell the player a browser sign-in was resuming that never will. The hand-off is
+        // what that player needs instead.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off to the game's own sign-in screen");
+        // A resume carries both; the hand-off is identified by carrying neither.
+        QVERIFY2(!sent.contains(qsl("provider")), "the resume form was sent to a game that never offered oauth");
+        QVERIFY2(!sent.contains(qsl("account")), "a hand-off is identified by the absence of account");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
     void testReconnectAcceptedAsTheIntegerOneKeepsTheToken_data()
     {
         QTest::addColumn<QString>("successLiteral");

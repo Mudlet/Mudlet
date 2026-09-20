@@ -1180,7 +1180,8 @@ void GMCPAuthenticator::attemptReconnect()
     // ahead of the advertised methods rather than as one of them, and Char.Login.Token is not scoped to
     // OAuth, so a password-credentials-only game may mint one and honour it. Gating this left that
     // player's saved token unused and downgraded them to typing a password on every connect. A store
-    // holding nothing usable still ends at selectAuthMethod(), on readStoredSignIn()'s last path.
+    // holding nothing replayable falls to readStoredSignIn()'s remaining rungs - the provider resume
+    // where the game offers oauth, otherwise the interactive hand-off.
     readStoredSignIn(true);
 }
 
@@ -1330,7 +1331,13 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
         // Scrub on every remaining path: the token is still live here whenever sendReconnect was not
         // reached or refused.
         SecureStringUtils::secureStringClear(entry.token);
-        if (!entry.account.isEmpty() && !entry.provider.isEmpty()) {
+        // Gated on oauth where the token rung above deliberately is not: a token is verified ahead of
+        // the advertised methods and is not OAuth-scoped, but a resume asks the game to restart a
+        // provider's browser sign-in, which a game offering only password-credentials cannot do.
+        // Sending it there spends this connection's one sign-in attempt - attemptReconnect() has
+        // already cancelled the login timers - on a frame the game cannot answer, and tells the player
+        // a browser sign-in is resuming that never will.
+        if (!entry.account.isEmpty() && !entry.provider.isEmpty() && mSupportedAuthTypes.contains(qsl("oauth"))) {
             // No usable token, but we remember how this account signs in: ask the game to restart that
             // provider's browser sign-in rather than fall to a provider menu.
             sendResume(entry.account, entry.provider);
