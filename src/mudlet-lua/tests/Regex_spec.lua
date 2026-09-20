@@ -339,6 +339,30 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- PCRE2 returns the name table in alphabetical order, so the named-group
+    -- loop asks for positions in an order unrelated to where the groups sit in
+    -- the line: aaa is asked for first and zzz last. Converting zzz's offset
+    -- therefore walks back over the dragon - one character, four bytes, but two
+    -- UTF-16 code units - and over the sharp s. Selecting zzz, the furthest step
+    -- back, is what pins that walk; a rule that subtracted one code unit for the
+    -- dragon instead of two would select "ed " here and pass every other spec.
+    it("selectCaptureGroup lands on a named group asked for after a later one", function()
+        local selection
+        local pattern = "^(?<zzz>\\w+) (?<mmm>\\S+) (?<aaa>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("zzz")
+            selection = getSelection()
+            deselect()
+        end, 1)
+        finally(function() if type(id) == "number" and id > 0 then killTrigger(id) end end)
+
+        feedTriggers("\nzed 🐉ß alf\n")
+
+        assert.are.equal("zed", selection)
+        killTrigger(id)
+    end)
+
     -- selectCaptureGroup by name selects correct text
     it("selectCaptureGroup by name selects the right text", function()
         local selection_first, selection_second
@@ -497,6 +521,27 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         assert.are.equal("50", sel_by_name)
         assert.are.equal("50", sel_by_number)
         killTrigger(id)
+    end)
+
+    -- a group on the branch the alternation did not take has no capture at all,
+    -- as opposed to an empty one
+    it("leaves out a named group that took no part in the match", function()
+        local snapshot = {}
+        local pattern = "^alt (?:(?<left>aaa)|(?<right>bbb))$"
+
+        local id = tempRegexTrigger(pattern, function()
+            snapshot = {left = matches["left"], right = matches["right"], whole = matches[1]}
+        end, 1)
+        -- killed from here rather than after the assertions: a trigger that
+        -- never fired is what the first of them catches, and a kill they skip
+        -- leaves it live for the specs that follow
+        finally(function() killTrigger(id) end)
+
+        feedTriggers("\nalt bbb\n")
+
+        assert.are.equal("alt bbb", snapshot.whole, "the trigger should have matched at all")
+        assert.are.equal("bbb", snapshot.right)
+        assert.is_nil(snapshot.left)
     end)
 
     -- no match

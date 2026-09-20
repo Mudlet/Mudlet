@@ -154,6 +154,16 @@ export MUDLET_TEST_HTTP_PORT="$HTTP_PORT"
 export MUDLET_TEST_MMCP_DIR="$peer_dir"
 export MUDLET_TEST_TELNET_DIR="$telnet_dir"
 export XDG_RUNTIME_DIR="${MUDLET_TEST_DISCORD_RUNTIME_DIR:-$runtime_dir}"
+# Xvfb is an X server, so both toolkits have to target X11 - on a Wayland desktop
+# neither picks it by itself, and the GTK3 platform theme Qt loads under GNOME
+# calls gtk_init(), which exits the process when it cannot open a display.
+export QT_QPA_PLATFORM=xcb
+# Replacing XDG_RUNTIME_DIR above also hides the desktop's Wayland socket. Where
+# Qt loads its GTK platform theme, GDK then finds no display it is willing to
+# open and gtk_init() exits the process during QApplication construction - status
+# 1, before Mudlet prints a line. The run is under an X server either way, so name
+# the backend GDK should have picked; it is a no-op without that theme plugin.
+export GDK_BACKEND=x11
 export LD_LIBRARY_PATH="$WS/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export DBUS_SESSION_BUS_ADDRESS='disabled:'
 export TESTS_DIRECTORY="${TESTS_DIRECTORY:-$WS/src/mudlet-lua/tests}"
@@ -179,10 +189,13 @@ timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --m
 # over to the donor's LUA_SOURCE_PATH and the suite passes against that instead.
 # The warning it emits on the way past names the file and the Lua error, so treat
 # it as fatal. MudletBusted_spec.lua backs this up with a positive check.
-if grep -q "loadGlobal() loading" "$TMP/run.log"; then
+# Anchored: --mirror copies every line the consoles show into this same log,
+# each behind a "<profile>.<console>| " prefix, so an unanchored match would
+# also fire on a spec that merely echoed the phrase.
+if grep -q "^TLuaInterpreter::loadGlobal() loading" "$TMP/run.log"; then
   echo "This worktree's mudlet-lua failed to load, so the specs ran against the"
   echo "binary's own copy - the result above is meaningless. The failure was:"
-  grep "loadGlobal() loading" "$TMP/run.log"
+  grep "^TLuaInterpreter::loadGlobal() loading" "$TMP/run.log"
   rc=1
 fi
 

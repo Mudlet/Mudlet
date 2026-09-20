@@ -82,6 +82,10 @@ QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 - Use Qt's parent-child system for automatic cleanup for Qt classes
 - Otherwise, use C++ smart pointers for non-Qt classes
 
+### Binary file formats
+
+Every `QDataStream` that reads or writes a Mudlet file must call `setVersion(QDataStream::Qt_5_12)` before any data crosses it, on both halves of a reader/writer pair - `QFont`'s binary representation changed at Qt 5.13, so that pinned version *is* the on-disk format and changing it breaks file compatibility.
+
 ### Include management
 
 Minimize `#include` directives to reduce build times:
@@ -97,7 +101,7 @@ Minimize `#include` directives to reduce build times:
 - Don't copy includes from similar files without checking if they're needed
 
 ## Key architecture points
-Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
+Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. There are two exceptions: networking, which Qt handles in the background, and `TriggerMatchPool` (`src/TriggerMatchPool.h`), which during a flood of incoming text asks a few helper threads which triggers *cannot* match a line before the main thread walks them. Everything reachable from `TTrigger::prescanMayFire()` must stay a pure function of the trigger and the line - no counters, no logging, no Lua, nothing that writes - because it runs on those threads; the main thread still runs every trigger that fires, in order. Its tuning knobs (`triggerMatchThreads` and friends in `Mudlet.ini`, or the `MUDLET_MATCH_*` environment variables that override them for one run) are documented in `docs/platform-builds.md`.
 
 `Host` (`src/Host.h`) is the per-profile session object: it owns the Lua interpreter, the trigger units and the console. The name reads like "server", but it is the profile.
 
@@ -144,7 +148,7 @@ The project uses the `.clang-format` configuration in the repo root. This ensure
 
 ### Static analysis
 
-For complete setup instructions on how to run static analysis during a build, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
+For complete setup instructions on how to run static analysis during a build, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_analysis
 
 ### Git
 

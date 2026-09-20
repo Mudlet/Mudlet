@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 3.1.0    Switch from MINGW64 to CLANG64
+# Version: 3.2.0    Configure from the ci-windows CMake preset
+#          3.1.0    Switch from MINGW64 to CLANG64
 #          3.0.0    Switch from qmake to CMake with Release builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
@@ -107,9 +108,6 @@ clang++ --version
 echo ""
 
 cd "${GITHUB_WORKSPACE}" || exit 1
-mkdir -p "build-${MSYSTEM}"
-
-cd "${GITHUB_WORKSPACE}"/build-"${MSYSTEM}" || exit 1
 
 #### Lua environment setup ####
 LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
@@ -138,34 +136,9 @@ else
   export WITH_UPDATER=YES
 fi
 
-# Configure CMake with ccache and Release build type
-CMAKE_ARGS=(
-  -G Ninja
-  -DCMAKE_BUILD_TYPE=Release
-  -DCMAKE_PREFIX_PATH="${MINGW_BASE_DIR}"
-  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
-)
-
-if [ "${WITH_SENTRY}" = "ON" ]; then
-    CMAKE_ARGS+=("-DWITH_SENTRY=ON")
-    CMAKE_ARGS+=("-DSENTRY_DSN=${SENTRY_DSN}")
-fi
-
-if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
-    CMAKE_ARGS+=("-DSENTRY_SEND_DEBUG=1")
-fi
-
-# Enable ccache for CMake
-export WITH_CCACHE="YES"
-if [ "${WITH_CCACHE}" = "YES" ]; then
-  echo "  Configuring CMake to use ccache..."
-  CMAKE_ARGS+=(
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache
-  )
-fi
-
-cmake .. "${CMAKE_ARGS[@]}"
+# The flags live in CMakePresets.json, and the preset picks WITH_SENTRY,
+# SENTRY_DSN and SENTRY_SEND_DEBUG up out of the environment the workflow set
+cmake --preset ci-windows
 
 echo " ... CMake configuration done."
 echo ""
@@ -174,12 +147,10 @@ echo "Running CMake build ..."
 echo ""
 
 # Build using CMake with parallel jobs
-# Note: --config is only relevant for multi-config generators (e.g., Visual Studio)
-# but is harmless for single-config generators like Unix Makefiles
 if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
-  cmake --build . --parallel "${NUMBER_OF_PROCESSORS}"
+  cmake --build --preset ci-windows --parallel "${NUMBER_OF_PROCESSORS}"
 else
-  cmake --build .
+  cmake --build --preset ci-windows
 fi
 
 echo " ... CMake build finished"

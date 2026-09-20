@@ -44,16 +44,81 @@ local function stillInLayout(container)
     return owner ~= nil and owner.windowList ~= nil and owner.windowList[container.name] == container
 end
 
--- Internal function: tells whether a constraint means a different size once the
--- container it belongs to is put somewhere else. A percentage is a share of the
--- parent and a negative value is measured from the parent's far edge, while a
--- plain pixel or character size means the same wherever the container ends up.
+-- Internal function: tells whether a constraint is a share of the parent
+-- @param constraint a Geyser size constraint
+local function scalesWithParent(constraint)
+    return type(constraint) == "string" and string.find(constraint, "%", 1, true) ~= nil
+end
+
+-- Internal function: tells whether a constraint is counted from the parent's anti-origin
+-- @param constraint a Geyser size constraint
+local function fromAntiOrigin(constraint)
+    return type(constraint) == "string" and string.find(constraint, "-", 1, true) ~= nil
+end
+
+-- Internal function: tells whether a constraint still re-derives itself from the far edge
+-- @param constraint a Geyser size constraint
+local function followsFarEdge(constraint)
+    return fromAntiOrigin(constraint) and not scalesWithParent(constraint)
+end
+
+-- Internal function: tells whether a constraint implies a different size in a different parent
 -- @param constraint a Geyser size constraint
 local function relativeToParent(constraint)
-    if type(constraint) ~= "string" then
-        return false
+    return scalesWithParent(constraint) or followsFarEdge(constraint)
+end
+
+-- Internal function: the size and origin Geyser resolves a percentage against,
+-- which is the container's own parent rather than the main window - the same
+-- switch setPercent() and onMove() make
+-- @param container the container whose constraint is being recomputed
+local function parentFrame(container)
+    local x, y = 0, 0
+    local winw, winh = getMainWindowSize()
+    if (container.container) and (container.container ~= Geyser) then
+        x, y = container.container.get_x(), container.container.get_y()
+        winw, winh = container.container.get_width(), container.container.get_height()
     end
-    return string.find(constraint, "%%") ~= nil or string.find(constraint, "-") ~= nil
+    return x, y, winw, winh
+end
+
+-- Internal function: gives a size constraint a new value while keeping its kind. A
+-- share is measured against the parent, since that is what Geyser resolves it
+-- against, and floored at zero because a negative share reads as its complement. A
+-- size counted from the far edge re-derives itself and is already right, and a
+-- parent with no size gives nothing to measure against at all.
+-- @param constraint the constraint as it stands
+-- @param value the new size in pixels
+-- @param total the parent's size along the same axis
+local function keepRelativeSize(constraint, value, total)
+    if total <= 0 then
+        return constraint
+    end
+    if scalesWithParent(constraint) then
+        return make_percent(math.max(0, value)/total)
+    end
+    if followsFarEdge(constraint) then
+        return constraint
+    end
+    return value
+end
+
+-- Internal function: gives a position constraint a new value while keeping its
+-- kind. A share is measured from the parent's origin as well as against its size.
+-- Nothing is left alone here: Geyser gives only a negative size the container's own
+-- position to work from, so a position counted from the far edge cannot follow it.
+-- @param constraint the constraint as it stands
+-- @param value the new position in pixels
+-- @param total the parent's size along the same axis
+-- @param origin the parent's origin along the same axis
+local function keepRelativePosition(constraint, value, total, origin)
+    if total <= 0 then
+        return constraint
+    end
+    if scalesWithParent(constraint) then
+        return make_percent(math.max(0, value - origin)/total)
+    end
+    return value
 end
 
 -- Internal function: works out what a constraint measures in a given container,
@@ -298,7 +363,6 @@ function Adjustable.Container:onMove (label, event)
     end
 
     if adjustInfo.x and adjustInfo.name == label.name then
-        self:adjustBorder()
         local x, y = getMousePosition()
         local winw, winh = getMainWindowSize()
         local x1, y1, w, h = self.get_x(), self.get_y(), self:get_width(), self:get_height()
@@ -369,6 +433,8 @@ function Adjustable.Container:onMove (label, event)
                 self:adjustConnectedContainers()
             end
         end
+        -- measured after the drag applies, not before: the border is the container's own size
+        self:adjustBorder()
         adjustInfo.x, adjustInfo.y = x, y
     end
 end
@@ -384,20 +450,20 @@ function Adjustable.Container:validAttachPositions()
     return found_positions
 end
 
--- internal function to adjust the main console borders if needed
-function Adjustable.Container:adjustBorder()
+local oppositeBorder = {top = "bottom", bottom = "top", left = "right", right = "left"}
+
+local function setConsoleBorder(where, size)
+    _G[string.format("setBorder%s", string.title(where))](size)
+end
+
+-- internal function to work out how much room this container wants reserved on its border,
+-- and reserve none of it. What is actually reserved also depends on the border facing this
+-- one, so self.borderSize is the request and not the size applied - the two only coincide
+-- while the facing border leaves enough room for the whole request. Returns false for a
+-- container that is not attached to a border this understands.
+function Adjustable.Container:measureBorder()
     local winw, winh = getMainWindowSize()
-    local where = false
-
-    if type(self.attached) ~= "string" then
-        return false
-    end
-
-    where = self.attached:lower()
-    if table.contains(self:validAttachPositions(), where) == false or self.minimized or self.hidden then 
-        self:detach()
-        return
-    end
+    local where = type(self.attached) == "string" and self.attached:lower()
 
     if  where == "right" then 
         self.borderSize = winw+self.attachedMargin-self.get_x()
@@ -408,17 +474,94 @@ function Adjustable.Container:adjustBorder()
     elseif  where == "top"     then 
         self.borderSize = self.get_height()+self.get_y()+self.attachedMargin
     else
+        return false
+    end
+    return true
+end
+
+-- internal function to re-measure the containers attached to one border and report the
+-- largest reservation any of them asks for. Zero for a border nothing is attached to, and
+-- for one whose containers have all been moved out of reach of it
+local function neededBorder(attached)
+    local needed = 0
+    for k,v in pairs(attached) do
+        if v:measureBorder() and v.borderSize > needed then
+            needed = v.borderSize
+        end
+    end
+    return needed
+end
+
+-- internal function to work out what each side of one axis may reserve. A container only
+-- knows what its own side needs, so the console is only left room if the two sides are
+-- worked out together: each side keeps up to half of what the axis can spare, plus however
+-- much of the other half the side facing it leaves unused. Both sides are measured afresh
+-- from the containers' current geometry, so the pair of sizes does not depend on which
+-- container asked for the settle
+local function axisShares(where, opposite)
+    local winw, winh = getMainWindowSize()
+    local vertical = (where == "top" or where == "bottom")
+    local charWidth, charHeight = calcFontSize("main")
+    -- the console keeps two characters, and never less than 40px, because the pane's scroll
+    -- bar has to fit in that and Lua cannot measure it. Without the bound a container
+    -- reaching the window edge would reserve the whole axis
+    local minimumConsole = math.max(40, 2 * (vertical and charHeight or charWidth))
+    local spare = math.max(0, (vertical and winh or winw) - minimumConsole)
+    local near = neededBorder(Adjustable.Container.Attached[where])
+    -- only the facing border is defaulted: nothing has ever had to be attached to it,
+    -- while the side being settled always has its table by the time it gets here
+    local far = neededBorder(Adjustable.Container.Attached[opposite] or {})
+    if near + far > spare then
+        local half = spare / 2
+        if near < half then
+            far = spare - near
+        elseif far < half then
+            near = spare - far
+        else
+            near, far = half, half
+        end
+    end
+    return near, far
+end
+
+-- internal function to reserve both borders of one axis at once. The border named is always
+-- written, because writing 0 to it is what hands it back once the last container has left
+-- it; the facing one is only written while containers are attached to it, since a border
+-- nobody is attached to may be one the user set with setBorderRight() by hand. So the pair
+-- of sizes does not depend on which side asked, but which borders get written does
+local function setAxisBorders(where)
+    local opposite = oppositeBorder[where]
+    if not opposite then
+        return
+    end
+    local near = axisShares(where, opposite)
+    setConsoleBorder(where, near)
+    if next(Adjustable.Container.Attached[opposite] or {}) then
+        -- the write above dispatched sysWindowResizeEvent to every attached container's
+        -- handler, and a handler can move, resize or detach one, so the facing side is
+        -- measured again rather than reused
+        local _, far = axisShares(where, opposite)
+        setConsoleBorder(opposite, far)
+    end
+end
+
+-- internal function to adjust the main console borders if needed
+function Adjustable.Container:adjustBorder()
+    if type(self.attached) ~= "string" then
+        return false
+    end
+
+    local where = self.attached:lower()
+    if table.contains(self:validAttachPositions(), where) == false or self.minimized or self.hidden then
+        self:detach()
+        return
+    end
+
+    if not self:measureBorder() then
         self.attached = false
         return
     end
-    local borderSize = self.borderSize
-    for k,v in pairs(Adjustable.Container.Attached[where]) do
-        if v.borderSize > borderSize then
-            borderSize = v.borderSize
-        end
-    end
-    local funcname = string.format("setBorder%s", string.title(where))
-    _G[funcname](borderSize)
+    setAxisBorders(where)
 end
 
 -- internal function to adjust connected containers
@@ -440,26 +583,31 @@ function Adjustable.Container:adjustConnectedContainers()
                     width = nil
                     x = nil
                 end
-                container:move(x, y)
-                container:resize(width, height)
+                Geyser.Container.move(container, x, y)
+                Geyser.Container.resize(container, width, height)
             else
+                -- every size below is measured from where the move actually put the
+                -- container rather than from the position it asked for: a pixel
+                -- constraint is stored whole, so dropping the fraction twice walks
+                -- the far edge in a pixel on every mouse move
+                local px, py, pw, ph = parentFrame(container)
                 if where == "right" then
-                    container:resize(self:get_x() - container:get_x(), nil)
+                    Geyser.Container.resize(container, keepRelativeSize(container.width, self:get_x() - container:get_x(), pw), nil)
                 end
                 if where == "left" then
                     local right_x = container:get_x() + container:get_width()
-                    local left_x = self:get_x() + self:get_width()
-                    container:move(left_x, nil)
-                    container:resize(right_x - container:get_x(), nil)
+                    local left_x = math.min(self:get_x() + self:get_width(), right_x)
+                    Geyser.Container.move(container, keepRelativePosition(container.x, left_x, pw, px), nil)
+                    Geyser.Container.resize(container, keepRelativeSize(container.width, right_x - container:get_x(), pw), nil)
                 end
                 if where == "bottom" then
-                    container:resize(nil, self:get_y() - container:get_y())
+                    Geyser.Container.resize(container, nil, keepRelativeSize(container.height, self:get_y() - container:get_y(), ph))
                 end
                 if where == "top" then
                     local bottom_y = container:get_y() + container:get_height()
-                    local top_y = self:get_y() + self:get_height()
-                    container:move(nil, top_y)
-                    container:resize(nil, bottom_y - container:get_y())
+                    local top_y = math.min(self:get_y() + self:get_height(), bottom_y)
+                    Geyser.Container.move(container, nil, keepRelativePosition(container.y, top_y, ph, py))
+                    Geyser.Container.resize(container, nil, keepRelativeSize(container.height, bottom_y - container:get_y(), ph))
                 end
             end
             container:adjustBorder()
@@ -542,18 +690,28 @@ function Adjustable.Container:setBorderMargin(margin)
     self:adjustBorder()
 end
 
+-- an attached container's reservation follows its own geometry, whichever handler moved or
+-- resized it - up to what the border facing it leaves room for
+function Adjustable.Container:move(x, y)
+    Geyser.Container.move(self, x, y)
+    if self.attached then self:adjustBorder() end
+end
+
+function Adjustable.Container:resize(width, height)
+    Geyser.Container.resize(self, width, height)
+    if self.attached then self:adjustBorder() end
+end
+
 -- internal function to resize the border automatically if the window size changes
 function Adjustable.Container:resizeBorder()
     local winw, winh = getMainWindowSize()
-    self.timer_active = self.timer_active or true
-    -- Check if Window resize already happened.
-    -- If that is not checked this creates an infinite loop and crashes because setBorder also causes a resize event
-    if (winw ~= self.old_w_value or winh ~= self.old_h_value) and self.timer_active then
-        self.timer_active = false
-        tempTimer(0.2, function() self:adjustBorder() self:adjustConnectedContainers() end)
+    -- setBorder raises another resize event; Host::setBorders ignoring an unchanged border is what ends the chain, recording the size first only spares it a measurement
+    if winw ~= self.old_w_value or winh ~= self.old_h_value then
+        self.old_w_value = winw
+        self.old_h_value = winh
+        self:adjustBorder()
+        self:adjustConnectedContainers()
     end
-    self.old_w_value = winw
-    self.old_h_value = winh
 end
 
 --- attaches your container to the given border
@@ -582,33 +740,27 @@ end
 function Adjustable.Container:detach()
     -- a container of the same name may have taken over the registration, so
     -- only unregister while it is still ours - the same guard type_delete uses
-    local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[self.attached]
+    local where = self.attached
+    local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[where]
     if attachedTo and attachedTo[self.name] == self then
         attachedTo[self.name] = nil
     end
     self.borderSize = nil
-    self:resetBorder(self.attached)
-    self.attached=false
+    -- unhooked first: handing the border back raises an event we would answer by re-reserving
+    self.attached = false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
+    self:resetBorder(where)
 end
 
--- internal function to reset the given border
+-- internal function to re-settle the axis the given border is on, releasing it when nothing
+-- is left attached to it. Both borders of the axis are written, so the one facing this gets
+-- back whatever it had to give up to the container that is leaving
 -- @param where possible border values are "top", "bottom", "right", "left"
 function Adjustable.Container:resetBorder(where)
-    local resetTo = 0
     if not Adjustable.Container.Attached[where] then
         return
     end
-    for k,v in pairs(Adjustable.Container.Attached[where]) do
-        if v.borderSize > resetTo then
-            resetTo = v.borderSize
-        end
-    end
-    if        where == "right"   then setBorderRight(resetTo)
-    elseif  where == "left"    then setBorderLeft(resetTo)
-    elseif  where == "bottom"  then setBorderBottom(resetTo)
-    elseif  where == "top"     then setBorderTop(resetTo)
-    end
+    setAxisBorders(where)
 end
 
 -- creates the adjustable label and the container where all the elements will be put in

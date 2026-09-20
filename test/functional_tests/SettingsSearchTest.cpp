@@ -34,6 +34,7 @@
 #include <QtTest/QtTest>
 
 #include <QBoxLayout>
+#include <QColorSpace>
 #include <QGroupBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -44,6 +45,7 @@
 #include <QTimer>
 #include <QToolButton>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -163,7 +165,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -178,8 +180,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -404,7 +405,14 @@ private slots:
         // survives out of the file and into the header
         const QImage expected(qsl(":/icons/settings-display.png"));
         QCOMPARE(carried.size(), expected.size());
-        QCOMPARE(carried.convertToFormat(QImage::Format_Alpha8), expected.convertToFormat(QImage::Format_Alpha8));
+        QImage carriedShape = carried.convertToFormat(QImage::Format_Alpha8);
+        QImage expectedShape = expected.convertToFormat(QImage::Format_Alpha8);
+        // QImage::operator== compares the colour space, which a gAMA chunk in the
+        // icon gives one side and painting the tint strips from the other - an
+        // image optimiser re-encoding the icon would otherwise fail this
+        carriedShape.setColorSpace(QColorSpace());
+        expectedShape.setColorSpace(QColorSpace());
+        QCOMPARE(carriedShape, expectedShape);
     }
 
     // What someone types is often not a word the settings use - an acronym, or

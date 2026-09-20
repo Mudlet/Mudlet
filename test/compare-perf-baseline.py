@@ -61,9 +61,46 @@ HARNESSES = {
             "corpus_version",
             "display_rows_per_paint",
             "display_cols_per_paint",
+            # Every display timing is paid per device pixel while every other
+            # display invariant is logical, so two runs at different scale
+            # factors agree on the workload and disagree on every paint metric -
+            # the ratio reported as a code change. Invariants are compared by
+            # exact equality on the parsed value, so the %.2f the benchmark
+            # prints is what gives this one any tolerance: two runs whose real
+            # ratios differ below the second decimal both read 1.00 and compare
+            # equal, while a genuinely different scale factor still does not.
+            "display_device_pixel_ratio",
             "display_tail_small_cells",
             "display_tail_large_cells",
+            "display_overlay_small_cells",
+            "display_overlay_large_cells",
+            # 0 when the overlay bench's repaints stopped reusing the cached
+            # screen. An invariant rather than a gated metric because the timings
+            # of a build that lost that path are not slower versions of the same
+            # work, they are a different paint entirely - refusing to compare
+            # says so, where a percentage would bury it.
+            "display_overlay_cache_reused",
         ),
+        # Invariants that also have to hold a particular value, not merely agree
+        # with each other. Two builds that have both lost the cached-screen path
+        # both emit 0, which equality is perfectly happy with - and the timings
+        # they carry then describe a repaint that skipped the damaged band on
+        # both sides, which is faster than the one the metric names.
+        "must_be_set": ("display_overlay_cache_reused",),
+        # Workload knobs the harness reads from the environment, as metric name
+        # to variable. Two runs that differ here did different work, so they are
+        # refused. A knob left unset did the default workload, whether the run
+        # reports it as 0 or leaves it out, and so did a dump from before it
+        # existed - so a missing one reads as 0 rather than as "skip the check",
+        # and a chunked run cannot slip past an old dump as a regression.
+        "workload_knobs": {
+            "feed_chunk_lines": "MUDLET_BENCH_CHUNK_LINES",
+            "bench_chunk_bytes": "MUDLET_BENCH_CHUNK_BYTES",
+        },
+        # Whether the trigger prescan ran in parallel: worth a note, since it
+        # moves trigger_lines_per_sec by a lot, but a fair comparison across
+        # the change that added it needs one side without it.
+        "soft_invariants": ("prescan_workers",),
         # Throughput for the text and trigger pipelines, plus the shipped default
         # packages on the same corpus - the pipeline metrics run on a bare
         # profile, so only defaults_text_lines_per_sec can see a package costing
@@ -124,7 +161,23 @@ HARNESSES = {
 # have it - but never read as a result either, so it stays out of the table.
 MODE_METRICS = ("bench_frame_hash_mode",)
 
-INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(name for harness in HARNESSES.values() for name in harness["invariants"])
+INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(
+    name
+    for harness in HARNESSES.values()
+    for name in harness["invariants"] + tuple(harness.get("workload_knobs", {}))
+)
+
+# Why a differing invariant means the runs are not comparable, where the default
+# answer - the two builds are not the same harness, rebuild them - would send
+# someone rebuilding over something no build can change.
+INVARIANT_HINTS = {
+    "display_device_pixel_ratio": (
+        "the two runs drew at different display scaling, and every paint metric is paid per "
+        "device pixel while every other display invariant is logical - so the ratio would be "
+        "reported as a paint regression. Re-run both at the same QT_SCALE_FACTOR, or with none "
+        "set at all; rebuilding cannot change it."
+    ),
+}
 
 # Wall-clock ceiling for a single benchmark run under --run. The ASan/offscreen
 # functional-test build feeds a huge corpus several times, so this is generous.
@@ -249,10 +302,35 @@ def check_invariants(before, after):
                 f"the same {before_harness} harness/build and cannot be compared."
             )
         if before[name] != after[name]:
+            if name == "corpus_version" and 0 in (before[name], after[name]):
+                fail(
+                    "corpus_version 0 marks a run made with MUDLET_BENCH_LINES or MUDLET_BENCH_CHUNK_BYTES "
+                    "set, which reshapes the workload; such a run compares only with another made with the "
+                    "same settings."
+                )
+            reason = INVARIANT_HINTS.get(
+                name,
+                "the two runs measured different workloads or build configurations and cannot be "
+                f"compared. Rebuild both trees from the same {before_harness} harness, built the same way.",
+            )
+            fail(f"{name} differs ({before[name]:g} vs {after[name]:g}) - {reason}")
+
+    for name in HARNESSES[before_harness].get("must_be_set", ()):
+        for label in ("before", "after"):
+            run = before if label == "before" else after
+            if not run[name]:
+                fail(
+                    f"{name} is 0 in the {label} run - that run did not measure what the metric "
+                    "names, so comparing it says nothing. Both runs having lost it makes them "
+                    "equal, not comparable."
+                )
+
+    for name, knob in HARNESSES[before_harness].get("workload_knobs", {}).items():
+        old, new = before.get(name, 0), after.get(name, 0)
+        if old != new:
             fail(
-                f"{name} differs ({before[name]:g} vs {after[name]:g}) - the two runs measured "
-                "different workloads or build configurations and cannot be compared. "
-                f"Rebuild both trees from the same {before_harness} harness, built the same way."
+                f"{name} differs ({old:g} vs {new:g}) - the two runs did different work and cannot "
+                f"be compared. Set {knob} the same way for both."
             )
 
     for name in HARNESSES[before_harness].get("soft_invariants", ()):

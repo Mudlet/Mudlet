@@ -27,7 +27,6 @@
 
 #include "Host.h"
 #include "T2DMap.h"
-#include "TConsole.h"
 #include "TRoomDB.h"
 
 #include <QBuffer>
@@ -357,6 +356,7 @@ void TArea::addRoom(int id)
     if (pR) {
         if (!rooms.contains(id)) {
             rooms.insert(id);
+            bumpRoomsVersion();
             mZLevelIndex.addRoom(id, pR->z());
             mGridIndex.addRoom(id, pR->z(), pR->x(), pR->y());
             if (!pR->customLines.empty()) {
@@ -373,7 +373,7 @@ void TArea::addRoom(int id)
         }
     } else {
         const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
-        mpMap->mpHost->mpConsole->printSystemMessage(error);
+        mpMap->mpHost->printSystemMessage(error);
     }
 }
 
@@ -688,7 +688,9 @@ void TArea::removeRoom(int room)
         // its entries are stuck here until something calls calcSpan():
         qWarning() << "TArea::removeRoom(" << room << ") the room is no longer in the map, so this area's indexes cannot be updated";
     }
-    rooms.remove(room);
+    if (rooms.remove(room)) {
+        bumpRoomsVersion();
+    }
     mAreaExits.remove(room);
     // Exits leading here from the area's remaining rooms are handled by
     // whoever took the room away: TRoomDB::__removeRoom() clears them through

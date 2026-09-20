@@ -31,14 +31,18 @@
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
+#include <utility>
 
 #include <hunspell/hunspell.h>
 
 #include <list>
 
+class TAction;
+class TEasyButtonBar;
 class TMediaPlayer;
 class TScrollBox;
 class TTextBox;
+class TToolBar;
 class QDialog;
 class QDockWidget;
 class QProgressDialog;
@@ -55,6 +59,7 @@ public:
     void resetMainConsole();
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    TConsole* createSubConsole(const QString& name, QWidget* parent);
     bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
@@ -114,6 +119,13 @@ public:
     std::optional<QColor> getLabelBackgroundColor(const QString& name) const;
     bool setLabelBackgroundImage(const QString& name, const QString& path);
     bool resetLabelBackgroundImage(const QString& name);
+    bool setLabelSvgTint(const QString& name, const QColor& color);
+    bool resetLabelSvgTint(const QString& name);
+    bool setLabelSvgRotation(const QString& name, double angle);
+    bool resetLabelSvgRotation(const QString& name);
+    bool setLabelSvgShear(const QString& name, double shearX, double shearY);
+    bool resetLabelSvgShear(const QString& name);
+    bool resetLabelSvgTransform(const QString& name);
     std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
     // For callers that need the widget itself. An accessor rather than the open
@@ -127,6 +139,7 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
+    TDockWidget* createUserWindow(const QString& name);
     // For callers that need the widgets themselves.
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
@@ -143,7 +156,7 @@ public:
     bool moveSubConsole(const QString& name, int x, int y);
     bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
     bool pasteToSubConsole(const QString& name);
-    std::optional<QSize> subConsoleFontSize(const QString& name) const;
+    std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
     bool resetSubConsoleBackgroundImage(const QString& name);
@@ -156,6 +169,10 @@ public:
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
+    void setCommandLinePlaceholderText(const QString& text);
+    void updateCommandLineSpellCheck(bool enabled);
+    void setCommandLineText(const QString& text);
+    TCommandLine* raiseCommandLine();
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // One set of operations for scroll boxes, command lines and text boxes
     // together rather than one per kind: each is the same plain QWidget call
@@ -182,13 +199,32 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
+    dlgMapper* dockedMapper() const;
+    void showMapWidget();
+    void dockMapWidget(Qt::DockWidgetArea area);
+    std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
+    // The map dock answered as values, so that the core is left holding the
+    // state of the map window rather than the widget showing it. Having made a
+    // dock is not the same as having one on screen, which is what the four
+    // after it answer for.
+    bool mapWidgetCreated() const;
+    bool setMapWidgetTitle(const QString& title);
+    std::optional<QString> mapWidgetTitle() const;
+    std::optional<QRect> mapWidgetGeometry() const;
+    bool hideMapWidget();
+    TToolBar* createToolBar(TAction* pAction, const QString& name);
+    TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
+    void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
+    void detachEasyButtonBar(TEasyButtonBar* pBar, int location);
+    void dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area);
+    void undockToolBar(TToolBar* pToolBar);
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
-    const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
-    Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
+    const QByteArray& getHunspellCodecName_system();
+    Hunhandle* getHunspellHandle_system();
     // Either returns the handle of the per profile or the shared Mudlet one or
     // nullptr depending on the state of the flags mEnableUserDictionary and
     // mUseSharedDictionary:
@@ -222,7 +258,7 @@ public:
     QPointer<QProgressDialog> mpMapProgressDialog;
     // Outlives Host::closeMapWidget(), which only hides it, so this being
     // non-null says the profile has made a map widget at some point, not that it
-    // has one on screen - see Host::mapWidget() for the latter.
+    // has one on screen - see mapWidget() for the latter.
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
 
@@ -239,6 +275,7 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
+    void slot_warmSystemSpellDictionary();
 
 
 signals:
@@ -250,6 +287,7 @@ signals:
 
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
+    void loadSystemSpellDictionary();
     // Where reparentLabel() and reparentWindow() parent an element named as a
     // setWindow() destination, shared so the two cannot disagree about what
     // "main" means.
@@ -257,6 +295,18 @@ private:
     // Where the three by-name-alone kinds are resolved to a widget, in the one
     // order the core resolves a name that is more than one of them in.
     QWidget* plainWindowWidget(const QString& name) const;
+    // The single answer to "does this profile have a map widget on screen right
+    // now" - null both for a profile that has never opened one and for one that
+    // put it away again, which a script cannot tell apart and does not need to.
+    //
+    // isHidden() rather than a flag of our own, because the dock gets hidden by
+    // paths that would never think to update one: its own title bar close
+    // button, mudlet::slot_showMapperDialog() handing the map over to a main
+    // window dock, and QMainWindow::restoreState() replaying a saved layout. It
+    // is also not !isVisible(), which would additionally answer "no map widget"
+    // whenever the main window itself is hidden, e.g. minimised to the system
+    // tray.
+    QDockWidget* mapWidget() const;
     void registerLabelWidget(const QString& name, TLabel* pLabel);
     void deregisterLabelWidget(TLabel* pLabel);
 
@@ -265,9 +315,9 @@ private:
     // and removal from the three maps goes through these, so that the Host's
     // window registry cannot fall out of step with them.
     void registerScrollBox(const QString& name, TScrollBox* pScrollBox);
-    TScrollBox* deregisterScrollBox(const QString& name);
+    void deregisterScrollBox(TScrollBox* pScrollBox);
     void registerTextBox(const QString& name, TTextBox* pTextBox);
-    TTextBox* deregisterTextBox(const QString& name);
+    void deregisterTextBox(TTextBox* pTextBox);
 
     // The view's half of the named-window bookkeeping; the core's half is the
     // Host's window registry, which this class registers into and deregisters
@@ -287,11 +337,11 @@ private:
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
 
-    // Names the dictionary mpHunspell_system was last built for. Assigned before
-    // the load is attempted and never rolled back, so a dictionary whose files
-    // are missing is remembered as loaded and never retried. Host's mSpellDic is
-    // the profile's setting; this is only ever what has been loaded from it.
-    QString mLoadedSystemDictionary;
+    // Names the dictionary mpHunspell_system is built for. The build is put off
+    // until the load has finished, so the profile load never reads the whole
+    // dictionary. Host's mSpellDic is the profile's setting; this is only ever
+    // what has been requested from it.
+    QString mSystemDictionary;
 
     // Cloned from Host
     bool mEnableUserDictionary = true;

@@ -21,10 +21,12 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -87,7 +89,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -96,7 +98,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -159,9 +161,9 @@ private slots:
         QCOMPARE(joinedText(console), qsl("abcdefghijklmnopqrstuvwxyz"));
         QCOMPARE(nonEmptyLineCount(console), 3);
         QCOMPARE(console->buffer.line(0), qsl("abcdefghij"));
-        QVERIFY2(console->buffer.timeBuffer.at(0) != mudlet::smBlankTimeStamp, "the line that starts the paragraph lost its timestamp");
-        QCOMPARE(console->buffer.timeBuffer.at(1), mudlet::smBlankTimeStamp);
-        QCOMPARE(console->buffer.timeBuffer.at(2), mudlet::smBlankTimeStamp);
+        QVERIFY2(console->buffer.timeBuffer.at(0) != TBuffer::smBlankTimeStamp, "the line that starts the paragraph lost its timestamp");
+        QCOMPARE(console->buffer.timeBuffer.at(1), TBuffer::smBlankTimeStamp);
+        QCOMPARE(console->buffer.timeBuffer.at(2), TBuffer::smBlankTimeStamp);
     }
 
     // The shortcut stops at a blank line rather than keeping it: the rewrap
@@ -511,6 +513,23 @@ private slots:
         QVERIFY(console->buffer.lineBuffer.constLast().isEmpty());
     }
 
+    // Declared last: without the clamp this aborts, taking the rest of the run
+    // with it. The Lua setter refuses a negative now, so the indent is written
+    // from C++ to reach wrapLine()'s clamp at all.
+    void test_aNegativeIndentIndentsByNothing()
+    {
+        auto* console = consoleWithWrapWidth(4);
+        QVERIFY(console);
+        console->setIndentCount(-2);
+        console->setHangingIndentCount(-3);
+
+        echo(qsl("abcdefghijklmnopqrstuvwxyz\\n"));
+
+        QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
+        const QString firstLine = console->buffer.line(0);
+        QVERIFY2(!firstLine.startsWith(qsl(" ")), qPrintable(qsl("a negative indent padded the line: '%1'").arg(firstLine)));
+    }
+
 private:
     void runLua(const QString& script)
     {
@@ -635,7 +654,7 @@ private:
         return QString::fromUtf8(logFile.readAll());
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {

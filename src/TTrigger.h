@@ -72,6 +72,102 @@ struct TColorTable
     QColor mBgColor;
 };
 
+// A 256-bit Bloom filter over the adjacent character pairs of one line: a
+// substring pattern whose own pairs are not all present cannot occur in that
+// line, so it can be dismissed without searching for it. That holds only while
+// the search it stands in for compares exactly the same way bitsFor() does -
+// a case-insensitive matcher would need a case-insensitive summary too.
+class TBigramFilter
+{
+public:
+    struct Bits
+    {
+        static constexpr int scmWords = 4;
+        quint64 words[scmWords]{};
+    };
+
+    static Bits bitsFor(const QString& text);
+
+    // Summarising a line costs about as much as searching it three or four
+    // times over, so a profile with only a couple of substring patterns pays
+    // more for the summary than the searches it saves. How many patterns asked
+    // about the previous line stands in for how many will ask about this one,
+    // a profile's trigger set hardly ever changing between two lines:
+    static constexpr int scmQuestionsWorthSummarising = 5;
+
+    TBigramFilter(const QString& line, const int questionsOnThePreviousLine)
+    : mLine(line)
+    , mSummarise(questionsOnThePreviousLine >= scmQuestionsWorthSummarising)
+    {
+    }
+    TBigramFilter(QString&&, int) = delete;
+    Q_DISABLE_COPY_MOVE(TBigramFilter)
+
+    // Takes the haystack it is standing in for only to check it really is the
+    // line these bits describe: answering about any other string - a capture,
+    // or a slice of the line - would silently stop triggers firing.
+    bool couldContain(const QString& haystack, const Bits& pattern) const
+    {
+        Q_ASSERT(haystack.constData() == mLine.constData());
+        Q_UNUSED(haystack)
+        ++mQuestionsAsked;
+        if (!mSummarise) {
+            return true;
+        }
+        if (!mBuilt) {
+            mLineBits = bitsFor(mLine);
+            mBuilt = true;
+        }
+        for (int i = 0; i < Bits::scmWords; ++i) {
+            if (pattern.words[i] & ~mLineBits.words[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Builds the summary now, on the calling thread, if it is worth having, so
+    // that couldContainShared() can be asked from other threads: after this
+    // nothing is left to build lazily.
+    void prepareForSharing() const
+    {
+        if (mSummarise && !mBuilt) {
+            mLineBits = bitsFor(mLine);
+            mBuilt = true;
+        }
+    }
+
+    // couldContain() for a thread that is not the main one: reads only, so it
+    // neither builds the summary nor counts the question. The count is what
+    // decides whether the next line is summarised, and the main thread asks
+    // about every substring pattern the prescan does not rule out, so the
+    // questions left uncounted here are the few the prescan answered itself.
+    bool couldContainShared(const QString& haystack, const Bits& pattern) const
+    {
+        Q_ASSERT(haystack.constData() == mLine.constData());
+        Q_UNUSED(haystack)
+        if (!mSummarise) {
+            return true;
+        }
+        Q_ASSERT_X(mBuilt, "TBigramFilter::couldContainShared", "prepareForSharing() has to run on the main thread before another thread asks");
+        for (int i = 0; i < Bits::scmWords; ++i) {
+            if (pattern.words[i] & ~mLineBits.words[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    int questionsAsked() const { return mQuestionsAsked; }
+
+private:
+    const QString& mLine;
+    const bool mSummarise;
+    mutable Bits mLineBits;
+    mutable bool mBuilt = false;
+    mutable int mQuestionsAsked = 0;
+};
+
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
@@ -114,25 +210,82 @@ public:
     void execute();
     bool isFilterChain();
     bool setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger = true);
+    void rebuildPrescanGrams();
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
-    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0);
+    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr);
+    // Runs only the patterns that are a pure function of the line, and only far
+    // enough to answer yes or no. Safe to call from another thread: it writes
+    // nothing, taking the one piece of mutable state a match needs - PCRE2's
+    // match data - from the caller. Answers yes to anything it cannot decide
+    // that way, so a false is a promise and a true is only a maybe. The bigram
+    // filter has to have been prepared for sharing by the main thread. Adds
+    // the regex searches it ran to regexSearches, which is the caller's own
+    // and so keeps this free of shared state.
+    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch, int& regexSearches) const;
+    // Regex searches match() has run so far on the main thread, over every
+    // trigger of every profile, counting only the ones a prescan could have
+    // run instead - a multiline trigger's are not. A caller reads it before
+    // and after a pass to learn what the pass cost.
+    static quint64 regexSearches() { return smRegexSearches; }
+    // Records what the prescan for pass id decided. Written from a worker
+    // thread, and only ever for a trigger no other worker is holding.
+    void setPrescanVerdict(const quint32 passId, const bool mayFire)
+    {
+        mPrescanPassId = passId;
+        mPrescanMayFire = mayFire;
+    }
+    // Which pass's verdicts match() should believe. Zero while no prescan is in
+    // force, which is also what an untouched trigger's own id reads as, so a
+    // trigger the prescan never visited is never mistaken for one it cleared.
+    static quint32 prescanPassId() { return smPrescanPassId; }
+    static void setPrescanPassId(const quint32 id) { smPrescanPassId = id; }
+    // Zero is skipped on wrap so it keeps meaning "no prescan in force".
+    static quint32 nextPrescanPassId()
+    {
+        if (++smPrescanPassIdCounter == 0) {
+            ++smPrescanPassIdCounter;
+        }
+        return smPrescanPassIdCounter;
+    }
+    // Bumped whenever the trigger tree changes shape or a pattern is
+    // recompiled, so a pass can tell that a list it flattened earlier no longer
+    // describes what is there now.
+    static quint64 structureGeneration() { return smStructureGeneration; }
+    static void bumpStructureGeneration() { ++smStructureGeneration; }
     bool checkIfNew();
     void unmarkAsNew();
+    // Empty when the trigger cannot be decided from the line's text alone, in
+    // which case TTriggerPrescan offers it every line.
+    const std::vector<quint64>& prescanGrams() const;
+    void invalidatePrescan(bool nowFiresWithoutMatching = false);
+    // Where TriggerUnit's root-node snapshot holds this trigger, or -1 when it
+    // holds it nowhere - it is not a root node, or the snapshot has yet to be
+    // told about it. Owned by TriggerUnit; nothing else may set it.
+    int rootSnapshotPosition() const { return mRootSnapshotPosition; }
+    void setRootSnapshotPosition(const int position) { mRootSnapshotPosition = position; }
 
     bool isMultiline() const { return mIsMultiline; }
     int getTriggerType() const { return mTriggerType; }
     bool isLineTrigger() const { return mIsLineTrigger; }
-    void setIsLineTrigger(bool b) { mIsLineTrigger = b; }
+    void setIsLineTrigger(bool b)
+    {
+        mIsLineTrigger = b;
+        invalidatePrescan(b);
+    }
     void setStartOfLineDelta(int b) { mStartOfLineDelta = b; }
     void setLineDelta(int b) { mLineDelta = b; }
     void setTriggerType(int b) { mTriggerType = b; }
-    void setIsMultiline(bool b) { mIsMultiline = b; }
+    void setIsMultiline(bool b)
+    {
+        mIsMultiline = b;
+        invalidatePrescan(b);
+    }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
-    bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber);
+    bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams);
     bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber);
     bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
@@ -172,6 +325,8 @@ public:
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
+    std::vector<quint64> mPrescanGrams;
+    int mRootSnapshotPosition = -1;
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     // specifies whenever the payload is Lua code as a string
@@ -220,10 +375,17 @@ private:
 
 
     QList<int> mPatternKinds;
+    // The matcher is null for every pattern kind that is not a substring one;
+    // it lives beside its own filter bits so the two cannot fall out of step
+    struct TSubstringPattern
+    {
+        std::unique_ptr<QStringMatcher> matcher;
+        TBigramFilter::Bits bigrams;
+    };
     // Indexed by pattern number rather than keyed by it: every line reaches
     // these for every pattern of every trigger, which is no place for a tree
     // lookup and a reference count
-    std::vector<std::unique_ptr<QStringMatcher>> mSubstringMatchers;
+    std::vector<TSubstringPattern> mSubstringPatterns;
     std::vector<QSharedPointer<pcre2_code>> mRegexes;
     std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
     // char rather than bool: keeps the plain element access the bit-packed
@@ -263,6 +425,12 @@ private:
     int mExpiryCount = -1;
     int mSameLineChainId = 0;
     int mSameLineGeneration = 0;
+    static quint64 smStructureGeneration;
+    static quint64 smRegexSearches;
+    static quint32 smPrescanPassId;
+    static quint32 smPrescanPassIdCounter;
+    quint32 mPrescanPassId = 0;
+    bool mPrescanMayFire = true;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

@@ -83,6 +83,8 @@ class TLuaInterpreter : public QThread
 
     friend class TForkedProcess;
     friend class LuaInterface;
+    // reads the parked capture vectors' capacity, which nothing else exposes
+    friend class CaptureGroupParkingTest;
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
@@ -136,6 +138,8 @@ public:
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
+    int pushNestedDispatchState();
+    void popNestedDispatchState(const int depth);
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -275,6 +279,7 @@ public:
     static int enableCommand(lua_State*);
     static int disableCommand(lua_State*);
     static int setCommandChecked(lua_State*);
+    static int setCommandPinned(lua_State*);
     static int setCommandIcon(lua_State*);
     static int setCommandTooltip(lua_State*);
     static int setCommandPulse(lua_State*);
@@ -605,6 +610,13 @@ public:
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
     static int setLabelStyleSheet(lua_State*);
+    static int setSvgTint(lua_State*);
+    static int resetSvgTint(lua_State*);
+    static int setSvgRotation(lua_State*);
+    static int resetSvgRotation(lua_State*);
+    static int setSvgShear(lua_State*);
+    static int resetSvgShear(lua_State*);
+    static int resetSvgTransform(lua_State*);
     static int setLinkStyle(lua_State*);
     static int resetLinkStyle(lua_State*);
     static int clearVisitedLinks(lua_State*);
@@ -953,6 +965,9 @@ private:
     // Bounds on what the parking above holds onto between fires
     static constexpr std::size_t scmMaxParkedCaptures = 512;
     static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
+    // Well past the cap, not at it: a trigger overshooting the cap by less than
+    // this would otherwise pay a reallocation each way per fire
+    static constexpr std::size_t scmMaxParkedCaptureSlack = 4 * scmMaxParkedCaptures;
     QString mLastGlobalName;
     QByteArray mLastGlobalNameUtf8;
     // Storage set_lua_string() encodes the line into, kept between calls for
@@ -964,6 +979,26 @@ private:
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
+    // An alias pass a script asks for - expandAlias() - sets "command" and the
+    // capture groups for the scripts that pass runs. What the calling script was
+    // given is parked here for the duration and handed back when the pass
+    // returns, so nesting does not leave the caller reading the inner pass's
+    // command and none of its own captures. One entry per level of nesting.
+    struct NestedDispatchState
+    {
+        std::vector<std::string> captureGroupList;
+        std::vector<int> captureGroupPosList;
+        std::list<std::list<std::string>> multiCaptureGroupList;
+        std::list<std::list<int>> multiCaptureGroupPosList;
+        NameGroupMatches capturedNameGroups;
+        NamedMatchesRanges capturedNameGroupsPosList;
+        QVector<NameGroupMatches> multiCaptureNameGroups;
+        int matchesRef = LUA_NOREF;
+        int multimatchesRef = LUA_NOREF;
+        int commandRef = LUA_NOREF;
+    };
+    std::vector<NestedDispatchState> mNestedDispatchStates;
+    void releaseNestedDispatchState(NestedDispatchState&);
     QMap<QNetworkReply*, QString> downloadMap;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,

@@ -31,6 +31,7 @@
 #include <QColor>
 #include <QLabel>
 #include <QMovie>
+#include <QPixmap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
@@ -39,7 +40,9 @@
 #include <memory>
 
 class Host;
+class QContextMenuEvent;
 class QMouseEvent;
+class QSvgRenderer;
 
 class TLabel : public QLabel
 {
@@ -63,12 +66,26 @@ public:
     void leaveEvent(QEvent*) override;
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
+    QSize sizeHint() const override;
+    void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
     void setBackgroundColor(const QColor& color);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
+    bool setBackgroundImage(const QString& path);
+    void resetBackgroundImage();
+    bool setSvgImage(const QString& path);
+    void clearSvgImage();
+    static bool svgCandidate(const QString& path);
+    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
+    void setSvgTint(const QColor& color);
+    void clearSvgTint();
+    void setSvgRotation(double angle);
+    void setSvgShear(double shearX, double shearY);
+    void resetSvgTransform();
     TLabelModel& model() { return *mpModel; }
 
     // The members below are references aliasing the model above. They stand for
@@ -85,6 +102,11 @@ public:
     int& mEnterFunction;
     int& mLeaveFunction;
     QMovie* mpMovie = nullptr;
+    QSvgRenderer* mpSvgRenderer = nullptr;
+    QColor& mSvgTintColor;
+    double& mSvgRotation;
+    double& mSvgShearX;
+    double& mSvgShearY;
     QVideoWidget* mpVideoWidget = nullptr;
     QString& mLinkColor;
     QString& mLinkVisitedColor;
@@ -92,9 +114,19 @@ public:
     QSet<QString>& mVisitedLinks;
 
 private:
+    QPixmap renderSvgPixmap(const QSize& size) const;
+    void refreshSvg();
+    void stopMovie();
+    // The selection flags would cost the label the press its click callback needs;
+    // the keyboard flag puts a link in reach of Tab and Return, through the focus
+    // policy QLabel derives from these flags.
+    static constexpr Qt::TextInteractionFlags scmLinkInteraction = Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard;
+
+    bool carriesLink() const;
     void applyBackgroundColor();
 
     QColor& mBackgroundColor;
+    QPixmap mSvgPixmapCache;
 
 private slots:
     void slot_linkActivated(const QString& link);

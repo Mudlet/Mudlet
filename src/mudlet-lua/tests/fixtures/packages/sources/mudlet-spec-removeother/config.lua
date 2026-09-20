@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-removeother]]
+author = [[Mudlet test suite]]
+title = [[Fixture package that uninstalls a different package while it is being installed]]
+version = [[1.0]]
+description = [[Regression fixture: a removal of some other package asked for from an install script still happens there and then.]]

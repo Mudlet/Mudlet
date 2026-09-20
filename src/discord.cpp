@@ -62,6 +62,10 @@ Discord::Discord(QObject* parent)
           {"asteria", {"asteriamud.com"}},
   }
 {
+    // Before the library probe below, which returns early when the Discord RPC
+    // library is absent - self() must still answer in that case.
+    smpSelf = this;
+
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
     mpLibrary.reset(new QLibrary(qsl("discord-rpc64")));
@@ -153,6 +157,8 @@ Discord::~Discord()
 
     // Clear out the localDiscordPresence collection:
     mPresencePtrs.clear();
+
+    smpSelf = nullptr;
 }
 
 // For all the setters below the caller is supposed to check that they have the
@@ -296,7 +302,7 @@ void Discord::handleDiscordReady(const DiscordUser* request)
     // Don't call UpdatePresence directly from here - re-entering the Discord
     // library from a callback freezes Mudlet. Instead, signal the timer to
     // pick it up on the next tick.
-    mudlet::self()->mDiscord.mPendingPresenceUpdate = true;
+    self()->mPendingPresenceUpdate = true;
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)

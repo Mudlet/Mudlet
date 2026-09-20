@@ -152,6 +152,31 @@ local function copyFile(from, to)
   destination:close()
 end
 
+local function readFile(path)
+  local file = io.open(path, "rb")
+  assert.is_not_nil(file, "could not read " .. path)
+  local contents = file:read("*a")
+  file:close()
+  return contents
+end
+
+-- The declaration and the doctype are what a package really carries, and the
+-- version attribute decides whether this Mudlet will read the file at all, so
+-- both are written out rather than assumed.
+local function writePackageXml(path, body, version)
+  local file = io.open(path, "wb")
+  assert.is_not_nil(file, "could not write " .. path)
+  assert.is_not_nil(file:write(table.concat({
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE MudletPackage>',
+    '<MudletPackage version="' .. (version or "1.001") .. '">',
+    body,
+    '</MudletPackage>',
+    '',
+  }, "\n")), "could not write " .. path)
+  file:close()
+end
+
 -- Every install and uninstall here starts an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
@@ -250,7 +275,10 @@ local function withFixturePackage(name)
   installFixturePackage(name)
 end
 
-local function removeFixtureModule(name)
+-- archiveName is given only for a fixture whose config.lua installs it under a
+-- different name than the file it came in: the archive names the file on disk,
+-- name is what the profile knows the module as.
+local function removeFixtureModule(name, archiveName)
   for _ = 1, 3 do
     if not moduleInstalled(name) then
       break
@@ -261,26 +289,26 @@ local function removeFixtureModule(name)
     pumpEvents(200)
   end
   assert.is_false(moduleInstalled(name), "the fixture module " .. name .. " reinstalled itself")
-  os.remove(scratchDirectory .. "/" .. name .. ".mpackage")
+  os.remove(scratchDirectory .. "/" .. (archiveName or name) .. ".mpackage")
   lfs.rmdir(scratchDirectory)
 end
 
 -- A module is installed from a copy inside the profile, never from the
 -- repository: with sync enabled a profile save rewrites the module's own
 -- .mpackage in place, which would corrupt the committed fixture.
-local function installFixtureModule(name)
+local function installFixtureModule(name, archiveName)
   lfs.mkdir(scratchDirectory)
-  local path = scratchDirectory .. "/" .. name .. ".mpackage"
-  copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
+  local path = scratchDirectory .. "/" .. (archiveName or name) .. ".mpackage"
+  copyFile(fixtureDirectory .. "/" .. (archiveName or name) .. ".mpackage", path)
   installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the fixture module " .. name)
   return path
 end
 
 -- The clean-up is registered before the install so a fixture that only got
 -- half-way in still leaves nothing behind.
-local function withFixtureModule(name)
-  defer(function() removeFixtureModule(name) end)
-  return installFixtureModule(name)
+local function withFixtureModule(name, archiveName)
+  defer(function() removeFixtureModule(name, archiveName) end)
+  return installFixtureModule(name, archiveName)
 end
 
 -- Collects every occurrence of an event until stopCollecting() is called. The
@@ -905,6 +933,48 @@ describe("Tests the module accessors", function()
   end)
 end)
 
+-- From format 1.001 on a control character in a script is stored as U+FFFC
+-- followed by the matching control picture, and XMLimport only runs its
+-- decoding scans over a script that holds a U+FFFC at all.
+describe("Tests installing a package whose scripts hold encoded control characters", function()
+  local name = "mudlet-spec-control-chars"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local encoded = "\239\191\188\226\144\129" -- U+FFFC U+2401: how \1 is stored
+  local bare = "\226\144\129" -- U+2401 on its own
+
+  setup(function()
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no"><name>mudletSpecEncodedControl</name><packageName></packageName>',
+      '<script>mudletSpecEncodedControl = "' .. encoded .. '"</script><eventHandlerList/></Script>',
+      '<Script isActive="yes" isFolder="no"><name>mudletSpecBareControlPicture</name><packageName></packageName>',
+      '<script>mudletSpecBareControlPicture = "' .. bare .. '"</script><eventHandlerList/></Script>',
+      '</ScriptPackage>',
+      '</MudletPackage>',
+    }, "\n"))
+    file:close()
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+  end)
+
+  teardown(function()
+    removeFixturePackage(name)
+    os.remove(xml)
+  end)
+
+  it("decodes a U+FFFC followed by a control picture back into the control character", function()
+    assert.equals('mudletSpecEncodedControl = "\1"', getScript("mudletSpecEncodedControl"))
+  end)
+
+  it("leaves a control picture with no U+FFFC before it as it is", function()
+    assert.equals('mudletSpecBareControlPicture = "' .. bare .. '"', getScript("mudletSpecBareControlPicture"))
+  end)
+end)
+
 describe("Tests the functionality of reloadModule", function()
   it("raises a Lua error when called with no arguments", function()
     assertArgError(function() reloadModule() end, "reloadModule: bad argument #1 type")
@@ -1003,6 +1073,182 @@ describe("Tests a package that uninstalls itself", function()
     raiseEvent("mudletSpecSelfUninstall")
     pumpEvents(100)
     assert.is_false(packageInstalled("mudlet-spec-selfuninstall"))
+  end)
+end)
+
+describe("Tests a package that uninstalls itself while it is being installed", function()
+  -- Regression #10867: a package's own scripts run while the install is still
+  -- reading the package in, so an uninstallPackage() from one of them took away
+  -- the folder items the importer was still holding and Mudlet died with a
+  -- segmentation fault before installPackage() ever returned. One-shot
+  -- installer packages - the ones that do their job once and then take
+  -- themselves away again - do exactly this.
+  local selfRemovePackage = "mudlet-spec-selfremove"
+  local selfRemoveModule = "mudlet-spec-selfremovemodule"
+  local removeOtherPackage = "mudlet-spec-removeother"
+
+  -- One list for all of a name's events rather than the file's own
+  -- collectEventsForSpec(), which keeps a list per event name: what is being
+  -- pinned here is the order they arrive in relative to each other.
+  local function recordEventsInto(seen, forName, eventNames)
+    for _, eventName in ipairs(eventNames) do
+      local handler = registerAnonymousEventHandler(eventName, function(_, name)
+        if name == forName then
+          seen[#seen + 1] = eventName
+        end
+      end)
+      defer(function() killAnonymousEventHandler(handler) end)
+    end
+  end
+
+  it("stays up, finishes the install, and is gone again afterwards", function()
+    defer(function()
+      removeFixturePackage(selfRemovePackage)
+      mudletSpecSelfRemoveRan = nil
+      mudletSpecSelfRemoveResult = nil
+    end)
+
+    -- twice over: the second round begins with the removal the first one asked
+    -- for already carried out, so a request left behind by round one - which
+    -- would swallow round two's identical one, the same request never being
+    -- queued twice - shows up as a package that stays installed for good
+    for _ = 1, 2 do
+      local eventsSeen = {}
+      recordEventsInto(eventsSeen, selfRemovePackage,
+                       {"sysInstall", "sysInstallPackage", "sysUninstall", "sysUninstallPackage", "sysUninstallModule"})
+
+      -- installUntilConfirmed() does nothing at all if the package is already
+      -- listed, which would leave the assertions below reading globals some
+      -- earlier install set
+      assert.is_false(packageInstalled(selfRemovePackage), "the fixture package was already installed")
+      mudletSpecSelfRemoveRan = nil
+      mudletSpecSelfRemoveResult = nil
+
+      installFixturePackage(selfRemovePackage)
+
+      -- it is still installed the moment the install returns: the removal it
+      -- asked for is held over, not carried out part-way through the import
+      assert.is_true(packageInstalled(selfRemovePackage), "the package was taken away while it was still being read in")
+      assert.is_true(mudletSpecSelfRemoveRan, "the package's install-time script did not run")
+      assert.is_true(mudletSpecSelfRemoveResult, "uninstallPackage() refused the package its own removal")
+      -- the key is read in after the script that asks for the removal, so it is
+      -- the item that a removal carried out mid-import would orphan: it belongs
+      -- to a package that is still installed
+      assert.equals(1, exists(selfRemovePackage .. " key", "keybind"), "the item read in after the removal was asked for is missing")
+      assert.equals(1, exists(selfRemovePackage .. " alias", "alias"))
+      -- and the master folders the importer is still holding - the objects the
+      -- crash was about - are all there
+      for _, kind in ipairs({"alias", "keybind", "script"}) do
+        assert.equals(1, exists(selfRemovePackage, kind), "the package's " .. kind .. " master folder went away mid-import")
+      end
+
+      -- the removal waits for the install that was running it to finish, and
+      -- then for the profile save that install started, so it lands an event
+      -- loop pass or more later rather than part-way through the import
+      assert.is_true(waitUntil(function() return not packageInstalled(selfRemovePackage) end, 5000),
+                     "the package that uninstalled itself is still installed")
+      -- the install did happen, so it is announced - and the removal that came
+      -- of it is announced after that, not before. The detailed events are here
+      -- too: the kind of removal that was asked for has to travel with it, and
+      -- it is what decides which of them is raised
+      assert.same({"sysInstall", "sysInstallPackage", "sysUninstall", "sysUninstallPackage"}, eventsSeen)
+      -- and it is gone completely rather than half installed: its own items, the
+      -- one read in after the removal was asked for, every master folder, and
+      -- its folder in the profile
+      assert.equals(0, exists(selfRemovePackage .. " alias", "alias"))
+      assert.equals(0, exists(selfRemovePackage .. " key", "keybind"))
+      assert.equals(0, exists("mudletSpecSelfRemoveScript", "script"))
+      for _, kind in ipairs({"trigger", "timer", "alias", "button", "keybind", "script"}) do
+        assert.equals(0, exists(selfRemovePackage, kind), "the package's " .. kind .. " master folder was left behind")
+      end
+      assert.is_false(fileExists(getMudletHomeDir() .. "/" .. selfRemovePackage), "the package's folder was left in the profile")
+    end
+  end)
+
+  it("still takes a different package away there and then", function()
+    -- only the package being read in is held over. An install script that
+    -- removes some *other* package - what an updater does - must have it gone by
+    -- the time the call returns, so nothing is answered "yes" for a removal that
+    -- has not happened.
+    withFixturePackage(minimalPackage)
+    assert.is_true(packageInstalled(minimalPackage))
+    defer(function()
+      removeFixturePackage(removeOtherPackage)
+      mudletSpecRemoveOtherResult = nil
+    end)
+    mudletSpecRemoveOtherResult = nil
+
+    installFixturePackage(removeOtherPackage)
+
+    -- nothing is pumped in between, which is what makes "there and then" the
+    -- thing being tested
+    assert.is_true(mudletSpecRemoveOtherResult, "uninstallPackage() would not take the other package away")
+    assert.is_false(packageInstalled(minimalPackage), "the removal of a different package was held over too")
+    assert.equals(0, exists(minimalPackage .. " alias", "alias"))
+  end)
+
+  it("does the same for a module that removes itself as it installs", function()
+    -- a module takes a different path through the same code: it is listed
+    -- before its XML is read rather than after, the install saves the profile
+    -- only for a package so the removal has no save to wait out, and
+    -- uninstallModule() asks for a kind of removal of its own, with its own
+    -- detailed event.
+    local eventsSeen = {}
+    recordEventsInto(eventsSeen, selfRemoveModule,
+                     {"sysInstall", "sysUninstall", "sysUninstallPackage", "sysUninstallModule", "sysLuaUninstallModule"})
+    defer(function()
+      removeFixtureModule(selfRemoveModule)
+      mudletSpecSelfRemoveModuleRan = nil
+      mudletSpecSelfRemoveModuleResult = nil
+    end)
+    mudletSpecSelfRemoveModuleRan = nil
+    mudletSpecSelfRemoveModuleResult = nil
+
+    installFixtureModule(selfRemoveModule)
+
+    assert.is_true(moduleInstalled(selfRemoveModule), "the module was taken away while it was still being read in")
+    assert.is_true(mudletSpecSelfRemoveModuleRan, "the module's install-time script did not run")
+    assert.is_true(mudletSpecSelfRemoveModuleResult, "uninstallModule() refused the module its own removal")
+
+    assert.is_true(waitUntil(function() return not moduleInstalled(selfRemoveModule) end, 5000),
+                   "the module that uninstalled itself is still installed")
+    assert.same({"sysInstall", "sysUninstall", "sysLuaUninstallModule"}, eventsSeen)
+    assert.equals(0, exists(selfRemoveModule .. " alias", "alias"))
+    assert.equals(0, exists("mudletSpecSelfRemoveModuleScript", "script"))
+  end)
+
+  it("refuses a module that renamed itself its way back into its own install", function()
+    -- The refusal that stops an install-time script installing the package
+    -- being read in all over again is asked of the archive's own file name,
+    -- which is all there is to go on until config.lua has been read. A module
+    -- that renames itself and then asks for *that* name to be reloaded comes
+    -- back to the install under a name the first ask never saw: reloadModule()
+    -- reinstalls the module from its file, and the file is still called what it
+    -- always was. Unless the refusal is asked again once the manifest has
+    -- settled the name, the file is imported on top of the copy being read in,
+    -- once per round, with a second set of every item each time.
+    local reloadArchive = "mudlet-spec-reloadrenamer"
+    local reloadModuleName = "mudlet-spec-reloadrenamed"
+    defer(function() mudletSpecReloadRenamerRuns = nil end)
+    mudletSpecReloadRenamerRuns = nil
+
+    withFixtureModule(reloadModuleName, reloadArchive)
+
+    assert.equals(1, mudletSpecReloadRenamerRuns, "the module's install-time script was run again by its own reload")
+    assert.is_true(moduleInstalled(reloadModuleName), "the module that asked to reload itself is not installed")
+    -- one round of the recursion is one extra copy of everything in the file
+    assert.equals(1, exists(reloadModuleName .. " alias", "alias"), "the module's alias was imported more than once")
+    assert.equals(1, exists("mudletSpecReloadRenamerScript", "script"), "the module's script was imported more than once")
+    for _, kind in ipairs({"alias", "script"}) do
+      assert.equals(1, exists(reloadModuleName, kind), "the module was given a second " .. kind .. " master folder")
+    end
+
+    -- and the refusal took nothing away with it: an event loop pass on, the
+    -- module is still there, whole
+    pumpEvents(300)
+    assert.equals(1, mudletSpecReloadRenamerRuns)
+    assert.is_true(moduleInstalled(reloadModuleName), "the module was taken away once its install had finished")
+    assert.equals(1, exists(reloadModuleName .. " alias", "alias"))
   end)
 end)
 
@@ -2010,6 +2256,547 @@ describe("Tests the functionality of packageUrlDrop", function()
     packageUrlDrop("sysDropUrlEvent", "http://127.0.0.1:1/mudlet-spec-not-a-package.txt", "http")
 
     assert.is_false(announcedADownload(mark))
+  end)
+end)
+
+-- A package written by a newer Mudlet carries elements this one has never heard
+-- of, and the reader is meant to walk past each of them and go on reading. It
+-- has a separate "anything else" arm inside every container it parses, so one
+-- file with an intruder in each of them is what holds all of those to it at
+-- once.
+describe("Tests importing a package XML holding elements this Mudlet does not know", function()
+  local name = "mudlet-spec-unknown-elements"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local triggerPattern = "mudlet spec walked past the unknown"
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<FromALaterMudlet setting="1">ignored</FromALaterMudlet>',
+      '<TriggerPackage>',
+      '<FromALaterMudlet/>',
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      '<name>' .. name .. ' trigger</name>',
+      '<script>mudletSpecUnknownElements.trigger = true</script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList><string>' .. triggerPattern .. '</string><notAString/></regexCodeList>',
+      '<regexCodePropertyList><integer>0</integer><notAnInteger/></regexCodePropertyList>',
+      '<fromALaterMudlet>1</fromALaterMudlet>',
+      '</Trigger>',
+      '</TriggerPackage>',
+      '<TimerPackage>',
+      '<FromALaterMudlet/>',
+      '<Timer isActive="no" isFolder="no" isTempTimer="no">',
+      '<name>' .. name .. ' timer</name><packageName></packageName><script></script>',
+      '<command></command><time>00:00:30.000</time><fromALaterMudlet/>',
+      '</Timer>',
+      '</TimerPackage>',
+      '<AliasPackage>',
+      '<FromALaterMudlet/>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName>',
+      '<script>mudletSpecUnknownElements.alias = true</script>',
+      '<command></command><regex>^' .. name .. '$</regex><fromALaterMudlet/>',
+      '</Alias>',
+      '</AliasPackage>',
+      '<ActionPackage>',
+      '<FromALaterMudlet/>',
+      '<Action isActive="no" isFolder="no" isPushButton="no" isFlatButton="no" useCustomLayout="no">',
+      '<name>' .. name .. ' button</name><packageName></packageName><script></script><css></css>',
+      '<commandButtonUp></commandButtonUp><commandButtonDown></commandButtonDown><icon></icon>',
+      '<orientation>0</orientation><location>0</location><posX>0</posX><posY>0</posY>',
+      '<mButtonState>1</mButtonState><sizeX>0</sizeX><sizeY>0</sizeY><buttonColumn>1</buttonColumn>',
+      -- dropped from the format, and still in every file saved before it was
+      '<buttonColor>#ffffff</buttonColor>',
+      '<buttonFillerOffset>0</buttonFillerOffset><buttonRotation>0</buttonRotation><fromALaterMudlet/>',
+      '</Action>',
+      '</ActionPackage>',
+      '<ScriptPackage>',
+      '<FromALaterMudlet/>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' script</name><packageName></packageName>',
+      '<script>mudletSpecUnknownElements.script = true</script>',
+      '<eventHandlerList><notAString/></eventHandlerList><fromALaterMudlet/>',
+      '</Script>',
+      '</ScriptPackage>',
+      '<KeyPackage>',
+      '<FromALaterMudlet/>',
+      '<Key isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' key</name><packageName></packageName><script></script>',
+      '<command></command><keyCode>16777268</keyCode><keyModifier>67108864</keyModifier>',
+      '<fromALaterMudlet/>',
+      '</Key>',
+      '</KeyPackage>',
+      '<VariablePackage>',
+      '<HiddenVariables><name>mudletSpecUnknownElementsHidden</name></HiddenVariables>',
+      '<FromALaterMudlet/>',
+      '</VariablePackage>',
+      '<HelpPackage><helpURL>https://example.invalid/' .. name .. '</helpURL></HelpPackage>',
+    }, "\n"))
+    _G.mudletSpecUnknownElements = {}
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+  end)
+
+  teardown(function()
+    removeFixturePackage(name)
+    os.remove(xml)
+    _G.mudletSpecUnknownElements = nil
+  end)
+
+  it("installs every item the file holds either side of an element it skipped", function()
+    assert.equals(1, exists(name .. " trigger", "trigger"))
+    assert.equals(1, exists(name .. " timer", "timer"))
+    assert.equals(1, exists(name .. " alias", "alias"))
+    assert.equals(1, exists(name .. " button", "button"))
+    assert.equals(1, exists(name .. " script", "script"))
+    assert.equals(1, exists(name .. " key", "keybind"))
+  end)
+
+  it("runs the script that followed an unknown element", function()
+    assert.is_true(mudletSpecUnknownElements.script == true, "the script after the skipped element never ran")
+  end)
+
+  it("keeps the pattern that sat beside one that is not a string", function()
+    assert.is_nil(mudletSpecUnknownElements.trigger)
+
+    feedTriggers("\n" .. triggerPattern .. "\n")
+    pumpEvents(50)
+
+    assert.is_true(mudletSpecUnknownElements.trigger == true, "the trigger's only pattern was lost")
+  end)
+
+  it("keeps the alias that followed an unknown element", function()
+    assert.is_nil(mudletSpecUnknownElements.alias)
+
+    expandAlias(name, false)
+
+    assert.is_true(mudletSpecUnknownElements.alias == true, "the alias after the skipped element never matched")
+  end)
+end)
+
+-- A pattern type is stored as a bare number, so a file from a later Mudlet can
+-- name a type this one has no code for. Rather than drop the pattern - which
+-- would silently shift every later pattern's type by one, since the two lists
+-- are matched up by position - the reader keeps it as a substring and says so.
+describe("Tests importing a trigger whose pattern types this Mudlet cannot read", function()
+  local name = "mudlet-spec-unknown-pattern-types"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local text
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<TriggerPackage>',
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      '<name>' .. name .. ' trigger</name>',
+      '<script>mudletSpecUnknownPatternType = (mudletSpecUnknownPatternType or 0) + 1</script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList>',
+      '<string>mudlet spec pattern from the future</string>',
+      '<string>mudlet spec pattern with no type</string>',
+      '</regexCodeList>',
+      '<regexCodePropertyList><integer>99</integer><integer>not a number</integer></regexCodePropertyList>',
+      '</Trigger>',
+      '</TriggerPackage>',
+    }, "\n"))
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    text = textFrom(mark)
+  end)
+
+  teardown(function()
+    removeFixturePackage(name)
+    os.remove(xml)
+    _G.mudletSpecUnknownPatternType = nil
+  end)
+
+  it("says which pattern type it could not understand", function()
+    assert.is_true(containsWrapped(text, 'cannot be understood by this version of Mudlet'), text)
+  end)
+
+  it("says so again for a type that is not a number at all", function()
+    assert.is_true(containsWrapped(text, 'Unable to convert: "not a number" to a number'), text)
+  end)
+
+  it("keeps both patterns, as substrings", function()
+    assert.is_nil(mudletSpecUnknownPatternType)
+
+    feedTriggers("\nholds mudlet spec pattern from the future inside\n")
+    pumpEvents(50)
+    assert.equals(1, mudletSpecUnknownPatternType, "the pattern with the unreadable type was dropped")
+
+    feedTriggers("\nholds mudlet spec pattern with no type inside\n")
+    pumpEvents(50)
+    assert.equals(2, mudletSpecUnknownPatternType, "the pattern whose type was not a number was dropped")
+  end)
+end)
+
+describe("Tests installing a package file from a later Mudlet", function()
+  local name = "mudlet-spec-from-the-future"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  it("refuses to read it and says a newer Mudlet is needed", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<TriggerPackage>',
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      '<name>' .. name .. ' trigger</name><script></script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList><string>mudlet spec from the future</string></regexCodeList>',
+      '<regexCodePropertyList><integer>0</integer></regexCodePropertyList>',
+      '</Trigger>',
+      '</TriggerPackage>',
+    }, "\n"), "2.000")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, "you need a newer Mudlet"), text)
+    -- the file is refused as a whole, so nothing in it is installed - even
+    -- though the package itself stays registered, the same way one whose XML is
+    -- malformed does
+    assert.equals(0, exists(name .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
+  end)
+end)
+
+-- The same reader parses a map file and a package file, and it will read a map
+-- into the profile - clearing whatever map was there first. That has to be
+-- reachable only when it is a map that is being opened: a map file handed to
+-- the package installer, by name or by a drag and drop, must not be able to
+-- replace the map the profile is using.
+describe("Tests installing a map file as if it were a package", function()
+  local name = "mudlet-spec-map-as-a-package"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  it("leaves the profile's own map alone", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<map>',
+      '<areas><area id="777777" name="' .. name .. ' area"/></areas>',
+      '<rooms/><environments/>',
+      '</map>',
+      '',
+    }, "\n"))
+    file:close()
+
+    local areasBefore = getAreaTable()
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the map file " .. name)
+
+    assert.same(areasBefore, getAreaTable(), "a map file installed as a package replaced the profile's map")
+  end)
+end)
+
+-- The one place a spec can reach the XML writer is saveProfile()'s "save as"
+-- form, which writes every permanent item out without the profile's settings.
+-- What is worth pinning there is the half of the format that is not stored the
+-- way Mudlet holds it: a colour pattern's numbers are remapped in both
+-- directions, and a control character cannot go into XML 1.0 at all, so it is
+-- written as a placeholder and a control picture instead.
+describe("Tests exporting the profile to a file with saveProfile", function()
+  local name = "mudlet-spec-export"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local exportedPath = scratchDirectory .. "/mudlet-spec-exported.xml"
+  -- U+FFFC U+241B, which is how an ESC is held in a save file
+  local encodedEscape = "\239\191\188\226\144\155"
+  -- The colour numbers a save file uses are not the ANSI ones Mudlet matches
+  -- on, and the two tables that convert between them are meant to be each
+  -- other's inverse - so a pattern that survives a trip through both unchanged
+  -- has been mapped correctly twice. Pairing each foreground with the
+  -- background from the far end covers every entry of both tables.
+  local saveFileColours = {-2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+  local colourPatterns = {}
+  for index, foreground in ipairs(saveFileColours) do
+    colourPatterns[index] = ("FG%dBG%d"):format(foreground, saveFileColours[#saveFileColours - index + 1])
+  end
+  local exported
+
+  -- Everything below reads one export of one installed package, so both are
+  -- done once: an install and a save are the two slowest things this file does.
+  setup(function()
+    local colourStrings, colourTypes = {}, {}
+    for index, pattern in ipairs(colourPatterns) do
+      colourStrings[index] = '<string>' .. pattern .. '</string>'
+      colourTypes[index] = '<integer>6</integer>'
+    end
+    writePackageXml(xml, table.concat({
+      '<TriggerPackage>',
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="yes">',
+      '<name>' .. name .. ' colour trigger</name><script></script>',
+      '<triggerType>0</triggerType><conditonLineDelta>3</conditonLineDelta><mStayOpen>2</mStayOpen>',
+      '<mCommand>mudlet spec command</mCommand><packageName></packageName>',
+      '<regexCodeList>' .. table.concat(colourStrings) .. '</regexCodeList>',
+      '<regexCodePropertyList>' .. table.concat(colourTypes) .. '</regexCodePropertyList>',
+      '</Trigger>',
+      '</TriggerPackage>',
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' escape script</name><packageName></packageName>',
+      '<script>mudletSpecExportedEscape = "' .. encodedEscape .. '"</script>',
+      '<eventHandlerList/>',
+      '</Script>',
+      '</ScriptPackage>',
+      '<KeyPackage>',
+      '<Key isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' key</name><packageName></packageName><script></script>',
+      '<command>mudlet spec key command</command>',
+      '<keyCode>16777268</keyCode><keyModifier>67108864</keyModifier>',
+      '</Key>',
+      '</KeyPackage>',
+      '<ActionPackage>',
+      '<Action isActive="no" isFolder="no" isPushButton="yes" isFlatButton="no" useCustomLayout="no">',
+      '<name>' .. name .. ' button</name><packageName></packageName><script></script><css></css>',
+      '<commandButtonUp>mudlet spec up</commandButtonUp><commandButtonDown>mudlet spec down</commandButtonDown>',
+      '<icon></icon><orientation>0</orientation><location>0</location><posX>0</posX><posY>0</posY>',
+      '<mButtonState>2</mButtonState><sizeX>0</sizeX><sizeY>0</sizeY><buttonColumn>3</buttonColumn>',
+      '<buttonFillerOffset>0</buttonFillerOffset><buttonRotation>0</buttonRotation>',
+      '</Action>',
+      '</ActionPackage>',
+    }, "\n"))
+    lfs.mkdir(scratchDirectory)
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the export would be refused")
+    local ok, writtenTo = saveProfile(scratchDirectory, "mudlet-spec-exported")
+    assert.is_true(ok, tostring(writtenTo))
+    assert.equals(exportedPath, writtenTo)
+    -- the write itself runs on a pool thread and lands atomically, so the file
+    -- turning up is the whole document turning up
+    assert.is_true(waitUntil(function() return fileExists(exportedPath) end, 10000), "the export never reached the disk")
+    assert.is_true(waitForProfileSaveToPass(), "the export was still running")
+    exported = readFile(exportedPath)
+  end)
+
+  teardown(function()
+    removeFixturePackage(name)
+    os.remove(xml)
+    os.remove(exportedPath)
+    lfs.rmdir(scratchDirectory)
+    _G.mudletSpecExportedEscape = nil
+  end)
+
+  it("writes a package document holding every kind of item", function()
+    assert.is_true(contains(exported, "<!DOCTYPE MudletPackage>"), "the export has no doctype")
+    -- a section with nothing in it is written as an empty element, so match the
+    -- opening tag rather than a complete one
+    for _, section in ipairs({"TriggerPackage", "TimerPackage", "AliasPackage", "ActionPackage", "ScriptPackage", "KeyPackage", "VariablePackage"}) do
+      assert.is_true(contains(exported, "<" .. section), "the export has no " .. section)
+    end
+    -- the settings are what a "save as" leaves out, and the profile's own save writes
+    assert.is_false(contains(exported, "<HostPackage>"), "a save as wrote the profile's settings out too")
+  end)
+
+  it("writes a colour pattern back in the numbering a save file uses", function()
+    local from = exported:find("<name>" .. name .. " colour trigger</name>", 1, true)
+    assert.is_not_nil(from, "the exported document has no colour trigger in it")
+    local trigger = exported:sub(from, exported:find("</Trigger>", from, true))
+
+    for _, pattern in ipairs(colourPatterns) do
+      assert.is_true(contains(trigger, "<string>" .. pattern .. "</string>"),
+                     "the colour pattern " .. pattern .. " did not come back out of the export: " .. trigger)
+    end
+  end)
+
+  it("writes the trigger's fire length and stay-open back", function()
+    local from = exported:find("<name>" .. name .. " colour trigger</name>", 1, true)
+    local trigger = exported:sub(from, exported:find("</Trigger>", from, true))
+
+    assert.is_true(contains(trigger, "<conditonLineDelta>3</conditonLineDelta>"), trigger)
+    assert.is_true(contains(trigger, "<mStayOpen>2</mStayOpen>"), trigger)
+    assert.is_true(contains(trigger, "<mCommand>mudlet spec command</mCommand>"), trigger)
+  end)
+
+  it("writes a control character back as a placeholder and a control picture", function()
+    -- the import turned the pair into a real ESC, which is what makes this a
+    -- round trip rather than a copy of the bytes the fixture file held
+    assert.equals("\27", mudletSpecExportedEscape)
+    assert.is_true(contains(exported, 'mudletSpecExportedEscape = "' .. encodedEscape .. '"'),
+                   "the exported script does not hold the encoded escape")
+    assert.is_false(contains(exported, "\27"), "the export wrote a raw control character, which XML cannot carry")
+  end)
+
+  it("writes a key's binding back", function()
+    local from = exported:find("<name>" .. name .. " key</name>", 1, true)
+    assert.is_not_nil(from, "the exported document has no key in it")
+    local key = exported:sub(from, exported:find("</Key>", from, true))
+
+    assert.is_true(contains(key, "<keyCode>16777268</keyCode>"), key)
+    assert.is_true(contains(key, "<keyModifier>67108864</keyModifier>"), key)
+    assert.is_true(contains(key, "<command>mudlet spec key command</command>"), key)
+  end)
+
+  it("writes a button's layout and its two commands back", function()
+    local from = exported:find("<name>" .. name .. " button</name>", 1, true)
+    assert.is_not_nil(from, "the exported document has no button in it")
+    local button = exported:sub(from, exported:find("</Action>", from, true))
+
+    assert.is_true(contains(button, "<buttonColumn>3</buttonColumn>"), button)
+    -- held as a boolean, but written as the 1/2 the format has always used
+    assert.is_true(contains(button, "<mButtonState>2</mButtonState>"), button)
+    assert.is_true(contains(button, "<commandButtonUp>mudlet spec up</commandButtonUp>"), button)
+    assert.is_true(contains(button, "<commandButtonDown>mudlet spec down</commandButtonDown>"), button)
+  end)
+
+  it("refuses a second export while the first is still running", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local ok = saveProfile(scratchDirectory, "mudlet-spec-exported-twice")
+    defer(function()
+      assert.is_true(waitForProfileSaveToPass(), "the export was still running")
+      os.remove(scratchDirectory .. "/mudlet-spec-exported-twice.xml")
+      -- a regression that let the refused export through would strand its file
+      -- and take this file's own folder check down with it
+      os.remove(scratchDirectory .. "/mudlet-spec-exported-thrice.xml")
+    end)
+    assert.is_true(ok)
+
+    local again, reason = saveProfile(scratchDirectory, "mudlet-spec-exported-thrice")
+
+    assert.is_nil(again)
+    assert.is_true(contains(reason, "a save is already in progress"), tostring(reason))
+    assert.is_false(fileExists(scratchDirectory .. "/mudlet-spec-exported-thrice.xml"))
+  end)
+end)
+
+-- A module with syncing on is written back out to its own file on every profile
+-- save, by a writer of its own that only takes that module's items - so a
+-- module is the one thing a spec can send out through the writer and read back
+-- in through the reader without touching anything else in the profile.
+describe("Tests a module round trip through the XML writer and reader", function()
+  local name = "mudlet-spec-module-roundtrip"
+  local modulePath = scratchDirectory .. "/" .. name .. ".xml"
+  local rewritten
+
+  -- the timer is counted as "at least one" because the whole spec run happens
+  -- inside a tempTimer callback, so TimerUnit is always mid-execute and defers an
+  -- uninstall's deletes (#9337) until no timer script is running - which is after
+  -- the last spec. Every other kind is freed immediately.
+  local function itemsAreInstalled()
+    return exists(name .. " trigger", "trigger") == 1 and exists(name .. " timer", "timer") >= 1
+       and exists(name .. " alias", "alias") == 1 and exists(name .. " button", "button") == 1
+       and exists(name .. " script", "script") == 1 and exists(name .. " key", "keybind") == 1
+  end
+
+  setup(function()
+    lfs.mkdir(scratchDirectory)
+    writePackageXml(modulePath, table.concat({
+      '<TriggerPackage>',
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      '<name>' .. name .. ' trigger</name><script></script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList><string>mudlet spec module line</string></regexCodeList>',
+      '<regexCodePropertyList><integer>0</integer></regexCodePropertyList>',
+      '</Trigger>',
+      '</TriggerPackage>',
+      '<TimerPackage>',
+      '<Timer isActive="no" isFolder="no" isTempTimer="no">',
+      '<name>' .. name .. ' timer</name><packageName></packageName><script></script>',
+      '<command></command><time>00:00:30.000</time>',
+      '</Timer>',
+      '</TimerPackage>',
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+      '<ActionPackage>',
+      '<Action isActive="no" isFolder="no" isPushButton="no" isFlatButton="no" useCustomLayout="no">',
+      '<name>' .. name .. ' button</name><packageName></packageName><script></script><css></css>',
+      '<commandButtonUp></commandButtonUp><commandButtonDown></commandButtonDown><icon></icon>',
+      '<orientation>0</orientation><location>0</location><posX>0</posX><posY>0</posY>',
+      '<mButtonState>1</mButtonState><sizeX>0</sizeX><sizeY>0</sizeY><buttonColumn>5</buttonColumn>',
+      '<buttonFillerOffset>0</buttonFillerOffset><buttonRotation>0</buttonRotation>',
+      '</Action>',
+      '</ActionPackage>',
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' script</name><packageName></packageName>',
+      '<script>mudletSpecModuleRoundTripRuns = (mudletSpecModuleRoundTripRuns or 0) + 1</script>',
+      '<eventHandlerList/>',
+      '</Script>',
+      '</ScriptPackage>',
+      '<KeyPackage>',
+      '<Key isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' key</name><packageName></packageName><script></script>',
+      '<command></command><keyCode>16777269</keyCode><keyModifier>134217728</keyModifier>',
+      '</Key>',
+      '</KeyPackage>',
+    }, "\n"))
+    installUntilConfirmed(installModule, modulePath, function() return moduleInstalled(name) end, "the module " .. name)
+  end)
+
+  teardown(function()
+    if moduleInstalled(name) then
+      disableModuleSync(name)
+    end
+    removeFixtureModule(name)
+    os.remove(modulePath)
+    lfs.rmdir(scratchDirectory)
+    _G.mudletSpecModuleRoundTripRuns = nil
+  end)
+
+  it("installs all six kinds of item the module holds", function()
+    assert.is_true(itemsAreInstalled(), "the module did not install all of its items")
+  end)
+
+  it("writes all six kinds back out when a save catches the module syncing", function()
+    assert.is_true(enableModuleSync(name))
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    -- taking the file away first is what makes "the save wrote the module out"
+    -- a plain yes or no rather than a guess about timestamps
+    os.remove(modulePath)
+    assert.is_false(fileExists(modulePath), "the module's file could not be cleared")
+
+    assert.is_true(saveProfile())
+    assert.is_true(waitUntil(function() return fileExists(modulePath) end, 10000), "the save never wrote the module out")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    rewritten = readFile(modulePath)
+
+    for _, element in ipairs({"<Trigger ", "<Timer ", "<Alias ", "<Action ", "<Script ", "<Key "}) do
+      assert.is_true(contains(rewritten, element), "the module was written out without any " .. element .. "in it")
+    end
+    -- the details a module's own writer has to carry, one per item kind that
+    -- only that writer reaches
+    assert.is_true(contains(rewritten, "<string>mudlet spec module line</string>"), rewritten)
+    assert.is_true(contains(rewritten, "<buttonColumn>5</buttonColumn>"), rewritten)
+    assert.is_true(contains(rewritten, "<keyCode>16777269</keyCode>"), rewritten)
+  end)
+
+  it("installs the same six items again from what the save wrote", function()
+    assert.is_string(rewritten, "the spec that rewrites the module did not run first")
+    local runsBefore = mudletSpecModuleRoundTripRuns
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(waitUntil(function() return uninstallModule(name) == true end, 5000))
+    pumpEvents(200)
+    assert.is_false(itemsAreInstalled(), "uninstalling the module left its items behind")
+    -- an uninstall from inside a timer callback defers its deletes, so what the
+    -- uninstall leaves behind is counted rather than assumed to be nothing
+    local timersLeft = exists(name .. " timer", "timer")
+
+    installUntilConfirmed(installModule, modulePath, function() return moduleInstalled(name) end, "the rewritten module")
+
+    assert.is_true(itemsAreInstalled(), "the module the save wrote could not be installed again")
+    assert.equals(timersLeft + 1, exists(name .. " timer", "timer"), "the module the save wrote came back without its timer")
+    assert.is_true(mudletSpecModuleRoundTripRuns > runsBefore, "the reinstalled module's script did not run")
   end)
 end)
 

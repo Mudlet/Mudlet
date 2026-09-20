@@ -26,6 +26,8 @@
 
 #include "Host.h"
 #include "TTrigger.h"
+#include "TriggerMatchPool.h"
+#include "dlgTriggerEditor.h"
 
 #include <QScopeGuard>
 #include <QStringConverter>
@@ -136,10 +138,11 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     if (!pT->getID()) {
         pT->setID(getNewID());
     }
-    mRootNodeSnapshotStale = true;
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
         mTriggerRootNodeList.push_back(pT);
+        markRootNodeAppended(pT);
     } else {
+        markRootNodeListReordered();
         // insert item at proper position
         int cnt = 0;
         for (auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++) {
@@ -167,10 +170,15 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
         return;
     }
 
+    // Moving a trigger changes which lineages the flattened prescan list should
+    // hold - a trigger under a chain is matched against its parent's capture
+    // rather than the line, so it must not be judged against the line.
+    TTrigger::bumpStructureGeneration();
+
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
-        mRootNodeSnapshotStale = true;
+        markRootNodeRemoved(pChild);
         mTriggerRootNodeList.remove(pChild);
     }
 
@@ -210,7 +218,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     // so a collision needs no coincidence)
     mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
-    mRootNodeSnapshotStale = true;
+    markRootNodeRemoved(pT);
     mTriggerRootNodeList.remove(pT);
 }
 
@@ -326,7 +334,7 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
             tempList.push_back(trigger);
         }
     }
-    mRootNodeSnapshotStale = true;
+    markRootNodeListReordered();
     for (auto& trigger : tempList) {
         mTriggerRootNodeList.remove(trigger);
     }
@@ -401,6 +409,135 @@ void TriggerUnit::stopSameLineCreationLoop(const int chainId)
                                 .arg(triggerName, created));
 }
 
+// Flattens out the triggers the match pool can take real work off the main
+// thread for: those with a Perl regex pattern, the one kind whose evaluation
+// costs a search. A substring pattern is dismissed by the bigram filter in a
+// few instructions on the main thread, and a begin-of-line or exact pattern by
+// one comparison, so handing those over would cost more in traffic between the
+// threads than it could save. The walk stops at any trigger that has both
+// patterns and children: ruling such a parent out already rules out everything
+// beneath it, and its children are matched against one of its captures rather
+// than against the line, so a verdict reached against the line would not apply
+// to them.
+void TriggerUnit::collectPrescanTasks(TTrigger* pT)
+{
+    if (pT->getRegexCodePropertyList().contains(REGEX_PERL)) {
+        mPrescanTasks.push_back(pT);
+    }
+    if (pT->isFilterChain()) {
+        return;
+    }
+    for (auto* childNode : *pT->mpMyChildrenList) {
+        collectPrescanTasks(static_cast<TTrigger*>(childNode));
+    }
+}
+
+// Rebuilt only when the tree changed shape or a pattern was recompiled - a
+// stale entry could otherwise name a trigger that has since been freed.
+void TriggerUnit::rebuildPrescanTasksIfStale()
+{
+    const quint64 generation = TTrigger::structureGeneration();
+    if (generation == mPrescanTasksGeneration) {
+        return;
+    }
+    mPrescanTasks.clear();
+    for (auto trigger : mTriggerRootNodeList) {
+        collectPrescanTasks(trigger);
+    }
+    mPrescanTasksGeneration = generation;
+}
+
+void TriggerUnit::markPrescanStale(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    if (mRootNodeSnapshotNeedsRebuild || !pT) {
+        return;
+    }
+    // A trigger with no position is either a child, which the index never files,
+    // or a root node still queued for appending, which will be filed from its
+    // current state anyway.
+    const int position = pT->rootSnapshotPosition();
+    if (position >= 0) {
+        mRootNodesRefiled.push_back(position);
+    }
+}
+
+void TriggerUnit::markRootNodeAppended(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    if (!mRootNodeSnapshotNeedsRebuild) {
+        mRootNodesAppended.push_back(pT);
+    }
+}
+
+void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    const int position = pT->rootSnapshotPosition();
+    // Cleared even when the snapshot is being rebuilt anyway: a stale position
+    // left on a trigger that is registered again later would have the next
+    // removal empty somebody else's slot.
+    pT->setRootSnapshotPosition(-1);
+    if (mRootNodeSnapshotNeedsRebuild) {
+        return;
+    }
+    if (position >= 0) {
+        mRootNodesRemoved.push_back(position);
+        return;
+    }
+    // No position and nothing queued means it was never in the root list, so
+    // the removal below it is a no-op and the snapshot already agrees.
+    const auto queued = std::find(mRootNodesAppended.begin(), mRootNodesAppended.end(), pT);
+    if (queued != mRootNodesAppended.end()) {
+        mRootNodesAppended.erase(queued);
+    }
+}
+
+// Brings the snapshot the next pass will pin back in step with the root list.
+// Arming or killing a trigger only ever appends or empties a position, so that
+// is patched in place; a rebuild is for the changes that move existing triggers,
+// and to reclaim the holes the removals leave behind.
+void TriggerUnit::refreshRootNodeSnapshot()
+{
+    const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild && !mpRootNodeSnapshot->mPrescan.shouldRebuild();
+    if (canPatch) {
+        RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        for (const int position : mRootNodesRemoved) {
+            snapshot.mNodes[position] = nullptr;
+            snapshot.mPrescan.removeSlot(position);
+        }
+        for (const int position : mRootNodesRefiled) {
+            if (TTrigger* pT = snapshot.mNodes[position]) {
+                snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
+            }
+        }
+        for (TTrigger* pT : mRootNodesAppended) {
+            pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
+            snapshot.mNodes.push_back(pT);
+            snapshot.mPrescan.appendSlot(pT->prescanGrams());
+        }
+    } else {
+        // Only a snapshot an outer pass has pinned has to be left alone and
+        // replaced; refilling the vector an earlier pass built keeps a rebuild
+        // down to no allocation.
+        if (mpRootNodeSnapshot.use_count() != 1) {
+            mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
+        }
+        RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        snapshot.mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        const int rootCount = static_cast<int>(snapshot.mNodes.size());
+        for (int position = 0; position < rootCount; ++position) {
+            snapshot.mNodes[position]->setRootSnapshotPosition(position);
+        }
+        snapshot.mPrescan.rebuild(snapshot.mNodes);
+    }
+    mRootNodesAppended.clear();
+    mRootNodesRemoved.clear();
+    mRootNodesRefiled.clear();
+    mRootNodeSnapshotNeedsRebuild = false;
+    mRootNodeSnapshotStale = false;
+}
+
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
     if (data.isEmpty()) {
@@ -468,18 +605,10 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Pinned for the length of this pass rather than copied: a mutation
     // replaces the shared snapshot instead of editing the pinned one.
     if (mRootNodeSnapshotStale) {
-        // Refilling the vector an earlier pass built keeps a profile whose
-        // triggers churn - a one-shot tempTrigger() invalidates the snapshot
-        // every time it fires - down to no allocation per line as well. Only a
-        // snapshot an outer pass has pinned has to be left alone and replaced.
-        if (mpRootNodeSnapshot.use_count() == 1) {
-            mpRootNodeSnapshot->assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
-        } else {
-            mpRootNodeSnapshot = std::make_shared<std::vector<TTrigger*>>(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
-        }
-        mRootNodeSnapshotStale = false;
+        refreshRootNodeSnapshot();
     }
-    const auto pinnedNodeList = mpRootNodeSnapshot;
+    const auto pinnedSnapshot = mpRootNodeSnapshot;
+    const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
     // before the snapshot the loop walked the live std::list, which a push_back
@@ -488,11 +617,79 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Entries below this index were added by outer (nested-feedTriggers) passes
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
-    for (auto trigger : *pinnedNodeList) {
-        if (!trigger->isActive()) {
-            continue;
+    const TBigramFilter lineBigrams(data, mSubstringQuestionsOnTheLastLine);
+    // Ask a few threads which of these can do anything on this line, so the walk
+    // below only stops at the ones that can. Nothing else changes hands: every
+    // match that fires is still found, run and ordered by that loop, on this
+    // thread, exactly as it was.
+    const quint32 previousPrescanPassId = TTrigger::prescanPassId();
+    TTrigger::setPrescanPassId(0);
+    const auto prescanGuard = qScopeGuard([previousPrescanPassId] {
+        TTrigger::setPrescanPassId(previousPrescanPassId);
+    });
+    // Only while the client is behind, which a chunk carrying many lines at once
+    // is what looks like from here. Handing one line's matching to other cores
+    // costs a wake-up that is repaid only when the next line is already waiting;
+    // at the speed a game sends text the threads would wake, find half a
+    // microsecond of work and sleep again, spending CPU to save nothing anyone
+    // could perceive. With the pool off none of this runs, not even the list
+    // rebuild, so the line takes exactly the path it took before the pool
+    // existed.
+    // Whether the last line ran enough regex searches to be worth sharing out
+    // is judged from the searches themselves rather than from the list, whose
+    // entries may mostly be disabled or settled before their regex is reached.
+    TriggerMatchPool& pool = TriggerMatchPool::instance();
+    const bool inFlood = pool.workerCount() > 0 && mpHost && mpHost->mpConsole && mpHost->mpConsole->buffer.pendingChunkLines() >= pool.floodChunkLines();
+    const quint64 regexSearchesBefore = TTrigger::regexSearches();
+    int prescanRegexSearches = 0;
+    if (inFlood && mRegexSearchesOnTheLastLine >= pool.threshold()) {
+        rebuildPrescanTasksIfStale();
+        const quint32 passId = TTrigger::nextPrescanPassId();
+        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data, lineBigrams)) {
+            TTrigger::setPrescanPassId(passId);
+            prescanRegexSearches = pool.regexSearchesInLastBatch();
         }
-        trigger->match(subject, subjectLength, data, line);
+    }
+
+    if (pinnedSnapshot->mPrescan.active()) {
+        // Borrowed from the unit so that only a longer line than any before it
+        // allocates, and moved out so a nested pass grows its own.
+        std::vector<int> scratch = std::move(mCandidateScratch);
+        std::vector<int> candidates = std::move(mCandidates);
+        const auto candidateGuard = qScopeGuard([this, &scratch, &candidates] {
+            mCandidateScratch = std::move(scratch);
+            mCandidates = std::move(candidates);
+        });
+        pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
+        // A firing script can make a later trigger fire without matching -
+        // setTriggerStayOpen() is the reachable way - and the candidate list was
+        // settled before that happened. So from the moment one does, the rest of
+        // the line goes to every remaining trigger, as an unfiltered pass would.
+        const quint32 epochAtStart = mUnfilterableEpoch;
+        const int rootCount = static_cast<int>(pinnedNodeList.size());
+        size_t nextCandidate = 0;
+        for (int position = 0; position < rootCount; ++position) {
+            if (mUnfilterableEpoch == epochAtStart) {
+                if (nextCandidate >= candidates.size()) {
+                    break;
+                }
+                position = candidates[nextCandidate++];
+            }
+            // A hole is a trigger the snapshot has outlived - see
+            // refreshRootNodeSnapshot()
+            TTrigger* trigger = pinnedNodeList[position];
+            if (!trigger || !trigger->isActive()) {
+                continue;
+            }
+            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
+        }
+    } else {
+        for (auto trigger : pinnedNodeList) {
+            if (!trigger || !trigger->isActive()) {
+                continue;
+            }
+            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
+        }
     }
     // A match here can register more triggers, which also get a shot at the
     // current line - so the list grows in front of the loop, and a trigger that
@@ -517,8 +714,12 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
-        trigger->match(subject, subjectLength, data, line);
+        trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
     }
+    mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
+    // A nested pass's searches land in here too; its lines are as real as
+    // this one and the count only steers the next line
+    mRegexSearchesOnTheLastLine = prescanRegexSearches + static_cast<int>(TTrigger::regexSearches() - regexSearchesBefore);
 }
 
 void TriggerUnit::compileAll()
@@ -590,6 +791,9 @@ bool TriggerUnit::enableTrigger(const QString& name)
         }
         it.value()->setIsActive(true);
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
+        }
     }
     return found;
 }
@@ -603,6 +807,9 @@ bool TriggerUnit::disableTrigger(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
+        }
     }
     return found;
 }
@@ -615,6 +822,9 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     for (auto it = begin; it != end; ++it) {
         it.value()->mKeepFiring = lines;
     }
+    // it now fires without matching, so it can no longer be filtered out of a
+    // line - including the one being processed right now
+    markRootUnfilterable();
 }
 
 bool TriggerUnit::killTrigger(const QString& name)

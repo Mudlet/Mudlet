@@ -23,12 +23,14 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -113,7 +115,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -126,7 +128,7 @@ private slots:
         // coming down from that to 1200 is exactly the drop that gets ignored.
         mudlet::self()->resize(1200, 800);
 
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
@@ -158,10 +160,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }
@@ -396,6 +397,33 @@ private slots:
 
         QCOMPARE(frameGeometry(qsl("inner")).x(), reservedArea.right() + 1 - 100);
         QCOMPARE(mpHost->borders().right(), 300);
+    }
+
+    // All three frame layouts get their console from
+    // TMainConsole::createSubConsole(), parented inside the frame (never on
+    // mpMainFrame, where createMiniConsole would flash it) and wired with the
+    // same name and command-line focus proxies createMiniConsole gives out. A
+    // titled frame takes the tabbed layout, an untitled one the borderless
+    // layout, and DOCK plus ALIGN=client becomes a tab inside the titled one.
+    void test_frameConsolesAreBuiltInsideTheirFrame()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Titled")}}));
+        QVERIFY(createFrame(qsl("plain"), qsl("left"), qsl("120px"), qsl("100%")));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        const TMxpFrame* titled = mpHost->mMxpFrameManager.getFrame(qsl("titled"));
+        QVERIFY2(titled && titled->tabWidget, "A titled frame should have taken the tabbed layout");
+
+        QWidget* commandLine = mpHost->mpConsole->mpCommandLine;
+        QVERIFY(commandLine);
+        for (const QString& name : {qsl("titled"), qsl("plain"), qsl("tab")}) {
+            const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(name);
+            QVERIFY2(frame && frame->widget && frame->console, qPrintable(qsl("Frame %1 should have a widget and a console").arg(name)));
+            QVERIFY2(frame->widget->isAncestorOf(frame->console), qPrintable(qsl("The console of %1 should live inside its frame widget").arg(name)));
+            QCOMPARE(frame->console->objectName(), name);
+            QCOMPARE(frame->console->focusProxy(), commandLine);
+            QCOMPARE(frame->console->mUpperPane->focusProxy(), commandLine);
+            QCOMPARE(frame->console->mLowerPane->focusProxy(), commandLine);
+        }
     }
 
     // How the base UI reserves its space, so this is #9698 as reported. Declared

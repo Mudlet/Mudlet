@@ -100,6 +100,7 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
+    void refreshMapperColours();
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
     int createMapLabel(int area,
                        const QString& text,
@@ -126,6 +127,8 @@ public:
     void updateArea(int areaId);
 
     void audit();
+    // One switch for the whole application, not one per map.
+    inline static bool smShowMapAuditErrors = false;
 
     QList<int> detectRoomCollisions(int id);
     void setRoom(int);

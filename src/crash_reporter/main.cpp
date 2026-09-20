@@ -18,20 +18,30 @@
  ***************************************************************************/
 
 #include <QApplication>
+#include <QDebug>
 #include <QDialog>
 #include <QLabel>
+#include <QNetworkProxyFactory>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSettings>
 #include <QCoreApplication>
+#include <QStringList>
 #include <cstdlib>
 
 #include "crashReporter.h"
-#include "sentry.h"
-#include "sentry_options.h"
-extern "C" {
-#include "sentry_transport.h"
+
+static QString configuredDsn()
+{
+    const char* dsnFromEnvironment = std::getenv("SENTRY_DSN");
+    if (dsnFromEnvironment && dsnFromEnvironment[0]) {
+        return QString::fromUtf8(dsnFromEnvironment);
+    }
+    if (SENTRY_DSN && SENTRY_DSN[0]) {
+        return QString::fromUtf8(SENTRY_DSN);
+    }
+    return QString();
 }
 
 // Setting "autoSendCrashReports" is expected to be stored there:
@@ -47,26 +57,28 @@ int main(int argc, char* argv[])
     }
 
     QApplication app(argc, argv);
+    QNetworkProxyFactory::setUseSystemConfiguration(true);
+    const QString envelopePath = QCoreApplication::arguments().value(1);
     QSettings settings("Mudlet", "CrashReporter");
     QVariant storedOption = settings.value("autoSendCrashReports", QVariant());
 
     if (storedOption.isValid() && storedOption.toInt() == AlwaysSend) {
-        sendCrashReport(argv[1]);
+        sendCrashReport(envelopePath, configuredDsn());
     } else {
-        showCrashDialogAndSend(argv[1], settings);
+        showCrashDialogAndSend(envelopePath, settings);
     }
     return 0;
 }
 
-void showCrashDialogAndSend(const char* envelopePath, QSettings& settings)
+void showCrashDialogAndSend(const QString& envelopePath, QSettings& settings)
 {
     TCrashSendOption result = createCrashDialog();
 
     if (result == AlwaysSend) {
         settings.setValue("autoSendCrashReports", static_cast<int>(AlwaysSend));
-        sendCrashReport(envelopePath);
+        sendCrashReport(envelopePath, configuredDsn());
     } else if (result == SendThisTime) {
-        sendCrashReport(envelopePath);
+        sendCrashReport(envelopePath, configuredDsn());
     }
 }
 
@@ -107,27 +119,4 @@ TCrashSendOption createCrashDialog()
     sendBtn->setDefault(true);
 
     return static_cast<TCrashSendOption>(dialog.exec());
-}
-
-void sendCrashReport(const char* envelopePath)
-{
-    sentry_options_t* opts = sentry_options_new();
-    sentry_envelope_t* envelope = sentry_envelope_read_from_file(envelopePath);
-    const char* effectiveDsn = nullptr;
-    const char* sentry_dsn_from_environment = std::getenv("SENTRY_DSN");
-
-    if (!opts || !envelope) {
-        return;
-    }
-    if (sentry_dsn_from_environment && sentry_dsn_from_environment[0]) {
-        effectiveDsn = sentry_dsn_from_environment;
-    } else if (SENTRY_DSN && SENTRY_DSN[0]) {
-        effectiveDsn = SENTRY_DSN;
-    } else {
-        return;
-    }
-    sentry_options_set_dsn(opts, effectiveDsn);
-    sentry__transport_startup(opts->transport, opts);
-    sentry__transport_send_envelope(opts->transport, envelope);
-    sentry__transport_shutdown(opts->transport, 30 * 1000);
 }

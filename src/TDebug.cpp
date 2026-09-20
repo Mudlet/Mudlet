@@ -24,7 +24,7 @@
 
 #include "TDebug.h"
 
-#include "TConsole.h"
+#include "TBuffer.h"
 #include "TDebugFilterBar.h"
 #include "TTabBar.h"
 #include "mudlet.h"
@@ -64,7 +64,7 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
 
 /* static */ bool TDebug::wants(const Category category)
 {
-    return mudlet::smDebugMode && smEnabledCategories.testFlag(category);
+    return smDebugMode && smEnabledCategories.testFlag(category);
 }
 
 /* static */ void TDebug::setEnabledCategories(const Categories categories)
@@ -121,22 +121,21 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
 // rather than leaving people to wonder.
 /* static */ void TDebug::announceFilters()
 {
-    QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
-    if (!debugConsole) {
+    if (!smpSink) {
         return;
     }
 
     const int hidden = hiddenCategoryCount();
     if (hidden) {
         //: Shown in the Central Debug Console when it opens with some kinds of message hidden. %n is how many.
-        debugConsole->print(csmTagSystemMessage % tr("%n kind(s) of message are hidden - use the controls below to change that.\n", "", hidden), Qt::white, Qt::darkBlue);
+        smpSink->printDebugLine(csmTagSystemMessage % tr("%n kind(s) of message are hidden - use the controls below to change that.\n", "", hidden), Qt::white, Qt::darkBlue, QString());
     }
 
     if (!smItemFilter.isEmpty()) {
         // Much more drastic than hiding a category - everything that is not
         // about this one item is gone, so it needs saying out loud:
         //: Shown in the Central Debug Console when it opens narrowed to a single trigger, alias, timer and so on. %1 is that item's name.
-        debugConsole->print(csmTagSystemMessage % tr("Showing only messages about \"%1\" - use the controls below to change that.\n").arg(smItemFilter), Qt::white, Qt::darkBlue);
+        smpSink->printDebugLine(csmTagSystemMessage % tr("Showing only messages about \"%1\" - use the controls below to change that.\n").arg(smItemFilter), Qt::white, Qt::darkBlue, QString());
     }
 }
 
@@ -167,8 +166,7 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
 // the user's messages out.
 /* static */ void TDebug::drainPausedQueue()
 {
-    QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
-    if (!debugConsole) {
+    if (!smpSink) {
         return;
     }
 
@@ -176,19 +174,18 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
         // Ahead of the replay, because it is the OLDEST messages that the cap
         // had to throw away - the gap is at the top, not the bottom:
         //: Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.
-        debugConsole->print(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed);
+        smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed, QString());
         smPausedDroppedCount = 0;
     }
 
     while (!smPausedQueue.isEmpty()) {
-        debugConsole = mudlet::smpDebugConsole;
-        if (!debugConsole) {
-            // Console has gone - leave the remainder queued
+        if (!smpSink) {
+            // Sink has gone - leave the remainder queued
             return;
         }
         const auto message = smPausedQueue.dequeue();
         // Already composed when it arrived, profile marking and all:
-        debugConsole->print(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
+        smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
     }
 }
 
@@ -291,28 +288,26 @@ bool TDebug::passesFilters(const Host* pHost)
             smPausedQueue.dequeue();
             ++smPausedDroppedCount;
         }
-        smPausedQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(mudlet::smTimeStampFormat)));
+        smPausedQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(TBuffer::smTimeStampFormat)));
         return;
     }
 
-    if (Q_UNLIKELY(!mudlet::smpDebugConsole)) {
+    if (Q_UNLIKELY(!smpSink)) {
         if (Q_LIKELY(!line.isEmpty())) {
             // Don't enqueue empty messages
-            smMessageQueue.enqueue(TDebugMessage(line, QString(), foreground, background));
+            // Stamped here rather than when the sink turns up, so that a
+            // backlog replayed minutes later still reads as when it happened:
+            smMessageQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(TBuffer::smTimeStampFormat)));
         }
         return;
     }
 
     if (Q_UNLIKELY(!smMessageQueue.isEmpty())) {
-        // The console must have just come on-line - so unload all the messages
-        // stacked up while it did not exist:
-        while (!smMessageQueue.isEmpty()) {
-            QPointer<TConsole> backlogConsole = mudlet::smpDebugConsole;
-            if (!backlogConsole) {
-                break;
-            }
+        // The sink must have just come on-line - so unload all the messages
+        // stacked up while there was none:
+        while (!smMessageQueue.isEmpty() && smpSink) {
             const auto message = smMessageQueue.dequeue();
-            backlogConsole->print(message.mMessage, message.mForeground, message.mBackground);
+            smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
         }
     }
 
@@ -321,9 +316,8 @@ bool TDebug::passesFilters(const Host* pHost)
         return;
     }
 
-    QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
-    if (debugConsole) {
-        debugConsole->print(line, foreground, background);
+    if (smpSink) {
+        smpSink->printDebugLine(line, foreground, background, QString());
     }
 }
 
@@ -469,7 +463,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     localMessage << qsl("Profile '%1' started.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black, Category::System);
     tableMessage << TDebug::displayNewTable() >> nullptr;
-    if (mudlet::smDebugMode) {
+    if (smDebugMode) {
         // Can't use TTabBar::applyPrefixToDisplayedText(hostName, newIdentifier.second)
         // here as the profile's tab has not been added to the tabbar yet.
         // Instead arrange for all the tabs to be refreshed when we are next
