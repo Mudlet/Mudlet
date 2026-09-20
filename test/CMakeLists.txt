@@ -22,6 +22,50 @@ function(restore_windows_test_output)
 endfunction()
 cmake_language(DEFER CALL restore_windows_test_output)
 
+# Where a test's config root goes. CredentialManager and SecureStringUtils write
+# per-profile encryption keys and passwords under QStandardPaths::AppConfigLocation
+# without asking Mudlet where its config root is, so for a QTEST_MAIN program that
+# is a directory named after the test class in the home directory of whoever runs
+# it - a path no source scan can recognise and nothing in the test tree names
+# (#10777). Pointing it at a directory of the build tree instead costs the tests
+# that already redirect nothing, since qputenv() in initTestCase() overrides it.
+#
+# On Linux the lever is XDG_CONFIG_HOME. macOS never reads it: AppConfigLocation there is
+# NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask) plus
+# "/Preferences" and the application name, so the lever is CFFIXED_USER_HOME, the
+# home directory override CoreFoundation resolves that call against. It has to
+# arrive from here rather than from the test, because a test process cannot move it
+# once Foundation has answered - which is why the per-test qputenv() in
+# initTestCase() covers Linux only, and why HomeUntouchedTest checks this redirect
+# rather than trusting it (test/ci/home-untouched-test.sh). Windows has no such
+# override - SHGetKnownFolderPath reads no environment - so it stays uncovered.
+#
+# For XDG this is a backstop and not the mechanism: a build-tree
+# directory outlives the run, where a test's own QTemporaryDir does not - so a test
+# still has to redirect for itself to get a config root that is empty at the start
+# of every run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet
+# only when that directory holds profiles/ (see MudletPaths::xdgConfigDir()), which this does
+# not create - deliberately, since seeding the opt-in here would give a test that
+# forgets a config root that accumulates profiles between runs, which is the
+# collision #9999 was about.
+#
+# Deferred, and per directory, for the same reason as restore_windows_test_output().
+function(sandbox_test_config_dirs)
+    get_property(registeredTests DIRECTORY PROPERTY TESTS)
+    foreach(testName ${registeredTests})
+        set(testConfigDir "${CMAKE_CURRENT_BINARY_DIR}/xdg-config/${testName}")
+        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CONFIG_HOME=${testConfigDir}")
+        if(APPLE)
+            # CoreFoundation is handed a home directory rather than a config root,
+            # and one that has to exist - Qt creates a config root on the way to
+            # writing into it, and no one creates a home
+            file(MAKE_DIRECTORY "${testConfigDir}")
+            set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "CFFIXED_USER_HOME=${testConfigDir}")
+        endif()
+    endforeach()
+endfunction()
+cmake_language(DEFER CALL sandbox_test_config_dirs)
+
 set(UNIT_TESTS
     TEntityResolverTest
     TEntityHandlerTest
@@ -69,8 +113,10 @@ foreach(test_name ${UNIT_TESTS})
 endforeach()
 
 # A regression in what EventLoopPumpTest covers hangs rather than fails, so cap
-# it well under ctest's default 25 minutes.
-set_tests_properties(EventLoopPumpTest PROPERTIES TIMEOUT 60)
+# it well under ctest's default 25 minutes. The same goes for the coordinate
+# limit cases in TAreaGridIndexTest, which never return once a viewport scan
+# stops terminating.
+set_tests_properties(EventLoopPumpTest TAreaGridIndexTest PROPERTIES TIMEOUT 60)
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
 # server with no window manager never gives them, so a plain `xvfb-run ctest`
@@ -118,6 +164,29 @@ set_tests_properties(IrcMessageFormatterTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
+# What communi makes of the multi-line numerics an IRC server sends, including
+# the ones it sends out of order. Needs nothing but communi for the same reason
+# the formatter test above does not.
+add_executable(IrcMessageComposerTest IrcMessageComposerTest.cpp)
+target_link_libraries(IrcMessageComposerTest PRIVATE Qt6::Test Qt6::Network communi)
+add_test(NAME IrcMessageComposerTest COMMAND $<TARGET_FILE:IrcMessageComposerTest>)
+set_tests_properties(IrcMessageComposerTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+    TIMEOUT 60
+)
+
+add_executable(CrashReportUploadTest
+    CrashReportUploadTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/crash_reporter/sendCrashReport.cpp
+)
+target_include_directories(CrashReportUploadTest PRIVATE ${CMAKE_SOURCE_DIR}/src/crash_reporter)
+target_link_libraries(CrashReportUploadTest PRIVATE Qt6::Test Qt6::Network)
+add_test(NAME CrashReportUploadTest COMMAND $<TARGET_FILE:CrashReportUploadTest>)
+set_tests_properties(CrashReportUploadTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+    TIMEOUT 60
+)
+
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
@@ -128,6 +197,18 @@ target_link_libraries(CMakeListsConsistencyTest PRIVATE Qt6::Test)
 target_compile_definitions(CMakeListsConsistencyTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 add_test(NAME CMakeListsConsistencyTest COMMAND $<TARGET_FILE:CMakeListsConsistencyTest>)
 set_tests_properties(CMakeListsConsistencyTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
+# The autocompletion data the script editor offers. It is scraped off the wiki manual,
+# so the page's own markup can end up in a function name - #10816 shipped all 669 of
+# them with "[edit | edit source]" appended. Only reads the file, so like
+# CMakeListsConsistencyTest it links nothing.
+add_executable(LuaFunctionListTest LuaFunctionListTest.cpp)
+target_link_libraries(LuaFunctionListTest PRIVATE Qt6::Test)
+target_compile_definitions(LuaFunctionListTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+add_test(NAME LuaFunctionListTest COMMAND $<TARGET_FILE:LuaFunctionListTest>)
+set_tests_properties(LuaFunctionListTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
@@ -184,6 +265,35 @@ add_test(NAME XdgRecipeConsistencyTest COMMAND $<TARGET_FILE:XdgRecipeConsistenc
 set_tests_properties(XdgRecipeConsistencyTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
+
+# What XdgRecipeConsistencyTest's source scan cannot see: whether the bytes a test
+# writes actually stay out of the home directory. Sweeps the real one for a config
+# root named after any credential-store test - which covers the sources compiled
+# into the grouped functional binaries too, since that needs no binary of its own -
+# and runs the standalone ones under a home directory of their own. Not on Windows,
+# where there is no shell for it and nothing redirects AppConfigLocation anyway.
+if(NOT WIN32)
+    add_test(NAME HomeUntouchedTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/home-untouched-test.sh ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    # The home sweep reports on what has already run, so it has to run last of the
+    # tests that could leave something there - ctest -j otherwise starts it among
+    # the first few and it sweeps a home directory nothing has written to yet.
+    # Derived from the sources, and by the same rule as the script's own candidates,
+    # so a test renamed or added needs no edit here either. A name that is not a
+    # registered test is ignored by ctest, which is what lets this cover the sources
+    # compiled into the grouped functional binaries without knowing which those are.
+    file(GLOB credentialStoreSources ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests/*.cpp)
+    set(credentialStoreTests)
+    foreach(candidateSource ${credentialStoreSources})
+        file(STRINGS ${candidateSource} credentialStoreUse REGEX "CredentialManager|SecureStringUtils" LIMIT_COUNT 1)
+        if(credentialStoreUse)
+            get_filename_component(candidateName ${candidateSource} NAME_WE)
+            list(APPEND credentialStoreTests ${candidateName})
+        endif()
+    endforeach()
+    set_tests_properties(HomeUntouchedTest PROPERTIES DEPENDS "${credentialStoreTests}")
+endif()
 
 # Checks the release-publishing scripts that keep SHA256SUMS.txt covering every
 # release binary - a binary without an entry is one the updater refuses to install

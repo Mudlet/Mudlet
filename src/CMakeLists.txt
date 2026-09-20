@@ -107,6 +107,7 @@ set(mudlet_SRCS
     MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    MudletPaths.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -118,7 +119,9 @@ set(mudlet_SRCS
     SecureStringUtils.cpp
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
+    SherpaRecognizer.cpp
     ShortcutsManager.cpp
+    SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
     SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp
@@ -203,6 +206,7 @@ set(mudlet_SRCS
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
+    TriggerMatchPool.cpp
     TriggerUnit.cpp
     TTriggerPrescan.cpp
     TRoom.cpp
@@ -223,6 +227,7 @@ set(mudlet_SRCS
     TUiTour.cpp
     TVar.cpp
     UntrustedText.cpp
+    utils.cpp
     VarUnit.cpp
     VoskRecognizer.cpp
     WideComboBox.cpp
@@ -250,6 +255,20 @@ if(APPLE)
   list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
   set_source_files_properties(
     MacMicrophonePermission.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
+
+  # The macOS speech recognition backend. Unlike MacMicrophonePermission its
+  # class declares Q_OBJECT, so AUTOMOC must see the header - but only where
+  # the .mm that defines the class is also built. Leaving it in the
+  # unconditional mudlet_HDRS set moc'd it on every platform and left Linux and
+  # Windows linking against a vtable nothing defined. The header is appended
+  # after that set() instead, since this block runs before it.
+  list(APPEND mudlet_SRCS AppleSpeechRecognizer.mm)
+  set_source_files_properties(
+    AppleSpeechRecognizer.mm
     PROPERTIES
     LANGUAGE OBJCXX
     COMPILE_OPTIONS "-fobjc-arc"
@@ -361,6 +380,7 @@ set(mudlet_HDRS
     MMCPServer.h
     mudlet.h
     MudletInstanceCoordinator.h
+    MudletPaths.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -372,7 +392,9 @@ set(mudlet_HDRS
     SecureStringUtils.h
     SelectionRectangleHandler.h
     SentryWrapper.h
+    SherpaRecognizer.h
     ShortcutsManager.h
+    SignInStoreReconciler.h
     SingleLineTextEdit.h
     SpeechAudioCapture.h
     SpeechRecognizer.h
@@ -462,6 +484,7 @@ set(mudlet_HDRS
     TrailingWhitespaceMarker.h
     Tree.h
     TriggerHighlighter.h
+    TriggerMatchPool.h
     TriggerUnit.h
     TTriggerPrescan.h
     TRoom.h
@@ -492,6 +515,13 @@ set(mudlet_HDRS
     widgetutils.h
     XMLexport.h
     XMLimport.h)
+
+if(APPLE)
+  # Appended rather than listed above: AUTOMOC generates a moc file for every
+  # Q_OBJECT header it is given, and AppleSpeechRecognizer is only compiled on
+  # Apple.
+  list(APPEND mudlet_HDRS AppleSpeechRecognizer.h)
+endif()
 
 
 if(USE_UPDATER)
@@ -544,6 +574,7 @@ find_package(Qt6 6.8.2 REQUIRED
                MultimediaWidgets
                Network
                OpenGL
+               Svg
                UiTools
                Widgets
                Concurrent)
@@ -560,6 +591,7 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::Multimedia
               Qt6::MultimediaWidgets
               Qt6::OpenGL
+              Qt6::Svg
               Qt6::UiTools
               Qt6::Widgets
               qt6keychain)
@@ -759,7 +791,7 @@ endif()
 # Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
 # qtkeychain's own header is stale (hardcoded to 0x000100), so the CMake package version is
 # the only reliable signal. Relevant since qtkeychain 0.17.0 changed the Windows credential
-# naming scheme (see CredentialManager::attemptCompatNamingMigration).
+# naming scheme (see the "pre-0.17 qtkeychain naming" stage in CredentialManager::retrievePassword).
 if(USE_OWN_QTKEYCHAIN)
   get_directory_property(QTKEYCHAIN_LINKED_VERSION
     DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain
@@ -901,9 +933,14 @@ endif()
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+  # A normal link, not a weak one: Speech.framework has shipped with every
+  # macOS Mudlet supports
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework Speech")
 
-  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
+  # Microphone permission and speech recognition sources are already added via
+  # mudlet_SRCS/mudlet_HDRS
   target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework Speech")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.

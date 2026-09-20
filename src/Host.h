@@ -62,7 +62,6 @@ namespace pugi {
 class xml_document;
 }
 
-class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
 class QSettings;
@@ -92,6 +91,17 @@ class stopWatch
     friend class XMLimport;
 
 public:
+    // A stopwatch keeps its time as a count of milliseconds and, while it runs,
+    // as an effective start time that many milliseconds back from now. Both are
+    // bounded to this in either direction - a little under 31,700 years, which
+    // is past any use a stopwatch has while still leaving four orders of
+    // magnitude of what a qint64 of milliseconds holds spare - so that no
+    // arithmetic on a stopwatch's time can run out of that range and wrap
+    // around onto a time of the opposite sign. Time reaching the bound is
+    // clamped to it; a script asking for more than the whole range outright is
+    // told so instead:
+    static constexpr qint64 csmMaximumMilliSeconds = 1'000'000'000'000'000;
+
     stopWatch();
 
     bool start();
@@ -100,6 +110,7 @@ public:
     bool running() const { return mIsRunning; }
     void adjustMilliSeconds(const qint64);
     qint64 getElapsedMilliSeconds() const;
+    static qint64 clampToRange(const qint64);
     QString getElapsedDayTimeString() const;
     void setPersistent(const bool state) { mIsPersistent = state; }
     bool persistent() const { return mIsPersistent; }
@@ -232,6 +243,8 @@ public:
     void setDiscordInviteURL(const QString& s);
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
     void setSpellDic(const QString&);
+    void setEnableSpellCheck(const bool enable);
+    bool getEnableSpellCheck() const { return mEnableSpellCheck; }
     QString getSpellDic() const;
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
@@ -267,6 +280,7 @@ public:
     AliasUnit* getAliasUnit() { return &mAliasUnit; }
     ActionUnit* getActionUnit() { return &mActionUnit; }
     KeyUnit* getKeyUnit() { return &mKeyUnit; }
+    const KeyUnit* getKeyUnit() const { return &mKeyUnit; }
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
 
@@ -290,6 +304,15 @@ public:
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    // How a colorizer trigger recolors the line it matched: select a run of
+    // the current line, paint it, then put the format back. All of that is
+    // model state, so these run with no view; the two colour ones repaint the
+    // lines they touched when there is one.
+    void deselectMainConsole();
+    bool selectMainConsoleSection(int from, int length);
+    void setMainConsoleFgColor(const QColor& color);
+    void setMainConsoleBgColor(const QColor& color);
+    void resetMainConsoleFormat();
     TWindowRegistry& windowRegistry() { return mWindowRegistry; }
     const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();
@@ -437,12 +460,16 @@ public:
     struct FontFamilyResolution
     {
         QString family;       // family to actually use
-        QFont::Weight weight; // weight parsed from a "Family Style" name, QFont::Normal otherwise
-        bool available;       // false when neither the name nor a style-stripped base family is installed
+        QFont::Weight weight; // the weight parsed off a "Family Style" name, but only where the
+                              // base family is the one being used; QFont::Normal otherwise
+        bool available;       // false when neither the font database nor the platform's own
+                              // name resolution recognises the name
     };
-    // Maps a requested font name onto an installed family: the name itself when it is
-    // installed, else the base family when the name is a "Family Style" one such as
-    // "EB Garamond SemiBold" (with the style as the weight), else {requested, Normal, false}.
+    // Maps a requested font name onto a font this machine can make of it: the name itself
+    // when it is an installed family, else the base family when the name is a "Family Style"
+    // one such as "EB Garamond SemiBold" (with the style as the weight), else either of
+    // those when the platform resolves it for itself the way fontconfig resolves
+    // "Helvetica", else {requested, Normal, false}.
     FontFamilyResolution resolveFontFamily(const QString& requested) const;
     // A profile can name a font that is not installed on this machine; Qt would then
     // silently draw the console in an arbitrary substitute, so switch to the bundled
@@ -471,7 +498,6 @@ public:
     void setBufferSearchOptions(const enums::BufferSearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     std::optional<QString> getMapperTitle() const;
-    QDockWidget* mapWidget() const;
     // Gives TMap::mpMapper back to this profile's own mapper - see the definition.
     void restoreOwnMapper();
 
@@ -496,6 +522,12 @@ public:
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    // Whether windowname can hold a new mini console, scroll box, command line,
+    // text edit or label: an empty name or "main" (in any case) is the main
+    // console, anything else has to be a registered user window or scroll box.
+    // Not a general "can this contain an element" test - createMapper() takes a
+    // user window only.
+    bool parentWindowMissing(const QString& windowname) const;
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
@@ -516,6 +548,7 @@ public:
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
     std::pair<bool, QString> closeMapWidget();
     std::optional<QRect> mapWidgetGeometry() const;
+    void refreshColours();
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
@@ -536,6 +569,13 @@ public:
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
     bool resetBackgroundImage(const QString& name, bool fullWindow = false);
+    bool setSvgTint(const QString& name, const QColor& color);
+    bool resetSvgTint(const QString& name);
+    bool setSvgRotation(const QString& name, double angle);
+    bool resetSvgRotation(const QString& name);
+    bool setSvgShear(const QString& name, double shearX, double shearY);
+    bool resetSvgShear(const QString& name);
+    bool resetSvgTransform(const QString& name);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool mapperShown() const;
     bool interceptMapperButton();
@@ -872,7 +912,6 @@ public:
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
     bool mTimeStampStatus = false;
-    bool mEnableSpellCheck = true;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
@@ -985,6 +1024,9 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // Spell check has just been turned on, so the system dictionary is wanted
+    // where it was not before. The main console reads it off the event loop.
+    void signal_spellCheckEnabled();
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
     // problems as they arrive as well as a summary upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
@@ -1017,6 +1059,9 @@ signals:
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
 
+public slots:
+    void slot_timerFires();
+
 private slots:
     void slot_purgeTemps();
     void slot_saveProfileAfterPackageChange();
@@ -1035,6 +1080,19 @@ private:
     void toggleMapperVisibility();
     void createMapper(const bool);
     void removePackageInfo(const QString& packageName, const bool);
+    // A removal uninstallPackage() held over because the package was still being
+    // read in when it was asked for.
+    struct DeferredUninstall
+    {
+        QString packageName;
+        // The kind of removal that was asked for: it decides which events the
+        // removal raises and which of mInstalledPackages/mInstalledModules the
+        // name comes out of, so it travels with the name rather than being
+        // assumed when the removal is finally carried out.
+        enums::PackageModuleType thing;
+        bool operator==(const DeferredUninstall&) const = default;
+    };
+    void runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred);
     static void createModuleBackup(const QString& filename, const QString& saveName);
     // A single module queued to be written out during a profile save. Its XML document
     // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
@@ -1077,6 +1135,20 @@ private:
     void setupSandboxedLuaState(lua_State* L);
 
     QStringList mModulesToSync;
+
+    // The packages and modules whose install is still reading their XML in. A
+    // package's own scripts run during that read, and one of them can ask for the
+    // package being read in to be taken away again, or to be installed a second
+    // time: neither may be done to it while the importer is still holding its
+    // items. A stack because an install-time script can install something else,
+    // and because one name can be on it twice - a module that reloads itself is
+    // installed again from inside its own install - so what comes off has to be
+    // what this call put on rather than whatever carries the name.
+    QStack<QString> mPackagesBeingInstalled;
+    // What those scripts asked for, carried out by
+    // runUninstallsDeferredByAnInstall() once the outermost install has finished
+    // and the install events it queued have gone out.
+    QList<DeferredUninstall> mUninstallsDeferredByAnInstall;
     QScopedPointer<LuaInterface> mLuaInterface;
 
     // Experiment system storage: key -> enabled state
@@ -1198,6 +1270,7 @@ private:
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be
     // looked up directly by that class:
+    bool mEnableSpellCheck = true;
     bool mEnableUserDictionary = true;
     bool mUseSharedDictionary = false;
 

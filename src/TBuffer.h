@@ -404,6 +404,9 @@ public:
     void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
+    // How many newlines the chunk being decoded carries in total, zero outside
+    // one - see translateToPlainTextInner().
+    int pendingChunkLines() const { return mPendingChunkLines; }
     // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
     // - public so that the connection teardown can flush it:
     void flushPendingServerWrapJoin();
@@ -456,6 +459,10 @@ public:
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
 
+    // The decoder incoming text bytes go through, resolved from the encoding
+    // name when it changes instead of in the per-byte loop:
+    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, Utf8 };
+    static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray&);
@@ -662,6 +669,7 @@ private:
     // Set whilst a locally generated feed is being processed, so a nested feed
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
     bool mProcessingLocalFeed = false;
+    int mPendingChunkLines = 0;
 
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
@@ -675,6 +683,7 @@ private:
     QList<int> mCommitLineIndices;
 
     QByteArray mEncoding;
+    Decoder mDecoder = Decoder::Ascii;
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;

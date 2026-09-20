@@ -29,6 +29,10 @@
  * parentage rather than a stacking order, since offscreen has no window manager
  * to ask.
  *
+ * It also owns the only fixture with two live profiles in one mudlet instance,
+ * so the cases that need two real profiles - such as the rule that a detach has
+ * to leave a tab behind - live here as well.
+ *
  * Run with: ctest -R DetachedWindowOwnershipTest -V
  */
 
@@ -40,10 +44,12 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
+#include "TTabBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -95,7 +101,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -103,7 +109,8 @@ private slots:
         deleteProfileDirectory(mFirstHostname);
         deleteProfileDirectory(mSecondHostname);
 
-        // Two of them, because slot_tabDetachRequested() refuses index 0
+        // Two of them, because a tab only detaches while another one is left
+        // behind in the main window
         startProfile(mFirstHostname);
         if (QTest::currentTestFailed()) {
             return;
@@ -115,8 +122,7 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mFirstHostname);
             deleteProfileDirectory(mSecondHostname);
@@ -131,8 +137,11 @@ private slots:
 
     void cleanup()
     {
-        if (mudlet::self()->getDetachedWindows().contains(mSecondHostname)) {
-            mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        // Whichever profiles a failed case left outside, so that none of them
+        // outlives the test that detached it
+        const QStringList detachedProfiles = mudlet::self()->getDetachedWindows().keys();
+        for (const QString& profileName : detachedProfiles) {
+            mudlet::self()->slot_tabReattachRequested(profileName);
         }
     }
 
@@ -188,7 +197,72 @@ private slots:
                 2000ms));
     }
 
+    // Which tab is being dragged out has no say in whether it may be - only how
+    // many tabs are left behind does. The left-most tab used to be refused
+    // outright, however many tabs sat beside it, while the tab bar's context
+    // menu offered the same profile its "Detach Tab" entry.
+    void test_theLeftMostTabDetachesWhileAnotherTabIsLeftBehind()
+    {
+        QVERIFY(mpDetachedWindow);
+        // init() detached the second profile, so put it back first: with one tab
+        // to its name the main window has nothing to keep and refuses either way
+        reattachAndWait(mSecondHostname);
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 2);
+
+        const QString leftMostProfile = mudlet::self()->mpTabBar->tabName(0);
+        const QString survivingProfile = mudlet::self()->mpTabBar->tabName(1);
+        // Taking out the tab that is current is the arrangement the old guard
+        // put out of reach, so it is the one to detach from
+        mudlet::self()->mpTabBar->setCurrentIndex(0);
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(200, 200));
+
+        QVERIFY2(mudlet::self()->getDetachedWindows().contains(leftMostProfile), qPrintable(qsl("dragging the left-most tab ('%1') out of the window produced no window for it").arg(leftMostProfile)));
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 1);
+        // The tab left behind has to be the one the main window now shows,
+        // rather than the chrome of two tabs around a console that has gone
+        QCOMPARE(mudlet::self()->mpTabBar->currentIndex(), 0);
+        QCOMPARE(mudlet::self()->mpTabBar->tabName(0), survivingProfile);
+        QVERIFY(mudlet::self()->getActiveHost());
+        QCOMPARE(mudlet::self()->getActiveHost()->getName(), survivingProfile);
+
+        // The one tab that is left has nothing to leave behind, so it stays
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(200, 200));
+        QCOMPARE(mudlet::self()->getDetachedWindows().count(), 1);
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 1);
+
+        // Back where the fixture expects it, rather than appended at the end
+        reattachAndWait(leftMostProfile, 0);
+    }
+
+    // The threshold decision and the detach itself sit either side of one
+    // connect(), and each is covered on its own side of it: with the signal
+    // unwired a drag would do nothing at all while both of those still passed
+    void test_theTabBarsDetachSignalReachesTheMainWindow()
+    {
+        QVERIFY(mpDetachedWindow);
+        reattachAndWait(mSecondHostname);
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 2);
+
+        const QString leftMostProfile = mudlet::self()->mpTabBar->tabName(0);
+        emit mudlet::self() -> mpTabBar->tabDetachRequested(0, QPoint(200, 200));
+
+        QVERIFY2(mudlet::self()->getDetachedWindows().contains(leftMostProfile),
+                 qPrintable(qsl("the tab bar asked for '%1' to be detached and no window appeared, so the signal never reaches mudlet").arg(leftMostProfile)));
+
+        reattachAndWait(leftMostProfile, 0);
+    }
+
 private:
+    void reattachAndWait(const QString& profileName, int insertIndex = -1)
+    {
+        mudlet::self()->slot_tabReattachRequested(profileName, insertIndex);
+        QVERIFY(QTest::qWaitFor(
+                []() {
+                    return mudlet::self()->getDetachedWindows().isEmpty();
+                },
+                2000ms));
+    }
+
     TDetachedWindow* detachSecondProfile()
     {
         if (!mudlet::self()->getDetachedWindows().isEmpty()) {
@@ -222,7 +296,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

@@ -77,8 +77,29 @@ private slots:
     void invite_namesWhoWasInvitedWhere() { QCOMPARE(forLua(":bob!u@h INVITE alice #mudlet"), QStringLiteral("! bob invited to #mudlet")); }
 
     // A kick is the one thing that happens to a player without their asking, so
-    // silently dropping it leaves them looking at a channel they are no longer in
-    void kick_namesWhoWasKickedByWhom() { QCOMPARE(forLua(":bob!u@h KICK #mudlet alice :behave"), QStringLiteral("! bob kicked alice")); }
+    // silently dropping it leaves them looking at a channel they are no longer in.
+    // With no reason given there are no empty parentheses either.
+    void kick_namesWhoWasKickedByWhom() { QCOMPARE(forLua(":bob!u@h KICK #mudlet alice"), QStringLiteral("! bob kicked alice from #mudlet")); }
+
+    // The reason is the one part of a kick a player cannot work out for themselves
+    void kick_withAReason() { QCOMPARE(forLua(":bob!u@h KICK #mudlet alice :behave"), QStringLiteral("! bob kicked alice from #mudlet (behave)")); }
+
+    // The formatter does not special-case a kick of this connection; the copy
+    // dlgIRC puts in the server tab relies on that, since the line it copies is
+    // the same one the channel tab got
+    void kick_ofThisConnectionIsWordedNoDifferently() { QCOMPARE(forLua(":bob!u@h KICK #mudlet me :get out"), QStringLiteral("! bob kicked me from #mudlet (get out)")); }
+
+    // Escaping the fields must not cost the window the line itself, and a kick
+    // with no reason must not render the empty parentheses the other branch avoids
+    void kick_readsTheSameInTheWindowAsItDoesForLua()
+    {
+        const QString html = forWindow(":bob!u@h KICK #mudlet alice :behave");
+        QVERIFY2(html.contains(QStringLiteral("! bob kicked alice from #mudlet (behave)")), qPrintable(html));
+
+        const QString reasonless = forWindow(":bob!u@h KICK #mudlet alice");
+        QVERIFY2(reasonless.contains(QStringLiteral("! bob kicked alice from #mudlet")), qPrintable(reasonless));
+        QVERIFY2(!reasonless.contains(QStringLiteral("()")), qPrintable(reasonless));
+    }
 
     void privateMessage_forLuaIsTheTextAlone() { QCOMPARE(forLua(":bob!u@h PRIVMSG #mudlet :hello there"), QStringLiteral("hello there")); }
 
@@ -110,11 +131,25 @@ private slots:
     void numeric_belowThreeHundredIsInformation() { QCOMPARE(forLua(":server 001 me :Welcome to the network"), QStringLiteral("[INFO] Welcome to the network")); }
 
     // Everything the server sends is put into an HTML document, so the markup
-    // characters in it have to be escaped on the way - an information numeric no
-    // less than any other line
-    void numeric_informationIsEscapedBeforeItReachesTheWindow()
+    // characters in it have to be escaped on the way - in every field of every
+    // line, not just the ones that are obviously free text
+    void window_escapesMarkupInEveryField_data()
     {
-        const QString html = forWindow(":server 001 me :<b>not bold</b>");
+        QTest::addColumn<QByteArray>("raw");
+
+        QTest::newRow("information numeric") << QByteArrayLiteral(":server 001 me :<b>not bold</b>");
+        QTest::newRow("kick reason") << QByteArrayLiteral(":bob!u@h KICK #mudlet alice :<b>not bold</b>");
+        // a channel name may hold anything but NUL, BEL, CR, LF, space, comma
+        // and colon, so it is markup a channel operator can choose
+        QTest::newRow("kick channel") << QByteArrayLiteral(":bob!u@h KICK #<b>bold</b> alice :hi");
+        QTest::newRow("part reason") << QByteArrayLiteral(":bob!u@h PART #mudlet :<b>not bold</b>");
+        QTest::newRow("quit reason") << QByteArrayLiteral(":bob!u@h QUIT :<b>not bold</b>");
+    }
+
+    void window_escapesMarkupInEveryField()
+    {
+        QFETCH(QByteArray, raw);
+        const QString html = forWindow(raw);
         QVERIFY2(!html.contains(QStringLiteral("<b>")), qPrintable(html));
         QVERIFY2(html.contains(QStringLiteral("&lt;b")), qPrintable(html));
     }
@@ -133,11 +168,19 @@ private slots:
         QTest::newRow("channel message") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :Fish & Chips <here>") << QStringLiteral("Fish & Chips <here>");
         QTest::newRow("action") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :\001ACTION likes Fish & Chips <here>\001") << QStringLiteral("* bob likes Fish & Chips <here>");
         QTest::newRow("notice") << QByteArrayLiteral(":bob!u@h NOTICE #mudlet :Fish & Chips <here>") << QStringLiteral("Fish & Chips <here>");
+        QTest::newRow("kick reason") << QByteArrayLiteral(":bob!u@h KICK #mudlet alice :Fish & Chips <here>") << QStringLiteral("! bob kicked alice from #mudlet (Fish & Chips <here>)");
+        // the channel is escaped for the window too, so it has to come back
+        // unescaped here - a script addresses the channel it is given
+        QTest::newRow("kick channel") << QByteArrayLiteral(":bob!u@h KICK #a&b<c> alice :hi") << QStringLiteral("! bob kicked alice from #a&b<c> (hi)");
+        QTest::newRow("part reason") << QByteArrayLiteral(":bob!u@h PART #mudlet :Fish & Chips <here>") << QStringLiteral("! bob has left #mudlet (Fish & Chips <here>)");
+        QTest::newRow("quit reason") << QByteArrayLiteral(":bob!u@h QUIT :Fish & Chips <here>") << QStringLiteral("! bob has quit (Fish & Chips <here>)");
         // Somebody typing an entity by hand must see it come out as typed
         QTest::newRow("a literal entity survives") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :&amp; &lt; &amp;lt;") << QStringLiteral("&amp; &lt; &amp;lt;");
         // The formatting codes are still stripped, which is why the plain text
         // comes from communi in the first place
         QTest::newRow("formatting codes are still stripped") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :\002Fish\002 & \00304Chips\003 <here>") << QStringLiteral("Fish & Chips <here>");
+        QTest::newRow("formatting codes are stripped from a part reason too")
+                << QByteArrayLiteral(":bob!u@h PART #mudlet :\002Fish\002 & \00304Chips\003 <here>") << QStringLiteral("! bob has left #mudlet (Fish & Chips <here>)");
     }
 
     void lua_getsTheTextAsItWasSent()

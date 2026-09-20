@@ -21,6 +21,7 @@
 // shape and why it exists.
 
 #include "GroupedTest.h"
+#include "TriggerMatchPool.h"
 
 #include <QLatin1Char>
 #include <QMap>
@@ -71,6 +72,11 @@ void initializeQRCResources()
 void GroupedTest::registerCase(const char* name, EntryFunction entry)
 {
     registry().insert(QString::fromUtf8(name), entry);
+}
+
+void GroupedTest::stopMatchHelpers()
+{
+    TriggerMatchPool::shutdown();
 }
 
 int main(int argc, char* argv[])
