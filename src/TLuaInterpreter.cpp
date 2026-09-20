@@ -5915,6 +5915,21 @@ void TLuaInterpreter::pushUtf8String(lua_State* L, const QString& text)
 }
 
 // No documentation available in wiki - internal function
+// For a reader that goes at the globals table itself rather than reading a name
+// through Lua: Mudlet's own Variables view walks it with lua_next(), which sees
+// only what is in the table, so what is still owed has to go in first
+void TLuaInterpreter::flushDeferredGlobals()
+{
+    if (!pGlobalLua) {
+        return;
+    }
+    lua_State* L = pGlobalLua;
+    const int callerStackTop = lua_gettop(L);
+    materialisePendingGlobals(L);
+    lua_settop(L, callerStackTop);
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setLineGlobal(const QString& line)
 {
     lua_State* L = pGlobalLua;
