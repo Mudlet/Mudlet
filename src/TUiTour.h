@@ -54,7 +54,6 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private slots:
@@ -75,6 +74,7 @@ private:
 
     void buildSteps();
     void createCard();
+    bool handleKey(const QKeyEvent* event);
     void setStep(int index, int direction);
     void updateCard();
     void positionCard();

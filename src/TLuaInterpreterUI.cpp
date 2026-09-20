@@ -27,6 +27,7 @@
 // UI-specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
+#include "MudletPaths.h"
 #include "TLuaInterpreter.h"
 
 #include <QClipboard>
@@ -36,6 +37,7 @@
 
 #include "EAction.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -68,6 +70,8 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -97,6 +101,61 @@ static bool isMain(const QString& name)
     return false;
 }
 
+// Mudlet's own colour names live in the Lua "color_table" global as {r, g, b};
+// the names QColor knows are the SVG ones, a different set with different
+// spellings. Returns an invalid colour when the name is not in the table.
+static QColor colorFromColorTable(lua_State* L, const QString& name)
+{
+    lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return QColor();
+    }
+
+    // A plain lookup would answer for fewer names than Geyser does: the table
+    // holds 137 lower_case keys and 88 CamelCase ones, and names like
+    // "LightGoldenrod" have no other spelling in it. Geyser.Color.find_color_name
+    // lower-cases what it is asked for and drops the underscores from it, then
+    // compares that against every key lower-cased - so "alice_blue" finds
+    // "AliceBlue". Matching the same way keeps the global and the Geyser wrapper
+    // resolving the same names.
+    const QString wanted = name.toLower().remove(QLatin1Char('_'));
+    QColor found;
+    lua_pushnil(L);
+    while (lua_next(L, -2)) {
+        // lua_tostring() converts a number key in place, which breaks lua_next()
+        if (lua_type(L, -2) != LUA_TSTRING || QString::fromUtf8(lua_tostring(L, -2)).toLower() != wanted) {
+            lua_pop(L, 1);
+            continue;
+        }
+
+        if (lua_istable(L, -1)) {
+            int components[3] = {0, 0, 0};
+            bool complete = true;
+            for (int i = 0; i < 3; ++i) {
+                lua_rawgeti(L, -1, i + 1);
+                if (lua_isnumber(L, -1)) {
+                    components[i] = static_cast<int>(lua_tointeger(L, -1));
+                } else {
+                    complete = false;
+                }
+                lua_pop(L, 1);
+            }
+            if (complete) {
+                found = QColor(components[0], components[1], components[2]);
+            }
+        }
+        lua_pop(L, 2);
+        break;
+    }
+    lua_pop(L, 1);
+
+    return found;
+}
+
+// variable names within these macros have trailing underscores because in
+// at least one case, masking an existing variable with the new one confused
+// GCC, leading to a crash.
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
     ({                                                                                                                                                                                                 \
         int pos_ = (ARG_pos);                                                                                                                                                                          \
@@ -183,6 +242,26 @@ static void releaseLuaReferences(lua_State* L, const QVector<int>& luaReferences
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCmdLineText
+int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    // The mandatory text is last, but with no arguments at all that would be
+    // index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
+    // free slot for it rather than complaining:
+    const int textIndex = qMax(n, 1);
+    const char* name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
+        return lua_error(L);
+    }
+    auto pN = COMMANDLINE(L, QString{name});
+    pN->addBlacklist(QString{lua_tostring(L, textIndex)});
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
 int TLuaInterpreter::addCommandLineMenuEvent(lua_State* L)
 {
@@ -246,6 +325,26 @@ int TLuaInterpreter::addMouseEvent(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#alert
+int TLuaInterpreter::alert(lua_State* L)
+{
+    double luaAlertDuration = 0.0;
+
+    if (lua_gettop(L) > 0) {
+        luaAlertDuration = getVerifiedDouble(L, __func__, 1, "alert duration in seconds");
+        if (luaAlertDuration < 0.000) {
+            lua_pushstring(L, "alert: duration, in seconds, is optional but if given must be zero or greater.");
+            return lua_error(L);
+        }
+    }
+
+    if (auto* application = mudlet::self()) {
+        application->alertUser(qRound(luaAlertDuration * 1000.0));
+    }
+
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendBuffer
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
@@ -301,6 +400,19 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLineBlacklist
+int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    const char* name = "main";
+    if (n >= 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pN = COMMANDLINE(L, QString{name});
+    pN->clearBlacklist();
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearUserWindow
 // Note that this is registered as both clearUserWindow(...) AND clearWindow(...)
 int TLuaInterpreter::clearUserWindow(lua_State* L)
@@ -329,6 +441,17 @@ int TLuaInterpreter::copy(lua_State* L)
 
     auto console = CONSOLE(L, windowName);
     console->copy();
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
+int TLuaInterpreter::cut(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    host.mpConsole->cut();
     return 0;
 }
 
@@ -940,6 +1063,42 @@ int TLuaInterpreter::disableTimeStamps(lua_State* L)
     }
 
     pConsole->slot_toggleTimeStamps(false);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echo
+int TLuaInterpreter::echo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const int n = lua_gettop(L);
+    int s = 1;
+
+    if (n > 1 && !checkStringArg(L, __func__, s++, "console name", true)) {
+        return lua_error(L);
+    }
+    if (!checkStringArg(L, __func__, s, "text to display")) {
+        return lua_error(L);
+    }
+    const QString consoleName = (n > 1) ? QString{lua_tostring(L, 1)} : QString();
+    const QString displayText{lua_tostring(L, s)};
+
+    if (isMain(consoleName)) {
+        if (!host.mpConsole) {
+            return warnArgumentValue(L, __func__, no_main_window_value);
+        }
+        host.mpConsole->buffer.mEchoingText = true;
+        host.mpConsole->echo(displayText);
+        host.mpConsole->buffer.mEchoingText = false;
+        // Writing to the main window must always succeed, but for consistent
+        // results, we now return a true for that
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    if (!host.echoWindow(consoleName, displayText)) {
+        return warnArgumentValue(L, __func__, qsl("console/label '%1' does not exist").arg(consoleName));
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1651,6 +1810,29 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSaveCommandHistory
+int TLuaInterpreter::getSaveCommandHistory(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    auto numberOfLines = host.getCommandLineHistorySaveSize();
+    if (!numberOfLines) {
+        // We do not use warnArgumentValue(...) because it is valid to have
+        // this disabled and we do not want a message to be painted on the
+        // Central Debug Console:
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "disabled by profile global preference");
+        return 2;
+    }
+    const char* name = "main";
+    if (lua_gettop(L)) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pCommandline = COMMANDLINE(L, QString{name});
+    lua_pushboolean(L, pCommandline->mSaveCommands);
+    lua_pushstring(L, (pCommandline->mSaveCommands ? qsl("enabled (%1 lines will be saved)").arg(QString::number(numberOfLines)) : qsl("disabled")).toUtf8().constData());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScroll
 int TLuaInterpreter::getScroll(lua_State* L)
 {
@@ -2039,6 +2221,18 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     return 1;
 }
 
+// No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
+int TLuaInterpreter::insertHTML(lua_State* L)
+{
+    const QString sendText = getVerifiedString(L, __func__, 1, "sendText");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    host.mpConsole->insertHTML(sendText);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText
 int TLuaInterpreter::insertText(lua_State* L)
 {
@@ -2300,7 +2494,7 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
 {
     const int n = lua_gettop(L);
     if (lua_type(L, 1) != LUA_TSTRING) {
-        lua_pushfstring(L, "openUserWindow:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "openUserWindow: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     if (n > 1 && !checkBoolArg(L, __func__, 2, "loadLayout", true)) {
@@ -2358,6 +2552,24 @@ int TLuaInterpreter::raiseWindow(lua_State* L)
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpConsole && host.mpConsole->raiseWindow(windowName));
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCmdLineBlacklist
+int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    // See addCmdLineBlacklist() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
+    const char* name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
+        return lua_error(L);
+    }
+    auto pN = COMMANDLINE(L, QString{name});
+    pN->removeBlacklist(QString{lua_tostring(L, textIndex)});
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCommandLineMenuEvent
@@ -2631,7 +2843,7 @@ int TLuaInterpreter::selectString(lua_State* L)
 
 int TLuaInterpreter::setActiveProfile(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
+    auto* hostManager = HostManager::self();
     const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
 
     if (requestedName.isEmpty()) {
@@ -2640,14 +2852,14 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
         return 2;
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushboolean(L, false);
         lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
-    if (!hostManager.hostLoaded(profileName)) {
+    if (!hostManager->hostLoaded(profileName)) {
         lua_pushboolean(L, false);
         lua_pushfstring(L, "setActiveProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
         return 2;
@@ -2685,7 +2897,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
     mudlet::self()->refreshTabBarsAfterStyleChange();
-    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+    HostManager::self()->postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2808,7 +3020,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
             // the console name is already validated above, so this is about the image
             return warnArgumentValue(L, __func__, qsl("could not use '%1' as a full window background image").arg(imgPath));
         }
-        return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
+        return warnArgumentValue(L, __func__, qsl("console or label '%1' not found, or '%2' could not be loaded as an image").arg(windowName, imgPath));
     }
 
     lua_pushboolean(L, true);
@@ -3352,6 +3564,162 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgTint
+int TLuaInterpreter::setSvgTint(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
+
+    QColor color;
+    if (lua_type(L, 2) == LUA_TSTRING) {
+        const QString colorStr = getVerifiedString(L, __func__, 2, "color string");
+        color = colorFromColorTable(L, colorStr);
+        if (!color.isValid()) {
+            color = QColor(colorStr);
+        }
+        if (!color.isValid()) {
+            return warnArgumentValue(
+                    L, __func__, qsl("'%1' is not a valid color - use a Mudlet color name like 'alice_blue', an SVG color name like 'aliceblue', or a '#rrggbb' hex value").arg(colorStr));
+        }
+    } else {
+        const int r = getVerifiedInt(L, __func__, 2, "red value 0-255");
+        const int g = getVerifiedInt(L, __func__, 3, "green value 0-255");
+        const int b = getVerifiedInt(L, __func__, 4, "blue value 0-255");
+
+        auto validRange = [](int number) {
+            return number >= 0 && number <= 255;
+        };
+
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+        }
+        if (!validRange(g)) {
+            return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+        }
+        if (!validRange(b)) {
+            return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+        }
+        color = QColor(r, g, b);
+    }
+
+    const QString labelName{lua_tostring(L, 1)};
+
+    Host& host = getHostFromLua(L);
+    if (!host.setSvgTint(labelName, color)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgTint
+int TLuaInterpreter::resetSvgTint(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgTint(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgRotation
+int TLuaInterpreter::setSvgRotation(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
+    const double angle = getVerifiedDouble(L, __func__, 2, "angle");
+    // NaN and the infinities reach QTransform as a transform that maps the whole
+    // document nowhere, leaving the SVG invisible until the rotation is reset
+    if (!qIsFinite(angle)) {
+        return warnArgumentValue(L, __func__, qsl("angle must be a finite number"));
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    Host& host = getHostFromLua(L);
+
+    if (!host.setSvgRotation(labelName, angle)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgRotation
+int TLuaInterpreter::resetSvgRotation(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgRotation(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgShear
+int TLuaInterpreter::setSvgShear(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
+    const double shearX = getVerifiedDouble(L, __func__, 2, "shearX");
+    const double shearY = getVerifiedDouble(L, __func__, 3, "shearY");
+    // as with the rotation, a non-finite factor takes the SVG off screen rather
+    // than slanting it
+    if (!qIsFinite(shearX)) {
+        return warnArgumentValue(L, __func__, qsl("shearX must be a finite number"));
+    }
+    if (!qIsFinite(shearY)) {
+        return warnArgumentValue(L, __func__, qsl("shearY must be a finite number"));
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    Host& host = getHostFromLua(L);
+
+    if (!host.setSvgShear(labelName, shearX, shearY)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgShear
+int TLuaInterpreter::resetSvgShear(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgShear(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgTransform
+int TLuaInterpreter::resetSvgTransform(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgTransform(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelCursor
 int TLuaInterpreter::setLabelCursor(lua_State* L)
 {
@@ -3607,6 +3975,47 @@ int TLuaInterpreter::setReverse(lua_State* L)
     const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable reverse attribute");
     auto console = CONSOLE(L, QString{windowName});
     console->setDisplayAttributes(TChar::Reverse, isAttributeEnabled);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSaveCommandHistory
+int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
+{
+    auto n = lua_gettop(L);
+    auto& host = getHostFromLua(L);
+    auto numberOfLines = host.getCommandLineHistorySaveSize();
+    if (!numberOfLines) {
+        // Unlike for the getter we do want to alert on trying to set the
+        // per-commandLine option when things are disabled globally for the
+        // profile:
+        return warnArgumentValue(L, __func__, "disabled by profile global preference");
+    }
+    // both defaults have to stand outside the argument handling below:
+    // setSaveCommandHistory() and setSaveCommandHistory(name) each turn saving
+    // on, so neither belongs inside a branch on the argument count:
+    const char* name = "main";
+    bool saveCommands = true;
+    if (n > 0) {
+        if (lua_type(L, 1) == LUA_TSTRING) {
+            // First argument is a string so is presumably a command line name
+            name = CMDLINE_NAME(L, 1);
+            if (n > 1) {
+                saveCommands = getVerifiedBool(L, __func__, 2, "save command history", true);
+            }
+
+        } else {
+            if (lua_type(L, 1) != LUA_TBOOLEAN) {
+                lua_pushfstring(L, "%s: bad argument #1 type (command line name as string or save history as boolean is optional, got %s!)", __func__, luaL_typename(L, 1));
+                return lua_error(L); // Dummy return!
+            }
+
+            saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
+        }
+    }
+
+    auto pCommandline = COMMANDLINE(L, QString{name});
+    pCommandline->mSaveCommands = saveCommands;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3926,12 +4335,16 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, QString{windowName});
+    if (luaFrom < 0) {
+        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    }
     console->setIndentCount(luaFrom);
-    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapIndentCount = luaFrom;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 //Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapHangingIndent
@@ -3940,12 +4353,16 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, QString{windowName});
+    if (luaFrom < 0) {
+        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    }
     console->setHangingIndentCount(luaFrom);
-    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapHangingIndentCount = luaFrom;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow
@@ -4507,6 +4924,22 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandPinned
+int TLuaInterpreter::setCommandPinned(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const bool pinned = getVerifiedBool(L, __func__, 2, "pinned");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandPinned(commandId, pinned, &host));
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandIcon
 int TLuaInterpreter::setCommandIcon(lua_State* L)
 {
@@ -4574,5 +5007,37 @@ int TLuaInterpreter::setCommandPulse(lua_State* L)
         return warnArgumentValue(L, __func__, error);
     }
     lua_pushboolean(L, success);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
+int TLuaInterpreter::invokeFileDialog(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    if (!checkBoolArg(L, __func__, 1, "fileOrFolder") || !checkStringArg(L, __func__, 2, "dialogTitle") || (n > 2 && !checkStringArg(L, __func__, 3, "dialogLocation"))) {
+        return lua_error(L);
+    }
+
+    Host& host = getHostFromLua(L);
+    QString location = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
+    const bool luaDir = lua_toboolean(L, 1);
+    const QString title{lua_tostring(L, 2)};
+
+    if (n > 2) {
+        const QString target{lua_tostring(L, 3)};
+        const QDir dir(target);
+
+        if (dir.exists()) {
+            location = target;
+        }
+    }
+
+    if (!luaDir) {
+        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
+        lua_pushstring(L, fileName.toUtf8().constData());
+        return 1;
+    }
+    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
+    lua_pushstring(L, fileName.toUtf8().constData());
     return 1;
 }

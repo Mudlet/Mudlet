@@ -87,6 +87,20 @@ HARNESSES = {
         # they carry then describe a repaint that skipped the damaged band on
         # both sides, which is faster than the one the metric names.
         "must_be_set": ("display_overlay_cache_reused",),
+        # Workload knobs the harness reads from the environment, as metric name
+        # to variable. Two runs that differ here did different work, so they are
+        # refused. A knob left unset did the default workload, whether the run
+        # reports it as 0 or leaves it out, and so did a dump from before it
+        # existed - so a missing one reads as 0 rather than as "skip the check",
+        # and a chunked run cannot slip past an old dump as a regression.
+        "workload_knobs": {
+            "feed_chunk_lines": "MUDLET_BENCH_CHUNK_LINES",
+            "bench_chunk_bytes": "MUDLET_BENCH_CHUNK_BYTES",
+        },
+        # Whether the trigger prescan ran in parallel: worth a note, since it
+        # moves trigger_lines_per_sec by a lot, but a fair comparison across
+        # the change that added it needs one side without it.
+        "soft_invariants": ("prescan_workers",),
         # Throughput for the text and trigger pipelines, plus the shipped default
         # packages on the same corpus - the pipeline metrics run on a bare
         # profile, so only defaults_text_lines_per_sec can see a package costing
@@ -147,7 +161,11 @@ HARNESSES = {
 # have it - but never read as a result either, so it stays out of the table.
 MODE_METRICS = ("bench_frame_hash_mode",)
 
-INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(name for harness in HARNESSES.values() for name in harness["invariants"])
+INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(
+    name
+    for harness in HARNESSES.values()
+    for name in harness["invariants"] + tuple(harness.get("workload_knobs", {}))
+)
 
 # Why a differing invariant means the runs are not comparable, where the default
 # answer - the two builds are not the same harness, rebuild them - would send
@@ -284,6 +302,12 @@ def check_invariants(before, after):
                 f"the same {before_harness} harness/build and cannot be compared."
             )
         if before[name] != after[name]:
+            if name == "corpus_version" and 0 in (before[name], after[name]):
+                fail(
+                    "corpus_version 0 marks a run made with MUDLET_BENCH_LINES or MUDLET_BENCH_CHUNK_BYTES "
+                    "set, which reshapes the workload; such a run compares only with another made with the "
+                    "same settings."
+                )
             reason = INVARIANT_HINTS.get(
                 name,
                 "the two runs measured different workloads or build configurations and cannot be "
@@ -300,6 +324,14 @@ def check_invariants(before, after):
                     "names, so comparing it says nothing. Both runs having lost it makes them "
                     "equal, not comparable."
                 )
+
+    for name, knob in HARNESSES[before_harness].get("workload_knobs", {}).items():
+        old, new = before.get(name, 0), after.get(name, 0)
+        if old != new:
+            fail(
+                f"{name} differs ({old:g} vs {new:g}) - the two runs did different work and cannot "
+                f"be compared. Set {knob} the same way for both."
+            )
 
     for name in HARNESSES[before_harness].get("soft_invariants", ()):
         if name in before and name in after and before[name] != after[name]:

@@ -29,6 +29,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "MudletPaths.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEasyButtonBar.h"
@@ -1412,10 +1413,21 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
     mpHost->editorThemeChanged();
 
-    // force the minimum size of the scroll area for the trigger items to be one
-    // and a half trigger item widgets:
-    const int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
-    mpScrollArea->setMinimumHeight(triggerWidgetItemMinHeight);
+    // Force the minimum size of the scroll area for the trigger items to be
+    // enough for a useful number of them. The right hand column of advanced
+    // options used to provide that height as a side effect, so collapsing it
+    // left a single row and a sliver of the next one - hiding the very
+    // patterns the room was made for. Issue #2548 settled on five.
+    //
+    // A row is measured by its minimum rather than its preferred height: once
+    // the list is longer than it can show - the case this floor is here for -
+    // the scroll area lays its inner widget out at that widget's minimum, so
+    // the minimum is the height the rows really get. The frame and the
+    // horizontal scrollbar come off the viewport rather than off the rows, so
+    // they are paid for on top; a colour trigger's row is wider than a narrow
+    // editor and without that allowance its scrollbar eats the fifth row.
+    const int scrollAreaChromeHeight = 2 * mpScrollArea->frameWidth() + mpScrollArea->horizontalScrollBar()->sizeHint().height();
+    mpScrollArea->setMinimumHeight(mPatternRowHeight * csmMinimumVisiblePatternRows + scrollAreaChromeHeight);
 
     widget_searchTerm->updateGeometry();
 
@@ -1667,6 +1679,20 @@ void dlgTriggerEditor::createPatternItem(int index)
 
     mTriggerPatternEdit.push_back(pItem);
     pItem->mRow = index;
+
+    // Measure a row here, while every control it can carry is still on show -
+    // which is how the .ui hands one over, before a pattern type hides the
+    // ones it has no use for. Each type shows a different set of them and
+    // they are not all the same height: on macOS a colour trigger's two
+    // colour buttons stand a pixel taller than the controls the other types
+    // show, so a row measured wearing one type's clothes is not the height
+    // rows are laid out at wearing another's. With all of them showing the
+    // row's own layout takes its minimum from whichever is tallest, which is
+    // the tallest a row can end up however it is later set.
+    if (!mPatternRowHeight) {
+        mPatternRowHeight = pItem->minimumSizeHint().height();
+    }
+
     pItem->pushButton_fgColor->hide();
     pItem->pushButton_bgColor->hide();
     pItem->label_prompt->hide();
@@ -1830,7 +1856,7 @@ void dlgTriggerEditor::slot_hideVariable(bool status)
 {
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    TVar* var = vu->getWVar(mpCurrentVarItem);
+    TVar* var = treeWidget_variables->variableForRow(vu, mpCurrentVarItem);
     if (var) {
         if (status) {
             vu->addHidden(var, 1);
@@ -2322,7 +2348,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         QListIterator<QTreeWidgetItem*> it(list);
         while (it.hasNext()) {
             QTreeWidgetItem* treeWidgetItem = it.next();
-            TVar* var = vu->getWVar(treeWidgetItem);
+            TVar* var = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (vu->shortVarName(var) == varShort) {
                 show_vars();
                 treeWidget_variables->setCurrentItem(treeWidgetItem, 0);
@@ -3306,7 +3332,7 @@ void dlgTriggerEditor::delete_variable()
     VarUnit* vu = lI->getVarUnit();
 
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
-        TVar* var = vu->getWVar(pItem);
+        TVar* var = treeWidget_variables->variableForRow(vu, pItem);
         if (var) {
             itemNames << var->getName();
             varsToDelete << var;
@@ -3331,7 +3357,7 @@ void dlgTriggerEditor::delete_variable()
     QList<QTreeWidgetItem*> removedItems;
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
-        TVar* var = vu->getWVar(pItem);
+        TVar* var = treeWidget_variables->variableForRow(vu, pItem);
 
         if (var) {
             lI->deleteVar(var);
@@ -3354,7 +3380,7 @@ void dlgTriggerEditor::delete_variable()
                 QList<QTreeWidgetItem*> pendingPurge{pItem};
                 while (!pendingPurge.isEmpty()) {
                     QTreeWidgetItem* pEntry = pendingPurge.takeLast();
-                    vu->removeTreeItem(pEntry);
+                    treeWidget_variables->forgetRow(pEntry);
                     for (int i = 0; i < pEntry->childCount(); ++i) {
                         pendingPurge.append(pEntry->child(i));
                     }
@@ -5256,7 +5282,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     QTreeWidgetItem* pNewItem;
     QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
     if (cItem) {
-        TVar* cVar = vu->getWVar(cItem);
+        TVar* cVar = treeWidget_variables->variableForRow(vu, cItem);
         if (cVar && cVar->getValueType() == LUA_TTABLE) {
             pParentItem = cItem;
         } else {
@@ -5267,7 +5293,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     auto newVar = new TVar();
     if (pParentItem) {
         //we're nested under something, or going to be.  This HAS to be a table
-        TVar* parent = vu->getWVar(pParentItem);
+        TVar* parent = treeWidget_variables->variableForRow(vu, pParentItem);
         if (parent && parent->getValueType() == LUA_TTABLE) {
             //create it under the parent
             pNewItem = new QTreeWidgetItem(pParentItem, nameList);
@@ -5286,7 +5312,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     } else {
         newVar->setValueType(LUA_TNONE);
     }
-    vu->addTempVar(pNewItem, newVar);
+    treeWidget_variables->setNewVariableForRow(vu, pNewItem, newVar);
     pNewItem->setFlags(pNewItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
 
     // Finalize selection
@@ -6914,7 +6940,7 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
     //basic checks, return 1 if we can recast, 2 if no need to recast, 0 if we can't recast
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    TVar* var = vu->getWVar(pItem);
+    TVar* var = treeWidget_variables->variableForRow(vu, pItem);
     if (!var) {
         return 2;
     }
@@ -6972,11 +6998,11 @@ void dlgTriggerEditor::saveVar()
     }
     auto* luaInterface = mpHost->getLuaInterface();
     auto* varUnit = luaInterface->getVarUnit();
-    TVar* variable = varUnit->getWVar(pItem);
+    TVar* variable = treeWidget_variables->variableForRow(varUnit, pItem);
     bool newVar = false;
     if (!variable) {
         newVar = true;
-        variable = varUnit->getTVar(pItem);
+        variable = treeWidget_variables->newVariableForRow(varUnit, pItem);
     }
     if (!variable) {
         return;
@@ -7034,7 +7060,7 @@ void dlgTriggerEditor::saveVar()
         //we sometimes get in here from new variables
         if (newVar) {
             //we're making this var
-            variable = varUnit->getTVar(pItem);
+            variable = treeWidget_variables->newVariableForRow(varUnit, pItem);
             if (!variable) {
                 variable = new TVar();
             }
@@ -7042,8 +7068,8 @@ void dlgTriggerEditor::saveVar()
             variable->setValue(newValue, uiValueType);
             luaInterface->createVar(variable);
             varUnit->addVariable(variable);
-            varUnit->addTreeItem(pItem, variable);
-            varUnit->removeTempVar(pItem);
+            treeWidget_variables->setVariableForRow(varUnit, pItem, variable);
+            treeWidget_variables->forgetNewVariableForRow(pItem);
             // Attach to its real parent TVar (set in addVar) so the XML writer,
             // which iterates from the base, nests it inside the parent table
             // rather than at root level.
@@ -7116,15 +7142,15 @@ void dlgTriggerEditor::saveVar()
             }
         }
     } else if (varRecast == 1) { //recast it
-        TVar* var = varUnit->getWVar(pItem);
+        TVar* var = treeWidget_variables->variableForRow(varUnit, pItem);
         if (newVar) {
             //we're making this var
-            var = varUnit->getTVar(pItem);
+            var = treeWidget_variables->newVariableForRow(varUnit, pItem);
             var->setName(newName, uiNameType);
             var->setValue(newValue, uiValueType);
             luaInterface->createVar(var);
             varUnit->addVariable(var);
-            varUnit->addTreeItem(pItem, var);
+            treeWidget_variables->setVariableForRow(varUnit, pItem, var);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
         } else if (var) {
@@ -7878,8 +7904,13 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             patternItem->spinBox_lineSpacer->hide();
             patternItem->comboBox_patternType->setCurrentIndex(0);
         }
-        // Scroll to the last used pattern:
-        mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), mVisiblePatternCount - 1)));
+        // Open the pattern list on pattern 1 - that is the one wanted first, and
+        // it is the row a trigger's own name and command sit next to. Setting
+        // the scrollbar rather than calling ensureWidgetVisible() also settles
+        // where the list opens: the widget is asked for its position before the
+        // layout that follows this selection has run, so scrolling to a row
+        // further down landed on a different row from one opening to the next.
+        mpScrollArea->verticalScrollBar()->setValue(0);
         const QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
         mpTriggersMainArea->label_idNumber->setText(QString::number(ID));
@@ -8159,7 +8190,7 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
     const int state = pItem->checkState(column);
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    TVar* var = vu->getWVar(pItem);
+    TVar* var = treeWidget_variables->variableForRow(vu, pItem);
     if (!var) {
         return;
     }
@@ -8178,7 +8209,7 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
         QList<QTreeWidgetItem*> list;
         recurseVariablesUp(pItem, list);
         for (auto& treeWidgetItem : list) {
-            TVar* v = vu->getWVar(treeWidgetItem);
+            TVar* v = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
@@ -8186,7 +8217,7 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
         list.clear();
         recurseVariablesDown(pItem, list);
         for (auto& treeWidgetItem : list) {
-            TVar* v = vu->getWVar(treeWidgetItem);
+            TVar* v = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
@@ -8200,7 +8231,7 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
         QList<QTreeWidgetItem*> list;
         recurseVariablesUp(pItem, list);
         for (auto& treeWidgetItem : list) {
-            TVar* v = vu->getWVar(treeWidgetItem);
+            TVar* v = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
                 vu->removeSavedVar(v);
             }
@@ -8208,7 +8239,7 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
         list.clear();
         recurseVariablesDown(pItem, list);
         for (auto& treeWidgetItem : list) {
-            TVar* v = vu->getWVar(treeWidgetItem);
+            TVar* v = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked)) {
                 vu->removeSavedVar(v);
             }
@@ -8236,7 +8267,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     const int state = pItem->checkState(column);
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    TVar* var = vu->getWVar(pItem); // This does NOT modify pItem or what it points at
+    TVar* var = treeWidget_variables->variableForRow(vu, pItem); // This does NOT modify pItem or what it points at
     QList<QTreeWidgetItem*> list;
     if (state == Qt::Checked || state == Qt::PartiallyChecked) {
         // What may be saved is asked again rather than read off the check state,
@@ -8248,7 +8279,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         }
         recurseVariablesUp(pItem, list); // This does NOT modify pItem or what it points at
         for (auto& treeWidgetItem : list) {
-            TVar* v = vu->getWVar(treeWidgetItem);
+            TVar* v = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
@@ -8256,7 +8287,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         list.clear();
         recurseVariablesDown(pItem, list); // This does NOT modify pItem or what it points at
         for (auto& treeWidgetItem : list) {
-            TVar* v = vu->getWVar(treeWidgetItem);
+            TVar* v = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (v && (treeWidgetItem->checkState(column) == Qt::Checked || treeWidgetItem->checkState(column) == Qt::PartiallyChecked) && vu->shouldSave(v)) {
                 vu->addSavedVar(v);
             }
@@ -8267,7 +8298,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         }
         recurseVariablesUp(pItem, list); // This does NOT modify pItem or what it points at
         for (auto& treeWidgetItem : list) {
-            TVar* v = vu->getWVar(treeWidgetItem);
+            TVar* v = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (v && (treeWidgetItem->checkState(column) == Qt::Unchecked)) {
                 vu->removeSavedVar(v);
             }
@@ -8275,7 +8306,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         list.clear();
         recurseVariablesDown(pItem, list); // This does NOT modify pItem or what it points at
         for (auto& treeWidgetItem : list) {
-            TVar* v = vu->getWVar(treeWidgetItem);
+            TVar* v = treeWidget_variables->variableForRow(vu, treeWidgetItem);
             if (v && (treeWidgetItem->checkState(column) == Qt::Unchecked)) {
                 vu->removeSavedVar(v);
             }
@@ -8295,7 +8326,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         mpVarsMainArea->checkBox_variable_hidden->setChecked(false);
         clearDocument(mpSourceEditorEdbee); // Var Select
         //check for temp item
-        var = vu->getTVar(pItem);
+        var = treeWidget_variables->newVariableForRow(vu, pItem);
         if (var && var->getValueType() == LUA_TTABLE) {
             mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
             // index 4 = "table"
@@ -9607,13 +9638,14 @@ void dlgTriggerEditor::repopulateVars()
     mpVarBaseItem->setTextAlignment(0, Qt::AlignLeft | Qt::AlignVCenter);
     mpVarBaseItem->setIcon(0, QPixmap(qsl(":/icons/variables.png")));
     treeWidget_variables->clear();
+    treeWidget_variables->clearVariableRows();
     mpCurrentVarItem = nullptr;
     treeWidget_variables->insertTopLevelItem(0, mpVarBaseItem);
     mpVarBaseItem->setExpanded(true);
     LuaInterface* lI = mpHost->getLuaInterface();
     lI->getVars(false);
     VarUnit* vu = lI->getVarUnit();
-    vu->buildVarTree(mpVarBaseItem, vu->getBase(), showHiddenVars);
+    treeWidget_variables->buildVariableRows(vu, mpVarBaseItem, vu->getBase(), showHiddenVars);
     mpVarBaseItem->setExpanded(true);
     treeWidget_variables->setUpdatesEnabled(true);
     treeWidget_variables->setCurrentItem(mpVarBaseItem);
@@ -10804,7 +10836,7 @@ QString dlgTriggerEditor::profileSettingsPrefix() const
         return QString();
     }
 
-    const QString sanitized = utils::sanitizeForPath(profileName);
+    const QString sanitized = MudletPaths::sanitizeForPath(profileName);
     if (sanitized.isEmpty()) {
         return QString();
     }
@@ -13111,6 +13143,8 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             pT->setKeyCode(key);
             pT->setKeyModifiers(modifier);
             QString newStateXML = exportKeyToXML(pT);
+
+            pKeyUnit->warnIfAddonCommandHoldsKey(pT);
 
             pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("keyBinding"), oldStateXML, newStateXML);
         }

@@ -38,6 +38,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -69,7 +70,7 @@ private:
     // constructed, so a broken section header is caught there instead
     static QByteArray unparseableIni() { return QByteArrayLiteral("[CommandLines]\nUsedIndexes=1\nthis line was truncated mid-write\n"); }
 
-    static QString iniPathFor(const QString& profileName) { return mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.ini")); }
+    static QString iniPathFor(const QString& profileName) { return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.ini")); }
 
     // Probes a copy at a path of its own: QSettings keeps the sections it has parsed
     // per file path and shares them between instances - and beyond the life of the one
@@ -100,11 +101,11 @@ private:
             ini.close();
         }
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        if (!hostManager.addHost(profileName, QString(), QString(), QString())) {
+        auto* hostManager = HostManager::self();
+        if (!hostManager->addHost(profileName, QString(), QString(), QString())) {
             return nullptr;
         }
-        return hostManager.getHost(profileName);
+        return hostManager->getHost(profileName);
     }
 
 private slots:
@@ -123,7 +124,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -157,7 +158,7 @@ private slots:
         // Read through the file rather than readProfileIniData(), which answers from
         // the very QSettings that has just cached the write and so would say "1"
         // whatever became of the file
-        mudlet::self()->getHostManager().deleteHost(profileName); // the Host's QSettings writes itself out as it goes
+        HostManager::self()->deleteHost(profileName); // the Host's QSettings writes itself out as it goes
         QFile written(iniPath);
         QVERIFY(written.open(QIODevice::ReadOnly | QIODevice::Text));
         const QString contents = QString::fromUtf8(written.readAll());
@@ -176,7 +177,7 @@ private slots:
         QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), qsl("3"));
         QCOMPARE(parseWarnings, 0);
 
-        mudlet::self()->getHostManager().deleteHost(profileName);
+        HostManager::self()->deleteHost(profileName);
     }
 
     void test_anAbsentProfileIniIsNotReported()
@@ -191,7 +192,7 @@ private slots:
         QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), QString());
         QCOMPARE(parseWarnings, 0);
 
-        mudlet::self()->getHostManager().deleteHost(profileName);
+        HostManager::self()->deleteHost(profileName);
     }
 };
 
