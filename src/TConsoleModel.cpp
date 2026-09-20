@@ -22,6 +22,8 @@
 #include "TConsoleModel.h"
 
 #include "Host.h"
+#include "MudletPaths.h"
+#include "TDebug.h"
 #include "mudlet.h"
 
 #include <QCoreApplication>
@@ -45,6 +47,66 @@ QStringList TConsoleModel::lines(int from, int to)
         ret << buffer.line(from + i);
     }
     return ret;
+}
+
+void TConsoleModel::deselect()
+{
+    P_begin = QPoint();
+    P_end = QPoint();
+}
+
+bool TConsoleModel::selectSection(int from, int to)
+{
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n"
+                >> mpHost;
+    }
+    if (from < 0) {
+        return false;
+    }
+    // a negative length would put the selection's end before its start
+    if (to < 0) {
+        return false;
+    }
+    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+        return false;
+    }
+    const int s = buffer.buffer[mUserCursor.y()].size();
+    // the length is compared against what is left of the line rather than
+    // added to the start: `from + to` overflows for a large `to`, and signed
+    // overflow that wraps negative sails through a check written that way,
+    // handing back a selection whose end precedes its start
+    if (from > s || to > s - from) {
+        return false;
+    }
+    P_begin = QPoint(from, mUserCursor.y());
+    P_end = QPoint(from + to, mUserCursor.y());
+
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
+                                                                        << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
+                >> mpHost;
+    }
+    return true;
+}
+
+void TConsoleModel::resetFormat()
+{
+    deselect();
+    mFormatCurrent.setColors(mFgColor, mBgColor);
+    mFormatCurrent.setAllDisplayAttributes(TChar::None);
+}
+
+bool TConsoleModel::setSelectionBgColor(const QColor& newColor)
+{
+    mFormatCurrent.setBackground(newColor);
+    return buffer.applyBgColor(P_begin, P_end, newColor);
+}
+
+bool TConsoleModel::setSelectionFgColor(const QColor& newColor)
+{
+    mFormatCurrent.setForeground(newColor);
+    return buffer.applyFgColor(P_begin, P_end, newColor);
 }
 
 // Two gotchas in here:
@@ -99,7 +161,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         return;
     }
 
-    const auto loggingPath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
+    const auto loggingPath = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
     const QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
@@ -116,7 +178,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         QString logFileName;
         // If no log directory is set, default to Mudlet's replay and log files path
         if (mpHost->mLogDir == nullptr || mpHost->mLogDir.isEmpty()) {
-            directoryLogFile = mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
+            directoryLogFile = MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
         } else {
             directoryLogFile = mpHost->mLogDir;
         }
