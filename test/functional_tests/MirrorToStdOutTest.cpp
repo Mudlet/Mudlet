@@ -117,6 +117,18 @@ private:
         if (lines.constLast().isEmpty()) {
             lines.removeLast();
         }
+        // Windows opens standard output in text mode, so the newline ending
+        // each copied line reaches the file as a carriage return and a line
+        // feed - the line ending a reader on that platform expects. What the
+        // cases are about is what is on the line, so the separator comes off
+        // here rather than being asserted on. Nothing else can leave a carriage
+        // return at the end of one: cTelnet strips those the game sends and
+        // TConsole::echo() those a script sends.
+        for (QString& line : lines) {
+            if (line.endsWith(QChar::CarriageReturn)) {
+                line.chop(1);
+            }
+        }
         mCapturedOutput.append(lines);
     }
 
@@ -382,6 +394,39 @@ private slots:
         QCOMPARE(mirroredLines().size(), 2);
         QCOMPARE(mirroredLines().at(0), qsl("first printed line"));
         QVERIFY(mirroredLines().at(1).startsWith(qsl("second printed line")));
+    }
+
+    // echo() can end a line and leave blank ones behind it. They are lines on
+    // the screen, so they are lines in the stream: a copy that stopped at the
+    // last line with text on it would no longer be line for line with it.
+    void test_trailingBlankLinesFromAScriptAreMirrored()
+    {
+        QVERIFY(runLua(qsl("echo(\"text and then a gap\\n\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("text and then a gap"), QString()}));
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
+    // A line the print path has left unfinished is one line on the screen until
+    // something ends it, so it is one line in the stream as well - which is how
+    // Mudlet's own startup message, written in two pieces, reaches it.
+    void test_aLineEchoedInPiecesIsMirroredOnce()
+    {
+        QVERIFY(runLua(qsl("echo(\"first half, \") echo(\"second half\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList{qsl("first half, second half")});
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
+    // Console names come from Lua, which takes any string at all. A line feed
+    // in one would split the record it prefixes over two lines and leave a
+    // reader unable to say which console the second half came from.
+    void test_aConsoleNameWithALineFeedDoesNotSplitARecord()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole(\"split\\nme\", 0, 0, 200, 100) echo(\"split\\nme\", \"in the oddly named console\\n\")")));
+
+        const QStringList carryingTheText = mCapturedOutput.filter(qsl("in the oddly named console"));
+        QCOMPARE(carryingTheText, QStringList{qsl("%1.split\uFFFDme| in the oddly named console").arg(mHostname)});
     }
 
     // feedTriggers() puts text on the same commit path without a server behind

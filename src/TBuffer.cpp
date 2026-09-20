@@ -2079,7 +2079,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // behind rather than the line the game sent.
     if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
         if (Q_LIKELY(!mpConsole.isNull())) {
-            mpConsole->mirrorToStdOut(line);
+            mpConsole->mirrorLineToStdOut(line);
         } else {
             static bool mirrorWithoutConsoleReported = false;
             if (!mirrorWithoutConsoleReported) {

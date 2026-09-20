@@ -273,10 +273,15 @@ public:
     void showSearchBar();
     // Copies text a caller is putting on this console to standard output for
     // --mirror, one line per line shown, each prefixed with the profile and
-    // console names. Does nothing unless --mirror was given. The text is
-    // copied as handed over: TBuffer::commitLineData() calls this with a line
-    // as the game sent it, before a trigger can gag or rewrite it.
-    void mirrorToStdOut(const QString& text) const;
+    // console names. Does nothing unless --mirror was given. The text is a
+    // fragment of a line as often as it is whole lines, so a line is written
+    // out once a line feed has ended it and what is left over is held until
+    // one does.
+    void mirrorToStdOut(const QString& text);
+    // The same for a line that is already complete: TBuffer::commitLineData()
+    // calls this with a line as the game sent it, before a trigger can gag or
+    // rewrite it.
+    void mirrorLineToStdOut(const QString& line);
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
     void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
     void discardAll() override;
@@ -396,6 +401,9 @@ public:
     int& mButtonState;
 
     QString mConsoleName;
+    // What --mirror has been handed for the line this console is building, and
+    // has not written out yet because no line feed has ended it
+    QString mMirrorPendingLine;
     QString& mCurrentLine;
     int& mEngineCursor;
 

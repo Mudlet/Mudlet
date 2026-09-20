@@ -1066,6 +1066,9 @@ void TConsole::clear()
     // no longer exist and the copy actions work on out of range indices
     clearSelection();
     buffer.clear();
+    // the line --mirror was building went with the buffer, so the next copied
+    // line must not still carry it
+    mMirrorPendingLine.clear();
     clearSplit();
     mUpperPane->update();
     mLowerPane->update();
@@ -2331,34 +2334,62 @@ void writeMirrorLine(const QString& line)
     mudlet::smMirrorToStdOut = false;
     qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
 }
+
+// Says which console a copied line came from. Every profile's main console is
+// called "main", so the console name on its own cannot tell two profiles apart.
+// Both names reach here from Lua, which takes any string at all, so a control
+// character in one - a line feed above all - would split the record in two for
+// a reader that goes by lines.
+QString mirrorPrefix(const QString& profileName, const QString& consoleName)
+{
+    QString prefix = qsl("%1.%2| ").arg(profileName, consoleName);
+    for (QChar& character : prefix) {
+        if (character.category() == QChar::Other_Control) {
+            character = QChar::ReplacementCharacter;
+        }
+    }
+    return prefix;
+}
 } // namespace
 
-void TConsole::mirrorToStdOut(const QString& text) const
+void TConsole::mirrorToStdOut(const QString& text)
 {
     if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
         return;
     }
 
-    // What the callers hand over does not divide into lines the same way: the
-    // print paths pass whatever was echoed, which can hold several lines and
-    // end with a newline of its own, whilst TBuffer::commitLineData() passes
-    // one bare line. Give the stream one prefixed line per line shown either
-    // way, so that a consumer can read it line by line.
-    // Every profile's main console is called "main", so the console name on its
-    // own cannot say which game a line came from once a second profile is open.
-    const QString prefix = qsl("%1.%2| ").arg(mProfileName, mConsoleName);
-    if (text.isEmpty()) {
-        writeMirrorLine(prefix);
+    // The print paths hand over a fragment of a line as readily as whole ones:
+    // Lua's print() sends its text and the newline that ends it as two calls of
+    // its own, and echo() need not end a line at all. TBuffer::appendLine()
+    // adds each fragment to the line it is building and starts a new one at
+    // every line feed, so this does the same and writes a line out once a line
+    // feed has ended it - one copied line per line shown, carrying what the
+    // console shows on it.
+    QStringList fragments = text.split(QChar::LineFeed);
+    const QString stillOpen = fragments.takeLast();
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    for (const QString& fragment : fragments) {
+        writeMirrorLine(prefix + mMirrorPendingLine + fragment);
+        mMirrorPendingLine.clear();
+    }
+    mMirrorPendingLine.append(stillOpen);
+}
+
+void TConsole::mirrorLineToStdOut(const QString& line)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
         return;
     }
 
-    QStringList shownLines = text.split(QChar::LineFeed);
-    while (!shownLines.isEmpty() && shownLines.constLast().isEmpty()) {
-        shownLines.removeLast();
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    // A committed line does not join a line the print path left open: when the
+    // line being built holds anything, TBuffer::commitLineData() puts the one
+    // from the game on a line of its own below it. So does this.
+    if (!mMirrorPendingLine.isEmpty()) {
+        writeMirrorLine(prefix + mMirrorPendingLine);
+        mMirrorPendingLine.clear();
     }
-    for (const QString& shownLine : shownLines) {
-        writeMirrorLine(prefix + shownLine);
-    }
+    writeMirrorLine(prefix + line);
 }
 
 // Not a bare buffer.clear(): the selection and scroll state have to go with
