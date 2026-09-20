@@ -5,8 +5,9 @@
 #   publish assemble DIR SITE  lay out DIR's packages as repositories in SITE
 #   publish upload SITE        mirror SITE to the R2 bucket, replacing its contents
 #
-# Signing uses the first secret key in the gpg keyring. assemble needs BASE_URL,
-# the address SITE is served from; upload needs R2_ACCOUNT_ID, R2_BUCKET,
+# Signing uses the first secret key in the gpg keyring, whose public half must
+# be committed as CI/linux-packages/mudlet.asc. assemble needs BASE_URL, the
+# address SITE is served from; upload needs R2_ACCOUNT_ID, R2_BUCKET,
 # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
 set -euo pipefail
 shopt -s nullglob globstar
@@ -17,27 +18,25 @@ signing_key() {
   local key
   key="$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')"
   [[ -n "$key" ]] || { echo "no secret key in the gpg keyring" >&2; exit 1; }
-  printf '%s' "$key"
-}
-
-# Users check the published key against the copy this repository carries, so
-# nothing is signed with a key that copy does not hold: rotating the key means
-# committing its public half in the same change
-check_committed_key() {
-  local key="$1" fpr
-  [[ -f "$HERE/mudlet.asc" ]] || { echo "CI/linux-packages/mudlet.asc is missing" >&2; exit 1; }
-  fpr="$(gpg --batch --with-colons --import-options show-only --import "$HERE/mudlet.asc" | awk -F: '/^fpr:/ {print $10; exit}')"
-  if [[ "$fpr" != "$key" ]]; then
-    echo "signing with $key, but CI/linux-packages/mudlet.asc holds ${fpr:-no key}" >&2
-    echo "commit that key's public half there, or users have nothing to check the published key against" >&2
+  # named before the comparison below, which would otherwise fail with gpg
+  # complaining about a broken pipe rather than about the file
+  [[ -f "$HERE/mudlet.asc" ]] || { echo "CI/linux-packages/mudlet.asc is missing - it holds the public half of $key" >&2; exit 1; }
+  # Anything pinning the committed copy checks the published key against it, so
+  # that copy has to be this key's public half and nothing else. Comparing the
+  # whole export rather than the fingerprint is what makes that hold: a
+  # fingerprint also matches a file carrying a second key every install would
+  # trust, a private key, or a copy frozen before the key grew a signing subkey,
+  # which would publish a key that cannot verify what was just signed.
+  gpg --batch --armor --export "$key" | cmp -s - "$HERE/mudlet.asc" || {
+    echo "CI/linux-packages/mudlet.asc is not the public half of $key - write it with: gpg --armor --export $key > CI/linux-packages/mudlet.asc" >&2
     exit 1
-  fi
+  }
+  printf '%s' "$key"
 }
 
 sign() {
   local dir="$1" key rpm
   key="$(signing_key)"
-  check_committed_key "$key"
   for rpm in "$dir"/*.rpm; do
     # Debian's rpm looks for a gpg2 binary that no longer exists
     rpmsign --addsign --define "__gpg $(command -v gpg)" --define "_gpg_name $key" "$rpm"
@@ -84,7 +83,6 @@ assemble() {
   # an empty site would make upload delete every package from the bucket
   [[ ${#packages[@]} -gt 0 ]] || { echo "no packages in $incoming" >&2; exit 1; }
   key="$(signing_key)"
-  check_committed_key "$key"
   rm -rf "$SITE"
   mkdir -p "$SITE"
   SITE="$(readlink -f "$SITE")"
@@ -132,9 +130,7 @@ gpgkey=${BASE_URL}/mudlet.asc
 EOF
   fi
 
-  # the bytes the repository carries, not a fresh export, so the two published
-  # copies of the key compare equal
-  cp "$HERE/mudlet.asc" "$SITE/mudlet.asc"
+  gpg --batch --armor --export "$key" > "$SITE/mudlet.asc"
   sed "s|@BASE_URL@|${BASE_URL}|g" "$HERE/install.sh.in" > "$SITE/install.sh"
   write_indexes
 }

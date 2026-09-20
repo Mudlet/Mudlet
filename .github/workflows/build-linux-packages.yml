@@ -230,13 +230,15 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.LINUX_PACKAGES_R2_SECRET_ACCESS_KEY }}
         run: CI/linux-packages/publish upload site
 
-      # The two places the key is published have to stay the same file, or there
-      # is no second copy to check the one users install against
-      - name: Check the published key against the one in the repository
+      # publish has already checked the key it signed with against the committed
+      # copy, so what is left to go wrong is delivery: this confirms the bucket
+      # serves those same bytes, which is what pinning the committed copy relies
+      # on. Retried because a read-back straight after the upload can be flaky.
+      - name: Check the served key against the one committed in git
         run: |
-          curl -fsSL "${BASE_URL}/mudlet.asc" -o published.asc
-          if ! cmp -s published.asc CI/linux-packages/mudlet.asc; then
-            echo "::error::${BASE_URL}/mudlet.asc is not the key committed as CI/linux-packages/mudlet.asc"
+          curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors "${BASE_URL}/mudlet.asc" -o served.asc
+          if ! cmp -s served.asc CI/linux-packages/mudlet.asc; then
+            echo "::error::${BASE_URL}/mudlet.asc is not the key committed as CI/linux-packages/mudlet.asc, and is being served now - re-run this workflow once that is fixed"
             exit 1
           fi
 

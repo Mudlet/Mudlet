@@ -331,6 +331,16 @@ if(NOT WIN32)
     )
 endif()
 
+# The key check in CI/linux-packages/publish is the only automated thing between
+# a wrong mudlet.asc and the package trust store of every Mudlet user on Linux,
+# and the publishing workflow runs it only when it publishes a release - so
+# without this nothing covers it before merge
+if(NOT WIN32)
+    add_test(NAME LinuxPackagesKeyTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/linux-packages-key-test.sh
+    )
+endif()
+
 add_subdirectory(functional_tests)
 
 # CI runners are elevated, so nothing there catches a test executable Windows
