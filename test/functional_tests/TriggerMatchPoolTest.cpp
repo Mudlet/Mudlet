@@ -140,7 +140,8 @@ private slots:
         QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared));
 
         TTrigger::setPrescanPassId(passId);
-        const bool matched = trigger->match(subject.constData(), static_cast<int>(subject.size()), line, 0, 0, &unprepared);
+        const TUtf8Subject matchSubject(subject.constData(), static_cast<int>(subject.size()));
+        const bool matched = trigger->match(matchSubject, line, 0, 0, &unprepared);
         TTrigger::setPrescanPassId(0);
         QVERIFY(matched);
         QCOMPARE(luaInteger(mpHost, "bigramHits"), 1);
@@ -156,11 +157,13 @@ private slots:
         QCOMPARE(pool.workerCount(), 2);
         const quint64 prescansBefore = pool.prescanCount();
         // The pool opens for a line on the strength of the searches the line
-        // before it ran, so the first line of a profile is always sequential;
-        // the trigger is not given anything to match on it.
+        // before it ran, so the first line of a profile is always sequential.
+        // That line has to hold the pattern's required literal, or the
+        // pre-check dismisses the trigger without a search and the line after
+        // it stays sequential too; the anchors keep it from matching.
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("needleCount = 0\n"
                                                                  "tempRegexTrigger('^needle$', [[needleCount = needleCount + 1]])\n"
-                                                                 "feedTriggers('haystack\\n')\n"
+                                                                 "feedTriggers('a needle in a haystack\\n')\n"
                                                                  "feedTriggers('needle\\n')\n"));
         // The line went through the pool and the trigger still fired, so the
         // helper has consumed a batch and is parked on its epoch.

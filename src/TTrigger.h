@@ -70,6 +70,13 @@ struct TColorTable
     int ansiBg;
     QColor mFgColor;
     QColor mBgColor;
+    // The same colors in the form the characters store theirs in, converted
+    // once here rather than on every line. An ignored aspect, or an ANSI code
+    // the table has no color for, leaves the QColor invalid and the flag clear
+    QRgb mFgRgba = 0;
+    QRgb mBgRgba = 0;
+    bool mFgValid = false;
+    bool mBgValid = false;
 };
 
 // A 256-bit Bloom filter over the adjacent character pairs of one line: a
@@ -168,6 +175,101 @@ private:
     mutable int mQuestionsAsked = 0;
 };
 
+// What TriggerUnit copies out of a root trigger, so that a line can dismiss it
+// without reading the trigger at all - see TTrigger::rootFilter(). A copy goes
+// stale the moment the trigger changes, so whatever changes one of the things
+// rootFilter() reads has to go through TTrigger::invalidatePrescan(), and
+// whatever makes a trigger fire without matching through
+// TriggerUnit::markRootUnfilterable(), which bumps mRootFilterEpoch.
+struct TRootTriggerFilter
+{
+    enum class Kind : quint8 {
+        // Nothing here can dismiss it, which leaves cannotMatch() and match()
+        // to decide as they would have anyway
+        Visit,
+        // mText is all there is to cannotMatch(), so that need not be asked
+        Text,
+        // It can only match a line holding this color, which a line that is
+        // one color throughout either is or is not
+        Color
+    };
+
+    // Whether a line of just this one color pair has nothing for the trigger
+    bool lacksColors(const QRgb foreground, const QRgb background) const { return (mForegroundWanted && foreground != mForeground) || (mBackgroundWanted && background != mBackground); }
+
+    TBigramFilter::Bits mText;
+    QRgb mForeground = 0;
+    QRgb mBackground = 0;
+    bool mForegroundWanted = false;
+    bool mBackgroundWanted = false;
+    Kind mKind = Kind::Visit;
+};
+
+// The UTF-8 bytes a perl pattern matches against. A line is encoded the first
+// time one asks for them, which with the literal pre-check most never do, so
+// a line no perl pattern gets as far as is not encoded at all. A filter's
+// capture is bytes already and is handed over as it is.
+class TUtf8Subject
+{
+public:
+    // Encodes line into scratch when first asked; the line has to outlive
+    // this object. Passing the storage in rather than allocating it is what
+    // lets a line no longer than any before it allocate nothing.
+    TUtf8Subject(const QString& line, QByteArray&& scratch)
+    : mpLine(&line)
+    , mpPendingLine(&line)
+    , mScratch(std::move(scratch))
+    {
+    }
+    TUtf8Subject(QString&&, QByteArray&&) = delete;
+    // Already encoded bytes, which have to outlive this object
+    TUtf8Subject(const char* data, const int length)
+    : mData(data)
+    , mLength(length)
+    {
+    }
+    Q_DISABLE_COPY_MOVE(TUtf8Subject)
+
+    const char* data() const
+    {
+        if (mpPendingLine) {
+            encode();
+        }
+        return mData;
+    }
+    // Perl patterns see the line only as far as its first NUL byte, so this
+    // is not the byte count
+    int length() const
+    {
+        if (mpPendingLine) {
+            encode();
+        }
+        return mLength;
+    }
+    // Hands the encoding storage back, to be lent to the next line
+    QByteArray takeScratch() { return std::move(mScratch); }
+    // An unpaired surrogate does not reach the UTF-8, which joins the text on
+    // either side of it for pcre2, so searching the QString cannot rule a
+    // pattern out on such a line
+    bool dropsText() const
+    {
+        if (mDropsText < 0) {
+            mDropsText = mpLine && !mpLine->isValidUtf16();
+        }
+        return mDropsText;
+    }
+
+private:
+    void encode() const;
+
+    const QString* const mpLine = nullptr;
+    mutable qint8 mDropsText = -1;
+    mutable const QString* mpPendingLine = nullptr;
+    mutable QByteArray mScratch;
+    mutable const char* mData = nullptr;
+    mutable int mLength = 0;
+};
+
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
@@ -214,7 +316,7 @@ public:
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
-    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr);
+    bool match(const TUtf8Subject& subject, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr);
     // Runs only the patterns that are a pure function of the line, and only far
     // enough to answer yes or no. Safe to call from another thread: it writes
     // nothing, taking the one piece of mutable state a match needs - PCRE2's
@@ -260,6 +362,34 @@ public:
     // which case TTriggerPrescan offers it every line.
     const std::vector<quint64>& prescanGrams() const;
     void invalidatePrescan(bool nowFiresWithoutMatching = false);
+    // Whether the line's bigram summary already rules this trigger out, so
+    // match() need not be entered for it. One-sided like the summary itself:
+    // false leaves match() to decide. Only a trigger whose every pattern
+    // matches by containing text can be dismissed this way, and never one
+    // that fires on a line it does not match - the same three cases
+    // prescanGrams() reads, taken live rather than from an index so that a
+    // script changing them mid-line is seen at once.
+    bool cannotMatch(const TBigramFilter& lineBigrams, const QString& line) const
+    {
+        if (mPatternBigrams.empty() || mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
+            return false;
+        }
+        for (const TBigramFilter::Bits& bits : mPatternBigrams) {
+            if (lineBigrams.couldContain(line, bits)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    // What a line can dismiss this trigger by without calling into it - the same
+    // cases cannotMatch() and match_color_pattern() decide, copied only for a
+    // trigger with a single pattern and nothing that makes it fire on a line it
+    // does not match.
+    TRootTriggerFilter rootFilter() const;
+    // The one color pair a root trigger's color pattern would find across the
+    // whole of this line, as match_color_pattern() reads it; false when the line
+    // has more than one, or is not one that can be answered for.
+    static bool uniformLineColors(Host* pHost, int line, int length, QRgb& foreground, QRgb& background);
     // Where TriggerUnit's root-node snapshot holds this trigger, or -1 when it
     // holds it nowhere - it is not a root node, or the snapshot has yet to be
     // told about it. Owned by TriggerUnit; nothing else may set it.
@@ -286,7 +416,7 @@ public:
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams);
-    bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber);
+    bool match_perl(const TUtf8Subject& subject, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams = nullptr);
     bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);
@@ -386,6 +516,20 @@ private:
     // these for every pattern of every trigger, which is no place for a tree
     // lookup and a reference count
     std::vector<TSubstringPattern> mSubstringPatterns;
+    // Text every match of a perl pattern has to contain, prepared like a
+    // substring pattern so that a line without it is dismissed without asking
+    // pcre2. A null matcher for every other pattern kind and for a perl pattern
+    // that guarantees no text of two characters or more
+    struct TRegexLiteral
+    {
+        std::unique_ptr<QStringMatcher> matcher;
+        TBigramFilter::Bits bigrams;
+    };
+    std::vector<TRegexLiteral> mRegexLiterals;
+    // One entry per pattern while every pattern of the trigger can be dismissed
+    // by a line's bigram summary; empty as soon as one cannot, which hands every
+    // line to match() - see cannotMatch()
+    std::vector<TBigramFilter::Bits> mPatternBigrams;
     std::vector<QSharedPointer<pcre2_code>> mRegexes;
     std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
     // char rather than bool: keeps the plain element access the bit-packed

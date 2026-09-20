@@ -122,6 +122,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        applyPendingScrollBarUpdate();
         if (!mPendingPaintRegion.isEmpty()) {
             update(mPendingPaintRegion);
             mPendingPaintRegion = QRegion();
@@ -160,6 +161,7 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
     if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+        applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
         mPendingPaintRegion = QRegion();
         return;
@@ -249,6 +251,9 @@ void TTextEdit::toggleTimeStamps(const bool state)
 // Only wired up for the upper pane:
 void TTextEdit::slot_scrollBarMoved(int line)
 {
+    if (mUpdatingScrollBar) {
+        return;
+    }
     if (mpConsole->mpScrollBar) {
         updateScrollBar(line);
         scrollTo(line);
@@ -258,17 +263,25 @@ void TTextEdit::slot_scrollBarMoved(int line)
 void TTextEdit::updateScrollBar(int line)
 {
     Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
+    mScrollBarUpdatePending = false;
     int screenHeight{mScreenHeight};
     if (mIsTailMode) {
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
     }
     if (mpConsole->mpScrollBar) {
-        disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
+        mUpdatingScrollBar = true;
         mpConsole->mpScrollBar->setRange(screenHeight, mpBuffer->getLastLineNumber() + 1);
         mpConsole->mpScrollBar->setSingleStep(1);
         mpConsole->mpScrollBar->setPageStep(screenHeight);
         mpConsole->mpScrollBar->setValue(std::max(0, line));
-        connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
+        mUpdatingScrollBar = false;
+    }
+}
+
+void TTextEdit::applyPendingScrollBarUpdate()
+{
+    if (mScrollBarUpdatePending) {
+        updateScrollBar(mpBuffer->mCursorY);
     }
 }
 
@@ -404,7 +417,7 @@ void TTextEdit::showNewLines()
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
         if (mpConsole->mpScrollBar && mOldScrollPos > 0) {
-            updateScrollBar(mpBuffer->mCursorY);
+            mScrollBarUpdatePending = true;
         }
     }
     scheduleUpdate();
@@ -1476,9 +1489,9 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
         // would be redundant. Only the remainder - if a partial expose left one -
-        // still needs the pacer.
+        // and a pending scrollbar update still need the pacer.
         mPendingPaintRegion -= e->region();
-        if (mPendingPaintRegion.isEmpty()) {
+        if (mPendingPaintRegion.isEmpty() && !mScrollBarUpdatePending) {
             mpPaintPacer->stop();
         }
     }

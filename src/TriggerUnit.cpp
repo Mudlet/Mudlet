@@ -30,7 +30,6 @@
 #include "dlgTriggerEditor.h"
 
 #include <QScopeGuard>
-#include <QStringConverter>
 
 #include <algorithm>
 #include <functional>
@@ -450,6 +449,9 @@ void TriggerUnit::rebuildPrescanTasksIfStale()
 void TriggerUnit::markPrescanStale(TTrigger* pT)
 {
     mRootNodeSnapshotStale = true;
+    // Whichever trigger it was: one that has left the root list since a pass
+    // pinned it no longer has a position to tell by
+    ++mRootFilterEpoch;
     if (mRootNodeSnapshotNeedsRebuild || !pT) {
         return;
     }
@@ -504,16 +506,19 @@ void TriggerUnit::refreshRootNodeSnapshot()
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
         for (const int position : mRootNodesRemoved) {
             snapshot.mNodes[position] = nullptr;
+            snapshot.mFilters[position] = TRootTriggerFilter();
             snapshot.mPrescan.removeSlot(position);
         }
         for (const int position : mRootNodesRefiled) {
             if (TTrigger* pT = snapshot.mNodes[position]) {
+                snapshot.mFilters[position] = pT->rootFilter();
                 snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
             }
         }
         for (TTrigger* pT : mRootNodesAppended) {
             pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
             snapshot.mNodes.push_back(pT);
+            snapshot.mFilters.push_back(pT->rootFilter());
             snapshot.mPrescan.appendSlot(pT->prescanGrams());
         }
     } else {
@@ -526,8 +531,10 @@ void TriggerUnit::refreshRootNodeSnapshot()
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
         snapshot.mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
         const int rootCount = static_cast<int>(snapshot.mNodes.size());
+        snapshot.mFilters.resize(rootCount);
         for (int position = 0; position < rootCount; ++position) {
             snapshot.mNodes[position]->setRootSnapshotPosition(position);
+            snapshot.mFilters[position] = snapshot.mNodes[position]->rootFilter();
         }
         snapshot.mPrescan.rebuild(snapshot.mNodes);
     }
@@ -544,38 +551,20 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
-    // Encoded into storage borrowed from the unit, so the capacity outlives the
-    // line and only a line longer than any before it allocates. Moving the buffer
-    // out rather than writing into the member is what makes that safe under
-    // nesting: a pass a trigger script starts finds the member empty and grows
-    // its own, so it cannot resize the one an outer pass is still matching.
-    QByteArray utf8Data = std::move(mUtf8Scratch);
-    const auto utf8Guard = qScopeGuard([this, &utf8Data] {
-        if (utf8Data.capacity() > scmMaxRetainedUtf8Scratch) {
-            utf8Data = QByteArray();
+    // Encoded, when a perl pattern asks, into storage borrowed from the unit,
+    // so the capacity outlives the line and only a line longer than any before
+    // it allocates. Moving the buffer out rather than lending the member is
+    // what makes that safe under nesting: a pass a trigger script starts finds
+    // the member empty and grows its own, so it cannot resize the one an outer
+    // pass is still matching.
+    TUtf8Subject subject(data, std::move(mUtf8Scratch));
+    const auto utf8Guard = qScopeGuard([this, &subject] {
+        QByteArray scratch = subject.takeScratch();
+        if (scratch.capacity() > scmMaxRetainedUtf8Scratch) {
+            scratch = QByteArray();
         }
-        mUtf8Scratch = std::move(utf8Data);
+        mUtf8Scratch = std::move(scratch);
     });
-    // Stateless so that an unpaired surrogate at the end of the line is reported
-    // here rather than held back as state for a following call.
-    QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
-    utf8Data.resizeForOverwrite(toUtf8.requiredSpace(data.size()));
-    char* const encodedBegin = utf8Data.data();
-    const char* const encodedEnd = toUtf8.appendToBuffer(encodedBegin, data);
-    if (Q_UNLIKELY(toUtf8.hasError())) {
-        // The encoder writes a replacement character where an unpaired surrogate
-        // was, while toUtf8() drops it, and the difference would move every byte
-        // offset a capture is reported at. No decoder Mudlet has puts an unpaired
-        // surrogate on a line, so that path can afford the copy and stay exact.
-        utf8Data = data.toUtf8();
-    } else {
-        utf8Data.truncate(encodedEnd - encodedBegin);
-    }
-    // subject points into utf8Data, so utf8Data has to outlive every match()
-    // call below. Perl patterns see the line only as far as its first NUL
-    // byte, so this is qstrnlen() rather than the byte count.
-    const char* subject = utf8Data.constData();
-    const int subjectLength = static_cast<int>(qstrnlen(subject, utf8Data.size()));
 
     mProcessingDepth++;
     const auto processingGuard = qScopeGuard([this] {
@@ -645,50 +634,88 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     if (inFlood && mRegexSearchesOnTheLastLine >= pool.threshold()) {
         rebuildPrescanTasksIfStale();
         const quint32 passId = TTrigger::nextPrescanPassId();
-        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data, lineBigrams)) {
+        // The helper threads run perl patterns of their own, so the line is
+        // encoded here, on this thread, before any of them can ask for it -
+        // TUtf8Subject encodes on first use, which is not a helper's to do.
+        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject.data(), subject.length(), data, lineBigrams)) {
             TTrigger::setPrescanPassId(passId);
             prescanRegexSearches = pool.regexSearchesInLastBatch();
         }
     }
 
-    if (pinnedSnapshot->mPrescan.active()) {
+    {
+        const std::vector<TRootTriggerFilter>& pinnedFilters = pinnedSnapshot->mFilters;
+        const bool prescanActive = pinnedSnapshot->mPrescan.active();
         // Borrowed from the unit so that only a longer line than any before it
         // allocates, and moved out so a nested pass grows its own.
-        std::vector<int> scratch = std::move(mCandidateScratch);
-        std::vector<int> candidates = std::move(mCandidates);
-        const auto candidateGuard = qScopeGuard([this, &scratch, &candidates] {
-            mCandidateScratch = std::move(scratch);
-            mCandidates = std::move(candidates);
+        std::vector<int> scratch;
+        std::vector<int> candidates;
+        if (prescanActive) {
+            scratch = std::move(mCandidateScratch);
+            candidates = std::move(mCandidates);
+            pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
+        }
+        const auto candidateGuard = qScopeGuard([this, prescanActive, &scratch, &candidates] {
+            if (prescanActive) {
+                mCandidateScratch = std::move(scratch);
+                mCandidates = std::move(candidates);
+            }
         });
-        pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
         // A firing script can make a later trigger fire without matching -
         // setTriggerStayOpen() is the reachable way - and the candidate list was
         // settled before that happened. So from the moment one does, the rest of
         // the line goes to every remaining trigger, as an unfiltered pass would.
-        const quint32 epochAtStart = mUnfilterableEpoch;
+        const quint32 unfilterableEpochAtStart = mUnfilterableEpoch;
+        // The pinned filters are copies, and a firing script can change what they
+        // were copied from - a pattern, a stay-open count, a trigger made
+        // multiline. From the moment one does, the rest of the line asks the
+        // triggers themselves.
+        const quint32 filterEpochAtStart = mRootFilterEpoch;
+        // Asked for only once a color trigger wants it, and again after any
+        // script has run: that can recolor the line, edit it, delete it or feed
+        // another one through, and what match_color_pattern() would then read is
+        // not something to second-guess from here.
+        bool lineColorsKnown = false;
+        bool lineColorsUniform = false;
+        QRgb lineForeground = 0;
+        QRgb lineBackground = 0;
         const int rootCount = static_cast<int>(pinnedNodeList.size());
         size_t nextCandidate = 0;
         for (int position = 0; position < rootCount; ++position) {
-            if (mUnfilterableEpoch == epochAtStart) {
+            if (prescanActive && mUnfilterableEpoch == unfilterableEpochAtStart) {
                 if (nextCandidate >= candidates.size()) {
                     break;
                 }
                 position = candidates[nextCandidate++];
             }
+            // Read before the trigger is, as most lines are over for most
+            // triggers right here and the trigger's own memory is never touched
+            bool textDecided = false;
+            if (mRootFilterEpoch == filterEpochAtStart) {
+                const TRootTriggerFilter& filter = pinnedFilters[position];
+                if (filter.mKind == TRootTriggerFilter::Kind::Text) {
+                    if (!lineBigrams.couldContain(data, filter.mText) && !subject.dropsText()) {
+                        continue;
+                    }
+                    textDecided = true;
+                } else if (filter.mKind == TRootTriggerFilter::Kind::Color) {
+                    if (!lineColorsKnown) {
+                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, static_cast<int>(data.length()), lineForeground, lineBackground);
+                        lineColorsKnown = true;
+                    }
+                    if (lineColorsUniform && filter.lacksColors(lineForeground, lineBackground)) {
+                        continue;
+                    }
+                }
+            }
             // A hole is a trigger the snapshot has outlived - see
             // refreshRootNodeSnapshot()
             TTrigger* trigger = pinnedNodeList[position];
-            if (!trigger || !trigger->isActive()) {
+            if (!trigger || !trigger->isActive() || (!textDecided && trigger->cannotMatch(lineBigrams, data) && !subject.dropsText())) {
                 continue;
             }
-            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
-        }
-    } else {
-        for (auto trigger : pinnedNodeList) {
-            if (!trigger || !trigger->isActive()) {
-                continue;
-            }
-            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
+            trigger->match(subject, data, line, 0, &lineBigrams);
+            lineColorsKnown = false;
         }
     }
     // A match here can register more triggers, which also get a shot at the
@@ -714,7 +741,10 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
-        trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
+        if (trigger->cannotMatch(lineBigrams, data) && !subject.dropsText()) {
+            continue;
+        }
+        trigger->match(subject, data, line, 0, &lineBigrams);
     }
     mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
     // A nested pass's searches land in here too; its lines are as real as
@@ -904,8 +934,6 @@ void TriggerUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
     if (!hasPendingDeletes()) {
         return;
     }
