@@ -127,6 +127,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
+    MirrorToStdOutTest.cpp
     MsdpMalformedDiagnosticTest.cpp
     IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp

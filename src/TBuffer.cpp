@@ -38,6 +38,7 @@
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
+#include "mudlet.h"
 
 #include <QDateTime>
 #include <QJsonArray>
@@ -2084,6 +2085,26 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             promptBuffer.back() = true;
         } else {
             promptBuffer.back() = false;
+        }
+    }
+    // commitLineData() is the one point every line the main console takes from
+    // the game passes through; TConsole::print() only ever sees what the client
+    // itself writes. Copying here, before runTriggers(), keeps --mirror's stream
+    // in arrival order - a line is copied when it arrives, so whatever a script
+    // writes to a console in response is copied after it. The cost is fidelity:
+    // a line a trigger then gags with deleteLine(), or rewrites, is still copied
+    // as the game sent it. Copying next to the log() call below would make the
+    // opposite trade, and would copy the wrapped fragments wrapLine() leaves
+    // behind rather than the line the game sent.
+    if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
+        if (Q_LIKELY(!mpConsole.isNull())) {
+            mpConsole->mirrorLineToStdOut(line);
+        } else {
+            static bool mirrorWithoutConsoleReported = false;
+            if (!mirrorWithoutConsoleReported) {
+                mirrorWithoutConsoleReported = true;
+                qWarning() << "--mirror: a buffer with no console of its own is committing lines, which cannot be copied to standard output";
+            }
         }
     }
     const int lineIndex = lineBuffer.size() - 1;

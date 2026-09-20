@@ -173,7 +173,10 @@ public:
     inline static QPointer<TConsole> smpDebugConsole;
     inline static QPointer<QMainWindow> smpDebugArea;
     inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
-    // mirror everything shown in any console to stdout. Helpful for CI environments
+    // --mirror: copy console output to standard output, one line per line
+    // shown. Covers the main console's game text, copied as each line arrives
+    // and so before a trigger can gag or rewrite it, and print()/echo() output
+    // from any console. Helpful for CI environments
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
