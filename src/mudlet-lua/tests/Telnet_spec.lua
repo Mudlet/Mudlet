@@ -1637,7 +1637,10 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
 
   after_each(function()
     -- The suppression is process wide, so a prompt left open by a failed
-    -- assertion would follow every later spec file.
+    -- assertion would follow every later spec file. This WONT is a no-op once
+    -- the anomaly detector has latched, because ctelnet.cpp ignores WONT ECHO
+    -- then - but in that case the WILL was refused too and nothing engaged, so
+    -- the probe in the test body fails first and says which half broke.
     if echoActive then
       serverEcho(false)
     end
