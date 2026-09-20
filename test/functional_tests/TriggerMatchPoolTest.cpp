@@ -137,7 +137,7 @@ private slots:
         const QByteArray subject = line.toUtf8();
         const TBigramFilter unprepared(line, TBigramFilter::scmQuestionsWorthSummarising);
         const quint32 passId = TTrigger::nextPrescanPassId();
-        QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared));
+        QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared, false));
 
         TTrigger::setPrescanPassId(passId);
         const TUtf8Subject matchSubject(subject.constData(), static_cast<int>(subject.size()));

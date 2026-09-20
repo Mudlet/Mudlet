@@ -1065,10 +1065,13 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // Mudlet has always done, whereas eating it loses real output:
     const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
-    // Parsed in place - an MXP entity expansion rewrites the head of the text
-    // and a forced line break overwrites a byte - so the caller's string is
-    // not meaningful afterwards (cTelnet::postData() copies it first for
-    // MMCP):
+    // Parsed in place, and written to in three places: the bytes held over
+    // from a sequence the last packet cut in half are prepended to the front
+    // before the scan starts, an MXP entity expansion rewrites the head of the
+    // text, and a synthesised line break (MXP <BR> or &newline;) overwrites the
+    // byte it was found at through the ch reference the scan holds. So the
+    // caller's string is not meaningful afterwards (cTelnet::postData() copies
+    // it first for MMCP):
     std::string& localBuffer = incoming;
 
     Host* pHost = mpHost;

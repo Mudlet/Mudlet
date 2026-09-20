@@ -94,6 +94,11 @@ public:
         ++mRootFilterEpoch;
         markRootNodeListReordered();
     }
+    // How many times a change has been announced to the passes that pinned a
+    // copy of the root triggers' filters. Only moves for a change one of those
+    // copies could be of, so a spec can tell an announcement that had to be
+    // made from one that cost a line its filters for nothing.
+    quint32 rootFilterEpoch() const { return mRootFilterEpoch; }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);

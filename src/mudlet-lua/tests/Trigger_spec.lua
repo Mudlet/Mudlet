@@ -3681,6 +3681,43 @@ describe("Trigger processing", function()
             _G.TrigSpec = nil
         end)
 
+        it("leaves the pinned filters alone when a trigger creates another trigger", function()
+            -- A pass pins a copy of every root trigger's pattern summary and
+            -- stops trusting those copies the moment one of the triggers they
+            -- were taken from changes. A trigger a script creates from inside a
+            -- trigger - a one-shot, a prompt capture, a combat follow-up - is in
+            -- none of those copies, because no snapshot has ever filed it, so
+            -- announcing it would cost every root trigger left on the line its
+            -- copy for nothing. This reads the announcement counter rather than
+            -- a firing, as the filters only decide how a line is walked and
+            -- never which triggers fire on it.
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("counting announcements to a line in progress needs MUDLET_TEST_MODE")
+            end
+            local function epoch()
+                return getProfileStats().triggers.rootFilterEpoch
+            end
+
+            track(tempTrigger("ruledoutmaker_fires", function()
+                track(tempTrigger("ruledoutmade_qzv_never_sent", function() end))
+            end))
+            -- files the maker itself, so the line below changes nothing else
+            feedTriggers(warmUpLine)
+
+            local before = epoch()
+            feedTriggers("\nruledoutmaker_fires now\n")
+            assert.are.equal(before, epoch(),
+                             "creating a trigger mid-line staled filter copies that could not have been of it")
+
+            -- A control, so the assertion above cannot pass on a counter that
+            -- never moves: a line trigger fires on its position rather than on
+            -- text, which every pinned copy has to hear about at once.
+            local lineId = tempLineTrigger(0, 1, function() end)
+            assert.is_true(epoch() > before, "a change every pinned copy has to hear about went unannounced")
+            disableTrigger(lineId)
+            killTrigger(lineId)
+        end)
+
         it("fires a regex whose brace is the brace itself and not a quantifier", function()
             track(tempRegexTrigger("^{OOC|IC} (\\w+) says", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
             feedTriggers(warmUpLine)

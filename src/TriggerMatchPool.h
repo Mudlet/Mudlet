@@ -76,7 +76,7 @@ public:
     // its ordinary sequential pass; whether a batch is worth sharing out is
     // the caller's call, made against threshold(). One caller at a time: the
     // batch lives in the pool until this returns.
-    bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams);
+    bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams, bool dropsText);
 
     // Below this many regex searches on a line the fork-join costs more than
     // it saves. Searches rather than triggers: a trigger that is disabled,
@@ -121,6 +121,9 @@ private:
         int subjectLength = 0;
         const QString* haystack = nullptr;
         const TBigramFilter* lineBigrams = nullptr;
+        // Whether encoding haystack to subject lost text, which is the main
+        // thread's to answer - see TTrigger::prescanMayFire()
+        bool dropsText = false;
     };
 
     // What the words the threads contend on are kept apart by. 128 rather than
