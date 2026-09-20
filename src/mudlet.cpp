@@ -7082,8 +7082,10 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
         }
     }
 
-    // If we right-clicked on a specific tab, add tab-specific actions
-    if (tabIndex >= 0) {
+    // If we right-clicked on a specific tab, add tab-specific actions. Detaching
+    // is only offered while another tab would be left behind, since detachTab()
+    // refuses to empty the main window
+    if (tabIndex >= 0 && mpTabBar->count() > 1) {
         const QString profileName = mpTabBar->tabData(tabIndex).toString();
 
         // Add "Detach Tab" option
@@ -9197,11 +9199,6 @@ void mudlet::saveDetachedWindowsGeometry()
 
 void mudlet::slot_tabDetachRequested(int index, const QPoint& globalPos)
 {
-    // ensure at least one tab is present in the main window
-    if (index < 1 || index >= mpTabBar->count()) {
-        return;
-    }
-
     detachTab(index, globalPos);
 }
 
@@ -9265,7 +9262,10 @@ void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
 
 void mudlet::detachTab(int tabIndex, const QPoint& position)
 {
-    if (tabIndex < 0 || tabIndex >= mpTabBar->count()) {
+    // The main window keeps at least one tab: which tab is being taken out of
+    // it does not matter, only how many would be left. Every route to a detach
+    // comes through here, so this is the one place the rule has to hold
+    if (tabIndex < 0 || tabIndex >= mpTabBar->count() || mpTabBar->count() < 2) {
         return;
     }
 
