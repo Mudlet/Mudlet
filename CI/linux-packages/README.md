@@ -31,7 +31,7 @@ The bucket holds nothing that cannot be rebuilt from the releases:
 
 ```
 install.sh                               adds the repository and installs Mudlet
-mudlet.asc                               signing key
+mudlet.asc                               signing key, the file below
 deb/dists/<codename>/InRelease           apt index, signed
 deb/pool/<codename>/*.deb
 rpm/mudlet.repo                          dnf repository definition
@@ -47,7 +47,48 @@ curl -fsSL <base url>/install.sh | sudo sh
 ```
 
 `CI/linux-packages/publish` does the signing, assembly and upload, and can be run
-locally against a test key and `python3 -m http.server` to try a change.
+locally against a test key and `python3 -m http.server` to try a change - put that
+key's public half in `mudlet.asc` in your checkout first, as `publish` will not
+sign or assemble with a key the checkout does not carry.
+
+## The signing key
+
+The public half is published in two places, on infrastructure that does not
+overlap:
+
+| Where                  | Address                                                                              |
+|------------------------|--------------------------------------------------------------------------------------|
+| the package repository | `<base url>/mudlet.asc`                                                              |
+| this repository        | `https://raw.githubusercontent.com/Mudlet/Mudlet/<tag>/CI/linux-packages/mudlet.asc` |
+
+They are the same file, byte for byte:
+
+```
+$ gpg --show-keys CI/linux-packages/mudlet.asc
+pub   rsa4096 2026-09-17 [SC]
+      86177D601D97BCA0F9DE78581F27952470038A10
+uid                      Mudlet package signing
+```
+
+`install.sh` takes the key and the packages from the same host, which is the
+usual trust model for a distribution repository: the host is trusted once, at
+install time. Anything that installs Mudlet unattended and repeatedly - a
+Dockerfile, a provisioning script - can do better by pinning the copy here, so
+that whoever serves the packages cannot also decide which key verifies them:
+
+```dockerfile
+ADD https://raw.githubusercontent.com/Mudlet/Mudlet/<tag>/CI/linux-packages/mudlet.asc /etc/apt/keyrings/mudlet.asc
+```
+
+A `<tag>` rather than a branch, so the key cannot change under the build. For dnf,
+write a `.repo` with `gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mudlet` pointing
+at the pinned copy instead of taking `rpm/mudlet.repo` from the repository.
+
+Rotating the key means committing the new public half in the same change:
+`publish` signs and assembles only with the key `mudlet.asc` holds, and the
+workflow compares what it uploaded against it afterwards, so the two copies
+cannot drift apart. That also makes a rotation a reviewed commit rather than a
+file quietly changing under a URL.
 
 ## One-time setup
 
@@ -61,7 +102,11 @@ locally against a test key and `python3 -m http.server` to try a change.
    gpg --armor --export-secret-keys > mudlet-signing-key.asc
    ```
    Keep an offline copy: every installed system trusts this key, so replacing it
-   means every user has to fetch the new one.
+   means every user has to fetch the new one. Commit the public half as
+   `CI/linux-packages/mudlet.asc`:
+   ```sh
+   gpg --armor --export "Mudlet package signing" > CI/linux-packages/mudlet.asc
+   ```
 4. Add to the repository's Actions settings:
 
    | Kind     | Name                                  | Value                                   |

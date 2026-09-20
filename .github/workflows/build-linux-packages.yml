@@ -230,6 +230,16 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.LINUX_PACKAGES_R2_SECRET_ACCESS_KEY }}
         run: CI/linux-packages/publish upload site
 
+      # The two places the key is published have to stay the same file, or there
+      # is no second copy to check the one users install against
+      - name: Check the published key against the one in the repository
+        run: |
+          curl -fsSL "${BASE_URL}/mudlet.asc" -o published.asc
+          if ! cmp -s published.asc CI/linux-packages/mudlet.asc; then
+            echo "::error::${BASE_URL}/mudlet.asc is not the key committed as CI/linux-packages/mudlet.asc"
+            exit 1
+          fi
+
       - name: Install Mudlet from the live repositories
         run: |
           docker run --rm -e BASE_URL ubuntu:26.04 sh -euc \
