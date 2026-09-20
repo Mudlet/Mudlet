@@ -4295,6 +4295,42 @@ describe("Trigger processing", function()
                 assert.is_true(finaliser.runs > 0, "no finaliser ran inside the read")
                 assert.are.equal("from the finaliser", seen.line)
             end)
+
+            -- The line is encoded into a buffer the interpreter keeps between
+            -- calls, and lua_pushstring() runs a collection step before it
+            -- copies the bytes out of it. A finaliser that gets another string
+            -- encoded there - an alias pass caches its command the same way -
+            -- writes over the bytes this read is still waiting for.
+            for _, size in ipairs({
+                {name = "a line", length = 40},
+                -- long enough that the buffer the inner call is left holding is
+                -- over the cap, which is where it used to go back to the
+                -- allocator while the outer call was still reading it
+                {name = "a line past the scratch buffer cap", length = 2000},
+            }) do
+                it("keeps " .. size.name .. " a finaliser had another string encoded under", function()
+                    local seen = {}
+                    local text = "LazyFinaliserScratch " .. string.rep("abcdefghij", size.length)
+                    alias(tempAlias("^lazyfinaliserscratch$", function() end))
+                    trigger(tempRegexTrigger("^LazyFinaliserScratch .*$", function()
+                        finaliser.watching = true
+                        seen.line = line
+                        finaliser.watching = false
+                    end))
+                    finaliser.onRun = function()
+                        finaliser.watching = false
+                        expandAlias("lazyfinaliserscratch", false)
+                    end
+
+                    withFinaliserAtEveryAllocation(function()
+                        feedTriggers("\n" .. text .. "\n")
+                    end)
+
+                    assert.is_true(finaliser.runs > 0, "no finaliser ran inside the read")
+                    assert.are.equal(#text, #tostring(seen.line), "the line came back a different length")
+                    assert.are.equal(text, seen.line)
+                end)
+            end
         end)
 
         -- A strict-globals package polices __index and __newindex on the

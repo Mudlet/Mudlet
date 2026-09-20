@@ -5872,7 +5872,13 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     // which is the class CI/check-lua-error-strands.lua exists for. Setting
     // these was never something a package could usefully intercept anyway: the
     // name is absent only until the first dispatch writes it.
-    lua_pushlstring(L, mLastGlobalNameUtf8.constData(), mLastGlobalNameUtf8.size());
+    // Held rather than pushed straight out of the member: lua_pushlstring()
+    // runs a collection step before it copies the bytes, and a finaliser that
+    // runs there can reach another dispatch - an alias pass caches its own name
+    // here and the buffer this push is reading goes back to the allocator.
+    // Sharing it costs a reference count and keeps it alive for the push.
+    const QByteArray name = mLastGlobalNameUtf8;
+    lua_pushlstring(L, name.constData(), name.size());
     pushUtf8String(L, varValue);
     lua_rawset(L, LUA_GLOBALSINDEX);
     lua_settop(L, callerStackTop);
@@ -5882,20 +5888,29 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
 // Pushes text the way lua_pushstring() does, so it ends at the first NUL
 void TLuaInterpreter::pushUtf8String(lua_State* L, const QString& text)
 {
+    // Moved out of the member rather than lent from it, the way
+    // TriggerUnit::processDataStream() does with its own: lua_pushstring() runs
+    // a collection step before it copies the bytes out, and a __gc finaliser
+    // that runs there reaches this again as soon as it reads "line". A nested
+    // call finds the member empty and grows a buffer of its own, so it can
+    // neither resize the one being read nor hand it back to the allocator.
+    QByteArray scratch = std::move(mUtf8Scratch);
     QStringEncoder encoder(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
-    mUtf8Scratch.resize(encoder.requiredSpace(text.size()));
-    const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), text);
+    scratch.resize(encoder.requiredSpace(text.size()));
+    const char* const end = encoder.appendToBuffer(scratch.data(), text);
     if (Q_UNLIKELY(encoder.hasError())) {
         // The encoder writes a replacement character where an unpaired
         // surrogate was, while toUtf8() drops it. That path can afford the
         // copy and stay byte for byte what a script used to be given.
-        mUtf8Scratch = text.toUtf8();
+        scratch = text.toUtf8();
     } else {
-        mUtf8Scratch.resize(end - mUtf8Scratch.constData());
+        scratch.resize(end - scratch.constData());
     }
-    lua_pushstring(L, mUtf8Scratch.constData());
-    if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
-        mUtf8Scratch = QByteArray();
+    lua_pushstring(L, scratch.constData());
+    // Back into the member unless it grew past the cap, in which case it goes
+    // to the allocator and the next call starts from whatever is there
+    if (scratch.capacity() <= scmMaxRetainedUtf8Scratch) {
+        mUtf8Scratch = std::move(scratch);
     }
 }
 
