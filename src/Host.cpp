@@ -4997,6 +4997,9 @@ std::pair<bool, QString> Host::closeMapWidget()
 
     // Ask whether the widget was ever made first, so that a profile which never
     // made one is told apart from one that has put its widget away.
+    // TMainConsole::createMapper() destroys it when it takes a hidden widget over,
+    // so a profile that traded its map widget for an embedded mapper gets the
+    // never-made answer too.
     if (!mpConsole->mapWidgetCreated()) {
         return {false, qsl("no map widget found to close")};
     }

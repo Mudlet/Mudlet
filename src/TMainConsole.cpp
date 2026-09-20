@@ -992,9 +992,30 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
-    auto pM = mpDockableMapWidget;
-    if (pM) {
-        return {false, qsl("cannot create mapper. Do you already use a map window?")};
+    // Only the profile's own map dock, and only while it is on screen, holds the
+    // mapper slot. One that is merely hidden - by Host::closeMapWidget(), by the
+    // dock's own close button, by a restored layout, or by
+    // mudlet::slot_showMapperDialog() handing the map over to a main window dock -
+    // used to refuse an embedded mapper for the rest of the session, while the map
+    // window getters, setMapWidgetTitle() and Host::closeMapWidget() reported no map
+    // window at all. Asking mapWidget() rather than the raw pointer is what keeps
+    // those answers the same as this one.
+    if (mpDockableMapWidget) {
+        if (mapWidget()) {
+            return {false, qsl("cannot create mapper. Do you already use a map window?")};
+        }
+        // The dock is the dlgMapper's parent, so taking it away takes the mapper
+        // with it. deleteLater() leaves every QPointer to the pair set until the
+        // event loop gets to run, which the script that called this will not let
+        // it do, so drop ours now. Conditional because the map may be being drawn
+        // by a main window or detached window dock instead, which this leaves
+        // alone; when it is not, the mapper below takes TMap::mpMapper over.
+        if (mpHost->mpMap->mpMapper.data() == mpDockableMapWidget->widget()) {
+            mpHost->mpMap->mpMapper = nullptr;
+        }
+        qDebug() << "TMainConsole::createMapper() INFO - removing the closed map widget so an embedded mapper can take the map over.";
+        mpDockableMapWidget->deleteLater();
+        mpDockableMapWidget = nullptr;
     }
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
@@ -1036,6 +1057,11 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
+    } else if (!mpHost->mpMap->mpMapper) {
+        // Nothing is drawing the map: either the map widget taken away above was
+        // doing it, or a window that borrowed TMap::mpMapper went without handing
+        // it back. The mapper this console already has takes over.
+        mpHost->restoreOwnMapper();
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
