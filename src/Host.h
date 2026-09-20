@@ -522,6 +522,12 @@ public:
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    // Whether windowname can hold a new mini console, scroll box, command line,
+    // text edit or label: an empty name or "main" (in any case) is the main
+    // console, anything else has to be a registered user window or scroll box.
+    // Not a general "can this contain an element" test - createMapper() takes a
+    // user window only.
+    bool parentWindowMissing(const QString& windowname) const;
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
