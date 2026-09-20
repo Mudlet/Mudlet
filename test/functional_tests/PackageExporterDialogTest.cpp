@@ -953,6 +953,31 @@ private slots:
         // the name is cleared so that another module can be made straight away
         QVERIFY2(nameField()->text().isEmpty(), "the module name was left in the field afterwards");
     }
+
+    // A module made from an item whose Lua does not work installs anyway - the
+    // item is kept so that it can be fixed in the editor - and installPackage()
+    // says so beside the true it answers with. Reading that boolean alone left
+    // the dialog reporting a clean success over a module that is not running.
+    void test_moduleCreationModeSaysWhenWhatItMadeIsNotAllWorking()
+    {
+        const QString moduleName = packageNamed(qsl("exporter-broken-module"));
+        makeScript(qsl("exporter module broken script"))->setScript(qsl("exporterModuleMissingFunction()"));
+
+        openExporter();
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(scriptsTop(), qsl("exporter module broken script")));
+        settleSaves();
+        nameField()->setText(moduleName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+
+        const QString said = infoLabel()->text();
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), qPrintable(qsl("The module it made was not installed. The dialog said: \"%1\"").arg(said)));
+        QVERIFY2(!said.contains(qsl("created and installed successfully")), qPrintable(qsl("A module that is not working was reported as a clean success: \"%1\"").arg(said)));
+        QVERIFY2(said.contains(qsl("was installed, but not everything in it is working")), qPrintable(qsl("The dialog has to say what the console says. It said: \"%1\"").arg(said)));
+        QVERIFY2(said.contains(qsl("exporter module broken script")), qPrintable(qsl("The item that is not working was not named: \"%1\"").arg(said)));
+        QVERIFY2(said.contains(qsl("exporterModuleMissingFunction")), qPrintable(qsl("The reason it is not working was not given: \"%1\"").arg(said)));
+    }
 };
 
 #include "PackageExporterDialogTest.moc"
