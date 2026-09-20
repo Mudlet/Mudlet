@@ -2492,9 +2492,12 @@ end)
 -- A package's Lua is compiled as the package is read in, and a script's body is
 -- run there and then. Whatever does not get through that is kept all the same,
 -- so that it can be opened in the editor and fixed - the rest of the package
--- installs around it. What it must not do is install in silence: the console,
--- installPackage()'s return and the install events all have to own up to the
--- part of the package that is not working.
+-- installs around it. What it must not do is answer a bare "installed" and
+-- leave it there: installPackage()'s return and the install events both have to
+-- own up to the part of the package that is not working, so that a package
+-- manager can tell a broken install from a healthy one. The console is a
+-- separate question, answered by who asked for the install - see the silence
+-- pinned below, and BrokenPackageNoticeTest for the other half.
 describe("Tests installing a package whose Lua does not work", function()
   local name = "mudlet-spec-broken-script"
   local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
@@ -2531,8 +2534,8 @@ describe("Tests installing a package whose Lua does not work", function()
     packageEvents, detailedHandler = collectEvents("sysInstallPackage")
     handlers = {genericHandler, detailedHandler}
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
-    -- the console is marked before the install because the answer and the line
-    -- the install writes are both what this block is about
+    -- the console is marked before the install because what does *not* appear
+    -- there for a scripted install is part of what this block pins
     local mark = getLastLineNumber("main")
     installAnswer, installReason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
     consoleText = textFrom(mark)
@@ -2556,14 +2559,16 @@ describe("Tests installing a package whose Lua does not work", function()
     assert.is_true(mudletSpecBrokenScriptSibling == true, "the other script in the package never ran")
   end)
 
-  it("says on the console what in the package is not working, and why", function()
-    assert.is_true(containsWrapped(consoleText, 'Package "' .. name .. '" was installed, but not everything in it is working: '), consoleText)
-    assert.is_true(containsWrapped(consoleText, name .. " script"), consoleText)
-    assert.is_true(containsWrapped(consoleText, "mudletSpecBrokenScriptMissing"), consoleText)
+  -- installPackage() is a script asking for the install, and a script has the
+  -- answer below to report from however it likes - mpkg does. The console line
+  -- is for the install a person asked for and is watching, which no Lua
+  -- function can ask for; BrokenPackageNoticeTest covers that one.
+  it("leaves the console alone, since a script asked for this install", function()
+    assert.is_false(containsWrapped(consoleText, "are not working"), consoleText)
+    assert.is_false(containsWrapped(consoleText, "mudletSpecBrokenScriptMissing"), consoleText)
   end)
 
   it("reports a trigger whose body does not compile as well as a script", function()
-    assert.is_true(containsWrapped(consoleText, name .. " trigger"), consoleText)
     assert.is_true(contains(installReason, name .. " trigger"), tostring(installReason))
   end)
 
@@ -2620,7 +2625,7 @@ describe("Tests installing a package archive whose scripts stop with an error", 
     assert.is_true(contains(installReason, name .. " second"), tostring(installReason))
     assert.is_true(installReason:find(name .. " first", 1, true) < installReason:find(name .. " second", 1, true), installReason)
     assert.is_true(contains(installReason, "; "), tostring(installReason))
-    assert.is_true(containsWrapped(consoleText, 'Package "' .. name .. '" was installed, but not everything in it is working: '), consoleText)
+    assert.is_false(containsWrapped(consoleText, "are not working"), consoleText)
   end)
 
   it("gives the error text back exactly as the script produced it", function()
@@ -2631,11 +2636,12 @@ describe("Tests installing a package archive whose scripts stop with an error", 
   end)
 end)
 
--- A module is read by the same code and reported the same way, with one
--- deliberate silence: a module sync reinstalls the module on every profile save
--- and on every reloadModule(), so the console line is left out there rather
--- than repeated for as long as the module is broken. The reason still has to
--- reach the sync's own install event.
+-- A module is read by the same code and answered the same way. A sync reinstalls
+-- the module on every profile save and on every reloadModule(), and opening the
+-- profile reinstalls it too, so a console line for either would come back for as
+-- long as the module is broken - at somebody who, for a module they did not
+-- write, can do nothing about it. The reason still has to reach the sync's own
+-- install event.
 describe("Tests installing a module whose scripts stop with an error", function()
   local name = "mudlet-spec-brokenscripts"
   local installAnswer, installReason, consoleText
@@ -2656,10 +2662,10 @@ describe("Tests installing a module whose scripts stop with an error", function(
     _G.mudletSpecBrokenScriptsRuns = nil
   end)
 
-  it("says on the console that the module is not working, and tells installModule()", function()
-    assert.is_true(containsWrapped(consoleText, 'Module "' .. name .. '" was installed, but not everything in it is working: '), consoleText)
+  it("tells installModule() what is not working, and keeps it off the console", function()
     assert.is_true(installAnswer)
     assert.is_true(contains(installReason, name .. " first"), tostring(installReason))
+    assert.is_false(containsWrapped(consoleText, "are not working"), consoleText)
   end)
 
   it("keeps quiet when a module sync reinstalls it, but still says so on the event", function()
@@ -2668,7 +2674,7 @@ describe("Tests installing a module whose scripts stop with an error", function(
     local mark = getLastLineNumber("main")
     reloadModuleUntil(name, function() return (mudletSpecBrokenScriptsRuns or 0) > runsBefore end)
     assert.is_true(waitUntil(function() return #syncEvents > eventsBefore end, 2000), "the module sync raised no install event")
-    assert.is_false(containsWrapped(textFrom(mark), "was installed, but not everything in it is working"), textFrom(mark))
+    assert.is_false(containsWrapped(textFrom(mark), "are not working"), textFrom(mark))
     local event = syncEvents[#syncEvents]
     assert.equals(name, event[1])
     assert.is_true(contains(event[3], name .. " first"), tostring(event[3]))

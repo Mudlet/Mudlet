@@ -78,6 +78,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
 {
     mPackageName = packName;
     mItemsWithErrors.clear();
+    mItemsWithErrorNames.clear();
     setDevice(pfile);
 
     module = moduleFlag;
@@ -1417,6 +1418,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
                     mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
@@ -1537,6 +1539,7 @@ int XMLimport::readTimer(TTimer* pParent)
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTimer(...): ERROR: can not compile timer's lua code for: " << pT->getName();
                     mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
@@ -1608,6 +1611,7 @@ int XMLimport::readAlias(TAlias* pParent)
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
                     mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
@@ -1677,6 +1681,7 @@ int XMLimport::readAction(TAction* pParent)
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAction(...): ERROR: can not compile action's lua code for: " << pT->getName();
                     mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("css")) {
                 pT->css = readElementText();
@@ -1773,6 +1778,7 @@ int XMLimport::readScript(TScript* pParent)
                 if (!script->setScript(tempScript)) {
                     qDebug().nospace().noquote() << "XMLimport::readScript(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
                     mItemsWithErrors.append(qsl("%1: %2").arg(script->getName(), compileErrorAsPlainText(script->getError())));
+                    mItemsWithErrorNames.append(script->getName());
                 }
             } else if (name() == qsl("eventHandlerList")) {
                 readStringList(script->mEventHandlerList, what);
@@ -1838,6 +1844,7 @@ int XMLimport::readKey(TKey* pParent)
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readKey(...): ERROR: can not compile key's lua code for: " << pT->getName();
                     mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();

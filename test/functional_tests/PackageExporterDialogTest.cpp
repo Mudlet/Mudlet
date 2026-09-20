@@ -954,11 +954,13 @@ private slots:
         QVERIFY2(nameField()->text().isEmpty(), "the module name was left in the field afterwards");
     }
 
-    // A module made from an item whose Lua does not work installs anyway - the
-    // item is kept so that it can be fixed in the editor - and installPackage()
-    // says so beside the true it answers with. Reading that boolean alone left
-    // the dialog reporting a clean success over a module that is not running.
-    void test_moduleCreationModeSaysWhenWhatItMadeIsNotAllWorking()
+    // An item whose Lua does not work is the one thing the person at this dialog
+    // already knows about: it is the item they picked to export, the editor
+    // behind the dialog is showing it with an error against it, and nothing here
+    // went wrong - the module file is written and holds exactly the Lua the
+    // profile has. So the export is reported as what it is, and the broken item
+    // is left to the editor rather than restated in red over a good export.
+    void test_moduleCreationModeLeavesABrokenItemToTheEditor()
     {
         const QString moduleName = packageNamed(qsl("exporter-broken-module"));
         makeScript(qsl("exporter module broken script"))->setScript(qsl("exporterModuleMissingFunction()"));
@@ -973,10 +975,8 @@ private slots:
 
         const QString said = infoLabel()->text();
         QVERIFY2(mpHost->mInstalledModules.contains(moduleName), qPrintable(qsl("The module it made was not installed. The dialog said: \"%1\"").arg(said)));
-        QVERIFY2(!said.contains(qsl("created and installed successfully")), qPrintable(qsl("A module that is not working was reported as a clean success: \"%1\"").arg(said)));
-        QVERIFY2(said.contains(qsl("was installed, but not everything in it is working")), qPrintable(qsl("The dialog has to say what the console says. It said: \"%1\"").arg(said)));
-        QVERIFY2(said.contains(qsl("exporter module broken script")), qPrintable(qsl("The item that is not working was not named: \"%1\"").arg(said)));
-        QVERIFY2(said.contains(qsl("exporterModuleMissingFunction")), qPrintable(qsl("The reason it is not working was not given: \"%1\"").arg(said)));
+        QVERIFY2(said.contains(qsl("created and installed successfully")), qPrintable(qsl("An export that worked was not reported as one: \"%1\"").arg(said)));
+        QVERIFY2(!said.contains(qsl("exporterModuleMissingFunction")), qPrintable(qsl("The dialog repeated the Lua error the editor already shows: \"%1\"").arg(said)));
     }
 };
 

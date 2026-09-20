@@ -62,6 +62,10 @@ public:
     // editor - so importPackage()'s own answer says nothing about it and this is
     // where a caller has to look.
     const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
+    // The same items by name alone, for saying on the console which parts of a
+    // package are not working without the Lua error text, which is written for
+    // whoever wrote the item rather than for whoever installed it.
+    const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
 
 private:
     const QString YES = qsl("yes");
@@ -120,6 +124,7 @@ private:
     QPointer<Host> mpHost;
     QString mPackageName;
     QStringList mItemsWithErrors;
+    QStringList mItemsWithErrorNames;
     TTrigger* mpTrigger = nullptr;
     TTimer* mpTimer = nullptr;
     TAlias* mpAlias = nullptr;

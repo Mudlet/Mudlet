@@ -2770,6 +2770,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Declared out here because the archive branch below reads one of these per
     // XML file in the package; reported once both branches are done.
     QStringList itemsWithErrors;
+    QStringList itemsWithErrorNames;
     if (packageUnpacksAFolder(fileName)) {
         const QString _home = MudletPaths::getMudletPath(enums::profileHomePath, getName());
         // Unpacking into a folder the other half of this name owns would write over
@@ -3010,6 +3011,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
             mPackagesBeingInstalled.pop();
             itemsWithErrors << reader.itemsWithErrors();
+            itemsWithErrorNames << reader.itemsWithErrorNames();
             if (thing != enums::PackageModuleType::Package) {
                 if (success) {
                     mModulesLoadedOk.insert(packageName);
@@ -3069,6 +3071,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
         mPackagesBeingInstalled.pop();
         itemsWithErrors << reader.itemsWithErrors();
+        itemsWithErrorNames << reader.itemsWithErrorNames();
         if (thing != enums::PackageModuleType::Package) {
             if (success) {
                 mModulesLoadedOk.insert(packageName);
@@ -3091,21 +3094,34 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     const QString itemErrors = itemsWithErrors.join(qsl("; "));
     if (!itemErrors.isEmpty()) {
         qWarning() << "Host::installPackage() WARNING - lua in" << packageName << "did not work:" << itemErrors;
-        // Said to a quiet caller as well, unlike the fail() lambda above, for
-        // the reason the manifest warning further up gives: a refusal hands the
-        // caller a false it has to deal with, while this install answers true,
-        // which every caller in the tree takes for a clean success. The reason
-        // rides back with that true for a package manager that does ask, but
-        // the console is the only place the player would ever hear of it.
+        // Only an install a person asked for and is watching says it, on the same
+        // terms as the fail() lambda above, and never while a profile is opening:
+        // every module is reinstalled from its archive then
+        // (mudlet::installModulesList()), so the line would otherwise come back
+        // on every launch for as long as the module is broken - at somebody who,
+        // for a module they did not write, can do nothing about it. A caller that
+        // asked to be left alone is left alone too: the reason rides back with
+        // the true it is handed, and with the install event, which is where a
+        // package manager reads it.
+        const bool sayItOnTheConsole = !quiet && !mIsProfileLoadingSequence;
+        // Only the names. The error text names a line of Lua in an item the
+        // player did not write, which is of use to whoever did - so it is left to
+        // the editor, which shows it against the item itself, and to the return
+        // value and the install event.
+        const QString itemNames = itemsWithErrorNames.join(qsl("\", \""));
         switch (thing) {
         case enums::PackageModuleType::Package:
-            //: %1 is the package name; %2 is a "; "-separated list of "<item name>: <error>", whose error text comes from Lua and is not translated
-            postMessage(tr("[ WARN ]  - Package \"%1\" was installed, but not everything in it is working: %2").arg(packageName, itemErrors));
+            if (sayItOnTheConsole) {
+                //: %1 is the package name; %2 is the names of the parts of it that are not working, separated by ", " and each already in its own pair of quotes
+                postMessage(tr("[ WARN ]  - Package \"%1\" was installed, but these parts of it are not working: \"%2\". Open them in the editor to see why.").arg(packageName, itemNames));
+            }
             break;
         case enums::PackageModuleType::ModuleFromUI:
         case enums::PackageModuleType::ModuleFromScript:
-            //: %1 is the module name; %2 is a "; "-separated list of "<item name>: <error>", whose error text comes from Lua and is not translated
-            postMessage(tr("[ WARN ]  - Module \"%1\" was installed, but not everything in it is working: %2").arg(packageName, itemErrors));
+            if (sayItOnTheConsole) {
+                //: %1 is the module name; %2 is the names of the parts of it that are not working, separated by ", " and each already in its own pair of quotes
+                postMessage(tr("[ WARN ]  - Module \"%1\" was installed, but these parts of it are not working: \"%2\". Open them in the editor to see why.").arg(packageName, itemNames));
+            }
             break;
         case enums::PackageModuleType::ModuleSync:
             // Left out for the reason the fail() lambda above gives: a sync

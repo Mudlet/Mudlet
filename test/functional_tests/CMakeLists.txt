@@ -195,6 +195,7 @@ set(MAP_GROUP_TEST_SOURCES
 set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     ActionToolbarMenuTest.cpp
+    BrokenPackageNoticeTest.cpp
     DefaultPackagesTest.cpp
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp

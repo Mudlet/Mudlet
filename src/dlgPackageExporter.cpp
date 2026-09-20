@@ -1027,22 +1027,16 @@ void dlgPackageExporter::slot_exportPackage()
                         if (installSuccess) {
                             const QString savedDir = QFileInfo(mPackagePathFileName).absolutePath();
                             const QString savedDirLink = qsl("<a href=\"%1\">%2</a>").arg(QUrl::fromLocalFile(savedDir).toString(QUrl::FullyEncoded).toHtmlEscaped(), savedDir.toHtmlEscaped());
-                            if (installMessage.isEmpty()) {
-                                // Show embedded success message (better UX than popup)
-                                //: %1 is the module name, %2 is a clickable link to the folder the module file was saved in
-                                displayResultMessage(
-                                        tr("Module \"%1\" created and installed successfully! Saved to: %2. You can now close this dialog.").arg(mPackageName.toHtmlEscaped(), savedDirLink), true);
-                            } else {
-                                // An item whose Lua does not work is kept so that it can be
-                                // fixed in the editor, so the module installs anyway and
-                                // installPackage() answers true with the reason beside it. The
-                                // sentence the console gets is said here too, or the dialog
-                                // would report a clean success over a module that is not working.
-                                //: %1 is the module name; %2 is a "; "-separated list of "<item name>: <error>", whose error text comes from Lua and is not translated; %3 is a clickable link to the folder the module file was saved in
-                                displayResultMessage(tr("Module \"%1\" was installed, but not everything in it is working: %2. Saved to: %3. You can now close this dialog.")
-                                                             .arg(mPackageName.toHtmlEscaped(), installMessage.toHtmlEscaped(), savedDirLink),
-                                                     false);
-                            }
+                            // An item whose Lua does not work is left to the editor, which
+                            // is already showing it against the item itself - the very item
+                            // this export was started from. Nothing here went wrong: the
+                            // module file is written and holds exactly the Lua the profile
+                            // has, so saying it here would report the export as the failure
+                            // and repeat what the editor behind this dialog already says.
+                            // Show embedded success message (better UX than popup)
+                            //: %1 is the module name, %2 is a clickable link to the folder the module file was saved in
+                            displayResultMessage(tr("Module \"%1\" created and installed successfully! Saved to: %2. You can now close this dialog.").arg(mPackageName.toHtmlEscaped(), savedDirLink),
+                                                 true);
 
                             // Clear the form to allow creating another module
                             ui->lineEdit_packageName->clear();
