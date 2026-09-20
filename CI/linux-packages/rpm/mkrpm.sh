@@ -23,6 +23,38 @@ echo "==> packaging ${PACKAGE} ${PKG_VERSION}-${RELEASE} ($(uname -m))"
 
 cmake --install "$SRC/build" --prefix "$STAGE/usr"
 
+# An end-user package carries runtime files only, but a plain add_subdirectory()
+# adopts a vendored project's own install() rules - that is how QTagEdit's header,
+# static library and CMake export files reached the 5.0.1 packages (#10871).
+# CMakeLists.txt keeps them out with EXCLUDE_FROM_ALL, which is observed rather
+# than documented CMake behaviour, so the staged tree is checked here rather than
+# trusted. They are dropped rather than refused because this script also packages
+# tags whose source predates that CMake fix, which would otherwise stop packaging
+# altogether.
+mapfile -d '' -t DEVELOPMENT_FILES < <(cd "$STAGE" && find . \( -path './usr/include' \
+  -o -name '*.a' -o -name '*.cmake' -o -name '*.h' -o -name '*.hpp' -o -name '*.la' \
+  -o -name '*.pc' -o -path '*/cmake/*' -o \( -type l -name '*.so' \) \) -prune -print0)
+if [[ ${#DEVELOPMENT_FILES[@]} -gt 0 ]]; then
+  echo "==> dropping development files staged into the package:" >&2
+  printf '      %s\n' "${DEVELOPMENT_FILES[@]}" >&2
+  echo "    a vendored project's install() rules reached this tree - add EXCLUDE_FROM_ALL to" >&2
+  echo "    its add_subdirectory() in CMakeLists.txt, as 3rdparty/qt-tags-widget has" >&2
+  (cd "$STAGE" && rm -rf -- "${DEVELOPMENT_FILES[@]}")
+  find "$STAGE" -mindepth 1 -type d -empty -delete
+else
+  echo "==> no development files staged"
+fi
+
+# EXCLUDE_FROM_ALL works by leaving a subdirectory out of the generated install
+# script, so its own failure mode is a file quietly going missing - check what the
+# install had to produce, not only what it must not
+mapfile -t STAGED_TOP < <(cd "$STAGE/usr" && find . -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
+if [[ "${STAGED_TOP[*]}" != "bin share" || ! -x "$STAGE/usr/bin/mudlet" || ! -d "$STAGE/usr/share/mudlet/lua" ]]; then
+  echo "the install staged no usable Mudlet: expected bin/mudlet and share/mudlet/lua below" >&2
+  echo "bin and share only, found '${STAGED_TOP[*]}'" >&2
+  exit 1
+fi
+
 if [[ -d "$SRC/translations/lua" ]]; then
   mkdir -p "$STAGE/usr/share/mudlet/lua/translations"
   cp -a "$SRC/translations/lua/." "$STAGE/usr/share/mudlet/lua/translations/"

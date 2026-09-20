@@ -164,6 +164,12 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
+        // A config dir of this test's own reads as a brand new installation, so
+        // the first-run interface tour would open over the profile a second
+        // after it loads and take the window's keyboard with it - the keys
+        // below would reach the tour rather than the caret
+        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
+        mudlet::getQSettings()->sync();
         QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));

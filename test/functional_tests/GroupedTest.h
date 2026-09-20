@@ -40,6 +40,12 @@ using EntryFunction = int (*)(int, char**);
 
 void registerCase(const char* name, EntryFunction entry);
 
+// What main() does between the event loop returning and the QApplication
+// going: joins the trigger match helpers, which any case that fed a line
+// through a profile has started. A function rather than the call itself so the
+// macro below does not pull TriggerMatchPool.h into every test.
+void stopMatchHelpers();
+
 // Registration has to have happened by the time main() runs, so it rides on the
 // constructor of the file-scope object the macro below declares.
 struct Registrar
@@ -68,7 +74,9 @@ struct Registrar
         app.setApplicationName(qsl(#TestObject));                                                                                                                                                      \
         TestObject tc;                                                                                                                                                                                 \
         QTEST_SET_MAIN_SOURCE_PATH                                                                                                                                                                     \
-        return QTest::qExec(&tc, argc, argv);                                                                                                                                                          \
+        const int result = QTest::qExec(&tc, argc, argv);                                                                                                                                              \
+        GroupedTest::stopMatchHelpers();                                                                                                                                                               \
+        return result;                                                                                                                                                                                 \
     }                                                                                                                                                                                                  \
     static const GroupedTest::Registrar registrar##TestObject(#TestObject, &run##TestObject);
 

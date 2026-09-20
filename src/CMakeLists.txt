@@ -206,6 +206,7 @@ set(mudlet_SRCS
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
+    TriggerMatchPool.cpp
     TriggerUnit.cpp
     TTriggerPrescan.cpp
     TRoom.cpp
@@ -483,6 +484,7 @@ set(mudlet_HDRS
     TrailingWhitespaceMarker.h
     Tree.h
     TriggerHighlighter.h
+    TriggerMatchPool.h
     TriggerUnit.h
     TTriggerPrescan.h
     TRoom.h
@@ -572,6 +574,7 @@ find_package(Qt6 6.8.2 REQUIRED
                MultimediaWidgets
                Network
                OpenGL
+               Svg
                UiTools
                Widgets
                Concurrent)
@@ -588,6 +591,7 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::Multimedia
               Qt6::MultimediaWidgets
               Qt6::OpenGL
+              Qt6::Svg
               Qt6::UiTools
               Qt6::Widgets
               qt6keychain)

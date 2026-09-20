@@ -1,6 +1,6 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/Lua/xcb-util-cursor/sentry-native save steps below: only builds of
+# ccache/Lua/xcb-util-cursor save steps below: only builds of
 # development write these shared caches, every other build restores
 # read-only, so build-mudlet-pr.yml has no equivalent save steps at all.
 name: 🔨 Build Mudlet
@@ -376,19 +376,6 @@ jobs:
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
-    - name: Get sentry-native commit hash
-      id: sentry-hash
-      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-    - name: Restore sentry-native cache
-      id: cache-sentry
-      uses: actions/cache/restore@v6
-      with:
-        path: |
-          3rdparty/sentry-native/install_without_transport
-          3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
-
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
       with:
@@ -405,15 +392,6 @@ jobs:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-    - name: Save sentry-native cache
-      if: github.ref_name == 'development' && steps.cache-sentry.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v6
-      with:
-        path: |
-          3rdparty/sentry-native/install_without_transport
-          3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: Save ccache
       if: >-

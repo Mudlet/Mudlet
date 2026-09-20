@@ -2769,9 +2769,9 @@ end)
 --
 -- The map dock has no window name, so windowVisible() cannot reach it and these
 -- specs read the state through the map window functions instead. That works
--- because Host::mapWidget() derives its answer from the dock's own hidden
--- state: drop the hide() out of Host::closeMapWidget() and the two specs below
--- that assert the closed answers fail.
+-- because TMainConsole::mapWidget() derives its answer from the dock's own
+-- hidden state: drop the hide() out of TMainConsole::hideMapWidget() and the
+-- two specs below that assert the closed answers fail.
 describe("Tests the open and closed states of the map widget", function()
   setup(function()
     assert.is_true(openMapWidget())
@@ -2853,8 +2853,8 @@ describe("Tests the open and closed states of the map widget", function()
 
   -- Neither of these can be reached from Lua, so they are recorded rather than
   -- covered: the dock's own title bar close button and mudlet's map toolbar
-  -- button both hide the same dock, and Host::mapWidget() reads the dock's
-  -- hidden state so that it follows them without either having to know.
+  -- button both hide the same dock, and TMainConsole::mapWidget() reads the
+  -- dock's hidden state so that it follows them without either having to know.
   pending("the map dock's title bar close button leaves the map window functions reporting no map window - needs GUI automation")
 
   pending("the map toolbar button handing the map to a main window dock leaves the map window functions reporting no map window - needs GUI automation")

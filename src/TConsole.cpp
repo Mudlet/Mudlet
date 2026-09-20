@@ -66,8 +66,11 @@
 #include <QStyleOptionSlider>
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
+#include <cerrno>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 
 using namespace std::chrono_literals;
 
@@ -216,6 +219,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mConsoleName(name)
 , mCurrentLine(mpModel->mCurrentLine)
 , mEngineCursor(mpModel->mEngineCursor)
+, mFormatCurrent(mpModel->mFormatCurrent)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -226,6 +230,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
 , mUserCursor(mpModel->mUserCursor)
+, P_begin(mpModel->P_begin)
+, P_end(mpModel->P_end)
 , mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
 , mIsPromptLine(mpModel->mIsPromptLine)
 , mpBufferSearchBox(new QLineEdit)
@@ -788,7 +794,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     if (mType & MainConsole) {
-        mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
+        setCompactInputLine(mpHost->getCompactInputLine());
 
         mpCommandLine->adjustHeight();
     }
@@ -1060,6 +1066,9 @@ void TConsole::clear()
     // no longer exist and the copy actions work on out of range indices
     clearSelection();
     buffer.clear();
+    // the line --mirror was building went with the buffer, so the next copied
+    // line must not still carry it
+    mMirrorPendingLine.clear();
     clearSplit();
     mUpperPane->update();
     mLowerPane->update();
@@ -1429,8 +1438,7 @@ void TConsole::scrollUp(int lines)
 
 void TConsole::deselect()
 {
-    P_begin = QPoint();
-    P_end = QPoint();
+    mpModel->deselect();
 }
 
 void TConsole::showEvent(QShowEvent* event)
@@ -1460,9 +1468,7 @@ void TConsole::hideEvent(QHideEvent* event)
 
 void TConsole::reset()
 {
-    deselect();
-    mFormatCurrent.setColors(mFgColor, mBgColor);
-    mFormatCurrent.setAllDisplayAttributes(TChar::None);
+    mpModel->resetFormat();
 }
 
 void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat, QVector<int> luaReference)
@@ -2088,37 +2094,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 
 bool TConsole::selectSection(int from, int to)
 {
-    if (TDebug::wants(TDebug::Category::Selection)) {
-        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n"
-                >> mpHost;
-    }
-    if (from < 0) {
-        return false;
-    }
-    // a negative length would put the selection's end before its start
-    if (to < 0) {
-        return false;
-    }
-    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return false;
-    }
-    const int s = buffer.buffer[mUserCursor.y()].size();
-    // the length is compared against what is left of the line rather than
-    // added to the start: `from + to` overflows for a large `to`, and signed
-    // overflow that wraps negative sails through a check written that way,
-    // handing back a selection whose end precedes its start
-    if (from > s || to > s - from) {
-        return false;
-    }
-    P_begin = QPoint(from, mUserCursor.y());
-    P_end = QPoint(from + to, mUserCursor.y());
-
-    if (TDebug::wants(TDebug::Category::Selection)) {
-        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
-                                                                        << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
-                >> mpHost;
-    }
-    return true;
+    return mpModel->selectSection(from, to);
 }
 
 // returns whenever the selection is valid, the selection text,
@@ -2180,16 +2156,14 @@ void TConsole::setBgColor(int r, int g, int b, int a)
 
 void TConsole::setBgColor(const QColor& newColor)
 {
-    mFormatCurrent.setBackground(newColor);
-    if (buffer.applyBgColor(P_begin, P_end, newColor)) {
+    if (mpModel->setSelectionBgColor(newColor)) {
         markSelectionDirty();
     }
 }
 
 void TConsole::setFgColor(const QColor& newColor)
 {
-    mFormatCurrent.setForeground(newColor);
-    if (buffer.applyFgColor(P_begin, P_end, newColor)) {
+    if (mpModel->setSelectionFgColor(newColor)) {
         markSelectionDirty();
     }
 }
@@ -2316,9 +2290,7 @@ void TConsole::print(const QString& msg)
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
-        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
-    }
+    mirrorToStdOut(msg);
 }
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
@@ -2329,9 +2301,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
-        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
-    }
+    mirrorToStdOut(msg);
 }
 
 void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp)
@@ -2345,9 +2315,81 @@ void TConsole::printFormatted(const QString& text, const std::vector<TChar>& for
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
-        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, text);
+    mirrorToStdOut(text);
+}
+
+namespace {
+// Writes one --mirror line to standard output. A reader that has gone away, or
+// a stream that cannot take any more, would otherwise cost a line per game line
+// in silence, so the first failure turns the option off and says so once.
+void writeMirrorLine(const QString& line)
+{
+    QByteArray output = line.toUtf8();
+    output.append('\n');
+    const size_t length = static_cast<size_t>(output.size());
+    if (std::fwrite(output.constData(), 1, length, stdout) == length && std::fflush(stdout) == 0) {
+        return;
     }
+
+    mudlet::smMirrorToStdOut = false;
+    qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
+}
+
+// Says which console a copied line came from. Every profile's main console is
+// called "main", so the console name on its own cannot tell two profiles apart.
+// Both names reach here from Lua, which takes any string at all, so a control
+// character in one - a line feed above all - would split the record in two for
+// a reader that goes by lines.
+QString mirrorPrefix(const QString& profileName, const QString& consoleName)
+{
+    QString prefix = qsl("%1.%2| ").arg(profileName, consoleName);
+    for (QChar& character : prefix) {
+        if (character.category() == QChar::Other_Control) {
+            character = QChar::ReplacementCharacter;
+        }
+    }
+    return prefix;
+}
+} // namespace
+
+void TConsole::mirrorToStdOut(const QString& text)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    // The print paths hand over a fragment of a line as readily as whole ones:
+    // Lua's print() sends its text and the newline that ends it as two calls of
+    // its own, and echo() need not end a line at all. TBuffer::appendLine()
+    // adds each fragment to the line it is building and starts a new one at
+    // every line feed, so this does the same and writes a line out once a line
+    // feed has ended it - one copied line per line shown, carrying what the
+    // console shows on it.
+    QStringList fragments = text.split(QChar::LineFeed);
+    const QString stillOpen = fragments.takeLast();
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    for (const QString& fragment : fragments) {
+        writeMirrorLine(prefix + mMirrorPendingLine + fragment);
+        mMirrorPendingLine.clear();
+    }
+    mMirrorPendingLine.append(stillOpen);
+}
+
+void TConsole::mirrorLineToStdOut(const QString& line)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    // A committed line does not join a line the print path left open: when the
+    // line being built holds anything, TBuffer::commitLineData() puts the one
+    // from the game on a line of its own below it. So does this.
+    if (!mMirrorPendingLine.isEmpty()) {
+        writeMirrorLine(prefix + mMirrorPendingLine);
+        mMirrorPendingLine.clear();
+    }
+    writeMirrorLine(prefix + line);
 }
 
 // Not a bare buffer.clear(): the selection and scroll state have to go with
@@ -2767,6 +2809,23 @@ QSize TConsole::getMainWindowSize() const
         mLastMeasuredSize = mainWindowSize;
     }
     return mainWindowSize;
+}
+
+void TConsole::setCompactInputLine(const bool state)
+{
+    // the button row belongs to the main console alone - setCmdVisible() keeps
+    // it hidden for every other type and the constructor only applies the
+    // setting for a main console, so showing it here on the bare setting would
+    // put it on a console that never has one
+    mpButtonMainLayer->setVisible(!state && (mType & MainConsole));
+}
+
+void TConsole::repaintPanes() const
+{
+    mUpperPane->updateScreenView();
+    mUpperPane->repaint();
+    mLowerPane->updateScreenView();
+    mLowerPane->repaint();
 }
 
 void TConsole::setProfileName(const QString& newName)

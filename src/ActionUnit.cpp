@@ -34,11 +34,9 @@
 #include "utils.h"
 
 #include <QDebug>
-#include <QDockWidget>
 #include <QMapIterator>
 #include <QPoint>
 #include <QSet>
-#include <QWidget>
 
 #include <functional>
 
@@ -624,7 +622,7 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     }
 
     if (pAction->mLocation == 4) {
-        pAction->expandToolbar(pToolBar);
+        pToolBar->addActionButtons(pAction);
         pToolBar->setTitleBarWidget(nullptr);
     }
 
@@ -637,7 +635,6 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     }
 
     pToolBar->setTitleBarWidget(nullptr);
-    pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pAction->mLocation == 4) {
         if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
             qWarning().nospace().noquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
@@ -702,7 +699,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
         return;
     }
 
-    pA->expandToolbar(pTB);
+    pTB->addActionButtons(pA);
     pTB->finalize();
     if (pA->mOrientation == 0) {
         pTB->setHorizontalOrientation();
