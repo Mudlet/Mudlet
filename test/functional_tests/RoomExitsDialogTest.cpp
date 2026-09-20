@@ -213,9 +213,9 @@ private slots:
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory();
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
-        mpHost = hostManager.getHost(mProfileName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
+        mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
     }
@@ -380,14 +380,6 @@ private slots:
         QVERIFY(pDlg->doortype_none_s->isChecked());
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * slot_stub_nw_stateChanged() hands normalStubExitChanged() the north row's
-     * doortype_locked_n where the northwest row's doortype_locked_nw was meant,
-     * so ticking the northwest stub leaves its own "locked door" choice greyed
-     * out and unticking it greys out north's instead. Correcting that one
-     * argument turns both QVERIFYs below green.
-     */
     void theNorthwestStubReachesIntoTheNorthRow()
     {
         buildMap();
@@ -396,13 +388,9 @@ private slots:
         QVERIFY(!pDlg->doortype_locked_nw->isEnabled());
 
         pDlg->stub_nw->setChecked(true);
-
-        QEXPECT_FAIL("", "issue #10421: the northwest stub enables north's locked-door choice instead of its own", Continue);
         QVERIFY(pDlg->doortype_locked_nw->isEnabled());
 
         pDlg->stub_nw->setChecked(false);
-
-        QEXPECT_FAIL("", "issue #10421: clearing the northwest stub disables north's locked-door choice", Continue);
         QVERIFY(pDlg->doortype_locked_n->isEnabled());
     }
 

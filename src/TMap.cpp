@@ -184,6 +184,13 @@ TMap::~TMap()
     }
 }
 
+void TMap::refreshMapperColours()
+{
+    if (mpMapper) {
+        mpMapper->refreshColours();
+    }
+}
+
 void TMap::mapClear()
 {
     mpRoomDB->clearMapDB();

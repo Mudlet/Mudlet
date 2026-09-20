@@ -619,10 +619,21 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
 
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager(this);
+    QPointer<dlgConnectionProfiles> safeThis = this;
 
-    credManager->storePassword(profile, "character", pass, [credManager, profile](bool success, const QString& errorMessage) {
+    credManager->storePassword(profile, "character", pass, [credManager, profile, safeThis](bool success, const QString& errorMessage) {
         if (success) {
             qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
+            // Saving it and keeping it to ourselves are two different things, and the store
+            // reports only the first: without this the user is told the password was saved
+            // while it sits there for every account on the machine to read. Asked of the
+            // manager that did this store, so that the answer is about this password.
+            const QString unprotectedPath = credManager->unprotectedSecretPath();
+
+            if (!unprotectedPath.isEmpty() && safeThis) {
+                //: Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.
+                safeThis->showNotification(tr("The password for '%1' was saved, but other accounts on this computer can still read it.").arg(profile), safeThis->notificationAreaIconLabelWarning);
+            }
         } else {
             qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
         }
@@ -1058,7 +1069,7 @@ void dlgConnectionProfiles::showNotification(const QString& message, QLabel* pIc
 // without that whole selection path, which ignores a repeat of the same profile
 void dlgConnectionProfiles::updateRemoveButtonState(const QString& profile)
 {
-    if (mudlet::self()->getHostManager().getHost(profile)) {
+    if (HostManager::self()->getHost(profile)) {
         remove_profile_button->setEnabled(false);
         remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
         return;
@@ -1334,7 +1345,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     static QString lastProfileClicked;
     static QTime lastClickTime;
 
-    if (profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
+    // a selection the dialog makes for itself has to fill the details even when
+    // it repeats the last one: fillout_form() blanks them first, so debouncing
+    // it would leave them empty with a profile highlighted
+    if (!mProgrammaticProfileSelection && profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
         return;
     }
 
@@ -1485,7 +1499,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     updateRemoveButtonState(profile_name);
 
-    if (mudlet::self()->getHostManager().getHost(profile_name)) {
+    if (HostManager::self()->getHost(profile_name)) {
         connect_button->setEnabled(false);
         offline_button->setEnabled(false);
 
@@ -1619,6 +1633,7 @@ void dlgConnectionProfiles::fillout_form()
     int toselectRow = -1;
     int test_profile_row = -1;
     int predefined_profile_row = -1;
+    int firstOnDiskProfileRow = -1;
     bool firstMudletLaunch = true;
 
     for (int i = 0; i < listWidget_profiles->count(); i++) {
@@ -1626,6 +1641,11 @@ void dlgConnectionProfiles::fillout_form()
         const auto profileName = profile->data(csmNameRole).toString();
         if (profileName == scmSelfTestProfile) {
             test_profile_row = i;
+        }
+        // the self-test entry is the one name mProfileList can hold without a
+        // folder on disk, and it is excluded from the pick below anyway
+        if (firstOnDiskProfileRow == -1 && profileName != scmSelfTestProfile && mProfileList.contains(profileName, Qt::CaseInsensitive)) {
+            firstOnDiskProfileRow = i;
         }
         const auto fileinfo = QFileInfo(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName));
         if (fileinfo.exists()) {
@@ -1664,6 +1684,21 @@ void dlgConnectionProfiles::fillout_form()
             // select the first of THAT/THOSE predefined one(s) on first launch:
             toselectRow = predefined_profile_row;
         }
+    }
+
+    if (toselectRow == -1 && firstOnDiskProfileRow != -1) {
+        // Profiles that were made but never connected carry no dated save for
+        // the loop above to pick the most recent of, and the fallbacks above
+        // only cover the tutorial, a lone row or a dedicated build's own game -
+        // so someone whose profiles are all like that gets here with nothing
+        // picked. QAbstractItemView then makes its own first row current, but
+        // not selected, when the games list takes the keyboard focus, and the
+        // connection details fill themselves in from that row - describing a
+        // game nothing in the list shows as picked, with Connect enabled.
+        // Picking the first listed row that has a profile folder keeps the two
+        // in step. The self-test entry is passed over for the same reason the
+        // lone-row fallback passes over it: it is a testing aid, not a game
+        toselectRow = firstOnDiskProfileRow;
     }
 
     if (toselectRow != -1) {
@@ -2273,7 +2308,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
 
     // Check if the host already exists before calling mudlet::loadProfile()
-    Host* pHostBeforeLoad = mudlet::self()->getHostManager().getHost(profile_name);
+    Host* pHostBeforeLoad = HostManager::self()->getHost(profile_name);
     bool hostExistedBefore = (pHostBeforeLoad != nullptr);
 
     Host* pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());
@@ -2892,7 +2927,11 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                     if (retrievedPassword.isEmpty()) {
                         qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
                     } else {
-                        qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
+                        // The password can come from any stage of CredentialManager's lookup -
+                        // several keychain formats, or the encrypted file - and this callback is
+                        // told only that one of them answered. Each stage logs where it found the
+                        // password, so this line names no source.
+                        qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profile_name;
                     }
                 } else {
                     // Fallback to QSettings only if credential retrieval failed

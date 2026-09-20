@@ -100,11 +100,11 @@ private:
 
     Host* addProfile(const QString& name)
     {
-        auto& hostManager = mudlet::self()->getHostManager();
-        if (!hostManager.addHost(name, qsl("23"), QString(), QString())) {
+        auto* hostManager = HostManager::self();
+        if (!hostManager->addHost(name, qsl("23"), QString(), QString())) {
             return nullptr;
         }
-        return hostManager.getHost(name);
+        return hostManager->getHost(name);
     }
 
     // Runs the event loop until the profile is gone. The close is deferred
@@ -112,7 +112,7 @@ private:
     bool waitForProfileToClose(const QString& name)
     {
         QDeadlineTimer deadline(10s);
-        while (mudlet::self()->getHostManager().getHost(name)) {
+        while (HostManager::self()->getHost(name)) {
             if (deadline.hasExpired()) {
                 return false;
             }

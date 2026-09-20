@@ -594,6 +594,27 @@ end
 
 
 
+--- Answers whether a create...() call left the element the caller asked for in place.
+-- The native creators refuse a parent window they cannot resolve before they ever look at the
+-- element's name, so an element that already exists under that name is no proof that the call
+-- did what was asked - the parent window's own refusal is what tells the two apart. Any other
+-- refusal on a parent window that does resolve is the "call it again to move or resize it"
+-- idiom, which is not worth a word.
+-- @param windowName the parent window name given to the creator
+-- @param name the element's name
+-- @param ok the creator's first return value
+-- @param err the creator's second return value
+function mudlet.elementCreated(windowName, name, ok, err)
+  if ok then
+    return true
+  end
+  if err == string.format("window '%s' not found", windowName) then
+    return false
+  end
+  return windowType(name) ~= nil
+end
+
+
 --- Make a new console window with ease. The default background is black and text color white.
 --- If you wish to change the color you can easily do this when updating your text or manually somewhere, using
 --- setFgColor() and setBackgroundColor().
@@ -621,7 +642,11 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
   assert(type(numberOfLines) == 'number', 'createConsole: invalid type for numberOfLines (expected number, got '..type(numberOfLines)..'!)')
   assert(type(Xpos) == 'number', 'createConsole: invalid type for Xpos (expected number, got '..type(Xpos)..'!)')
   assert(type(Ypos) == 'number', 'createConsole: invalid type for Ypos (expected number, got '..type(Ypos)..'!)')
-  createMiniConsole(windowName, consoleName, 0, 0, 1, 1)
+  local ok, err = createMiniConsole(windowName, consoleName, 0, 0, 1, 1)
+  if not mudlet.elementCreated(windowName, consoleName, ok, err) then
+    printError(string.format("createConsole: '%s' was not created: %s", consoleName, err or "unknown error"), false, false)
+    return false, err
+  end
   setMiniConsoleFontSize(consoleName, fontSize)
   local x, y = calcFontSize( fontSize )
   resizeWindow(consoleName, x * charsPerLine, y * numberOfLines)
@@ -630,6 +655,7 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
 
   setBackgroundColor(consoleName, 0, 0, 0, 0)
   setFgColor(consoleName, 255, 255, 255)
+  return true
 end
 
 

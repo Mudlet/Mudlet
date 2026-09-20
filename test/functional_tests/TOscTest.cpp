@@ -220,6 +220,12 @@ private slots:
             "MudletInstanceCoordinator"));
     mudlet::self()->init();
     mudlet::self()->setStorePasswordsSecurely(false);
+    // A config dir of this test's own reads as a brand new installation, so the
+    // first-run interface tour would open over the profile a second after it
+    // loads and take the window's keyboard with it - the link navigation keys
+    // below would reach the tour rather than the console.
+    mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
+    mudlet::getQSettings()->sync();
 
     const QString path =
         MudletPaths::getMudletPath(enums::profileHomePath, mHostname);

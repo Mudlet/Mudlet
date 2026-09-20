@@ -25,7 +25,6 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
@@ -34,12 +33,12 @@
 #include "THyperlinkSelectionManager.h"
 #include "TPrintSink.h"
 #include "TStringUtils.h"
-#include "TTextEdit.h"
 #include "UntrustedText.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
+#include "mudlet.h"
 
 #include <QDateTime>
 #include <QJsonArray>
@@ -53,14 +52,109 @@
 #include <QTimer>
 #include <QUrlQuery>
 
+#include <QScopeGuard>
+
 #include <algorithm>
 #include <iterator>
 #include <utility>
 #include <chrono>
 
+// for system physical memory info
+#if defined(Q_OS_WINDOWS)
+#include <Windows.h>
+#elif defined(Q_OS_MACOS)
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_OPENBSD)
+// OpenBSD doesn't have a sysinfo.h
+#include <sys/sysctl.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
+#else
+// Any other OS?
+#endif
+
 using namespace std::chrono_literals;
 
 namespace {
+
+// credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
+int64_t physicalMemoryTotal()
+{
+#if defined(Q_OS_WINDOWS)
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    return static_cast<int64_t>(memInfo.ullTotalPhys);
+#elif defined(Q_OS_HURD)
+    // GNU/Hurd does not have a sysinfo struct  yet:
+    errno = 0;
+    int64_t pageSize = sysconf(_SC_PAGESIZE);
+    if (pageSize < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PAGESIZE).";
+        }
+        return -1;
+    }
+    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
+    if (pageCount < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PHYS_PAGES).";
+        }
+        return -1;
+    }
+    return pageSize * pageCount;
+#elif defined(Q_OS_MACOS)
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
+        return memInfo;
+    }
+
+    return -1;
+#elif defined(Q_OS_OPENBSD)
+    // Very similar to MacOS but uses a different second level name
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_PHYSMEM64; // Or do we really want HW_USERMEM64?
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
+        return memInfo;
+    }
+
+    return -1;
+#elif defined(Q_OS_UNIX)
+    // Including both GNU/Linux and FreeBSD:
+    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
+    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
+    struct sysinfo memInfo;
+    sysinfo(&memInfo);
+    int64_t const total = memInfo.totalram;
+    return total * static_cast<int64_t>(memInfo.mem_unit);
+#else
+    return -1;
+#endif
+}
 
 // Every line appended to a buffer is stamped with the time it arrived, and
 // QTime::currentTime() consults the timezone database on each call - which on
@@ -647,11 +741,11 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
 // naive calculation to get a reasonable limit for a maximum buffer size
 int TBuffer::getMaxBufferSize()
 {
-    const int64_t physicalMemoryTotal = mudlet::self()->getPhysicalMemoryTotal();
+    const int64_t memoryTotal = physicalMemoryTotal();
     // Mudlet is 32bit mainly on Windows, see where the practical limit for a process 2GB:
     // https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-and-address-space-limits
     // 64bit: set to 80% of what is available to us, swap not included
-    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (physicalMemoryTotal * 0.80);
+    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (memoryTotal * 0.80);
     auto maxLines = (maxProcessMemoryBytes / TCHAR_IN_BYTES) / mpHost->mWrapAt;
     // now we've calculated how many lines can we fit in 80% of memory, ignoring memory use for other things like triggers/aliases, Lua scripts, etc
     // so shave that down by 20%
@@ -869,6 +963,16 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
+    // How much text this call has to get through, so the trigger engine can tell
+    // a flood from a line trickling in - see TriggerUnit::processDataStream().
+    // Restored rather than cleared on the way out because a nested feed re-enters
+    // here and the outer chunk is still being decoded.
+    const int previousPendingLines = mPendingChunkLines;
+    mPendingChunkLines = static_cast<int>(std::count(incoming.cbegin(), incoming.cend(), '\n'));
+    const auto pendingLinesGuard = qScopeGuard([this, previousPendingLines] {
+        mPendingChunkLines = previousPendingLines;
+    });
+
     // What can appear anywhere in a CSI Parameter String (Ps): ECMA-48 5.4
     // puts every byte of one in the range 0x30 to 0x3F, so '<', '=', '>' and
     // '?' do not end the parameter string when they turn up after the first
@@ -1020,6 +1124,25 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 ++localBufferPosition;
                 continue;
             }
+        }
+
+        if ((mGotESC || mGotEscCharset) && localBufferPosition >= localBufferDecodableLength) {
+            // Part way through an escape sequence and the only byte left is
+            // Mudlet's own flush marker rather than the game's next one
+            // (decodableLength()): the loop head has already returned for a
+            // chunk with nothing left in it, so this position can only be that
+            // marker. Tested against it an escape names no sequence and is
+            // dropped as a stray one, and a character set designation is
+            // abandoned - either way the rest of the sequence arrives with its
+            // opening gone and prints as text: the colour code the game asked
+            // for, the payload of an OSC or a string sequence, or the byte that
+            // would have named the set. Leave the latch set for the chunk that
+            // carries the rest, and commit the line the marker came to flush.
+            // The CSI scan below commits the same way, but has to test for the
+            // marker first because it is also reached when a chunk merely ran
+            // out part way through a sequence, which this cannot be:
+            commitLine(CHAR_CARRIAGE_RETURN, localBufferPosition, isFromServer, false);
+            return;
         }
 
         if (mGotEscCharset) {
@@ -1962,6 +2085,26 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             promptBuffer.back() = true;
         } else {
             promptBuffer.back() = false;
+        }
+    }
+    // commitLineData() is the one point every line the main console takes from
+    // the game passes through; TConsole::print() only ever sees what the client
+    // itself writes. Copying here, before runTriggers(), keeps --mirror's stream
+    // in arrival order - a line is copied when it arrives, so whatever a script
+    // writes to a console in response is copied after it. The cost is fidelity:
+    // a line a trigger then gags with deleteLine(), or rewrites, is still copied
+    // as the game sent it. Copying next to the log() call below would make the
+    // opposite trade, and would copy the wrapped fragments wrapLine() leaves
+    // behind rather than the line the game sent.
+    if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
+        if (Q_LIKELY(!mpConsole.isNull())) {
+            mpConsole->mirrorLineToStdOut(line);
+        } else {
+            static bool mirrorWithoutConsoleReported = false;
+            if (!mirrorWithoutConsoleReported) {
+                mirrorWithoutConsoleReported = true;
+                qWarning() << "--mirror: a buffer with no console of its own is committing lines, which cannot be copied to standard output";
+            }
         }
     }
     const int lineIndex = lineBuffer.size() - 1;
@@ -5667,8 +5810,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     materialisePreTriggerPassLine(startLine);
 
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
-    const int indent = (indentSize < maxWidth) ? indentSize : 0;
-    const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+    // a negative indent needs discarding too: the insert() applying it below
+    // takes an unsigned count, so it would ask for a huge allocation
+    const int indent = (indentSize > 0 && indentSize < maxWidth) ? indentSize : 0;
+    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
     const int total = static_cast<int>(buffer.size());
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
@@ -8566,12 +8711,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     qDebug() << "[OSC] Character search completed for link" << linkIndex << "- Total characters searched:" << totalCharacters << "- Matching characters found:" << matchingCharacters;
 #endif
 
-    // Refresh the display to show the updated character styling
-    // Use updateScreenView and repaint for immediate Qt rendering
     if (mpConsole) {
-        mpConsole->mUpperPane->updateScreenView();
-        mpConsole->mUpperPane->repaint();
-        mpConsole->mLowerPane->updateScreenView();
-        mpConsole->mLowerPane->repaint();
+        mpConsole->repaintPanes();
     }
 }
