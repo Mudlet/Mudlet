@@ -318,7 +318,7 @@ public:
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
     void replayOver();
-    bool replayStart();
+    bool replayStart(Host*);
     std::pair<bool, QString> resetProfileIcon(const QString&);
 #if defined(Q_OS_WINDOWS)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
@@ -549,9 +549,10 @@ public slots:
     void slot_activateMainWindowProfile();
     void slot_activateDetachedWindowProfile();
     void slot_replay();
+    void slot_replayPauseToggled(const bool);
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
-    void slot_replayTimeChanged();
+    void slot_replayStop();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
     void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
     void slot_showAboutDialog();
@@ -676,6 +677,7 @@ private:
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     void setupTrayIcon();
     void reshowRequiredMainConsoles();
+    void updateReplayTimeLabel();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
     static void showEditorRestoringWindowState(QWidget* editor);
@@ -764,8 +766,10 @@ private:
     QPointer<QAction> mpActionPackageManager;
     QPointer<QAction> mpActionReconnect;
     QPointer<QAction> mpActionReplay;
+    QPointer<QAction> mpActionReplayPause;
     QPointer<QAction> mpActionReplaySpeedDown;
     QPointer<QAction> mpActionReplaySpeedUp;
+    QPointer<QAction> mpActionReplayStop;
     QPointer<QAction> mpActionReplayTime;
     QPointer<QAction> mpActionReportIssue;
     QPointer<QAction> mpActionScripts;
@@ -846,6 +850,11 @@ private:
     QPointer<QShortcut> mpShortcutPreviousProfile;
     std::array<QPointer<QShortcut>, 9> mpShortcutsSwitchToProfile;
     QPointer<QTimer> mpTimerReplay;
+    // The profile playing the replay the toolbar is showing. Only one replay
+    // runs at a time, but it need not belong to the profile in front - so the
+    // toolbar's buttons have to reach the profile that started it rather than
+    // whichever one is active when they are pressed.
+    QPointer<Host> mpReplayingHost;
     QPointer<QTimer> mpBlinkTimer;
     QElapsedTimer mBlinkElapsedTimer;
     qreal mBlinkTimeMs = 0.0;
