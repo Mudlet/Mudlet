@@ -2786,19 +2786,21 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     bool isFontBigEnoughToShowRoomVnum = false;
     if (mShowRoomID) {
-        /*
-         * If we are to show the room Id numbers - find out the number of digits
-         * that we will need to use; actually, knowing the digit count is also
-         * useful for the room selection widget so perform this check EVERY time.
-         * TODO: Eventually move this check to the TArea class and just redo it
-         * when areas' room content changes.
-         */
-        int maxUsedRoomId = 0;
-        QSetIterator<int> itRoomId(pDrawnArea->getAreaRooms());
-        while (itRoomId.hasNext()) {
-            maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
+        // Find out the number of digits the biggest room Id number in the area
+        // needs; also useful for the room selection widget. Rescanning every
+        // room here on every single paint made a large area's room-ID display
+        // cost more than everything else in the frame put together, so this is
+        // only redone when the area or its room membership has actually moved
+        // on since the value was last cached.
+        if (mCachedRoomIdDigitsVersion != pDrawnArea->getRoomsVersion()) {
+            int maxUsedRoomId = 0;
+            QSetIterator<int> itRoomId(pDrawnArea->getAreaRooms());
+            while (itRoomId.hasNext()) {
+                maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
+            }
+            mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
+            mCachedRoomIdDigitsVersion = pDrawnArea->getRoomsVersion();
         }
-        mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
 
         QRectF roomTestRect;
         if (pDrawnArea->gridMode) {
@@ -3887,14 +3889,13 @@ void T2DMap::paintRoomExits(QPainter& painter,
                     }
                 }
                 if (!oneWayToDestination) {
-                    // Two way exit
+                    // Two way exit. drawLine() does not itself touch any
+                    // painter state, so there is nothing here for save()
+                    // /restore() to protect - removed along with the QPen
+                    // copy that was never installed via setPen() and so
+                    // never actually took effect.
                     const QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    painter.save();
-                    QPen exitPen = painter.pen();
-                    // We need the line not to extend past the actual end point:
-                    exitPen.setCapStyle(Qt::FlatCap);
                     painter.drawLine(l0);
-                    painter.restore();
                 } else {
                     // one way non-area exit - draw arrow
                     QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
