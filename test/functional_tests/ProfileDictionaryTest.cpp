@@ -42,6 +42,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 
 #include <QtTest/QtTest>
@@ -72,11 +73,11 @@ private:
     const QString mQuietProfile = qsl("dictionary quiet");
     const QString mAffixProfile = qsl("dictionary affix");
 
-    QString dictionaryPath(const QString& profileName) const { return mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.dic")); }
+    QString dictionaryPath(const QString& profileName) const { return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.dic")); }
 
-    QString affixPath(const QString& profileName) const { return mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.aff")); }
+    QString affixPath(const QString& profileName) const { return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.aff")); }
 
-    void makeProfileFolder(const QString& name) const { QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileDataItemPath, name, QString()))); }
+    void makeProfileFolder(const QString& name) const { QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileDataItemPath, name, QString()))); }
 
     void writeDictionary(const QString& profileName, const QString& contents) const
     {
@@ -120,7 +121,7 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         // never touch the user's real profiles:
-        QVERIFY(mudlet::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
 
@@ -221,7 +222,7 @@ private slots:
         QLoggingCategory::setFilterRules(qsl("default.debug=true"));
         QtMessageHandler previousHandler = qInstallMessageHandler(captureMessage);
         handle = mudlet::self()->prepareProfileDictionary(mQuietProfile, wordSet);
-        const bool saved = mudlet::self()->saveDictionary(mudlet::getMudletPath(enums::profileDataItemPath, mQuietProfile, qsl("profile")), wordSet);
+        const bool saved = mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mQuietProfile, qsl("profile")), wordSet);
         qInstallMessageHandler(previousHandler);
         QLoggingCategory::setFilterRules(QString());
 
