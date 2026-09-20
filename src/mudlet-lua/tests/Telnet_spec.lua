@@ -1609,3 +1609,57 @@ describe("MXP auto-detection from the mode switch escape", function()
     assert.is_false(getConfig("promptForMXPProcessorOn"))
   end)
 end)
+
+-- cTelnet already withholds this event for the password it sends itself: the
+-- auto-login call passes permitDataSendRequestEvent false where the one for the
+-- character name does not. What it does not withhold is the password the player
+-- types at the game's own prompt, which goes through Host::send() and reaches
+-- every handler in cleartext. Masking does not help - it is painted over the
+-- widget, not applied to what is sent.
+describe("Tests what sysDataSendRequest carries at a server password prompt", function()
+  -- Password mode cannot be turned on from Lua; the server takes the ECHO option,
+  -- so the real parser has to be fed. cTelnet stops answering ECHO after five
+  -- negotiations less than five seconds apart, and a prompt costs two, so this
+  -- block opens exactly one - see CommandLine_spec.lua, which spends four of them.
+  local echoActive = false
+  local function serverEcho(takesEcho)
+    local ok, msg = feedTelnet(takesEcho and "<T_IAC><T_WILL><O_ECHO>" or "<T_IAC><T_WONT><O_ECHO>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    echoActive = takesEcho
+  end
+
+  after_each(function()
+    -- The suppression is process wide, so a prompt left open by a failed
+    -- assertion would follow every later spec file.
+    if echoActive then
+      serverEcho(false)
+    end
+  end)
+
+  it("does not hand the password to a sysDataSendRequest handler", function()
+    local seen = {}
+    local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, data)
+      seen[#seen + 1] = data
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    -- The control: with no prompt open the event still carries what was sent, so
+    -- a pass below cannot come from the handler never firing at all.
+    send("specOrdinaryCommandBeforeThePrompt", false)
+    assert.is_true(table.contains(seen, "specOrdinaryCommandBeforeThePrompt"),
+                   "an ordinary command should still raise sysDataSendRequest")
+
+    serverEcho(true)
+    send("specPasswordAtThePrompt", false)
+    serverEcho(false)
+
+    assert.is_false(table.contains(seen, "specPasswordAtThePrompt"),
+                    "the password typed at the game's prompt was handed to a sysDataSendRequest handler")
+
+    -- And the event comes back once the prompt is over, so the guard is scoped to
+    -- the prompt rather than latching off for the rest of the session.
+    send("specOrdinaryCommandAfterThePrompt", false)
+    assert.is_true(table.contains(seen, "specOrdinaryCommandAfterThePrompt"),
+                   "sysDataSendRequest stopped firing after the password prompt ended")
+  end)
+end)
