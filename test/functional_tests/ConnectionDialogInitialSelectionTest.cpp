@@ -41,7 +41,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <chrono>
-#include <filesystem>
+#include <filesystem> // NOLINT(build/c++17) - Qt cannot set the time of a directory, see dateSaveHoursAgo() below
 #include <system_error>
 
 #include "GroupedTest.h"
