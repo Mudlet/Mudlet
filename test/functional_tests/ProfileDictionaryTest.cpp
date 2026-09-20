@@ -19,14 +19,23 @@
 
 /*
  * Guards the word count Mudlet writes on the first line of a profile's
- * ".dic" file. hunspell refuses to load a dictionary that declares no words -
- * 1.7.3 reports "missing or bad word count" where 1.7.2 accepted it - and
- * Hunspell_create() returns a non-null handle either way, so checking the
- * handle alone does not detect the dictionary-loading failure.
+ * ".dic" file. hunspell has refused to load a dictionary that declares no
+ * words since 1.3.4 - the "missing or bad word count" guard is unchanged
+ * between 1.7.2 and 1.7.3 - so the failure is neither new nor confined to one
+ * release. 1.7.3 only made it audible, by emitting that message with fprintf
+ * where earlier releases used HUNSPELL_WARNING, which compiles away unless
+ * HUNSPELL_WARNING_ON is defined.
  *
- * The assertions are on the file rather than on hunspell's behaviour: a test
- * that only checked whether the dictionary loaded would pass on a 1.7.2 build
- * whether or not the bug was present.
+ * The assertions are on the file rather than on hunspell's behaviour because
+ * for an empty dictionary there is no behaviour to assert on: one that failed
+ * to load and one that loaded with no words answer spell(), add() and
+ * suggest() identically. The handle says nothing either - Hunspell_create()
+ * is a new expression behind a cast, so it is non-null on every version and
+ * for every outcome. The header is the only place the difference shows.
+ *
+ * The handle is still checked, but only for what it can actually prove:
+ * prepareProfileDictionary() returns nullptr when Mudlet itself gives up
+ * before reaching hunspell.
  *
  * Run with: ctest -R ProfileDictionaryTest -V
  */
@@ -37,7 +46,16 @@
 
 #include <QtTest/QtTest>
 
+#include <algorithm>
+
 #include "GroupedTest.h"
+
+static QStringList sCapturedMessages;
+
+static void captureMessage(QtMsgType, const QMessageLogContext&, const QString& message)
+{
+    sCapturedMessages << message;
+}
 
 class ProfileDictionaryTest : public QObject
 {
@@ -48,11 +66,24 @@ private:
     QByteArray mSavedXdg;
 
     const QString mEmptyProfile = qsl("dictionary empty");
+    const QString mSingleWordProfile = qsl("dictionary single");
     const QString mStockedProfile = qsl("dictionary stocked");
+    const QString mZeroCountProfile = qsl("dictionary zero");
+    const QString mQuietProfile = qsl("dictionary quiet");
+    const QString mAffixProfile = qsl("dictionary affix");
 
     QString dictionaryPath(const QString& profileName) const { return mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.dic")); }
 
+    QString affixPath(const QString& profileName) const { return mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.aff")); }
+
     void makeProfileFolder(const QString& name) const { QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileDataItemPath, name, QString()))); }
+
+    void writeDictionary(const QString& profileName, const QString& contents) const
+    {
+        QFile dict(dictionaryPath(profileName));
+        QVERIFY(dict.open(QFile::WriteOnly | QFile::Text));
+        QCOMPARE(dict.write(contents.toUtf8()), contents.toUtf8().size());
+    }
 
     // The count hunspell reads, and the words that follow it:
     QStringList dictionaryLines(const QString& profileName) const
@@ -62,6 +93,16 @@ private:
             return {};
         }
         return QString::fromUtf8(dict.readAll()).split(QChar::LineFeed, Qt::SkipEmptyParts);
+    }
+
+    // The directives hunspell parses, in the order they are written:
+    QStringList affixLines(const QString& profileName) const
+    {
+        QFile aff(affixPath(profileName));
+        if (!aff.open(QFile::ReadOnly | QFile::Text)) {
+            return {};
+        }
+        return QString::fromUtf8(aff.readAll()).split(QChar::LineFeed, Qt::SkipEmptyParts);
     }
 
 private slots:
@@ -84,7 +125,11 @@ private slots:
         mudlet::self()->init();
 
         makeProfileFolder(mEmptyProfile);
+        makeProfileFolder(mSingleWordProfile);
         makeProfileFolder(mStockedProfile);
+        makeProfileFolder(mZeroCountProfile);
+        makeProfileFolder(mQuietProfile);
+        makeProfileFolder(mAffixProfile);
     }
 
     void cleanupTestCase()
@@ -100,7 +145,7 @@ private slots:
     {
         QSet<QString> wordSet;
         Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mEmptyProfile, wordSet);
-        QVERIFY2(handle, "no dictionary was prepared for a new profile");
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 
         QVERIFY(wordSet.isEmpty());
@@ -115,25 +160,113 @@ private slots:
     }
 
     // The padding for the empty case must not inflate a real word count, which
-    // hunspell uses to size its hash table:
+    // hunspell uses to size its hash table. A single word is the boundary that
+    // shows it: a two word dictionary is written as "2" by an exact count and
+    // by a qMax(2, ...) padding alike, so it cannot tell them apart.
     void test_storedWordsAreCountedExactly()
     {
-        QFile dict(dictionaryPath(mStockedProfile));
-        QVERIFY(dict.open(QFile::WriteOnly | QFile::Text));
-        dict.write(QString(qsl("2\nbrandish\nquaff\n")).toUtf8());
-        dict.close();
+        writeDictionary(mSingleWordProfile, qsl("1\nbrandish\n"));
 
         QSet<QString> wordSet;
-        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mStockedProfile, wordSet);
-        QVERIFY2(handle, "no dictionary was prepared for a profile with stored words");
+        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mSingleWordProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+
+        QCOMPARE(wordSet, QSet<QString>({qsl("brandish")}));
+        QCOMPARE(dictionaryLines(mSingleWordProfile), QStringList({qsl("1"), qsl("brandish")}));
+
+        writeDictionary(mStockedProfile, qsl("2\nbrandish\nquaff\n"));
+
+        handle = mudlet::self()->prepareProfileDictionary(mStockedProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 
         QCOMPARE(wordSet, QSet<QString>({qsl("brandish"), qsl("quaff")}));
+        QCOMPARE(dictionaryLines(mStockedProfile), QStringList({qsl("2"), qsl("brandish"), qsl("quaff")}));
+    }
 
-        const QStringList lines = dictionaryLines(mStockedProfile);
-        QCOMPARE(lines.size(), 3);
-        QCOMPARE(lines.first(), qsl("2"));
-        QCOMPARE(lines.mid(1), QStringList({qsl("brandish"), qsl("quaff")}));
+    // Every profile that has already hit this bug has a "0" on disk, so the
+    // repair on load is the path that matters to them. A fix that only got the
+    // creation path right would leave those dictionaries unloadable and still
+    // pass every other test here:
+    void test_existingZeroCountIsRepairedOnLoad()
+    {
+        writeDictionary(mZeroCountProfile, qsl("0\n"));
+
+        QSet<QString> wordSet;
+        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mZeroCountProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+
+        QVERIFY(wordSet.isEmpty());
+        // Repaired, and without a placeholder word being invented to justify it:
+        QCOMPARE(dictionaryLines(mZeroCountProfile), QStringList({qsl("1")}));
+    }
+
+    // The padded count is a floor for hunspell, not a claim about how many
+    // words are stored, so neither reader may report the padding as a word the
+    // user has since removed:
+    void test_emptyDictionaryReportsNoWordsLost()
+    {
+        QSet<QString> wordSet;
+        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mQuietProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+        QCOMPARE(dictionaryLines(mQuietProfile), QStringList({qsl("1")}));
+
+        // Only the second pass sees the padded count written by the first:
+        sCapturedMessages.clear();
+        // The diagnostics are qDebug() lines, which some distributions - Fedora
+        // among them - turn off by default in their shipped qtlogging.ini:
+        QLoggingCategory::setFilterRules(qsl("default.debug=true"));
+        QtMessageHandler previousHandler = qInstallMessageHandler(captureMessage);
+        handle = mudlet::self()->prepareProfileDictionary(mQuietProfile, wordSet);
+        const bool saved = mudlet::self()->saveDictionary(mudlet::getMudletPath(enums::profileDataItemPath, mQuietProfile, qsl("profile")), wordSet);
+        qInstallMessageHandler(previousHandler);
+        QLoggingCategory::setFilterRules(QString());
+
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+        QVERIFY(saved);
+
+        // The diagnostics under test are qDebug() lines: capturing nothing at
+        // all would pass this test without exercising anything:
+        QVERIFY2(!sCapturedMessages.isEmpty(), "no dictionary diagnostics were captured");
+
+        for (const QString& message : sCapturedMessages) {
+            QVERIFY2(!message.contains(qsl("fewer words")), qPrintable(qsl("an unchanged empty dictionary reported lost words: '%1'").arg(message)));
+            QVERIFY2(!message.contains(qsl("Previously, there were")), qPrintable(qsl("an unchanged empty dictionary reported a differing stored count: '%1'").arg(message)));
+        }
+    }
+
+    // The ".dic" half is only one of the pair. hunspell rejects the whole affix
+    // file if TRY is written with nothing after it, so an empty profile - which
+    // has no graphemes to offer - must not carry the line at all, or every load
+    // prints "Failure loading aff file" no matter how sound the ".dic" is:
+    void test_affixFileOmitsAnEmptyTryLine()
+    {
+        QSet<QString> wordSet;
+        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mAffixProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+
+        QCOMPARE(affixLines(mAffixProfile), QStringList({qsl("SET UTF-8")}));
+
+        // ...and it comes back as soon as there is something to try:
+        writeDictionary(mAffixProfile, qsl("1\nbrandish\n"));
+        handle = mudlet::self()->prepareProfileDictionary(mAffixProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+
+        const QStringList lines = affixLines(mAffixProfile);
+        QCOMPARE(lines.size(), 2);
+        QCOMPARE(lines.first(), qsl("SET UTF-8"));
+        QVERIFY2(lines.at(1).startsWith(qsl("TRY ")), qPrintable(qsl("no TRY line for a stocked dictionary: '%1'").arg(lines.at(1))));
+        // The graphemes are ordered by frequency, which ties for these, so
+        // compare the set of them rather than the order:
+        QString graphemes = lines.at(1).mid(4);
+        std::sort(graphemes.begin(), graphemes.end());
+        QCOMPARE(graphemes, qsl("abdhinrs"));
     }
 };
 
