@@ -5101,8 +5101,8 @@ end)
 -- top-level block kept at the tail of the file; do not interleave it with the
 -- blocks above.
 describe("Widget state getters", function()
-  -- user windows and the map widget cannot be deleted from Lua, only hidden,
-  -- so keep the names unique per run
+  -- user windows cannot be deleted from Lua, only hidden, so keep the names
+  -- unique per run
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local function name(base)
     return base .. suffix
