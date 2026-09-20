@@ -29,15 +29,15 @@
 
 #include "TBuffer.h"
 #include "TConsoleModel.h"
+#include "TDebug.h"
 #include "TPrintSink.h"
+#include "enums.h"
 
-#include <QDataStream>
 #include <QElapsedTimer>
 #include <QFont>
 #include <QIcon>
 #include <QPixmap>
 #include <QPointer>
-#include <QSaveFile>
 #include <QWidget>
 
 #include <hunspell/hunspell.h>
@@ -160,9 +160,9 @@ class TSplitter;
 class dlgNotepad;
 
 
-// TPrintSink is the write-only face core code redirects output to; QWidget
-// stays first so moc sees the QObject base it needs.
-class TConsole : public QWidget, public TPrintSink
+// TPrintSink and TDebug::Sink are the write-only faces core code redirects
+// output to; QWidget stays first so moc sees the QObject base it needs.
+class TConsole : public QWidget, public TPrintSink, public TDebug::Sink
 {
     Q_OBJECT
 
@@ -177,13 +177,6 @@ public:
         Buffer = 0x20              // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
-
-    enum SearchOption {
-        // Unset:
-        SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1
-    };
-    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -207,7 +200,6 @@ public:
     void clear();
     void appendBuffer();
     void appendBuffer(const TBuffer&);
-    int getButtonState();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void pasteWindow(const TBuffer&);
@@ -279,7 +271,19 @@ public:
     // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
     // until its right-click menu asks for it:
     void showSearchBar();
+    // Copies text a caller is putting on this console to standard output for
+    // --mirror, one line per line shown, each prefixed with the profile and
+    // console names. Does nothing unless --mirror was given. The text is a
+    // fragment of a line as often as it is whole lines, so a line is written
+    // out once a line feed has ended it and what is left over is held until
+    // one does.
+    void mirrorToStdOut(const QString& text);
+    // The same for a line that is already complete: TBuffer::commitLineData()
+    // calls this with a line as the game sent it, before a trigger can gag or
+    // rewrite it.
+    void mirrorLineToStdOut(const QString& line);
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
     void discardAll() override;
     void discardLastLine() override;
     void printSystemMessage(const QString& msg);
@@ -321,6 +325,9 @@ public:
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
+    // For a MainConsole put away by a tab switch, which no resize event reaches:
+    // works out the size it will come back to and has NAWS report it
+    void syncHiddenScreenDimensions();
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
     // In the next function the first element in the return is an
@@ -330,9 +337,11 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
-    void setSearchOptions(const SearchOptions);
+    void setSearchOptions(const enums::BufferSearchOptions);
     void setF3SearchEnabled(const bool enabled);
     void setProxyForFocus(TCommandLine*);
+    void setCompactInputLine(const bool state);
+    void repaintPanes() const;
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
     // Raises an event if the number of lines (in the
     // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
@@ -361,13 +370,13 @@ public:
     // the console itself:
     QPointer<QWidget> mpFindBar;
 
-    // The buffer, cursor/prompt state and fg/bg colours live in a core
-    // TConsoleModel reached through model(). For the main console that model is
-    // co-owned with Host (which drives the trigger pipeline through it - see
-    // Host::runTriggers); sub-consoles own theirs. The members below are
-    // references aliasing the model, so the existing buffer/mFgColor/...
-    // accesses across the codebase are unchanged - which is why the model has
-    // to stay declared ahead of every one of them.
+    // The buffer, cursor/prompt state, selection, current format and fg/bg
+    // colours live in a core TConsoleModel reached through model(). For the
+    // main console that model is co-owned with Host (which drives the trigger
+    // pipeline through it - see Host::runTriggers); sub-consoles own theirs.
+    // The members below are references aliasing the model, so the existing
+    // buffer/mFgColor/... accesses across the codebase are unchanged - which is
+    // why the model has to stay declared ahead of every one of them.
     std::shared_ptr<TConsoleModel> mpModel;
     TBuffer& buffer;
     static const QString cmLuaLineVariable;
@@ -389,10 +398,12 @@ public:
     QColor mSystemMessageBgColor = QColorConstants::Black;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
-    //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
-    int mButtonState = 1;
+    int& mButtonState;
 
     QString mConsoleName;
+    // What --mirror has been handed for the line this console is building, and
+    // has not written out yet because no line feed has ended it
+    QString mMirrorPendingLine;
     QString& mCurrentLine;
     int& mEngineCursor;
 
@@ -402,7 +413,7 @@ public:
     int mOldX = 0;
     int mOldY = 0;
 
-    TChar mFormatCurrent;
+    TChar& mFormatCurrent;
     QString mFormatSequenceRest;
 
     QWidget* mpBaseVFrame = nullptr;
@@ -420,17 +431,14 @@ public:
     QScrollBar* mpHScrollBar = nullptr;
 
     QElapsedTimer mProcessingTimer;
-    bool mRecordReplay = false;
-    QSaveFile mReplayFile;
-    QDataStream mReplayStream;
 
     bool mTriggerEngineMode = false;
 
     QPoint& mUserCursor;
     int mWrapAt = 100;
     QLineEdit* mpLineEdit_networkLatency = nullptr;
-    QPoint P_begin;
-    QPoint P_end;
+    QPoint& P_begin;
+    QPoint& P_end;
     QString mProfileName;
     TSplitter* splitter = nullptr;
     bool& mIsPromptLine;
@@ -494,9 +502,15 @@ private slots:
 private:
     void createFindBar();
     void positionFindBar();
+    // MainConsole only - they take off the profile's own main window borders.
+    // The height is -1 when it cannot be known.
+    int upperPaneWidthFor(const int containerWidth) const;
+    int upperPaneHeightFor(const int containerHeight) const;
+    void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
+    void updateScrollBarStyle();
 
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
@@ -505,7 +519,7 @@ private:
     // getMainWindowSize() falls back to while the console is hidden or too small
     // to measure cannot be a size the window never had
     mutable QSize mLastMeasuredSize;
-    SearchOptions mSearchOptions = SearchOptionNone;
+    enums::BufferSearchOptions mSearchOptions = enums::BufferSearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
     bool mScrollingEnabled = true;

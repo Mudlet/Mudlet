@@ -150,6 +150,11 @@ bool CustomLineEditHandler::handleMousePress(T2DMap::MapInteractionContext& cont
 
                 if (mMapWidget.mCustomLineSelectedRoom != 0) {
                     if (std::fabs(mx - newX) <= 0.25F && std::fabs(my - newY) <= 0.25F) {
+                        // The point may belong to a different line than the
+                        // one selected so far, and it is that line's point
+                        // the user has hold of.
+                        mMapWidget.mCustomLineSelectedRoom = room->getId();
+                        mMapWidget.mCustomLineSelectedExit = lineIterator.key();
                         mMapWidget.mCustomLineSelectedPoint = pointIndex;
                         return true;
                     }

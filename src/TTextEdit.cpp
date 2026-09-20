@@ -61,6 +61,7 @@
 #include <QStringRef>
 #include <QTextBoundaryFinder>
 #include <QLabel>
+#include <QLineEdit>
 #include <QToolTip>
 #include <QWidgetAction>
 #include <QVersionNumber>
@@ -364,7 +365,10 @@ void TTextEdit::updateScreenView()
     // revealed columns/rows unpainted - e.g. growing the pane horizontally
     // after it has been shrunk. Force a full repaint so the whole pane is
     // re-rendered and the cache is rebuilt at the new size.
-    if (mScreenWidth != oldScreenWidth || mScreenHeight != oldScreenHeight) {
+    // Growing reveals cells and any change of height shifts every row, but
+    // losing columns does neither: wrapping happens on insert, so the cache
+    // still holds every column that is left.
+    if (mScreenWidth > oldScreenWidth || mScreenHeight != oldScreenHeight) {
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
@@ -1257,10 +1261,18 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     int lineOffset = imageTopLine();
     int from = 0;
+
+    // A scroll moves every row, so the region handed to us is a floor and not a
+    // ceiling: taken as a ceiling it redraws only the rows named in it, leaving
+    // the rows the scroll exposed still showing pre-scroll ink.
+    const bool scrolledSinceLastPaint = (lineOffset != mLastRenderedOffset);
+    if (scrolledSinceLastPaint) {
+        y_bottom = mScreenHeight;
+    }
+
     if (lineOffset == 0) {
         mScrollVector = 0;
     } else {
-        // Was: mScrollVector = lineOffset - mLastRenderedOffset;
         if (mLastRenderedOffset) {
             mScrollVector = lineOffset - mLastRenderedOffset;
         } else {
@@ -1274,7 +1286,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
-    if ((r.height() < rect().height()) && (lineOffset > 0) && (mScreenMap.width() >= surfaceSize.width()) && (mScreenMap.height() >= surfaceSize.height())) {
+    if (!scrolledSinceLastPaint && (r.height() < rect().height()) && (lineOffset > 0) && (mScreenMap.width() >= surfaceSize.width()) && (mScreenMap.height() >= surfaceSize.height())) {
         p.drawPixmap(0, 0, mScreenMap);
         reusedCachedScreenContent = true;
         from = y_top;

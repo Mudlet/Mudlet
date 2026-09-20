@@ -145,8 +145,8 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
         // A bare Host blocks script compilation until the full profile boot
         // would normally clear this; the test's scripts need to compile:
@@ -307,7 +307,7 @@ private slots:
         // Allow any queued activity (the declined deferred save, further timer
         // ticks) to surface problems:
         QTest::qWait(500);
-        // mudlet::slot_timerFires() flushes the deferred delete as soon as the
+        // TimerUnit::timerFired() flushes the deferred delete as soon as the
         // uninstalling timer's execute() has finished, so by now the timer must
         // be properly gone - not lingering deactivated where the next profile
         // save would serialize it back in:

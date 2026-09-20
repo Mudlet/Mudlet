@@ -64,6 +64,7 @@ public:
     inline static int DefaultMessageBufferLimit = 5000;
 
 
+    static QPair<bool, QString> validateMsgArguments(const QString& target, const QString& message);
     static QString readIrcHostName(Host* pH);
     static int readIrcHostPort(Host* pH);
     static bool readIrcHostSecure(Host* pH);
@@ -74,12 +75,14 @@ public:
     static QPair<bool, QString> writeIrcHostPort(Host* pH, int port);
     static QPair<bool, QString> writeIrcHostSecure(Host* pH, bool secure);
     static QPair<bool, QString> writeIrcNickName(Host* pH, const QString& nickname);
+    static QPair<bool, QString> validateIrcPassword(const QString& password);
     static QPair<bool, QString> writeIrcPassword(Host* pH, const QString& password);
     static QPair<bool, QString> writeIrcChannels(Host* pH, const QStringList& channels);
 
     IrcConnection* connection = nullptr;
     bool mReadyForSending = false;
     QPair<bool, QString> sendMsg(const QString& target, const QString& message);
+    QPair<bool, QString> sendText(const QString& target, const QString& message);
     QString getHostName() const { return mHostName; }
     int getHostPort() const { return mHostPort; }
     bool getHostSecure() const { return mHostSecure; }
@@ -117,7 +120,7 @@ private:
     void setupBuffers();
     bool processCustomCommand(IrcCommand*);
     void displayHelp(const QString&);
-    void appendHtml(QTextDocument*, const QString&);
+    void appendToDocument(QTextDocument*, const QString&);
     QString getMessageTarget(IrcMessage*, const QString&);
     static QString readAppDefaultIrcNick();
     static void writeAppDefaultIrcNick(const QString&);

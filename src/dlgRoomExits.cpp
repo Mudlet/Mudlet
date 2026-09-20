@@ -279,8 +279,8 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
     init();
 
-    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate);
-    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate);
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate(specialExits));
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate(specialExits));
 }
 
 dlgRoomExits::~dlgRoomExits() = default;
@@ -301,6 +301,25 @@ void dlgRoomExits::slot_endEditSpecialExits()
         mEditColumn = -1;
     }
     specialExits->clearSelection();
+}
+
+// The Delete key removes the selected special exits (see
+// ExitsTreeWidget::keyPressEvent()), and one of them may be the item being
+// edited.
+void dlgRoomExits::slot_specialExitRowsAboutToBeRemoved(const QModelIndex& parent, const int first, const int last)
+{
+    if (!mpEditItem || parent.isValid()) {
+        return;
+    }
+    for (int row = first; row <= last; ++row) {
+        if (specialExits->topLevelItem(row) == mpEditItem) {
+            mpEditItem = nullptr;
+            mEditColumn = -1;
+            button_endEditing->setDisabled(true);
+            button_addSpecialExit->setEnabled(true);
+            return;
+        }
+    }
 }
 
 void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
@@ -982,6 +1001,13 @@ void dlgRoomExits::save()
         pA->determineAreaExitsOfRoom(pR->getId());
     }
 
+    // Repaint the mapper so the changed exits/doors/locks show immediately -
+    // without this the map stays stale until the next scroll/pan forces a
+    // paint. updateArea() queues a throttled mp2dMap->update(). Also mark the
+    // map unsaved, since editing exits is a map change.
+    mpHost->mpMap->updateArea(pR->getArea());
+    mpHost->mpMap->setUnsaved(__func__);
+
     close();
 }
 
@@ -1418,7 +1444,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
     normalStubExitChanged(
-            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_n, utils::richText(tr("Set the number of the room northwest of this one.")));
+            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, utils::richText(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 
@@ -1908,6 +1934,7 @@ void dlgRoomExits::init()
     connect(button_addSpecialExit, &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_addSpecialExit);
     connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_editSpecialExit);
     connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_checkModified);
+    connect(specialExits->model(), &QAbstractItemModel::rowsAboutToBeRemoved,     this, &dlgRoomExits::slot_specialExitRowsAboutToBeRemoved);
     connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
     connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
     connect(nw,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_nw_textEdited);

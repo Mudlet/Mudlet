@@ -339,6 +339,30 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- PCRE2 returns the name table in alphabetical order, so the named-group
+    -- loop asks for positions in an order unrelated to where the groups sit in
+    -- the line: aaa is asked for first and zzz last. Converting zzz's offset
+    -- therefore walks back over the dragon - one character, four bytes, but two
+    -- UTF-16 code units - and over the sharp s. Selecting zzz, the furthest step
+    -- back, is what pins that walk; a rule that subtracted one code unit for the
+    -- dragon instead of two would select "ed " here and pass every other spec.
+    it("selectCaptureGroup lands on a named group asked for after a later one", function()
+        local selection
+        local pattern = "^(?<zzz>\\w+) (?<mmm>\\S+) (?<aaa>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("zzz")
+            selection = getSelection()
+            deselect()
+        end, 1)
+        finally(function() if type(id) == "number" and id > 0 then killTrigger(id) end end)
+
+        feedTriggers("\nzed 🐉ß alf\n")
+
+        assert.are.equal("zed", selection)
+        killTrigger(id)
+    end)
+
     -- selectCaptureGroup by name selects correct text
     it("selectCaptureGroup by name selects the right text", function()
         local selection_first, selection_second
