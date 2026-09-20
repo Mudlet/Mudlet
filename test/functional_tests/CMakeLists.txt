@@ -85,6 +85,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
