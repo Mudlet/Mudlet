@@ -486,6 +486,32 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("ordinarycommandbefore"));
     }
 
+    // Down banks whatever is on the line (see
+    // test_downOnFreshTextBanksItAndClearsTheLine), so it is a second way into the
+    // history - and under remote echo the text it banks is a password the player
+    // cannot even see. sendCommand() checks for that; this path has to as well.
+    void test_aPasswordIsNotBankedIntoTheHistoryByDown()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("ordinarycommandbefore"));
+
+        mpHost->setRemoteEchoingActive(true);
+        type(pCommandLine, qsl("hunter2secret"));
+        press(pCommandLine, Qt::Key_Down);
+        mpHost->setRemoteEchoingActive(false);
+
+        // Down deliberately leaves the line alone rather than banking it, so empty
+        // the line by hand: what is being asserted is what reached the history, and
+        // a line still holding the password would send Up down the completion
+        // branch instead of walking.
+        pCommandLine->clear();
+        press(pCommandLine, Qt::Key_Up);
+
+        QVERIFY2(pCommandLine->toPlainText() != qsl("hunter2secret"), "the password banked with Down was kept in the command history");
+        QCOMPARE(pCommandLine->toPlainText(), qsl("ordinarycommandbefore"));
+    }
+
     // Tab completes the word being typed from what the game has said recently,
     // and pressing it again cycles on to the next match.
     void test_tabCompletesAWordFromTheConsoleBuffer()

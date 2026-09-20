@@ -1236,6 +1236,14 @@ void TCommandLine::historyMove(MoveDirection direction)
 {
     // DOWN at position 0 with text: save to history and clear input
     if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty()) {
+        // Banking is the second way text enters the history, and sendCommand()'s
+        // check for a password does not cover it: with the game's echo off, the
+        // line holds a password the player cannot even see. Done here rather than
+        // by falling through to the walk below, which would replace the password
+        // mid-typing with a history entry and announce it.
+        if (mpHost->isRemoteEchoingActive() && !mpHost->mDisablePasswordMasking) {
+            return;
+        }
         mHistoryList.removeAll(toPlainText());
         if (!mHistoryList.isEmpty()) {
             mHistoryList[0] = toPlainText();
