@@ -126,6 +126,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
 )
 
