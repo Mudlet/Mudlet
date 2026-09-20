@@ -242,17 +242,20 @@ private slots:
         QCOMPARE(lineFor(report, qsl("SEND_LOCATION (23)")), qsl("  SEND_LOCATION (23): client disabled"));
     }
 
-    // Every arm of decodeOption(), by announcing the whole option number space:
-    // the official names, the unofficial ones, and the UNKNOWN fallback for the
-    // numbers with no name. heAnnouncedState is set before any option-specific
-    // handling, so an option Mudlet refuses is reported just the same.
     // The password-mode timeout is the only recovery when a server takes ECHO and
     // never releases it: masking otherwise stays on for the rest of the connection.
     // It is armed only inside the login phase, and that window was written as
     // `elapsed() < 5min.count()` - elapsed() answers in milliseconds while
     // 5min.count() is 5, so the window was five milliseconds and the timer never
     // armed at all. Nothing observed it arming, so nothing failed.
-    void test_thePasswordModeTimeoutArmsAcrossTheLoginPhase()
+    //
+    // What arms it is a masked line going to the game, not the prompt arriving. A
+    // prompt nobody has answered yet is not a server that failed to release ECHO,
+    // and lifting the mask under someone still reading their password manager
+    // would show the password they then type - and, since the guard in
+    // Host::maskedPasswordPromptActive() reads the same echo state, hand it to
+    // every sysDataSendRequest handler as well.
+    void test_anUnansweredPasswordPromptKeepsItsMask()
     {
         QVERIFY(mpHost);
         // Past the five milliseconds the broken comparison allowed, far inside the
@@ -264,8 +267,8 @@ private slots:
 
         announce(TN_WILL, OPT_ECHO);
         QVERIFY2(mpHost->isRemoteEchoingActive(), "the server's WILL ECHO was refused, so this case cannot say anything about the timer");
-        QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout, "no password-mode timeout was created for the prompt");
-        QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout->isActive(), "the password-mode timeout did not arm, so a server that never sends WONT ECHO would leave masking stuck for the connection");
+        QVERIFY2(!mpHost->mTelnet.mTimerPasswordModeTimeout || !mpHost->mTelnet.mTimerPasswordModeTimeout->isActive(),
+                 "the password-mode timeout armed on the prompt alone, so a player who takes longer than it to answer loses the mask mid-prompt");
 
         // Released here rather than in a cleanup hook: the suppression is per-Host
         // and this class shares one across its cases.
@@ -273,6 +276,30 @@ private slots:
         QVERIFY2(!mpHost->isRemoteEchoingActive(), "echo suppression outlived the prompt");
     }
 
+    // The other half: once a password has actually been sent, WONT ECHO is owed,
+    // and this timer is what lifts the mask if it never comes.
+    void test_thePasswordModeTimeoutArmsWhenAMaskedLineIsSent()
+    {
+        QVERIFY(mpHost);
+        QTest::qWait(50);
+
+        announce(TN_WILL, OPT_ECHO);
+        QVERIFY2(mpHost->isRemoteEchoingActive(), "the server's WILL ECHO was refused, so this case cannot say anything about the timer");
+
+        QString password = qsl("hunter2");
+        mpHost->mTelnet.sendData(password, false, true);
+
+        QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout, "no password-mode timeout was created when the password was sent");
+        QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout->isActive(), "the password-mode timeout did not arm, so a server that never sends WONT ECHO would leave masking stuck for the connection");
+
+        announce(TN_WONT, OPT_ECHO);
+        QVERIFY2(!mpHost->isRemoteEchoingActive(), "echo suppression outlived the prompt");
+    }
+
+    // Every arm of decodeOption(), by announcing the whole option number space:
+    // the official names, the unofficial ones, and the UNKNOWN fallback for the
+    // numbers with no name. heAnnouncedState is set before any option-specific
+    // handling, so an option Mudlet refuses is reported just the same.
     void test_everyAnnouncedOptionIsNamedInTheReport()
     {
         QVERIFY(mpHost);
