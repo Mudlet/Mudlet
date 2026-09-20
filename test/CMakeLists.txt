@@ -334,11 +334,18 @@ endif()
 # The key check in CI/linux-packages/publish is the only automated thing between
 # a wrong mudlet.asc and the package trust store of every Mudlet user on Linux,
 # and the publishing workflow runs it only when it publishes a release - so
-# without this nothing covers it before merge
-if(NOT WIN32)
+# without this nothing covers it before merge.
+#
+# Linux only, unlike the other script tests here: publish needs globstar, which
+# arrived in bash 4, and macOS ships bash 3.2 - there the script it drives exits
+# before reaching a single assertion.
+if(UNIX AND NOT APPLE)
     add_test(NAME LinuxPackagesKeyTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/linux-packages-key-test.sh
     )
+    # ctest counts any zero exit as a pass, so without this a runner missing gpg
+    # would report the gate green having run none of it
+    set_tests_properties(LinuxPackagesKeyTest PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 add_subdirectory(functional_tests)

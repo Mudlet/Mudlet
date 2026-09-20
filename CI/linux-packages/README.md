@@ -61,7 +61,6 @@ The public half is published in two places:
 |------------------------|-----------------------------------------------------------------------------------------|
 | the package repository | `<base url>/mudlet.asc`                                                                 |
 | this git repository    | `https://raw.githubusercontent.com/Mudlet/Mudlet/<commit>/CI/linux-packages/mudlet.asc` |
-| this git repository    | `https://raw.githubusercontent.com/Mudlet/Mudlet/<commit>/CI/linux-packages/mudlet.asc`   |
 
 The two are the same bytes, which is what lets one be checked against the other:
 
@@ -108,10 +107,20 @@ repo_gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mudlet
 ```
 
+`gpgkey` there is a local path rather than a URL - that is the point of it - so
+the committed copy has to be fetched to it first, the dnf counterpart of the
+`ADD` above:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Mudlet/Mudlet/<commit>/CI/linux-packages/mudlet.asc \
+  -o /etc/pki/rpm-gpg/RPM-GPG-KEY-mudlet
+```
+
 Pin a commit, not a branch and not a release tag. The published key is whatever
-the default branch holds when the release workflow runs, because the jobs that
-sign and publish check out no particular ref; a release tag is not guaranteed to
-carry this file at all.
+the default branch holds when the release workflow runs: the jobs that sign and
+publish check out the ref they were dispatched from, and refuse to run for any
+ref but the default branch. A release tag is not guaranteed to carry this file at
+all.
 
 ### Rotating the key
 

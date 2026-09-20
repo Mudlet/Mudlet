@@ -13,15 +13,33 @@
 # Keys are generated into a throwaway GNUPGHOME, so this needs no network and no
 # secrets. It drives "publish sign" on an empty directory, which runs the check
 # and then signs nothing, so no rpm tooling is needed either.
+#
+# Linux only - publish uses globstar, which needs bash 4, so on the bash 3.2 that
+# macOS ships it exits before any of this is reached. test/CMakeLists.txt
+# registers it accordingly.
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGING_DIR="$(cd "${SCRIPT_DIR}/../../CI/linux-packages" && pwd)"
 
+# Matches SKIP_RETURN_CODE in test/CMakeLists.txt, so a skip reads as one rather
+# than as a pass - a zero exit here would report the only pre-merge key gate
+# green having run none of it. Skipping is a local convenience either way: on CI
+# nothing this needs is allowed to be missing.
+SKIP=77
+
+skip_or_fail() {
+  if [ -n "${CI:-}${GITHUB_ACTIONS:-}" ]; then
+    echo "FAIL: $1" >&2
+    exit 1
+  fi
+  echo "SKIP: $1"
+  exit "${SKIP}"
+}
+
 if ! command -v gpg > /dev/null 2>&1; then
-  echo "SKIP: gpg is not installed"
-  exit 0
+  skip_or_fail "gpg is not installed"
 fi
 
 WORK_DIR="$(mktemp -d)"
@@ -51,8 +69,7 @@ new_key() {
 }
 
 if ! SIGNING_KEY="$(new_key 'Mudlet key gate test')" || [ -z "${SIGNING_KEY}" ]; then
-  echo "SKIP: this gpg cannot generate a key here (no agent?)"
-  exit 0
+  skip_or_fail "this gpg cannot generate a key here (no agent?)"
 fi
 OTHER_KEY="$(new_key 'Unrelated other key')"
 

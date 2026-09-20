@@ -102,6 +102,18 @@ jobs:
       TAG: ${{ inputs.tag }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      # Signing and publishing use CI/linux-packages/mudlet.asc out of the ref this
+      # run was dispatched from, and every Mudlet install on Linux trusts whatever
+      # key that file holds - so it has to be the reviewed copy on the default
+      # branch, not one a dispatch brought along with it. Dispatching from a branch
+      # still builds and install-tests packages; it just cannot publish them.
+      - name: Check the publish is from the default branch
+        run: |
+          if [[ "${GITHUB_REF_NAME}" != "development" ]]; then
+            echo "::error::Publishing signs with the key CI/linux-packages/mudlet.asc holds, so it only runs from development, not from '${GITHUB_REF_NAME}' - merge the change there first"
+            exit 1
+          fi
+
       - name: Check the tag is a release
         run: |
           if [[ ! "${TAG}" =~ ^Mudlet-[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -172,6 +184,9 @@ jobs:
 
   publish:
     needs: attach
+    # attach refuses every other ref already; said again here because this job
+    # checks the same ref out for the key it uploads and compares against
+    if: ${{ github.ref_name == 'development' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
