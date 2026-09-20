@@ -95,6 +95,20 @@ private:
         return pCommandLine;
     }
 
+    // The profile's own command line. Password masking only ever applies to this
+    // one - setEchoSuppression() returns early for any other type - so a case
+    // about masking cannot use freshCommandLine(). Its history lives for the whole
+    // process, so cases keyed off it use sentinels of their own rather than
+    // assuming an empty list.
+    TCommandLine* mainCommandLine() const
+    {
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        if (pCommandLine) {
+            pCommandLine->mSaveCommands = false;
+        }
+        return pCommandLine;
+    }
+
     static void type(TCommandLine* pCommandLine, const QString& text) { QTest::keyClicks(pCommandLine, text); }
 
     // Real macOS arrow keys arrive with the keypad modifier set, and TCommandLine's
@@ -238,6 +252,10 @@ private slots:
 
     void cleanup()
     {
+        // Dropped here rather than inline: QTest abandons the slot on a failed
+        // assertion, so an inline reset is skipped exactly when it matters and
+        // every later case would run against a still-masked main command line.
+        mpHost->setRemoteEchoingActive(false);
         if (!mLineName.isEmpty()) {
             mpHost->resetCmdLineAction(mLineName);
             mLineName.clear();
@@ -492,24 +510,64 @@ private slots:
     // cannot even see. sendCommand() checks for that; this path has to as well.
     void test_aPasswordIsNotBankedIntoTheHistoryByDown()
     {
-        TCommandLine* pCommandLine = freshCommandLine();
+        TCommandLine* pCommandLine = mainCommandLine();
         QVERIFY(pCommandLine);
-        sendCommand(pCommandLine, qsl("ordinarycommandbefore"));
+        // Asserted rather than assumed: masking applies to this type alone, and a
+        // case that quietly ran against any other would prove nothing.
+        QCOMPARE(pCommandLine->getType(), TCommandLine::MainCommandLine);
+        sendCommand(pCommandLine, qsl("bankedbeforethepassword"));
 
         mpHost->setRemoteEchoingActive(true);
-        type(pCommandLine, qsl("hunter2secret"));
+        // setEchoSuppression() clears the line as it starts, so an empty line here
+        // is the proof that masking really engaged rather than silently not applying.
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), "masking did not engage on the main command line");
+        type(pCommandLine, qsl("downsecret2c41"));
         press(pCommandLine, Qt::Key_Down);
         mpHost->setRemoteEchoingActive(false);
 
-        // Down deliberately leaves the line alone rather than banking it, so empty
-        // the line by hand: what is being asserted is what reached the history, and
-        // a line still holding the password would send Up down the completion
-        // branch instead of walking.
-        pCommandLine->clear();
         press(pCommandLine, Qt::Key_Up);
+        QVERIFY2(pCommandLine->toPlainText() != qsl("downsecret2c41"), "the password banked with Down was kept in the command history");
+        QCOMPARE(pCommandLine->toPlainText(), qsl("bankedbeforethepassword"));
+    }
 
-        QVERIFY2(pCommandLine->toPlainText() != qsl("hunter2secret"), "the password banked with Down was kept in the command history");
-        QCOMPARE(pCommandLine->toPlainText(), qsl("ordinarycommandbefore"));
+    // Guarding only the banking branch leaves the walk below it live. Masking starts
+    // by clearing the line (setEchoSuppression), and the walk is exactly what an
+    // empty line takes - so one press of Up at a password prompt loads a previous
+    // command into the masked field and announces it to a screen reader. The player
+    // cannot see what is in the box, and Enter then sends that command to the game
+    // as their password.
+    void test_walkingTheHistoryIsRefusedWhileThePasswordPromptIsMasked()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("walkablehistoryentry"));
+
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), "masking did not engage on the main command line");
+
+        press(pCommandLine, Qt::Key_Up);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), "Up walked a history entry into the masked password field");
+
+        press(pCommandLine, Qt::Key_Down);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), "Down walked a history entry into the masked password field");
+    }
+
+    // The other half of the same guard: masking is per-widget, so a package's own
+    // command line - which is never masked and never holds the password - must keep
+    // working normally while the main line is at a password prompt.
+    void test_aSubCommandLineStillBanksWhileTheMainLineIsMasked()
+    {
+        TCommandLine* pSubLine = freshCommandLine();
+        QVERIFY(pSubLine);
+        QCOMPARE(pSubLine->getType(), TCommandLine::SubCommandLine);
+
+        mpHost->setRemoteEchoingActive(true);
+        type(pSubLine, qsl("ordinary sub line text"));
+        press(pSubLine, Qt::Key_Down);
+        QCOMPARE(pSubLine->toPlainText(), QString());
+
+        press(pSubLine, Qt::Key_Up);
+        QCOMPARE(pSubLine->toPlainText(), qsl("ordinary sub line text"));
     }
 
     // Tab completes the word being typed from what the game has said recently,
