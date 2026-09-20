@@ -3,7 +3,7 @@ name: Update 3rdparty sources
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * fri'
+    - cron: '23 */6 * * *'
 
 jobs:
   update-3rdparty:

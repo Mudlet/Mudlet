@@ -131,8 +131,8 @@ TDetachedWindow::~TDetachedWindow()
             // If this is a map dock widget, restore the main mapper
             if (key.startsWith("map_")) {
                 QString profileName = key.mid(4); // Remove "map_" prefix
-                if (auto mudletInstance = mudlet::self()) {
-                    if (auto pHost = mudletInstance->getHostManager().getHost(profileName)) {
+                if (auto pHostManager = HostManager::self()) {
+                    if (auto pHost = pHostManager->getHost(profileName)) {
                         pHost->restoreOwnMapper();
                     }
                 }
@@ -147,8 +147,8 @@ TDetachedWindow::~TDetachedWindow()
     if (mpMapDockWidget) {
         // Restore main mapper if this detached window had an active map
         if (!mCurrentProfileName.isEmpty()) {
-            if (auto mudletInstance = mudlet::self()) {
-                if (auto pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName)) {
+            if (auto pHostManager = HostManager::self()) {
+                if (auto pHost = pHostManager->getHost(mCurrentProfileName)) {
                     pHost->restoreOwnMapper();
                 }
             }
@@ -186,9 +186,9 @@ void TDetachedWindow::setupUI()
 
         // Apply CDC identifier prefix if debug mode is active
         if (TDebug::smDebugMode) {
-            auto pMudlet = mudlet::self();
-            if (pMudlet) {
-                Host* pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
+            auto pHostManager = HostManager::self();
+            if (pHostManager) {
+                Host* pHost = pHostManager->getHost(mCurrentProfileName);
 
                 if (pHost) {
                     QString debugTag = TDebug::getTag(pHost);
@@ -389,6 +389,7 @@ void TDetachedWindow::createMenus()
     // Options menu - matches main window order
     //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
     auto optionsMenu = menuBar()->addMenu(tr("Options"));
+    mpOptionsMenu = optionsMenu;
 
     //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
     mpMenuPreferencesAction = new QAction(tr("&Preferences"), this);
@@ -559,6 +560,7 @@ void TDetachedWindow::createMenus()
     // Toolbar visibility toggle
     //: This is an item for the toolbar visibility toggle in a detached Mudlet window.
     mpActionToggleToolBar = new QAction(tr("Show &Toolbar"), this);
+    mpActionToggleToolBar->setObjectName(qsl("toggle_toolbar_action"));
     mpActionToggleToolBar->setCheckable(true);
     mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
     //: This explains the "Show Toolbar" action for toolbar visibility in a detached Mudlet window.
@@ -1160,7 +1162,7 @@ QKeySequence TDetachedWindow::resolveShortcut(const QString& key, const QKeySequ
     }
 
     if (!mCurrentProfileName.isEmpty()) {
-        if (auto host = mudletInstance->getHostManager().getHost(mCurrentProfileName)) {
+        if (auto host = HostManager::self()->getHost(mCurrentProfileName)) {
             if (auto it = host->profileShortcuts.find(key); it != host->profileShortcuts.end()) {
                 const QKeySequence* sequence = it->second.get();
                 if (sequence && !sequence->isEmpty()) {
@@ -1234,9 +1236,9 @@ void TDetachedWindow::updateToolBarActions()
 {
     Host* pHost = nullptr;
 
-    auto pMudlet = mudlet::self();
-    if (!mCurrentProfileName.isEmpty() && pMudlet) {
-        pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
+    auto pHostManager = HostManager::self();
+    if (!mCurrentProfileName.isEmpty() && pHostManager) {
+        pHost = pHostManager->getHost(mCurrentProfileName);
     }
 
     bool hasActiveProfile = (pHost != nullptr);
@@ -1300,10 +1302,10 @@ void TDetachedWindow::updateToolBarActions()
 void TDetachedWindow::updateDiscordNamedIcon()
 {
     Host* pHost = nullptr;
-    auto pMudlet = mudlet::self();
+    auto pHostManager = HostManager::self();
 
-    if (!mCurrentProfileName.isEmpty() && pMudlet) {
-        pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
+    if (!mCurrentProfileName.isEmpty() && pHostManager) {
+        pHost = pHostManager->getHost(mCurrentProfileName);
     }
 
     if (!pHost) {
@@ -1347,8 +1349,8 @@ void TDetachedWindow::updateWindowTitle()
         Host* pHost = nullptr;
 
         if (!mCurrentProfileName.isEmpty()) {
-            if (auto pMudlet = mudlet::self()) {
-                pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
+            if (auto pHostManager = HostManager::self()) {
+                pHost = pHostManager->getHost(mCurrentProfileName);
             }
             //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
             title = tr("Mudlet - %1 (Detached)").arg(mCurrentProfileName);
@@ -1382,6 +1384,20 @@ void TDetachedWindow::updateWindowTitle()
         // Multiple profiles - show count and current
         //: This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %1 is the number of profiles, %2 is the name of the profile currently shown.
         title = tr("Mudlet (%1 profiles) - %2 (Detached)").arg(mProfileConsoleMap.size()).arg(mCurrentProfileName);
+    }
+
+    // Any profile this window holds, not only the one it is showing: a window
+    // whose second tab has the microphone open is still a window with an open
+    // microphone, and its title is the only place that says so once it is behind
+    // something else.
+    if (auto pMudlet = mudlet::self()) {
+        for (const QString& profileName : mProfileConsoleMap.keys()) {
+            const QString marker = pMudlet->microphoneMarkerFor(profileName);
+            if (!marker.isEmpty()) {
+                title += marker;
+                break;
+            }
+        }
     }
 
     setWindowTitle(title);
@@ -1418,7 +1434,7 @@ void TDetachedWindow::updateTabIndicator(int tabIndex)
     }
 
     // Get the host and determine connection status
-    Host* pHost = pMudlet->getHostManager().getHost(profileName);
+    Host* pHost = HostManager::self()->getHost(profileName);
     TabConnectionIndicator state = TabConnectionIndicator::None;
 
     // Only show connection indicators if the global setting is enabled
@@ -1546,8 +1562,8 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                 }
 
                 // Ensure the map's active mapper points to our detached instance (if visible)
-                if (auto pMudlet = mudlet::self()) {
-                    if (auto pHost = pMudlet->getHostManager().getHost(profileName)) {
+                if (auto pHostManager = HostManager::self()) {
+                    if (auto pHost = pHostManager->getHost(profileName)) {
                         if (auto pMap = pHost->mpMap.data()) {
                             auto mapWidget = dockWidget->widget();
 
@@ -1574,8 +1590,8 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                 dockWidget->blockSignals(false);
 
                 // Restore main mapper for the other profile
-                if (auto pMudlet = mudlet::self()) {
-                    if (auto pHost = pMudlet->getHostManager().getHost(dockProfileName)) {
+                if (auto pHostManager = HostManager::self()) {
+                    if (auto pHost = pHostManager->getHost(dockProfileName)) {
                         pHost->restoreOwnMapper();
                     }
                 }
@@ -1708,12 +1724,12 @@ void TDetachedWindow::slot_saveProfile()
         return;
     }
 
-    auto pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pHostManager = HostManager::self();
+    if (!pHostManager) {
         return;
     }
 
-    Host* pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
+    Host* pHost = pHostManager->getHost(mCurrentProfileName);
 
     if (pHost) {
         pHost->saveProfile();
@@ -1762,7 +1778,7 @@ void TDetachedWindow::updateWindowMenu()
     totalWindows += detachedWindows.size();
 
     // Only show window list if there are multiple windows OR if there are multiple profiles
-    bool hasMultipleProfiles = pMudlet->getHostManager().getHostCount() > 1;
+    bool hasMultipleProfiles = HostManager::self()->getHostCount() > 1;
 
     if (totalWindows > 1 || hasMultipleProfiles) {
         // Add separator before window list
@@ -1771,7 +1787,7 @@ void TDetachedWindow::updateWindowMenu()
         // Add main window profiles
         QStringList mainWindowProfiles;
 
-        for (const auto& host : pMudlet->getHostManager()) {
+        for (const auto& host : *HostManager::self()) {
             if (host && host->mpConsole) {
                 const QString profileName = host->getName();
                 // Only include profiles that are in the main window (not detached)
@@ -2026,6 +2042,15 @@ bool TDetachedWindow::addProfile(const QString& profileName, TMainConsole* conso
             console->repaint();
         }
     });
+    // Which window holds a profile decides where its add-on commands go. This
+    // covers the paths that add a profile to a window that already exists - a
+    // drag into another detached window, a move between two of them - rather
+    // than each of those callers separately. It is not every path: detachTab()
+    // builds the window with the profile already in its map, never calling
+    // this, which is why it asks for a placement of its own.
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
+    }
 
     return true;
 }
@@ -2056,8 +2081,8 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             QMainWindow::removeDockWidget(mapDockWidget);
 
             // Restore the main window's mapper before deleting our dock widget
-            if (auto pMudlet = mudlet::self()) {
-                if (auto pHost = pMudlet->getHostManager().getHost(profileName)) {
+            if (auto pHostManager = HostManager::self()) {
+                if (auto pHost = pHostManager->getHost(profileName)) {
                     pHost->restoreOwnMapper();
                 }
             }
@@ -2194,6 +2219,11 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             }
         });
     }
+    // The other half of the rule in addProfile() above: a profile leaving takes
+    // its commands out of this window's chrome.
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
+    }
 
     return true;
 }
@@ -2305,6 +2335,10 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
             console->repaint();
         }
     });
+
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
+    }
 
     // Ensure the detached window itself gets focus and is brought to the front
     raise();
@@ -2545,7 +2579,7 @@ void TDetachedWindow::withCurrentProfileActive(const std::function<void()>& acti
         return;
     }
 
-    Host* pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName);
+    Host* pHost = HostManager::self()->getHost(mCurrentProfileName);
 
     if (!pHost) {
         return;
@@ -2709,7 +2743,7 @@ void TDetachedWindow::slot_showMapperDialog()
         return;
     }
 
-    Host* pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName);
+    Host* pHost = HostManager::self()->getHost(mCurrentProfileName);
     if (!pHost) {
         return;
     }
@@ -2849,12 +2883,12 @@ void TDetachedWindow::slot_showMapperDialog()
         }
 
         // Safely get the host and map - they might be null during shutdown
-        auto mudletInstance = mudlet::self();
-        if (!mudletInstance) {
+        auto pHostManager = HostManager::self();
+        if (!pHostManager) {
             return;
         }
 
-        Host* pHost = mudletInstance->getHostManager().getHost(profileName);
+        Host* pHost = pHostManager->getHost(profileName);
         if (!pHost) {
             return;
         }
@@ -3061,7 +3095,7 @@ void TDetachedWindow::slot_profileDiscord()
         return;
     }
 
-    Host* pHost = mudletInstance->getHostManager().getHost(mCurrentProfileName);
+    Host* pHost = HostManager::self()->getHost(mCurrentProfileName);
     QString invite;
     if (pHost) {
         invite = pHost->getDiscordInviteURL();
@@ -3147,8 +3181,8 @@ void TDetachedWindow::refreshTabBar()
 
             // Apply CDC identifier prefix if debug mode is active
             if (TDebug::smDebugMode) {
-                auto pMudlet = mudlet::self();
-                Host* pHost = pMudlet ? pMudlet->getHostManager().getHost(profileName) : nullptr;
+                auto pHostManager = HostManager::self();
+                Host* pHost = pHostManager ? pHostManager->getHost(profileName) : nullptr;
                 if (pHost) {
                     QString debugTag = TDebug::getTag(pHost);
                     if (!debugTag.isEmpty()) {
@@ -3218,13 +3252,13 @@ void TDetachedWindow::addTransferredDockWidget(const QString& mapKey, QDockWidge
         }
 
         // Safely get the host and map - they might be null during shutdown
-        auto mudletInstance = mudlet::self();
+        auto pHostManager = HostManager::self();
 
-        if (!mudletInstance) {
+        if (!pHostManager) {
             return;
         }
 
-        Host* pHost = mudletInstance->getHostManager().getHost(profileName);
+        Host* pHost = pHostManager->getHost(profileName);
 
         if (!pHost) {
             return;
@@ -3284,7 +3318,7 @@ void TDetachedWindow::slot_updateShowMapActionText()
     Host* pHost = nullptr;
     auto pMudlet = mudlet::self();
     if (!mCurrentProfileName.isEmpty() && pMudlet) {
-        pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
+        pHost = HostManager::self()->getHost(mCurrentProfileName);
     }
     bool willHide = false;
     if (pHost) {
@@ -3310,12 +3344,12 @@ void TDetachedWindow::slot_toggleCompactInputLine()
         return;
     }
 
-    auto mudletInstance = mudlet::self();
-    if (!mudletInstance) {
+    auto pHostManager = HostManager::self();
+    if (!pHostManager) {
         return;
     }
 
-    auto host = mudletInstance->getHostManager().getHost(mCurrentProfileName);
+    auto host = pHostManager->getHost(mCurrentProfileName);
     if (!host) {
         return;
     }

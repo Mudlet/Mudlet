@@ -49,6 +49,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -109,7 +110,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -206,15 +207,15 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory();
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
-        mpHost = hostManager.getHost(mProfileName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
+        mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
     }
@@ -379,14 +380,6 @@ private slots:
         QVERIFY(pDlg->doortype_none_s->isChecked());
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * slot_stub_nw_stateChanged() hands normalStubExitChanged() the north row's
-     * doortype_locked_n where the northwest row's doortype_locked_nw was meant,
-     * so ticking the northwest stub leaves its own "locked door" choice greyed
-     * out and unticking it greys out north's instead. Correcting that one
-     * argument turns both QVERIFYs below green.
-     */
     void theNorthwestStubReachesIntoTheNorthRow()
     {
         buildMap();
@@ -395,13 +388,9 @@ private slots:
         QVERIFY(!pDlg->doortype_locked_nw->isEnabled());
 
         pDlg->stub_nw->setChecked(true);
-
-        QEXPECT_FAIL("", "issue #10421: the northwest stub enables north's locked-door choice instead of its own", Continue);
         QVERIFY(pDlg->doortype_locked_nw->isEnabled());
 
         pDlg->stub_nw->setChecked(false);
-
-        QEXPECT_FAIL("", "issue #10421: clearing the northwest stub disables north's locked-door choice", Continue);
         QVERIFY(pDlg->doortype_locked_n->isEnabled());
     }
 

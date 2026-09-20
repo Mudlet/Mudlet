@@ -189,10 +189,13 @@ timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --m
 # over to the donor's LUA_SOURCE_PATH and the suite passes against that instead.
 # The warning it emits on the way past names the file and the Lua error, so treat
 # it as fatal. MudletBusted_spec.lua backs this up with a positive check.
-if grep -q "loadGlobal() loading" "$TMP/run.log"; then
+# Anchored: --mirror copies every line the consoles show into this same log,
+# each behind a "<profile>.<console>| " prefix, so an unanchored match would
+# also fire on a spec that merely echoed the phrase.
+if grep -q "^TLuaInterpreter::loadGlobal() loading" "$TMP/run.log"; then
   echo "This worktree's mudlet-lua failed to load, so the specs ran against the"
   echo "binary's own copy - the result above is meaningless. The failure was:"
-  grep "loadGlobal() loading" "$TMP/run.log"
+  grep "^TLuaInterpreter::loadGlobal() loading" "$TMP/run.log"
   rc=1
 fi
 
