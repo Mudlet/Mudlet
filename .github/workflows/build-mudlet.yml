@@ -380,6 +380,14 @@ jobs:
         ccache --zero-stats --show-stats -v
         ccache --show-compression
 
+    - name: recompress the restored ccache
+      if: >-
+        github.ref_name == 'development'
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+      run: |
+        ccache --recompress 19
+        ccache --show-compression
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
       with:

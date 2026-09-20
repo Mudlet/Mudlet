@@ -83,6 +83,19 @@ jobs:
         ccache --zero-stats --show-stats -v
         ccache --show-compression
 
+    - name: recompress the restored ccache
+      if: >-
+        github.ref_name == 'development'
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_MAXSIZE: 500M
+        CCACHE_COMPRESSLEVEL: 19
+      run: |
+        ccache --recompress 19
+        ccache --show-compression
+
     - name: (Windows) Build
       shell: msys2 {0}
       env:
