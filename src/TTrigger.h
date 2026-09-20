@@ -324,8 +324,12 @@ public:
     // that way, so a false is a promise and a true is only a maybe. The bigram
     // filter has to have been prepared for sharing by the main thread. Adds
     // the regex searches it ran to regexSearches, which is the caller's own
-    // and so keeps this free of shared state.
-    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch, int& regexSearches) const;
+    // and so keeps this free of shared state. lineDropsText is the line's
+    // TUtf8Subject::dropsText(), asked for on the main thread because the
+    // answer is cached lazily: it gates the same literal pre-check match_perl()
+    // makes, which only holds while the UTF-8 the pattern is run against and
+    // the QString the literal is searched for in carry the same text.
+    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, bool lineDropsText, pcre2_match_data* scratch, int& regexSearches) const;
     // Regex searches match() has run so far on the main thread, over every
     // trigger of every profile, counting only the ones a prescan could have
     // run instead - a multiline trigger's are not. A caller reads it before
@@ -390,9 +394,17 @@ public:
     // whole of this line, as match_color_pattern() reads it; false when the line
     // has more than one, or is not one that can be answered for.
     static bool uniformLineColors(Host* pHost, int line, int length, QRgb& foreground, QRgb& background);
-    // Where TriggerUnit's root-node snapshot holds this trigger, or -1 when it
-    // holds it nowhere - it is not a root node, or the snapshot has yet to be
-    // told about it. Owned by TriggerUnit; nothing else may set it.
+    // No snapshot has ever filed this trigger: it is a child, which the index
+    // never files, or a root node still queued for appending. Nothing a pass
+    // has pinned can be holding a filter copy of it.
+    static constexpr int scmNeverSnapshotted = -1;
+    // It has left the root list since it was last filed. It has no position to
+    // tell by any more, but a snapshot pinned before the removal still holds it
+    // - and its filter copy - so a change to it still has to be announced.
+    static constexpr int scmSnapshotPositionDropped = -2;
+    // Where TriggerUnit's root-node snapshot holds this trigger, or one of the
+    // two sentinels above when it holds it nowhere. Owned by TriggerUnit;
+    // nothing else may set it.
     int rootSnapshotPosition() const { return mRootSnapshotPosition; }
     void setRootSnapshotPosition(const int position) { mRootSnapshotPosition = position; }
 
@@ -456,7 +468,7 @@ public:
     QString mName;
     QStringList mPatterns;
     std::vector<quint64> mPrescanGrams;
-    int mRootSnapshotPosition = -1;
+    int mRootSnapshotPosition = scmNeverSnapshotted;
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     // specifies whenever the payload is Lua code as a string

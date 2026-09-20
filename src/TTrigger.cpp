@@ -1688,7 +1688,8 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
 
-bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch, int& regexSearches) const
+bool TTrigger::prescanMayFire(
+        const char* haystackC, const int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, const bool lineDropsText, pcre2_match_data* scratch, int& regexSearches) const
 {
     // Everything below decides "this trigger cannot possibly do anything on
     // this line". Anything whose outcome depends on more than the line text -
@@ -1742,6 +1743,25 @@ bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, 
                 // here would silence that warning for exactly as long as the text
                 // keeps flooding.
                 return true;
+            }
+            // The same dismissal match_perl() makes, so a line without the text
+            // every match has to hold is never handed to pcre2 on any thread.
+            // Counted the same way too: the increment below sits past this
+            // check exactly as match_perl()'s does, which is what lets the
+            // threshold weigh one line's searches against the next line's.
+            if (patternNumber < static_cast<int>(mRegexLiterals.size()) && !lineDropsText) {
+                const TRegexLiteral& literal = mRegexLiterals[patternNumber];
+                if (literal.matcher) {
+                    if (!lineBigrams.couldContainShared(haystack, literal.bigrams)) {
+                        break;
+                    }
+                    // As in the substring branch above, a const reference keeps
+                    // the compiler checking that this path stays read-only
+                    const QStringMatcher& matcher = *literal.matcher;
+                    if (matcher.indexIn(haystack) == -1) {
+                        break;
+                    }
+                }
             }
             ++regexSearches;
             const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr)

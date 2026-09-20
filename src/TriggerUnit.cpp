@@ -449,16 +449,29 @@ void TriggerUnit::rebuildPrescanTasksIfStale()
 void TriggerUnit::markPrescanStale(TTrigger* pT)
 {
     mRootNodeSnapshotStale = true;
-    // Whichever trigger it was: one that has left the root list since a pass
-    // pinned it no longer has a position to tell by
-    ++mRootFilterEpoch;
+    // A null stands for a trigger there is nothing left to tell by, so it takes
+    // the reading that announces rather than the one that stays quiet.
+    const int position = pT ? pT->rootSnapshotPosition() : TTrigger::scmSnapshotPositionDropped;
+    // The epoch is what stops the rest of the line trusting the filter copies a
+    // pass pinned, so it only has to move for a trigger one of those copies
+    // could be of. A trigger no snapshot has ever filed is in none of them:
+    // rootFilter() reads nothing but the trigger's own patterns and flags, so
+    // not even its parent's copy can be of it. That is the common case of a
+    // script creating a trigger from inside a trigger - a one-shot, a prompt
+    // capture, a combat follow-up - which used to disable the pinned filters
+    // for every root trigger left on the line. Anything else, a position or a
+    // trigger that has since left the root list, still has to be announced:
+    // -1 alone could not tell those apart, and the filter check runs ahead of
+    // isActive(), so a removed trigger's stale copy would be trusted.
+    if (position != TTrigger::scmNeverSnapshotted) {
+        ++mRootFilterEpoch;
+    }
     if (mRootNodeSnapshotNeedsRebuild || !pT) {
         return;
     }
     // A trigger with no position is either a child, which the index never files,
     // or a root node still queued for appending, which will be filed from its
     // current state anyway.
-    const int position = pT->rootSnapshotPosition();
     if (position >= 0) {
         mRootNodesRefiled.push_back(position);
     }
@@ -478,8 +491,10 @@ void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
     const int position = pT->rootSnapshotPosition();
     // Cleared even when the snapshot is being rebuilt anyway: a stale position
     // left on a trigger that is registered again later would have the next
-    // removal empty somebody else's slot.
-    pT->setRootSnapshotPosition(-1);
+    // removal empty somebody else's slot. Cleared to the sentinel that says it
+    // was filed once rather than the one that says it never was, which is what
+    // markPrescanStale() tells a pinned copy of it from no copy at all by.
+    pT->setRootSnapshotPosition(TTrigger::scmSnapshotPositionDropped);
     if (mRootNodeSnapshotNeedsRebuild) {
         return;
     }
@@ -637,7 +652,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         // The helper threads run perl patterns of their own, so the line is
         // encoded here, on this thread, before any of them can ask for it -
         // TUtf8Subject encodes on first use, which is not a helper's to do.
-        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject.data(), subject.length(), data, lineBigrams)) {
+        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject.data(), subject.length(), data, lineBigrams, subject.dropsText())) {
             TTrigger::setPrescanPassId(passId);
             prescanRegexSearches = pool.regexSearchesInLastBatch();
         }

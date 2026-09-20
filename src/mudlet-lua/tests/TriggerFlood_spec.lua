@@ -215,4 +215,44 @@ describe("trigger matching under a flood", function()
         assert.is_true((fired.stayOpenChild or 0) > 0,
                        "a stay-open trigger should keep offering later lines to its children during a burst")
     end)
+
+    itFlood("fires a pattern whose required text the line holds only once encoded", function()
+        -- A perl pattern that every match has to hold one run of literal text
+        -- is dismissed from a line without that run before pcre2 is asked, on
+        -- the prescan's threads as much as on this one. The two look for the
+        -- run in the line as Qt holds it but run the pattern against its UTF-8,
+        -- and those carry the same text for every line but one: an unpaired
+        -- surrogate has no UTF-8 of its own, so encoding drops it and puts the
+        -- text either side of it together. "abcd" is not in this line - the
+        -- surrogate splits it - and is in the bytes pcre2 reads, so a prescan
+        -- that skips the dismissal for such a line keeps the trigger and one
+        -- that does not loses a match nothing would report.
+        track(tempRegexTrigger("abcd", function() note("split") end))
+        setConfig("specialForceMXPProcessorOn", true)
+        finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+
+        feedAsBurst(filler(12, {[6] = "zqab&#xD800;cd"}))
+
+        assert.are.equal(1, fired.split,
+                         "a burst dropped a match whose required text only the encoded line holds")
+    end)
+
+    itFlood("fires a pattern whose required text the line holds outright", function()
+        -- The other side of the same dismissal, on a line whose UTF-8 holds
+        -- what it holds: "flood_literal_" is the run every match needs, so the
+        -- line carrying it reaches pcre2 and fires, the line spelling it with
+        -- spaces is dismissed before pcre2 is asked, and the line carrying the
+        -- run but not matching is dismissed by pcre2 itself. All three have to
+        -- come out of a burst the way they come out of a trickle.
+        track(tempRegexTrigger([[^flood_literal_(\d+)_tail$]], function() note("literal") end))
+
+        feedAsBurst(filler(12, {
+            [4] = "flood_literal_7_tail",
+            [8] = "flood literal 7 tail",
+            [10] = "flood_literal_seven_tail",
+        }))
+
+        assert.are.equal(1, fired.literal,
+                         "a burst should keep a pattern whose required text the line holds, and only that line")
+    end)
 end)
