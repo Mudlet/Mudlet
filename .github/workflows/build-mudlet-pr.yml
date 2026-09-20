@@ -1,6 +1,6 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/Lua/xcb-util-cursor/sentry-native handling: only builds of development
+# ccache/Lua/xcb-util-cursor handling: only builds of development
 # write these shared caches, so there are no save steps here at all - a pull
 # request never owns an entry of its own.
 name: 🔨 Build Mudlet - PR
@@ -367,19 +367,6 @@ jobs:
 
     - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
-
-    - name: Get sentry-native commit hash
-      id: sentry-hash
-      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-    - name: Restore sentry-native cache
-      id: cache-sentry
-      uses: actions/cache/restore@v6
-      with:
-        path: |
-          3rdparty/sentry-native/install_without_transport
-          3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9

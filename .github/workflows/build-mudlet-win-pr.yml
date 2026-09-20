@@ -1,7 +1,7 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/sentry-native handling: only builds of development write these
-# shared caches, so there are no save steps here at all - a pull request
+# ccache handling: only builds of development write this
+# shared cache, so there are no save steps here at all - a pull request
 # never owns an entry of its own.
 name: 🔨 Build Mudlet - PR (windows)
 on:
@@ -102,20 +102,6 @@ jobs:
         CCACHE_DIR: ${{runner.workspace}}/ccache
         CCACHE_MAXSIZE: 500M
       run: ccache --zero-stats --show-stats
-
-    - name: Get sentry-native commit hash
-      shell: msys2 {0}
-      id: sentry-hash
-      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-    - name: Restore sentry-native cache
-      id: cache-sentry
-      uses: actions/cache/restore@v6
-      with:
-        path: |
-          3rdparty/sentry-native/install_without_transport
-          3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: (Windows) Build
       shell: msys2 {0}
