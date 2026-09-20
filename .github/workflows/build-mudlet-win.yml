@@ -78,12 +78,16 @@ jobs:
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
         CCACHE_MAXSIZE: 500M
-      run: ccache --zero-stats --show-stats
+        CCACHE_COMPRESSLEVEL: 5
+      run: |
+        ccache --zero-stats --show-stats -v
+        ccache --show-compression
 
     - name: (Windows) Build
       shell: msys2 {0}
       env:
         CCACHE_MAXSIZE: 500M
+        CCACHE_COMPRESSLEVEL: 5
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -100,7 +104,10 @@ jobs:
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
         CCACHE_MAXSIZE: 500M
-      run: ccache --show-stats
+        CCACHE_COMPRESSLEVEL: 5
+      run: |
+        ccache --show-stats -v
+        ccache --show-compression
 
     - name: (Windows) Run QTest
       shell: msys2 {0}

@@ -152,6 +152,7 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
         echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESSLEVEL=5" >> $GITHUB_ENV
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
@@ -247,6 +248,7 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
         echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESSLEVEL=5" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks --lua-version 5.1 install --local lua-yajl
@@ -374,7 +376,9 @@ jobs:
         echo "CC=clang" >> $GITHUB_ENV
 
     - name: check ccache stats prior to build
-      run: ccache --zero-stats --show-stats
+      run: |
+        ccache --zero-stats --show-stats -v
+        ccache --show-compression
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
@@ -403,7 +407,9 @@ jobs:
         key: ccache-${{matrix.ccache_id}}-sha-${{ github.sha }}
 
     - name: check ccache stats post build
-      run: ccache --show-stats
+      run: |
+        ccache --show-stats -v
+        ccache --show-compression
 
     - name: install dependencies for packaging/tests
       run: |
