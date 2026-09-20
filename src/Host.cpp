@@ -1075,9 +1075,11 @@ void Host::resetProfile_phase2()
 }
 
 // Saves profile to disk - does not save items dirty in the editor, however.
-// takes a directory to save in or an empty string for the default location
-// as well as a boolean whenever to sync the modules or not
-// returns true+filepath if successful or false+error message otherwise
+// Takes a directory to save in (empty for the profile's own save directory), a
+// file name without its ".xml" suffix (empty for a timestamped one) and whether
+// to sync the modules.
+// Returns {ok, pathFileName, error}: a failure fills the pathFileName in as
+// well, except when another save is already running.
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
     QString directory_xml;
@@ -1087,12 +1089,15 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         directory_xml = saveFolder;
     }
 
-    QString filename_xml;
-    if (saveName.isEmpty()) {
-        filename_xml = qsl("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-    } else {
-        filename_xml = qsl("%1/%2.xml").arg(directory_xml, saveName);
-    }
+    // profileXmlFilesPath already ends in a separator (MudletPaths.cpp), so
+    // appending a file name with another one named ".../current//x.xml". QDir
+    // joins with exactly one separator and changes nothing else about the path,
+    // which matters because this string is the file XMLexport writes as well as
+    // the one handed back: any normalising of "." or ".." here would resolve
+    // them before the kernel does and could move the save somewhere else.
+    const QDir dir_xml(directory_xml);
+    const QString saveBaseName = saveName.isEmpty() ? QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")) : saveName;
+    const QString filename_xml = dir_xml.filePath(saveBaseName + qsl(".xml"));
 
     if (!mLoadedOk) {
         return {false, filename_xml, qsl("profile was not loaded correctly to begin with")};
@@ -1103,9 +1108,10 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
-    const QDir dir_xml;
-    if (!dir_xml.exists(directory_xml)) {
-        dir_xml.mkpath(directory_xml);
+    // the same directory the file above is going into, rather than the raw
+    // argument, so that the one made is the one written to
+    if (!dir_xml.exists()) {
+        QDir().mkpath(dir_xml.path());
     }
 
     if (currentlySavingProfile()) {

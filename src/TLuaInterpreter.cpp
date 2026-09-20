@@ -1346,12 +1346,27 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     QString saveAsFile;
     if (!lua_isnoneornil(L, 2)) {
         saveAsFile = lua_tostring(L, 2);
+        // The join below hands an absolute file name back as it is, dropping the
+        // folder that was asked for and putting the save outside it, so such a
+        // name is refused instead. Without a folder there is nothing to drop, and
+        // an absolute name is then the only way to say where the save goes. What
+        // counts as absolute is the platform's own rule: a leading separator on
+        // Unix, a drive or a UNC share on Windows.
+        if (!saveToDir.isEmpty() && QDir::isAbsolutePath(saveAsFile)) {
+            return warnArgumentValue(L, __func__, qsl("file name '%1' cannot be an absolute path when a folder is given as well").arg(saveAsFile));
+        }
         if (!saveAsFile.endsWith(".xml", Qt::CaseInsensitive)) {
             saveAsFile = saveAsFile + ".xml";
         }
     }
 
-    auto [ok, filename, error] = (saveAsFile.isNull()) ? host.saveProfile(saveToDir) : host.saveProfileAs(saveToDir + "/" + saveAsFile);
+    // A folder from a script can already end in a separator, and this string is
+    // the file saveProfileAs() writes as well as the one handed back, so QDir
+    // does the join: exactly one separator, and nothing else about the path
+    // touched. An empty folder keeps naming the filesystem root, as it always
+    // has - QDir would make that the working directory instead.
+    const QString saveAsPathFileName = saveToDir.isEmpty() ? qsl("/%1").arg(saveAsFile) : QDir(saveToDir).filePath(saveAsFile);
+    auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
     if (ok) {
         lua_pushboolean(L, true);
