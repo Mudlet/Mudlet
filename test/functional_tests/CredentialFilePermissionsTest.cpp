@@ -27,11 +27,11 @@
  * than assumed. The umask is pinned to the usual 022 in initTestCase(), and a scratch
  * file and directory are created to prove the pin took effect - a default ACL or a mount
  * option can override a umask, and then "owner-only" would prove nothing. The config
- * root is moved into QStandardPaths' test sandbox, which redirects it on every platform
- * where XDG_CONFIG_HOME would only move it on Linux, and that move is checked too: a
- * platform where the root could not be moved is one these cases skip rather than write a
- * credential into the root the person running them keeps their own in. The sandbox
- * outlives a run, so the profile directories are removed before each case and after the
+ * root is redirected with XDG_CONFIG_HOME, which is the recipe the rest of the test tree
+ * follows and the one test/CMakeLists.txt sandboxes a test run with: QStandardPaths reads
+ * it on Linux alone, macOS is moved by the CFFIXED_USER_HOME that ctest hands in, and on
+ * Windows nothing moves it, so there the root persists between runs. The profile
+ * directories these cases use are therefore removed before each case and again after the
  * last one, and every case asserts the key is absent before it saves.
  *
  * A third group of cases covers the log line that names where a password was found, in
@@ -90,9 +90,10 @@ private:
     const QString mKey = qsl("character");
     const QString mPassword = qsl("correct horse battery staple");
 
-    QTemporaryDir mScratchDir;
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdgConfigHome;
     QByteArray mSavedLoggingRules;
-    bool mConfigRootRedirected = false;
+    bool mInitialised = false;
 #if defined(Q_OS_UNIX)
     mode_t mSavedUmask = 0;
     bool mUmaskPinned = false;
@@ -138,12 +139,13 @@ private:
         return QFile::setPermissions(path, permissions);
     }
 
-    // The sandbox outlives a run, so what one case or one run saved is cleared out rather
-    // than left for the next to pass on. Only ever called once the config root has been
-    // moved: a run that skipped that has no business removing directories.
+    // On the platforms that ignore XDG_CONFIG_HOME the config root outlives a run, so what
+    // one case or one run saved is cleared out rather than left for the next to pass on.
+    // Only ever once initTestCase() has run to the end: a run it skipped has written
+    // nothing, and the root it would be removing from is the real one.
     void removeTheProfilesTheseCasesUse()
     {
-        if (!mConfigRootRedirected) {
+        if (!mInitialised) {
             return;
         }
 
@@ -156,8 +158,8 @@ private:
 
     void saveAPassword(const QString& profile)
     {
-        // The sandbox outlives a run, and a key left owner-only by an earlier one would
-        // satisfy these cases on its own
+        // The config root outlives a run on the platforms that ignore XDG_CONFIG_HOME, and a
+        // key left owner-only by an earlier run would satisfy these cases on its own
         QVERIFY2(!QFileInfo::exists(encryptionKeyFile(profile)), "this case started on a config root an earlier run left behind, so it would prove nothing");
         QVERIFY(CredentialManager::storeCredential(profile, mKey, mPassword));
         QVERIFY(QFileInfo::exists(credentialFile(profile)));
@@ -168,24 +170,12 @@ private slots:
     void initTestCase()
     {
         if (portableMarkerPresent()) {
-            QSKIP("portable.txt present - it takes precedence over the test sandbox, so the config root cannot be moved away from the real one");
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config root cannot be redirected away from the real one");
         }
 
-        QVERIFY(mScratchDir.isValid());
-
-        // These cases save a password into the config root and delete what they saved, so
-        // that root must not be the one the person running them keeps their own credentials
-        // in. XDG_CONFIG_HOME moves it on Linux alone, where QStandardPaths' own test mode
-        // moves it everywhere - and whether it did is asked rather than assumed, because a
-        // platform where it did not is one these cases have to leave alone.
-        const QString realConfigRoot = configRoot();
-        QStandardPaths::setTestModeEnabled(true);
-
-        if (configRoot() == realConfigRoot) {
-            QSKIP("the config root could not be moved out of the way on this platform, and these cases write credentials into it and delete them again");
-        }
-
-        mConfigRootRedirected = true;
+        QVERIFY(mConfigDir.isValid());
+        mSavedXdgConfigHome = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         // The log cases read a qDebug() line, which a rule in the environment would filter
         // out before it ever reached them
@@ -200,7 +190,7 @@ private slots:
         // A default ACL on the parent, or a mount option such as vfat's fmask, overrides a
         // umask - and then every "owner-only" assertion below would hold with the whole fix
         // taken out. Prove the pin is what decides a new file's and a new directory's mode.
-        const QString scratchDirectory = qsl("%1/umask-control").arg(mScratchDir.path());
+        const QString scratchDirectory = qsl("%1/umask-control").arg(mConfigDir.path());
         QVERIFY(QDir().mkpath(scratchDirectory));
         QFile scratchFile(qsl("%1/file").arg(scratchDirectory));
         QVERIFY(scratchFile.open(QIODevice::WriteOnly));
@@ -208,6 +198,8 @@ private slots:
         QVERIFY2(reachableByOthers(scratchDirectory), "the umask this case pins is not what decides a new directory's mode here, so 'owner-only' would prove nothing");
         QVERIFY2(reachableByOthers(scratchFile.fileName()), "the umask this case pins is not what decides a new file's mode here, so 'owner-only' would prove nothing");
 #endif
+
+        mInitialised = true;
     }
 
     void cleanupTestCase()
@@ -218,11 +210,11 @@ private slots:
         }
 #endif
         removeTheProfilesTheseCasesUse();
-        QStandardPaths::setTestModeEnabled(false);
+        mSavedXdgConfigHome.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdgConfigHome);
         mSavedLoggingRules.isNull() ? qunsetenv("QT_LOGGING_RULES") : qputenv("QT_LOGGING_RULES", mSavedLoggingRules);
     }
 
-    // The sandbox is a directory of its own but not a fresh one, so each case clears out what
+    // XDG_CONFIG_HOME only redirects the config root on Linux, so each case clears out what
     // the one before it - or an earlier run - left rather than trusting the root to be empty
     void init() { removeTheProfilesTheseCasesUse(); }
 
