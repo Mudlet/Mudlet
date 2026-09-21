@@ -990,8 +990,6 @@ public:
 
     std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
 
-    bool mTutorialForCompactLineAlreadyShown = false;
-
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;

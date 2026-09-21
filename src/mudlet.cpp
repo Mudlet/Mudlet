@@ -4770,6 +4770,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     mScrollbackTutorialsShown = qBound(0, settings.value("scrollbackTutorialsShown", QVariant(0)).toInt(), mScrollbackTutorialsMax);
     mCharacterModeWarningsShown = qBound(0, settings.value("characterModeWarningsShown", QVariant(0)).toInt(), mCharacterModeWarningsMax);
+    mCompactInputLineTutorialsShown = qBound(0, settings.value("compactInputLineTutorialsShown", QVariant(0)).toInt(), mCompactInputLineTutorialsMax);
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
@@ -5018,6 +5019,7 @@ void mudlet::writeSettings()
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
     settings.setValue("characterModeWarningsShown", mCharacterModeWarningsShown);
+    settings.setValue("compactInputLineTutorialsShown", mCompactInputLineTutorialsShown);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
     settings.setValue("showMenuBar", mMenuBarVisibility != enums::visibleNever);
@@ -6971,11 +6973,11 @@ void mudlet::slot_compactInputLine(const bool state)
     if (pHost) {
         pHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && !pHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && showCompactInputLineTutorial() && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
             pHost->postMessage(infoMsg);
-            pHost->mTutorialForCompactLineAlreadyShown = true;
+            showedCompactInputLineTutorial();
         }
     }
     // Ensure the menu item reflects the actual state - a handler of the event
@@ -9050,6 +9052,16 @@ bool mudlet::showSplitscreenTutorial()
 void mudlet::showedSplitscreenTutorial()
 {
     mScrollbackTutorialsShown++;
+}
+
+bool mudlet::showCompactInputLineTutorial()
+{
+    return !experiencedMudletPlayer() && mCompactInputLineTutorialsShown < mCompactInputLineTutorialsMax;
+}
+
+void mudlet::showedCompactInputLineTutorial()
+{
+    mCompactInputLineTutorialsShown++;
 }
 
 bool mudlet::showMuteAllMediaTutorial()
