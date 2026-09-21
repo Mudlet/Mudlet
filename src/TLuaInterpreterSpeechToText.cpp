@@ -671,7 +671,8 @@ int TLuaInterpreter::sttCancel(lua_State* L)
         return 1;
     }
 
-    // Answered as stt.stop() answers them, for stt.stop()'s reasons
+    // Refused in an error state and from a profile not holding the
+    // microphone, as stt.stop() is and for the same reasons
     if (pRecognizer->state() == SpeechRecognizer::State::Error) {
         const QString message = qsl("nothing was cancelled - speech recognition is in an error state; the sysSTTError event carries the reason");
         reportSpeechRefusal(message);
@@ -1039,8 +1040,9 @@ int TLuaInterpreter::sttClose(lua_State* L)
             // listening() is false in Processing, so this used to fall straight
             // through and the phrase being decoded went with the engine - no
             // sysSTTResult, no sysSTTError, and nothing to tell it apart from
-            // the player never speaking. docs/stt-api.md rule 1 allows exactly
-            // one way to drop recognised speech, which is to report it.
+            // the player never speaking. docs/stt-api.md rule 1 lets speech be
+            // dropped silently only when the owning script asked for it; this
+            // phrase was already on its way, so its loss is reported.
             if (lostAPhraseBeingTranscribed) {
                 reportSpeechRefusalTo(*pOwner, qsl("speech recognition was closed while the last phrase was still being transcribed, so that phrase is lost"));
             }

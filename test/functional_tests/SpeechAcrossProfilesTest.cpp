@@ -1131,7 +1131,8 @@ private slots:
 
     // Leaving is not finishing. A package that stops listening because its
     // profile is no longer in front has no use for the half-sentence, and
-    // stt.stop() would finalise it and hand it over as a command.
+    // stt.stop() would finalise it as a sysSTTResult, which the package sends
+    // as a command.
     void test_cancellingAbandonsTheHalfSpokenPhrase()
     {
         mudlet::self()->activateProfile(mpFirstHost);
@@ -1201,12 +1202,25 @@ private slots:
         QVERIFY(runLua(mpSecondHost, qsl("_sttSecondCancelStarted = stt.start()")).isNull());
         QVERIFY2(luaGlobalBoolean(mpSecondHost, qsl("_sttSecondCancelStarted")), "the second profile could not start a session");
 
+        // The refusal is the caller's news, not the listening game's
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            QVERIFY(runLua(pHost,
+                           qsl("_sttCancelErrorsHeard = '0'\n_sttCancelErrorHandler = registerAnonymousEventHandler('sysSTTError', function() _sttCancelErrorsHeard = "
+                               "tostring(tonumber(_sttCancelErrorsHeard) + 1) end)"))
+                            .isNull());
+        }
+
         QVERIFY(runLua(mpFirstHost, qsl("_sttForeignCancelOk, _sttForeignCancelWhy = stt.cancel()")).isNull());
         const bool cancelSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttForeignCancelOk"));
         const QString why = luaGlobalString(mpFirstHost, qsl("_sttForeignCancelWhy"));
         const bool stillListening = pEngine->listening();
         const Host* pOwner = mudlet::self()->microphoneOwner();
+        const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttCancelErrorsHeard"));
+        const QString errorsToListener = luaGlobalString(mpSecondHost, qsl("_sttCancelErrorsHeard"));
 
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            runLua(pHost, qsl("killAnonymousEventHandler(_sttCancelErrorHandler)"));
+        }
         runLua(mpSecondHost, qsl("stt.stop()"));
         retireStandInEngine();
 
@@ -1214,6 +1228,8 @@ private slots:
         QVERIFY2(why.contains(qsl("only the profile that started a session can cancel it")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
         QVERIFY2(stillListening, "another profile's cancel ended the session anyway");
         QCOMPARE(pOwner, mpSecondHost);
+        QCOMPARE(errorsToCaller, qsl("1"));
+        QCOMPARE(errorsToListener, qsl("0"));
     }
 
     // The microphone cannot change hands while the last phrase is still being
