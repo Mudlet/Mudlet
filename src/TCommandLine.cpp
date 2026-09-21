@@ -1702,11 +1702,11 @@ void TCommandLine::slot_saveHistory()
  * sent as part of the password. When the prompt ends, the part of the line that
  * was already there the last time the game sent text is given back - selected
  * again if it was selected - because the player could not have been answering
- * a prompt they had not yet seen. The part typed after that is given back only
- * if nothing was typed at the prompt: typed into a silence the game then broke,
- * it was a command, but typed after a prompt the player saw, it was the start
- * of the password, and the line cannot tell those apart. A script logging in
- * types nothing, so its player gets their text back either way.
+ * a prompt they had not yet seen. The part typed after that could have been
+ * the start of the password, and the line cannot tell: it is given back only if
+ * nothing was typed at the prompt, which is a script logging in, or if it is a
+ * command the player has sent before, which the history already holds in the
+ * clear. Otherwise it is dropped.
  *
  * @param suppress true to start password mode (hide input), false to end it (restore normal input)
  */
@@ -1786,13 +1786,17 @@ void TCommandLine::setEchoSuppression(bool suppress)
 
         // Give back what the prompt set aside. The part that predated the game's
         // last output always: it is a command whatever was typed at the prompt.
-        // The part typed after it only if nothing was typed at the prompt, since
-        // otherwise it may have been the start of the password that was. The game
+        // The part typed after it only if it cannot have been the start of the
+        // password - nothing was typed at the prompt, or see below. The game
         // releasing ECHO is the game acting, so the line is remembered as it stands
         // now - a prompt that comes straight back, for a rejected password, must
         // find this text already there rather than take it for something typed in
         // reply.
-        const QString textToRestore = mTextToRestoreAfterEchoSuppression + (mTypedDuringPrompt ? QString() : mUncertainTextToRestore);
+        // The uncertain part also comes back if it is a command the player has sent
+        // before: it is then already in the history, in the clear, on disk, so
+        // showing it again can disclose nothing the history does not hold.
+        const bool uncertainTextIsSafeToShow = !mTypedDuringPrompt || mHistoryList.contains(mUncertainTextToRestore);
+        const QString textToRestore = mTextToRestoreAfterEchoSuppression + (uncertainTextIsSafeToShow ? mUncertainTextToRestore : QString());
         mUncertainTextToRestore.clear();
         if (!textToRestore.isEmpty()) {
             setPlainText(textToRestore);

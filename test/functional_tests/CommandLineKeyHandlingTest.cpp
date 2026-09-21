@@ -803,6 +803,9 @@ private slots:
         QCOMPARE(pCommandLine->getType(), TCommandLine::MainCommandLine);
         QVERIFY2(!mpHost->mDisablePasswordMasking, "password masking is off in this profile, so this case proves nothing");
         sendCommand(pCommandLine, qsl("qzxsentcommand"));
+        // Delivered to the stub asynchronously, so wait for it: otherwise it lands
+        // during a later case's check of what the game received.
+        QVERIFY(waitForServerToReceive("qzxsentcommand"));
 
         type(pCommandLine, qsl("qzxleftover"));
         serverSays("Password:\n");
@@ -889,9 +892,34 @@ private slots:
         mpHost->setRemoteEchoingActive(true);
         QVERIFY(pCommandLine->toPlainText().isEmpty());
         QVERIFY(runLua(qsl("send('qzxscriptedpassword', false)")));
+        QVERIFY(waitForServerToReceive("qzxscriptedpassword"));
 
         mpHost->setRemoteEchoingActive(false);
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxtypedahead"));
+    }
+
+    // The same silence answered by hand, but the text is a command the player has
+    // sent before. It is already in the history, in the clear, on disk - so giving
+    // it back can show nothing the history does not hold, and it comes back.
+    void test_textTypedIntoASilenceComesBackWhenItIsAlreadyInTheHistory()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("qzxlook"));
+        // Delivered to the stub asynchronously, so wait for it: otherwise it lands
+        // during a later case's check of what the game received.
+        QVERIFY(waitForServerToReceive("qzxlook"));
+
+        serverSays("Checking the ledgers.\n");
+        type(pCommandLine, qsl("qzxlook"));
+
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY(pCommandLine->toPlainText().isEmpty());
+        type(pCommandLine, qsl("qzxsecret"));
+        press(pCommandLine, Qt::Key_Return);
+
+        mpHost->setRemoteEchoingActive(false);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxlook"));
     }
 
     // Both at once: a command the game printed after, then more typed before
