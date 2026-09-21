@@ -30,7 +30,10 @@
 //
 // A fresh sub command line per test rather than the profile's main one: the
 // history list is private and has no reset, so a shared command line would
-// make each test's history depend on the ones that ran before it.
+// make each test's history depend on the ones that ran before it. The one
+// exception is the password-prompt Tab case, which has to drive the profile's
+// own command line because only that one is ever masked - see
+// mainCommandLine().
 
 #include <QFileInfo>
 #include <QSignalSpy>
@@ -80,18 +83,6 @@ private:
     // A command line of this test's own, with an empty history and no
     // suggestions. Lua cannot delete one again, but it is parented into the
     // console so the profile's teardown takes it with it.
-    // The profile's own command line. freshCommandLine() below makes a
-    // SubCommandLine, which setEchoSuppression() deliberately never masks, so a
-    // case about a password prompt has to drive this one or it proves nothing.
-    TCommandLine* mainCommandLine() const
-    {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
-        if (pCommandLine) {
-            pCommandLine->mSaveCommands = false;
-        }
-        return pCommandLine;
-    }
-
     TCommandLine* freshCommandLine()
     {
         mLineName = qsl("keyHandlingLine%1").arg(++mLineCounter);
@@ -103,6 +94,27 @@ private:
         TCommandLine* pCommandLine = mpHost->mpConsole->subCommandLineWidget(mLineName);
         if (pCommandLine) {
             pCommandLine->mSaveCommands = false;
+        }
+        return pCommandLine;
+    }
+
+    // The profile's own command line, for the one case that cannot use the
+    // fresh sub command line above. setEchoSuppression() returns early for
+    // anything that is not a MainCommandLine, and the signal that drives it is
+    // only connected for one, so a SubCommandLine is never masked - which makes
+    // it useless for a case gated on the mask itself. Host-level behaviour, like
+    // the history guard in enterCommand(), does reach a sub command line, so the
+    // password case below at test_aPasswordIsNotKeptInTheHistory() is not
+    // affected by this.
+    TCommandLine* mainCommandLine() const
+    {
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        if (pCommandLine) {
+            pCommandLine->mSaveCommands = false;
+            // This one is the profile's, shared by every case that asks for it,
+            // and a case that aborts mid-prompt can have its pre-prompt text put
+            // back on it by the cleanup. Start from a known empty line.
+            pCommandLine->clear();
         }
         return pCommandLine;
     }
@@ -250,9 +262,10 @@ private slots:
 
     void cleanup()
     {
-        // Echo suppression is per-Host and this class shares one across its
-        // cases, so a case that aborts while a prompt is open would mask every
-        // case after it.
+        // This class shares one Host across its cases, so a case that aborts with
+        // the prompt still open would mask the ones after it. Only the Host half is
+        // undone here: Host::setRemoteEchoingActive() is change-gated, so this does
+        // nothing for a widget left masked on its own, which no case here does.
         mpHost->setRemoteEchoingActive(false);
         if (!mLineName.isEmpty()) {
             mpHost->resetCmdLineAction(mLineName);
@@ -555,17 +568,18 @@ private slots:
 
     // Tab at a password prompt rewrites the line the player cannot read: it
     // takes what has been typed so far - the password - as the prefix to
-    // complete, and puts a word lifted from the game's own output in its place.
+    // complete, and puts a word lifted from the console buffer, or from a
+    // script's registered suggestions, in its place.
     // The player sees asterisks throughout, so the next Return sends a
     // credential they never typed and it looks like a mistyped password.
-    // Up and Down already do nothing here; Tab is the half that was missed.
+    // The two history keys have the same hole at a masked prompt; #10965 closes
+    // that half, and is not in this branch.
     void test_tabDoesNothingAtAPasswordPrompt()
     {
         mpHost->mpConsole->print(qsl("qzxpassphrase appears\n"));
         TCommandLine* pCommandLine = mainCommandLine();
         QVERIFY(pCommandLine);
         QCOMPARE(pCommandLine->getType(), TCommandLine::MainCommandLine);
-        pCommandLine->clear();
 
         // The control, on the same widget: Tab completes here, so a pass below
         // cannot come from this command line never completing anything at all.
@@ -574,19 +588,39 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxpassphrase"));
         pCommandLine->clear();
 
-        // Opening the prompt on an empty line just clears it, so what is typed
-        // next is the password and nothing of the control survives into it.
+        // The one precondition that can actually be tested. Asserting on the
+        // line's contents here would not do it: the prompt opens on an empty line
+        // and leaves it empty, so that reads true whether the mask engaged or
+        // setEchoSuppression() returned early on this preference.
+        // mIsEchoSuppressed is private and this class is not a friend of the
+        // widget, so there is nothing else to read.
+        QVERIFY2(!mpHost->mDisablePasswordMasking, "password masking is off in this profile, so this case proves nothing");
         mpHost->setRemoteEchoingActive(true);
-        QVERIFY2(pCommandLine->toPlainText().isEmpty(), "masking did not engage on the main command line, so this case proves nothing");
 
         type(pCommandLine, qsl("qzxpass"));
         press(pCommandLine, Qt::Key_Tab);
-        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxpass"), qPrintable(qsl("Tab completed the password against the game's output, leaving '%1'").arg(pCommandLine->toPlainText())));
+        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxpass"), qPrintable(qsl("Tab completed the password against the console buffer, leaving '%1'").arg(pCommandLine->toPlainText())));
 
         press(pCommandLine, Qt::Key_Backtab, Qt::ShiftModifier);
-        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxpass"), qPrintable(qsl("Shift+Tab completed the password against the game's output, leaving '%1'").arg(pCommandLine->toPlainText())));
+        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxpass"), qPrintable(qsl("Shift+Tab completed the password against the console buffer, leaving '%1'").arg(pCommandLine->toPlainText())));
 
         mpHost->setRemoteEchoingActive(false);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), "the password was left on the line after the prompt ended");
+
+        // The refusal is scoped to the prompt rather than latched off for the
+        // session. This cannot fail against the guard as written - it reads a flag
+        // setEchoSuppression() has just cleared - so it earns its place as a fence
+        // rather than as proof: a later refusal keyed on something that outlives
+        // the prompt would kill completion for the rest of the session, and
+        // nothing else here would notice.
+        type(pCommandLine, qsl("qzxpass"));
+        press(pCommandLine, Qt::Key_Tab);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxpassphrase"));
+
+        // This case is the only one that drives the profile's own command line, so
+        // it is also the only one that can leave a completion cycle on it. Escape
+        // resets that state, keeping the shared widget as it was found.
+        press(pCommandLine, Qt::Key_Escape);
     }
 
     // Typing a space accepts the completion. A Tab straight after it must not

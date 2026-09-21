@@ -1105,7 +1105,13 @@ void TCommandLine::handleTabCompletion(bool direction)
     // from that output in its place. The line is painted as asterisks, so the
     // player cannot see that happen and the next Return sends a credential they
     // never typed - which reads as a mistyped password rather than as this.
-    // enterCommand() already refuses to put the same text into the history.
+    // enterCommand() already keeps a masked line out of the history, on the
+    // remote-echo check there.
+    //
+    // This refuses while the prompt is open rather than while the text is hidden,
+    // so it still refuses when the player has revealed the line with the eye
+    // button: completing a credential against the game's buffer is wrong whether
+    // or not they can see it happen.
     if (mIsEchoSuppressed && mType == MainCommandLine) {
         return;
     }
