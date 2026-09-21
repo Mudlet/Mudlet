@@ -93,6 +93,7 @@
 #include "TTrigger.h"
 #include "TelnetServerStub.h"
 #include "TriggerMatchPool.h"
+#include "TriggerUnit.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -422,8 +423,9 @@ private:
     // is the worst case of that, so it is the arm to measure the index against.
     // MUDLET_BENCH_CHURN=stayOpen churns through setTriggerStayOpen() instead of
     // through arming and killing. Both move a trigger in and out of what the
-    // index can filter, but they reach the index by different routes, and only
-    // this one takes the route a script takes.
+    // index can filter, but they reach the index by different routes: arming
+    // and killing add and empty a slot, while a stay-open window files an
+    // existing one again.
     int installChurnTrigger(Host* host, bool& allOk)
     {
         const QByteArray churnMode = qgetenv("MUDLET_BENCH_CHURN");
@@ -431,7 +433,6 @@ private:
             return 0;
         }
         const bool churnByStayOpen = (churnMode == "stayOpen");
-        int installed = 0;
         if (churnByStayOpen) {
             // setTriggerStayOpen() reopens a standing trigger rather than making
             // one, so the arm needs something for it to reopen. Its pattern never
@@ -442,28 +443,37 @@ private:
             pStay->setTemporary(false);
             pStay->setIsActive(true);
             allOk = pStay->registerTrigger() && allOk;
+            // The constructor sets the name but only setName() enters it in the
+            // lookup table setTriggerStayOpen() searches, so without this the
+            // arm reopens nothing and times an empty Lua call.
+            pStay->setName(qsl("bench_stayopen"));
             allOk = pStay->setScript(QString()) && allOk;
             allOk = pStay->state() && allOk;
-            ++installed;
+            allOk = (host->getTriggerUnit()->findTrigger(qsl("bench_stayopen")) != nullptr) && allOk;
         }
         auto* pT = new TTrigger(qsl("bench_churn"), {qsl("e")}, {REGEX_SUBSTRING}, false, host);
         pT->setIsFolder(false);
         pT->setTemporary(false);
         pT->setIsActive(true);
         allOk = pT->registerTrigger() && allOk;
-        // The kill is held back a few lines so that the arming has been applied
-        // to the index before the killing reaches it. Arming and killing on the
-        // same line is the commoner shape, but the two cancel out before the
-        // index sees either, so it measures nothing about maintaining one.
-        const QString churnScript = churnByStayOpen ? qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
-                                                          "setTriggerStayOpen('bench_stayopen', 1)")
-                                                    : qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
-                                                          "__bench_churn_q = __bench_churn_q or {} "
-                                                          "__bench_churn_q[#__bench_churn_q + 1] = tempTrigger('__bench_churn__', '--') "
-                                                          "if #__bench_churn_q > 8 then killTrigger(table.remove(__bench_churn_q, 1)) end");
+        QString churnScript;
+        if (churnByStayOpen) {
+            churnScript = qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
+                              "setTriggerStayOpen('bench_stayopen', 1)");
+        } else {
+            // The kill is held back a few lines so that the arming has been
+            // applied to the index before the killing reaches it. Arming and
+            // killing on the same line is the commoner shape, but the two
+            // cancel out before the index sees either, so it measures nothing
+            // about maintaining one.
+            churnScript = qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
+                              "__bench_churn_q = __bench_churn_q or {} "
+                              "__bench_churn_q[#__bench_churn_q + 1] = tempTrigger('__bench_churn__', '--') "
+                              "if #__bench_churn_q > 8 then killTrigger(table.remove(__bench_churn_q, 1)) end");
+        }
         allOk = pT->setScript(churnScript) && allOk;
         allOk = pT->state() && allOk;
-        return installed + 1;
+        return churnByStayOpen ? 2 : 1;
     }
 
     int installTriggerSet(Host* host, bool& allOk)

@@ -509,6 +509,12 @@ void TriggerUnit::refreshRootNodeSnapshot()
             snapshot.mNodes[position] = nullptr;
             snapshot.mPrescan.removeSlot(position);
         }
+        if (mRootNodesRefiled.size() > 1) {
+            // One slot queued twice refiles to the same state twice, and the
+            // index counts both towards the mutations that buy a rebuild.
+            std::sort(mRootNodesRefiled.begin(), mRootNodesRefiled.end());
+            mRootNodesRefiled.erase(std::unique(mRootNodesRefiled.begin(), mRootNodesRefiled.end()), mRootNodesRefiled.end());
+        }
         for (const int position : mRootNodesRefiled) {
             if (TTrigger* pT = snapshot.mNodes[position]) {
                 snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
@@ -824,10 +830,25 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     // start mid-run and skip duplicates on some QMultiMap implementations
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
-        it.value()->mKeepFiring = lines;
-        // the trigger now fires without matching, so it can no longer be
-        // filtered out of a line - including the one being processed right now
-        markPrescanStaleForLineInFlight(it.value());
+        TTrigger* pT = it.value();
+        const bool wasUnfilterable = pT->prescanGrams().empty();
+        pT->mKeepFiring = lines;
+        const bool nowUnfilterable = pT->prescanGrams().empty();
+        if (wasUnfilterable == nowUnfilterable) {
+            // A script that sets the same count every line is the common shape,
+            // and the index files on nothing that just changed - refiling anyway
+            // would spend a mutation per call and buy a rebuild with them.
+            continue;
+        }
+        if (nowUnfilterable) {
+            // it now fires without matching, so it can no longer be filtered out
+            // of a line - including the one being processed right now
+            markPrescanStaleForLineInFlight(pT);
+        } else {
+            // closing the window only makes it filterable again, which the line
+            // in flight can ignore: it was already being offered the trigger.
+            markPrescanStale(pT);
+        }
     }
 }
 
