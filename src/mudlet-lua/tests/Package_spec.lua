@@ -196,6 +196,11 @@ local function waitForProfileSaveToPass()
   return waitUntil(function() return installPackage("") == nil end, 5000)
 end
 
+-- Hands back what the install that took answered, for the specs that are about
+-- the answer itself: true, and - when the package has something to own up to -
+-- the reason with it. An install that was already there before the first
+-- attempt, or one that landed from an earlier postponement while this pumped,
+-- has no answer of its own to give and comes back with nothing.
 local function installUntilConfirmed(install, path, isInstalled, what)
   for attempt = 1, 3 do
     if isInstalled() then
@@ -211,7 +216,7 @@ local function installUntilConfirmed(install, path, isInstalled, what)
     -- an install that is carried out is carried out there and then, so if it is
     -- not listed by the time the call returns it was postponed
     if isInstalled() then
-      return
+      return ok, err
     end
     pumpEvents(400 * attempt)
   end
@@ -300,8 +305,8 @@ local function installFixtureModule(name, archiveName)
   lfs.mkdir(scratchDirectory)
   local path = scratchDirectory .. "/" .. (archiveName or name) .. ".mpackage"
   copyFile(fixtureDirectory .. "/" .. (archiveName or name) .. ".mpackage", path)
-  installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the fixture module " .. name)
-  return path
+  local ok, reason = installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the fixture module " .. name)
+  return path, ok, reason
 end
 
 -- The clean-up is registered before the install so a fixture that only got
@@ -462,12 +467,27 @@ describe("Tests the functionality of installPackage", function()
       assert.equals(1, #packageEvents)
       assert.equals(minimalPackage, packageEvents[1][1])
       assert.is_true(contains(packageEvents[1][2], minimalPackage .. ".mpackage"), tostring(packageEvents[1][2]))
+      -- only an install with something to own up to adds an argument, so a
+      -- package whose Lua all works raises exactly the events it always did
+      assert.is_nil(installEvents[1][2], tostring(installEvents[1][2]))
+      assert.is_nil(packageEvents[1][3], tostring(packageEvents[1][3]))
     end)
 
     it("refuses to install a package that is already installed", function()
       local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
       assert.is_true(contains(err, "package " .. minimalPackage .. " is already installed"), tostring(err))
     end)
+  end)
+
+  it("answers a package whose Lua all works with a bare true", function()
+    defer(function() removeFixturePackage(minimalPackage) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local answer = {installPackage(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")}
+    -- a postponed install answers a bare true as well, so the answer only says
+    -- anything about this package once the package really is installed
+    assert.is_true(packageInstalled(minimalPackage), "the install was postponed, so its answer is not this package's")
+    assert.is_true(answer[1])
+    assert.equals(1, #answer, "a healthy install handed back " .. tostring(answer[2]))
   end)
 
   it("unpacks a folder of resources that ships with a package", function()
@@ -2466,6 +2486,198 @@ describe("Tests installing a package file from a later Mudlet", function()
     -- though the package itself stays registered, the same way one whose XML is
     -- malformed does
     assert.equals(0, exists(name .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
+  end)
+end)
+
+-- A package's Lua is compiled as the package is read in, and a script's body is
+-- run there and then. Whatever does not get through that is kept all the same,
+-- so that it can be opened in the editor and fixed - the rest of the package
+-- installs around it. What it must not do is answer a bare "installed" and
+-- leave it there: installPackage()'s return and the install events both have to
+-- own up to the part of the package that is not working, so that a package
+-- manager can tell a broken install from a healthy one. The console is a
+-- separate question, answered by who asked for the install - see the silence
+-- pinned below, and BrokenPackageNoticeTest for the other half.
+describe("Tests installing a package whose Lua does not work", function()
+  local name = "mudlet-spec-broken-script"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local installAnswer, installReason, consoleText
+  local installEvents, packageEvents, handlers
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<TriggerPackage>',
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      '<name>' .. name .. ' trigger</name><script>this is not lua(</script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList><string>mudlet spec broken trigger</string></regexCodeList>',
+      '<regexCodePropertyList><integer>0</integer></regexCodePropertyList>',
+      '</Trigger>',
+      '</TriggerPackage>',
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' script</name><packageName></packageName>',
+      '<script>mudletSpecBrokenScriptMissing()</script>',
+      '<eventHandlerList />',
+      '</Script>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' sibling</name><packageName></packageName>',
+      '<script>mudletSpecBrokenScriptSibling = true</script>',
+      '<eventHandlerList />',
+      '</Script>',
+      '</ScriptPackage>',
+    }, "\n"))
+    local genericHandler, detailedHandler
+    installEvents, genericHandler = collectEvents("sysInstall")
+    packageEvents, detailedHandler = collectEvents("sysInstallPackage")
+    handlers = {genericHandler, detailedHandler}
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    -- the console is marked before the install because what does *not* appear
+    -- there for a scripted install is part of what this block pins
+    local mark = getLastLineNumber("main")
+    installAnswer, installReason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    consoleText = textFrom(mark)
+    -- the install events are raised from a zero-timer once the install is done
+    assert.is_true(waitUntil(function() return #packageEvents > 0 end, 2000), "the install events never arrived")
+  end)
+
+  teardown(function()
+    for _, handler in ipairs(handlers) do
+      killAnonymousEventHandler(handler)
+    end
+    removeFixturePackage(name)
+    os.remove(xml)
+    _G.mudletSpecBrokenScriptSibling = nil
+  end)
+
+  it("installs the package anyway, and everything else in it runs", function()
+    assert.is_true(packageInstalled(name))
+    assert.equals(1, exists(name .. " script", "script"))
+    assert.equals(1, exists(name .. " trigger", "trigger"))
+    assert.is_true(mudletSpecBrokenScriptSibling == true, "the other script in the package never ran")
+  end)
+
+  -- installPackage() is a script asking for the install, and a script has the
+  -- answer below to report from however it likes - mpkg does. The console line
+  -- is for the install a person asked for and is watching, which no Lua
+  -- function can ask for; BrokenPackageNoticeTest covers that one.
+  it("leaves the console alone, since a script asked for this install", function()
+    assert.is_false(containsWrapped(consoleText, "are not working"), consoleText)
+    assert.is_false(containsWrapped(consoleText, "mudletSpecBrokenScriptMissing"), consoleText)
+  end)
+
+  it("reports a trigger whose body does not compile as well as a script", function()
+    assert.is_true(contains(installReason, name .. " trigger"), tostring(installReason))
+  end)
+
+  it("hands the reason back to whoever called installPackage()", function()
+    assert.is_true(installAnswer)
+    assert.is_true(contains(installReason, name .. " script"), tostring(installReason))
+    assert.is_true(contains(installReason, "mudletSpecBrokenScriptMissing"), tostring(installReason))
+  end)
+
+  it("hands it back as plain text, not as the markup the editor is shown", function()
+    assert.is_false(contains(installReason, "<b>"), tostring(installReason))
+    assert.is_false(contains(installReason, "&quot;"), tostring(installReason))
+    assert.is_true(contains(installReason, '[string "Script: ' .. name .. ' script"]'), tostring(installReason))
+  end)
+
+  it("carries the reason on sysInstall and sysInstallPackage", function()
+    assert.equals(1, #installEvents)
+    assert.equals(name, installEvents[1][1])
+    assert.is_true(contains(installEvents[1][2], "mudletSpecBrokenScriptMissing"), tostring(installEvents[1][2]))
+    assert.equals(1, #packageEvents)
+    assert.equals(name, packageEvents[1][1])
+    assert.is_true(contains(packageEvents[1][3], "mudletSpecBrokenScriptMissing"), tostring(packageEvents[1][3]))
+  end)
+end)
+
+-- The same failure the way a player meets it: an archive, whose XML files are
+-- read one at a time, holding more than one script that stops with an error.
+describe("Tests installing a package archive whose scripts stop with an error", function()
+  local name = "mudlet-spec-brokenscripts"
+  local installAnswer, installReason, consoleText, runsBefore
+
+  setup(function()
+    runsBefore = mudletSpecBrokenScriptsRuns or 0
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    installAnswer, installReason = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                                                         function() return packageInstalled(name) end, "the fixture package " .. name)
+    consoleText = textFrom(mark)
+  end)
+
+  teardown(function()
+    removeFixturePackage(name)
+    _G.mudletSpecBrokenScriptsRuns = nil
+  end)
+
+  it("installs it, and the script with nothing wrong with it runs", function()
+    assert.is_true(packageInstalled(name))
+    assert.is_true(installAnswer)
+    assert.is_true((mudletSpecBrokenScriptsRuns or 0) > runsBefore, "the package's healthy script did not run")
+  end)
+
+  it("names each script that stopped, in the order the package lists them", function()
+    assert.is_true(contains(installReason, name .. " first"), tostring(installReason))
+    assert.is_true(contains(installReason, name .. " second"), tostring(installReason))
+    assert.is_true(installReason:find(name .. " first", 1, true) < installReason:find(name .. " second", 1, true), installReason)
+    assert.is_true(contains(installReason, "; "), tostring(installReason))
+    assert.is_false(containsWrapped(consoleText, "are not working"), consoleText)
+  end)
+
+  it("gives the error text back exactly as the script produced it", function()
+    -- the editor is shown this escaped and wrapped in markup, and undoing that
+    -- in the wrong order would eat the script's own angle brackets or turn its
+    -- "&lt;" into one
+    assert.is_true(contains(installReason, 'amp & lt &lt;b&gt; markup <b>bold</b> quote " end'), tostring(installReason))
+  end)
+end)
+
+-- A module is read by the same code and answered the same way. A sync reinstalls
+-- the module on every profile save and on every reloadModule(), and opening the
+-- profile reinstalls it too, so a console line for either would come back for as
+-- long as the module is broken - at somebody who, for a module they did not
+-- write, can do nothing about it. The reason still has to reach the sync's own
+-- install event.
+describe("Tests installing a module whose scripts stop with an error", function()
+  local name = "mudlet-spec-brokenscripts"
+  local installAnswer, installReason, consoleText
+  local syncEvents, syncHandler
+
+  setup(function()
+    syncEvents, syncHandler = collectEvents("sysSyncInstallModule")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    local _
+    _, installAnswer, installReason = installFixtureModule(name)
+    consoleText = textFrom(mark)
+  end)
+
+  teardown(function()
+    killAnonymousEventHandler(syncHandler)
+    removeFixtureModule(name)
+    _G.mudletSpecBrokenScriptsRuns = nil
+  end)
+
+  it("tells installModule() what is not working, and keeps it off the console", function()
+    assert.is_true(installAnswer)
+    assert.is_true(contains(installReason, name .. " first"), tostring(installReason))
+    assert.is_false(containsWrapped(consoleText, "are not working"), consoleText)
+  end)
+
+  it("keeps quiet when a module sync reinstalls it, but still says so on the event", function()
+    local runsBefore = mudletSpecBrokenScriptsRuns or 0
+    local eventsBefore = #syncEvents
+    local mark = getLastLineNumber("main")
+    reloadModuleUntil(name, function() return (mudletSpecBrokenScriptsRuns or 0) > runsBefore end)
+    assert.is_true(waitUntil(function() return #syncEvents > eventsBefore end, 2000), "the module sync raised no install event")
+    assert.is_false(containsWrapped(textFrom(mark), "are not working"), textFrom(mark))
+    local event = syncEvents[#syncEvents]
+    assert.equals(name, event[1])
+    assert.is_true(contains(event[3], name .. " first"), tostring(event[3]))
   end)
 end)
 

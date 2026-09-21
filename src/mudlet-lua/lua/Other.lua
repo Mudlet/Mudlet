@@ -1133,7 +1133,7 @@ end
 local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
 function verbosePackageInstall(fileName)
-  local ok, err = installPackage(fileName)
+  local ok, reason = installPackage(fileName)
   -- this has to stay a literal prefix strip: as a Lua pattern the profile path's
   -- magic characters bite, and a "-" (as in "Mudlet self-test") stops it
   -- matching at all
@@ -1141,7 +1141,14 @@ function verbosePackageInstall(fileName)
   local packageName = fileName:starts(profileFolder) and fileName:sub(#profileFolder + 1) or fileName
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
-  if ok then
+  if ok and reason and reason ~= "" then
+    -- the install has already named on the console whatever in the package is
+    -- not working, so this owns up to it rather than claiming a clean install
+    local partialText = mudlet.Locale.packageInstallPartial.message
+    partialText = string.format(partialText, packageName)
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. partialText .. '\n')
+  elseif ok then
     local successText = mudlet.Locale.packageInstallSuccess.message
     successText = string.format(successText, packageName)
     local okPrefix = mudlet.Locale.prefixOk.message
@@ -1149,7 +1156,7 @@ function verbosePackageInstall(fileName)
     -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
   else
     local failureText = mudlet.Locale.packageInstallFail.message
-    failureText = string.format(failureText, packageName, err)
+    failureText = string.format(failureText, packageName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
     -- Cyan and Orange; see cTelnet::postMessage for color comparison
@@ -1157,11 +1164,16 @@ function verbosePackageInstall(fileName)
 end
 
 function verboseModuleInstall(fileName)
-  local ok, err = installModule(fileName)
+  local ok, reason = installModule(fileName)
   local moduleName = fileName
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
-  if ok then
+  if ok and reason and reason ~= "" then
+    local partialText = mudlet.Locale.moduleInstallPartial.message
+    partialText = string.format(partialText, moduleName)
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. partialText .. '\n')
+  elseif ok then
     local successText = mudlet.Locale.moduleInstallSuccess.message
     successText = string.format(successText, moduleName)
     local okPrefix = mudlet.Locale.prefixOk.message
@@ -1169,7 +1181,7 @@ function verboseModuleInstall(fileName)
     -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
   else
     local failureText = mudlet.Locale.moduleInstallFail.message
-    failureText = string.format(failureText, moduleName, err)
+    failureText = string.format(failureText, moduleName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
     -- Cyan and Orange; see cTelnet::postMessage for color comparison
