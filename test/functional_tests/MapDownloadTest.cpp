@@ -1228,8 +1228,8 @@ private slots:
     //
     // After every standalone-progress test on purpose: loadMap() creates the
     // mapper widget, and from then on TMap puts its progress on that widget
-    // instead of emitting the signals those tests watch. A profile's mapper
-    // cannot be destroyed again, so this cannot be undone within the process -
+    // instead of emitting the signals those tests watch. Nothing in this file
+    // undoes mapper creation, so this cannot be undone within the process -
     // which is what the two mapper tests below rely on.
     void test_downloadedBinaryMapIsLoadedThroughTheConsole()
     {

@@ -6175,6 +6175,8 @@ void dlgTriggerEditor::saveTimer()
         pT->setName(name);
         pT->setScript(script);
 
+        pT->validateTime();
+
         QIcon icon;
         QString itemDescription;
         if (pT->isFolder()) {
