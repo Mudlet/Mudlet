@@ -56,6 +56,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
+#include <utility>
 
 #include "Host.h"
 #include "HostManager.h"
@@ -131,10 +132,29 @@ public:
         setState(State::Ready);
     }
 
+    // Words heard but not yet finalised: what a stop delivers and a cancel
+    // throws away
+    void hearSoFar(const QString& text) { mHeardSoFar = text; }
+
 protected:
     void doStartListening() override { setState(State::Listening); }
-    void doStopListening() override { setState(State::Ready); }
-    void doCancel() override { setState(State::Ready); }
+    void doStopListening() override
+    {
+        const QString heard = std::exchange(mHeardSoFar, QString());
+        if (!heard.isEmpty()) {
+            setState(State::Processing);
+            emit finalResult(heard);
+        }
+        setState(State::Ready);
+    }
+    void doCancel() override
+    {
+        mHeardSoFar.clear();
+        setState(State::Ready);
+    }
+
+private:
+    QString mHeardSoFar;
 };
 
 class SpeechAcrossProfilesTest : public QObject
@@ -1106,6 +1126,93 @@ private slots:
         QVERIFY2(!stopSucceeded, "a profile holding no session was told it had stopped one");
         QVERIFY2(why.contains(qsl("only the profile that started a session can stop it")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
         QVERIFY2(stillListening, "another profile's stop ended the session anyway");
+        QCOMPARE(pOwner, mpSecondHost);
+    }
+
+    // Leaving is not finishing. A package that stops listening because its
+    // profile is no longer in front has no use for the half-sentence, and
+    // stt.stop() would finalise it and hand it over as a command.
+    void test_cancellingAbandonsTheHalfSpokenPhrase()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttCancelHeard = 0\n_sttCancelHandler = registerAnonymousEventHandler('sysSTTResult', function() _sttCancelHeard = _sttCancelHeard + 1 end)")).isNull());
+        QVERIFY(runLua(mpFirstHost, qsl("_sttCancelStarted = stt.start()")).isNull());
+        QVERIFY2(luaGlobalBoolean(mpFirstHost, qsl("_sttCancelStarted")), "the session did not start");
+        pEngine->hearSoFar(qsl("say test"));
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttCancelOk = stt.cancel()")).isNull());
+        QTest::qWait(50ms);
+
+        const bool cancelled = luaGlobalBoolean(mpFirstHost, qsl("_sttCancelOk"));
+        runLua(mpFirstHost, qsl("_sttCancelHeardText = tostring(_sttCancelHeard)"));
+        const QString resultsDelivered = luaGlobalString(mpFirstHost, qsl("_sttCancelHeardText"));
+        const SpeechRecognizer::State stateAfter = pEngine->state();
+        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+
+        runLua(mpFirstHost, qsl("killAnonymousEventHandler(_sttCancelHandler)"));
+        retireStandInEngine();
+
+        QVERIFY2(cancelled, "cancelling the profile's own session was refused");
+        QCOMPARE(resultsDelivered, qsl("0"));
+        QCOMPARE(stateAfter, SpeechRecognizer::State::Ready);
+        QVERIFY2(pOwnerAfter == nullptr, "the microphone was still held after the session was cancelled");
+    }
+
+    // A phrase the decoder is still finishing is in flight too. On a backend
+    // that finalises after the stop returns - the built-in macOS one - a
+    // package can stop and then learn it is leaving, and the phrase has not
+    // landed yet.
+    void test_cancellingAbandonsAPhraseStillBeingDecoded()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttDecodingCancelStarted = stt.start()")).isNull());
+        QVERIFY2(luaGlobalBoolean(mpFirstHost, qsl("_sttDecodingCancelStarted")), "the session did not start");
+        pEngine->beginProcessing();
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttDecodingCancelOk = stt.cancel()")).isNull());
+        const bool cancelled = luaGlobalBoolean(mpFirstHost, qsl("_sttDecodingCancelOk"));
+        const SpeechRecognizer::State stateAfter = pEngine->state();
+        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+
+        retireStandInEngine();
+
+        QVERIFY2(cancelled, "cancelling the profile's own session was refused");
+        QCOMPARE(stateAfter, SpeechRecognizer::State::Ready);
+        QVERIFY2(pOwnerAfter == nullptr, "the microphone was still held after the session was cancelled");
+    }
+
+    // Owned the way stopping is, for stopping's reason: throwing away another
+    // game's phrase would leave that game with a bare state change.
+    void test_cancellingIsRefusedFromAProfileThatHoldsNoSession()
+    {
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+
+        QVERIFY(runLua(mpSecondHost, qsl("_sttSecondCancelStarted = stt.start()")).isNull());
+        QVERIFY2(luaGlobalBoolean(mpSecondHost, qsl("_sttSecondCancelStarted")), "the second profile could not start a session");
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttForeignCancelOk, _sttForeignCancelWhy = stt.cancel()")).isNull());
+        const bool cancelSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttForeignCancelOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttForeignCancelWhy"));
+        const bool stillListening = pEngine->listening();
+        const Host* pOwner = mudlet::self()->microphoneOwner();
+
+        runLua(mpSecondHost, qsl("stt.stop()"));
+        retireStandInEngine();
+
+        QVERIFY2(!cancelSucceeded, "a profile holding no session was told it had cancelled one");
+        QVERIFY2(why.contains(qsl("only the profile that started a session can cancel it")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
+        QVERIFY2(stillListening, "another profile's cancel ended the session anyway");
         QCOMPARE(pOwner, mpSecondHost);
     }
 

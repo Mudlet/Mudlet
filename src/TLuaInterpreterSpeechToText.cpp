@@ -653,6 +653,46 @@ int TLuaInterpreter::sttStop(lua_State* L)
     return 1;
 }
 
+// stt.cancel()
+// Stop listening and throw away what has not been delivered yet.
+// Returns true on success, or nil + error message on failure.
+int TLuaInterpreter::sttCancel(lua_State* L)
+{
+    const char* funcName = "stt.cancel";
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
+    }
+
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Answered as stt.stop() answers them, for stt.stop()'s reasons
+    if (pRecognizer->state() == SpeechRecognizer::State::Error) {
+        const QString message = qsl("nothing was cancelled - speech recognition is in an error state; the sysSTTError event carries the reason");
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    Host& host = getHostFromLua(L);
+    if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+        const QString message = qsl("another profile is listening, and only the profile that started a session can cancel it");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // Processing included: a backend that finalises after its stop returns
+    // still has the phrase in flight, and abandoning that is what was asked.
+    pRecognizer->cancel();
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // stt.toggle()
 // Toggle speech recognition on/off.
 // Returns true if now listening, false if stopped, or nil + error on failure.
