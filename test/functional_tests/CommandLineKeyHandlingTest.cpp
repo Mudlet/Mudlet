@@ -46,6 +46,7 @@
 #include "RecordingTelnetServer.h"
 #include "KeyUnit.h"
 #include "TCommandLine.h"
+#include "ctelnet.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "ctelnet.h"
@@ -100,6 +101,17 @@ private:
     void serverSays(const char* text)
     {
         QByteArray bytes(text);
+        mpHost->mTelnet.loopbackTest(bytes);
+    }
+
+    // The game taking or releasing ECHO, through the real telnet parser rather
+    // than by setting the Host flag, so that everything the negotiation does on
+    // the way - including flushing text it was holding - happens as it does in
+    // play.
+    void serverEcho(bool takesEcho)
+    {
+        QByteArray bytes;
+        bytes.append(TN_IAC).append(takesEcho ? TN_WILL : TN_WONT).append(OPT_ECHO);
         mpHost->mTelnet.loopbackTest(bytes);
     }
 
@@ -933,6 +945,74 @@ private slots:
 
         mpHost->setRemoteEchoingActive(false);
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxlook"));
+    }
+
+    // A real password prompt has no newline on the end, so the parser holds it
+    // back waiting for one - and the WILL ECHO behind it can arrive in the same
+    // read. The prompt has still been sent, so what was typed before it is a
+    // command; without flushing that held text the command line would not know
+    // the game had spoken, and would treat the command as something typed in
+    // reply and drop it. Driven through the telnet parser, since it is the
+    // negotiation itself that has to do the flushing.
+    void test_anUnterminatedPromptStillMarksWhatWasTypedBeforeIt()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+
+        serverSays("Checking the ledgers.\n");
+        // Never sent, so the history cannot be what brings it back.
+        type(pCommandLine, qsl("qzxheldahead"));
+        serverSays("Password: ");
+
+        serverEcho(true);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), qPrintable(qsl("the command was carried into the password prompt, leaving '%1' on the masked line").arg(pCommandLine->toPlainText())));
+
+        type(pCommandLine, qsl("qzxheldpass"));
+        press(pCommandLine, Qt::Key_Return);
+
+        serverEcho(false);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxheldahead"));
+    }
+
+    // The other side of that flush: a read carrying only the negotiation, after
+    // the prompt was shown and the player has started their password. Nothing is
+    // held, so nothing has been said since they began typing - those characters
+    // must stay uncertain and never come back in the clear.
+    void test_aBareNegotiationDoesNotMarkAHalfTypedPassword()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+
+        serverSays("Password: ");
+        type(pCommandLine, qsl("qzxbarestart"));
+
+        serverEcho(true);
+        QVERIFY(pCommandLine->toPlainText().isEmpty());
+        type(pCommandLine, qsl("qzxbarerest"));
+        press(pCommandLine, Qt::Key_Return);
+
+        serverEcho(false);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), qPrintable(qsl("password characters came back after the prompt - the line holds '%1'").arg(pCommandLine->toPlainText())));
+    }
+
+    // A key that edits nothing is not the player answering the prompt. Pressing
+    // Shift while a script logs in must not make the parked command look like
+    // something typed in reply, which would discard it.
+    void test_aModifierKeyAtThePromptDoesNotDiscardTheCommand()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+
+        serverSays("Checking the ledgers.\n");
+        type(pCommandLine, qsl("qzxmodahead"));
+
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY(pCommandLine->toPlainText().isEmpty());
+        press(pCommandLine, Qt::Key_Shift);
+        QVERIFY(runLua(qsl("send('qzxmodpassword', false)")));
+
+        mpHost->setRemoteEchoingActive(false);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxmodahead"));
     }
 
     // Both at once: a command the game printed after, then more typed before WILL

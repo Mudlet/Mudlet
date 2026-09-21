@@ -130,7 +130,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
         connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
             this->setEchoSuppression(isRemoteEcho);
         });
-        connect(mpHost, &Host::signal_serverTextPrinted, this, [this]() {
+        connect(mpHost, &Host::signal_serverTextSent, this, [this]() {
             mLineAtLastServerOutput = toPlainText();
         });
     }
@@ -138,6 +138,10 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
 void TCommandLine::processNormalKey(QEvent* event)
 {
+    // A key that edits nothing - a bare modifier, a cursor move - is not the
+    // player answering the prompt, and treating it as one would discard the
+    // command the prompt set aside. The document's revision counts edits only.
+    const int revisionBeforeKey = document()->revision();
     QPlainTextEdit::event(event);
     adjustHeight();
 
@@ -150,7 +154,7 @@ void TCommandLine::processNormalKey(QEvent* event)
     }
 
 
-    if (mIsEchoSuppressed && mType == MainCommandLine) {
+    if (mIsEchoSuppressed && mType == MainCommandLine && document()->revision() != revisionBeforeKey) {
         mTypedDuringPrompt = true;
     }
 
