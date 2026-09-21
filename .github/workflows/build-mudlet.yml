@@ -27,6 +27,8 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
     env:
       LUA_VERSION: '5.1.5'
+      CCACHE_MAXSIZE: 500M
+      CCACHE_COMPRESSLEVEL: ${{ (github.ref_name == 'development' && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true') && '19' || '1' }}
     strategy:
       fail-fast: false
       matrix:
@@ -151,8 +153,6 @@ jobs:
         done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
-        echo "CCACHE_COMPRESSLEVEL=19" >> $GITHUB_ENV
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
@@ -247,8 +247,6 @@ jobs:
         sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
-        echo "CCACHE_COMPRESSLEVEL=19" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks --lua-version 5.1 install --local lua-yajl
