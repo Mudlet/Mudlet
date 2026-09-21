@@ -422,8 +422,8 @@ private:
     // is the worst case of that, so it is the arm to measure the index against.
     // MUDLET_BENCH_CHURN=stayOpen churns through setTriggerStayOpen() instead of
     // through arming and killing. Both move a trigger in and out of what the
-    // index can filter, but only this one goes through markRootUnfilterable(),
-    // which is the path that discards the index rather than maintaining it.
+    // index can filter, but they reach the index by different routes, and only
+    // this one takes the route a script takes.
     int installChurnTrigger(Host* host, bool& allOk)
     {
         const QByteArray churnMode = qgetenv("MUDLET_BENCH_CHURN");

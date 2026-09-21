@@ -502,6 +502,9 @@ void TriggerUnit::refreshRootNodeSnapshot()
     const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild && !mpRootNodeSnapshot->mPrescan.shouldRebuild();
     if (canPatch) {
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        // Removals first: a refile can be queued for a position whose trigger
+        // is freed before this runs, and emptying the slot here is what turns
+        // that into a skip below rather than a dangling dereference.
         for (const int position : mRootNodesRemoved) {
             snapshot.mNodes[position] = nullptr;
             snapshot.mPrescan.removeSlot(position);
@@ -530,6 +533,7 @@ void TriggerUnit::refreshRootNodeSnapshot()
             snapshot.mNodes[position]->setRootSnapshotPosition(position);
         }
         snapshot.mPrescan.rebuild(snapshot.mNodes);
+        ++mPrescanRebuilds;
     }
     mRootNodesAppended.clear();
     mRootNodesRemoved.clear();
@@ -821,10 +825,10 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         it.value()->mKeepFiring = lines;
+        // the trigger now fires without matching, so it can no longer be
+        // filtered out of a line - including the one being processed right now
+        markPrescanStaleForLineInFlight(it.value());
     }
-    // it now fires without matching, so it can no longer be filtered out of a
-    // line - including the one being processed right now
-    markRootUnfilterable();
 }
 
 bool TriggerUnit::killTrigger(const QString& name)
