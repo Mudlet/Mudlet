@@ -1382,9 +1382,20 @@ describe("Trigger processing", function()
                 local line = string.rep("word ", repeats)
                 local best
                 for _ = 1, 3 do
+                    -- os.clock() resolves to about a millisecond on Windows,
+                    -- which is the whole cost of the shorter line there, so a
+                    -- single feed can measure exactly 0 and leave the ratio
+                    -- below nothing to divide by. Feeding until the run is
+                    -- clear of that floor and dividing by the number of feeds
+                    -- keeps both measurements per-feed and comparable.
+                    local feeds, taken = 0, 0
                     local started = os.clock()
-                    feedTriggers("\n" .. line .. "\n")
-                    local taken = os.clock() - started
+                    repeat
+                        feedTriggers("\n" .. line .. "\n")
+                        feeds = feeds + 1
+                        taken = os.clock() - started
+                    until taken >= 0.02
+                    taken = taken / feeds
                     if not best or taken < best then
                         best = taken
                     end
