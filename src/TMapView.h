@@ -57,6 +57,10 @@ public:
     int getZLevel() const;
 
     void updateAreaComboBox();
+    // Called when the area this view is showing has been deleted elsewhere -
+    // moves to another area so paintEvent() isn't left drawing one that no
+    // longer exists.
+    void switchToAnotherArea();
 
 private slots:
     void slot_switchArea(int index);

@@ -43,6 +43,7 @@
 #include "RoomMoveActivationHandler.h"
 #include "RoomMoveDragHandler.h"
 #include "SelectionRectangleHandler.h"
+#include "TMapView.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -5695,7 +5696,13 @@ void T2DMap::slot_configureAreas()
             }
         }
 
-        if (mpMap && mpMap->mpMapper) {
+        // Update the combo box of whichever view opened this dialog - a
+        // secondary TMapView has its own area combo box, separate from the
+        // primary mapper's, and must not have the primary's dropdown pushed
+        // into it instead.
+        if (auto* view = qobject_cast<TMapView*>(parentWidget())) {
+            view->updateAreaComboBox();
+        } else if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
             // Only follow the rename into the dropdown if it's the area the
             // map is actually showing - otherwise this would move the
@@ -5736,7 +5743,9 @@ void T2DMap::slot_configureAreas()
             }
         }
 
-        if (mpMap && mpMap->mpMapper) {
+        if (auto* view = qobject_cast<TMapView*>(parentWidget())) {
+            view->updateAreaComboBox();
+        } else if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
             if (mpMap->mpMapper->comboBox_showArea) {
                 mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
@@ -5771,7 +5780,14 @@ void T2DMap::slot_configureAreas()
         mpMap->setUnsaved(__func__);
 
         repopulate();
-        if (mpMap && mpMap->mpMapper) {
+
+        // The view that opened this dialog owns the combo box and the
+        // switch-away call to use below - a secondary TMapView has its own,
+        // separate from the primary mapper's.
+        auto* view = qobject_cast<TMapView*>(parentWidget());
+        if (view) {
+            view->updateAreaComboBox();
+        } else if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
         }
 
@@ -5780,11 +5796,15 @@ void T2DMap::slot_configureAreas()
             // an area that no longer exists, so move to another one rather
             // than leaving the map blank until the player moves or another
             // area is picked.
-            auto* comboBox = mpMap->mpMapper ? mpMap->mpMapper->comboBox_showArea : nullptr;
-            if (comboBox && comboBox->count() > 0) {
-                mpMap->mpMapper->slot_switchArea(comboBox->currentIndex());
+            if (view) {
+                view->switchToAnotherArea();
             } else {
-                switchArea(mpMap->getDefaultAreaName());
+                auto* comboBox = mpMap->mpMapper ? mpMap->mpMapper->comboBox_showArea : nullptr;
+                if (comboBox && comboBox->count() > 0) {
+                    mpMap->mpMapper->slot_switchArea(comboBox->currentIndex());
+                } else {
+                    switchArea(mpMap->getDefaultAreaName());
+                }
             }
         }
         update();

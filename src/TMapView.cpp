@@ -137,7 +137,6 @@ void TMapView::updateAreaComboBox()
         return;
     }
 
-    const QString oldValue = mpAreaComboBox->currentText();
     const auto& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
 
     QMap<QString, QString> areaNames;
@@ -154,14 +153,28 @@ void TMapView::updateAreaComboBox()
         mpAreaComboBox->addItem(areaName);
     }
 
-    if (!oldValue.isEmpty()) {
-        const int index = mpAreaComboBox->findText(oldValue);
+    // Re-select whichever entry names the area this view is actually
+    // showing - not whatever text used to be selected, which goes stale
+    // across a rename of that same area.
+    const QString currentAreaName = mp2dMap ? areaNamesMap.value(mp2dMap->getAreaId()) : QString();
+    if (!currentAreaName.isEmpty()) {
+        const int index = mpAreaComboBox->findText(currentAreaName);
         if (index != -1) {
             mpAreaComboBox->setCurrentIndex(index);
         }
     }
 
     mpAreaComboBox->setEnabled(mpAreaComboBox->count() > 0);
+}
+
+void TMapView::switchToAnotherArea()
+{
+    updateAreaComboBox();
+    if (mpAreaComboBox->count() > 0) {
+        slot_switchArea(mpAreaComboBox->currentIndex());
+    } else if (mp2dMap && mpMap) {
+        mp2dMap->switchArea(mpMap->getDefaultAreaName());
+    }
 }
 
 void TMapView::slot_switchArea(int index)
