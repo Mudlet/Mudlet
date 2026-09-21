@@ -8162,6 +8162,13 @@ bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash
 
     dict.close();
 
+    // An empty dictionary declares one word so that hunspell will load it - see
+    // overwriteDictionaryFile(...) - so do not report that padding as a word the
+    // user has since removed:
+    if (wl.isEmpty() && oldWC == 1) {
+        oldWC = 0;
+    }
+
     qDebug().nospace().noquote() << "Loaded custom dictionary \"" << dict.fileName() << "\" with " << wl.count() << " words.";
     if (oldWC != wl.count()) {
         qDebug().nospace().noquote() << "Previously, there were " << oldWC << " words recorded instead.";
@@ -8194,7 +8201,18 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
     }
 
     QTextStream ds(&dict);
-    ds << qMax(0, wl.count());
+    // hunspell refuses to load a dictionary that declares no words: its hash
+    // manager has rejected a zero count with "missing or bad word count" since
+    // 1.3.4, so this is not a new failure and not confined to one release.
+    // What 1.7.3 changed is that the message became audible - it was emitted
+    // through HUNSPELL_WARNING, an empty inline function unless
+    // HUNSPELL_WARNING_ON is defined, which distribution builds do not - so the
+    // load had been failing silently for a decade. Hunspell_create() hands back
+    // a non-null handle either way, so a caller cannot tell it got an unusable
+    // dictionary. The count on this first line only sizes hunspell's hash table
+    // and it reads words until EOF regardless, so claiming one word when the
+    // personal dictionary is empty costs nothing:
+    ds << qMax(1, wl.count());
     if (!wl.isEmpty()) {
         ds << QChar(QChar::LineFeed);
         ds << wl.join(QChar::LineFeed).toUtf8();
@@ -8220,16 +8238,25 @@ int mudlet::getDictionaryWordCount(const QString& dictionaryPath)
 
     QTextStream ds(&dict);
     QString dictionaryLine;
-    // Read the header line containing the word count:
+    // The header line is not the count to report: an empty dictionary declares
+    // one word so that hunspell will load it - see overwriteDictionaryFile(...).
+    // It is still read, as an unparsable one means a file we should not touch:
     ds.readLineInto(&dictionaryLine);
     bool isOk = false;
-    const int oldWordCount = dictionaryLine.toInt(&isOk);
-    dict.close();
-    if (isOk) {
-        return oldWordCount;
+    dictionaryLine.toInt(&isOk);
+    if (!isOk) {
+        return -1;
     }
 
-    return -1;
+    int wordCount = 0;
+    while (ds.readLineInto(&dictionaryLine)) {
+        if (!dictionaryLine.isEmpty()) {
+            ++wordCount;
+        }
+    }
+    dict.close();
+
+    return wordCount;
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
@@ -8245,18 +8272,25 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
         }
     }
 
-    // Generate TRY line:
-    QString tryLine = qsl("TRY ");
+    // Generate the graphemes for the TRY line, most frequent first:
+    QString graphemes;
     QMultiMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
     itGrapheme.toBack();
     while (itGrapheme.hasPrevious()) {
         itGrapheme.previous();
-        tryLine.append(itGrapheme.value());
+        graphemes.append(itGrapheme.value());
     }
 
     QStringList affixLines;
     affixLines << qsl("SET UTF-8");
-    affixLines << tryLine;
+    // An empty personal dictionary has no graphemes, and hunspell rejects the
+    // whole affix file - "Failure loading aff file", because parse_string()
+    // wants two fields and a bare "TRY " gives it one - rather than ignoring
+    // the empty directive. TRY is optional and only seeds completion
+    // suggestions, so omit it until the dictionary has its first word:
+    if (!graphemes.isEmpty()) {
+        affixLines << qsl("TRY %1").arg(graphemes);
+    }
 
     QSaveFile aff(affixPath);
     // Finally, having got the needed content, write it out:
