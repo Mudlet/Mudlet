@@ -464,7 +464,6 @@ QStringList SherpaRecognizer::usableHotwords(const QStringList& words, QStringLi
 
 bool SherpaRecognizer::loadModel(const QString& modelPath)
 {
-    noteModelLoadStarted();
     const unsigned int loadGeneration = modelLoadGeneration();
     if (!loadSherpaLibrary()) {
         setState(State::Error);
@@ -694,6 +693,9 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
         emit errorOccurred(tr("Failed to load sherpa-onnx model from: %1").arg(modelPath));
         return false;
     }
+    // The commit: mModelPath is set earlier, but the load can still fail until
+    // the recognizer exists, and a load that fails has installed nothing.
+    noteModelLoaded();
 
     // Try to determine language from model path (convention: sherpa-onnx-nemotron-speech-streaming-en-0.6b-...)
     const QString dirName = modelDir.dirName();

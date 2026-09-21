@@ -490,12 +490,17 @@ protected:
     // backend that forgets it does not fail, it goes silent - which is what
     // VoskRecognizer::initialize() did while SherpaRecognizer::loadModel()
     // reported.
-    // Bumped as a model load begins, so a load can tell whether a handler
-    // reached from one of its own reports loaded a model while it ran. The
-    // report below is the one that does it: it reaches Lua synchronously, and a
-    // handler is free to call stt.init() from there. Kept here rather than in a
-    // backend because the hazard is in this report, which every backend raises.
-    void noteModelLoadStarted() { ++mModelLoadGeneration; }
+    // Bumped once a model load has committed, so a load can tell whether a
+    // handler reached from one of its own reports installed a model while it
+    // ran. The report below is the one that does it: it reaches Lua
+    // synchronously, and a handler is free to call stt.init() from there.
+    //
+    // Counted at the commit rather than as a load begins: a handler whose load
+    // fails has replaced nothing, and counting its attempt would have the load
+    // it interrupted stand down for it - leaving neither model installed. Kept
+    // here rather than in a backend because the hazard is in this report, which
+    // every backend raises.
+    void noteModelLoaded() { ++mModelLoadGeneration; }
     unsigned int modelLoadGeneration() const { return mModelLoadGeneration; }
 
     void endSessionForModelLoad()

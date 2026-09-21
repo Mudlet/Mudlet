@@ -134,6 +134,15 @@ private:
         return path;
     }
 
+    // A folder laid out like a Vosk model, so the load reaches the backend, but
+    // one the stand-in library refuses to open.
+    QString unloadableStubModelDirectory() const
+    {
+        const QString path = QDir(mConfigDir.path()).filePath(qsl("vosk-model-stub-unloadable"));
+        QDir().mkpath(QDir(path).filePath(qsl("am")));
+        return path;
+    }
+
     // A second model for the cases about one load replacing another. It has to
     // be a different directory for sameModelDirectory() to tell them apart.
     QString otherStubModelDirectory() const
@@ -369,6 +378,49 @@ private slots:
         QVERIFY2(!luaTrue(qsl("_outerOk")), qPrintable(qsl("both loads answered true - the model in place is '%1'").arg(luaString(qsl("stt.getInfo().modelPath")))));
         QVERIFY2(luaString(qsl("_outerErr")).contains(qsl("replaced it with another")),
                  qPrintable(qsl("the outer load did not say a handler had replaced its model: \"%1\"").arg(luaString(qsl("_outerErr")))));
+    }
+
+    // The other half of the case above. A handler whose own load fails has
+    // replaced nothing, so the load it interrupted must carry on and install
+    // the model it was asked for. Counting a load as a replacement from the
+    // moment it began, rather than once it committed, had the interrupted load
+    // stand down here too - leaving neither model installed, and sttInit()
+    // blaming a replacement that never happened.
+    //
+    // The outer call asks for a different model from the one already loaded,
+    // or a load that wrongly stood down would leave an equal model in place and
+    // sttInit() would find nothing amiss.
+    void aHandlersFailedLoadDoesNotStopTheLoadItInterrupted()
+    {
+        requireStub();
+        const QString model = stubModelDirectory();
+        const QString alreadyLoaded = otherStubModelDirectory();
+        const QString unloadable = unloadableStubModelDirectory();
+
+        QVERIFY(runLua(qsl("_ok, _err = stt.init([[%1]])").arg(alreadyLoaded)).isNull());
+        QVERIFY2(luaTrue(qsl("_ok")), qPrintable(qsl("the stand-in model did not load: %1").arg(luaString(qsl("_err")))));
+        QVERIFY(runLua(qsl("_started = stt.start()")).isNull());
+        if (!luaTrue(qsl("_started"))) {
+            QSKIP("no session could be started here, so no load can interrupt one");
+        }
+
+        QVERIFY(runLua(qsl("_failedRan = false\n"
+                           "_failedOk = nil\n"
+                           "_handlers = _handlers or {}\n"
+                           "table.insert(_handlers, registerAnonymousEventHandler('sysSTTError', function(_, message)\n"
+                           "  if not _failedRan and message:find('stopped the listening session') then\n"
+                           "    _failedRan = true\n"
+                           "    _failedOk = stt.init([[%1]])\n"
+                           "  end\n"
+                           "end))\n"
+                           "_outerOk, _outerErr = stt.init([[%2]])")
+                               .arg(unloadable, model))
+                        .isNull());
+
+        QVERIFY2(luaTrue(qsl("_failedRan")), "the handler never ran, so nothing here was re-entered");
+        QVERIFY2(!luaTrue(qsl("_failedOk")), "the handler's load of an unloadable model succeeded, so this case is not about a failed load");
+        QVERIFY2(luaTrue(qsl("_outerOk")), qPrintable(qsl("the load was abandoned for a handler load that failed: \"%1\"").arg(luaString(qsl("_outerErr")))));
+        QCOMPARE(luaString(qsl("stt.getInfo().modelPath")), model);
     }
 
     // Reloading a library that is not there has nothing to report success about,

@@ -354,7 +354,6 @@ QString VoskRecognizer::backendVersion() const
 bool VoskRecognizer::initialize(const QString& modelPath)
 {
     ++mLoadGeneration;
-    noteModelLoadStarted();
     const unsigned int loadGeneration = modelLoadGeneration();
     // Its own guard, ahead of the availability check and not folded into it:
     // loading a model is a write, and going through loadVoskLibrary() mapped
@@ -434,6 +433,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // Only now is there a model loaded for modelPath() to name; the failure
     // paths above leave it empty, which is what getInfo() promises
     mModelPath = modelPath;
+    noteModelLoaded();
 
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
