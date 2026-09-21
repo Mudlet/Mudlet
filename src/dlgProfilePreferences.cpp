@@ -7274,6 +7274,9 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     QNetworkReply* getReply = manager->get(request);
 
     connect(getReply, &QNetworkReply::errorOccurred, this, [=, this](QNetworkReply::NetworkError) {
+        // the label takes the message away again after a few seconds, so this
+        // is the only lasting record that the update failed
+        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << getReply->errorString();
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
         QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
             label->hide();
