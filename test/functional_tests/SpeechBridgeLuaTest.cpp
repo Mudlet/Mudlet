@@ -134,6 +134,15 @@ private:
         return path;
     }
 
+    // A second model for the cases about one load replacing another. It has to
+    // be a different directory for sameModelDirectory() to tell them apart.
+    QString otherStubModelDirectory() const
+    {
+        const QString path = QDir(mConfigDir.path()).filePath(qsl("vosk-model-stub-other"));
+        QDir().mkpath(QDir(path).filePath(qsl("am")));
+        return path;
+    }
+
     void requireStub()
     {
         if (mSystemEngineWins) {
@@ -319,6 +328,47 @@ private slots:
         QVERIFY2(luaTrue(qsl("_reentered")), "the handler never ran, so nothing here was re-entered");
         QVERIFY2(luaTrue(qsl("_ok")), qPrintable(qsl("a reload of the same model was taken for a replacement: %1").arg(luaString(qsl("_err")))));
         QVERIFY(luaTrue(qsl("stt.initialized()")));
+    }
+
+    // A model load ends a session that was under way and says so, and that report
+    // reaches Lua while the load is still running. A handler that loads a model
+    // of its own from there is told it succeeded - and it did - so the load it
+    // interrupted must not free that model and install its own behind it, with
+    // both calls answering true. The sysSTTStateChanged path already refuses the
+    // outer call in exactly this position; reached through sysSTTError it did
+    // not, and said nothing.
+    void aModelLoadedFromTheLostSessionReportSurvives()
+    {
+        requireStub();
+        const QString model = stubModelDirectory();
+        const QString handlerModel = otherStubModelDirectory();
+
+        QVERIFY(runLua(qsl("_ok, _err = stt.init([[%1]])").arg(model)).isNull());
+        QVERIFY2(luaTrue(qsl("_ok")), qPrintable(qsl("the stand-in model did not load: %1").arg(luaString(qsl("_err")))));
+        QVERIFY(runLua(qsl("_started = stt.start()")).isNull());
+        if (!luaTrue(qsl("_started"))) {
+            QSKIP("no session could be started here, so no load can interrupt one");
+        }
+
+        QVERIFY(runLua(qsl("_handlerRan = false\n"
+                           "_handlerOk = nil\n"
+                           "_handlers = _handlers or {}\n"
+                           "table.insert(_handlers, registerAnonymousEventHandler('sysSTTError', function(_, message)\n"
+                           "  if not _handlerRan and message:find('stopped the listening session') then\n"
+                           "    _handlerRan = true\n"
+                           "    _handlerOk = stt.init([[%1]])\n"
+                           "  end\n"
+                           "end))\n"
+                           "_outerOk, _outerErr = stt.init([[%2]])")
+                               .arg(handlerModel, model))
+                        .isNull());
+
+        QVERIFY2(luaTrue(qsl("_handlerRan")), "the handler never ran, so nothing here was re-entered");
+        QVERIFY2(luaTrue(qsl("_handlerOk")), "the handler's own load was refused, so this case is not about the load that interrupted it");
+        QCOMPARE(luaString(qsl("stt.getInfo().modelPath")), handlerModel);
+        QVERIFY2(!luaTrue(qsl("_outerOk")), qPrintable(qsl("both loads answered true - the model in place is '%1'").arg(luaString(qsl("stt.getInfo().modelPath")))));
+        QVERIFY2(luaString(qsl("_outerErr")).contains(qsl("replaced it with another")),
+                 qPrintable(qsl("the outer load did not say a handler had replaced its model: \"%1\"").arg(luaString(qsl("_outerErr")))));
     }
 
     // Reloading a library that is not there has nothing to report success about,

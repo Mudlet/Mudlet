@@ -354,6 +354,8 @@ QString VoskRecognizer::backendVersion() const
 bool VoskRecognizer::initialize(const QString& modelPath)
 {
     ++mLoadGeneration;
+    noteModelLoadStarted();
+    const unsigned int loadGeneration = modelLoadGeneration();
     // Its own guard, ahead of the availability check and not folded into it:
     // loading a model is a write, and going through loadVoskLibrary() mapped
     // the library back in regardless of the latch stt.unloadLibrary() set - so
@@ -382,6 +384,16 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // The caller asked to load a model, not to end a session; the phrase in
     // flight goes with the decoder freed below, and the player is told so.
     endSessionForModelLoad();
+
+    // A handler reached from the report above loaded a model of its own, and was
+    // told it succeeded - it did. Carrying on here would free that model and put
+    // this call's own in its place, leaving both callers told they had won. So
+    // this load stands down and leaves the handler's model standing; sttInit()
+    // sees a model other than the one it asked for and refuses with the same
+    // words the sysSTTStateChanged path already uses.
+    if (modelLoadGeneration() != loadGeneration) {
+        return true;
+    }
 
     releaseVoskResources();
     // Both describe a model that has just been freed. Leaving them standing

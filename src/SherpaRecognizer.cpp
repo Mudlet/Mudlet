@@ -464,6 +464,8 @@ QStringList SherpaRecognizer::usableHotwords(const QStringList& words, QStringLi
 
 bool SherpaRecognizer::loadModel(const QString& modelPath)
 {
+    noteModelLoadStarted();
+    const unsigned int loadGeneration = modelLoadGeneration();
     if (!loadSherpaLibrary()) {
         setState(State::Error);
         //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
@@ -532,6 +534,16 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // The caller asked to load a model, not to stop listening; the utterance in
     // flight goes with the decoder released below, and the player is told so.
     endSessionForModelLoad();
+
+    // A handler reached from the report above loaded a model of its own, and was
+    // told it succeeded - it did. Carrying on here would free that model and put
+    // this call's own in its place, leaving both callers told they had won. So
+    // this load stands down and leaves the handler's model standing; sttInit()
+    // sees a model other than the one it asked for and refuses with the same
+    // words the sysSTTStateChanged path already uses.
+    if (modelLoadGeneration() != loadGeneration) {
+        return true;
+    }
 
     releaseSherpaResources();
 
