@@ -93,6 +93,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
+    ProfileDictionaryTest.cpp
     ProfileFolderNameTest.cpp
     ProfileIniParseErrorTest.cpp
     ProfileLifecycleTest.cpp
@@ -663,8 +664,8 @@ set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 # reconnecting in others, so it needs a longer timeout
 set_tests_properties(TelnetStringSequenceRecoveryTest PROPERTIES TIMEOUT 300)
 
-# CopyAsImageTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(CopyAsImageTest PROPERTIES TIMEOUT 300)
+# CopyAsImageTest and MainConsoleSelectionTest create a fresh profile per test method, so they need a longer timeout
+set_tests_properties(CopyAsImageTest MainConsoleSelectionTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's

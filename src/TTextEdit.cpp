@@ -2054,7 +2054,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         if (mCtrlSelecting) {
             expandSelectionToLine(y);
-            highlightSelection();
             event->accept();
             return;
         }
@@ -2338,7 +2337,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
     // Is this a single line then we do NOT need to pad the first (and thus
     // only) line to the right:
-    bool isSingleLine = (mDragStart.y() == mDragSelectionEnd.y());
+    bool isSingleLine = (mPA.y() == mPB.y());
     for (int y = mPA.y(), total = mPB.y(); y <= total; ++y) {
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             return;
@@ -2371,17 +2370,21 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 // size) hold for any console the user can right-click on.
 bool TTextEdit::hasSelectedText() const
 {
-    return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty();
+    // A double-click on a word separator highlights nothing, yet leaves a
+    // region behind and mPA one cell past mPB
+    const bool endpointsCrossed = mPA.y() > mPB.y() || (mPA.y() == mPB.y() && mPA.x() > mPB.x());
+    return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty() && !endpointsCrossed;
 }
 
+// Only checks that there is a selection to read. mPA and mPB stay as the
+// highlight set them: mDragSelectionEnd is just the pointer's cell, which word
+// and line selection widen past.
 bool TTextEdit::establishSelectedText()
 {
     if (!hasSelectedText()) {
         return false;
     }
 
-    // if selection was made backwards swap
-    // right to left
     if (mFontWidth <= 0 || mFontHeight <= 0) {
         qWarning().nospace() << "TTextEdit::establishSelectedText() ERROR - font is " << mFontWidth << "x" << mFontHeight << " so the selection cannot be worked out";
         return false;
@@ -2399,10 +2402,6 @@ bool TTextEdit::establishSelectedText()
         }
     }
 
-    normaliseSelection();
-    if (mMouseTrackLevel == 2) {
-        expandSelectionToWords();
-    }
     return true;
 }
 
@@ -3348,7 +3347,6 @@ void TTextEdit::slot_analyseSelection()
     }
     // If we get here we must at least have a line 0!
 
-    normaliseSelection();
     // Get the smallest of the two lines in the range, but clamp it to the first
     // line which is zero and then the maximum line in existence:
     int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size() - 1));
