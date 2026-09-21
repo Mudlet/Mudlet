@@ -544,6 +544,16 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    // A pass replaces the capture lists, and a matches or multimatches table
+    // part way through being built out of them is still reading them. The only
+    // way in from there is a __gc finaliser the collector ran inside the build,
+    // so this turns away nothing a script can ask for on purpose.
+    if (mpHost->getLuaInterpreter()->buildingCaptureTables()) {
+        qWarning().nospace()
+                << "TriggerUnit::processDataStream(...) aborting: a line was fed while the capture tables were being built, which only a garbage collection finaliser can do. Its triggers do not run.";
+        return;
+    }
+
     // Encoded into storage borrowed from the unit, so the capacity outlives the
     // line and only a line longer than any before it allocates. Moving the buffer
     // out rather than writing into the member is what makes that safe under

@@ -133,6 +133,10 @@ public:
     void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
+    // Whether a matches/multimatches table is part way through being built out
+    // of the capture lists. While it is, nothing that replaces those lists may
+    // run - see setMatches().
+    bool buildingCaptureTables() const { return mCaptureBuildDepth > 0; }
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
     void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
@@ -979,6 +983,9 @@ private:
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
+    // Depth rather than a flag: a build reached from inside another one must not
+    // clear the guard when only the inner one has finished.
+    int mCaptureBuildDepth = 0;
     // An alias pass a script asks for - expandAlias() - sets "command" and the
     // capture groups for the scripts that pass runs. What the calling script was
     // given is parked here for the duration and handed back when the pass

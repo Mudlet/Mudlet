@@ -3044,6 +3044,12 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     // emptied matches table:
     TLuaInterpreter* pL = host.getLuaInterpreter();
     const int dispatchDepth = pL->pushNestedDispatchState();
+    if (dispatchDepth < 0) {
+        qWarning().nospace() << "TLuaInterpreter::expandAlias(...) aborting: \"" << payload
+                             << "\" was expanded while the capture tables were being built, which only a garbage collection finaliser can do. Nothing is sent.";
+        lua_pushboolean(L, false);
+        return 1;
+    }
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
     host.send(payload, wantPrint, false);
@@ -3545,6 +3551,13 @@ void TLuaInterpreter::clearCaptureGroups()
 // popNestedDispatchState() to unwind to.
 int TLuaInterpreter::pushNestedDispatchState()
 {
+    // Refused while a capture table is part way through being built: the pop
+    // this pairs with moves the parked lists back over the ones that build is
+    // still walking. Only a __gc finaliser the collector ran inside the build
+    // can get here, so nothing a script asks for on purpose is turned away.
+    if (buildingCaptureTables()) {
+        return -1;
+    }
     // Every Lua call is made before the entry goes onto the stack, and each one
     // is raw. A package is free to put __index on the globals table, and running
     // one here could raise past the pop this pairs with - raw reads cannot, and
@@ -4347,19 +4360,34 @@ void TLuaInterpreter::setMatches(lua_State* L)
         return;
     }
 
-    // presized, so filling it in does not rehash the table on the way up
-    lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
+    {
+        // The walk below holds iterators into the capture lists across Lua
+        // allocations, and every one of those runs a collection step that can
+        // run a __gc finaliser. A finaliser that starts an alias or trigger
+        // pass replaces the very lists being walked - TTrigger and TAlias
+        // assign over them and clearCaptureGroups() empties them at the end of
+        // the pass - leaving this reading destroyed strings. So a pass is
+        // refused for as long as this runs; the two processDataStream() funnels
+        // every pass goes through are where that is turned away.
+        mCaptureBuildDepth++;
+        const auto captureBuildGuard = qScopeGuard([this] {
+            mCaptureBuildDepth--;
+        });
 
-    // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
-    int i = 1; // Lua indexes start with 1 as a general convention
-    for (const auto& capture : mCaptureGroupList) {
-        lua_pushstring(L, capture.c_str());
-        lua_rawseti(L, -2, i++);
-    }
-    for (const auto& [name, capture] : mCapturedNameGroups) {
-        lua_pushstring(L, name.toUtf8().constData());
-        lua_pushstring(L, capture.toUtf8().constData());
-        lua_rawset(L, -3);
+        // presized, so filling it in does not rehash the table on the way up
+        lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
+
+        // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
+        int i = 1; // Lua indexes start with 1 as a general convention
+        for (const auto& capture : mCaptureGroupList) {
+            lua_pushstring(L, capture.c_str());
+            lua_rawseti(L, -2, i++);
+        }
+        for (const auto& [name, capture] : mCapturedNameGroups) {
+            lua_pushstring(L, name.toUtf8().constData());
+            lua_pushstring(L, capture.toUtf8().constData());
+            lua_rawset(L, -3);
+        }
     }
     lua_setglobal(L, "matches");
 }
@@ -4697,24 +4725,32 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     const int callerStackTop = lua_gettop(L);
 
     if (!mMultiCaptureGroupList.empty()) {
-        int k = 1;       // Lua indexes start with 1 as a general convention
-        lua_newtable(L); //multimatches
-        for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
-            // multimatches{ trigger_idx{ table_matches{ ... } } }
-            lua_pushnumber(L, k);
-            lua_newtable(L); //regex-value => table matches
-            int i = 1;       // Lua indexes start with 1 as a general convention
-            for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
-                lua_pushnumber(L, i);
-                lua_pushstring(L, (*it).c_str());
-                lua_settable(L, -3); //match in matches
+        {
+            // Refused a nested pass for the duration, for the reason setMatches() gives
+            mCaptureBuildDepth++;
+            const auto captureBuildGuard = qScopeGuard([this] {
+                mCaptureBuildDepth--;
+            });
+
+            int k = 1;       // Lua indexes start with 1 as a general convention
+            lua_newtable(L); //multimatches
+            for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
+                // multimatches{ trigger_idx{ table_matches{ ... } } }
+                lua_pushnumber(L, k);
+                lua_newtable(L); //regex-value => table matches
+                int i = 1;       // Lua indexes start with 1 as a general convention
+                for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
+                    lua_pushnumber(L, i);
+                    lua_pushstring(L, (*it).c_str());
+                    lua_settable(L, -3); //match in matches
+                }
+                for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
+                    lua_pushstring(L, name.toUtf8().constData());
+                    lua_pushstring(L, capture.toUtf8().constData());
+                    lua_settable(L, -3);
+                }
+                lua_settable(L, -3); //matches in regex
             }
-            for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
-                lua_pushstring(L, name.toUtf8().constData());
-                lua_pushstring(L, capture.toUtf8().constData());
-                lua_settable(L, -3);
-            }
-            lua_settable(L, -3); //matches in regex
         }
         lua_setglobal(L, "multimatches");
     }
@@ -4758,19 +4794,27 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     bool returnValue = false;
 
     if (!mMultiCaptureGroupList.empty()) {
-        int k = 1;       // Lua indexes start with 1 as a general convention
-        lua_newtable(L); //multimatches
-        for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
-            // multimatches{ trigger_idx{ table_matches{ ... } } }
-            lua_pushnumber(L, k);
-            lua_newtable(L); //regex-value => table matches
-            int i = 1;       // Lua indexes start with 1 as a general convention
-            for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
-                lua_pushnumber(L, i);
-                lua_pushstring(L, (*it).c_str());
-                lua_settable(L, -3); //match in matches
+        {
+            // Refused a nested pass for the duration, for the reason setMatches() gives
+            mCaptureBuildDepth++;
+            const auto captureBuildGuard = qScopeGuard([this] {
+                mCaptureBuildDepth--;
+            });
+
+            int k = 1;       // Lua indexes start with 1 as a general convention
+            lua_newtable(L); //multimatches
+            for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
+                // multimatches{ trigger_idx{ table_matches{ ... } } }
+                lua_pushnumber(L, k);
+                lua_newtable(L); //regex-value => table matches
+                int i = 1;       // Lua indexes start with 1 as a general convention
+                for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
+                    lua_pushnumber(L, i);
+                    lua_pushstring(L, (*it).c_str());
+                    lua_settable(L, -3); //match in matches
+                }
+                lua_settable(L, -3); //matches in regex
             }
-            lua_settable(L, -3); //matches in regex
         }
         lua_setglobal(L, "multimatches");
     }

@@ -3313,6 +3313,118 @@ describe("Trigger processing", function()
 
     end)
 
+    -- Building "matches" or "multimatches" walks the capture lists the C++ side
+    -- holds, making a Lua value per capture, and every one of those allocations
+    -- runs a collection step. A __gc finaliser the collector runs there can
+    -- start an alias or trigger pass, and a pass replaces those very lists - so
+    -- the build was left reading destroyed strings and the process died. Such a
+    -- pass is refused for as long as a build is running; nothing a script can
+    -- ask for on purpose reaches that point.
+    describe("a pass a finaliser starts while the capture tables are built", function()
+        local ids, aliasIds = {}, {}
+        -- High enough that finalisers are still firing once the build starts:
+        -- a cap that runs out before then would leave the case passing without
+        -- having gone anywhere near what it is about.
+        local finaliser = {armed = false, watching = false, inside = false, runs = 0, limit = 500}
+
+        -- Each finaliser leaves another proxy behind, so one runs at every
+        -- allocation rather than only the first
+        local function chain()
+            local proxy = newproxy(true)
+            getmetatable(proxy).__gc = function()
+                if not finaliser.armed then
+                    return
+                end
+                if finaliser.watching and not finaliser.inside and finaliser.runs < finaliser.limit then
+                    finaliser.runs = finaliser.runs + 1
+                    finaliser.inside = true
+                    pcall(finaliser.onRun)
+                    finaliser.inside = false
+                end
+                chain()
+            end
+        end
+
+        -- With a pause of 0 every allocation finishes a whole collection cycle
+        local function withFinaliserAtEveryAllocation(run)
+            local pause = collectgarbage("setpause", 0)
+            local stepmul = collectgarbage("setstepmul", 0)
+            finaliser.armed, finaliser.watching, finaliser.runs, finaliser.inside = true, true, 0, false
+            chain()
+            collectgarbage()
+            local ok, message = pcall(run)
+            finaliser.armed, finaliser.watching = false, false
+            collectgarbage("setpause", pause)
+            collectgarbage("setstepmul", stepmul)
+            collectgarbage()
+            assert(ok, message)
+        end
+
+        before_each(function()
+            _G.TrigSpec = {}
+        end)
+
+        after_each(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+            for _, id in ipairs(aliasIds) do
+                killAlias(id)
+            end
+            ids, aliasIds = {}, {}
+            _G.TrigSpec = nil
+        end)
+
+        -- Long captures, so the build makes enough allocations for a finaliser
+        -- to land between two of them rather than only before the first
+        local word = string.rep("abcdefghij", 12)
+
+        it("keeps a multiline trigger's captures when the finaliser expands an alias", function()
+            aliasIds[#aliasIds + 1] = tempAlias("^captureguardalias$", function() end)
+            tempComplexRegexTrigger("CaptureGuardMulti", [[^captureguard one (\w+)$]], [[]], 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("CaptureGuardMulti", [[^captureguard two (\w+)$]], [==[
+                TrigSpec.multi = {multimatches[1] and multimatches[1][2], multimatches[2] and multimatches[2][2]}
+            ]==], 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            finaliser.onRun = function()
+                -- Most runs land outside the build, where the pass goes ahead
+                -- as usual; one landing inside is what this is about
+                TrigSpec.refused = TrigSpec.refused or expandAlias("captureguardalias", false) == false
+            end
+
+            feedTriggers("captureguard one " .. word .. "1\n")
+            withFinaliserAtEveryAllocation(function()
+                feedTriggers("captureguard two " .. word .. "2\n")
+            end)
+            killTrigger("CaptureGuardMulti")
+
+            assert.is_true(finaliser.runs > 20, "finalisers stopped running before the capture tables were built")
+            assert.are.same({word .. "1", word .. "2"}, _G.TrigSpec.multi,
+                "a capture was lost while multimatches was being built")
+            assert.is_true(_G.TrigSpec.refused, "no alias pass was turned away, so nothing ran while the tables were being built")
+        end)
+
+        it("keeps a single-line trigger's captures when the finaliser expands an alias", function()
+            aliasIds[#aliasIds + 1] = tempAlias("^captureguardalias$", function() end)
+            ids[#ids + 1] = tempRegexTrigger("^CaptureGuardSingle (\\w+) (\\w+) (\\w+)$", function()
+                TrigSpec.matches = {matches[2], matches[3], matches[4]}
+            end)
+            finaliser.onRun = function()
+                -- Most runs land outside the build, where the pass goes ahead
+                -- as usual; one landing inside is what this is about
+                TrigSpec.refused = TrigSpec.refused or expandAlias("captureguardalias", false) == false
+            end
+
+            withFinaliserAtEveryAllocation(function()
+                feedTriggers("\nCaptureGuardSingle " .. word .. "1 " .. word .. "2 " .. word .. "3\n")
+            end)
+
+            assert.is_true(finaliser.runs > 20, "finalisers stopped running before the capture tables were built")
+            assert.are.same({word .. "1", word .. "2", word .. "3"}, _G.TrigSpec.matches,
+                "a capture was lost while matches was being built")
+            assert.is_true(_G.TrigSpec.refused, "no alias pass was turned away, so nothing ran while the tables were being built")
+        end)
+    end)
+
     -- Once a profile holds enough plain-text triggers, the engine files them by
     -- their own characters and offers a line only the ones that could match it.
     -- The filter is meant to be invisible, so every case here runs with enough

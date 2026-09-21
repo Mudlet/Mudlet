@@ -299,6 +299,15 @@ bool AliasUnit::processDataStream(const QString& data)
     }
 
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
+    // A pass replaces the capture lists, and a matches or multimatches table
+    // part way through being built out of them is still reading them. The only
+    // way in from there is a __gc finaliser the collector ran inside the build,
+    // so this turns away nothing a script can ask for on purpose.
+    if (Lua->buildingCaptureTables()) {
+        qWarning().nospace() << "AliasUnit::processDataStream(...) aborting: \"" << data
+                             << "\" was sent while the capture tables were being built, which only a garbage collection finaliser can do. The command goes nowhere.";
+        return false;
+    }
     Lua->set_lua_string(qsl("command"), data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
