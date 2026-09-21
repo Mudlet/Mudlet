@@ -835,32 +835,69 @@ private slots:
         mpHost->setRemoteEchoingActive(true);
         QVERIFY2(pCommandLine->toPlainText().isEmpty(),
                  qPrintable(qsl("the restored command was kept on the masked line at the re-prompt, leaving '%1'").arg(pCommandLine->toPlainText())));
+        // Answered by hand again. Only text the game is known to have seen comes
+        // back after that, so this is where the restore's own refresh of what the
+        // line held is load-bearing: without it the command would count as typed
+        // after the thunder, and be dropped here.
+        type(pCommandLine, qsl("qzxsecret"));
+        press(pCommandLine, Qt::Key_Return);
         mpHost->setRemoteEchoingActive(false);
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxleftover"));
     }
 
-    // The other half, which the fix must keep: a password typed in the gap between
-    // the game printing its prompt and its WILL ECHO arriving stays on the masked
-    // line, and is never handed back afterwards in the clear.
-    void test_aPasswordTypedAfterThePromptStaysOnTheMaskedLine()
+    // Text typed after the game last spoke could be a reply to a prompt the
+    // player saw, or a command typed into a silence the game then broke with
+    // WILL ECHO - the same order of events, and nothing on the line tells them
+    // apart. So it is set aside rather than kept as the password, and given back
+    // only when nothing was typed at the prompt, which is a script logging in.
+    // Answered by hand, it is dropped: never sent as part of the password, and
+    // never shown afterwards, since it may have been the start of one.
+    void test_textTypedIntoASilenceIsNeitherSentNorShownWhenThePromptIsAnsweredByHand()
     {
         TCommandLine* pCommandLine = mainCommandLine();
         QVERIFY(pCommandLine);
 
-        serverSays("Password:\n");
-        type(pCommandLine, qsl("qzxpassstart"));
+        serverSays("Checking the ledgers.\n");
+        type(pCommandLine, qsl("qzxlook"));
+        mpServer->forgetReceived();
 
         mpHost->setRemoteEchoingActive(true);
-        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxpassstart"));
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(),
+                 qPrintable(qsl("text typed into the silence was kept on the masked line, leaving '%1'").arg(pCommandLine->toPlainText())));
+
+        type(pCommandLine, qsl("qzxsecret"));
+        press(pCommandLine, Qt::Key_Return);
+        QVERIFY2(waitForServerToReceive("qzxsecret"), qPrintable(qsl("the game never received the password - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
+        QVERIFY2(!mpServer->received().contains("qzxlook"), qPrintable(qsl("the text was sent as part of the password - the wire holds: %1").arg(QString::fromUtf8(mpServer->received()))));
 
         mpHost->setRemoteEchoingActive(false);
         QVERIFY2(pCommandLine->toPlainText().isEmpty(),
-                 qPrintable(qsl("password characters were handed back after the prompt - the line holds '%1'").arg(pCommandLine->toPlainText())));
+                 qPrintable(qsl("text that may have been the start of a password was shown after the prompt - the line holds '%1'").arg(pCommandLine->toPlainText())));
     }
 
-    // Both at once: a command left unsent, then the prompt, then the player starts
-    // the password before WILL ECHO lands. The line holds both as one string, and
-    // the game's output is the only thing that says where one ends.
+    // The same silence, answered by a script: nothing was typed at the prompt,
+    // so the text cannot have been a password, and it comes back. This is what
+    // #7921 asked for, and the one shape of it that can be told apart.
+    void test_textTypedIntoASilenceComesBackWhenAScriptAnswersThePrompt()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+
+        serverSays("Checking the ledgers.\n");
+        type(pCommandLine, qsl("qzxtypedahead"));
+
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY(pCommandLine->toPlainText().isEmpty());
+        QVERIFY(runLua(qsl("send('qzxscriptedpassword', false)")));
+
+        mpHost->setRemoteEchoingActive(false);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxtypedahead"));
+    }
+
+    // Both at once: a command the game printed after, then more typed before
+    // WILL ECHO. The line holds them as one string, and the game's output is the
+    // only thing that says where the certain part ends. The certain part comes
+    // back; the rest is answered by hand here, so it is dropped.
     void test_theLineIsSplitWhereTheGameLastSpoke()
     {
         TCommandLine* pCommandLine = mainCommandLine();
@@ -872,9 +909,10 @@ private slots:
         mpServer->forgetReceived();
 
         mpHost->setRemoteEchoingActive(true);
-        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxsec"));
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(),
+                 qPrintable(qsl("something was kept on the masked line, leaving '%1'").arg(pCommandLine->toPlainText())));
 
-        type(pCommandLine, qsl("ret"));
+        type(pCommandLine, qsl("qzxsecret"));
         press(pCommandLine, Qt::Key_Return);
         QVERIFY2(waitForServerToReceive("qzxsecret"), qPrintable(qsl("the game never received the password - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
         QVERIFY2(!mpServer->received().contains("qzxlook"), qPrintable(qsl("the command went to the game with the password - the wire holds: %1").arg(QString::fromUtf8(mpServer->received()))));

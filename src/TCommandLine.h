@@ -160,6 +160,13 @@ private:
     // prompt and is the password. Refreshed by signal_serverTextPrinted, and by
     // the prompt ending, which is the game acting too.
     QString mLineAtLastServerOutput;
+    // What the line held past that point when the prompt opened: typed after the
+    // game last spoke, so either a reply to a prompt the player had seen or a
+    // command typed into a silence the game then broke - the same order of
+    // events, which nothing on the line can tell apart. Given back only when
+    // nothing was typed at the prompt, which is a script logging in.
+    QString mUncertainTextToRestore;
+    bool mTypedDuringPrompt = false;
     // Track password visibility state when echo is suppressed
     bool mPasswordVisible = false;
     // Button to toggle password visibility
