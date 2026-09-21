@@ -25,8 +25,8 @@
  * behavior. The get/set round-trip itself is spec-tested in Other_spec.lua -
  * this needs C++ because pressing the buttons has no Lua entry point.
  *
- * Mapper creation cannot be undone for the life of a profile, so each test
- * method needs a mudlet of its own.
+ * Nothing in this file can undo mapper creation, so each test method needs a
+ * mudlet of its own.
  */
 
 #include <QDockWidget>
