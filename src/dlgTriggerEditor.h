@@ -756,8 +756,8 @@ private:
     QSet<int> mPendingTriggerIconRefresh;
     bool mTriggerIconRefreshQueued = false;
     void flushPendingTriggerIconRefresh();
-    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
-    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT);
+    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bool touchNotification);
 
     // Same coalescing as mPendingTriggerIconRefresh, for the other four unit
     // types refreshXIcon() covers. The Flush/Paint counters exist only for
@@ -769,32 +769,32 @@ private:
     int mAliasIconFlushCount = 0;
     int mAliasIconPaintCount = 0;
     void flushPendingAliasIconRefresh();
-    void refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
-    void paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT);
+    void refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification);
 
     QSet<int> mPendingTimerIconRefresh;
     bool mTimerIconRefreshQueued = false;
     int mTimerIconFlushCount = 0;
     int mTimerIconPaintCount = 0;
     void flushPendingTimerIconRefresh();
-    void refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
-    void paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT);
+    void refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT, bool touchNotification);
 
     QSet<int> mPendingScriptIconRefresh;
     bool mScriptIconRefreshQueued = false;
     int mScriptIconFlushCount = 0;
     int mScriptIconPaintCount = 0;
     void flushPendingScriptIconRefresh();
-    void refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
-    void paintScriptItem(QTreeWidgetItem* pItem, TScript* pT);
+    void refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintScriptItem(QTreeWidgetItem* pItem, TScript* pT, bool touchNotification);
 
     QSet<int> mPendingKeyIconRefresh;
     bool mKeyIconRefreshQueued = false;
     int mKeyIconFlushCount = 0;
     int mKeyIconPaintCount = 0;
     void flushPendingKeyIconRefresh();
-    void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
-    void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT);
+    void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touchNotification);
 
     // One QIcon per resource path: a tree of thousands of items would otherwise
     // decode the same handful of PNGs once per item, every time it is rebuilt

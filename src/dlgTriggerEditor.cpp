@@ -6552,16 +6552,20 @@ void dlgTriggerEditor::flushPendingAliasIconRefresh()
     if (mPendingAliasIconRefresh.isEmpty()) {
         return;
     }
-    ++mAliasIconFlushCount;
-    if (mpAliasBaseItem && isVisible()) {
-        int remaining = mPendingAliasIconRefresh.size();
-        refreshAliasIconsIn(mpAliasBaseItem, false, remaining);
+    if (!mpAliasBaseItem || !isVisible()) {
+        // See flushPendingTriggerIconRefresh() - leave the IDs queued rather
+        // than dropping the update.
+        return;
     }
+    ++mAliasIconFlushCount;
+    int remaining = mPendingAliasIconRefresh.size();
+    refreshAliasIconsIn(mpAliasBaseItem, false, false, remaining);
     mPendingAliasIconRefresh.clear();
 }
 
-// See refreshTriggerIconsIn() for the shape of this walk.
-void dlgTriggerEditor::refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+// See refreshTriggerIconsIn() for the shape of this walk, including what
+// ancestorTouchNotification carries forward.
+void dlgTriggerEditor::refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
 {
     for (int i = 0, n = pParent->childCount(); i < n; ++i) {
         QTreeWidgetItem* pItem = pParent->child(i);
@@ -6571,13 +6575,14 @@ void dlgTriggerEditor::refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancest
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentAliasItem) && (mCurrentView == EditorViewType::cmAliasView)) : ancestorTouchNotification;
         if (dirty) {
             if (TAlias* pT = mpHost->getAliasUnit()->getAlias(id)) {
-                paintAliasItem(pItem, pT);
+                paintAliasItem(pItem, pT, touchNotification);
             }
         }
         if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
-            refreshAliasIconsIn(pItem, dirty, remaining);
+            refreshAliasIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
         }
         if (!ancestorDirty && remaining <= 0) {
             return;
@@ -6585,9 +6590,8 @@ void dlgTriggerEditor::refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancest
     }
 }
 
-void dlgTriggerEditor::paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT)
+void dlgTriggerEditor::paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification)
 {
-    const bool touchNotification = (pItem == mpCurrentAliasItem) && (mCurrentView == EditorViewType::cmAliasView);
     // A profile's aliases stay TAlias::mIsNew until explicitly saved in the
     // editor, so respecting that here would paint every Lua-toggled alias
     // with the "unsaved" icon instead of reporting its actual state.
@@ -9065,16 +9069,20 @@ void dlgTriggerEditor::flushPendingKeyIconRefresh()
     if (mPendingKeyIconRefresh.isEmpty()) {
         return;
     }
-    ++mKeyIconFlushCount;
-    if (mpKeyBaseItem && isVisible()) {
-        int remaining = mPendingKeyIconRefresh.size();
-        refreshKeyIconsIn(mpKeyBaseItem, false, remaining);
+    if (!mpKeyBaseItem || !isVisible()) {
+        // See flushPendingTriggerIconRefresh() - leave the IDs queued rather
+        // than dropping the update.
+        return;
     }
+    ++mKeyIconFlushCount;
+    int remaining = mPendingKeyIconRefresh.size();
+    refreshKeyIconsIn(mpKeyBaseItem, false, false, remaining);
     mPendingKeyIconRefresh.clear();
 }
 
-// See refreshTriggerIconsIn() for the shape of this walk.
-void dlgTriggerEditor::refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+// See refreshTriggerIconsIn() for the shape of this walk, including what
+// ancestorTouchNotification carries forward.
+void dlgTriggerEditor::refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
 {
     for (int i = 0, n = pParent->childCount(); i < n; ++i) {
         QTreeWidgetItem* pItem = pParent->child(i);
@@ -9084,13 +9092,14 @@ void dlgTriggerEditor::refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestor
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView)) : ancestorTouchNotification;
         if (dirty) {
             if (TKey* pT = mpHost->getKeyUnit()->getKey(id)) {
-                paintKeyItem(pItem, pT);
+                paintKeyItem(pItem, pT, touchNotification);
             }
         }
         if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
-            refreshKeyIconsIn(pItem, dirty, remaining);
+            refreshKeyIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
         }
         if (!ancestorDirty && remaining <= 0) {
             return;
@@ -9098,20 +9107,19 @@ void dlgTriggerEditor::refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestor
     }
 }
 
-void dlgTriggerEditor::paintKeyItem(QTreeWidgetItem* pItem, TKey* pT)
+void dlgTriggerEditor::paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touchNotification)
 {
-    const bool isCurrentItem = (pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        if (isCurrentItem) {
+        if (touchNotification) {
             clearEditorNotification();
         }
         computeKeyIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        if (isCurrentItem) {
+        if (touchNotification) {
             showError(pT->getError());
         }
     }
@@ -9329,18 +9337,36 @@ void dlgTriggerEditor::computeScriptIcon(TScript* pT, QIcon& icon, QString& item
             }
         } else {
             if (itemActive) {
-                icon = cachedIcon(qsl(":/icons/folder-orange.png"));
+                if (pT->ancestorsActive()) {
+                    icon = cachedIcon(qsl(":/icons/folder-orange.png"));
+                } else {
+                    icon = cachedIcon(qsl(":/icons/folder-grey.png"));
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
             } else {
-                icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
+                if (pT->ancestorsActive()) {
+                    icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
+                } else {
+                    icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
+                }
             }
         }
     } else {
         if (pT->isActive()) {
-            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             itemDescription = descActive;
+            if (pT->ancestorsActive()) {
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
+            } else {
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
+                itemDescription = descInactiveParent.arg(itemDescription);
+            }
         } else {
-            icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             itemDescription = descInactive;
+            if (pT->ancestorsActive()) {
+                icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
+            } else {
+                icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
+            }
         }
     }
 }
@@ -9373,16 +9399,20 @@ void dlgTriggerEditor::flushPendingScriptIconRefresh()
     if (mPendingScriptIconRefresh.isEmpty()) {
         return;
     }
-    ++mScriptIconFlushCount;
-    if (mpScriptsBaseItem && isVisible()) {
-        int remaining = mPendingScriptIconRefresh.size();
-        refreshScriptIconsIn(mpScriptsBaseItem, false, remaining);
+    if (!mpScriptsBaseItem || !isVisible()) {
+        // See flushPendingTriggerIconRefresh() - leave the IDs queued rather
+        // than dropping the update.
+        return;
     }
+    ++mScriptIconFlushCount;
+    int remaining = mPendingScriptIconRefresh.size();
+    refreshScriptIconsIn(mpScriptsBaseItem, false, false, remaining);
     mPendingScriptIconRefresh.clear();
 }
 
-// See refreshTriggerIconsIn() for the shape of this walk.
-void dlgTriggerEditor::refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+// See refreshTriggerIconsIn() for the shape of this walk, including what
+// ancestorTouchNotification carries forward.
+void dlgTriggerEditor::refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
 {
     for (int i = 0, n = pParent->childCount(); i < n; ++i) {
         QTreeWidgetItem* pItem = pParent->child(i);
@@ -9392,13 +9422,14 @@ void dlgTriggerEditor::refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ances
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView)) : ancestorTouchNotification;
         if (dirty) {
             if (TScript* pT = mpHost->getScriptUnit()->getScript(id)) {
-                paintScriptItem(pItem, pT);
+                paintScriptItem(pItem, pT, touchNotification);
             }
         }
         if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
-            refreshScriptIconsIn(pItem, dirty, remaining);
+            refreshScriptIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
         }
         if (!ancestorDirty && remaining <= 0) {
             return;
@@ -9406,20 +9437,19 @@ void dlgTriggerEditor::refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ances
     }
 }
 
-void dlgTriggerEditor::paintScriptItem(QTreeWidgetItem* pItem, TScript* pT)
+void dlgTriggerEditor::paintScriptItem(QTreeWidgetItem* pItem, TScript* pT, bool touchNotification)
 {
-    const bool isCurrentItem = (pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        if (isCurrentItem) {
+        if (touchNotification) {
             clearEditorNotification();
         }
         computeScriptIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        if (isCurrentItem) {
+        if (touchNotification) {
             showError(pT->getError());
         }
     }
@@ -9553,16 +9583,20 @@ void dlgTriggerEditor::flushPendingTimerIconRefresh()
     if (mPendingTimerIconRefresh.isEmpty()) {
         return;
     }
-    ++mTimerIconFlushCount;
-    if (mpTimerBaseItem && isVisible()) {
-        int remaining = mPendingTimerIconRefresh.size();
-        refreshTimerIconsIn(mpTimerBaseItem, false, remaining);
+    if (!mpTimerBaseItem || !isVisible()) {
+        // See flushPendingTriggerIconRefresh() - leave the IDs queued rather
+        // than dropping the update.
+        return;
     }
+    ++mTimerIconFlushCount;
+    int remaining = mPendingTimerIconRefresh.size();
+    refreshTimerIconsIn(mpTimerBaseItem, false, false, remaining);
     mPendingTimerIconRefresh.clear();
 }
 
-// See refreshTriggerIconsIn() for the shape of this walk.
-void dlgTriggerEditor::refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+// See refreshTriggerIconsIn() for the shape of this walk, including what
+// ancestorTouchNotification carries forward.
+void dlgTriggerEditor::refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
 {
     for (int i = 0, n = pParent->childCount(); i < n; ++i) {
         QTreeWidgetItem* pItem = pParent->child(i);
@@ -9572,13 +9606,14 @@ void dlgTriggerEditor::refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancest
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView)) : ancestorTouchNotification;
         if (dirty) {
             if (TTimer* pT = mpHost->getTimerUnit()->getTimer(id)) {
-                paintTimerItem(pItem, pT);
+                paintTimerItem(pItem, pT, touchNotification);
             }
         }
         if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
-            refreshTimerIconsIn(pItem, dirty, remaining);
+            refreshTimerIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
         }
         if (!ancestorDirty && remaining <= 0) {
             return;
@@ -9586,20 +9621,19 @@ void dlgTriggerEditor::refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancest
     }
 }
 
-void dlgTriggerEditor::paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT)
+void dlgTriggerEditor::paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT, bool touchNotification)
 {
-    const bool isCurrentItem = (pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        if (isCurrentItem) {
+        if (touchNotification) {
             clearEditorNotification();
         }
         computeTimerIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        if (isCurrentItem) {
+        if (touchNotification) {
             showError(pT->getError());
         }
     }
@@ -9734,17 +9768,29 @@ void dlgTriggerEditor::flushPendingTriggerIconRefresh()
     if (mPendingTriggerIconRefresh.isEmpty()) {
         return;
     }
-    if (mpTriggerBaseItem && isVisible()) {
-        int remaining = mPendingTriggerIconRefresh.size();
-        refreshTriggerIconsIn(mpTriggerBaseItem, false, remaining);
+    if (!mpTriggerBaseItem || !isVisible()) {
+        // Editor closed before this flush ran - leave the IDs queued rather
+        // than silently dropping the update. showEvent() flushes them when
+        // the editor becomes visible again, and the next toggle would too.
+        return;
     }
+    int remaining = mPendingTriggerIconRefresh.size();
+    refreshTriggerIconsIn(mpTriggerBaseItem, false, false, remaining);
     mPendingTriggerIconRefresh.clear();
 }
 
 // One pass over the tree: repaints every pending item and, since a folder's
 // state changes its descendants' greyed-out look, everything under one. Stops
 // as soon as every pending ID has been seen.
-void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+//
+// ancestorTouchNotification carries the notification-eligibility of whichever
+// pending item most recently rooted the current dirty subtree - matching the
+// pre-coalescing behaviour where one refreshTriggerIcon(id) call decided
+// touchNotification once, from id's own selection state, and applied it to
+// that id's whole subtree. A descendant swept in only because an ancestor
+// folder toggled must not touch the notification banner on its own account,
+// even if that descendant happens to be the selected item.
+void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
 {
     for (int i = 0, n = pParent->childCount(); i < n; ++i) {
         QTreeWidgetItem* pItem = pParent->child(i);
@@ -9754,13 +9800,14 @@ void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ance
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView)) : ancestorTouchNotification;
         if (dirty) {
             if (TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(id)) {
-                paintTriggerItem(pItem, pT);
+                paintTriggerItem(pItem, pT, touchNotification);
             }
         }
         if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
-            refreshTriggerIconsIn(pItem, dirty, remaining);
+            refreshTriggerIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
         }
         if (!ancestorDirty && remaining <= 0) {
             return;
@@ -9768,20 +9815,19 @@ void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ance
     }
 }
 
-void dlgTriggerEditor::paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT)
+void dlgTriggerEditor::paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bool touchNotification)
 {
-    const bool isCurrentItem = (pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        if (isCurrentItem) {
+        if (touchNotification) {
             clearEditorNotification();
         }
         computeTriggerIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        if (isCurrentItem) {
+        if (touchNotification) {
             showError(pT->getError());
         }
     }
@@ -10419,6 +10465,15 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
 
     mHasBeenShown = true;
     widgetutils::keepDialogOnAScreen(this, mpHost->mpConsole);
+
+    // A Lua toggle that arrived while this editor was hidden stays queued
+    // rather than being dropped (see flushPendingTriggerIconRefresh()) -
+    // flush it now instead of waiting for the next toggle to trigger it.
+    flushPendingTriggerIconRefresh();
+    flushPendingAliasIconRefresh();
+    flushPendingTimerIconRefresh();
+    flushPendingScriptIconRefresh();
+    flushPendingKeyIconRefresh();
 }
 
 void dlgTriggerEditor::changeView(EditorViewType view)

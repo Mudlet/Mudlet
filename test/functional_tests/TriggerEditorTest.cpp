@@ -408,6 +408,147 @@ private slots:
     QCOMPARE(description(pAlias2), inactive);
     QCOMPARE(pEditor->mAliasIconPaintCount, paintBefore + 2);
   }
+
+  // computeScriptIcon() was the only one of the five compute*Icon() helpers
+  // that never consulted ancestorsActive() - so a script under a Lua-disabled
+  // group kept its active icon/description instead of greying out like the
+  // same case already does for triggers, aliases, timers and keys.
+  void test_luaToggleGreysScriptUnderADeactivatedGroup() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaScriptGroup\", \"script\")\n"
+            "permScript(\"qaScriptGroupChild\", \"qaScriptGroup\", \"-- deliberately does nothing\")\n"
+            "enableScript(\"qaScriptGroup\")\n"
+            "enableScript(\"qaScriptGroupChild\")")));
+    pEditor->doCleanReset();
+
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pLeaf = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaScriptGroupChild"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pLeaf = found.isEmpty() ? nullptr : found.first();
+      return pLeaf != nullptr;
+    }), "the editor never rebuilt its tree around the planted script");
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactiveParent = dlgTriggerEditor::tr("%1 in a deactivated group").arg(active);
+    QCOMPARE(description(pLeaf), active);
+
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableScript(\"qaScriptGroup\")")));
+    QTRY_COMPARE(description(pLeaf), inactiveParent);
+  }
+
+  // A repaint queued while the editor was visible used to be dropped for
+  // good if the editor was hidden before the deferred flush ran: the flush
+  // checked isVisible() to decide whether to do the walk, but cleared the
+  // pending IDs regardless of that check, so nothing repainted them even
+  // once the editor became visible again. showEvent() now flushes anything
+  // still queued when the editor is reshown.
+  void test_luaToggleQueuedWhileHiddenIsNotDroppedOnReshow() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permAlias(\"qaHiddenRaceAlias\", \"\", \"^qa hidden race$\", \"\")")));
+    pEditor->doCleanReset();
+
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_aliases"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaHiddenRaceAlias"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }), "the editor never rebuilt its tree around the planted alias");
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+    QCOMPARE(description(pItem), active);
+
+    // Toggle while visible (queues the repaint and arms the deferred flush),
+    // then hide before that flush's 0ms timer fires.
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableAlias(\"qaHiddenRaceAlias\")")));
+    pEditor->hide();
+    QTest::qWait(50ms);
+    QVERIFY(!pEditor->isVisible());
+    // Still queued, not yet repainted, and not dropped.
+    QVERIFY(pEditor->mPendingAliasIconRefresh.contains(pItem->data(0, Qt::UserRole).toInt()));
+
+    pEditor->show();
+    QTRY_COMPARE(description(pItem), inactive);
+  }
+
+  // paintAliasItem()/paintTimerItem()/paintScriptItem()/paintKeyItem() (and
+  // paintTriggerItem() from #10605) used to recompute touchNotification for
+  // every item they painted, including descendants only swept in because an
+  // ancestor folder toggled - so toggling a folder could wipe the shared
+  // notification banner via a descendant that happened to be selected, even
+  // though nothing about that descendant's own error/active state changed.
+  // touchNotification must instead be decided once, by the actually-toggled
+  // item's own selection state, and carried down to its descendants.
+  void test_luaToggleOfFolderDoesNotClearNotificationOfUnrelatedSelectedDescendant() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaNotifyFolder\", \"script\")\n"
+            "permScript(\"qaNotifyLeaf\", \"qaNotifyFolder\", \"-- deliberately does nothing\")\n"
+            "enableScript(\"qaNotifyFolder\")\n"
+            "enableScript(\"qaNotifyLeaf\")")));
+    pEditor->doCleanReset();
+
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pLeaf = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaNotifyLeaf"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pLeaf = found.isEmpty() ? nullptr : found.first();
+      return pLeaf != nullptr;
+    }), "the editor never rebuilt its tree around the planted script");
+
+    // doCleanReset()'s deferred runScheduledCleanReset() always ends on
+    // slot_showTriggers(), so the view has to be switched back to Scripts
+    // again now that the reset has settled, before selecting the leaf makes
+    // it the item that view has open.
+    pEditor->slot_showScripts();
+    pEditor->slot_scriptsSelected(pLeaf);
+    QCOMPARE(pEditor->mCurrentView, EditorViewType::cmScriptView);
+    QCOMPARE(pEditor->mpCurrentScriptItem, pLeaf);
+
+    // Put an unrelated banner up, as if some other diagnostic were showing.
+    pEditor->showError(qsl("an unrelated diagnostic"));
+    QVERIFY(pEditor->mpSystemMessageArea->isVisible());
+
+    const int flushBefore = pEditor->mScriptIconFlushCount;
+    // Toggle the *folder*, not the selected leaf.
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableScript(\"qaNotifyFolder\")")));
+    QTRY_COMPARE(pEditor->mScriptIconFlushCount, flushBefore + 1);
+    QVERIFY(pEditor->mpSystemMessageArea->isVisible());
+  }
 };
 
 #include "TriggerEditorTest.moc"
