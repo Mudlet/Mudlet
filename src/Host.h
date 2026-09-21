@@ -1038,6 +1038,10 @@ signals:
     void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
+    // Every piece of text the game sends, as it reaches the console. The command
+    // line uses it to remember what it held when the game last spoke, which is
+    // how a password prompt tells a command typed ahead from the password.
+    void signal_serverTextPrinted();
     void signal_forceMXPProcessorOnChanged(bool enabled);
     // The frontend (TMainConsole) owns the dialogs these drive; the strings are
     // built here so they stay in Host's translation context.

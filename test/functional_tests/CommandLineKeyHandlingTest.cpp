@@ -93,6 +93,16 @@ private:
         return pCommandLine;
     }
 
+    // Text from the game, through the real telnet parser rather than printed
+    // straight into the console: what the command line remembers about itself is
+    // keyed off the game having said something, and only that path says so. Ends
+    // in a newline so the line is posted at once instead of held as a prompt.
+    void serverSays(const char* text)
+    {
+        QByteArray bytes(text);
+        mpHost->mTelnet.loopbackTest(bytes);
+    }
+
     TCommandLine* freshCommandLine()
     {
         mLineName = qsl("keyHandlingLine%1").arg(++mLineCounter);
@@ -777,50 +787,100 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("k"));
     }
 
-    // A command typed and left unsent before the password prompt arrived is not
-    // part of the password. The history check alone cannot tell it from password
-    // characters typed as WILL ECHO landed, so it was kept on the masked line and
-    // went to the game with the password concatenated onto it.
+    // What a player had typed before the game asked for a password is a command;
+    // what they typed after seeing the prompt is the password. Neither the history
+    // nor a clock can tell those apart - the boundary is the game's own output, so
+    // the command line remembers what it held each time the game spoke, and the
+    // prompt splits the line there.
     //
-    // The keystroke clock is aged here rather than waited out. Letting two seconds
-    // of real time pass in this process stops synthetic key events reaching the
-    // command line at all, and takes five of the completion cases with it.
-    void test_textTypedWellBeforeThePromptIsNotPartOfThePassword()
+    // These drive the profile's own command line: only that one is ever masked.
+    // Declared last because they put entries into its history, which nothing
+    // resets, and the rest of the file relies on a fresh sub command line per case.
+    void test_aCommandTypedBeforeThePromptIsParkedAndGivenBack()
     {
         TCommandLine* pCommandLine = mainCommandLine();
         QVERIFY(pCommandLine);
         QCOMPARE(pCommandLine->getType(), TCommandLine::MainCommandLine);
         QVERIFY2(!mpHost->mDisablePasswordMasking, "password masking is off in this profile, so this case proves nothing");
-
-        // The branch under test needs a non-empty history and text that does not
-        // match its newest entry.
         sendCommand(pCommandLine, qsl("qzxsentcommand"));
 
         type(pCommandLine, qsl("qzxleftover"));
-        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxleftover"), qPrintable(qsl("the leftover command did not reach the line - it holds '%1'").arg(pCommandLine->toPlainText())));
-
-        // Stands for the seconds a login script spends working through the login
-        // while the player types ahead. An invalid clock is what the production code
-        // reads as "not still typing", which is the whole of the distinction.
-        pCommandLine->mSinceLastKeystroke.invalidate();
+        serverSays("Password:\n");
+        mpServer->forgetReceived();
 
         mpHost->setRemoteEchoingActive(true);
-        // Nothing is on the masked line, so there is nothing for the password to be
-        // appended to - which is the whole of the harm in #10973.
         QVERIFY2(pCommandLine->toPlainText().isEmpty(),
-                 qPrintable(qsl("the leftover command was carried into the password prompt, leaving '%1' on the masked line").arg(pCommandLine->toPlainText())));
+                 qPrintable(qsl("the command was carried into the password prompt, leaving '%1' on the masked line").arg(pCommandLine->toPlainText())));
 
-        // Typed rather than set, because answering the prompt by hand is what used
-        // to make the parked command be dropped instead of given back.
         type(pCommandLine, qsl("qzxsecret"));
-        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxsecret"), qPrintable(qsl("the password did not reach the masked line - it holds '%1'").arg(pCommandLine->toPlainText())));
+        // The game talks while the password is being typed, so what the line is
+        // remembered as holding is now the half-typed password. Harmless here, and
+        // it is what makes the re-prompt below a real test of the restore.
+        serverSays("You hear distant thunder.\n");
         press(pCommandLine, Qt::Key_Return);
+        QVERIFY2(waitForServerToReceive("qzxsecret"), qPrintable(qsl("the game never received the password - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
+        QVERIFY2(!mpServer->received().contains("qzxleftover"), qPrintable(qsl("the command was sent as part of the password - the wire holds: %1").arg(QString::fromUtf8(mpServer->received()))));
 
-        // #7921's half: the command comes back once the prompt is over. Without
-        // this the fix would only have moved the harm, from a password with a
-        // command stuck to the front of it to a command silently thrown away.
+        // #7921: the command comes back once the prompt is over, even though the
+        // player answered the prompt by hand.
         mpHost->setRemoteEchoingActive(false);
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxleftover"));
+
+        // A rejected password brings the prompt straight back, and a real prompt
+        // has no newline, so nothing is posted between the game releasing ECHO and
+        // taking it again. The command was put back by the game releasing ECHO, so
+        // it has to count as predating this prompt, not as something typed into it -
+        // and the last text the game posted was the thunder, over a half-typed
+        // password, so nothing but the restore itself can say so.
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(),
+                 qPrintable(qsl("the restored command was kept on the masked line at the re-prompt, leaving '%1'").arg(pCommandLine->toPlainText())));
+        mpHost->setRemoteEchoingActive(false);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxleftover"));
+    }
+
+    // The other half, which the fix must keep: a password typed in the gap between
+    // the game printing its prompt and its WILL ECHO arriving stays on the masked
+    // line, and is never handed back afterwards in the clear.
+    void test_aPasswordTypedAfterThePromptStaysOnTheMaskedLine()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+
+        serverSays("Password:\n");
+        type(pCommandLine, qsl("qzxpassstart"));
+
+        mpHost->setRemoteEchoingActive(true);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxpassstart"));
+
+        mpHost->setRemoteEchoingActive(false);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(),
+                 qPrintable(qsl("password characters were handed back after the prompt - the line holds '%1'").arg(pCommandLine->toPlainText())));
+    }
+
+    // Both at once: a command left unsent, then the prompt, then the player starts
+    // the password before WILL ECHO lands. The line holds both as one string, and
+    // the game's output is the only thing that says where one ends.
+    void test_theLineIsSplitWhereTheGameLastSpoke()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("qzxlook"));
+        serverSays("Password:\n");
+        type(pCommandLine, qsl("qzxsec"));
+        mpServer->forgetReceived();
+
+        mpHost->setRemoteEchoingActive(true);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxsec"));
+
+        type(pCommandLine, qsl("ret"));
+        press(pCommandLine, Qt::Key_Return);
+        QVERIFY2(waitForServerToReceive("qzxsecret"), qPrintable(qsl("the game never received the password - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
+        QVERIFY2(!mpServer->received().contains("qzxlook"), qPrintable(qsl("the command went to the game with the password - the wire holds: %1").arg(QString::fromUtf8(mpServer->received()))));
+
+        mpHost->setRemoteEchoingActive(false);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxlook"));
     }
 
 };

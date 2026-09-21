@@ -5254,6 +5254,7 @@ void cTelnet::postData()
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
+    emit mpHost->signal_serverTextPrinted();
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
         mpHost->mMMCPServer->receiveFromPlayer(data);
     }
