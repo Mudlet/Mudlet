@@ -121,6 +121,12 @@ public:
     // Parked where a backend sits while it finishes decoding the last phrase
     void beginProcessing() { setState(State::Processing); }
 
+    // AppleSpeechRecognizer's shape: doStopListening() parks in Processing and
+    // returns, and the phrase lands afterwards. The Vosk and Sherpa backends
+    // emit their last phrase and settle to Ready before returning, which is why
+    // this is a switch rather than how the stand-in always behaves.
+    void finalisesAfterTheStopReturns() { mFinalisesAfterStop = true; }
+
     // What a stop looks like on a backend that finalises the last phrase:
     // Processing while the decoder finishes, the phrase, then idle. The
     // handlers run inside the delivery, which is the whole point of it.
@@ -133,8 +139,11 @@ public:
 
 protected:
     void doStartListening() override { setState(State::Listening); }
-    void doStopListening() override { setState(State::Ready); }
+    void doStopListening() override { setState(mFinalisesAfterStop ? State::Processing : State::Ready); }
     void doCancel() override { setState(State::Ready); }
+
+private:
+    bool mFinalisesAfterStop = false;
 };
 
 class SpeechAcrossProfilesTest : public QObject
@@ -1135,6 +1144,53 @@ private slots:
         QVERIFY2(!takeSucceeded, "the microphone was taken while the previous profile's phrase was still being decoded");
         QVERIFY2(why.contains(qsl("still finishing a phrase")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
         QCOMPARE(pOwner, mpSecondHost);
+    }
+
+    // The guard beside this one catches a decode that is already under way when
+    // the microphone is asked for. This is the case it does not: the losing
+    // profile is still Listening, so the claim passes, and the stop that follows
+    // leaves a backend which finalises asynchronously still Processing. The
+    // phrase belongs to the profile that spoke it whichever side of the stop the
+    // decode began.
+    void test_aPhraseFinalisedAfterAHandoverGoesToTheProfileThatSpokeIt()
+    {
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->finalisesAfterTheStopReturns();
+
+        listenFor(mpFirstHost, qsl("sysSTTResult"), qsl("_heardFirst"));
+        listenFor(mpSecondHost, qsl("sysSTTResult"), qsl("_heardSecond"));
+
+        QVERIFY(runLua(mpSecondHost, qsl("_sttSpeakerStart = stt.start()")).isNull());
+        QVERIFY2(luaGlobalBoolean(mpSecondHost, qsl("_sttSpeakerStart")), "the second profile could not start a session");
+
+        // The profile taking the microphone is the one in front, which is what a
+        // player switching to it and asking to listen looks like - and what makes
+        // this worth catching: with no owner left, a phrase falls through to
+        // whichever profile is on screen, so the misdelivery lands here.
+        mudlet::self()->activateProfile(mpFirstHost);
+
+        // Taken while the second profile is still listening, so the decode has
+        // not begun and the guard above has nothing to catch.
+        QVERIFY(runLua(mpFirstHost, qsl("_sttTakeOk, _sttTakeWhy = stt.start()")).isNull());
+        const bool takeSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttTakeOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttTakeWhy"));
+        const Host* pOwnerAfterTake = mudlet::self()->microphoneOwner();
+
+        // What the stop set going, arriving after the claim was answered.
+        pEngine->finishPhrase(qsl("kill hound"));
+
+        const QString heardFirst = luaGlobalString(mpFirstHost, qsl("_heardFirst"));
+        const QString heardSecond = luaGlobalString(mpSecondHost, qsl("_heardSecond"));
+        retireStandInEngine();
+
+        QVERIFY2(heardFirst.isEmpty(), qPrintable(qsl("the phrase the second profile spoke was delivered to the first: \"%1\"").arg(heardFirst)));
+        QCOMPARE(heardSecond, qsl("kill hound"));
+        QVERIFY2(!takeSucceeded, "the microphone was taken while the phrase the previous profile spoke was still being decoded");
+        QVERIFY2(why.contains(qsl("still finishing a phrase")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
+        QVERIFY2(pOwnerAfterTake == mpSecondHost, "the microphone did not stay with the profile whose phrase was still being decoded");
     }
 
     // A command created by a profile that is not the one on screen must arrive
