@@ -1116,11 +1116,18 @@ void TCommandLine::handleTabCompletion(bool direction)
         return;
     }
 
+    // Checked before the cycle is consulted, not inside the refresh below. A cycle
+    // is only meaningful while the line still holds what it completed, and the line
+    // can be emptied without the cycle being told: clearCmdLine() from a script
+    // does it, and so does the end of a password prompt. Asked to carry on from a
+    // prefix that is no longer on screen, this would put a word the player never
+    // typed onto an empty line, ready for Return to send.
+    if (toPlainText().isEmpty()) {
+        return;
+    }
+
     if ((mTabCompletionCount < 0) || (mUserKeptOnTyping)) {
         mTabCompletionTyped = toPlainText();
-        if (mTabCompletionTyped.isEmpty()) {
-            return;
-        }
         mUserKeptOnTyping = false;
         mTabCompletionCount = -1;
     }

@@ -623,6 +623,30 @@ private slots:
         press(pCommandLine, Qt::Key_Escape);
     }
 
+    // Something can empty the line without the completion cycle being told, and
+    // then a bare Tab used to carry on from the prefix that is no longer there,
+    // putting a word the player never typed onto an empty line for Return to send.
+    // clearCmdLine() from a script does it, and so does the end of a password
+    // prompt - which is how the guard above can be reached with a cycle still live
+    // from before the prompt opened.
+    void test_tabDoesNothingOnALineThatWasCleared()
+    {
+        mpHost->mpConsole->print(qsl("qzxstalealpha qzxstalebravo\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("qzxstale"));
+        press(pCommandLine, Qt::Key_Tab);
+        const QString completed = pCommandLine->toPlainText();
+        QVERIFY2(completed.startsWith(qsl("qzxstale")) && completed != qsl("qzxstale"), qPrintable(qsl("control failed, line reads '%1'").arg(completed)));
+
+        // What Lua clearCmdLine() does, and what the end of a password prompt does.
+        pCommandLine->clear();
+
+        press(pCommandLine, Qt::Key_Tab);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), qPrintable(qsl("Tab on an empty line completed against the stale prefix, leaving '%1'").arg(pCommandLine->toPlainText())));
+    }
+
     // Typing a space accepts the completion. A Tab straight after it must not
     // carry on cycling through the matches and swap the accepted word for the
     // other one - which is what it would do if the space left the cycle where
