@@ -80,6 +80,19 @@ private:
     // A command line of this test's own, with an empty history and no
     // suggestions. Lua cannot delete one again, but it is parented into the
     // console so the profile's teardown takes it with it.
+    // The profile's own command line. freshCommandLine() below makes a
+    // SubCommandLine, and setEchoSuppression() returns early for anything that is
+    // not a MainCommandLine, so only this one is ever masked.
+    TCommandLine* mainCommandLine() const
+    {
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        if (pCommandLine) {
+            pCommandLine->mSaveCommands = false;
+            pCommandLine->clear();
+        }
+        return pCommandLine;
+    }
+
     TCommandLine* freshCommandLine()
     {
         mLineName = qsl("keyHandlingLine%1").arg(++mLineCounter);
@@ -238,6 +251,10 @@ private slots:
 
     void cleanup()
     {
+        // Per-Host and shared across this class's cases, so a case that aborts with
+        // the prompt still open would mask the ones after it.
+        mpHost->setRemoteEchoingActive(false);
+
         if (!mLineName.isEmpty()) {
             mpHost->resetCmdLineAction(mLineName);
             mLineName.clear();
@@ -759,6 +776,53 @@ private slots:
         // nothing claimed the press, so it is the command line's again
         QCOMPARE(pCommandLine->toPlainText(), qsl("k"));
     }
+
+    // A command typed and left unsent before the password prompt arrived is not
+    // part of the password. The history check alone cannot tell it from password
+    // characters typed as WILL ECHO landed, so it was kept on the masked line and
+    // went to the game with the password concatenated onto it.
+    //
+    // The keystroke clock is aged here rather than waited out. Letting two seconds
+    // of real time pass in this process stops synthetic key events reaching the
+    // command line at all, and takes five of the completion cases with it.
+    void test_textTypedWellBeforeThePromptIsNotPartOfThePassword()
+    {
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+        QCOMPARE(pCommandLine->getType(), TCommandLine::MainCommandLine);
+        QVERIFY2(!mpHost->mDisablePasswordMasking, "password masking is off in this profile, so this case proves nothing");
+
+        // The branch under test needs a non-empty history and text that does not
+        // match its newest entry.
+        sendCommand(pCommandLine, qsl("qzxsentcommand"));
+
+        type(pCommandLine, qsl("qzxleftover"));
+        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxleftover"), qPrintable(qsl("the leftover command did not reach the line - it holds '%1'").arg(pCommandLine->toPlainText())));
+
+        // Stands for the seconds a login script spends working through the login
+        // while the player types ahead. An invalid clock is what the production code
+        // reads as "not still typing", which is the whole of the distinction.
+        pCommandLine->mSinceLastKeystroke.invalidate();
+
+        mpHost->setRemoteEchoingActive(true);
+        // Nothing is on the masked line, so there is nothing for the password to be
+        // appended to - which is the whole of the harm in #10973.
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(),
+                 qPrintable(qsl("the leftover command was carried into the password prompt, leaving '%1' on the masked line").arg(pCommandLine->toPlainText())));
+
+        // Typed rather than set, because answering the prompt by hand is what used
+        // to make the parked command be dropped instead of given back.
+        type(pCommandLine, qsl("qzxsecret"));
+        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxsecret"), qPrintable(qsl("the password did not reach the masked line - it holds '%1'").arg(pCommandLine->toPlainText())));
+        press(pCommandLine, Qt::Key_Return);
+
+        // #7921's half: the command comes back once the prompt is over. Without
+        // this the fix would only have moved the harm, from a password with a
+        // command stuck to the front of it to a command silently thrown away.
+        mpHost->setRemoteEchoingActive(false);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxleftover"));
+    }
+
 };
 
 #include "CommandLineKeyHandlingTest.moc"

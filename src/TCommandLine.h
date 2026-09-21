@@ -27,6 +27,7 @@
 
 #include "utils.h"
 
+#include <QElapsedTimer>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>
@@ -42,6 +43,12 @@ class TConsole;
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
+
+    // Ages mSinceLastKeystroke without waiting on the clock. Letting real time
+    // pass in that test's process breaks the synthetic key events the rest of its
+    // cases rely on, and whether a keystroke was recent is the only thing the
+    // password-prompt decision reads from it.
+    friend class CommandLineKeyHandlingTest;
 
     enum MoveDirection {
         MOVE_UP,
@@ -154,6 +161,12 @@ private:
 
     // Track echo suppression state
     bool mIsEchoSuppressed = false;
+    // Restarted on every key that reaches the command line, so that
+    // setEchoSuppression() can tell text the player was in the middle of typing
+    // from text that has been sitting there while something else worked. Invalid
+    // until the first keystroke, which is the right answer for text a script put
+    // on the line: that was never typed, so it is not the start of a password.
+    QElapsedTimer mSinceLastKeystroke;
     // Track password visibility state when echo is suppressed
     bool mPasswordVisible = false;
     // Button to toggle password visibility
@@ -163,8 +176,6 @@ private:
     QString mTextToRestoreAfterEchoSuppression;
     // Track whether the preserved text was originally selected (for auto-clear OFF)
     bool mRestoredTextShouldBeSelected = false;
-    // Track whether user typed anything during echo suppression mode
-    bool mUserTypedDuringEchoSuppression = false;
 
 private slots:
     void slot_togglePasswordVisibility();

@@ -135,6 +135,10 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
 void TCommandLine::processNormalKey(QEvent* event)
 {
+    // Before the event is handled, so a paste is timed by the keystroke that
+    // asked for it. This is the default arm of the key handler, so it sees typing
+    // and paste but not setPlainText() from a script.
+    mSinceLastKeystroke.restart();
     QPlainTextEdit::event(event);
     adjustHeight();
 
@@ -144,11 +148,6 @@ void TCommandLine::processNormalKey(QEvent* event)
         mAutoCompletionCount = -1;
     } else {
         mUserKeptOnTyping = false;
-    }
-
-    // Track if user types during echo suppression for content preservation logic
-    if (mIsEchoSuppressed && mType == MainCommandLine) {
-        mUserTypedDuringEchoSuppression = true;
     }
 
     spellCheck();
@@ -1774,8 +1773,19 @@ void TCommandLine::setEchoSuppression(bool suppress)
                     }
                 }
 
-                if (!isExistingCommand && !mHistoryList.isEmpty()) {
-                    // SCENARIO 3: Text doesn't match history - likely password chars already typed
+                // Whether the player was still typing when the prompt arrived. A
+                // password typed into the gap between the game printing "Password:"
+                // and its WILL ECHO landing is moments old; a command typed while an
+                // automated login worked through the login screen is seconds old
+                // (#7921). The history check alone cannot separate those, which is
+                // why a command left unsent was being prepended to the password and
+                // sent to the game as one string (#10973).
+                constexpr auto typingRace = 2s;
+                const bool stillTyping = mSinceLastKeystroke.isValid() && mSinceLastKeystroke.durationElapsed() < typingRace;
+
+                if (!isExistingCommand && !mHistoryList.isEmpty() && stillTyping) {
+                    // SCENARIO 3: Text doesn't match history and was being typed as the
+                    // prompt arrived - password chars already typed
                     // User workflow: types 'password' -> server enables echo suppression mid-typing
                     // Action: Continue with these characters as hidden password input
                     partialPasswordToKeep = currentText;
@@ -1793,8 +1803,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
 
         // Store the command text for later restoration (empty if none to restore)
         mTextToRestoreAfterEchoSuppression = textToRestoreAfterPassword;
-        mUserTypedDuringEchoSuppression = false; // Reset typing tracking
-        clear();                                 // Clear command line for password input
+        clear(); // Clear command line for password input
 
         // Show password toggle button and reset visibility state
         if (mpPasswordToggleButton) {
@@ -1823,9 +1832,17 @@ void TCommandLine::setEchoSuppression(bool suppress)
             mpPasswordToggleButton->setVisible(false);
         }
 
-        // Restore any command text that was preserved when password mode started
-        // Only restore if user didn't type anything during echo suppression
-        if (!mTextToRestoreAfterEchoSuppression.isEmpty() && !mUserTypedDuringEchoSuppression) {
+        // Restore any command text that was preserved when password mode started.
+        //
+        // Not gated on the player having stayed silent through the prompt any more.
+        // This slot only ever holds a command - text that was selected, or matched
+        // the history, or had been sitting unsent long enough not to be password
+        // characters. Password characters go onto the line instead, and are never
+        // parked here. So there is nothing for typing a password to invalidate, and
+        // gating on it meant answering the prompt by hand threw the command away:
+        // the player who typed ahead before an automated login got their text back,
+        // and the player who typed their own password did not.
+        if (!mTextToRestoreAfterEchoSuppression.isEmpty()) {
             setPlainText(mTextToRestoreAfterEchoSuppression);
 
             // Restore the original selection state to maintain user workflow consistency
@@ -1847,7 +1864,6 @@ void TCommandLine::setEchoSuppression(bool suppress)
         // Clear saved state - restoration is complete
         mTextToRestoreAfterEchoSuppression.clear();
         mRestoredTextShouldBeSelected = false;
-        mUserTypedDuringEchoSuppression = false;
     }
 
     viewport()->update(); // Force repaint to apply/remove password masking visual effect
