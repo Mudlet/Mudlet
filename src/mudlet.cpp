@@ -279,11 +279,14 @@ bool mudlet::claimMicrophoneFor(Host* pHost)
         // nothing to catch. Moving the owner now would hand that phrase to the
         // profile taking the microphone instead of the one that spoke it.
         //
-        // The caller gets the same "try again in a moment" it gets above, and the
-        // claim it retries will announce the handover a second time to a profile
-        // whose session has already ended. That is the lesser of the two: the
-        // alternative is announcing it after the stop, and the state change that
-        // follows sysSTTHandover is what docs/stt-api.md tells a script to expect.
+        // The caller gets the same "try again in a moment" it gets above. The
+        // losing profile has already been told of the handover, and that stands:
+        // its session really has ended, and it keeps the microphone only until
+        // its phrase lands, when the session's end releases it. The retry then
+        // finds nobody holding it and announces nothing, so the handover is told
+        // once. Announcing it after the stop instead would put it behind the
+        // state change, and docs/stt-api.md tells a script the state change is
+        // what follows sysSTTHandover.
         if (mpSpeechRecognizer && mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing) {
             return false;
         }

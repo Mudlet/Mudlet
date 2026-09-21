@@ -1162,6 +1162,17 @@ private slots:
 
         listenFor(mpFirstHost, qsl("sysSTTResult"), qsl("_heardFirst"));
         listenFor(mpSecondHost, qsl("sysSTTResult"), qsl("_heardSecond"));
+        // Counted rather than captured: the contract is that the profile losing
+        // the microphone is told once, on the attempt that is refused - not
+        // again when the asking profile retries.
+        QVERIFY(runLua(mpSecondHost,
+                       qsl("_handoversToSecond = 0\n"
+                           "_handoverNamed = nil\n"
+                           "registerAnonymousEventHandler('sysSTTHandover', function(_, name)\n"
+                           "  _handoversToSecond = _handoversToSecond + 1\n"
+                           "  _handoverNamed = name\n"
+                           "end)"))
+                        .isNull());
 
         QVERIFY(runLua(mpSecondHost, qsl("_sttSpeakerStart = stt.start()")).isNull());
         QVERIFY2(luaGlobalBoolean(mpSecondHost, qsl("_sttSpeakerStart")), "the second profile could not start a session");
@@ -1184,6 +1195,17 @@ private slots:
 
         const QString heardFirst = luaGlobalString(mpFirstHost, qsl("_heardFirst"));
         const QString heardSecond = luaGlobalString(mpSecondHost, qsl("_heardSecond"));
+        const Host* pOwnerAfterPhrase = mudlet::self()->microphoneOwner();
+
+        // The retry the refusal asked for. The phrase has landed, so the session
+        // it belonged to has ended and released the microphone: this claim finds
+        // nobody holding it, and announces nothing.
+        QVERIFY(runLua(mpFirstHost, qsl("_sttRetryOk, _sttRetryWhy = stt.start()")).isNull());
+        const bool retrySucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttRetryOk"));
+        const QString retryWhy = luaGlobalString(mpFirstHost, qsl("_sttRetryWhy"));
+        const Host* pOwnerAfterRetry = mudlet::self()->microphoneOwner();
+        const int handoversToSecond = luaGlobalString(mpSecondHost, qsl("_handoversToSecond")).toInt();
+        const QString handoverNamed = luaGlobalString(mpSecondHost, qsl("_handoverNamed"));
         retireStandInEngine();
 
         QVERIFY2(heardFirst.isEmpty(), qPrintable(qsl("the phrase the second profile spoke was delivered to the first: \"%1\"").arg(heardFirst)));
@@ -1191,6 +1213,12 @@ private slots:
         QVERIFY2(!takeSucceeded, "the microphone was taken while the phrase the previous profile spoke was still being decoded");
         QVERIFY2(why.contains(qsl("still finishing a phrase")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
         QVERIFY2(pOwnerAfterTake == mpSecondHost, "the microphone did not stay with the profile whose phrase was still being decoded");
+
+        QVERIFY2(pOwnerAfterPhrase == nullptr, "the microphone was still held once the phrase it was kept for had landed");
+        QVERIFY2(retrySucceeded, qPrintable(qsl("the retry the refusal asked for was refused as well: \"%1\"").arg(retryWhy)));
+        QVERIFY2(pOwnerAfterRetry == mpFirstHost, "the retry did not leave the microphone with the profile that asked");
+        QCOMPARE(handoverNamed, mFirstHostname);
+        QVERIFY2(handoversToSecond == 1, qPrintable(qsl("the profile losing the microphone was told %1 times, where docs/stt-api.md promises once").arg(handoversToSecond)));
     }
 
     // A command created by a profile that is not the one on screen must arrive
