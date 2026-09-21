@@ -945,6 +945,9 @@ private:
     void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
     bool lazyGlobalsUsable(lua_State*);
     static bool globalsMetatablePristine(lua_State*, const int metatable);
+    bool globalsHandlersInPlace(lua_State*);
+    void standDownDeferral(lua_State*);
+    void pushUnusedSpareMultimatches(lua_State*);
     void pushMatchesTable(lua_State*);
     void pushEmptyMatchesTable(lua_State*);
     void pushMultimatchesTable(lua_State*, const bool withNames);
@@ -1028,6 +1031,10 @@ private:
     int mMatchesKeyRef = LUA_NOREF;
     int mMultimatchesKeyRef = LUA_NOREF;
     int mLineKeyRef = LUA_NOREF;
+    // The two metamethod names, for the same reason: they are looked for on the
+    // globals metatable before anything is left out
+    int mIndexKeyRef = LUA_NOREF;
+    int mNewindexKeyRef = LUA_NOREF;
     const char* mMatchesKey = nullptr;
     const char* mMultimatchesKey = nullptr;
     const char* mLineKey = nullptr;
@@ -1044,8 +1051,10 @@ private:
     // Those four names as they stand once Mudlet's own scripts have loaded are
     // the whole of what this watches: a package that replaces one of them
     // afterwards hands the metatable out past the guard, with nothing here to
-    // notice. The cost of that is a deferral that stays on when it should not,
-    // so it is left to the packages that do it rather than paid for per fire.
+    // notice. What that costs is only a deferral that stays on when it should
+    // not - the guard is no longer what stands between a changed metatable and
+    // a script reading nil, since lazyGlobalsUsable() asks whether the handlers
+    // are still there before anything is left out.
     lua_CFunction mStockMetatableFunctions[4] = {};
     bool mGlobalsMetatableTouched = false;
     // An alias pass a script asks for - expandAlias() - sets "command" and the

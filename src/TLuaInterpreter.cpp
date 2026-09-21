@@ -4517,14 +4517,88 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
     if (!mLazyGlobalsInstalled || mGlobalsMetatableTouched) {
         return false;
     }
-    if (lua_topointer(L, LUA_GLOBALSINDEX) == mGlobalsTable) {
-        return true;
+    if (lua_topointer(L, LUA_GLOBALSINDEX) != mGlobalsTable) {
+        // setfenv(0, ...) gave the thread another globals table, which Mudlet
+        // writes to from now on. Code compiled before still reads the original,
+        // so whatever it is owed goes in there first.
+        materialisePendingGlobals(L);
+        return false;
     }
-    // setfenv(0, ...) gave the thread another globals table, which Mudlet
-    // writes to from now on. Code compiled before still reads the original, so
-    // whatever it is owed goes in there first.
+    if (!globalsHandlersInPlace(L)) {
+        // A script handed the metatable can take a handler off it, or put its
+        // own there, in place - an assignment to a key that already holds a
+        // value, which no metamethod and so no guard of ours sees. Leaving a
+        // name out after that hands the script nil: the read that would have
+        // built it never reaches lazyGlobalsIndex(). So this is asked before
+        // anything is left out, rather than trusted from the last setmetatable.
+        mGlobalsMetatableTouched = true;
+        standDownDeferral(L);
+        return false;
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
+// Nothing can build a name on demand once the handlers are gone, so as well as
+// what is still owed, any name that is out of the globals table goes back in.
+// "multimatches" is the one that matters: between dispatches it is left out for
+// a read to put back, and a read that no longer reaches lazyGlobalsIndex() would
+// answer nil for the rest of the session instead. "line" is left alone - it is
+// legitimately absent until the first line arrives, and set_lua_string() writes
+// it from here on.
+void TLuaInterpreter::standDownDeferral(lua_State* L)
+{
     materialisePendingGlobals(L);
-    return false;
+    if (mGlobalsTableRef == LUA_NOREF) {
+        return;
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mGlobalsTableRef);
+    const int globals = lua_gettop(L);
+    if (!globalPresent(L, globals, mMatchesKeyRef)) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
+        pushEmptyMatchesTable(L);
+        lua_rawset(L, globals);
+    }
+    if (!globalPresent(L, globals, mMultimatchesKeyRef)) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
+        pushUnusedSpareMultimatches(L);
+        lua_rawset(L, globals);
+    }
+    lua_pop(L, 1);
+}
+
+// No documentation available in wiki - internal function
+// The spare, or a new one if a script has been handed that one already
+void TLuaInterpreter::pushUnusedSpareMultimatches(lua_State* L)
+{
+    if (mSpareMultimatchesSeen) {
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_rawseti(L, LUA_REGISTRYINDEX, mSpareMultimatchesRef);
+        mSpareMultimatchesSeen = false;
+        return;
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mSpareMultimatchesRef);
+    mSpareMultimatchesSeen = true;
+}
+
+// No documentation available in wiki - internal function
+// Whether the globals table still carries both of Mudlet's handlers. Read
+// through the interned names rather than pushed literals, as this runs on the
+// per-line path and a literal would be hashed every time.
+bool TLuaInterpreter::globalsHandlersInPlace(lua_State* L)
+{
+    if (!lua_getmetatable(L, LUA_GLOBALSINDEX)) {
+        return false;
+    }
+    const int metatable = lua_gettop(L);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mIndexKeyRef);
+    lua_rawget(L, metatable);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mNewindexKeyRef);
+    lua_rawget(L, metatable);
+    const bool inPlace = lua_tocfunction(L, -2) == &TLuaInterpreter::lazyGlobalsIndex && lua_tocfunction(L, -1) == &TLuaInterpreter::lazyGlobalsNewindex;
+    lua_pop(L, 3);
+    return inPlace;
 }
 
 // No documentation available in wiki - internal function
@@ -4793,6 +4867,10 @@ void TLuaInterpreter::installLazyGlobals()
             lua_pushliteral(L, "line");
             mLineKey = lua_tostring(L, -1);
             mLineKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            lua_pushliteral(L, "__index");
+            mIndexKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            lua_pushliteral(L, "__newindex");
+            mNewindexKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_newtable(L);
             mSpareMultimatchesRef = luaL_ref(L, LUA_REGISTRYINDEX);
             mSpareMultimatchesSeen = false;
@@ -4868,6 +4946,8 @@ void TLuaInterpreter::forgetLazyGlobals()
     mMatchesKeyRef = LUA_NOREF;
     mMultimatchesKeyRef = LUA_NOREF;
     mLineKeyRef = LUA_NOREF;
+    mIndexKeyRef = LUA_NOREF;
+    mNewindexKeyRef = LUA_NOREF;
     mMatchesKey = nullptr;
     mMultimatchesKey = nullptr;
     mLineKey = nullptr;

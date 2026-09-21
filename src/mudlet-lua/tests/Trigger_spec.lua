@@ -4558,6 +4558,80 @@ describe("Trigger processing", function()
 
         end)
 
+        -- Handing the globals table a metatable carrying both handlers turns
+        -- the deferral back on, and the script that handed it over is still
+        -- holding that table. Changing a handler on it afterwards is an
+        -- assignment to a key that already has a value, so no metamethod and no
+        -- guard of Mudlet's hears about it. Nothing may be left out after that:
+        -- the read that would build it never reaches the handler.
+        describe("a metatable the globals table is given and then changed", function()
+            local function readEverythingIn(seen)
+                return function()
+                    seen.rawMatches = rawget(_G, "matches")
+                    seen.matches = matches
+                    seen.multimatches = multimatches
+                    seen.line = line
+                end
+            end
+
+            it("keeps answering after the script takes Mudlet's __index off it", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyKeptMetatable (\\w+)$", readEverythingIn(seen)))
+
+                setmetatable(_G, copy)
+                copy.__index = nil
+                local ok, message = pcall(feedTriggers, "\nLazyKeptMetatable word\n")
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(message))
+                assert.is_not_nil(seen.matches, "matches read as nil - a name was left out with no handler to build it")
+                assert.is_not_nil(seen.multimatches, "multimatches read as nil")
+                assert.are.equal("LazyKeptMetatable word", seen.line)
+            end)
+
+            it("hands a script its captures after the metatable gets a strict __index", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local asked = {}
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyStrictLater (\\w+)$", function()
+                    seen.capture = matches[2]
+                end))
+
+                setmetatable(_G, copy)
+                copy.__index = function(_, key)
+                    asked[key] = true
+                    return nil
+                end
+                local ok, message = pcall(feedTriggers, "\nLazyStrictLater word\n")
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(message))
+                assert.are.equal("word", seen.capture, "the script was handed something other than its capture")
+                assert.is_nil(asked.matches, "the package's metatable was asked for a name Mudlet sets")
+            end)
+
+            -- The control: the same shape with the handlers left alone, so a
+            -- case that stops reaching any of this cannot pass quietly
+            it("still leaves them out when the metatable is only copied", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyCopiedMetatable (\\w+)$", readEverythingIn(seen)))
+
+                setmetatable(_G, copy)
+                local ok, message = pcall(feedTriggers, "\nLazyCopiedMetatable word\n")
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(message))
+                assert.is_nil(seen.rawMatches, "nothing was left out, so the cases above prove nothing")
+                assert.is_not_nil(seen.matches)
+                assert.are.equal("LazyCopiedMetatable word", seen.line)
+            end)
+        end)
+
     end)
 
     -- Once a profile holds enough plain-text triggers, the engine files them by
