@@ -80,6 +80,18 @@ private:
     // A command line of this test's own, with an empty history and no
     // suggestions. Lua cannot delete one again, but it is parented into the
     // console so the profile's teardown takes it with it.
+    // The profile's own command line. freshCommandLine() below makes a
+    // SubCommandLine, which setEchoSuppression() deliberately never masks, so a
+    // case about a password prompt has to drive this one or it proves nothing.
+    TCommandLine* mainCommandLine() const
+    {
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        if (pCommandLine) {
+            pCommandLine->mSaveCommands = false;
+        }
+        return pCommandLine;
+    }
+
     TCommandLine* freshCommandLine()
     {
         mLineName = qsl("keyHandlingLine%1").arg(++mLineCounter);
@@ -238,6 +250,10 @@ private slots:
 
     void cleanup()
     {
+        // Echo suppression is per-Host and this class shares one across its
+        // cases, so a case that aborts while a prompt is open would mask every
+        // case after it.
+        mpHost->setRemoteEchoingActive(false);
         if (!mLineName.isEmpty()) {
             mpHost->resetCmdLineAction(mLineName);
             mLineName.clear();
@@ -535,6 +551,42 @@ private slots:
         press(pCommandLine, Qt::Key_Tab);
 
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxbrachiosaurus "));
+    }
+
+    // Tab at a password prompt rewrites the line the player cannot read: it
+    // takes what has been typed so far - the password - as the prefix to
+    // complete, and puts a word lifted from the game's own output in its place.
+    // The player sees asterisks throughout, so the next Return sends a
+    // credential they never typed and it looks like a mistyped password.
+    // Up and Down already do nothing here; Tab is the half that was missed.
+    void test_tabDoesNothingAtAPasswordPrompt()
+    {
+        mpHost->mpConsole->print(qsl("qzxpassphrase appears\n"));
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+        QCOMPARE(pCommandLine->getType(), TCommandLine::MainCommandLine);
+        pCommandLine->clear();
+
+        // The control, on the same widget: Tab completes here, so a pass below
+        // cannot come from this command line never completing anything at all.
+        type(pCommandLine, qsl("qzxpass"));
+        press(pCommandLine, Qt::Key_Tab);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxpassphrase"));
+        pCommandLine->clear();
+
+        // Opening the prompt on an empty line just clears it, so what is typed
+        // next is the password and nothing of the control survives into it.
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), "masking did not engage on the main command line, so this case proves nothing");
+
+        type(pCommandLine, qsl("qzxpass"));
+        press(pCommandLine, Qt::Key_Tab);
+        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxpass"), qPrintable(qsl("Tab completed the password against the game's output, leaving '%1'").arg(pCommandLine->toPlainText())));
+
+        press(pCommandLine, Qt::Key_Backtab, Qt::ShiftModifier);
+        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxpass"), qPrintable(qsl("Shift+Tab completed the password against the game's output, leaving '%1'").arg(pCommandLine->toPlainText())));
+
+        mpHost->setRemoteEchoingActive(false);
     }
 
     // Typing a space accepts the completion. A Tab straight after it must not

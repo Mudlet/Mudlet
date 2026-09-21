@@ -1100,6 +1100,16 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
 void TCommandLine::handleTabCompletion(bool direction)
 {
+    // At a password prompt the line holds the password, so completing it would
+    // search the game's own output with the password as the key and put a word
+    // from that output in its place. The line is painted as asterisks, so the
+    // player cannot see that happen and the next Return sends a credential they
+    // never typed - which reads as a mistyped password rather than as this.
+    // enterCommand() already refuses to put the same text into the history.
+    if (mIsEchoSuppressed && mType == MainCommandLine) {
+        return;
+    }
+
     if ((mTabCompletionCount < 0) || (mUserKeptOnTyping)) {
         mTabCompletionTyped = toPlainText();
         if (mTabCompletionTyped.isEmpty()) {
