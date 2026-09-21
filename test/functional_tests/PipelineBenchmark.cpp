@@ -420,10 +420,31 @@ private:
     // whether the prescan index can be maintained rather than rebuilt. One
     // trigger that matches every line and churns one temporary trigger per line
     // is the worst case of that, so it is the arm to measure the index against.
+    // MUDLET_BENCH_CHURN=stayOpen churns through setTriggerStayOpen() instead of
+    // through arming and killing. Both move a trigger in and out of what the
+    // index can filter, but only this one goes through markRootUnfilterable(),
+    // which is the path that discards the index rather than maintaining it.
     int installChurnTrigger(Host* host, bool& allOk)
     {
-        if (qgetenv("MUDLET_BENCH_CHURN").isEmpty()) {
+        const QByteArray churnMode = qgetenv("MUDLET_BENCH_CHURN");
+        if (churnMode.isEmpty()) {
             return 0;
+        }
+        const bool churnByStayOpen = (churnMode == "stayOpen");
+        int installed = 0;
+        if (churnByStayOpen) {
+            // setTriggerStayOpen() reopens a standing trigger rather than making
+            // one, so the arm needs something for it to reopen. Its pattern never
+            // matches: every firing it gets is one the stay-open count bought it,
+            // which is what takes it out of the index.
+            auto* pStay = new TTrigger(qsl("bench_stayopen"), {qsl("__bench_never_matches__")}, {REGEX_SUBSTRING}, false, host);
+            pStay->setIsFolder(false);
+            pStay->setTemporary(false);
+            pStay->setIsActive(true);
+            allOk = pStay->registerTrigger() && allOk;
+            allOk = pStay->setScript(QString()) && allOk;
+            allOk = pStay->state() && allOk;
+            ++installed;
         }
         auto* pT = new TTrigger(qsl("bench_churn"), {qsl("e")}, {REGEX_SUBSTRING}, false, host);
         pT->setIsFolder(false);
@@ -434,13 +455,15 @@ private:
         // to the index before the killing reaches it. Arming and killing on the
         // same line is the commoner shape, but the two cancel out before the
         // index sees either, so it measures nothing about maintaining one.
-        allOk = pT->setScript(qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
-                                  "__bench_churn_q = __bench_churn_q or {} "
-                                  "__bench_churn_q[#__bench_churn_q + 1] = tempTrigger('__bench_churn__', '--') "
-                                  "if #__bench_churn_q > 8 then killTrigger(table.remove(__bench_churn_q, 1)) end"))
-                && allOk;
+        const QString churnScript = churnByStayOpen ? qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
+                                                          "setTriggerStayOpen('bench_stayopen', 1)")
+                                                    : qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
+                                                          "__bench_churn_q = __bench_churn_q or {} "
+                                                          "__bench_churn_q[#__bench_churn_q + 1] = tempTrigger('__bench_churn__', '--') "
+                                                          "if #__bench_churn_q > 8 then killTrigger(table.remove(__bench_churn_q, 1)) end");
+        allOk = pT->setScript(churnScript) && allOk;
         allOk = pT->state() && allOk;
-        return 1;
+        return installed + 1;
     }
 
     int installTriggerSet(Host* host, bool& allOk)
