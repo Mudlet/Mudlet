@@ -69,6 +69,7 @@ private slots:
     void testALookupReadsEachPlaceOnceInOrder_data();
     void testALookupReadsEachPlaceOnceInOrder();
     void testATimedOutRemovalDoesNotStopLaterKeychainJobs();
+    void testAStoreStartedFromATimedOutCallbackIsNotTornDownWithIt();
     void testALookupIsNotDisturbedByAnotherOnTheSameManager();
     void testDeletingAManagerMidLookupLeavesItsReadToFinish();
     void testACallbackThatFlushesDeferredDeletesDoesNotDeleteTheAnsweringRead();
@@ -882,6 +883,49 @@ void CredentialManagerKeychainTest::testATimedOutRemovalDoesNotStopLaterKeychain
     QCOMPARE(released, 2);
     QVERIFY2(staller.answersToOtherReceivers() == released, "a timed-out removal dropped connections to its job that were not its own, so QtKeychain's queue would never learn the job finished");
     QVERIFY2(keychainQueueRuns(), "a timed-out removal stopped every later keychain job from running");
+}
+
+// A timed-out operation's callback may start another one on the same manager - dlgConnectionProfiles
+// chains keychain removals that way. The cleanup of the timed-out operation has to finish before the
+// callback runs, or it tears down the operation the callback just started and that one never answers.
+// The missing answer is what this pins; #9072's use-after-free is the same clearing destroying the
+// std::function still running.
+void CredentialManagerKeychainTest::testAStoreStartedFromATimedOutCallbackIsNotTornDownWithIt()
+{
+    JobStaller staller;
+    staller.stallEvery<QKeychain::WritePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+
+    const auto first = std::make_shared<Answer>();
+    const auto second = std::make_shared<Answer>();
+    const QString profile = mProfile;
+    const QString secondKey = mKey + QStringLiteral("-second");
+
+    manager.storePassword(mProfile, mKey, QStringLiteral("secret"), [&manager, first, second, profile, secondKey](bool success, const QString& error) {
+        ++first->count;
+        first->success = success;
+        first->error = error;
+        // Must be the last statement: storeCredential() begins by cleaning up the current
+        // operation, which in a regression clears the callback running here, so anything after it
+        // reads freed memory
+        manager.storePassword(profile, secondKey, QStringLiteral("secret-again"), [second](bool laterSuccess, const QString& laterError) {
+            ++second->count;
+            second->success = laterSuccess;
+            second->error = laterError;
+        });
+    });
+
+    QVERIFY2(waitForAnswer(first), "a store whose keychain job never answers must still answer its caller");
+    QVERIFY(!first->success);
+    QCOMPARE(first->error, QStringLiteral("Operation timed out"));
+    QVERIFY2(waitForAnswer(second), "the store started from the timed-out callback was torn down by the cleanup of the operation that timed out, so it never answered - see #9072");
+    QVERIFY(!second->success);
+    QCOMPARE(second->error, QStringLiteral("Operation timed out"));
+    QTest::qWait(200);
+    QCOMPARE(first->count, 1);
+    QCOMPARE(second->count, 1);
 }
 
 void CredentialManagerKeychainTest::testALookupIsNotDisturbedByAnotherOnTheSameManager()
