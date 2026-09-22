@@ -1394,7 +1394,12 @@ describe("Trigger processing", function()
                         feedTriggers("\n" .. line .. "\n")
                         feeds = feeds + 1
                         taken = os.clock() - started
-                    until taken >= 0.02
+                    -- a clock that never advanced would spin here forever and
+                    -- hang CI with no diagnostic, which is worse than the
+                    -- failure this loop replaced. 100 feeds is far more than
+                    -- any platform needs, so giving up past it leaves the
+                    -- short > 0 assertion below to report the dead clock.
+                    until taken >= 0.02 or feeds >= 100
                     taken = taken / feeds
                     if not best or taken < best then
                         best = taken
