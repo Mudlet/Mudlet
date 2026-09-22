@@ -80,6 +80,20 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
+    // The profile's own command line. freshCommandLine() below makes a
+    // SubCommandLine, and setEchoSuppression() returns early for anything that is
+    // not a MainCommandLine, so only this one is ever masked. It belongs to the
+    // profile rather than to a case, so it starts from a known empty line.
+    TCommandLine* mainCommandLine() const
+    {
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        if (pCommandLine) {
+            pCommandLine->mSaveCommands = false;
+            pCommandLine->clear();
+        }
+        return pCommandLine;
+    }
+
     // A command line of this test's own, with an empty history and no
     // suggestions. Lua cannot delete one again, but it is parented into the
     // console so the profile's teardown takes it with it.
@@ -94,27 +108,6 @@ private:
         TCommandLine* pCommandLine = mpHost->mpConsole->subCommandLineWidget(mLineName);
         if (pCommandLine) {
             pCommandLine->mSaveCommands = false;
-        }
-        return pCommandLine;
-    }
-
-    // The profile's own command line, for the one case that cannot use the
-    // fresh sub command line above. setEchoSuppression() returns early for
-    // anything that is not a MainCommandLine, and the signal that drives it is
-    // only connected for one, so a SubCommandLine is never masked - which makes
-    // it useless for a case gated on the mask itself. Host-level behaviour, like
-    // the history guard in enterCommand(), does reach a sub command line, so the
-    // password case below at test_aPasswordIsNotKeptInTheHistory() is not
-    // affected by this.
-    TCommandLine* mainCommandLine() const
-    {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
-        if (pCommandLine) {
-            pCommandLine->mSaveCommands = false;
-            // This one is the profile's, shared by every case that asks for it,
-            // and a case that aborts mid-prompt can have its pre-prompt text put
-            // back on it by the cleanup. Start from a known empty line.
-            pCommandLine->clear();
         }
         return pCommandLine;
     }
@@ -262,11 +255,12 @@ private slots:
 
     void cleanup()
     {
-        // This class shares one Host across its cases, so a case that aborts with
-        // the prompt still open would mask the ones after it. Only the Host half is
-        // undone here: Host::setRemoteEchoingActive() is change-gated, so this does
-        // nothing for a widget left masked on its own, which no case here does.
+        // Per-Host and shared across this class's cases, so a case that aborts with
+        // the prompt still open would mask the ones after it. Not inline in the
+        // cases: QTest abandons a slot on a failed assertion, which is exactly when
+        // this matters.
         mpHost->setRemoteEchoingActive(false);
+
         if (!mLineName.isEmpty()) {
             mpHost->resetCmdLineAction(mLineName);
             mLineName.clear();
