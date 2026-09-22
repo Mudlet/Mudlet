@@ -28,6 +28,8 @@
 #include <QVariantMap>
 #include <QtMath>
 
+#include <unistd.h>
+
 #import <AVFoundation/AVFoundation.h>
 #import <Speech/Speech.h>
 
@@ -227,6 +229,46 @@ SpeechRecognizer::VocabularyResult AppleSpeechRecognizer::applyVocabulary(const 
     return VocabularyResult::Applied;
 }
 
+// Whether macOS will attribute a permission request to Mudlet itself.
+//
+// It attributes one to the *responsible process*, which for anything started
+// from a shell is the application that owns the terminal rather than the
+// process that asked. That application is then required to carry the usage
+// description, and TCC kills the asking process outright when it does not -
+// naming Mudlet's own Info.plist in the report, where the string has been all
+// along. Launched from Finder, or with `open`, Mudlet is its own responsible
+// process and none of this arises.
+//
+// Verified against a real kill: the report read "Parent Process: launchd [1]"
+// and "Responsible Process: Code", on a build started from an editor's
+// terminal and left running after the shell had gone.
+//
+// LaunchServices sets __CFBundleIdentifier to the bundle it launched, and a
+// process started from a shell inherits the terminal application's value
+// instead - which is the same application the crash report goes on to name as
+// responsible. The parent process ID does not answer this: a process whose
+// shell has exited is reparented to launchd and looks launched, while macOS
+// goes on holding the terminal responsible, and that is how this check was
+// wrong the first time it was tried.
+//
+// Only a value that positively names something else counts. With the variable
+// absent there is nothing to go on, and refusing on that would deny speech to
+// a launch this does not understand rather than to one that is known to be
+// doomed; the ordinary Finder and `open` launches both set it to Mudlet's own
+// identifier.
+static bool mudletIsResponsibleForItself()
+{
+    const char* launchedBundleId = getenv("__CFBundleIdentifier");
+    if (!launchedBundleId) {
+        return true;
+    }
+    NSString* ownBundleId = [[NSBundle mainBundle] bundleIdentifier];
+    if (!ownBundleId) {
+        return true;
+    }
+    return [ownBundleId isEqualToString:@(launchedBundleId)];
+}
+
 void AppleSpeechRecognizer::doStartListening()
 {
     // Two permissions stand between here and a microphone, and either can put
@@ -238,6 +280,23 @@ void AppleSpeechRecognizer::doStartListening()
     // doCancel().
     switch ([SFSpeechRecognizer authorizationStatus]) {
     case SFSpeechRecognizerAuthorizationStatusNotDetermined: {
+        // Asking is what gets the process killed when something else is
+        // responsible for it, so this refuses instead of asking. Only where
+        // permission has never been granted: once it has, nothing below asks
+        // again, and a build started from a shell works normally.
+        if (!mudletIsResponsibleForItself()) {
+            qWarning().noquote() << "AppleSpeechRecognizer: not asking for speech recognition permission -" << QString::fromUtf8(qgetenv("__CFBundleIdentifier")) << "is responsible for this process, so macOS would ask it for the usage description and kill Mudlet when it has none";
+            // Error, as the denied and restricted cases below are, and for their
+            // reason: which process macOS holds responsible is fixed at launch,
+            // so no later call in this process can get any further than this one
+            // did, and a package driving its controls from state would otherwise
+            // go on offering to listen. Settled before the emit, as everywhere
+            // else here that sets a state.
+            setState(State::Error);
+            //: Shown only in a development build started from a terminal, where macOS would blame the terminal's application for the permission request and kill Mudlet. Do not translate the command.
+            emit errorOccurred(tr("Speech recognition permission cannot be requested when Mudlet is started from a terminal, because macOS asks the terminal's application for it instead. Quit and start Mudlet as an application - open build/src/mudlet.app - then try again."));
+            return;
+        }
         setState(State::Starting);
         QPointer<AppleSpeechRecognizer> weakThis = this;
         [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {

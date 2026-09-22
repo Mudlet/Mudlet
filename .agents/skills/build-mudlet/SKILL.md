@@ -138,12 +138,28 @@ Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
 ## Running the result
 
 ```bash
-# macOS
-./build/src/mudlet.app/Contents/MacOS/mudlet
+# Either platform, through the build system
+cmake --build --preset macos-debug --target run-mudlet
 
-# Linux
+# Linux, directly
 ./build/src/mudlet
 ```
+
+On macOS, launch the **bundle** rather than the binary inside it. macOS attributes a
+permission request to the responsible process, which for anything started from a shell is
+the application owning the terminal - so the built-in speech backend asking for speech
+recognition kills Mudlet, blaming a usage description that Mudlet's `Info.plist` does
+carry. `run-mudlet` runs `open` and, because that detaches, keeps `qDebug()` and
+`qWarning()` output in `<build>/mudlet-run.log`. By hand:
+
+```bash
+open build/src/mudlet.app --stdout /tmp/mudlet.log --stderr /tmp/mudlet.log
+```
+
+A sanitizer build is the exception, and `run-mudlet` handles it: `open` hands the launch to
+launchd rather than passing the shell's environment on, so it runs the binary directly there
+and the sanitizer's options and reports work as usual. Speech declines to ask for permission
+in that case rather than dying.
 
 Mudlet is a graphical desktop application; launching it opens a window. Variant presets put the
 binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full build.
