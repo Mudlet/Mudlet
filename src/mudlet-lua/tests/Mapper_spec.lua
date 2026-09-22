@@ -3942,6 +3942,34 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_nil(io.open(suffixlessPath, "r"))
     end)
 
+    it("makes the profile's map folder when saving with no destination (#5955)", function()
+      local movedMapDirectory = getMudletHomeDir() .. "/mapper_spec_map_moved"
+      assert.are.equal("directory", lfs.attributes(mapDirectory, "mode"), "the block's backup folder has gone missing")
+      assert.is_nil(lfs.attributes(movedMapDirectory), "a previous run left the moved map folder behind")
+      assert(os.rename(mapDirectory, movedMapDirectory))
+      finally(function()
+        if lfs.attributes(mapDirectory, "mode") == "directory" then
+          -- the names come out first: removing while lfs.dir walks the folder
+          -- can skip an entry, and a leftover would strand the rename below
+          local written = {}
+          for entry in lfs.dir(mapDirectory) do
+            if entry ~= "." and entry ~= ".." then
+              written[#written + 1] = mapDirectory .. "/" .. entry
+            end
+          end
+          for _, path in ipairs(written) do
+            assert(os.remove(path))
+          end
+          assert(lfs.rmdir(mapDirectory))
+        end
+        assert(os.rename(movedMapDirectory, mapDirectory))
+      end)
+
+      assert.is_nil(lfs.attributes(mapDirectory))
+      assert.is_true(saveJsonMap())
+      assert.are.equal("directory", lfs.attributes(mapDirectory, "mode"))
+    end)
+
     it("reports failure rather than raising when the file cannot be written", function()
       local ok, err = saveJsonMap("/nosuchdirectory/mapper_spec.json")
       assert.is_nil(ok)
