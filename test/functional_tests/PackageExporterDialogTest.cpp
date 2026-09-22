@@ -19,6 +19,7 @@
 
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QGroupBox>
 #include <QImage>
@@ -293,11 +294,20 @@ private:
             return false;
         }
         mAnsweredPicker = false;
+        QElapsedTimer sinceArmed;
+        sinceArmed.start();
         auto* timer = new QTimer(this);
         timer->setInterval(20);
-        connect(timer, &QTimer::timeout, this, [this, chosenPath]() {
-            auto* picker = qobject_cast<QFileDialog*>(QApplication::activeModalWidget());
+        connect(timer, &QTimer::timeout, this, [this, chosenPath, sinceArmed]() {
+            auto* modal = QApplication::activeModalWidget();
+            auto* picker = qobject_cast<QFileDialog*>(modal);
             if (!picker) {
+                // Only the picker's own exec() can be ended from here, so a
+                // modal that never turns out to be one has to be closed on a
+                // deadline - otherwise the click below waits out ctest's
+                if (modal && sinceArmed.hasExpired(10000)) {
+                    modal->close();
+                }
                 return;
             }
             // QFileDialog makes accept() protected, so it is reached through
@@ -1144,9 +1154,10 @@ private slots:
     {
         const QString unreadable = qsl("%1/unreadable.txt").arg(mExportDir);
         QVERIFY(writeTextFile(unreadable, qsl("an asset nobody may read")));
-        QVERIFY(QFile::setPermissions(unreadable, QFileDevice::Permissions()));
-        if (QFileInfo(unreadable).isReadable()) {
-            QSKIP("this user can read a file with no permissions set, so a copy of one cannot be made to fail");
+        // Windows has no permission bits to clear, so setPermissions() refuses
+        // an empty set outright rather than leaving the file unreadable
+        if (!QFile::setPermissions(unreadable, QFileDevice::Permissions()) || QFileInfo(unreadable).isReadable()) {
+            QSKIP("a file with no permissions set is still readable here, so a copy of one cannot be made to fail");
         }
 
         const QString packageName = packageNamed(qsl("exporter-unreadable-asset"));
