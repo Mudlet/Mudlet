@@ -78,18 +78,34 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
-    // A command line of this test's own, with an empty history and no
-    // suggestions. Lua cannot delete one again, but it is parented into the
-    // console so the profile's teardown takes it with it.
     // The profile's own command line. freshCommandLine() below makes a
     // SubCommandLine, and setEchoSuppression() returns early for anything that is
-    // not a MainCommandLine, so only this one is ever masked.
+    // not a MainCommandLine, so only this one is ever masked. It belongs to the
+    // profile rather than to a case, so it starts from a known empty line.
     TCommandLine* mainCommandLine() const
     {
         TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
         if (pCommandLine) {
             pCommandLine->mSaveCommands = false;
             pCommandLine->clear();
+        }
+        return pCommandLine;
+    }
+
+    // A command line of this test's own, with an empty history and no
+    // suggestions. Lua cannot delete one again, but it is parented into the
+    // console so the profile's teardown takes it with it.
+    TCommandLine* freshCommandLine()
+    {
+        mLineName = qsl("keyHandlingLine%1").arg(++mLineCounter);
+        auto [created, message] = mpHost->mpConsole->createCommandLine(QString(), mLineName, 0, 0, 300, 30);
+        if (!created) {
+            qWarning() << "CommandLineKeyHandlingTest - could not create a command line:" << message;
+            return nullptr;
+        }
+        TCommandLine* pCommandLine = mpHost->mpConsole->subCommandLineWidget(mLineName);
+        if (pCommandLine) {
+            pCommandLine->mSaveCommands = false;
         }
         return pCommandLine;
     }
@@ -113,21 +129,6 @@ private:
         QByteArray bytes;
         bytes.append(TN_IAC).append(takesEcho ? TN_WILL : TN_WONT).append(OPT_ECHO);
         mpHost->mTelnet.loopbackTest(bytes);
-    }
-
-    TCommandLine* freshCommandLine()
-    {
-        mLineName = qsl("keyHandlingLine%1").arg(++mLineCounter);
-        auto [created, message] = mpHost->mpConsole->createCommandLine(QString(), mLineName, 0, 0, 300, 30);
-        if (!created) {
-            qWarning() << "CommandLineKeyHandlingTest - could not create a command line:" << message;
-            return nullptr;
-        }
-        TCommandLine* pCommandLine = mpHost->mpConsole->subCommandLineWidget(mLineName);
-        if (pCommandLine) {
-            pCommandLine->mSaveCommands = false;
-        }
-        return pCommandLine;
     }
 
     static void type(TCommandLine* pCommandLine, const QString& text) { QTest::keyClicks(pCommandLine, text); }
@@ -274,7 +275,9 @@ private slots:
     void cleanup()
     {
         // Per-Host and shared across this class's cases, so a case that aborts with
-        // the prompt still open would mask the ones after it.
+        // the prompt still open would mask the ones after it. Not inline in the
+        // cases: QTest abandons a slot on a failed assertion, which is exactly when
+        // this matters.
         mpHost->setRemoteEchoingActive(false);
 
         if (!mLineName.isEmpty()) {
