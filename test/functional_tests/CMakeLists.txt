@@ -263,6 +263,7 @@ set(MEDIA_GROUP_TEST_SOURCES
     SpeechBridgeLuaTest.cpp
     SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
+    TMediaAudioOutputTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
