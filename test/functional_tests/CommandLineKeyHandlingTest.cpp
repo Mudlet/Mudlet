@@ -77,6 +77,20 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
+    // The profile's own command line. freshCommandLine() below makes a
+    // SubCommandLine, and setEchoSuppression() returns early for anything that is
+    // not a MainCommandLine, so only this one is ever masked. It belongs to the
+    // profile rather than to a case, so it starts from a known empty line.
+    TCommandLine* mainCommandLine() const
+    {
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        if (pCommandLine) {
+            pCommandLine->mSaveCommands = false;
+            pCommandLine->clear();
+        }
+        return pCommandLine;
+    }
+
     // A command line of this test's own, with an empty history and no
     // suggestions. Lua cannot delete one again, but it is parented into the
     // console so the profile's teardown takes it with it.
@@ -89,20 +103,6 @@ private:
             return nullptr;
         }
         TCommandLine* pCommandLine = mpHost->mpConsole->subCommandLineWidget(mLineName);
-        if (pCommandLine) {
-            pCommandLine->mSaveCommands = false;
-        }
-        return pCommandLine;
-    }
-
-    // The profile's own command line. Password masking only ever applies to this
-    // one - setEchoSuppression() returns early for any other type - so a case
-    // about masking cannot use freshCommandLine(). Its history lives for the whole
-    // process, so cases keyed off it use sentinels of their own rather than
-    // assuming an empty list.
-    TCommandLine* mainCommandLine() const
-    {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
         if (pCommandLine) {
             pCommandLine->mSaveCommands = false;
         }
@@ -252,10 +252,12 @@ private slots:
 
     void cleanup()
     {
-        // Dropped here rather than inline: QTest abandons the slot on a failed
-        // assertion, so an inline reset is skipped exactly when it matters and
-        // every later case would run against a still-masked main command line.
+        // Per-Host and shared across this class's cases, so a case that aborts with
+        // the prompt still open would mask the ones after it. Not inline in the
+        // cases: QTest abandons a slot on a failed assertion, which is exactly when
+        // this matters.
         mpHost->setRemoteEchoingActive(false);
+
         if (!mLineName.isEmpty()) {
             mpHost->resetCmdLineAction(mLineName);
             mLineName.clear();
