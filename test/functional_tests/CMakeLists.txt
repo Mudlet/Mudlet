@@ -45,6 +45,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
     LabelAnchorInteractionTest.cpp
+    MainWindowTitleTest.cpp
     LabelMovieRefusalTest.cpp
     LabelSvgBackgroundTest.cpp
     CaretNavigationTest.cpp
@@ -61,6 +62,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     NotepadTest.cpp
+    MenuShortcutTeardownTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
@@ -71,6 +73,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
+    ReplaySpeedClampTest.cpp
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
@@ -91,6 +94,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
+    ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileDictionaryTest.cpp
@@ -158,6 +162,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
     ColorTriggerDialogTest.cpp
+    EditorReshowTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
     MissingEditorThemeTest.cpp
