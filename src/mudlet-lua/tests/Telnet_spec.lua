@@ -1164,6 +1164,19 @@ describe("Tests telnet option negotiation", function()
     assert.equals("part2", mssp.TELNETSPLITVAR)
   end)
 
+  -- a variable with no value used to abandon the whole subnegotiation, so every
+  -- variable a game sent behind a malformed one went missing
+  it("keeps reading MSSP variables past one that arrives without a value (#4233)", function()
+    finally(function()
+      mssp.TELNETMSSPNOVALUE = nil
+      mssp.TELNETMSSPAFTERBAD = nil
+    end)
+
+    feed("<T_IAC><T_SB><O_MSSP><01>TELNETMSSPNOVALUE<01>TELNETMSSPAFTERBAD<02>arrived<T_IAC><T_SE>")
+    assert.is_nil(mssp.TELNETMSSPNOVALUE, "a variable with no value should not be recorded")
+    assert.equals("arrived", mssp.TELNETMSSPAFTERBAD)
+  end)
+
   it("displays nothing for the commands it answers on the wire", function()
     -- AYT and NOP produce no text of their own; a parser that lost track of
     -- them would leak 0xff and the command byte into the line instead
