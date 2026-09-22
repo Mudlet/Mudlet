@@ -950,6 +950,36 @@ describe("Tests the module accessors", function()
       written:close()
       assert.is_true(contains(contents, "<MudletPackage"), "the module's XML was written without a package in it")
     end)
+
+    -- A module whose XML stopped part-way through is running the items that got
+    -- in before the break but never reached the mark that says it loaded, so the
+    -- profile holds only part of it - saving that over the module's own file
+    -- would destroy the rest.
+    it("skips a module whose XML never loaded, while writing one that did (#8696)", function()
+      local partial = "mudlet-spec-partialxml"
+      withFixtureModule(partial)
+      assert.equals(1, exists(partial .. " alias", "alias"), "the fixture no longer imports items before its XML breaks")
+      defer(function() disableModuleSync(moduleName) end)
+      defer(function() disableModuleSync(partial) end)
+      assert.is_true(enableModuleSync(moduleName))
+      assert.is_true(enableModuleSync(partial))
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+      local loadedXml = getMudletHomeDir() .. "/" .. moduleName .. "/" .. moduleName .. ".xml"
+      local brokenXml = getMudletHomeDir() .. "/" .. partial .. "/" .. partial .. ".xml"
+      assert.is_not_nil(lfs.attributes(brokenXml), "the broken module's XML was not where the save would have written it")
+      os.remove(loadedXml)
+      os.remove(brokenXml)
+      assert.is_nil(lfs.attributes(loadedXml), "the loaded module's unpacked XML could not be cleared")
+      assert.is_nil(lfs.attributes(brokenXml), "the broken module's unpacked XML could not be cleared")
+
+      assert.is_true(saveProfile())
+      assert.is_true(waitUntil(function() return lfs.attributes(loadedXml) ~= nil end, 10000),
+                     "the profile save never wrote out the module that did load")
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+      assert.is_nil(lfs.attributes(brokenXml), "the profile save wrote over a module whose XML had never loaded")
+    end)
   end)
 end)
 
