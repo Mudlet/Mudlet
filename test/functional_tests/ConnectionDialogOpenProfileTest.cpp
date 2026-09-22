@@ -69,9 +69,13 @@ private:
 
     // Each case here closes the dialog, which then deletes itself through the
     // event loop - asking for a new one before that has happened only raises
-    // the dying one.
+    // the dying one. One still on screen is the dialog this test started with,
+    // which needs no reopening.
     bool reopenDialog() const
     {
+        if (auto* pDialog = dialog(); pDialog && pDialog->isVisible()) {
+            return true;
+        }
         if (!QTest::qWaitFor(
                     []() {
                         return mudlet::self()->mpConnectionDialog.isNull();
@@ -106,6 +110,27 @@ private:
         pDialog->listWidget_profiles->setCurrentItem(items.first());
         pDialog->slot_itemClicked(items.first());
         return pDialog->profile_name_entry->text() == mProfileName;
+    }
+
+    // The case below reads what the dialog does about a profile that is
+    // already open, and the case above it is what normally leaves one open.
+    // The grouped runner also takes a single method name, so opening it here
+    // is what lets that case run on its own.
+    bool openTheTestProfile() const
+    {
+        if (auto* pHost = mudlet::self()->getActiveHost(); pHost && pHost->getName() == mProfileName) {
+            return true;
+        }
+        if (!reopenDialog() || !selectTestProfile()) {
+            return false;
+        }
+        dialog()->slot_load();
+        return QTest::qWaitFor(
+                [this]() {
+                    auto* pHost = mudlet::self()->getActiveHost();
+                    return pHost && pHost->getName() == mProfileName;
+                },
+                15000);
     }
 
 private slots:
@@ -183,11 +208,12 @@ private slots:
         QVERIFY2(!mDialogOnScreenDuringTheLoad, "The dialog was still on screen while the profile loaded");
     }
 
-    // The case above left the profile open, so the dialog has to leave it alone
-    // and just reconnect it rather than run the load a second time. PR #7778.
+    // With the profile open, the dialog has to leave it alone and just
+    // reconnect it rather than run the load a second time. PR #7778.
     void test_askingForTheOpenProfileAgainReconnectsIt()
     {
-        QVERIFY2(reopenDialog(), "No dialog to test against - this case follows on from the one above and cannot run alone");
+        QVERIFY2(openTheTestProfile(), "The test profile could not be opened, so there is nothing for the dialog to be asked about twice");
+        QVERIFY2(reopenDialog(), "No dialog to test against");
         QVERIFY(selectTestProfile());
         auto* pHost = mudlet::self()->getActiveHost();
         QVERIFY2(pHost && pHost->getName() == mProfileName, "The test profile is not the open one, so this case would take another path");
