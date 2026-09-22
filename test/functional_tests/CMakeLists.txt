@@ -44,6 +44,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
+    AboutDialogLicencesTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     LabelSvgBackgroundTest.cpp
@@ -240,6 +241,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
+    SettingsMapControlsTest.cpp
     SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
@@ -613,6 +615,7 @@ set_tests_properties(SettingsAppearanceTest
                      SettingsHostLifecycleTest
                      SettingsInstantApplyTest
                      SettingsLiveSyncTest
+                     SettingsMapControlsTest
                      SettingsRoundTripTest
                      SettingsSearchTest
                      SettingsShellNavigationTest

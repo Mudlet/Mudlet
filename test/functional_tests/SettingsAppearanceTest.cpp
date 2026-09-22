@@ -35,10 +35,12 @@
 #include <QtTest/QtTest>
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
 #include <QLabel>
 #include <QPixmap>
+#include <QRegularExpression>
 
 #include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
@@ -139,6 +141,24 @@ private:
         const qreal first = relativeLuminance(one);
         const qreal second = relativeLuminance(other);
         return (std::max(first, second) + 0.05) / (std::min(first, second) + 0.05);
+    }
+
+    // The certificate warnings carry their colours as a stylesheet, so the two
+    // have to be read back out of one to be measured. Qt parses a colour name
+    // but not the rgb() form these are written in.
+    static QColor colourFrom(const QString& styleSheet, const QString& property)
+    {
+        const QRegularExpression declaration(qsl("(?:^|;)\\s*%1:\\s*([^;]+)").arg(property));
+        const auto declared = declaration.match(styleSheet);
+        if (!declared.hasMatch()) {
+            return QColor();
+        }
+        const QString value = declared.captured(1).trimmed();
+        static const QRegularExpression rgbFunction(qsl("^rgb\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\)$"));
+        if (const auto rgb = rgbFunction.match(value); rgb.hasMatch()) {
+            return QColor(rgb.captured(1).toInt(), rgb.captured(2).toInt(), rgb.captured(3).toInt());
+        }
+        return QColor::fromString(value);
     }
 
     static QString describe(const QColor& surface)
@@ -261,6 +281,74 @@ private slots:
         const QColor surface = paintedSurface();
         QVERIFY2(!(surface.red() > 200 && surface.green() < 60), qPrintable(qsl("the profile stylesheet painted the shell %1 after the theme change").arg(surface.name())));
         QVERIFY2(surface.lightness() >= 128, qPrintable(describe(surface)));
+    }
+
+    // The certificate warnings carry their colours in a stylesheet rather than
+    // taking them from the palette, so a theme change has to restyle them
+    // explicitly: the checkbox, which named no colour of its own, was left
+    // drawing the dark theme's near-white text on the bright yellow it had been
+    // given, and the label kept its light-theme red (#9418).
+    void test_theCertificateWarningsFollowAThemeChange()
+    {
+        // The dialog opens on whatever the desktop's own scheme is, and the
+        // restyle only runs when the appearance crosses the light/dark line, so
+        // start from the side the flip below has to come from.
+        setAppearance(enums::Appearance::light);
+        QVERIFY2(applicationIsLight(), "the application did not go light, so the flip below is not the one this case is about");
+
+        // Only a warning already showing is restyled, and one shows only for a
+        // TLS connection whose certificate is bad - which a test cannot offer.
+        // So put the two in the state such a connection used to leave them in.
+        mpPreferences->checkBox_self_signed->setStyleSheet(qsl("font-weight: bold; background: yellow"));
+        mpPreferences->ssl_issuer_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
+        const QList<QWidget*> warnings{mpPreferences->checkBox_self_signed, mpPreferences->ssl_issuer_label};
+        QStringList beforeTheFlip;
+        for (QWidget* pWarning : warnings) {
+            beforeTheFlip << pWarning->styleSheet();
+        }
+
+        // The other two warnings are not showing anything, and a restyle has to
+        // pass them by rather than paint a warning colour onto a silent widget.
+        const QList<QWidget*> quiet{mpPreferences->checkBox_expired, mpPreferences->ssl_expires_label};
+
+        const auto readable = [](QWidget* pWidget) {
+            const QString styleSheet = pWidget->styleSheet();
+            const QColor ink = colourFrom(styleSheet, qsl("color"));
+            const QColor fill = colourFrom(styleSheet, qsl("background"));
+            if (!ink.isValid() || !fill.isValid()) {
+                return qsl("%1 is styled '%2', which does not say both what colour it is drawn in and what it is drawn on").arg(pWidget->objectName(), styleSheet);
+            }
+            // 3:1 rather than the 4.5:1 body text keeps: the light-mode design,
+            // red on pale yellow, is only 3.9:1
+            const qreal ratio = contrastRatio(fill, ink);
+            return ratio >= 3.0 ? QString() : qsl("%1 is drawn %2 on %3, a contrast of %4:1").arg(pWidget->objectName(), ink.name(), fill.name(), QString::number(ratio, 'f', 2));
+        };
+
+        setAppearance(enums::Appearance::dark);
+        QVERIFY2(!applicationIsLight(), "the application did not go dark, so this is not the flip the case is about");
+        QStringList inDarkMode;
+        for (int i = 0, total = warnings.size(); i < total; ++i) {
+            QWidget* pWarning = warnings.at(i);
+            // Red on yellow clears a contrast check by itself, so what catches a
+            // warning the dark theme never reached is that it is still wearing
+            // the stylesheet the light theme left on it.
+            QVERIFY2(pWarning->styleSheet() != beforeTheFlip.at(i),
+                     qPrintable(qsl("%1 kept the light theme's '%2' after the appearance went dark").arg(pWarning->objectName(), pWarning->styleSheet())));
+            const QString complaint = readable(pWarning);
+            QVERIFY2(complaint.isEmpty(), qPrintable(complaint));
+            inDarkMode << pWarning->styleSheet();
+        }
+
+        setAppearance(enums::Appearance::light);
+        QVERIFY2(applicationIsLight(), "the application did not go light, so this is not the flip the case is about");
+        for (int i = 0, total = warnings.size(); i < total; ++i) {
+            const QString complaint = readable(warnings.at(i));
+            QVERIFY2(complaint.isEmpty(), qPrintable(complaint));
+            QVERIFY2(warnings.at(i)->styleSheet() != inDarkMode.at(i), qPrintable(qsl("%1 is styled '%2' in both themes").arg(warnings.at(i)->objectName(), warnings.at(i)->styleSheet())));
+        }
+        for (QWidget* pQuiet : quiet) {
+            QVERIFY2(pQuiet->styleSheet().isEmpty(), qPrintable(qsl("%1 is warning about nothing, yet a restyle gave it '%2'").arg(pQuiet->objectName(), pQuiet->styleSheet())));
+        }
     }
 };
 
