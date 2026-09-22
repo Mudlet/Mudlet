@@ -22,19 +22,24 @@
  * profile leaves the dock holding nothing while Qt is still sending it the
  * close and the hide that shutting the profile down produces.
  *
- * Both guards under test have a second half these cases do not reach - the
- * profile still there but its main console already gone - because standing a
- * real Host up and taking its console away is beyond what this fixture can do.
- *
  * Run with: ctest -R DockWidgetWithoutProfileTest -V
  */
 
 #include <QCloseEvent>
 #include <QCoreApplication>
+#include <QDir>
+#include <QTemporaryDir>
 #include <QWidget>
 #include <QtTest/QtTest>
 
+#include <memory>
+
+#include "Host.h"
+#include "HostManager.h"
+#include "MudletInstanceCoordinator.h"
+#include "PortableModeTestHelper.h"
 #include "TDockWidget.h"
+#include "mudlet.h"
 #include "utils.h"
 
 #include "GroupedTest.h"
@@ -42,6 +47,11 @@
 class DockWidgetWithoutProfileTest : public QObject
 {
     Q_OBJECT
+
+private:
+    // A member, so the directory outlives the profile that is pointed at it:
+    // the application object the last test builds is never taken down.
+    QTemporaryDir mConfigDir;
 
 private slots:
     // Before #4892 the hide looked the user window up on the profile's main
@@ -76,6 +86,46 @@ private slots:
         QCoreApplication::sendEvent(&dock, &event);
 
         QVERIFY2(event.isAccepted(), "the close was turned down, with no profile left to hide the user window on");
+    }
+
+    // The other half of the same hide guard: the profile is still there but its
+    // main console has already gone, which is the state a profile is left in
+    // part way through being torn down. Last, because it builds the application
+    // object, and a profile cannot be made without one.
+    void test_aDockWidgetHidesItselfWhenItsProfilesConsoleIsGone()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        const QByteArray savedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+
+        const QString profileName = qsl("DockWidgetWithoutConsole-Test");
+        QVERIFY2(HostManager::self()->addHost(profileName, QString(), QString(), QString()), "failed to put a profile in the pool");
+        Host* pHost = HostManager::self()->getHost(profileName);
+        QVERIFY(pHost);
+        // A profile only gets its main console from the frontend, so one that
+        // has not been given one stands in for one whose console has gone.
+        QVERIFY2(!pHost->mpConsole, "the profile already has a main console, so the hide never reaches the guard");
+
+        QWidget parent;
+        TDockWidget dock(pHost, qsl("userwindow"));
+        dock.setParent(&parent);
+        dock.QWidget::setVisible(true);
+        QVERIFY2(dock.testAttribute(Qt::WA_WState_ExplicitShowHide), "the dock was never put up, so hiding it proves nothing");
+
+        dock.setVisible(false);
+
+        savedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", savedXdg);
+        QVERIFY2(dock.isHidden(), "the dock stayed up after its profile's main console went");
     }
 };
 
