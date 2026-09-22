@@ -206,9 +206,15 @@ private slots:
                            "echoPopup('POPUPLINK', {[[caretPopupA = 'a']], [[caretPopupB = 'b']]}, {'first choice', 'second choice'})\n"
                            "echo('\\n')")));
         QTest::qWait(100ms);
-        // Last, and after the wait: the profile's own start-up output is still
-        // arriving until then, and a line of it landing afterwards would put a
-        // second empty line at the end of the buffer
+        // Last, and only once the profile's own start-up output has stopped
+        // arriving: a line of it landing afterwards would put a second empty
+        // line at the end of the buffer, and Ctrl+End steps over one
+        qsizetype settledLength = -1;
+        for (int attempt = 0; attempt < 50 && settledLength != consoleBuffer().lineBuffer.length(); ++attempt) {
+            settledLength = consoleBuffer().lineBuffer.length();
+            QTest::qWait(200ms);
+        }
+        QVERIFY2(settledLength == consoleBuffer().lineBuffer.length(), "the profile's start-up output never stopped arriving");
         mpHost->mpConsole->print(qsl("%1\n").arg(mLatestLine));
 
         mLongLineNumber = consoleBuffer().lineBuffer.indexOf(mLongLine);
