@@ -179,17 +179,20 @@ set(MAP_GROUP_TEST_SOURCES
     MapCoordinateLimitTest.cpp
     MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
+    MapSmallAreaCenteringTest.cpp
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapTextLabelCacheTest.cpp
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
+    MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
     RoomExitsDeletedEditItemTest.cpp
