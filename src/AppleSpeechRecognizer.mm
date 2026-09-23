@@ -364,6 +364,18 @@ void AppleSpeechRecognizer::requestMicrophoneThenStart()
     // Starting just as the first one did.
     switch (MacMicrophonePermission::checkStatus()) {
     case MacMicrophonePermission::AuthorizationStatus::NotDetermined: {
+        // The microphone is asked for the same way speech recognition is, and
+        // TCC kills a process over a missing NSMicrophoneUsageDescription just
+        // as readily. Reached on its own when speech was granted earlier and
+        // the microphone was not - a microphone reset leaves exactly that - so
+        // this needs the guard whether or not the branch above ran.
+        if (!mudletIsResponsibleForItself()) {
+            qWarning() << "AppleSpeechRecognizer: not asking for microphone permission - another application is responsible for this process, so macOS would ask it for the usage description and kill Mudlet when it has none";
+            setState(State::Error);
+            //: Shown only in a development build started from a terminal, where macOS would blame the terminal's application for the permission request and kill Mudlet. Do not translate the command.
+            emit errorOccurred(tr("Microphone permission cannot be requested when Mudlet is started from a terminal, because macOS asks the terminal's application for it instead. Quit and start Mudlet as an application - open build/src/mudlet.app - then try again."));
+            return;
+        }
         setState(State::Starting);
         QPointer<AppleSpeechRecognizer> weakThis = this;
         MacMicrophonePermission::requestAccess([weakThis](bool granted) {

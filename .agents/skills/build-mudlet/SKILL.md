@@ -159,7 +159,9 @@ open build/src/mudlet.app --stdout /tmp/mudlet.log --stderr /tmp/mudlet.log
 A sanitizer build is the exception, and `run-mudlet` handles it: `open` hands the launch to
 launchd rather than passing the shell's environment on, so it runs the binary directly there
 and the sanitizer's options and reports work as usual. Speech declines to ask for permission
-in that case rather than dying.
+in that case rather than dying - and since the plain `macos-debug` preset has
+AddressSanitizer on, exercising the built-in macOS speech backend means building
+`macos-debug-nosan` (or launching the bundle by hand).
 
 Mudlet is a graphical desktop application; launching it opens a window. Variant presets put the
 binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full build.
