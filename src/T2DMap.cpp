@@ -98,6 +98,7 @@
 #include <cmath>
 
 #include <algorithm>
+#include <vector>
 
 #include "mapInfoContributorManager.h"
 
@@ -2451,36 +2452,26 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     int roomCount = 0;
 
     // Zoomed out this far every room on screen is visited, and each visit is a
-    // chain of dependent main-memory misses - the id's hash bucket, then the
-    // room it points at. Walked in one loop, the drawing work in between keeps
-    // the CPU to one chain at a time; resolved first in a loop of their own,
-    // many lookups overlap, and the drawing loop prefetches the rooms ahead.
-    static const int expDist = qEnvironmentVariableIsSet("MUDLET_PF_DIST") ? qEnvironmentVariableIntValue("MUDLET_PF_DIST") : 16;
-    static const bool expLocal = qEnvironmentVariableIsSet("MUDLET_LOCAL_SCRATCH");
-    std::vector<TRoom*> localRooms;
-    TRoom* const* rooms = nullptr;
-    if (expLocal) {
-        localRooms.reserve(viewportRooms.size());
-        for (const int roomId : viewportRooms) {
-            localRooms.push_back(mpMap->mpRoomDB->getRoom(roomId));
-        }
-        rooms = localRooms.data();
-    } else {
-        mLodRoomScratch.clear();
-        mLodRoomScratch.reserve(viewportRooms.size());
-        for (const int roomId : viewportRooms) {
-            mLodRoomScratch.push_back(mpMap->mpRoomDB->getRoom(roomId));
-        }
-        rooms = mLodRoomScratch.constData();
+    // chain of dependent loads that miss main memory: the hash lookup for the
+    // id, then the room it points at. Interleaved with the drawing work, the
+    // chains barely overlap; resolved first in a tight loop of their own they
+    // do, and the drawing loop then prefetches the rooms ahead (16 measured as
+    // good as 8 or 32 on a 2.3 million room map, and better than 64). The
+    // fields read below sit in the first 16 bytes of TRoom, so one prefetch
+    // covers them.
+    std::vector<TRoom*> resolvedRooms;
+    resolvedRooms.reserve(viewportRooms.size());
+    for (const int roomId : viewportRooms) {
+        resolvedRooms.push_back(mpMap->mpRoomDB->getRoom(roomId));
     }
-    const qsizetype scmPrefetchDistance = expDist;
+    constexpr qsizetype scmPrefetchDistance = 16;
     const qsizetype candidateCount = viewportRooms.size();
 
     for (qsizetype index = 0; index < candidateCount; ++index) {
-        if (scmPrefetchDistance > 0 && index + scmPrefetchDistance < candidateCount) {
-            __builtin_prefetch(rooms[index + scmPrefetchDistance]);
+        if (index + scmPrefetchDistance < candidateCount) {
+            __builtin_prefetch(resolvedRooms[index + scmPrefetchDistance]);
         }
-        TRoom* room = rooms[index];
+        TRoom* room = resolvedRooms[index];
         if (!room) {
             continue;
         }

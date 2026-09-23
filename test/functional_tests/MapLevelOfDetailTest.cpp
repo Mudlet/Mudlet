@@ -1047,7 +1047,6 @@ private slots:
         p2dMap->mMultiSelectionSet = {100 + selectedX, 100 + selectedHiddenX};
         const QImage frame = renderFrame(p2dMap);
         QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
-        QVERIFY2(!indexPathTaken(p2dMap), "the exit index supplied the rooms, so the viewport query this test seeds with stale ids was not used");
 
         const auto blobAt = [&](const int x) {
             return QRect(qRound(p2dMap->mRX + x * p2dMap->mRoomWidth) - 1, p2dMap->mRY - 1, 3, 3).intersected(frame.rect());

@@ -143,6 +143,11 @@ public:
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
 
+    // The members from mX to highlight are declared first, and must stay
+    // within the first 16 bytes of the object: T2DMap::drawNonGridModeRoomsLod()
+    // reads them for every room on screen and prefetches one cache line per
+    // room, and at any 16-byte-aligned address - what operator new gives on
+    // the 64-bit platforms - those 16 bytes never straddle two lines.
 private:
     // Made private so we can catch all cases where they are to be modified.
     int mX = 0;
