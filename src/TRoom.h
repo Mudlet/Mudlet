@@ -144,13 +144,9 @@ public:
     int readJsonRoom(const QJsonArray&, const int, const int);
 
 private:
-    // Declared first, beside environment, hidden and highlight, so that all
-    // six share one cache line: the zoomed-out 2D map reads them for every
-    // room on screen, and its one prefetch per room only covers one line.
-    // Made private so we can catch all cases where they are to be modified:
+    // Made private so we can catch all cases where they are to be modified.
     int mX = 0;
     int mY = 0;
-    int mZ = 0;
 
 public:
     int environment = -1;
@@ -158,6 +154,11 @@ public:
     bool isLocked = false;
     bool hidden = false;
     bool highlight = false;
+
+private:
+    int mZ = 0;
+
+public:
     qreal min_x = 0.0;
     qreal min_y = 0.0;
     qreal max_x = 0.0;

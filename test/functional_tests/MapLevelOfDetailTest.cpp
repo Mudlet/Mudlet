@@ -67,6 +67,7 @@
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
 #include "TArea.h"
+#include "TAreaGridIndex.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -1003,6 +1004,123 @@ private slots:
                                           QString::number(markerRect.width()),
                                           QString::number(markerRect.height()),
                                           saveFrame(frame, qsl("player-marker")))));
+        }
+    }
+
+    // The reduced tier resolves every candidate room up front into a list that
+    // has to stay in step with the ids it came from: the player marker and the
+    // selection tint are both decided by id, the colour and the hidden flag by
+    // the room. A row longer than the loop's prefetch distance, with ids that
+    // resolve to no room scattered between the real ones, is what would show a
+    // room being drawn with some other room's id.
+    void test_eachRoomKeepsItsOwnSelectionAndPlayerMarkerInTheReducedTier()
+    {
+        const int areaId = freshArea(qsl("Resolved Rooms Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setRoomCoordinates(kPlayerRoomId, 0, 0, 0));
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+
+        // Rooms two cells apart either side of the player, so each three pixel
+        // blob has clear space around it, and a stale id between every pair.
+        constexpr int roomsEachSide = 15;
+        constexpr int firstStaleId = 5000;
+        QList<int> rowXs;
+        for (int step = 1; step <= roomsEachSide; ++step) {
+            rowXs << -2 * step << 2 * step;
+        }
+        for (const int x : std::as_const(rowXs)) {
+            const int roomId = 100 + x;
+            QVERIFY(addRoomAt(roomId, areaId, x, 0, kEnvRoom));
+            const_cast<TAreaGridIndex&>(pArea->getGridIndex()).addRoom(firstStaleId + 100 + x, 0, x + 1, 0);
+            QVERIFY(!map()->mpRoomDB->getRoom(firstStaleId + 100 + x));
+        }
+        const int selectedX = 6;
+        const int selectedHiddenX = -8;
+        const int unselectedX = -6;
+        TRoom* pHiddenRoom = map()->mpRoomDB->getRoom(100 + selectedHiddenX);
+        QVERIFY(pHiddenRoom);
+        pHiddenRoom->hidden = true;
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomThreePixelRooms, 1.0, 2.0);
+        QVERIFY(p2dMap);
+        p2dMap->mMultiSelectionSet = {100 + selectedX, 100 + selectedHiddenX};
+        const QImage frame = renderFrame(p2dMap);
+        QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
+        QVERIFY2(!indexPathTaken(p2dMap), "the exit index supplied the rooms, so the viewport query this test seeds with stale ids was not used");
+
+        const auto blobAt = [&](const int x) {
+            return QRect(qRound(p2dMap->mRX + x * p2dMap->mRoomWidth) - 1, p2dMap->mRY - 1, 3, 3).intersected(frame.rect());
+        };
+        const auto tintedPixels = [&](const int x) {
+            int count = 0;
+            const QRect blob = blobAt(x);
+            for (int py = blob.top(); py <= blob.bottom(); ++py) {
+                for (int px = blob.left(); px <= blob.right(); ++px) {
+                    const QColor pixel = frame.pixelColor(px, py);
+                    if (pixel.blue() > pixel.red() + 50) {
+                        ++count;
+                    }
+                }
+            }
+            return count;
+        };
+
+        if (tintedPixels(selectedX) < 1) {
+            QFAIL(qPrintable(qsl("the selected room was not tinted, frame saved at %1").arg(saveFrame(frame, qsl("resolved-selection")))));
+        }
+        if (tintedPixels(unselectedX) != 0 || countPixels(frame.copy(blobAt(unselectedX)), roomColour()) < 1) {
+            QFAIL(qPrintable(qsl("an unselected room was tinted or not drawn, frame saved at %1").arg(saveFrame(frame, qsl("resolved-unselected")))));
+        }
+        if (countMarkedPixels(frame.copy(blobAt(selectedHiddenX))) != 0) {
+            QFAIL(qPrintable(qsl("a hidden room was drawn or tinted because it was selected, frame saved at %1").arg(saveFrame(frame, qsl("resolved-hidden")))));
+        }
+        const QRect markerRect(p2dMap->mRX - 12, p2dMap->mRY - 12, 25, 25);
+        if (countPixels(frame.copy(markerRect.intersected(frame.rect())), QColor(255, 0, 0)) < 1) {
+            QFAIL(qPrintable(qsl("the player room lost its marker, frame saved at %1").arg(saveFrame(frame, qsl("resolved-player")))));
+        }
+    }
+
+    // A highlighted room keeps its highlight in the reduced tier, among more
+    // rooms than the loop prefetches ahead, and a hidden one gets none.
+    void test_aHighlightedRoomKeepsItsHighlightInTheReducedTier()
+    {
+        const int areaId = freshArea(qsl("Highlight Area"));
+        QVERIFY(areaId > 0);
+        constexpr int roomCount = 30;
+        for (int index = 0; index < roomCount; ++index) {
+            QVERIFY(addRoomAt(1 + index, areaId, 2 * index - roomCount, 0, kEnvRoom));
+        }
+        const QColor highlightColour(255, 255, 0);
+        const auto highlight = [&](const int roomId) {
+            TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            QVERIFY(pRoom);
+            pRoom->highlight = true;
+            pRoom->highlightColor = highlightColour;
+            pRoom->highlightColor2 = highlightColour;
+            pRoom->highlightRadius = 10.0f;
+        };
+        const int highlightedRoomId = 21;
+        const int hiddenHighlightedRoomId = 6;
+        highlight(highlightedRoomId);
+        highlight(hiddenHighlightedRoomId);
+        map()->mpRoomDB->getRoom(hiddenHighlightedRoomId)->hidden = true;
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomThreePixelRooms, 1.0, 2.0);
+        QVERIFY(p2dMap);
+        const QImage frame = renderFrame(p2dMap);
+        QVERIFY2(p2dMap->mRoomWidth < 4.0f, "the rooms were not drawn small enough to reach the reduced level of detail");
+
+        const auto discAround = [&](const int roomId) {
+            const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            const int centreX = qRound(p2dMap->mRX + pRoom->x() * p2dMap->mRoomWidth);
+            return QRect(centreX - 10, p2dMap->mRY - 10, 21, 21).intersected(frame.rect());
+        };
+        if (countPixels(frame.copy(discAround(highlightedRoomId)), highlightColour) < 20) {
+            QFAIL(qPrintable(qsl("the highlighted room was drawn without its highlight, frame saved at %1").arg(saveFrame(frame, qsl("highlight")))));
+        }
+        if (countPixels(frame.copy(discAround(hiddenHighlightedRoomId)), highlightColour) != 0) {
+            QFAIL(qPrintable(qsl("a hidden room was drawn with its highlight, frame saved at %1").arg(saveFrame(frame, qsl("highlight-hidden")))));
         }
     }
 

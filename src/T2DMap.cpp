@@ -2455,19 +2455,32 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     // room it points at. Walked in one loop, the drawing work in between keeps
     // the CPU to one chain at a time; resolved first in a loop of their own,
     // many lookups overlap, and the drawing loop prefetches the rooms ahead.
-    mLodRoomScratch.clear();
-    mLodRoomScratch.reserve(viewportRooms.size());
-    for (const int roomId : viewportRooms) {
-        mLodRoomScratch.push_back(mpMap->mpRoomDB->getRoom(roomId));
+    static const int expDist = qEnvironmentVariableIsSet("MUDLET_PF_DIST") ? qEnvironmentVariableIntValue("MUDLET_PF_DIST") : 16;
+    static const bool expLocal = qEnvironmentVariableIsSet("MUDLET_LOCAL_SCRATCH");
+    std::vector<TRoom*> localRooms;
+    TRoom* const* rooms = nullptr;
+    if (expLocal) {
+        localRooms.reserve(viewportRooms.size());
+        for (const int roomId : viewportRooms) {
+            localRooms.push_back(mpMap->mpRoomDB->getRoom(roomId));
+        }
+        rooms = localRooms.data();
+    } else {
+        mLodRoomScratch.clear();
+        mLodRoomScratch.reserve(viewportRooms.size());
+        for (const int roomId : viewportRooms) {
+            mLodRoomScratch.push_back(mpMap->mpRoomDB->getRoom(roomId));
+        }
+        rooms = mLodRoomScratch.constData();
     }
-    constexpr qsizetype scmPrefetchDistance = 16;
+    const qsizetype scmPrefetchDistance = expDist;
     const qsizetype candidateCount = viewportRooms.size();
 
     for (qsizetype index = 0; index < candidateCount; ++index) {
-        if (index + scmPrefetchDistance < candidateCount) {
-            __builtin_prefetch(mLodRoomScratch[index + scmPrefetchDistance]);
+        if (scmPrefetchDistance > 0 && index + scmPrefetchDistance < candidateCount) {
+            __builtin_prefetch(rooms[index + scmPrefetchDistance]);
         }
-        TRoom* room = mLodRoomScratch[index];
+        TRoom* room = rooms[index];
         if (!room) {
             continue;
         }
