@@ -844,7 +844,9 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         // "line" and "multimatches" are left out of the globals table until a
         // script reads them, and this walk is lua_next() rather than a read, so
         // without this the Variables view would stop showing them
-        getHostFromLua(L).getLuaInterpreter()->flushDeferredGlobals();
+        if (Host* host = findHostFromLua(L)) {
+            host->getLuaInterpreter()->flushDeferredGlobals();
+        }
     }
     depth++;
     while (lua_next(L, index)) {

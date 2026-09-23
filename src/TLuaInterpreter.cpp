@@ -8022,12 +8022,18 @@ static void storeHostInLua(lua_State* L, Host* h)
 // No documentation available in wiki - internal function
 Host& getHostFromLua(lua_State* L)
 {
+    Host* h = findHostFromLua(L);
+    assert(h);
+    return *h;
+}
+
+Host* findHostFromLua(lua_State* L)
+{
     lua_pushlightuserdata(L, &host_key);                 // 1 - push unique key
     lua_rawget(L, LUA_REGISTRYINDEX);                    // 1 - pop key, push host ptr
     auto* h = static_cast<Host*>(lua_touserdata(L, -1)); // 1 - get host ptr
     lua_pop(L, 1);                                       // 0 - pop host ptr
-    assert(h);
-    return *h;
+    return h;
 }
 
 // No documentation available in wiki - internal function

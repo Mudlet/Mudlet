@@ -1129,5 +1129,7 @@ private:
 };
 
 Host& getHostFromLua(lua_State*);
+// The same lookup for a state that may belong to no profile, as in a harness
+Host* findHostFromLua(lua_State*);
 
 #endif // MUDLET_LUAINTERPRETER_H
