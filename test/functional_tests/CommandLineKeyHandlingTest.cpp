@@ -48,6 +48,7 @@
 #include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TUiTour.h"
 #include "ctelnet.h"
 #include "mudlet.h"
 #include "utils.h"
@@ -199,9 +200,19 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        // A config dir of this test's own reads as a brand new installation, so
+        // the first-run interface tour would open a second after the profile
+        // loads and its application-wide event filter would swallow every key
+        // aimed at the main window - silently, for as many slots as the tour
+        // stays up. Written before init(), which is what stamps an untouched
+        // config as a first launch: a settings file that already holds
+        // something is how mudletUsedBefore() recognises an existing player,
+        // which keeps the rest of the first-run interface away as well.
+        TUiTour::rememberShown();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
+        QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests and eat their key presses");
         QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));

@@ -134,6 +134,17 @@ endif()
 # somebody running the binary by hand on a bare X server is allowed the skip.
 set_property(TEST TKeySequenceEditTest APPEND PROPERTY ENVIRONMENT "MUDLET_REQUIRE_WINDOW_ACTIVATION=1")
 
+# The two macOS usage strings, read back out of the bundle that was built rather
+# than out of the template they come from. A build-system change that dropped
+# either would be found by a player, whose Mudlet is killed by macOS the moment
+# speech asks for the microphone - see test/check-macos-usage-strings.cmake.
+if(APPLE)
+    add_test(NAME MacOSUsageStringsTest
+        COMMAND ${CMAKE_COMMAND}
+            "-DBUNDLE_PLIST=$<TARGET_BUNDLE_DIR:mudlet_executable>/Contents/Info.plist"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/check-macos-usage-strings.cmake")
+endif()
+
 # Which releases' notes the update offer shows. Built from the updater sources
 # rather than linked against the Mudlet library, because the library only
 # contains them when configured with USE_UPDATER.
