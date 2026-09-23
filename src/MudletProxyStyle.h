@@ -20,13 +20,19 @@
 #ifndef MUDLET_MUDLETPROXYSTYLE_H
 #define MUDLET_MUDLETPROXYSTYLE_H
 
+#include <QAbstractNativeEventFilter>
 #include <QProxyStyle>
 
 // Applies Mudlet's application-wide style hint adjustments on top of whichever
-// base style is in use; previously named AltFocusMenuBarDisable when it
-// unconditionally suppressed the Alt key menu bar navigation that it now
-// enables for screen reader users only
-class MudletProxyStyle : public QProxyStyle
+// base style is in use.
+//
+// Alt-to-menu-bar navigation follows the operating system's own screen reader
+// flag: SPI_GETSCREENREADER on Windows, and org.a11y.Status.ScreenReaderEnabled
+// on Linux and the BSDs. QAccessible::isActive() is not used because any
+// accessibility client turns it on, such as an IME or password manager on
+// Windows, or the AT-SPI bus that most X11 sessions start without a screen
+// reader. macOS has a native menu bar, so the hint stays off there.
+class MudletProxyStyle : public QProxyStyle, public QAbstractNativeEventFilter
 {
     Q_OBJECT
 
@@ -34,6 +40,19 @@ public:
     MudletProxyStyle();
     explicit MudletProxyStyle(const QString& style);
     int styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const override;
+    bool nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result) override;
+
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+private slots:
+    void slot_a11yStatusChanged(const QString& interfaceName, const QVariantMap& changedProperties, const QStringList& invalidatedProperties);
+#endif
+
+private:
+    void watchScreenReaderStatus();
+
+    // QMenuBar asks for SH_MenuBar_AltKeyNavigation on every event its window
+    // receives, so the operating system is asked once and then told of changes
+    bool mScreenReaderRunning = false;
 };
 
 #endif

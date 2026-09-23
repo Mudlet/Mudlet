@@ -601,6 +601,12 @@ if(Qt6TextToSpeech_FOUND)
   message(STATUS "Using TextToSpeech module")
 endif()
 
+# MudletProxyStyle reads the AT-SPI screen reader status over D-Bus
+if(UNIX AND NOT APPLE)
+  find_package(Qt6 COMPONENTS DBus REQUIRED)
+  list(APPEND QT_LIBS Qt6::DBus)
+endif()
+
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 find_package(ZIP REQUIRED)
