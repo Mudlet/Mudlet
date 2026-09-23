@@ -992,9 +992,37 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
-    auto pM = mpDockableMapWidget;
-    if (pM) {
-        return {false, qsl("cannot create mapper. Do you already use a map window?")};
+    // an embedded map can only be put in a user window, so - unlike
+    // Host::parentWindowMissing() - a scroll box is not a parent it can use
+    // either; without this the map goes on the main console over the game text
+    // and the caller is told it worked
+    const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
+    if (!pW && !wantsMainConsole) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+    // Only the profile's own map dock, and only while it is on screen, holds the
+    // mapper slot. One that is merely hidden - by closeMapWidget(), by the dock's
+    // own close button, by a restored layout, or by mudlet::slot_showMapperDialog()
+    // handing the map over to a main window dock - used to refuse an embedded mapper
+    // for the rest of the session, while the map window getters, setMapWindowTitle()
+    // and closeMapWidget() reported no map window at all. Asking mapWidget() rather
+    // than the raw pointer is what keeps those answers the same as this one.
+    if (mpDockableMapWidget) {
+        if (mapWidget()) {
+            return {false, qsl("cannot create mapper. Do you already use a map window?")};
+        }
+        // The dock is the dlgMapper's parent, so taking it away takes the mapper
+        // with it. deleteLater() leaves every QPointer to the pair set until the
+        // event loop gets to run, which the script that called this will not let
+        // it do, so drop ours now. Conditional because the map may be being drawn
+        // by a main window or detached window dock instead, which this leaves
+        // alone; when it is not, the mapper below takes TMap::mpMapper over.
+        if (mpHost->mpMap->mpMapper.data() == mpDockableMapWidget->widget()) {
+            mpHost->mpMap->mpMapper = nullptr;
+        }
+        qDebug() << "TMainConsole::createMapper() INFO - removing the closed map widget so an embedded mapper can take the map over.";
+        mpDockableMapWidget->deleteLater();
+        mpDockableMapWidget = nullptr;
     }
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
@@ -1036,6 +1064,11 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
+    } else if (!mpHost->mpMap->mpMapper) {
+        // Nothing is drawing the map: either the map widget taken away above was
+        // doing it, or a window that borrowed TMap::mpMapper went without handing
+        // it back. The mapper this console already has takes over.
+        mpHost->restoreOwnMapper();
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
@@ -1064,18 +1097,16 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         return {false, QLatin1String("a commandLine cannot have an empty string as its name")};
     }
 
+    // there is no Host::createCommandLine() wrapper, so the refusal the other
+    // creators make in Host::create...() is made here
+    if (mpHost->parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     auto pN = mSubCommandLineMap.value(name);
-    auto pW = mDockWidgetMap.value(windowname);
-    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pN) {
-        if (pS) {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pS->widget());
-        } else if (pW) {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pW->widget());
-        } else {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
-        }
+        pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, parentWidgetFor(windowname));
         registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
@@ -1158,24 +1189,51 @@ void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
     });
 }
 
+void TMainConsole::setCommandLinePlaceholderText(const QString& text)
+{
+    mpCommandLine->setPlaceholderText(text);
+}
+
+void TMainConsole::updateCommandLineSpellCheck(bool enabled)
+{
+    if (enabled) {
+        mpCommandLine->recheckWholeLine();
+    } else {
+        mpCommandLine->clearMarksOnWholeLine();
+    }
+}
+
+void TMainConsole::setCommandLineText(const QString& text)
+{
+    mpCommandLine->setPlainText(text);
+    mpCommandLine->selectAll();
+}
+
+TCommandLine* TMainConsole::raiseCommandLine()
+{
+    mpCommandLine->activateWindow();
+    show();
+    raise();
+    repaint();
+    return mpCommandLine;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
         return {false, QLatin1String("a text edit cannot have an empty string as its name")};
     }
 
+    // there is no Host::createTextEdit() wrapper, so the refusal the other
+    // creators make in Host::create...() is made here
+    if (mpHost->parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     auto pT = mTextBoxMap.value(name);
-    auto pW = mDockWidgetMap.value(windowname);
-    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pT) {
-        if (pS) {
-            pT = new TTextBox(mpHost, name, pS->widget());
-        } else if (pW) {
-            pT = new TTextBox(mpHost, name, pW->widget());
-        } else {
-            pT = new TTextBox(mpHost, name, mpMainFrame);
-        }
+        pT = new TTextBox(mpHost, name, parentWidgetFor(windowname));
         registerTextBox(name, pT);
         pT->resize(width, height);
         pT->move(x, y);
@@ -1363,8 +1421,7 @@ bool TMainConsole::setLabelBackgroundImage(const QString& name, const QString& p
     if (!pL) {
         return false;
     }
-    pL->setPixmap(QPixmap(path));
-    return true;
+    return pL->setBackgroundImage(path);
 }
 
 bool TMainConsole::resetLabelBackgroundImage(const QString& name)
@@ -1373,7 +1430,77 @@ bool TMainConsole::resetLabelBackgroundImage(const QString& name)
     if (!pL) {
         return false;
     }
-    pL->clear();
+    pL->resetBackgroundImage();
+    return true;
+}
+
+bool TMainConsole::setLabelSvgTint(const QString& name, const QColor& color)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgTint(color);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgTint(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->clearSvgTint();
+    return true;
+}
+
+bool TMainConsole::setLabelSvgRotation(const QString& name, double angle)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgRotation(angle);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgRotation(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgRotation(0.0);
+    return true;
+}
+
+bool TMainConsole::setLabelSvgShear(const QString& name, double shearX, double shearY)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgShear(shearX, shearY);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgShear(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgShear(0.0, 0.0);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgTransform(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->resetSvgTransform();
     return true;
 }
 
@@ -1528,14 +1655,13 @@ bool TMainConsole::pasteToSubConsole(const QString& name)
     return true;
 }
 
-std::optional<QSize> TMainConsole::subConsoleFontSize(const QString& name) const
+std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
 {
-    auto pC = mSubConsoleMap.value(name);
+    const TConsole* pC = (name.isEmpty() || name == qsl("main")) ? this : mSubConsoleMap.value(name).data();
     if (!pC) {
         return {};
     }
 
-    Q_ASSERT_X(pC->mUpperPane, "TMainConsole::subConsoleFontSize", "located console does not have the upper pane available");
     const QFontMetrics fontMetrics(pC->mUpperPane->fontMetrics());
     return {QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height())};
 }
@@ -1712,6 +1838,9 @@ void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)
 {
     for (auto& pDockWidget : mDockWidgetMap) {
         pDockWidget->setStyleSheet(styleSheet);
+    }
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->setStyleSheet(styleSheet);
     }
 }
 
@@ -2654,6 +2783,138 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpHost->mpMap->mpMapper = new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data());
     mpHost->mpMap->mpMapper->setStyleSheet(mpHost->mProfileStyleSheet);
     mpDockableMapWidget->setWidget(mpHost->mpMap->mpMapper);
+}
+
+QDockWidget* TMainConsole::mapWidget() const
+{
+    if (!mpDockableMapWidget || mpDockableMapWidget->isHidden()) {
+        return nullptr;
+    }
+
+    return mpDockableMapWidget;
+}
+
+bool TMainConsole::mapWidgetCreated() const
+{
+    return !mpDockableMapWidget.isNull();
+}
+
+bool TMainConsole::setMapWidgetTitle(const QString& title)
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return false;
+    }
+
+    pM->setWindowTitle(title);
+    return true;
+}
+
+std::optional<QString> TMainConsole::mapWidgetTitle() const
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return {};
+    }
+
+    return {pM->windowTitle()};
+}
+
+// pos()/size() rather than geometry() for the same reason as
+// Host::windowGeometry(): they are what move()/resize() were given, while a
+// floating dock's geometry() reports the client area instead.
+std::optional<QRect> TMainConsole::mapWidgetGeometry() const
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return {};
+    }
+
+    return {QRect(pM->pos(), pM->size())};
+}
+
+bool TMainConsole::hideMapWidget()
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return false;
+    }
+
+    pM->hide();
+    return true;
+}
+
+void TMainConsole::showMapWidget()
+{
+    mpDockableMapWidget->show();
+}
+
+dlgMapper* TMainConsole::dockedMapper() const
+{
+    if (!mpDockableMapWidget) {
+        return nullptr;
+    }
+
+    return qobject_cast<dlgMapper*>(mpDockableMapWidget->widget());
+}
+
+void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
+{
+    mudlet::self()->addDockWidget(area, mpDockableMapWidget);
+}
+
+std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
+{
+    auto pM = mpDockableMapWidget;
+    if (!pM) {
+        return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::RightDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::LeftDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::TopDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::BottomDockWidgetArea);
+        return {true, QString()};
+    }
+
+    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
 }
 
 void TMainConsole::showMapperScriptReminder()

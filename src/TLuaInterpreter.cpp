@@ -1346,12 +1346,27 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     QString saveAsFile;
     if (!lua_isnoneornil(L, 2)) {
         saveAsFile = lua_tostring(L, 2);
+        // The join below hands an absolute file name back as it is, dropping the
+        // folder that was asked for and putting the save outside it, so such a
+        // name is refused instead. Without a folder there is nothing to drop, and
+        // an absolute name is then the only way to say where the save goes. What
+        // counts as absolute is the platform's own rule: a leading separator on
+        // Unix, a drive or a UNC share on Windows.
+        if (!saveToDir.isEmpty() && QDir::isAbsolutePath(saveAsFile)) {
+            return warnArgumentValue(L, __func__, qsl("file name '%1' cannot be an absolute path when a folder is given as well").arg(saveAsFile));
+        }
         if (!saveAsFile.endsWith(".xml", Qt::CaseInsensitive)) {
             saveAsFile = saveAsFile + ".xml";
         }
     }
 
-    auto [ok, filename, error] = (saveAsFile.isNull()) ? host.saveProfile(saveToDir) : host.saveProfileAs(saveToDir + "/" + saveAsFile);
+    // A folder from a script can already end in a separator, and this string is
+    // the file saveProfileAs() writes as well as the one handed back, so QDir
+    // does the join: exactly one separator, and nothing else about the path
+    // touched. An empty folder keeps naming the filesystem root, as it always
+    // has - QDir would make that the working directory instead.
+    const QString saveAsPathFileName = saveToDir.isEmpty() ? qsl("/%1").arg(saveAsFile) : QDir(saveToDir).filePath(saveAsFile);
+    auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
     if (ok) {
         lua_pushboolean(L, true);
@@ -2717,16 +2732,32 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 }
 
 
+// An install that went through, with or without something to own up to: the
+// install did succeed, so the answer stays true rather than nil plus a message,
+// and a part of the package whose Lua did not work rides along as a second
+// value only when there is one - the way setConfig()'s successWithWarning()
+// reports a setting that was made with a consequence a script has no other way
+// of learning about.
+static int pushInstallSucceeded(lua_State* L, const QString& warning)
+{
+    lua_pushboolean(L, true);
+    if (warning.isEmpty()) {
+        return 1;
+    }
+    lua_pushstring(L, warning.toUtf8().constData());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
 int TLuaInterpreter::installPackage(lua_State* L)
 {
     const QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true); !success) {
+    auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true);
+    if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
-    lua_pushboolean(L, true);
-    return 1;
+    return pushInstallSucceeded(L, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallPackage
@@ -2750,15 +2781,15 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     const QString module = QDir::fromNativeSeparators(modName);
 
-    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true); !success) {
+    auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true);
+    if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
     if (moduleManager && moduleManager->moduleTable->isVisible()) {
         moduleManager->layoutModules();
     }
-    lua_pushboolean(L, true);
-    return 1;
+    return pushInstallSucceeded(L, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallModule
@@ -4090,6 +4121,25 @@ static QByteArray jsonEscapedControlByte(const char byte)
     }
 }
 
+// Punctuation for the table or array opening at this marker: the caller writes
+// the '{' or '[' itself, this only ends what stood in front of it. A string still
+// open ends here - the value marker of a structure opens none, so only a text
+// value or, on malformed input, a variable name leaves one - and a sibling that
+// already closed is separated from this one.
+static void closeBeforeNestedStructure(QByteArray& script, const quint8 last, const int nest, const bool valueQuoted)
+{
+    const bool endsString = (last == MSDP_VAL && valueQuoted) || last == MSDP_VAR;
+    if (endsString) {
+        script.append('\"');
+    }
+    // Siblings exist only inside a structure: a variable's own value stands alone,
+    // and a comma in front of it would make JSON no decoder accepts. Only
+    // malformed input reaches this line at the top level.
+    if (nest && (endsString || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE)) {
+        script.append(',');
+    }
+}
+
 // No documentation available in wiki - internal function
 // src is in Mud Server encoding and may need transcoding
 // Includes MSDP code originally from recv_sb_msdp(...) in TinTin++'s telopt.c,
@@ -4113,9 +4163,14 @@ void TLuaInterpreter::msdp2Lua(const char* src)
     // strip: a name holding a byte JSON has to escape is longer in script than
     // the raw name is, and the strip then leaves part of the prefix behind.
     int topLevelPrefixLength = 0;
+    // whether the value being written opened a quote, which only a text value
+    // does - read while last is still MSDP_VAL, which is why the text cases below
+    // leave last alone
+    bool valueQuoted = false;
     for (int i = 0; i < textLength; ++i) {
         switch (transcodedSrc.at(i)) {
         case MSDP_TABLE_OPEN:
+            closeBeforeNestedStructure(script, last, nest, valueQuoted);
             script.append('{');
             ++nest;
             last = MSDP_TABLE_OPEN;
@@ -4133,6 +4188,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             last = MSDP_TABLE_CLOSE;
             break;
         case MSDP_ARRAY_OPEN:
+            closeBeforeNestedStructure(script, last, nest, valueQuoted);
             script.append('[');
             ++nest;
             last = MSDP_ARRAY_OPEN;
@@ -4150,17 +4206,17 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             last = MSDP_ARRAY_CLOSE;
             break;
         case MSDP_VAR:
+            // the name starting here ends the string in front of it - a value, or
+            // the name of a variable that never got one; a table or an array
+            // closed its own, as the check at the end of the message assumes too
+            if (last == MSDP_VAL || last == MSDP_VAR) {
+                script.append('\"');
+            }
             if (nest) {
-                if (last == MSDP_VAL || last == MSDP_VAR) {
-                    script.append('\"');
-                }
                 if (last == MSDP_VAL || last == MSDP_VAR || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
                     script.append(',');
                 }
-                script.append('\"');
             } else {
-                script.append('\"');
-
                 if (!varList.empty()) {
                     QString token = varList.front();
                     token = token.remove(QLatin1Char('\"'));
@@ -4182,10 +4238,6 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                     no_array_marker_bug = false;
                     varList.clear();
                     script.clear();
-                    // the quote above closed the value just flushed - this one
-                    // opens the name starting now, which the first variable of a
-                    // subnegotiation gets from that same append
-                    script.append('\"');
                 }
                 // Scoped to the variable that carried the imbalance, and a
                 // valueless one never reaches the flush above that would clear
@@ -4193,6 +4245,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                 // flag lands on whichever variable does flush next.
                 malformed = false;
             }
+            // opens the name starting now
+            script.append('\"');
             last = MSDP_VAR;
             lastVar.clear();
             break;
@@ -4217,7 +4271,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
                 script.append(',');
             }
-            if (((textLength > i + 1) && transcodedSrc.at(i + 1) && transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) || (textLength <= i + 1)) {
+            valueQuoted = ((textLength > i + 1) && transcodedSrc.at(i + 1) && transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) || (textLength <= i + 1);
+            if (valueQuoted) {
                 script.append('\"');
             }
             varList.append(lastVar);
@@ -5768,6 +5823,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias);
     lua_register(pGlobalLua, "killAlias", TLuaInterpreter::killAlias);
     lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
+    lua_register(pGlobalLua, "setSvgTint", TLuaInterpreter::setSvgTint);
+    lua_register(pGlobalLua, "resetSvgTint", TLuaInterpreter::resetSvgTint);
+    lua_register(pGlobalLua, "setSvgRotation", TLuaInterpreter::setSvgRotation);
+    lua_register(pGlobalLua, "resetSvgRotation", TLuaInterpreter::resetSvgRotation);
+    lua_register(pGlobalLua, "setSvgShear", TLuaInterpreter::setSvgShear);
+    lua_register(pGlobalLua, "resetSvgShear", TLuaInterpreter::resetSvgShear);
+    lua_register(pGlobalLua, "resetSvgTransform", TLuaInterpreter::resetSvgTransform);
     lua_register(pGlobalLua, "setUserWindowStyleSheet", TLuaInterpreter::setUserWindowStyleSheet);
     lua_register(pGlobalLua, "getUserWindowStyleSheet", TLuaInterpreter::getUserWindowStyleSheet);
     lua_register(pGlobalLua, "getTime", TLuaInterpreter::getTime);
@@ -6224,6 +6286,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableCommand", TLuaInterpreter::enableCommand);
     lua_register(pGlobalLua, "disableCommand", TLuaInterpreter::disableCommand);
     lua_register(pGlobalLua, "setCommandChecked", TLuaInterpreter::setCommandChecked);
+    lua_register(pGlobalLua, "setCommandPinned", TLuaInterpreter::setCommandPinned);
     lua_register(pGlobalLua, "setCommandIcon", TLuaInterpreter::setCommandIcon);
     lua_register(pGlobalLua, "setCommandTooltip", TLuaInterpreter::setCommandTooltip);
     lua_register(pGlobalLua, "setCommandPulse", TLuaInterpreter::setCommandPulse);

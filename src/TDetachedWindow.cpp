@@ -389,6 +389,7 @@ void TDetachedWindow::createMenus()
     // Options menu - matches main window order
     //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
     auto optionsMenu = menuBar()->addMenu(tr("Options"));
+    mpOptionsMenu = optionsMenu;
 
     //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
     mpMenuPreferencesAction = new QAction(tr("&Preferences"), this);
@@ -559,6 +560,7 @@ void TDetachedWindow::createMenus()
     // Toolbar visibility toggle
     //: This is an item for the toolbar visibility toggle in a detached Mudlet window.
     mpActionToggleToolBar = new QAction(tr("Show &Toolbar"), this);
+    mpActionToggleToolBar->setObjectName(qsl("toggle_toolbar_action"));
     mpActionToggleToolBar->setCheckable(true);
     mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
     //: This explains the "Show Toolbar" action for toolbar visibility in a detached Mudlet window.
@@ -1384,6 +1386,20 @@ void TDetachedWindow::updateWindowTitle()
         title = tr("Mudlet (%1 profiles) - %2 (Detached)").arg(mProfileConsoleMap.size()).arg(mCurrentProfileName);
     }
 
+    // Any profile this window holds, not only the one it is showing: a window
+    // whose second tab has the microphone open is still a window with an open
+    // microphone, and its title is the only place that says so once it is behind
+    // something else.
+    if (auto pMudlet = mudlet::self()) {
+        for (const QString& profileName : mProfileConsoleMap.keys()) {
+            const QString marker = pMudlet->microphoneMarkerFor(profileName);
+            if (!marker.isEmpty()) {
+                title += marker;
+                break;
+            }
+        }
+    }
+
     setWindowTitle(title);
 }
 
@@ -2026,6 +2042,15 @@ bool TDetachedWindow::addProfile(const QString& profileName, TMainConsole* conso
             console->repaint();
         }
     });
+    // Which window holds a profile decides where its add-on commands go. This
+    // covers the paths that add a profile to a window that already exists - a
+    // drag into another detached window, a move between two of them - rather
+    // than each of those callers separately. It is not every path: detachTab()
+    // builds the window with the profile already in its map, never calling
+    // this, which is why it asks for a placement of its own.
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
+    }
 
     return true;
 }
@@ -2194,6 +2219,11 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
             }
         });
     }
+    // The other half of the rule in addProfile() above: a profile leaving takes
+    // its commands out of this window's chrome.
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
+    }
 
     return true;
 }
@@ -2305,6 +2335,10 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
             console->repaint();
         }
     });
+
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
+    }
 
     // Ensure the detached window itself gets focus and is brought to the front
     raise();

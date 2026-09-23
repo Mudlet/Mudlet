@@ -120,7 +120,7 @@ private:
     void setupBuffers();
     bool processCustomCommand(IrcCommand*);
     void displayHelp(const QString&);
-    void appendHtml(QTextDocument*, const QString&);
+    void appendToDocument(QTextDocument*, const QString&);
     QString getMessageTarget(IrcMessage*, const QString&);
     static QString readAppDefaultIrcNick();
     static void writeAppDefaultIrcNick(const QString&);

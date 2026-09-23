@@ -2221,6 +2221,88 @@ describe("Tests the timer API", function()
       assert.equals(firedWhenDisabled, _G.W2aPermTimerFires,
         "a disabled permanent timer must not fire again")
     end)
+
+    it("does not run with a time of zero", function()
+      -- it would fire on every pass of the event loop and keep a CPU core busy
+      assert.is_true(permTimer(trackPerm("W2aPermTimerZero"), "", 0,
+        [[_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1]]) > 0)
+      assert.is_true(enableTimer("W2aPermTimerZero"))
+      assert.equals(0, isActive("W2aPermTimerZero", "timer"))
+      settle(0.15)
+      assert.is_nil(_G.W2aPermTimerFires, "a permanent timer with no time must not fire")
+    end)
+
+    it("still fires an offset timer with a time of zero, once per firing of its parent", function()
+      -- an earlier run's parent of the same name would adopt this child and fire along with this one
+      local parent = trackPerm("W2aOffsetParent" .. getEpoch())
+      local child = trackPerm("W2aOffsetChild" .. getEpoch())
+      -- long enough that the parent cannot fire a second time before it is disabled below
+      assert.is_true(permTimer(parent, "", 0.5, [[raiseEvent("w2aOffsetParentFired")]]) > 0)
+      assert.is_true(permTimer(child, parent, 0, [[
+        _G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1
+        raiseEvent("w2aOffsetChildFired")
+      ]]) > 0)
+      assert.is_true(enableTimer(child))
+      assert.is_true(enableTimer(parent))
+      waitFor("w2aOffsetChildFired")
+      disableTimer(parent)
+      settle(0.15)
+      assert.equals(1, _G.W2aPermTimerFires)
+    end)
+
+    it("does not run with a time of zero when a package brings it in switched on", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+        return
+      end
+      local path = getMudletHomeDir() .. "/w2a-zero-timer.xml"
+      finally(function()
+        -- uninstallPackage() refuses while the profile save the install
+        -- started is still running
+        local removed = false
+        for _ = 1, 100 do
+          if uninstallPackage("w2a-zero-timer") == true then
+            removed = true
+            break
+          end
+          pumpEvents(50)
+        end
+        os.remove(path)
+        -- let the save the uninstall queues run now rather than during the next spec
+        pumpEvents(200)
+        assert.is_true(removed, "could not uninstall the zero timer package")
+      end)
+      local file = assert(io.open(path, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TimerPackage>
+		<Timer isActive="yes" isFolder="no" isTempTimer="no" isOffsetTimer="no">
+			<name>W2aZeroFromPackage</name>
+			<script>_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1</script>
+			<command></command>
+			<packageName></packageName>
+			<time>00:00:00.000</time>
+		</Timer>
+		<Timer isActive="yes" isFolder="no" isTempTimer="no" isOffsetTimer="no">
+			<name>W2aLiveFromPackage</name>
+			<script>-- never gets to run</script>
+			<command></command>
+			<packageName></packageName>
+			<time>00:00:30.000</time>
+		</Timer>
+	</TimerPackage>
+</MudletPackage>
+]])
+      file:close()
+      assert.is_true(installPackage(path))
+
+      -- the sibling shows that a package's timers do get switched on as they arrive
+      assert.equals(1, isActive("W2aLiveFromPackage", "timer"))
+      assert.equals(0, isActive("W2aZeroFromPackage", "timer"))
+      settle(0.15)
+      assert.is_nil(_G.W2aPermTimerFires, "a permanent timer with no time must not fire")
+    end)
   end)
 
   describe("Tests exists and isActive for timers", function()
