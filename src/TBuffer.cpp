@@ -1937,11 +1937,13 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     // dropped. What the game did mark stays a link: those characters already
     // carry the id.
     //
-    // Before the wrap-join below rather than after, because this runs on the
-    // line boundary itself: a link left open across a segment the game wrapped
-    // ends with that segment, which is the same trade in the same direction.
+    // Its visibility is registered only when no held segment is waiting to be
+    // prepended to this line: the columns the link recorded are relative to the
+    // text it was opened on, and a prefix arriving in front of it would move
+    // them, so concealing at them would hide the text ahead of the link
+    // instead. Left unregistered in that case, as a multi-line link already is.
     if (mHyperlinkActive) {
-        finaliseActiveHyperlink();
+        finaliseActiveHyperlink(mServerWrapPendingLine.isEmpty());
     }
 
     // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
@@ -6019,7 +6021,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 // boundary for one the game never closed - so a link left open still gets its
 // spoiler masked and its visibility applied on the line it was on, rather than
 // having that metadata dropped along with the leak it used to cause.
-void TBuffer::finaliseActiveHyperlink()
+void TBuffer::finaliseActiveHyperlink(const bool mayRegisterVisibility)
 {
     // Apply initial selection/disabled state styling when link closes (from selection branch)
     // OR apply :link pseudo-class styling for preset-only links (from compact branch)
@@ -6068,7 +6070,13 @@ void TBuffer::finaliseActiveHyperlink()
     // Register with visibility manager if visibility settings exist
     // Visibility currently only supports single-line hyperlinks
     // Multi-line links will not have visibility management applied
-    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mpConsole && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
+    // mayRegisterVisibility is false when a held segment is about to be
+    // prepended to this line: the column recorded when the link opened is
+    // relative to the text it was opened on, so registering at it would conceal
+    // the wrong characters once the prefix arrives. Left unregistered, as a
+    // multi-line link already is - visibility covers single lines only.
+    if (mayRegisterVisibility && mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mpConsole
+        && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
         int currentColumn = mMudLine.length();
         int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
 
