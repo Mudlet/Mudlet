@@ -56,12 +56,18 @@ void TDockWidget::closeEvent(QCloseEvent* event)
 void TDockWidget::resizeEvent(QResizeEvent* event)
 {
     Q_UNUSED(event)
+    if (!mpHost) {
+        return;
+    }
     mpHost->setDockLayoutUpdated(mWidgetConsoleName);
 }
 
 void TDockWidget::moveEvent(QMoveEvent* event)
 {
     Q_UNUSED(event)
+    if (!mpHost) {
+        return;
+    }
     mpHost->setDockLayoutUpdated(mWidgetConsoleName);
 }
 
