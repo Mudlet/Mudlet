@@ -12,8 +12,11 @@ cd /path/to/Mudlet
 cmake --preset macos-debug
 cmake --build --preset macos-debug
 
-# Run Mudlet - as an application, not as the binary inside the bundle
-cmake --build --preset macos-debug --target run-mudlet
+# Run Mudlet - as an application, not as the binary inside the bundle.
+# macos-debug is an AddressSanitizer preset, and run-mudlet launches the binary
+# directly there so the sanitizer's environment reaches it; build the -nosan
+# preset when you want the bundle launch described below.
+cmake --build --preset macos-debug-nosan --target run-mudlet
 ```
 
 That target runs `open`, so macOS holds Mudlet responsible for its own permission
@@ -26,9 +29,9 @@ losing it.
 A sanitizer build runs the binary directly instead, which the target does for you: `open`
 hands the launch to launchd rather than passing your shell's environment on, so
 `ASAN_OPTIONS` would be ignored and the report would go to a terminal nothing is reading.
-`macos-debug` **is** a sanitizer preset, so the commands above launch the binary and speech
-refuses to ask for permission; build `macos-debug-nosan` when the built-in macOS speech
-backend is what you are trying out.
+That is why the run command above names `macos-debug-nosan`: under a sanitizer preset the
+target launches the binary, the terminal stays responsible, and speech refuses to ask for
+permission rather than showing the dialogs.
 Only the built-in macOS speech backend is affected by the launch method at all, and it
 declines to ask for permission rather than dying when it finds something else responsible
 for the process.

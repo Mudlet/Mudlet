@@ -138,10 +138,11 @@ Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
 ## Running the result
 
 ```bash
-# Either platform, through the build system
-cmake --build --preset macos-debug --target run-mudlet
+# macOS, through the build system - the preset has to be one this host has
+cmake --build --preset macos-debug-nosan --target run-mudlet
 
-# Linux, directly
+# Linux, either way
+cmake --build --preset linux-debug --target run-mudlet
 ./build/src/mudlet
 ```
 

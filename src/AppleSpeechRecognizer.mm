@@ -28,8 +28,6 @@
 #include <QVariantMap>
 #include <QtMath>
 
-#include <unistd.h>
-
 #import <AVFoundation/AVFoundation.h>
 #import <Speech/Speech.h>
 
@@ -261,15 +259,24 @@ SpeechRecognizer::VocabularyResult AppleSpeechRecognizer::applyVocabulary(const 
 // identifier, so nothing a player does lands here.
 static bool mudletIsResponsibleForItself()
 {
-    const char* launchedBundleId = getenv("__CFBundleIdentifier");
-    if (!launchedBundleId) {
+    const QByteArray launchedBundleId = qgetenv("__CFBundleIdentifier");
+    if (launchedBundleId.isEmpty()) {
         return false;
     }
     NSString* ownBundleId = [[NSBundle mainBundle] bundleIdentifier];
     if (!ownBundleId) {
         return false;
     }
-    return [ownBundleId isEqualToString:@(launchedBundleId)];
+    return [ownBundleId isEqualToString:QString::fromUtf8(launchedBundleId).toNSString()];
+}
+
+// The command that starts *this* bundle as an application, for the messages
+// below: a variant preset builds into a tree of its own, so naming the default
+// one would send a developer to a path they may not have.
+static QString relaunchAsApplicationCommand()
+{
+    NSString* bundlePath = [[NSBundle mainBundle] bundlePath];
+    return bundlePath ? qsl("open \"%1\"").arg(QString::fromNSString(bundlePath)) : qsl("open build/src/mudlet.app");
 }
 
 void AppleSpeechRecognizer::doStartListening()
@@ -300,8 +307,8 @@ void AppleSpeechRecognizer::doStartListening()
             // go on offering to listen. Settled before the emit, as everywhere
             // else here that sets a state.
             setState(State::Error);
-            //: Shown only in a development build started from a terminal, where macOS would blame the terminal's application for the permission request and kill Mudlet. Do not translate the command.
-            emit errorOccurred(tr("Speech recognition permission cannot be requested when Mudlet is started from a terminal, because macOS asks the terminal's application for it instead. Quit and start Mudlet as an application - open build/src/mudlet.app - then try again."));
+            //: Shown only in a development build started from a terminal, where macOS would blame the terminal's application for the permission request and kill Mudlet. %1 is a shell command, such as open "/path/to/mudlet.app", and is not translated.
+            emit errorOccurred(tr("Speech recognition permission cannot be requested when Mudlet is started from a terminal, because macOS asks the terminal's application for it instead. Quit and start Mudlet as an application - %1 - then try again.").arg(relaunchAsApplicationCommand()));
             return;
         }
         setState(State::Starting);
@@ -372,8 +379,8 @@ void AppleSpeechRecognizer::requestMicrophoneThenStart()
         if (!mudletIsResponsibleForItself()) {
             qWarning() << "AppleSpeechRecognizer: not asking for microphone permission - another application is responsible for this process, so macOS would ask it for the usage description and kill Mudlet when it has none";
             setState(State::Error);
-            //: Shown only in a development build started from a terminal, where macOS would blame the terminal's application for the permission request and kill Mudlet. Do not translate the command.
-            emit errorOccurred(tr("Microphone permission cannot be requested when Mudlet is started from a terminal, because macOS asks the terminal's application for it instead. Quit and start Mudlet as an application - open build/src/mudlet.app - then try again."));
+            //: Shown only in a development build started from a terminal, where macOS would blame the terminal's application for the permission request and kill Mudlet. %1 is a shell command, such as open "/path/to/mudlet.app", and is not translated.
+            emit errorOccurred(tr("Microphone permission cannot be requested when Mudlet is started from a terminal, because macOS asks the terminal's application for it instead. Quit and start Mudlet as an application - %1 - then try again.").arg(relaunchAsApplicationCommand()));
             return;
         }
         setState(State::Starting);
