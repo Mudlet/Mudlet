@@ -284,7 +284,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPAddChatMessageNewline(true)
 , mMMCPAutoAcceptCalls(true)
 , mMMCPShowSnoopInMainConsole(true)
-, mTutorialForCompactLineAlreadyShown(false)
 , mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
