@@ -141,6 +141,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
+    LazyGlobalsSwitchTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp

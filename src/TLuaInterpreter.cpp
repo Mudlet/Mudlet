@@ -4926,8 +4926,31 @@ int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
+// Whether "matches", "multimatches" and "line" may be left out until a script
+// reads them. On unless lazyCaptureGlobals=false in Mudlet.ini, or
+// MUDLET_LAZY_GLOBALS=0 in the environment, which wins. Read as a profile's Lua
+// starts; switched off, nothing is installed and every dispatch sets all three
+// up front as Mudlet always did.
+static bool lazyCaptureGlobalsWanted()
+{
+    if (qEnvironmentVariableIsSet("MUDLET_LAZY_GLOBALS")) {
+        bool parsed = false;
+        const int value = qEnvironmentVariableIntValue("MUDLET_LAZY_GLOBALS", &parsed);
+        if (parsed) {
+            return value != 0;
+        }
+        qWarning().noquote() << "MUDLET_LAZY_GLOBALS is set to" << qEnvironmentVariable("MUDLET_LAZY_GLOBALS") << "but is not 0 or 1; ignoring it";
+    }
+    QSettings* settings = mudlet::self() ? mudlet::getQSettings() : nullptr;
+    return !settings || settings->value(qsl("lazyCaptureGlobals"), true).toBool();
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::installLazyGlobals()
 {
+    if (!lazyCaptureGlobalsWanted()) {
+        return;
+    }
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
     // Only onto the metatable Other.lua gives the globals table, and only into
