@@ -26,14 +26,16 @@
 
 
 #include "dlgTriggerEditor.h"
+#include "EditorCommand.h"
+#include "utils.h"
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QFile>
 #include <QMap>
+#include <QMargins>
 #include <QMultiHash>
 #include <QPointer>
 #include <QXmlStreamReader>
-#include <QClipboard>
 
 class Host;
 class TAction;
@@ -54,6 +56,16 @@ public:
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<EditorViewType, int> importFromClipboard();
+    // Each item of the file just read whose Lua body did not compile, or stopped
+    // with an error while it ran, as "<item name>: <error>". A body that fails
+    // does not fail the read - the item is kept so that it can be fixed in the
+    // editor - so importPackage()'s own answer says nothing about it and this is
+    // where a caller has to look.
+    const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
+    // The same items by name alone, for saying on the console which parts of a
+    // package are not working without the Lua error text, which is written for
+    // whoever wrote the item rather than for whoever installed it.
+    const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
 
 private:
     const QString YES = qsl("yes");
@@ -100,7 +112,7 @@ private:
     void readHiddenVariables();
 
     void readStringList(QStringList&, const QString&);
-    void readIntegerList(QList<int>&, const QString& parentName, const QString &whatIsParent);
+    void readIntegerList(QList<int>&, const QString& parentName, const QString& whatIsParent);
     void readModulesDetailsMap(QMap<QString, QStringList>&);
     void getVersionString(QString&);
     QString readScriptElement();
@@ -111,6 +123,8 @@ private:
 
     QPointer<Host> mpHost;
     QString mPackageName;
+    QStringList mItemsWithErrors;
+    QStringList mItemsWithErrorNames;
     TTrigger* mpTrigger = nullptr;
     TTimer* mpTimer = nullptr;
     TAlias* mpAlias = nullptr;
@@ -126,7 +140,7 @@ private:
     bool gotScript = false;
     int module = 0;
     int mMaxRoomId = 0;
-    quint8 mVersionMajor = 1; // 0 to 255
+    quint8 mVersionMajor = 1;  // 0 to 255
     quint16 mVersionMinor = 0; // 0 to 999 for 3 digit decimal value. Cannot be a quint8 as that only allows x.255 for the decimal
 };
 

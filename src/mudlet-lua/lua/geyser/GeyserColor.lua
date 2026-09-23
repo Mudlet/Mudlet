@@ -103,9 +103,13 @@ function Geyser.Color.parse(red, green, blue, alpha)
       elseif string.find(red, "^<") then
         next_num = string.gmatch(red, "%d+")
 
+      else
         -- fourth case is a named string
-      elseif Geyser.Color.find_color_name(red) then
         local col = Geyser.Color.find_color_name(red)
+        if not col then
+          -- finally, no matches, do nothing
+          return
+        end
         local i = 0
         local n = #color_table[col]
         next_num = function()
@@ -116,10 +120,6 @@ function Geyser.Color.parse(red, green, blue, alpha)
           else return nil
           end
         end
-
-      else
-        -- finally, no matches, do nothing
-        return
       end
     end
 
@@ -147,6 +147,20 @@ function Geyser.Color.parse(red, green, blue, alpha)
   return r, g, b, a
 end
 
+-- Lower cased name -> the name as color_table spells it. color_table holds
+-- around 500 entries and a lookup runs on every echo that carries a named
+-- colour, so scanning it is the single most expensive thing a Geyser label does.
+local colorNamesByLowerCase
+
+local function indexColorNames()
+  local index = {}
+  for name in pairs(color_table) do
+    index[name:lower()] = name
+  end
+  colorNamesByLowerCase = index
+  return index
+end
+
 --- Searches for a close match to 'color' in the color_table
 --  Returns the color found, or false if it can't find one
 -- @param color the color name you're trying to find
@@ -154,11 +168,23 @@ function Geyser.Color.find_color_name(color)
   if type(color) ~= "string" then
     return false
   end
-  color = color:lower()
-  color = color:gsub("_", "")
-  for color_name,_ in pairs(color_table) do
-    if color_name:lower() == color then
-      return color_name
+  -- underscores are stripped from what is asked for but not from what
+  -- color_table holds, so "light_blue" finds "lightblue" and not "light_blue"
+  local wanted = color:lower():gsub("_", "")
+  local index = colorNamesByLowerCase or indexColorNames()
+  local found = index[wanted]
+  if found and color_table[found] then
+    return found
+  end
+  -- either the index has never seen this name or color_table no longer holds
+  -- what it points at, so the index predates a change to the table. Scan for the
+  -- answer, which costs what the whole lookup used to, and rebuild the index
+  -- only when there was one to find - a name that is not a colour at all is the
+  -- answer a script asking "is this a colour?" wants, not a reason to reindex.
+  for name in pairs(color_table) do
+    if name:lower() == wanted then
+      indexColorNames()
+      return name
     end
   end
   return false

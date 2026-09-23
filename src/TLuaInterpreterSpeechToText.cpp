@@ -1,0 +1,1339 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Mike Conley - mike.conley@stickmud.com          *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+// Speech-to-text Lua API functions for TLuaInterpreter
+// These functions provide a minimal bridge between Mudlet's speech recognition
+// engines - Vosk, sherpa-onnx and the built-in macOS backend - and Lua
+// scripts. Which one answers is decided by SpeechRecognizerFactory; nothing
+// here is engine-specific beyond the model and library management calls that
+// docs/stt-api.md marks platform-tier.
+
+#include "TLuaInterpreter.h"
+
+#include "Host.h"
+#include "mudlet.h"
+#include "SherpaRecognizer.h"
+#include "SpeechRecognizer.h"
+#include "SpeechRecognizerFactory.h"
+#include "VoskRecognizer.h"
+
+#include <QDir>
+#include <QFileInfo>
+
+#if defined(Q_OS_MACOS)
+#include "AppleSpeechRecognizer.h"
+#endif
+
+// Lowercase, script-friendly name for a recognizer state. Kept separate from
+// the Q_ENUM name so that Lua sees a stable identifier regardless of how the
+// enumerators are spelled in C++.
+static const char* speechRecognizerStateName(const SpeechRecognizer::State state)
+{
+    switch (state) {
+    case SpeechRecognizer::State::Ready:
+        return "ready";
+    case SpeechRecognizer::State::Starting:
+        return "starting";
+    case SpeechRecognizer::State::Listening:
+        return "listening";
+    case SpeechRecognizer::State::Processing:
+        return "processing";
+    case SpeechRecognizer::State::Error:
+        return "error";
+    case SpeechRecognizer::State::Uninitialized:
+        break;
+    }
+    return "uninitialized";
+}
+
+// Lowercase, script-friendly name for an end-of-speech sensitivity, matching
+// the words stt.setSensitivity() accepts.
+static const char* speechSensitivityName(const SpeechRecognizer::Sensitivity sensitivity)
+{
+    switch (sensitivity) {
+    case SpeechRecognizer::Sensitivity::Short:
+        return "short";
+    case SpeechRecognizer::Sensitivity::Long:
+        return "long";
+    case SpeechRecognizer::Sensitivity::Default:
+        break;
+    }
+    return "default";
+}
+
+// docs/stt-api.md's "refusals speak": a consumer driving the bridge from events
+// has to hear a refusal too, and with no engine installed there is no recognizer
+// to emit errorOccurred through - so this raises the event on mudlet itself.
+// Without it "no engine" and "nothing said yet" look identical from Lua.
+static void reportSpeechRefusal(const QString& message)
+{
+    if (auto* pMudlet = mudlet::self()) {
+        pMudlet->raiseSpeechEvent(qsl("sysSTTError"), message);
+    }
+}
+
+// A refusal belongs to the profile whose call was refused. raiseSpeechEvent()
+// prefers the microphone's owner, which is right for the recognizer's own
+// traffic and wrong here: a profile refused while another one is listening
+// would otherwise send its fault to that other profile, which cannot act on it
+// and would report a fault in a session that is running perfectly well.
+static void reportSpeechRefusalTo(Host& host, const QString& message)
+{
+    if (auto* pMudlet = mudlet::self()) {
+        pMudlet->raiseSpeechEventOn(&host, qsl("sysSTTError"), message);
+    }
+}
+
+// Every directory a dynamically-loaded engine could have been installed into,
+// across all of them rather than Vosk's alone. A reader told where Mudlet
+// looked has to be told where it looked for the engine they installed, and on
+// a sherpa-only machine that was never any of the paths this used to name.
+static QStringList speechLibrarySearchPaths()
+{
+    QStringList paths = SherpaRecognizer::librarySearchPaths();
+    for (const QString& path : VoskRecognizer::librarySearchPaths()) {
+        if (!paths.contains(path)) {
+            paths.append(path);
+        }
+    }
+    return paths;
+}
+
+// Whether two paths name the same model directory. A handler that reloads the
+// model this call is loading has replaced nothing, and telling the two apart by
+// string would call a trailing separator or a symlink a replacement.
+static bool sameModelDirectory(const QString& loaded, const QString& requested)
+{
+    const QString canonicalLoaded = QFileInfo(loaded).canonicalFilePath();
+    if (canonicalLoaded.isEmpty()) {
+        // Nothing is there to canonicalise - the load left no path at all, or
+        // the directory went away between the load and this check - so the text
+        // is all there is to go on
+        return loaded == requested;
+    }
+    return canonicalLoaded == QFileInfo(requested).canonicalFilePath();
+}
+
+// The message for a call that needs an engine when there is none. "failed to
+// Why a library that is there would not load, or nothing when no file was
+// found at all. A library present but unloadable - a dependency of its own
+// missing, most often - was reported as "not installed", naming the very path
+// the file is sitting at; the loader's own reason is the one string that says
+// what is actually wrong, and it used to go only to a qWarning nobody reading
+// the error would see.
+//
+// Either engine may have found a file it could not use, so both are asked, or
+// a broken libvosk reads as "not installed" while sherpa's says so - the same
+// defect, fixed for one engine and not the other.
+static QString speechLibraryLoadFailure()
+{
+    for (const QString& reason : {SherpaRecognizer::libraryLoadError(), VoskRecognizer::libraryLoadError()}) {
+        if (!reason.isEmpty()) {
+            return reason;
+        }
+    }
+    return QString();
+}
+
+// create speech recognizer" described the symptom of a missing library rather
+// than the library, and sent people looking for a fault in Mudlet.
+static QString noEngineMessage()
+{
+    if (VoskRecognizer::libraryUnloadedByRequest()) {
+        return qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before using speech recognition again");
+    }
+    if (const QString reason = speechLibraryLoadFailure(); !reason.isEmpty()) {
+        return qsl("the speech engine library is installed but could not be loaded: %1").arg(reason);
+    }
+    return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
+}
+
+// words follows a symbol resolved from the library, so unloading or reloading it
+// changes what the backend can do without anything else happening. Announced
+// here because docs/stt-api.md tells consumers to re-read capabilities on a
+// change rather than cache them, which needs the change to be announced at all.
+static void announceSpeechCapabilities(mudlet* pMudlet)
+{
+    if (!pMudlet) {
+        return;
+    }
+    if (auto* pRecognizer = qobject_cast<VoskRecognizer*>(pMudlet->speechRecognizer())) {
+        // Keeps the recognizer's own baseline in step. It no longer decides what
+        // Lua hears - the bridge does - so this cannot produce an announcement
+        // the call below would not.
+        pRecognizer->announceCapabilitiesIfChanged();
+    }
+    // The bridge decides. Its view can move without the recognizer's doing so,
+    // since getInfo() reports every capability as false while there is no
+    // recognizer at all.
+    pMudlet->announceSpeechCapabilitiesIfChanged();
+}
+
+// Whether any speech engine at all is present and loadable: a model-based
+// one (Vosk, sherpa-onnx), or - since stt.init() can now reach it with no
+// model at all - the built-in macOS backend. availableBackends() deliberately
+// excludes the latter (see its own comment), so it is asked about separately
+// here rather than trusting that list alone.
+static bool speechEngineAvailable()
+{
+    return !SpeechRecognizerFactory::availableBackends().isEmpty() || SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform);
+}
+
+// Which backend the on-demand initSpeechRecognition() calls below should ask
+// for, so that what stt.available() counts and what those calls can actually
+// build are the same set. Auto resolves through availableBackends(), which
+// deliberately omits the model-less macOS backend - so on a Mac with neither
+// Vosk nor sherpa installed an eager Auto built nothing and stt.start()
+// refused with "the speech engine library is not installed" while
+// stt.available() answered true. Naming Platform in exactly that case is what
+// closes that gap; the backend genuinely works there once stt.init() has run.
+static SpeechRecognizerFactory::Backend onDemandSpeechBackend()
+{
+    if (!SpeechRecognizerFactory::availableBackends().isEmpty()) {
+        return SpeechRecognizerFactory::Backend::Auto;
+    }
+    if (SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+        return SpeechRecognizerFactory::Backend::Platform;
+    }
+    return SpeechRecognizerFactory::Backend::Auto;
+}
+
+// Which model-based backend's on-disk install paths answer stt.getModelPath(),
+// stt.getLibraryPath() and getInfo().searchPaths: whichever is actually loaded
+// when it is one of these two, the auto-preferred installed backend otherwise,
+// and Vosk's own paths as the last resort - so these platform-tier reads
+// always name a real, checkable directory, exactly as they did before sherpa
+// or the built-in macOS backend existed. The macOS backend never answers for
+// these: it installs no library and needs no model, so it has no paths of its
+// own to report.
+static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(mudlet* pMudlet)
+{
+    auto* pRecognizer = pMudlet ? pMudlet->speechRecognizer() : nullptr;
+    if (qobject_cast<SherpaRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Sherpa;
+    }
+    if (qobject_cast<VoskRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Vosk;
+    }
+
+    const auto backends = SpeechRecognizerFactory::availableBackends();
+    return backends.isEmpty() ? SpeechRecognizerFactory::Backend::Vosk : backends.first();
+}
+
+// The directory stt.getModelPath() answers with: the same engine choice, so a
+// refusal telling a package where to install a model never names a directory
+// other than the one the API told it to use.
+static QString speechModelsDirectory(mudlet* pMudlet)
+{
+    return modelBasedBackendForPaths(pMudlet) == SpeechRecognizerFactory::Backend::Sherpa ? SherpaRecognizer::modelsDirectoryPath() : VoskRecognizer::modelsDirectoryPath();
+}
+
+// Which backend a live recognizer actually is - the same identification
+// modelBasedBackendForPaths() makes, widened to the model-less backend, since
+// this one answers "did the engine I asked for come back?" rather than "whose
+// install paths do I report?". Auto means none of the three, which no caller
+// below treats as a match.
+static SpeechRecognizerFactory::Backend loadedSpeechBackend(const SpeechRecognizer* pRecognizer)
+{
+    if (qobject_cast<const SherpaRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Sherpa;
+    }
+    if (qobject_cast<const VoskRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Vosk;
+    }
+#if defined(Q_OS_MACOS)
+    if (qobject_cast<const AppleSpeechRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Platform;
+    }
+#endif
+    return SpeechRecognizerFactory::Backend::Auto;
+}
+
+// What to call an engine in a refusal. backendIdentifier() answers a settings
+// key rather than something to put in front of a reader.
+static QString speechBackendLabel(const SpeechRecognizerFactory::Backend backend)
+{
+    switch (backend) {
+    case SpeechRecognizerFactory::Backend::Vosk:
+        return qsl("Vosk");
+    case SpeechRecognizerFactory::Backend::Sherpa:
+        return qsl("sherpa-onnx");
+    case SpeechRecognizerFactory::Backend::Whisper:
+        return qsl("Whisper");
+    case SpeechRecognizerFactory::Backend::Platform:
+        return qsl("built-in system");
+    case SpeechRecognizerFactory::Backend::Auto:
+        break;
+    }
+    return qsl("speech");
+}
+
+// Where one engine's library is looked for, as opposed to
+// speechLibrarySearchPaths()'s union across all of them: a refusal about a
+// named engine must name only that engine's directories. Empty for a backend
+// that loads no library of its own.
+static QStringList speechLibrarySearchPathsFor(const SpeechRecognizerFactory::Backend backend)
+{
+    if (backend == SpeechRecognizerFactory::Backend::Sherpa) {
+        return SherpaRecognizer::librarySearchPaths();
+    }
+    if (backend == SpeechRecognizerFactory::Backend::Vosk) {
+        return VoskRecognizer::librarySearchPaths();
+    }
+    return QStringList();
+}
+
+// The message for a call that asked for one engine by name and did not get
+// it. initSpeechRecognition() keeps a working engine rather than leaving the
+// bridge with none, so the only thing that went wrong is the engine that was
+// asked for not being installed - and saying so is what stops the survivor
+// being handed the other engine's model and blamed for refusing it.
+static QString engineNotInstalledMessage(const SpeechRecognizerFactory::Backend backend)
+{
+    if (backend == SpeechRecognizerFactory::Backend::Vosk && VoskRecognizer::libraryUnloadedByRequest()) {
+        return qsl("the Vosk speech engine library was unloaded on request - call stt.reloadLibrary() before loading a Vosk model");
+    }
+    const QStringList paths = speechLibrarySearchPathsFor(backend);
+    if (paths.isEmpty()) {
+        return qsl("the %1 speech engine is not available on this machine, so nothing was loaded").arg(speechBackendLabel(backend));
+    }
+    return qsl("this model needs the %1 speech engine, whose library is not installed - looked in: %2").arg(speechBackendLabel(backend), paths.join(qsl(", ")));
+}
+
+// stt.init([modelPath])
+// Initialize speech recognition with a language model.
+// modelPath is optional - falls back to SpeechRecognizerFactory::defaultModelPath().
+// Returns true on success, or nil + error message on failure.
+int TLuaInterpreter::sttInit(lua_State* L)
+{
+    const char* funcName = "stt.init";
+    // Resolved before the first refusal rather than after several of them: a
+    // fault raised through raiseSpeechEvent() goes to the microphone's owner,
+    // so a profile refused while another one is listening sent its fault to
+    // that other profile - which cannot act on it, and reads it as a fault in a
+    // session that is running perfectly well.
+    Host& host = getHostFromLua(L);
+    QString modelPath;
+    bool usedDefaultModel = false;
+    // Set only when no path was given and the backend this call is about to
+    // use needs none - the built-in macOS one today. Skips both the "no
+    // model installed" refusal below and the model-path existence check
+    // further down, since there is no path to check.
+    bool useModelLessBackend = false;
+    SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto;
+
+    if (lua_gettop(L) >= 1 && !lua_isnoneornil(L, 1)) {
+        modelPath = getVerifiedString(L, funcName, 1, "model path");
+        // An empty path is a bad argument, not a model. QDir("") is Qt's
+        // spelling for the working directory, so the existence check below
+        // would pass and the engine would be handed wherever Mudlet happens
+        // to have been started from.
+        if (modelPath.trimmed().isEmpty()) {
+            return warnArgumentValue(L, funcName, "the model path is empty - give the folder a model was installed into, or call stt.init() with no argument to use the default");
+        }
+        // The model directory says which engine it belongs to, so a package
+        // that only ever installs one engine's models never has to name it
+        // separately. A layout that matches nothing falls back to Auto rather
+        // than a guess - guessing wrong hands a model to the wrong decoder and
+        // fails deep inside the library instead of here.
+        backend = SpeechRecognizerFactory::backendForModelDir(modelPath);
+    } else {
+        usedDefaultModel = true;
+        // Asked of every installed engine rather than only the preferred one.
+        // Auto resolves through availableBackends().first(), where sherpa now
+        // sorts ahead of Vosk, so a machine carrying the sherpa library but
+        // only Vosk models on disk got an empty answer and a refusal - having
+        // loaded that same Vosk model quite happily before sherpa existed. The
+        // engine is pinned to whichever one's model was actually found, so a
+        // model and a decoder from different engines can never be paired.
+        for (const SpeechRecognizerFactory::Backend candidate : SpeechRecognizerFactory::availableBackends()) {
+            const QString candidateModelPath = SpeechRecognizerFactory::defaultModelPath(candidate);
+            if (!candidateModelPath.isEmpty()) {
+                modelPath = candidateModelPath;
+                backend = candidate;
+                break;
+            }
+        }
+        if (modelPath.isEmpty()) {
+            // Two different problems wore one message: defaultModelPath() is
+            // empty whenever no backend is available, which is the case when
+            // the engine *library* is missing however many models are
+            // installed. Telling someone to install what they already have
+            // sends them looking in the wrong place.
+            if (SpeechRecognizerFactory::availableBackends().isEmpty()) {
+                // No model-based engine is installed. A model-less backend -
+                // the built-in macOS one today - still works with nothing to
+                // install, and hiding it here would repeat the mistake
+                // availableBackends() deliberately does not make.
+                if (SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+                    useModelLessBackend = true;
+                    backend = SpeechRecognizerFactory::Backend::Platform;
+                } else {
+                    QString message;
+                    if (VoskRecognizer::libraryUnloadedByRequest()) {
+                        message = qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model");
+                    } else if (const QString reason = speechLibraryLoadFailure(); !reason.isEmpty()) {
+                        // A broken library is installed, so "not installed"
+                        // sends the reader to install what they already have
+                        message = qsl("the speech engine library is installed but could not be loaded, so no model can be loaded: %1").arg(reason);
+                    } else {
+                        message = qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
+                    }
+                    reportSpeechRefusalTo(host, message);
+                    return warnArgumentValue(L, funcName, message);
+                }
+            } else {
+                const QString message = qsl("no model path provided and no language model is installed - install one into %1").arg(speechModelsDirectory(mudlet::self()));
+                reportSpeechRefusalTo(host, message);
+                return warnArgumentValue(L, funcName, message);
+            }
+        }
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
+    }
+
+    if (!useModelLessBackend && !QDir(modelPath).exists()) {
+        // Raised as well as returned, and deliberately not treated as rule 2's
+        // argument carve-out. A malformed argument - setSilenceTimeout(-1) - is
+        // the script getting its own call wrong, and STT_spec pins that as
+        // silent. A path that is not there is usually the world changing under
+        // a package that was right when it saved it: the model was deleted, or
+        // the drive is not mounted. That is worth telling a consumer driving
+        // the bridge from events, and STT_spec pins this one as announced.
+        const QString message = qsl("model path does not exist: %1").arg(modelPath);
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    pMudlet->initSpeechRecognition(backend);
+
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        const QString message = noEngineMessage();
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // The switch can fail while a working engine stays in place:
+    // SpeechRecognizerFactory::create() answers nullptr when the named
+    // engine's library is not installed, and initSpeechRecognition() then
+    // rightly keeps what was there rather than leaving the bridge with
+    // nothing. Nothing about that reaches Lua, though, so this used to hand
+    // the survivor the other engine's model - which reported a valid model as
+    // broken, in the words of a decoder that was never meant to read it, and
+    // cost the caller the working engine they had. Refused here instead,
+    // naming what is actually missing, with that engine left untouched.
+    if (backend != SpeechRecognizerFactory::Backend::Auto && loadedSpeechBackend(pRecognizer) != backend) {
+        const QString message = engineNotInstalledMessage(backend);
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // A backend that loads no models can only be given a path by mistake, and
+    // it is the caller's own argument - so it is answered here, in the return
+    // value, rather than raised at every other package on the profile. Reached
+    // when the directory matches no engine's layout: that leaves the backend at
+    // Auto, and the built-in one is what answered.
+    if (!useModelLessBackend && !modelPath.isEmpty() && loadedSpeechBackend(pRecognizer) == SpeechRecognizerFactory::Backend::Platform) {
+        return warnArgumentValue(L, funcName, qsl("%1 uses no model files, so it cannot load '%2' - call stt.init() with no argument to use it").arg(pRecognizer->backendName(), modelPath));
+    }
+
+    if (!pRecognizer->initialize(modelPath)) {
+        // Whatever went wrong reached sysSTTError from the backend, except the
+        // model-less case answered just above, which never gets this far
+        return warnArgumentValue(L, funcName, qsl("failed to initialize model from: %1").arg(modelPath));
+    }
+
+    // A handler for any event this call raised may have undone the load before
+    // it returned. initialize() reaches Lua while it runs - setState() does,
+    // and so does a backend announcing capabilities it only learns from the
+    // model - and a handler is free to call stt.close(), to load another model,
+    // or to ask for another engine entirely. Answering true then hands the
+    // caller a bridge it was told was ready and is not: the next stt.start()
+    // fails on a session nothing loaded (#10759).
+    //
+    // Asked here rather than inside each initialize(): there are three backends
+    // and the hazard is in none of them - it is in the events this bridge
+    // raises while a backend loads, so a guard in one backend is a guard the
+    // other two silently lack.
+    //
+    // Each is raised as well as returned. A load undone from inside a script's
+    // own handler is the one refusal a script can actually cause, so a consumer
+    // driving the bridge from events would otherwise see the load simply not
+    // take, with nothing said.
+
+    // The engine was swapped: this call's recognizer has been retired and
+    // another published, so the pointer it has been working through is no
+    // longer the one Lua reads. Asked first, and by identity, so nothing below
+    // dereferences a recognizer on its way out.
+    if (pMudlet->speechRecognizer() != pRecognizer) {
+        const QString message = qsl("a handler for one of this call's own events changed the speech engine while the model was still loading");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+    // Uninitialized rather than !initialized(), which is also false in the
+    // error state. A handler that starts listening and finds no microphone
+    // faults the bridge, and that says nothing about whether this load took -
+    // refusing for it would report a model that is loaded, and that getInfo()
+    // still names, as having failed to load. stt.close() is what this catches,
+    // and releaseResources() leaves exactly this state.
+    if (pRecognizer->state() == SpeechRecognizer::State::Uninitialized) {
+        const QString message = qsl("the speech model loaded, but a handler for one of this call's own events closed it before it could be used");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+    // Model-less backends answer an empty modelPath() by design, so there is
+    // nothing here to compare - a handler replacing that load is caught above.
+    // The same model reached under another spelling - a trailing separator, a
+    // symlink - has not replaced anything, so it is compared as a directory
+    // rather than as text.
+    if (!useModelLessBackend && !sameModelDirectory(pRecognizer->modelPath(), modelPath)) {
+        const QString message = qsl("the speech model loaded, but a handler for one of this call's own events replaced it with another before it could be used");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // Settings can name a model that is no longer installed, and
+    // getSelectedModelPath() then loads whatever else is on disk. That keeps
+    // speech working, which is the right call, but a package configured for one
+    // language would otherwise be handed a decoder for another with nothing
+    // said - init true, no event, and a language key it never asked about.
+    //
+    // Only for Vosk, and said so in the message: SpeechRecognition/selectedModel
+    // is resolved against Vosk's models directory alone, and sherpa's
+    // defaultModelPath() never consults it. Fired for every engine, it
+    // announced a substitution that had not happened whenever a stale Vosk
+    // setting sat beside a sherpa model - and it can still say nothing about
+    // sherpa, which has no such setting to be missing.
+    if (usedDefaultModel && backend == SpeechRecognizerFactory::Backend::Vosk) {
+        if (const QString missing = VoskRecognizer::missingSelectedModel(); !missing.isEmpty()) {
+            reportSpeechRefusalTo(host, qsl("the selected Vosk speech model %1 is not installed; loaded %2 instead").arg(missing, QDir(modelPath).dirName()));
+        }
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.start()
+// Start listening for speech input.
+// Returns true on success, or nil + error message on failure.
+int TLuaInterpreter::sttStart(lua_State* L)
+{
+    const char* funcName = "stt.start";
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
+    }
+
+    // The recognizer is only built on demand, so without this a first call
+    // before stt.init() finds nothing and reports the library as missing on a
+    // machine where stt.getInfo().available is true. Every setter already
+    // builds it here for the same reason.
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
+
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        const QString message = noEngineMessage();
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    if (!pRecognizer->initialized()) {
+        const QString message = qsl("speech recognizer not initialized with a model - call stt.init() first");
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // Already listening for this profile is nothing to do. Already listening
+    // for another one is not: answering "yes, you are listening" to a profile
+    // that holds nothing sent it away believing a microphone it never got was
+    // its own. That case falls through to the claim below, which takes the
+    // microphone off the profile that has it.
+    Host& host = getHostFromLua(L);
+    if (pRecognizer->listening() && pMudlet->microphoneOwner() == &host) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Only what this call takes is given back below: claiming a microphone this
+    // profile already holds does nothing, so releasing it unconditionally would
+    // drop a claim made for an earlier session and send the phrase it is still
+    // decoding to whichever profile happens to be in front.
+    const bool alreadyOurs = (pMudlet->microphoneOwner() == &host);
+    if (!alreadyOurs && !pMudlet->claimMicrophoneFor(&host)) {
+        const QString message = qsl("another profile is still finishing a phrase on the microphone - try again in a moment");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+    if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
+        if (!alreadyOurs) {
+            pMudlet->releaseMicrophone();
+        }
+        // The recognizer has already said why through sysSTTError; what
+        // matters here is not telling the caller that recording began
+        return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.stop()
+// Stop listening and process any remaining audio.
+// Returns true on success, or nil + error message on failure.
+int TLuaInterpreter::sttStop(lua_State* L)
+{
+    const char* funcName = "stt.stop";
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
+    }
+
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        // Not initialized is fine - just return true
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // "Stopped" and "was never running because it failed" are different
+    // answers, and returning true for both told a caller its session had ended
+    // cleanly when the engine had faulted and produced nothing.
+    if (pRecognizer->state() == SpeechRecognizer::State::Error) {
+        const QString message = qsl("nothing was stopped - speech recognition is in an error state; the sysSTTError event carries the reason");
+        // Raised as well as returned: docs/stt-api.md's "refusals speak" covers
+        // every refusal the engine caused, and a consumer driving the bridge
+        // from events alone heard nothing at all about this one.
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // A session belongs to the profile that started it, and stopping is as much
+    // a part of owning it as starting was. Without this a profile could end
+    // another game's session and be told it had succeeded, while that game saw
+    // only a bare state change - the very ambiguity sysSTTHandover was added to
+    // remove, reached through a different door. Nothing is owed to a caller
+    // that holds nothing, so this refuses rather than handing the microphone
+    // over: taking it is what stt.start() is for.
+    Host& host = getHostFromLua(L);
+    if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+        const QString message = qsl("another profile is listening, and only the profile that started a session can stop it");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // Unconditional: which states have something to stop, and what a pending
+    // start does instead of finalising, are SpeechRecognizer::stopListening()'s
+    // rules now rather than this binding's copy of them.
+    pRecognizer->stopListening();
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.toggle()
+// Toggle speech recognition on/off.
+// Returns true if now listening, false if stopped, or nil + error on failure.
+int TLuaInterpreter::sttToggle(lua_State* L)
+{
+    const char* funcName = "stt.toggle";
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
+    }
+
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
+
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer || !pRecognizer->initialized()) {
+        const QString message = pRecognizer ? qsl("speech recognizer not initialized - call stt.init() first") : noEngineMessage();
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // starting() counts as on: a request still waiting on the permission
+    // dialog is one the player asked for, and reading it as off took the start
+    // branch, had it refused silently, and answered "now listening" while the
+    // microphone opened behind them. stopListening() handles Starting itself,
+    // so the branch below needs no special case of its own.
+    //
+    // Only the profile holding the microphone can toggle it off. For any other
+    // profile this control is off - whatever some other game is doing with the
+    // decoder - so pressing it asks for the microphone rather than surrendering
+    // one it never had.
+    Host& host = getHostFromLua(L);
+    const bool ownedHere = pMudlet->microphoneOwner() == &host;
+    if ((pRecognizer->listening() || pRecognizer->starting()) && ownedHere) {
+        pRecognizer->stopListening();
+        lua_pushboolean(L, false);
+    } else {
+        if (!ownedHere && !pMudlet->claimMicrophoneFor(&host)) {
+            const QString message = qsl("another profile is still finishing a phrase on the microphone - try again in a moment");
+            reportSpeechRefusalTo(host, message);
+            return warnArgumentValue(L, funcName, message);
+        }
+        if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
+            if (!ownedHere) {
+                pMudlet->releaseMicrophone();
+            }
+            return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
+        }
+        lua_pushboolean(L, true);
+    }
+
+    return 1;
+}
+
+// stt.listening()
+// Check if speech recognition is currently active.
+// Returns true if listening, false otherwise.
+// Reads the recognizer's state, which docs/stt-api.md makes the single truth:
+// there is deliberately no parallel "active" flag tracking what the user asked
+// for, because nothing would clear it when the recognizer leaves Listening on
+// its own. This stays in step with stt.getInfo().listening for the same reason.
+int TLuaInterpreter::sttIsListening(lua_State* L)
+{
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    // This profile's answer, not the decoder's. One recognizer is shared, so the
+    // engine being busy says nothing about whose session it is - and a package
+    // asking "am I listening" and being told about another game's microphone
+    // showed a live control it did not own and announced stops it never made.
+    // A profile that wants to know the device is busy elsewhere learns it from
+    // the refusal its own start returns.
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    const bool listeningHere = pRecognizer && pRecognizer->listening() && pMudlet->microphoneOwner() == &getHostFromLua(L);
+    lua_pushboolean(L, listeningHere);
+    return 1;
+}
+
+// stt.available()
+// Check if any speech engine - Vosk, sherpa-onnx, or the built-in macOS
+// backend - is present and loadable.
+// Returns true if available, false otherwise.
+int TLuaInterpreter::sttIsAvailable(lua_State* L)
+{
+    lua_pushboolean(L, speechEngineAvailable());
+    return 1;
+}
+
+// stt.initialized()
+// Check if speech recognition has been initialized with a model.
+// Returns true if initialized, false otherwise.
+int TLuaInterpreter::sttIsInitialized(lua_State* L)
+{
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    lua_pushboolean(L, pRecognizer && pRecognizer->initialized());
+    return 1;
+}
+
+// stt.getInfo()
+// Get information about the speech recognition backend.
+// The keys and their meanings are specified in docs/stt-api.md rather than
+// listed again here, because a second copy of that list has already drifted
+// once behind the keys this function actually sets.
+int TLuaInterpreter::sttGetInfo(lua_State* L)
+{
+    auto* pMudlet = mudlet::self();
+
+    lua_newtable(L);
+
+    // Every key below is answered whether or not a recognizer exists. A package
+    // reads these to decide what it can do, and it reads them before anything is
+    // installed - which was exactly when they were absent, so the documented
+    // probe getInfo().capabilities.words was a nil index on any machine without
+    // an engine.
+    auto* pRecognizer = pMudlet ? pMudlet->speechRecognizer() : nullptr;
+
+    // Asked of the recognizer once one exists, so the name cannot drift from
+    // the backend actually running. Empty before that: this build can create
+    // three backends now, and naming one of them on the strength of nothing
+    // would be the fixed value docs/stt-api.md says this key is not.
+    lua_pushstring(L, "backend");
+    lua_pushstring(L, pRecognizer ? pRecognizer->backendName().toUtf8().constData() : "");
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "available");
+    lua_pushboolean(L, speechEngineAvailable());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "initialized");
+    lua_pushboolean(L, pRecognizer && pRecognizer->initialized());
+    lua_settable(L, -3);
+
+    // Per-profile, matching stt.listening() - the two are documented as the same
+    // answer, and a getInfo() that reported another game's session while
+    // stt.listening() said no would be the worse of the two to debug.
+    lua_pushstring(L, "listening");
+    lua_pushboolean(L, pRecognizer && pRecognizer->listening() && pMudlet->microphoneOwner() == &getHostFromLua(L));
+    lua_settable(L, -3);
+
+    // Engine state, which distinguishes Error from Uninitialized - both of
+    // which report initialized == false
+    lua_pushstring(L, "state");
+    lua_pushstring(L, speechRecognizerStateName(pRecognizer ? pRecognizer->state() : SpeechRecognizer::State::Uninitialized));
+    lua_settable(L, -3);
+
+    // Path of the model actually in use, as opposed to the directory models
+    // are installed into that stt.getModelPath() reports
+    lua_pushstring(L, "modelPath");
+    lua_pushstring(L, pRecognizer ? pRecognizer->modelPath().toUtf8().constData() : "");
+    lua_settable(L, -3);
+
+    // Milliseconds of continuous silence before listening stops
+    // automatically; 0 while the timeout is disabled
+    lua_pushstring(L, "silenceTimeout");
+    lua_pushinteger(L, pRecognizer ? pRecognizer->silenceTimeout() : 0);
+    lua_settable(L, -3);
+
+    // Smoothed level of recent input, so a caller can tell a misheard phrase
+    // from one that barely arrived
+    lua_pushstring(L, "audioLevel");
+    lua_pushnumber(L, pRecognizer ? pRecognizer->audioLevel() : 0.0f);
+    lua_settable(L, -3);
+
+    // How quickly the engine calls an utterance finished
+    lua_pushstring(L, "sensitivity");
+    lua_pushstring(L, pRecognizer ? speechSensitivityName(pRecognizer->sensitivity()) : "default");
+    lua_settable(L, -3);
+
+    // What this backend can do, so packages adapt rather than guess:
+    // biasing/grammar govern whether setVocabulary reaches the engine, words
+    // whether sysSTTWords fires, onDevice whether audio stays on this machine.
+    // With no engine every answer is false, including onDevice: there is no
+    // backend to make a privacy guarantee, and claiming one nobody gave is
+    // the wrong way to be wrong.
+    lua_pushstring(L, "capabilities");
+    lua_newtable(L);
+    lua_pushstring(L, "biasing");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsBiasing());
+    lua_settable(L, -3);
+    lua_pushstring(L, "grammar");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsGrammar());
+    lua_settable(L, -3);
+    lua_pushstring(L, "words");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsWordResults());
+    lua_settable(L, -3);
+    lua_pushstring(L, "sensitivityTuning");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsSensitivityTuning());
+    lua_settable(L, -3);
+    lua_pushstring(L, "onDevice");
+    lua_pushboolean(L, pRecognizer && pRecognizer->onDevice());
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Only meaningful once an instance exists, and documented as such
+    if (pRecognizer) {
+        lua_pushstring(L, "version");
+        lua_pushstring(L, pRecognizer->backendVersion().toUtf8().constData());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "language");
+        lua_pushstring(L, pRecognizer->currentLanguage().toUtf8().constData());
+        lua_settable(L, -3);
+    }
+
+    lua_pushstring(L, "searchPaths");
+    lua_newtable(L);
+    int pathIndex = 1;
+    const bool searchSherpaPaths = modelBasedBackendForPaths(pMudlet) == SpeechRecognizerFactory::Backend::Sherpa;
+    const QStringList searchPaths = searchSherpaPaths ? SherpaRecognizer::librarySearchPaths() : VoskRecognizer::librarySearchPaths();
+    for (const QString& path : searchPaths) {
+        lua_pushinteger(L, pathIndex++);
+        lua_pushstring(L, path.toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    lua_settable(L, -3);
+
+    return 1;
+}
+
+// stt.getModelPath()
+// Get the default path where speech models should be stored, for whichever
+// model-based engine is actually loaded (falling back to the auto-preferred
+// installed one, then Vosk, when none is loaded yet).
+// Returns the path as a string.
+int TLuaInterpreter::sttGetModelPath(lua_State* L)
+{
+    const QString path = speechModelsDirectory(mudlet::self());
+    lua_pushstring(L, path.toUtf8().constData());
+    return 1;
+}
+
+// stt.getLibraryPath()
+// Get the user-writable directory the speech recognition library is
+// installed into, for whichever model-based engine is actually loaded (see
+// stt.getModelPath()).
+// Returns the path as a string.
+int TLuaInterpreter::sttGetLibraryPath(lua_State* L)
+{
+    const bool sherpa = modelBasedBackendForPaths(mudlet::self()) == SpeechRecognizerFactory::Backend::Sherpa;
+    const QString path = sherpa ? SherpaRecognizer::userLibraryPath() : VoskRecognizer::userLibraryPath();
+    lua_pushstring(L, path.toUtf8().constData());
+    return 1;
+}
+
+// stt.listModels()
+// List available downloaded language models, across every model-based engine
+// - not only whichever is currently loaded - so a model downloaded for one
+// engine stays visible while another is active, or before any is.
+// Returns a table of model names/paths.
+int TLuaInterpreter::sttListModels(lua_State* L)
+{
+    lua_newtable(L);
+    int index = 1;
+
+    const QDir voskModelsDir(VoskRecognizer::modelsDirectoryPath());
+    for (const QString& model : VoskRecognizer::getInstalledModels()) {
+        lua_pushinteger(L, index++);
+        lua_newtable(L);
+
+        lua_pushstring(L, "name");
+        lua_pushstring(L, model.toUtf8().constData());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "path");
+        lua_pushstring(L, voskModelsDir.filePath(model).toUtf8().constData());
+        lua_settable(L, -3);
+
+        lua_settable(L, -3);
+    }
+
+    const QDir sherpaModelsDir(SherpaRecognizer::modelsDirectoryPath());
+    for (const QString& model : SherpaRecognizer::getInstalledModels()) {
+        lua_pushinteger(L, index++);
+        lua_newtable(L);
+
+        lua_pushstring(L, "name");
+        lua_pushstring(L, model.toUtf8().constData());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "path");
+        lua_pushstring(L, sherpaModelsDir.filePath(model).toUtf8().constData());
+        lua_settable(L, -3);
+
+        lua_settable(L, -3);
+    }
+
+    return 1;
+}
+
+// stt.close()
+// Close and cleanup speech recognition resources.
+// Returns true.
+int TLuaInterpreter::sttClose(lua_State* L)
+{
+    const char* funcName = "stt.close";
+
+    auto* pMudlet = mudlet::self();
+    if (pMudlet) {
+        auto* pRecognizer = pMudlet->speechRecognizer();
+        if (pRecognizer) {
+            // Closing takes the engine down for every profile, so a profile
+            // that holds nothing must not be able to do it to the one that
+            // does - it would end another game's session and destroy the model
+            // under it, and that game would see only a state change.
+            Host& host = getHostFromLua(L);
+            if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+                const QString message = qsl("another profile is listening, so the speech engine cannot be closed from here");
+                reportSpeechRefusalTo(host, message);
+                return warnArgumentValue(L, funcName, message);
+            }
+
+            // Held rather than resolved later: releaseResources() below drives
+            // the recognizer to Uninitialized, which releases the claim, and
+            // the report is raised after that - so by then raiseSpeechEvent()
+            // would answer with whichever profile is in front rather than the
+            // one whose phrase was lost.
+            Host* pOwner = pMudlet->microphoneOwner() ? pMudlet->microphoneOwner() : &host;
+
+            if (pRecognizer->listening()) {
+                pRecognizer->cancel();
+            }
+            // Noted before the release, said after it. The test has to run
+            // while the state still shows Processing, but the report must not:
+            // the report reaches Lua inside this frame, and a handler
+            // answering "phrase lost" by restarting would be refused by the
+            // base for still processing - a second, false error about a phrase
+            // that had just been declared gone.
+            // Not while the phrase is being handed to Lua: closing from a
+            // sysSTTResult handler is closing on the strength of the phrase
+            // that handler was just given, and the engine still reads as
+            // Processing while it runs. Telling that handler its phrase is
+            // lost describes the one outcome that did not happen.
+            const bool lostAPhraseBeingTranscribed = !pRecognizer->listening() && pRecognizer->state() == SpeechRecognizer::State::Processing && !pMudlet->deliveringSpeechResult();
+            pRecognizer->releaseResources();
+            // listening() is false in Processing, so this used to fall straight
+            // through and the phrase being decoded went with the engine - no
+            // sysSTTResult, no sysSTTError, and nothing to tell it apart from
+            // the player never speaking. docs/stt-api.md rule 1 allows exactly
+            // one way to drop recognised speech, which is to report it.
+            if (lostAPhraseBeingTranscribed) {
+                reportSpeechRefusalTo(*pOwner, qsl("speech recognition was closed while the last phrase was still being transcribed, so that phrase is lost"));
+            }
+        }
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+
+// stt.setSilenceTimeout(milliseconds)
+// Stop listening automatically after this long of continuous silence, with
+// the utterance finalised exactly as stt.stop() would. 0 disables the
+// timeout. The setting persists across listening sessions.
+// Returns true, or nil + error message on failure.
+int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
+{
+    const int msec = getVerifiedInt(L, "stt.setSilenceTimeout", 1, "milliseconds");
+    if (msec < 0) {
+        return warnArgumentValue(L, "stt.setSilenceTimeout", qsl("milliseconds must be 0 (disabled) or greater, got %1").arg(msec));
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, "stt.setSilenceTimeout", "mudlet instance not available");
+    }
+
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        const QString message = noEngineMessage();
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, "stt.setSilenceTimeout", message);
+    }
+
+    pRecognizer->setSilenceTimeout(msec);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.setSensitivity(mode)
+// How quickly the engine decides an utterance has ended: "short" for
+// commands, "default" for balanced use, "long" for dictation. Engines apply
+// this to their own end-of-speech detection, so the effect is comparable
+// rather than identical between them.
+// Returns true, or nil + error message on failure.
+int TLuaInterpreter::sttSetSensitivity(lua_State* L)
+{
+    const QString mode = getVerifiedString(L, "stt.setSensitivity", 1, "sensitivity").toLower();
+
+    SpeechRecognizer::Sensitivity sensitivity;
+    if (mode == QLatin1String("short")) {
+        sensitivity = SpeechRecognizer::Sensitivity::Short;
+    } else if (mode == QLatin1String("default")) {
+        sensitivity = SpeechRecognizer::Sensitivity::Default;
+    } else if (mode == QLatin1String("long")) {
+        sensitivity = SpeechRecognizer::Sensitivity::Long;
+    } else {
+        return warnArgumentValue(L, "stt.setSensitivity", qsl(R"(sensitivity must be "short", "default" or "long", got "%1")").arg(mode));
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, "stt.setSensitivity", "mudlet instance not available");
+    }
+
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        const QString message = noEngineMessage();
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, "stt.setSensitivity", message);
+    }
+
+    // Asked before the call, not inferred from its answer. Both produce false
+    // and they call for opposite responses: a package told "cannot" stops
+    // asking, which is right for an engine that never can and wrong for one
+    // whose reload happened to fail. Only the engine knows which it is, and
+    // only capabilities() can say so before the attempt.
+    if (!pRecognizer->supportsSensitivityTuning()) {
+        // Names the engine rather than blaming "this build of the speech
+        // engine": for an older libvosk without the endpointer symbol that
+        // was true, but the built-in macOS backend can never tune
+        // end-of-speech detection in any build, and telling a player to go
+        // and find a better one sends them after something that does not exist.
+        // backendName() is already a proper name, so it carries the sentence
+        // on its own - "the Apple Speech speech engine" reads as a stutter.
+        //
+        // Returned but not raised, matching setVocabulary(): an engine that
+        // can never do this is answering a capability question, not reporting
+        // a fault, and a package applying its saved sensitivity whenever
+        // speech starts would otherwise raise sysSTTError on every single
+        // start for a limit that will never change.
+        const QString message = qsl("%1 cannot tune end-of-speech detection").arg(pRecognizer->backendName());
+        return warnArgumentValue(L, "stt.setSensitivity", message);
+    }
+
+    if (!pRecognizer->setSensitivity(sensitivity)) {
+        // An engine that can tune and did not, this once. sherpa-onnx rebuilds
+        // the model to re-bake its endpoint rules and returns that rebuild's
+        // answer, so the reason is whatever went wrong with the rebuild - which
+        // it has already said through sysSTTError, in terms this layer cannot
+        // improve on. Pointed at rather than restated, the way stt.start() does.
+        return warnArgumentValue(L, "stt.setSensitivity", "the sensitivity could not be applied this time - the sysSTTError event carries the reason");
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.setVocabulary(words)
+// Supply a table (array) of words or phrases for the backend to bias or
+// constrain recognition toward. Returns true only when the engine applied
+// the vocabulary; false is not an error - it means this backend cannot use
+// it (see stt.getInfo().capabilities) and callers should correct results
+// client-side instead.
+int TLuaInterpreter::sttSetVocabulary(lua_State* L)
+{
+    if (!lua_istable(L, 1)) {
+        lua_pushfstring(L, "stt.setVocabulary: bad argument #1 type (words as table expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    QStringList words;
+    for (int i = 1;; ++i) {
+        lua_rawgeti(L, 1, i);
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            break;
+        }
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            const QString word = QString::fromUtf8(lua_tostring(L, -1)).trimmed();
+            if (!word.isEmpty()) {
+                words.append(word);
+            }
+        }
+        lua_pop(L, 1);
+    }
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, "stt.setVocabulary", "mudlet instance not available");
+    }
+
+    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        const QString message = noEngineMessage();
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, "stt.setVocabulary", message);
+    }
+
+    // The Lua answer stays a boolean, as documented: applied or not. Nothing is
+    // emitted here. A Failed backend has already said why, in terms naming the
+    // actual fault, and adding a second event restated it with a vaguer one -
+    // two sysSTTError for one problem, the useful one first.
+    const auto outcome = pRecognizer->setVocabulary(words);
+    lua_pushboolean(L, outcome == SpeechRecognizer::VocabularyResult::Applied);
+    return 1;
+}
+
+// stt.getPlatformKey()
+// Identify the platform and architecture for selecting a Vosk library build.
+// Returns a key string, or nil if this platform has no published build.
+int TLuaInterpreter::sttGetPlatformKey(lua_State* L)
+{
+#if defined(Q_OS_MACOS)
+    lua_pushstring(L, "macos");
+#elif defined(Q_OS_WIN)
+#if defined(Q_PROCESSOR_ARM_64)
+    lua_pushnil(L);
+#elif defined(Q_PROCESSOR_X86_64)
+    lua_pushstring(L, "windows-x64");
+#else
+    lua_pushstring(L, "windows-x86");
+#endif
+#elif defined(Q_OS_LINUX)
+#if defined(Q_PROCESSOR_ARM_64)
+    lua_pushstring(L, "linux-aarch64");
+#elif defined(Q_PROCESSOR_X86_64)
+    lua_pushstring(L, "linux-x86_64");
+#else
+    lua_pushnil(L);
+#endif
+#else
+    lua_pushnil(L);
+#endif
+    return 1;
+}
+
+// stt.reloadLibrary()
+// Re-run Vosk library detection, for use after installing the library.
+// Returns whether the library is now available, or false plus a message if
+// the recognizer is in use, or still holds live native resources, and cannot
+// be safely unloaded.
+int TLuaInterpreter::sttReloadLibrary(lua_State* L)
+{
+    auto* pMudlet = mudlet::self();
+    if (pMudlet) {
+        auto* pRecognizer = pMudlet->speechRecognizer();
+        // initialized() is false in State::Error, but Error can still be
+        // reached with live native handles (e.g. a failure partway through
+        // startListeningInternal() after the native recognizer was already
+        // allocated), so check hasLiveNativeResources() directly rather than
+        // relying on state alone. A failed initialize() before any handle was
+        // allocated also leaves the recognizer in Error, and that case must
+        // stay reloadable since it's exactly what stt.reloadLibrary() is for.
+        if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
+            // stt.reloadLibrary() takes no arguments, so this cannot be a caller's
+            // own mistake - it is a call the engine could not satisfy, and rule 2
+            // in docs/stt-api.md says those speak through sysSTTError too. The
+            // package that left the recognizer in use is usually not the one that
+            // asked for the reload, and it is the one that needs to hear this.
+            const QString refusal = qsl("cannot reload the speech recognition library while it is in use, close speech recognition first");
+            reportSpeechRefusal(refusal);
+            return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
+        }
+    }
+
+    // A refused unload leaves every pointer and both flags as they were, so
+    // libraryAvailable() below would skip the probe and answer from cache -
+    // reporting a successful reload of a module that was never released
+    if (!VoskRecognizer::resetLibraryLoadState()) {
+        // The loader still holds the module: an engine fault rather than a state
+        // guard, and the one an installer replacing the file most needs told.
+        const QString refusal = qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
+    }
+    // sherpa latches its own "already looked" flag, and resetting only Vosk's
+    // left a first sherpa install invisible until Mudlet restarted - which is
+    // the restart this call exists to avoid. Safe to reach here only because
+    // the guard above refused while any native handle was live: this nulls the
+    // function pointers that destroyStream() and releaseSherpaResources() test
+    // before freeing, so handles outliving it could never be freed at all.
+    if (!SherpaRecognizer::resetLibraryLoadState()) {
+        // The loader still holds the module: an engine fault rather than a state
+        // guard, and the one an installer replacing the file most needs told.
+        const QString refusal = qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
+    }
+    // Lift the latch stt.unloadLibrary() set, since asking for a reload is
+    // exactly the caller saying they are done replacing the file
+    VoskRecognizer::unloadLibraryByRequest(false);
+    // Both latches were reset above, so the answer is whether speech can be had
+    // at all now - not whether Vosk in particular can. A player who installed
+    // sherpa-onnx and called this got false for a re-detect that had worked.
+    // Both probed, and neither short-circuited: with || the sherpa probe ran
+    // only when Vosk was absent, so whether reloadLibrary left sherpa's module
+    // mapped depended on whether an unrelated engine happened to be installed.
+    // Re-detect means re-detect, for each of them, every time.
+    VoskRecognizer::libraryAvailable();
+    SherpaRecognizer::sherpaAvailable();
+    // And the answer is the same question stt.available() answers - whether
+    // speech can be had at all - rather than whether a library in particular
+    // turned up. On a Mac the built-in backend needs none, so a caller told
+    // "false" here after a successful re-detect would have concluded speech
+    // was unavailable while stt.available() said otherwise.
+    const bool available = speechEngineAvailable();
+    announceSpeechCapabilities(pMudlet);
+    if (!available) {
+        // Detection ran and found nothing usable, which is the engine's answer
+        // rather than anything the caller got wrong - so it speaks like the other
+        // refusals here instead of leaving a bare false to be guessed at.
+        const QString refusal = noEngineMessage();
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// stt.unloadLibrary()
+// Unload the Vosk library without probing for it again, so that its file can be
+// deleted. Windows refuses to delete a module that is still mapped, so removing
+// the library has to go through here first.
+// Returns true once unloaded, or false plus a message if the recognizer is in
+// use, or still holds live native resources, and cannot be safely unloaded.
+int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
+{
+    auto* pMudlet = mudlet::self();
+    if (pMudlet) {
+        auto* pRecognizer = pMudlet->speechRecognizer();
+        // Same guard as stt.reloadLibrary(): see the comment there for why
+        // hasLiveNativeResources() is checked rather than state alone.
+        if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
+            // Announced for the same reason as the sibling refusal in
+            // stt.reloadLibrary(): no arguments to get wrong, so this is the
+            // engine refusing, and other packages on the profile are affected.
+            const QString refusal = qsl("cannot unload the speech recognition library while it is in use, close speech recognition first");
+            reportSpeechRefusal(refusal);
+            return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
+        }
+        // Only Vosk's loader is wired to this call, so an engine that has a
+        // library of its own which this cannot release has to refuse: saying
+        // true would be the plainest lie the bridge tells, with the module
+        // still mapped, stt.available() still answering true, and on Windows
+        // the file the caller meant to replace still locked.
+        //
+        // The built-in macOS backend is not one of those. It has no library at
+        // all, so unloading Vosk's is exactly as possible with it loaded as
+        // without - and refusing there told a caller their file was locked by
+        // an engine that maps nothing. It is also the engine that exists by
+        // default on a Mac the moment anything builds one, which made the
+        // refusal the normal answer rather than the exceptional one.
+        if (pRecognizer && !qobject_cast<VoskRecognizer*>(pRecognizer) && loadedSpeechBackend(pRecognizer) != SpeechRecognizerFactory::Backend::Platform) {
+            const QString message = qsl("stt.unloadLibrary() acts on the Vosk library alone today, and the engine loaded is %1 - its library stays mapped, so quit Mudlet to replace it")
+                                            .arg(pRecognizer->backendName());
+            // Raised as well as returned, like the other refusals here: which
+            // engine is loaded is not the caller's argument, and a consumer
+            // driving an install flow from events alone would otherwise see a
+            // false it could not attribute to anything.
+            reportSpeechRefusal(message);
+            return warnArgumentValue(L, "stt.unloadLibrary", message, true);
+        }
+    }
+
+    if (!VoskRecognizer::resetLibraryLoadState()) {
+        // The whole point of this call is to let the file be replaced, so a
+        // failure here is precisely what the caller - and anything else about to
+        // touch that file - has to hear about.
+        const QString refusal = qsl("the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
+    }
+
+    // Stays unloaded until stt.reloadLibrary() asks for it back: without this
+    // the next read-shaped call - getInfo(), available() - maps it straight
+    // back in, and the file the caller meant to replace is locked again
+    VoskRecognizer::unloadLibraryByRequest(true);
+    announceSpeechCapabilities(pMudlet);
+
+    lua_pushboolean(L, true);
+    return 1;
+}

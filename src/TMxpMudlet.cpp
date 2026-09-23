@@ -53,12 +53,18 @@ void TMxpMudlet::popColor()
 
 void TMxpMudlet::pushColor(QList<QColor>& stack, const QString& color)
 {
-    if (color.isEmpty()) {
+    // A name the client does not know gives an invalid QColor, which a TChar
+    // would store as opaque black - so treat it like an attribute that was not
+    // given at all and carry on with the color in force, as an empty name has
+    // always done. Repeating that color rather than not pushing is what keeps
+    // the stack in step with popColor().
+    const QColor newColor(color);
+    if (!newColor.isValid()) {
         if (!stack.isEmpty()) {
             stack.push_back(stack.last());
         }
     } else {
-        stack.push_back(QColor(color));
+        stack.push_back(newColor);
     }
 }
 void TMxpMudlet::popColor(QList<QColor>& stack)
@@ -105,7 +111,7 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
 {
     if (tag->isStartTag()) {
         if (context.getElementRegistry().containsElement(tag->getName())) {
-            enqueueMxpEvent(tag->asStartTag());
+            enqueueMxpEvent(tag->asStartTag(), context.getElementRegistry().getElement(tag->getName()));
         } else if (tag->isNamed("SEND")) {
             // send events are queued on closing tag so the caption is available
             TMxpEvent event;
@@ -123,12 +129,26 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
     return result;
 }
 
-void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
+void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag, const TMxpElement& element)
 {
     TMxpEvent mxpEvent;
     mxpEvent.name = tag->getName();
     for (const auto& attrName : tag->getAttributesNames()) {
         mxpEvent.attrs[attrName] = tag->getAttributeValue(attrName);
+    }
+    // Also resolve the element's declared (ATT) attribute names - like
+    // TMxpCustomElementTagHandler::parseFlagAttributes() does - so a
+    // positional token like <RMob "Urthguk"> is reachable under a stable,
+    // case-preserving key: mxp.rmob.name = "Urthguk" for ATT="Name"
+    for (int i = 0, total = element.attrs.size(); i < total; ++i) {
+        const QString& attrName = element.attrs.at(i);
+        if (tag->hasAttribute(attrName)) {
+            mxpEvent.attrs[attrName] = tag->getAttributeValue(attrName);
+        } else if (tag->getAttributesCount() > i) {
+            mxpEvent.attrs[attrName] = tag->getAttribute(i).getName();
+        } else if (element.defaultValues.contains(attrName)) {
+            mxpEvent.attrs[attrName] = element.defaultValues.value(attrName);
+        }
     }
     mxpEvent.actions = getLinkStore().getCurrentLinks();
     mxpEvent.caption.clear();

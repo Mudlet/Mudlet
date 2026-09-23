@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-minimal]]
+author = [[Mudlet test suite]]
+title = [[Minimal fixture package for Package_spec.lua]]
+version = [[1.0]]
+description = [[One alias and one script, just enough to prove a package installed.]]

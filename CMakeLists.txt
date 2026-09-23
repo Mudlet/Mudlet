@@ -37,7 +37,7 @@ cmake_minimum_required(VERSION 3.25.1)
 
 if(APPLE)
   # minimum supported version by Qt6
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
 endif()
 
 project(mudlet)
@@ -78,6 +78,7 @@ file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
   docs/**
   .clang-format
   src/.gitignore
+  src/mudlet-lua/**
 )
 
 # It is not clear that the "COMMENT" actually shows up anywhere - so include
@@ -105,6 +106,7 @@ if(WIN32)
   set(APP_TARGET mudlet.exe)
 elseif(APPLE)
   set(APP_TARGET Mudlet)
+  enable_language(OBJCXX)
 else()
   set(APP_TARGET mudlet)
 endif()
@@ -135,11 +137,20 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.20.1)
+set(APP_VERSION 5.0.0)
 
-# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
-if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-    set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
+# empty value must be distinguished from an unset one so release builds (CI exports
+# MUDLET_VERSION_BUILD="") get a clean version with no "-dev-<sha>" suffix:
+#   unset (local dev build)         -> "-dev-<sha>"
+#   defined but empty (release)     -> "" (no suffix)
+#   defined with a value (ptb/test) -> "<value>-<sha>"
+if(DEFINED ENV{MUDLET_VERSION_BUILD})
+    if("$ENV{MUDLET_VERSION_BUILD}" STREQUAL "")
+        set(BUILD_VALUE "")
+    else()
+        set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+    endif()
 else()
     set(BUILD_VALUE "-dev-${GIT_SHA1}")
 endif()
@@ -150,11 +161,6 @@ message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
-
-# For release builds, comment out the above and uncomment below:
-# file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-# message(STATUS "Value written to app-build.txt file: {nothing}")
-# set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
@@ -220,7 +226,15 @@ if(APPLE)
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"
     READABLE_NAME "QtKeychain")
+  # Building qtkeychain's translations runs lupdate, which rewrites the .ts
+  # files inside the submodule whenever a source is newer than them, so the
+  # submodule shows as modified after every checkout. Mudlet neither bundles
+  # nor loads those catalogues, so skip them. The normal variable overrides the
+  # option() in the subdirectory (CMP0077) and is unset afterwards so the
+  # generic name cannot leak into other 3rdparty projects.
+  set(BUILD_TRANSLATIONS OFF)
   add_subdirectory(3rdparty/qtkeychain)
+  unset(BUILD_TRANSLATIONS)
 endif()
 
 git_submodule_init(
@@ -260,14 +274,56 @@ if(CCACHE_FOUND)
   set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif(CCACHE_FOUND)
 
+# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
+macro(set_alternate_linker linker)
+  find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
+  if(LINKER_EXECUTABLE)
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.1.0 AND "${USE_ALTERNATE_LINKER}" STREQUAL "mold")
+      # LINKER_EXECUTABLE will be a full path to ld.mold, so we replace the end of the path, resulting in the relative
+      # libexec/mold dir, and tell GCC to look there first for an override version of executables, in this case, ld
+      string(REPLACE "bin/ld.mold" "libexec/mold" PATH_TO_LIBEXEC_MOLD ${LINKER_EXECUTABLE})
+      add_link_options("-B${PATH_TO_LIBEXEC_MOLD}")
+    else()
+      add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
+    endif()
+  else()
+    message(WARNING "USE_ALTERNATE_LINKER=${USE_ALTERNATE_LINKER} was asked for but no such linker is installed - using the system one")
+    set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker" FORCE)
+  endif()
+endmacro()
+
+# add_link_options() only reaches directories added after it, and most of the
+# link time is in test/, so this has to come before those subdirectories
+set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
+if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
+  set_alternate_linker(${USE_ALTERNATE_LINKER})
+endif()
+
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
+# edbee-lib's AUTOMOC mocs_compilation.cpp hits the same GCC 16
+# -Wsfinae-incomplete false positives as mudlet_core's (qmetatype.h's
+# is_complete SFINAE instantiated from one moc file while a type defined in a
+# later moc file is incomplete). The per-source property used for mudlet_core
+# does not cross the add_subdirectory() boundary for a generated AUTOMOC file,
+# so silence the warning on the edbee-lib target itself - PRIVATE so it does
+# not propagate to mudlet_core. Scoped to GCC: the flag is GCC-only (GCC 15+)
+# and Clang/MSVC would diagnose the unknown option.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
+endif()
 add_subdirectory(3rdparty/communi)
-add_subdirectory(3rdparty/qt-tags-widget)
+# Upstream ships this as a standalone library, so a plain add_subdirectory() adopts
+# its own install() rules and puts a header, a static library and CMake export files
+# into every "cmake --install" of this tree - and from there into the .deb, .rpm and
+# Flatpak payloads. EXCLUDE_FROM_ALL leaves the subdirectory out of the generated
+# install script, so no development files reach it; that is observed CMake behaviour
+# rather than documented, which is why the packaging scripts check the staged tree.
+# QTagEdit itself is still built, because mudlet_core links it.
+add_subdirectory(3rdparty/qt-tags-widget EXCLUDE_FROM_ALL)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
-add_subdirectory(test)
 
-
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)
+option(BUILD_TESTING "Build the test tree" ON)
+if(BUILD_TESTING)
+  add_subdirectory(test)
+endif()

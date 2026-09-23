@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022, 2026 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,6 +40,8 @@ public:
 
 private slots:
     void slot_editingNameFinished();
+    void slot_setMaximumValueForOffset(const int);
+    void slot_setColumnsOrRowsCountText(const int);
 };
 
 #endif // MUDLET_DLGACTIONMAINAREA_H

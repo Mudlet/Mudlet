@@ -4,18 +4,51 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * fri'
+  pull_request:
+    paths:
+      - 'CI/update-autocompletion.lua'
+      - 'CI/test-update-autocompletion.lua'
+      - '.github/workflows/update-autocompletion.yml'
+
+permissions:
+  contents: read
 
 jobs:
-  update-autocompletion:
+  # Run the scraper against a recorded copy of the wiki's heading markup. This catches a
+  # regression in the scraper itself - the wiki moving underneath it is what the count
+  # guards in the generator are for - so it is worth running on any change to either file
+  # rather than only finding out on the next scheduled scrape.
+  test-scraper:
+    name: Unit-test the scraper against recorded wiki markup
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-
+    # this job runs Lua out of the pull request's own checkout, so its token gets
+    # nothing it could write with
+    permissions:
+      contents: read
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: leafo/gh-actions-lua@v13
       with:
         luaVersion: "5.1.5"
-    - uses: actions/setup-node@v6
+
+    - name: unit-test the scraper
+      run: lua CI/test-update-autocompletion.lua
+
+  update-autocompletion:
+    runs-on: ubuntu-latest
+    needs: test-scraper
+    # only this job creates the check run below, and it never runs on a pull request
+    permissions:
+      contents: read
+      checks: write
+    if: ${{ github.repository_owner == 'Mudlet' && github.event_name != 'pull_request' }}
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: leafo/gh-actions-lua@v13
+      with:
+        luaVersion: "5.1.5"
+    - uses: actions/setup-node@v7
     - uses: leafo/gh-actions-luarocks@v6
 
     - name: install Lua dependencies
@@ -24,7 +57,59 @@ jobs:
         luarocks install lunajson
 
     - name: update autocompletion data
-      run: lua CI/update-autocompletion.lua src/lua-function-list.json
+      id: update
+      run: |
+        set -o pipefail
+        lua CI/update-autocompletion.lua src/lua-function-list.json | tee update.log
+
+        # The two kinds of warning need different people to act on them: a duplicate heading
+        # is something to fix on the wiki, a heading this scraper cannot read as a name is
+        # something to fix in the scraper. Reporting both as duplicates told the reviewer of
+        # the update PR that the scrape had gone fine when it had not.
+        sed -n 's/^::warning::duplicate heading: //p' update.log > duplicates.txt
+        sed -n 's/^::warning::unusable name: //p' update.log > unusable.txt
+
+        : > warnings.md
+        report() {
+          count=$(wc --lines < "$1")
+          if [ "$count" -eq 0 ]; then
+            return 0
+          fi
+          {
+            echo "#### :warning: $2 ($count)"
+            echo ""
+            # a markup change puts every heading on the page in here, and GitHub rejects a
+            # pull request body over 65,536 characters outright
+            head --lines=20 "$1" | sed 's/^/- /'
+            if [ "$count" -gt 20 ]; then
+              echo "- ... and $((count - 20)) more, in this run's log"
+            fi
+          } >> warnings.md
+        }
+        report duplicates.txt "Duplicate function headings in the wiki manual"
+        report unusable.txt "Headings the scraper could not read as function names"
+
+        if [ -s warnings.md ]; then
+          cat warnings.md >> "$GITHUB_STEP_SUMMARY"
+          # a scraped heading rendering to the delimiter would otherwise close the block early
+          delimiter="PRBODY$(date +%s%N)"
+          {
+            echo "warnings<<$delimiter"
+            cat warnings.md
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+        duplicate_count=$(wc --lines < duplicates.txt)
+        if [ "$duplicate_count" -gt 0 ]; then
+          delimiter="DUPES$(date +%s%N)"
+          {
+            echo "duplicate_count=$duplicate_count"
+            echo "duplicates<<$delimiter"
+            head --lines=50 duplicates.txt | sed 's/^/- /'
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+        fi
 
     - name: sort autocompletion data
       run: |
@@ -44,9 +129,10 @@ jobs:
     - name: check if any autocompletion data was modified
       id: getdiff
       run: |
+        set -o pipefail
         lines_changed=$(git diff --patch --unified=0 src/lua-function-list.json | wc --lines)
         echo "$lines_changed lines changed."
-        echo ::set-output name=lines_changed::$lines_changed
+        echo "lines_changed=$lines_changed" >> "$GITHUB_OUTPUT"
 
     - name: send in a pull request
       uses: peter-evans/create-pull-request@v8
@@ -62,4 +148,28 @@ jobs:
           :crown: An automated PR to update autocompletion data in Mudlet from ${{ github.ref }} (${{ github.sha }}).
           #### Motivation for adding to Mudlet
           So autocompletion works as expected.
+          ${{ steps.update.outputs.warnings }}
         author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
+    # GitHub Actions cannot conclude a run as anything but success or failure, so raise the
+    # duplicates as a separate check run - 'neutral' is what shows up as a yellow warning
+    - name: flag duplicate functions in the manual
+      if: steps.update.outputs.duplicates != ''
+      uses: actions/github-script@v9
+      env:
+        DUPLICATE_COUNT: ${{ steps.update.outputs.duplicate_count }}
+        DUPLICATES: ${{ steps.update.outputs.duplicates }}
+      with:
+        script: |
+          await github.rest.checks.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            name: 'wiki manual duplicates',
+            head_sha: context.sha,
+            status: 'completed',
+            conclusion: 'neutral',
+            output: {
+              title: `${process.env.DUPLICATE_COUNT} duplicate function heading(s) in the wiki manual`,
+              summary: process.env.DUPLICATES,
+            },
+          });

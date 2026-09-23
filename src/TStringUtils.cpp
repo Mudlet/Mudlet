@@ -18,6 +18,8 @@
  ***************************************************************************/
 #include "TStringUtils.h"
 
+#include "TEncodingHelper.h"
+
 
 bool TStringUtils::isQuote(QChar ch)
 {
@@ -33,4 +35,17 @@ bool TStringUtils::isOneOf(QChar inputCharacter, const QString& characterSet)
     }
 
     return false;
+}
+
+QString TStringUtils::decodeBytes(const std::string& bytes, const QByteArray& encoding)
+{
+    // An unnegotiated (empty) session encoding is treated as UTF-8, matching the
+    // historical default for MXP text and staying a safe pass-through for ASCII.
+    if (encoding.isEmpty() || encoding == QByteArrayLiteral("UTF-8")) {
+        return QString::fromStdString(bytes);
+    }
+    if (encoding == QByteArrayLiteral("ISO 8859-1")) {
+        return QString::fromLatin1(bytes.c_str(), static_cast<int>(bytes.length()));
+    }
+    return TEncodingHelper::decode(QByteArray::fromRawData(bytes.c_str(), bytes.length()), encoding);
 }

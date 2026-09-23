@@ -18,10 +18,14 @@
  ***************************************************************************/
 
 #include "updater.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
 
+#include <QDataStream>
+#include <QSaveFile>
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QMessageBox>
 #include <QPushButton>
@@ -89,21 +93,82 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     feed.reset(new dblsqd::Feed(this));
     feed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion);
     mPeriodicCheck = std::make_unique<QTimer>();
+
+#if !defined(Q_OS_MACOS)
+    // The update dialog must not be deleted in ~Updater: this Updater is
+    // parented to the application object (so it can offer an update after the
+    // last window closes, #9388), which means ~Updater only runs inside the
+    // application's own destructor - after ~QApplication has torn down all
+    // widget infrastructure. Deleting a QWidget that late corrupts the heap on
+    // Windows (#9122). aboutToQuit fires while the application is still fully
+    // alive, so destroy it there instead.
+    //
+    // deleteLater(), not delete: quit() emits aboutToQuit synchronously and the
+    // dialog quits when dismissed, so this can run with dialog code still on
+    // the stack (#9967). Qt flushes pending DeferredDelete events as exec()
+    // unwinds, so the dialog is still destroyed before ~QApplication.
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this]() {
+        if (updateDialog) {
+            updateDialog->deleteLater();
+        }
+    });
+#endif
 }
 
-Updater::~Updater()
+Updater::~Updater() = default;
+
+// A download is kept deliberately - UpdateDialog records it in settings and
+// reuses it next launch rather than fetching another 135MB - and the installer
+// copied from it on Windows has to outlive Mudlet, since the batch file only
+// runs it once Mudlet has exited. What was missing is anything to collect the
+// ones that never get reused: the installer copy, which nothing has ever
+// deleted, and downloads orphaned when Mudlet went away without recording them
+// (#9985). Those accumulated at ~135MB apiece.
+//
+// keepFilePath is the download UpdateDialog still intends to use. Everything
+// else is fair game once it has had time to be claimed - a second Mudlet may
+// have just started a download of its own, and an installer waiting for the
+// batch file to pick it up is only seconds old.
+void Updater::cleanupStaleUpdateFiles(const QString& directory, const QString& keepFilePath)
 {
-#if !defined(Q_OS_MACOS)
-    // QPointer::data() returns null if Qt already deleted the dialog; only
-    // delete if it hasn't been cleaned up yet.
-    if (updateDialog) {
-        delete updateDialog;
+    if (directory.isEmpty()) {
+        qWarning() << "No temporary directory to clean leftover update files from";
+        return;
     }
-#endif
+
+    const QDir tempDir(directory);
+    const QStringList leftovers{qsl("mudlet-update-*"), qsl("mudlet-setup-*.exe")};
+    const QDateTime unclaimedBy = QDateTime::currentDateTime().addSecs(-3600);
+    const QString keepFile = keepFilePath.isEmpty() ? QString() : QFileInfo(keepFilePath).absoluteFilePath();
+    qint64 freedBytes = 0;
+    int removedCount = 0;
+    int failedCount = 0;
+
+    for (const QFileInfo& fileInfo : tempDir.entryInfoList(leftovers, QDir::Files)) {
+        if (fileInfo.absoluteFilePath() == keepFile || fileInfo.lastModified() > unclaimedBy) {
+            continue;
+        }
+        const qint64 fileSize = fileInfo.size();
+        if (QFile::remove(fileInfo.absoluteFilePath())) {
+            freedBytes += fileSize;
+            ++removedCount;
+        } else {
+            ++failedCount;
+        }
+    }
+
+    if (removedCount) {
+        qWarning() << "Removed" << removedCount << "leftover update file(s), freeing" << (freedBytes / 1024) << "KB";
+    }
+    if (failedCount) {
+        qWarning() << "Could not remove" << failedCount << "leftover update file(s) in" << directory << "- retrying on the next start";
+    }
 }
 
 void Updater::checkUpdatesOnStart()
 {
+    cleanupStaleUpdateFiles(QStandardPaths::writableLocation(QStandardPaths::TempLocation), dblsqd::UpdateDialog::pendingDownloadPath(mSettings));
+
 #if defined(Q_OS_MACOS)
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
@@ -138,9 +203,25 @@ void Updater::checkUpdatesOnStart()
     mPeriodicCheck->start();
 }
 
+// Whether the platform updater is set up and can answer for itself. On macOS
+// that only happens in checkUpdatesOnStart(), so anything reaching the Updater
+// before then - the preferences dialog above all - has to ask first. Elsewhere
+// the automatic-update flag lives in QSettings and is readable straight away.
+bool Updater::ready() const
+{
+#if defined(Q_OS_MACOS)
+    return msparkleUpdater != nullptr;
+#else
+    return true;
+#endif
+}
+
 void Updater::setAutomaticUpdates(const bool state)
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return;
+    }
     msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
 #else
     dblsqd::UpdateDialog::enableAutoDownload(state, mSettings);
@@ -153,6 +234,9 @@ void Updater::setAutomaticUpdates(const bool state)
 bool Updater::updateAutomatically() const
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return false;
+    }
     return msparkleUpdater->automaticallyDownloadsUpdates();
 #else
     return dblsqd::UpdateDialog::autoDownloadEnabled(true, mSettings);
@@ -162,6 +246,9 @@ bool Updater::updateAutomatically() const
 void Updater::manuallyCheckUpdates()
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return;
+    }
     msparkleUpdater->checkForUpdates();
 #else
     if (mManualCheckInProgress) {
@@ -237,7 +324,7 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
         }
         return false;
     }
-    feed->downloadRelease(release);
+    feed->downloadRelease(release, /*requireChecksums=*/true);
     return true;
 }
 
@@ -284,14 +371,23 @@ void Updater::setupPlatformUpdater()
 
         auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
-        if (!updates.isEmpty()) {
-            emit signal_updateAvailable(updates.size());
+        if (updates.isEmpty()) {
+            return;
         }
+        emit signal_updateAvailable(updates.size());
     });
 
     connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {
+        // Only a check the user started reaches the console. An automatic one
+        // runs twice a day whether or not anybody is interested, so its failures
+        // would just repeat in red; once the update dialog is listening it
+        // reports them itself.
+        if (mManualCheckInProgress) {
+            qWarning() << "Manual update download failed:" << error;
+            emit signal_updateCheckFailed(error);
+            return;
+        }
         qWarning() << "Automatic update download failed:" << error;
-        emit signal_updateCheckFailed(error);
     });
 }
 #endif // !Q_OS_MACOS
@@ -488,10 +584,18 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
+        // a restart is already underway - don't launch a second instance from
+        // another click on a still-visible dialog or toolbar button
+        if (mRestartInProgress) {
+            return;
+        }
+
         // defer to next event loop iteration so the dialog close happens after the button click handler returns
-        QTimer::singleShot(0, this, [=, this]() {
-            updateDialog->close();
-            updateDialog->done(0);
+        QTimer::singleShot(0ms, this, [=, this]() {
+            if (updateDialog) {
+                updateDialog->close();
+                updateDialog->done(0);
+            }
         });
 
 #if defined(Q_OS_WINDOWS)
@@ -566,16 +670,35 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
             return;
         }
 
+        mRestartInProgress = true;
+        // Closing the last window would otherwise pop the update dialog back
+        // up and keep this instance running alongside the restarted one:
+        if (updateDialog) {
+            updateDialog->disableAutoShow();
+        }
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
         // Mudlet is not restarted here - the installer is expected to handle launching the updated version
         return;
 #else
+        mRestartInProgress = true;
+        // Closing the last window would otherwise pop the update dialog back
+        // up and keep this instance running alongside the restarted one:
+        if (updateDialog) {
+            updateDialog->disableAutoShow();
+        }
         if (mudlet::self()) {
             mudlet::self()->forceClose();
         }
-        if (!QProcess::startDetached(qApp->arguments()[0], qApp->arguments())) {
+        // Relaunch the outer AppImage (via $APPIMAGE) when running as one: both
+        // argv[0] and applicationFilePath() point inside the temporary squashfs
+        // mount, which is torn down once this instance exits. Fall back to the
+        // canonical executable path for non-AppImage installs - matches the path
+        // the update was installed to in slot_updateLinuxBinary().
+        const auto systemEnvironment = QProcessEnvironment::systemEnvironment();
+        const QString restartBinary = systemEnvironment.contains(qsl("APPIMAGE")) ? systemEnvironment.value(qsl("APPIMAGE"), QString()) : QCoreApplication::applicationFilePath();
+        if (!QProcess::startDetached(restartBinary, qApp->arguments().mid(1))) {
             qWarning() << "Failed to restart Mudlet after update";
             //: Error title for dialog shown when Mudlet fails to restart after updating
             QMessageBox::critical(nullptr,
@@ -621,7 +744,12 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // Records a timestamp on disk so shouldShowChangelog() can detect automatic updates on next launch
 void Updater::recordUpdateTime() const
 {
-    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
+    // The updater outlives the main window; without it there is no config
+    // path to write the changelog marker to:
+    if (!mudlet::self()) {
+        return;
+    }
+    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update timestamp file for writing.";
@@ -629,9 +757,7 @@ void Updater::recordUpdateTime() const
     }
 
     QDataStream ofs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ofs.setVersion(QDataStream::Qt_5_12);
     ofs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     if (!file.commit()) {
         qWarning() << "Updater::recordUpdateTime: error recording update time:" << file.errorString();
@@ -642,7 +768,12 @@ void Updater::recordUpdateTime() const
 // the changelog on next startup for the latest version only
 void Updater::recordUpdatedVersion() const
 {
-    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+    // The updater outlives the main window; without it there is no config
+    // path to write the changelog marker to:
+    if (!mudlet::self()) {
+        return;
+    }
+    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update version file for writing.";
@@ -650,10 +781,10 @@ void Updater::recordUpdatedVersion() const
     }
 
     QDataStream ofs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
-    ofs << APP_VERSION;
+    ofs.setVersion(QDataStream::Qt_5_12);
+    // The full version (including any -ptb suffix) so shouldShowChangelog()
+    // can tell whether the running version actually changed:
+    ofs << QCoreApplication::applicationVersion();
     if (!file.commit()) {
         qWarning() << "Updater::recordUpdatedVersion: error saving old mudlet version:" << file.errorString();
     }
@@ -672,7 +803,7 @@ bool Updater::shouldShowChangelog()
         return false;
     }
 
-    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
+    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::ReadOnly);
     qint64 updateTimestamp;
     if (!opened) {
@@ -680,9 +811,7 @@ bool Updater::shouldShowChangelog()
         return false;
     }
     QDataStream ifs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> updateTimestamp;
     file.close();
 
@@ -697,25 +826,41 @@ bool Updater::shouldShowChangelog()
 
     file.remove();
 
+    // The markers are also written when an update was downloaded but never
+    // installed (e.g. the user declined the restart). If the "updated from"
+    // version is still the one running, no update actually happened - don't
+    // show a changelog for it:
+    if (readPreviousVersionFile(false) == QCoreApplication::applicationVersion()) {
+        QFile::remove(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+        return false;
+    }
+
     return minsSinceUpdate >= 5;
 }
 
 QString Updater::getPreviousVersion() const
 {
-    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+    return readPreviousVersionFile(true);
+}
+
+QString Updater::readPreviousVersionFile(const bool removeAfterRead) const
+{
+    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::ReadOnly);
     QString previousVersion;
     if (!opened) {
-        file.remove();
+        if (removeAfterRead) {
+            file.remove();
+        }
         return QString();
     }
     QDataStream ifs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> previousVersion;
     file.close();
-    file.remove();
+    if (removeAfterRead) {
+        file.remove();
+    }
 
     if (ifs.status() != QDataStream::Ok) {
         qWarning() << "Failed to read previous version file, treating as missing";

@@ -34,23 +34,22 @@ bool TMxpNodeBuilder::accept(char ch)
         mRawTagContent += ch;
         if (!acceptTag(ch)) {
             return false;
-        } else {
-            mIsInsideTag = false;
-            mRawTagContent.clear();
-            return true;
         }
-    } else if (ch == '<') { // start tag
+        mIsInsideTag = false;
+        mRawTagContent.clear();
+        return true;
+    } else if (ch == '<') { // NOLINT(readability-else-after-return) start tag
         if (mIsInsideText) {
             mIsInsideText = false;
             mIsText = true;
             mHasNode = true;
             return true;
-        } else {              // second call
-            mHasNode = false; //mIsText = false
-            mRawTagContent.clear();
-            return acceptTag(ch);
         }
-    } else if (!mOptionIgnoreText) { // text
+        // second call
+        mHasNode = false; //mIsText = false
+        mRawTagContent.clear();
+        return acceptTag(ch);
+    } else if (!mOptionIgnoreText) { // NOLINT(readability-else-after-return) text
         mIsInsideText = true;
         mCurrentText.push_back(ch);
         return false;
@@ -68,12 +67,11 @@ bool TMxpNodeBuilder::acceptTag(char ch)
     if (mIsInsideAttr) {
         if (!acceptAttribute(ch)) {
             return false;
-        } else {
-            if (!mCurrentAttrName.empty()) {
-                processAttribute();
-            }
-            resetCurrentAttribute();
         }
+        if (!mCurrentAttrName.empty()) {
+            processAttribute();
+        }
+        resetCurrentAttribute();
     }
 
     if (QChar(ch).isSpace()) {
@@ -114,7 +112,7 @@ void TMxpNodeBuilder::processAttribute()
     if (mCurrentTagName.empty()) {
         mCurrentTagName = mCurrentAttrName;
     } else if (!mCurrentAttrName.empty()) {
-        mCurrentTagAttrs.append(MxpTagAttribute(mCurrentAttrName.c_str(), mCurrentAttrValue.c_str()));
+        mCurrentTagAttrs.append(MxpTagAttribute(TStringUtils::decodeBytes(mCurrentAttrName, mEncoding), TStringUtils::decodeBytes(mCurrentAttrValue, mEncoding)));
     }
 }
 void TMxpNodeBuilder::resetCurrentTag()
@@ -168,7 +166,7 @@ bool TMxpNodeBuilder::acceptSequence(char ch, std::string& buffer)
             mIsQuotedSequence = true;
             mOpeningQuote = ch;
             return false;
-        } else if (mIsQuotedSequence && ch == mOpeningQuote) {
+        } else if (mIsQuotedSequence && ch == mOpeningQuote) { // NOLINT(readability-else-after-return)
             mHasSequence = true;
             return false;
         }
@@ -184,7 +182,7 @@ bool TMxpNodeBuilder::acceptSequence(char ch, std::string& buffer)
             mCurrentTagName.clear();
             resetCurrentAttribute();
             return true;
-        } else if (ch == '>' || ch == '=') {
+        } else if (ch == '>' || ch == '=') { // NOLINT(readability-else-after-return)
             return true;
         }
     }

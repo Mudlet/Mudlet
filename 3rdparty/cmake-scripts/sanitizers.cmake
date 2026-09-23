@@ -316,7 +316,11 @@ function(add_sanitizer_support)
   if(SANITIZER_SELECTED_OPTIONS_AVAILABLE)
     # sanitizer selection is compatible, apply it
     add_compile_options(${SANITIZER_COMPILE_OPTIONS_SELECTED})
-    add_link_options(${SANITIZER_SELECTED_LINK_OPTIONS})
+
+    # set link options (not MSVC, which does infer automagically)
+    if(NOT MSVC)
+      add_link_options(${SANITIZER_SELECTED_LINK_OPTIONS})
+    endif()
   else()
     message(FATAL_ERROR "Selected sanitizer options not compatible: ${ARGN}")
   endif()

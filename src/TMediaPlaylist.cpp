@@ -94,9 +94,9 @@ int TMediaPlaylist::nextIndex() const
 {
     if (mPlaybackMode == Loop && (mCurrentIndex + 1 == mMediaList.size())) {
         return 0;
-    } else if (mPlaybackMode == Random) {
+    } else if (mPlaybackMode == Random) { // NOLINT(readability-else-after-return)
         return QRandomGenerator::global()->bounded(mMediaList.size());
-    } else if (mCurrentIndex + 1 < mMediaList.size()) {
+    } else if (mCurrentIndex + 1 < mMediaList.size()) { // NOLINT(readability-else-after-return)
         return mCurrentIndex + 1;
     }
     return -1; // No valid next index if out of range

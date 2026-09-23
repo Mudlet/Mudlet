@@ -51,7 +51,7 @@ void markQString(QString* text)
         auto lastNonSpace = std::find_if_not(text->rbegin(), text->rend(), [](QChar c) {
             return c == QChar(' ');
         });
-        std::replace(lastNonSpace, text->rend(), QChar(' '), middleDot);
+        std::replace(text->rbegin(), lastNonSpace, QChar(' '), middleDot);
     }
 }
 

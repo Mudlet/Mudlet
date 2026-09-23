@@ -27,34 +27,42 @@
  * Run with: ctest -R TOscTest -V
  */
 
+#include <QFileInfo>
 #include <QKeyEvent>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
+#include <chrono>
 
+#include "LuaLiteral.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
 #include "THyperlinkStyling.h"
 #include "TLinkStore.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
+#include "TUiTour.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForOscTest();
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class TOscTest : public QObject {
   Q_OBJECT
 
 private:
+  QTemporaryDir mConfigDir;
+  QByteArray mSavedXdg;
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "OSC-Test-Host";
-  const QString mPort = "4002";
+  QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = "localhost";
 
   // Injects raw telnet data into the processing pipeline via loopback and
@@ -62,7 +70,7 @@ private:
   void injectData(const QString &message) {
     QByteArray data = (message + qsl("\r\n")).toUtf8();
     mpHost->mTelnet.loopbackTest(data);
-    QTest::qWait(50);
+    QTest::qWait(50ms);
   }
 
   // Scans backward through the buffer to find the first hyperlink and returns
@@ -170,55 +178,72 @@ private:
     return std::nullopt;
   }
 
+  // Joins all buffer lines into one string.
+  QString allBufferText() {
+    TMainConsole *console = mpHost->mpConsole;
+    QString allText;
+    for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+      allText += console->buffer.line(i);
+    }
+    return allText;
+  }
+
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
-    initializeQRCResourcesForOscTest();
+    if (portableMarkerPresent()) {
+      QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
+            "so the config dir cannot be redirected");
+    }
+
+    // A config root of this process's own. Sharing the developer's
+    // ~/.config/mudlet means sharing a profile list, so a second copy of this
+    // test running at the same time is told the name it types is already in
+    // use and never gets an enabled Connect button. Since #9712 the opt-in
+    // that makes setupConfig() adopt a directory is
+    // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+    QVERIFY(mConfigDir.isValid());
+    QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+    mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
     mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, mPort.toUShort());
+    mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+    QVERIFY2(mpServer->isListening(),
+             "TelnetServerStub failed to bind a loopback port");
+    mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
+    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
+             qsl("%1/mudlet").arg(mConfigDir.path()));
+    // A config dir of this test's own reads as a brand new installation, so the
+    // first-run interface tour would open over the profile a second after it
+    // loads and take the window's keyboard with it - the link navigation keys
+    // below would reach the tour rather than the console. Written before
+    // init(), which is what stamps an untouched config as a first launch: a
+    // settings file that already holds something is how mudletUsedBefore()
+    // recognises an existing player, which keeps the rest of the first-run
+    // interface away as well.
+    TUiTour::rememberShown();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
             "MudletInstanceCoordinator"));
     mudlet::self()->init();
     mudlet::self()->setStorePasswordsSecurely(false);
+    QVERIFY2(mudlet::self()->experiencedMudletPlayer(),
+             "the first-run UI would open over these tests and take the "
+             "window's keyboard");
 
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
     QDir(path).removeRecursively();
 
-    QTimer::singleShot(0, qApp, [this]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), mHostname);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), mPort);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    mpHost = mudlet::self()->getActiveHost();
-    if (!mpHost) {
-      QFAIL("No active host available for the test.");
-    }
+    mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
+    QVERIFY2(mpHost, "Could not create the test profile - see the warning above "
+                     "for the step that timed out.");
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
+    if (!spy2.wait(5000)) {
       QFAIL("Could not connect with the host.");
     }
   }
@@ -252,6 +277,10 @@ private slots:
         << QString("\x1b]P0FF0000\x07Hello") << qsl("Hello") << true;
     QTest::newRow("empty OSC sequence")
         << QString("\x1b]\x07Normal text") << qsl("Normal text") << true;
+    QTest::newRow("stray ESC c then literal bracket text")
+        << QString("\x1b"
+                   "c[literal] text")
+        << qsl("[literal] text") << true;
     QTest::newRow("OSC exceeds length limit")
         << QString("\x1b]2;") + QString(5000, 'A') + QString("\x07Normal text")
         << qsl("Normal text") << true;
@@ -277,6 +306,129 @@ private slots:
                qPrintable(qsl("Expected buffer to contain '%1' but got '%2'")
                               .arg(expectedText, allText)));
     }
+  }
+
+  // =====================================================================
+  // Split sequence / interleaved local feed tests
+  // =====================================================================
+
+  // A CSI/OSC sequence split across two server packets must still parse when
+  // locally generated text (a feedTriggers() call, an MMCP chat message)
+  // arrives in between: the local feed runs through the same parser and must
+  // not consume or clear the pending ESC latch of the server stream.
+  void test_SplitSequenceSurvivesInterleavedLocalFeed_data() {
+    QTest::addColumn<QString>("secondPacket");
+    QTest::addColumn<QString>("mustNotContain");
+
+    QTest::newRow("split CSI") << qsl("[32mAfter\n") << qsl("[32mAfter");
+    QTest::newRow("split OSC")
+        << qsl("]2;Window Title\x07"
+               "After\n")
+        << qsl("]2;Window Title");
+  }
+
+  void test_SplitSequenceSurvivesInterleavedLocalFeed() {
+    QFETCH(QString, secondPacket);
+    QFETCH(QString, mustNotContain);
+
+    // First server packet ends in a bare ESC...
+    std::string part1{"Before\n\x1b"};
+    mpHost->mpConsole->printOnDisplay(part1, true);
+    // ...then locally generated text arrives in between...
+    std::string localText{"local tick\n"};
+    mpHost->mpConsole->printOnDisplay(localText, false);
+    // ...then the server packet with the rest of the sequence:
+    std::string part2{secondPacket.toStdString()};
+    mpHost->mpConsole->printOnDisplay(part2, true);
+
+    const QString allText = allBufferText();
+    QVERIFY2(!allText.contains(mustNotContain),
+             qPrintable(qsl("Sequence fragment '%1' leaked into display: '%2'")
+                            .arg(mustNotContain, allText)));
+    QVERIFY2(allText.contains(qsl("After")),
+             qPrintable(
+                 qsl("Text after the split sequence went missing from: '%1'")
+                     .arg(allText)));
+    QVERIFY2(allText.contains(qsl("local tick")),
+             qPrintable(qsl("Locally fed text went missing from: '%1'")
+                            .arg(allText)));
+  }
+
+  // A private/reserved CSI ("CSI ?25l" and friends) split across two server
+  // packets must survive the boundary. The branch that discards such a sequence
+  // has to sit BELOW the incomplete-packet check: above it, the first packet's
+  // "?25" is consumed on its own and the trailing "l" is left to print as text.
+  // Only a genuine packet split reaches this - two feedTriggers() calls cannot,
+  // because the incomplete bytes are carried only when isFromServer is set.
+  void test_SplitPrivateCsiSurvivesThePacketBoundary() {
+    std::string part1{"PRIVSPLIT(\x1b[?25"};
+    mpHost->mpConsole->printOnDisplay(part1, true);
+    std::string part2{"l)PRIVSPLIT\n"};
+    mpHost->mpConsole->printOnDisplay(part2, true);
+
+    const QString allText = allBufferText();
+    QVERIFY2(allText.contains(qsl("PRIVSPLIT()PRIVSPLIT")),
+             qPrintable(qsl("A private CSI split across two packets did not survive the boundary: '%1'")
+                            .arg(allText)));
+  }
+
+  // The don't-decode-this-payload flag set by a DCS/SOS/PM/APC introducer
+  // (mGotString) is carry-over parser state just like mGotOSC and must swap
+  // with the rest of it around a local feed. If it leaks: a complete OSC in
+  // the local feed is consumed but silently not decoded, and the server's DCS
+  // payload is wrongly decoded as an OSC when its terminator arrives.
+  void test_SplitDcsStringStateDoesNotLeakAcrossChannels() {
+    const bool savedMayRedefine = mpHost->getMayRedefineColors();
+    mpHost->setMayRedefineColors(true);
+    const QColor savedRed = mpHost->mRed;
+    const QColor savedGreen = mpHost->mGreen;
+
+    // First server packet ends inside a DCS (ESC P) with no terminator; its
+    // payload is shaped like an OSC colour redefinition for ANSI colour 2 so
+    // that wrongly feeding it to the OSC decoder is observable:
+    std::string part1{"Before\n\x1bPP2665544"};
+    mpHost->mpConsole->printOnDisplay(part1, true);
+
+    // Interleaved local feed carrying a complete OSC colour redefinition for
+    // ANSI colour 1 that must be decoded:
+    std::string localText{"\x1b]P1223344\x07local tick\n"};
+    mpHost->mpConsole->printOnDisplay(localText, false);
+
+    // The server DCS terminator arrives; the payload must be consumed
+    // without being decoded:
+    std::string part2{"\x07"
+                      "After\n"};
+    mpHost->mpConsole->printOnDisplay(part2, true);
+
+    const QColor redAfter = mpHost->mRed;
+    const QColor greenAfter = mpHost->mGreen;
+    const QString allText = allBufferText();
+
+    // Restore profile colour state before asserting so a failure does not
+    // poison later tests:
+    mpHost->mRed = savedRed;
+    mpHost->mGreen = savedGreen;
+    mpHost->setMayRedefineColors(savedMayRedefine);
+
+    QVERIFY2(allText.contains(qsl("After")),
+             qPrintable(
+                 qsl("Text after the split sequence went missing from: '%1'")
+                     .arg(allText)));
+    QVERIFY2(allText.contains(qsl("local tick")),
+             qPrintable(qsl("Locally fed text went missing from: '%1'")
+                            .arg(allText)));
+    QVERIFY2(!allText.contains(qsl("P2665544")),
+             qPrintable(qsl("DCS payload leaked into display: '%1'")
+                            .arg(allText)));
+    QVERIFY2(redAfter == QColor(0x22, 0x33, 0x44),
+             qPrintable(qsl("Complete OSC inside the local feed was not "
+                            "decoded: expected colour 1 to become #223344 "
+                            "but it is %1")
+                            .arg(redAfter.name())));
+    QVERIFY2(greenAfter == savedGreen,
+             qPrintable(qsl("Server DCS payload was wrongly fed to the OSC "
+                            "decoder: colour 2 changed to %1")
+                            .arg(greenAfter.name())));
   }
 
   // =====================================================================
@@ -315,6 +467,18 @@ private slots:
         << qsl("\x1b]8;;https://example.com/"
                "?%63%6F%6E%66%69%67=value\x1b\\Link\x1b]8;;\x1b\\")
         << QStringList{"%63%6F%6E%66%69%67=value"} << QStringList{};
+    QTest::newRow("keeps a valueless config name")
+        << qsl("\x1b]8;;https://example.com/"
+               "?config&id=42\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"?config&id=42"} << QStringList{};
+    QTest::newRow("keeps a valueless preset name")
+        << qsl("\x1b]8;;https://example.com/"
+               "?preset&page=1\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"?preset&page=1"} << QStringList{};
+    QTest::newRow("unterminated config keeps later params")
+        << qsl("\x1b]8;;https://example.com/"
+               "?config={\"a\":\"x&id=42\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"id=42"} << QStringList{"config="};
     QTest::newRow("send URL strips all query params")
         << qsl("\x1b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%"
                "22red%22%7D%7D\x1b\\Attack\x1b]8;;\x1b\\")
@@ -341,6 +505,238 @@ private slots:
                qPrintable(qsl("Did not expect '%1' in: %2")
                               .arg(forbidden, commands.first())));
     }
+  }
+
+  // A percent-encoded reserved parameter name is ordinary URL data, not OSC 8
+  // styling - that is the escape servers are told to use to put a literal
+  // "config" or "preset" parameter in a web URL. The styling parser has to agree
+  // with the URL-stripping path above, which already keeps the encoded name.
+  void test_Osc8UrlParams_EncodedReservedNameIsNotStyling() {
+    const QString encodedConfigName = qsl("%63%6F%6E%66%69%67");
+    injectData(qsl("\x1b]8;;https://example.com/?") + encodedConfigName +
+               qsl("=%7B%22tooltip%22%3A%22URL-DATA%22%2C%22style%22%3A%7B%"
+                   "22color%22%3A%22red%22%7D%7D\x1b\\Encoded\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    // Had the encoded name been consumed as styling, the hint would be the
+    // config's tooltip ("URL-DATA") instead of the URL Mudlet is about to open
+    const QString tooltip = console->buffer.getLinkTooltip(linkId);
+    QCOMPARE(tooltip, qsl("Open browser to: https://example.com/?") +
+                          encodedConfigName +
+                          qsl("=%7B%22tooltip%22%3A%22URL-DATA%22%2C%22style%"
+                              "22%3A%7B%22color%22%3A%22red%22%7D%7D"));
+    QVERIFY2(!console->getLinkStore().getStyling(linkId).hasCustomStyling,
+             "Encoded 'config' must not apply custom link styling");
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+    QVERIFY2(commands.first().contains(encodedConfigName),
+             qPrintable(qsl("Expected the encoded parameter to survive into the "
+                            "opened URL: %1")
+                            .arg(commands.first())));
+  }
+
+  // Each row drives the split down a different path: a percent-encoded value
+  // bounded by the next '&', a reserved key that is not the first parameter, a
+  // raw-JSON value, one carrying an unencoded '&' inside a string, and the
+  // '%3D' separator.
+  void test_Osc8ReservedParamShapes_data() {
+    QTest::addColumn<QString>("query");
+    QTest::addColumn<QString>("expectedTooltip");
+    QTest::addColumn<QString>("mustRemainInUrl");
+
+    QTest::newRow("encoded config bounded by a later param")
+        << qsl("?config=%7B%22tooltip%22%3A%22Encoded%20config%22%7D&page=1")
+        << qsl("Encoded config") << qsl("page=1");
+    QTest::newRow("encoded config after another param")
+        << qsl("?page=1&config=%7B%22tooltip%22%3A%22Later%20config%22%7D")
+        << qsl("Later config") << qsl("page=1");
+    QTest::newRow("raw JSON config after another param")
+        << qsl("?page=1&config={\"tooltip\":\"Raw later\"}")
+        << qsl("Raw later") << qsl("page=1");
+    QTest::newRow("raw JSON config with an unencoded ampersand inside a string")
+        << qsl("?config={\"tooltip\":\"Tea & Cake\"}") << qsl("Tea & Cake")
+        << QString();
+    QTest::newRow("encoded separator")
+        << qsl("?config%3D%7B%22tooltip%22%3A%22Encoded%20separator%22%7D")
+        << qsl("Encoded separator") << QString();
+  }
+
+  void test_Osc8ReservedParamShapes() {
+    QFETCH(QString, query);
+    QFETCH(QString, expectedTooltip);
+    QFETCH(QString, mustRemainInUrl);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+
+    if (!mustRemainInUrl.isEmpty()) {
+      const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+      QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+      QVERIFY2(commands.first().contains(mustRemainInUrl),
+               qPrintable(qsl("Expected '%1' to survive into the opened URL: %2")
+                              .arg(mustRemainInUrl, commands.first())));
+    }
+  }
+
+  // A config value sent as unencoded JSON can carry '&' inside its strings, so
+  // the whole parameter has to be stripped out of the URL Mudlet opens - not
+  // just the part before the first '&', which leaves a JSON fragment behind.
+  void test_Osc8UnencodedAmpersandInConfigLeavesUrlIntact_data() {
+    QTest::addColumn<QString>("query");
+    QTest::addColumn<QString>("expectedUrl");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("config with a raw ampersand, trailing param")
+        << qsl("?config={\"tooltip\":\"A & B\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with a raw ampersand, no other param")
+        << qsl("?config={\"tooltip\":\"A & B\"}") << qsl("https://example.com/")
+        << qsl("A & B");
+    QTest::newRow("config with a raw ampersand, preceding param")
+        << qsl("?id=42&config={\"tooltip\":\"A & B\"}")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with two raw ampersands")
+        << qsl("?config={\"tooltip\":\"A & B & C\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B & C");
+    // A server may encode part of the object and leave the rest raw, so the
+    // braces bounding it can arrive as %7B/%7D while an '&' inside stays literal
+    QTest::newRow("half-encoded config with a raw ampersand")
+        << qsl("?config=%7B%22tooltip%22%3A%22A & B%22%7D&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("half-encoded config, no other param")
+        << qsl("?config=%7B%22tooltip%22%3A%22A & B%22%7D")
+        << qsl("https://example.com/") << qsl("A & B");
+    // JSON allows whitespace before the object, and the parser accepts it, so
+    // a value that opens with it is still a config - and since decodeOSC()
+    // strips a reserved parameter on its key alone, refusing it here would
+    // take the styling out of the link and the parameter off the URL both
+    QTest::newRow("config with a leading space")
+        << qsl("?config= {\"tooltip\":\"A & B\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with a percent-encoded leading space")
+        << qsl("?config=%20%7B%22tooltip%22%3A%22A & B%22%7D&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+  }
+
+  void test_Osc8UnencodedAmpersandInConfigLeavesUrlIntact() {
+    QFETCH(QString, query);
+    QFETCH(QString, expectedUrl);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+    // Compared in full rather than with contains(): the leak this guards against
+    // appends to the URL, so for the row that expects no query at all the
+    // corrupted URL still starts with the expected one. Quoting the expectation
+    // through LuaLiteral means the assertion tracks the command's Lua wrapper
+    // instead of hard-coding it.
+    QCOMPARE(commands.first(),
+             qsl("openUrl(%1)").arg(LuaLiteral::quote(expectedUrl)));
+    // the config itself must still have been consumed as styling
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+  }
+
+  // A "config" parameter carrying something that is not an object is not a
+  // config, so it must not displace a valid one earlier in the same query.
+  void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {
+    QTest::addColumn<QString>("query");
+
+    QTest::newRow("second config empty")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config=");
+    QTest::newRow("second config not an object")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config=junk");
+    QTest::newRow("second config empty, encoded separator")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config%3D");
+  }
+
+  void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne() {
+    QFETCH(QString, query);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), qsl("FIRST"));
+  }
+
+  // preset= is matched on its raw key by the same loop as config=, so a
+  // registered preset must still resolve while a percent-encoded name must not.
+  void test_Osc8PresetNameMatchedOnRawKeyOnly() {
+    injectData(qsl("\x1b]8;;preset:danger?config=%7B%22style%22%3A%7B%22color%"
+                   "22%3A%22red%22%7D%7D\x1b\\\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    // Returns 0 when the query produced no link at all. Each caller has to
+    // reject that before asking for styling, because getStyling() answers an
+    // unknown id with a default-constructed styling whose hasCustomStyling is
+    // false - which would let the negative assertion below pass without a link
+    // ever having been created. The buffer is cleared first for the same
+    // reason: the scan runs backwards, so a query that makes no link would
+    // otherwise find the one left by the previous query and be checked against
+    // that instead.
+    auto linkIdFor = [&](const QString &query) {
+      console->buffer.clear();
+      injectData(qsl("\x1b]8;;https://example.com/") + query +
+                 qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+      int linkId = 0;
+      for (int line = console->buffer.getLastLineNumber();
+           line >= 0 && linkId == 0; --line) {
+        linkId = console->buffer.getLinkIndexAt(line, 0);
+      }
+      return linkId;
+    };
+
+    const int rawKeyLink = linkIdFor(qsl("?preset=danger"));
+    QVERIFY2(rawKeyLink > 0, "No link found for ?preset=danger");
+    QVERIFY2(console->getLinkStore().getStyling(rawKeyLink).hasCustomStyling,
+             "A registered preset named by its raw key should style the link");
+
+    const int laterParamLink = linkIdFor(qsl("?page=1&preset=danger"));
+    QVERIFY2(laterParamLink > 0, "No link found for ?page=1&preset=danger");
+    QVERIFY2(console->getLinkStore().getStyling(laterParamLink).hasCustomStyling,
+             "A preset should resolve when it is not the first parameter");
+
+    const int encodedNameLink = linkIdFor(qsl("?%70%72%65%73%65%74=danger"));
+    QVERIFY2(encodedNameLink > 0,
+             "No link found for the percent-encoded preset name");
+    QVERIFY2(!console->getLinkStore().getStyling(encodedNameLink).hasCustomStyling,
+             "A percent-encoded 'preset' name is URL data, not a preset");
   }
 
   // =====================================================================
@@ -1294,26 +1690,17 @@ private slots:
     delete mpServer;
     mpServer = nullptr;
     mpHost = nullptr;
-    const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname);
-    QDir(path).removeRecursively();
-    delete mudlet::self();
+    // Null when initTestCase skipped or failed ahead of mudlet::start()
+    if (mudlet::self()) {
+      const QString path =
+          MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+      QDir(path).removeRecursively();
+      delete mudlet::self();
+    }
+    mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
+                       : qputenv("XDG_CONFIG_HOME", mSavedXdg);
   }
 };
 
-void initializeQRCResourcesForOscTest() {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-  qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-  qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-  qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-  qInitResources_mudlet();
-  qInitResources_qm();
-}
-
 #include "TOscTest.moc"
-QTEST_MAIN(TOscTest)
+MUDLET_GROUPED_TEST_MAIN(TOscTest)

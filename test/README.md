@@ -79,7 +79,7 @@ QTEST_MAIN(MyComponentTest)
 
 ### Adding a New Test
 
-1. **Create Test File**: Create `YourTestName.cpp` in the `test/` directory
+1. **Create Test File**: Create `YourTestName.cpp` in the `test/` directory. Keep the words `install`, `uninstall`, `setup`, `update` and `patch` out of the name: Windows takes an unsigned executable named that way for an installer and will not start it from an ordinary, non-elevated Windows shell. CMake rejects such a name at configure time.
 
 2. **Implement Test Class**: Follow the structure above, inheriting from `QObject` and using `Q_OBJECT` macro
 

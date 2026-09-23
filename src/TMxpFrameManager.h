@@ -27,6 +27,7 @@
 #include <QMap>
 #include <QMargins>
 #include <QPointer>
+#include <QRect>
 #include <QSize>
 #include <QString>
 #include <QStringList>
@@ -37,6 +38,7 @@
 class Host;
 class TConsole;
 class TDockWidget;
+class TPrintSink;
 
 /**
  * @brief Represents a single MXP frame for multi-window layouts.
@@ -102,7 +104,12 @@ public:
     void clearDestination();
     QString getCurrentDestination() const { return mCurrentDestination; }
     QWidget* getCurrentDestinationWidget() const;
-    TConsole* getCurrentDestinationConsole() const;
+    // Where <DEST> is redirecting output to, as a write-only sink so that the
+    // buffer translation never gets a view pointer back. Null unless a
+    // redirect is really in force: no destination set, a frame that has since
+    // gone, or a destination that resolves back to the main console - which
+    // would recurse into the very buffer being translated.
+    TPrintSink* currentDestinationSink() const;
     bool hasActiveDestination() const { return !mCurrentDestination.isEmpty(); }
     
     // Frame queries
@@ -111,31 +118,41 @@ public:
     QStringList getFrameNames() const;
     bool frameExists(const QString& name) const { return mFrames.contains(name); }
     int frameCount() const { return mFrames.size(); }
-    
+
+    // Reposition every frame on the next event loop turn, once the space they
+    // are laid out in has changed. Does nothing while no frames are open.
+    void scheduleRelayout();
+
     // Configuration
     static constexpr int MAX_FRAMES = 20;
     
 private:
     Host* mpHost;
     QMap<QString, TMxpFrame*> mFrames;
+    // Frames in creation order: borders accumulate inwards, so the order frames
+    // were opened in decides where each one sits
+    QList<TMxpFrame*> mFrameOrder;
     QString mCurrentDestination;  // Current output target (empty = main console)
     QMargins mMxpBorders;         // MXP-specific borders, separate from Host::mBorders
-    
+    bool mRelayoutPending = false;
+
     // Layout and sizing helpers
     void layoutInternalFrame(TMxpFrame* frame);
     void layoutExternalFrame(TMxpFrame* frame);
     void layoutTabFrame(TMxpFrame* frame);
     void layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* targetFrame);
+    QRect availableFrameArea() const;
+    QRect calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* parentFrame);
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
+    void relayoutFrames();
     Qt::DockWidgetArea alignmentToDockArea(const QString& align);
-    
+
     // Validation
     bool validateFrameName(const QString& name) const;
     bool canCreateFrame() const;
-    
+
     // Cleanup
     void removeFrameFromHierarchy(TMxpFrame* frame);
-    void recalculateBorders();
 };
 
 #endif // MUDLET_TMXPFRAMEMANAGER_H

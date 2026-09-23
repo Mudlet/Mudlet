@@ -46,6 +46,7 @@
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
+#include "enums.h"
 #include "SingleLineTextEdit.h"
 #include "EditorUndoStack.h"
 
@@ -96,6 +97,7 @@ class QFrame;
 class QToolButton;
 class TAction;
 class TKey;
+class TVar;
 class TConsole;
 class dlgVarsMainArea;
 class QShortcut;
@@ -105,8 +107,19 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    // Allow QTest-based test class to access private members
+    // Allow QTest-based test classes to access private members
+    friend class AddonControlsTest;
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorBannerViewSwitchTest;
+    friend class EditorClipboardXmlTest;
+    friend class EditorSearchTest;
+    friend class HostWidgetDecouplingTest;
+    friend class ScriptEventHandlerLifetimeTest;
+    friend class TreeWidgetItemMoveTest;
+    friend class TriggerEditorDisclosureTest;
+    friend class TriggerEditorTest;
+    friend class TriggerPatternListLayoutTest;
+    friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -161,20 +174,9 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     };
 
 public:
-    // This needs to be public so that the options can be used from the Host class:
-    enum SearchOption {
-        // Unset:
-        SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1,
-        SearchOptionIncludeVariables = 0x2,
-        SearchOptionWholeWord = 0x4 /*,
-        SearchOptionRegExp = 0x8 */
-    };
-
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
-
-    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
+    ~dlgTriggerEditor();
 
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
@@ -185,21 +187,37 @@ public:
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* e) override;
+    void updateExtraControlsToggleIcon();
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
-    void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_timer(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_script(QTreeWidgetItem* pWidgetItemParent);
+    // touchNotification: whether an errored descendant may show its error on the
+    // shared editor-wide notification banner. The GUI toggle paths default this
+    // true - the user is looking at the tree they just clicked in - while the
+    // Lua-triggered refreshXIcon() paths pass whether the recursing item is the
+    // one currently open, so a background toggle cannot clobber an unrelated
+    // diagnostic the user is actually reading.
+    void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_alias(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_key(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_timer(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_script(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
     void children_icon_action(QTreeWidgetItem* pWidgetItemParent);
+    // Repaints a single item's icon/description from its current TX::isActive()
+    // state, without a full tree rebuild - for GUI-external state changes such
+    // as the enableTrigger()/disableTrigger() family of Lua functions.
+    void refreshTriggerIcon(int triggerID);
+    void refreshAliasIcon(int aliasID);
+    void refreshScriptIcon(int scriptID);
+    void refreshTimerIcon(int timerID);
+    void refreshKeyIcon(int keyID);
     void doCleanReset();
     void writeScript(int id);
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
+    void showVariableRenameRefused(TVar*);
     void repopulateVars();
     void changeView(EditorViewType);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
@@ -229,7 +247,7 @@ public:
     void delete_timer();
     void delete_trigger();
     void delete_variable();
-    void setSearchOptions(const SearchOptions);
+    void setSearchOptions(const enums::EditorSearchOptions);
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
@@ -333,6 +351,7 @@ private slots:
     void slot_clickedMessageBox(const QString&);
     void slot_addPattern();
     void slot_bannerDismissClicked();
+    void slot_refreshBannerLinkColors();
     void slot_itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);
 
     // Per-property immediate save slots for triggers (create individual undo entries)
@@ -372,6 +391,7 @@ private slots:
     void slot_saveProperty_ActionCommandUp();
     void slot_saveProperty_ActionIsPushDown();
     void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarFillerOffset();
     void slot_saveProperty_ActionBarOrientation();
     void slot_saveProperty_ActionBarLocation();
     void slot_saveProperty_ActionButtonRotation();
@@ -393,6 +413,22 @@ private:
     EditorViewType resolveCurrentView();
     void saveTrigger();
     void saveAlias();
+    void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
+    void computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const;
+    void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;
+    void computeScriptIcon(TScript* pT, QIcon& icon, QString& itemDescription) const;
+    void computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescription) const;
+    // respectNewState: a freshly-added, not-yet-saved alias keeps its "unsaved"
+    // icon rather than an active/inactive one - true for every GUI-driven path,
+    // since TAlias::mIsNew only ever clears via an explicit Save. The
+    // Lua-triggered refreshAliasIcon() passes false: a profile's aliases are
+    // still "new" until manually saved, so respecting it there painted every
+    // Lua-toggled alias with the save-as icon instead of reporting its state.
+    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
+    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error, bool touchNotification = true);
+    void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
+    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
+    bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
     void saveTimer();
     void saveKey();
     void saveScript();
@@ -452,6 +488,8 @@ private:
     void exportMultipleActionsToClipboard(const QList<TAction*>& actions);
     void exportMultipleScriptsToClipboard(const QList<TScript*>& scripts);
     void exportMultipleKeysToClipboard(const QList<TKey*>& keys);
+
+    void placePastedItems(EditorViewType itemType, const QList<int>& itemIDs);
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
@@ -632,6 +670,8 @@ private:
     dlgSystemMessageArea* mpSystemMessageArea = nullptr;
 
     bool mIsScriptsMainAreaEditHandler = false;
+    // Not owned, and does not outlive a
+    // listWidget_script_registered_event_handlers->clear()
     QListWidgetItem* mpScriptsMainAreaEditHandlerItem = nullptr;
     bool mIsGrabKey = false;
     QPointer<Host> mpHost;
@@ -652,12 +692,21 @@ private:
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
+    // How many trigger pattern rows fit in the pattern list in full, however
+    // the splitter and the advanced options are arranged - see issue #2548
+    static constexpr int csmMinimumVisiblePatternRows = 5;
+
+    // The height a trigger pattern row is laid out at when the list is longer
+    // than it can show, taken from the tallest control any pattern type can
+    // put in a row - see createPatternItem()
+    int mPatternRowHeight = 0;
+
     QAction* mAddItem = nullptr;
     QAction* mDeleteItem = nullptr;
     QAction* mAddGroup = nullptr;
     QAction* mSaveItem = nullptr;
 
-    SearchOptions mSearchOptions = SearchOptionNone;
+    enums::EditorSearchOptions mSearchOptions = enums::EditorSearchOptionNone;
     QSplitter* searchSplitter;
 
     // This has a menu which the following QActions are inserted into:
@@ -702,6 +751,55 @@ private:
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+    // Trigger IDs whose tree icon is stale; painted in one tree walk on the
+    // next event-loop turn rather than one O(tree) lookup per Lua toggle.
+    QSet<int> mPendingTriggerIconRefresh;
+    bool mTriggerIconRefreshQueued = false;
+    void flushPendingTriggerIconRefresh();
+    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bool touchNotification);
+
+    // Same coalescing as mPendingTriggerIconRefresh, for the other four unit
+    // types refreshXIcon() covers. The Flush/Paint counters exist only for
+    // TriggerEditorTest, to prove the queue collapses N pending toggles into
+    // one flush and that paintXItem() skips a setIcon() the cacheKey() guard
+    // finds unchanged, rather than just the end state those produce either way.
+    QSet<int> mPendingAliasIconRefresh;
+    bool mAliasIconRefreshQueued = false;
+    int mAliasIconFlushCount = 0;
+    int mAliasIconPaintCount = 0;
+    void flushPendingAliasIconRefresh();
+    void refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification);
+
+    QSet<int> mPendingTimerIconRefresh;
+    bool mTimerIconRefreshQueued = false;
+    int mTimerIconFlushCount = 0;
+    int mTimerIconPaintCount = 0;
+    void flushPendingTimerIconRefresh();
+    void refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT, bool touchNotification);
+
+    QSet<int> mPendingScriptIconRefresh;
+    bool mScriptIconRefreshQueued = false;
+    int mScriptIconFlushCount = 0;
+    int mScriptIconPaintCount = 0;
+    void flushPendingScriptIconRefresh();
+    void refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintScriptItem(QTreeWidgetItem* pItem, TScript* pT, bool touchNotification);
+
+    QSet<int> mPendingKeyIconRefresh;
+    bool mKeyIconRefreshQueued = false;
+    int mKeyIconFlushCount = 0;
+    int mKeyIconPaintCount = 0;
+    void flushPendingKeyIconRefresh();
+    void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touchNotification);
+
+    // One QIcon per resource path: a tree of thousands of items would otherwise
+    // decode the same handful of PNGs once per item, every time it is rebuilt
+    const QIcon& cachedIcon(const QString& path) const;
+    mutable QHash<QString, QIcon> mIconCache;
 
     // tracks whether the initial profile load has completed (to avoid clearing undo stack on refreshes)
     bool mInitialLoadDone = false;
@@ -717,6 +815,15 @@ private:
     // so as to be able to fit the right side with the extra controls,
     // determined the first time the area is shrunk down by the user:
     int mTriggerMainAreaMinimumHeightToShowAll = 0;
+
+    // Persisted preference for showing the extra trigger controls; only
+    // changed by explicit clicks on the toggle button, not by the transient
+    // space-driven auto-collapse:
+    bool mShowAllTriggerControls = false;
+
+    // Every profile builds an editor when it loads but they share one saved
+    // window position, so one that was never opened must not write over it:
+    bool mHasBeenShown = false;
 
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;
@@ -776,6 +883,7 @@ private:
 
     // Banner methods
     void handleBannerDismiss();
+    void cancelBannerUndoTimer();
     void showBannerUndoToast();
     void undoBannerDismiss();
     void handlePermanentBannerDismiss();
@@ -796,7 +904,5 @@ private:
     QString descNewItem;
     QString descPackageItem;
 };
-
-Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

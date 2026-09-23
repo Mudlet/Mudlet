@@ -40,6 +40,11 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
     if (!oldExpireName.isEmpty()) {
         mExpireToLinks.remove(oldExpireName, mLinkID);
     }
+    mExpireStore.remove(mLinkID);
+
+    // Remove old styling and its selection-group index entry too, so a
+    // recycled id does not inherit the previous link's styling
+    clearStyling(mLinkID);
 
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
@@ -120,16 +125,24 @@ void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* p
     }
 }
 
+void TLinkStore::clearStyling(int id)
+{
+    if (!mStylingStore.contains(id)) {
+        return;
+    }
+
+    const Mudlet::HyperlinkStyling& oldStyling = mStylingStore[id];
+    if (oldStyling.selection.hasSelectionSettings) {
+        const QPair<QString, QString> key = qMakePair(oldStyling.selection.group, oldStyling.selection.value);
+        mSelectionGroupIndex.remove(key, id);
+    }
+
+    mStylingStore.remove(id);
+}
+
 void TLinkStore::setStyling(int id, const Mudlet::HyperlinkStyling& styling)
 {
-    // Remove old selection group index entry if it exists
-    if (mStylingStore.contains(id)) {
-        const Mudlet::HyperlinkStyling& oldStyling = mStylingStore[id];
-        if (oldStyling.selection.hasSelectionSettings) {
-            QPair<QString, QString> oldKey = qMakePair(oldStyling.selection.group, oldStyling.selection.value);
-            mSelectionGroupIndex.remove(oldKey, id);
-        }
-    }
+    clearStyling(id);
 
     mStylingStore[id] = styling;
 

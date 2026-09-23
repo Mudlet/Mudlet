@@ -15,20 +15,19 @@ jobs:
       matrix:
         include:
           - buildname: 'pi'
-            qt: '6.9.0'
             triplet: arm64-linux
             compiler: gcc_64
             os: [ self-hosted, pi4 ]
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
         submodules: recursive
 
     - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.3.2
+      uses: lukka/get-cmake@v4.4.2
 
     - name: Install dependencies
       run: |

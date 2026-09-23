@@ -125,14 +125,15 @@ function datetime:parse(source, format, as_epoch)
       dt.month = datetime._abbrev_month_names[m.abbrev_month_name:lower()]
     end
 
-    dt.day = m.day_of_month
+    dt.day = tonumber(m.day_of_month)
 
     if m.hour_12 then
       assert(m.ampm, "You must use %p (AM|PM) with %I (12-hour time)")
-      if m.ampm == "PM" then
-        dt.hour = 12 + tonumber(m.hour_12)
-      else
-        dt.hour = tonumber(m.hour_12)
+      -- 12-hour to 24-hour: 12 AM is 0, 12 PM is 12, so the 12 wraps to 0 before
+      -- the PM offset is added. The regex is caseless, so compare caselessly too.
+      dt.hour = tonumber(m.hour_12) % 12
+      if m.ampm:upper() == "PM" then
+        dt.hour = dt.hour + 12
       end
     else
       dt.hour = tonumber(m.hour_24)

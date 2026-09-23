@@ -27,28 +27,37 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QStringView>
+
 #include <string>
 #include "widechar_width.h"
 
 namespace graphemeInfo {
 
-inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
+// The most columns a single grapheme cluster can take. Callers rely on this
+// ceiling to avoid measuring text they do not have to: TBuffer::getWrapInfo()
+// multiplies a line's QChar count by it to rule the line out of wrapping
+// without running the Unicode analysis, so a wider value here would silently
+// stop short lines of wide characters from wrapping.
+inline constexpr int maxWidth = 2;
+
+inline int codepointWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
 {
     // https://github.com/ridiculousfish/widecharwidth/issues/11
     if (unicode == 0x1F6E1 || unicode == 0x2318) {
-        return 2;
+        return maxWidth;
     }
 
     // fix to make red heart width 2
     if (unicode == 0x2764) {
-        return 2;
+        return maxWidth;
     }
 
     switch (widechar_wcwidth(unicode)) {
     case 1: // Draw as normal/narrow
         return 1;
     case 2: // Draw as wide
-        return 2;
+        return maxWidth;
     case widechar_nonprint:
         return 0;
     case widechar_non_character:
@@ -57,25 +66,34 @@ inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
         return 0;
     case widechar_ambiguous:
         // -3 = The character is East-Asian ambiguous width.
-        return mWideAmbigousWidthGlyphs ? 2 : 1;
+        return mWideAmbigousWidthGlyphs ? maxWidth : 1;
     case widechar_private_use:
         return 1;
     case widechar_unassigned:
         return 1;
     case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
-        return 2;
+        return maxWidth;
     default:
         return 1; // Got an uncoded return value from widechar_wcwidth(...)
     }
 }
 
+inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
+{
+    const int width = codepointWidth(unicode, mWideAmbigousWidthGlyphs);
+    // Kept to maxWidth here rather than at each caller, since a wider value
+    // would not be visibly wrong - it would just stop TBuffer::getWrapInfo()
+    // wrapping lines that do reach the wrap column.
+    Q_ASSERT_X(width <= maxWidth, "graphemeInfo::getWidth", "a grapheme wider than graphemeInfo::maxWidth breaks TBuffer::getWrapInfo()'s short-line shortcut");
+    return width > maxWidth ? maxWidth : width;
+}
 
 
 // Extract the base (first) part which will be one or two QChars
 // and if they ARE a surrogate pair convert them back to the single
 // Unicode codepoint (needs around 21 bits, can be contained in a
 // 32bit unsigned integer) value:
-inline uint getBaseCharacter(const QString& str)
+inline uint getBaseCharacter(QStringView str)
 {
     if (str.isEmpty()) {
         return 0;
@@ -89,7 +107,8 @@ inline uint getBaseCharacter(const QString& str)
         }
 
         if (Q_UNLIKELY(first.isLowSurrogate() && second.isHighSurrogate())) {
-            qDebug().noquote().nospace() << "TTextEdit::getGraphemeBaseCharacter(\"str\") INFO - passed a QString comprising a Low followed by a High surrogate QChar, this is not expected, they will be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
+            qDebug().noquote().nospace() << "graphemeInfo::getBaseCharacter() INFO - passed a grapheme comprising a Low followed by a High surrogate QChar, this is not expected, they will "
+                                            "be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
             return QChar::surrogateToUcs4(second, first);
         }
 

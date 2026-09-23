@@ -48,6 +48,7 @@ public:
     QUrl getChecksumsUrl() const;
     void setDownloadSHA256(const QString& sha256);
     static dblsqd::Release getCurrentRelease();
+    static QString gitHubRef(const QString& version);
 
 private:
     QString mVersion;

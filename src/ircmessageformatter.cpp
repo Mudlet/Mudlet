@@ -23,6 +23,26 @@
 
 #include <IrcTextFormat>
 
+// communi escapes & and < before it strips the IRC formatting codes, and hands
+// out the plain text with those entities still in it; a script wants the text
+// the way it was sent. Only those two are escaped, and &lt; is undone first so
+// that a literal "&lt;" (which came through as "&amp;lt;") survives the trip.
+static QString plainTextForLua(const QString& text)
+{
+    return IrcTextFormat().toPlainText(text).replace(QStringLiteral("&lt;"), QStringLiteral("<")).replace(QStringLiteral("&amp;"), QStringLiteral("&"));
+}
+
+// Whatever a server or another user fills in reaches the IRC window as HTML and
+// a script as it was sent, so every such field goes through here rather than
+// being interpolated raw into a line that QTextBrowser will render as markup.
+static QString contentFor(const QString& text, bool isForLua)
+{
+    if (isForLua) {
+        return plainTextForLua(text);
+    }
+    return IrcTextFormat().toHtml(text);
+}
+
 QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
 {
     QString formatted;
@@ -39,6 +59,9 @@ QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
         break;
     case IrcMessage::Join:
         formatted = formatJoinMessage(static_cast<IrcJoinMessage*>(message), isForLua);
+        break;
+    case IrcMessage::Kick:
+        formatted = formatKickMessage(static_cast<IrcKickMessage*>(message), isForLua);
         break;
     case IrcMessage::Mode:
         formatted = formatModeMessage(static_cast<IrcModeMessage*>(message), isForLua);
@@ -131,14 +154,15 @@ QString IrcMessageFormatter::formatAwayMessage(IrcAwayMessage* message, bool isF
 {
     QString content;
     if (isForLua) {
-        content = IrcTextFormat().toPlainText(message->content());
+        content = plainTextForLua(message->content());
     } else {
         content = IrcTextFormat().toHtml(message->content());
     }
 
     if (message->flags() & IrcMessage::Own) {
         return QObject::tr("! %1").arg(content);
-    } else if (!message->content().isEmpty()) {
+    }
+    if (!message->content().isEmpty()) {
         return QObject::tr("! %1 is away (%2)").arg(message->nick(), content);
     }
     return QObject::tr("! %1 is back").arg(message->nick());
@@ -165,8 +189,15 @@ QString IrcMessageFormatter::formatJoinMessage(IrcJoinMessage* message, bool isF
 
 QString IrcMessageFormatter::formatKickMessage(IrcKickMessage* message, bool isForLua)
 {
-    Q_UNUSED(isForLua)
-    return QObject::tr("! %1 kicked %2").arg(message->nick(), message->user());
+    const QString channel = contentFor(message->channel(), isForLua);
+
+    if (message->reason().isEmpty()) {
+        //: Shown in the IRC client when someone is kicked out of a channel without a reason being given. %1 is the nickname doing the kicking, %2 the nickname being kicked, %3 the channel.
+        return QObject::tr("! %1 kicked %2 from %3").arg(message->nick(), message->user(), channel);
+    }
+
+    //: Shown in the IRC client when someone is kicked out of a channel. %1 is the nickname doing the kicking, %2 the nickname being kicked, %3 the channel, %4 the reason the kicker gave.
+    return QObject::tr("! %1 kicked %2 from %3 (%4)").arg(message->nick(), message->user(), channel, contentFor(message->reason(), isForLua));
 }
 
 QString IrcMessageFormatter::formatModeMessage(IrcModeMessage* message, bool isForLua)
@@ -186,7 +217,7 @@ QString IrcMessageFormatter::formatMotdMessage(IrcMotdMessage* message, bool isF
         QString content, lineEnd;
         if (isForLua) {
             lineEnd = "\n";
-            content = IrcTextFormat().toPlainText(line);
+            content = plainTextForLua(line);
         } else {
             lineEnd = "<br />\n";
             content = IrcTextFormat().toHtml(line);
@@ -223,10 +254,14 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
         if (cmd.toUpper() == "PING") {
             const QString secs = formatSeconds(params.value(1).toInt());
             return QObject::tr("! %1 replied in %2").arg(message->nick(), secs);
-        } else if (cmd.toUpper() == "TIME") {
+        }
+
+        if (cmd.toUpper() == "TIME") {
             const QString rest = QStringList(params.mid(1)).join(" ");
             return QObject::tr("! %1 time is %2").arg(message->nick(), rest);
-        } else if (cmd.toUpper() == "VERSION") {
+        }
+
+        if (cmd.toUpper() == "VERSION") {
             const QString rest = QStringList(params.mid(1)).join(" ");
             return QObject::tr("! %1 version is %2").arg(message->nick(), rest);
         }
@@ -240,7 +275,7 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
     if (message->isPrivate()) {
         QString content;
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(message->content());
+            content = plainTextForLua(message->content());
         } else {
             content = IrcTextFormat().toHtml(message->content());
         }
@@ -249,11 +284,10 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
 
     if (isForLua) {
         // lua only needs the message text.
-        return IrcTextFormat().toPlainText(message->content());
-    } else {
-        const QString content = IrcTextFormat().toHtml(message->content());
-        return QObject::tr("&lt;%1%2&gt; [%3] %4").arg(message->nick(), pfx, message->target(), content);
+        return plainTextForLua(message->content());
     }
+    const QString content = IrcTextFormat().toHtml(message->content());
+    return QObject::tr("&lt;%1%2&gt; [%3] %4").arg(message->nick(), pfx, message->target(), content);
 }
 
 QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bool isForLua)
@@ -262,11 +296,11 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
         const QString info = QStringList(message->parameters().mid(1)).join(" ");
         QString content;
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            content = plainTextForLua(info);
         } else {
             content = IrcTextFormat().toHtml(info);
         }
-        return QObject::tr("[INFO] %1").arg(info);
+        return QObject::tr("[INFO] %1").arg(content);
     }
 
     switch (message->code()) {
@@ -289,7 +323,7 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
         const QString info = QStringList(message->parameters().mid(1)).join(" ");
         QString content;
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            content = plainTextForLua(info);
         } else {
             content = IrcTextFormat().toHtml(info);
         }
@@ -299,7 +333,7 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
         const QString info = QStringList(message->parameters().mid(1)).join(" ");
         QString content;
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            content = plainTextForLua(info);
         } else {
             content = IrcTextFormat().toHtml(info);
         }
@@ -308,7 +342,7 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
     const QString info = QStringList(message->parameters().mid(1)).join(" ");
     QString content;
     if (isForLua) {
-        content = IrcTextFormat().toPlainText(info);
+        content = plainTextForLua(info);
     } else {
         content = IrcTextFormat().toHtml(info);
     }
@@ -324,11 +358,10 @@ QString IrcMessageFormatter::formatErrorMessage(IrcErrorMessage* message, bool i
 
 QString IrcMessageFormatter::formatPartMessage(IrcPartMessage* message, bool isForLua)
 {
-    Q_UNUSED(isForLua)
     if (message->reason().isEmpty()) {
         return QObject::tr("! %1 has left %2").arg(message->nick(), message->channel());
     }
-    return QObject::tr("! %1 has left %2 (%3)").arg(message->nick(), message->channel(), message->reason());
+    return QObject::tr("! %1 has left %2 (%3)").arg(message->nick(), message->channel(), contentFor(message->reason(), isForLua));
 }
 
 QString IrcMessageFormatter::formatPongMessage(IrcPongMessage* message, bool isForLua)
@@ -344,30 +377,27 @@ QString IrcMessageFormatter::formatPrivateMessage(IrcPrivateMessage* message, bo
 {
     QString content;
     if (isForLua) {
-        content = IrcTextFormat().toPlainText(message->content());
+        content = plainTextForLua(message->content());
     } else {
         content = IrcTextFormat().toHtml(message->content());
     }
 
     if (message->isAction()) {
         return QObject::tr("* %1 %2").arg(message->nick(), content);
-    } else {
-        if (isForLua) {
-            // lua only needs the message text here.  Nick and target are sent as arguments to postIrcMessage()
-            return content;
-        } else {
-            return QObject::tr("<b>&lt;%1&gt;</b> %2").arg(message->nick(), content);
-        }
     }
+    if (isForLua) {
+        // lua only needs the message text here.  Nick and target are sent as arguments to postIrcMessage()
+        return content;
+    }
+    return QObject::tr("<b>&lt;%1&gt;</b> %2").arg(message->nick(), content);
 }
 
 QString IrcMessageFormatter::formatQuitMessage(IrcQuitMessage* message, bool isForLua)
 {
-    Q_UNUSED(isForLua)
     if (message->reason().isEmpty()) {
         return QObject::tr("! %1 has quit").arg(message->nick());
     }
-    return QObject::tr("! %1 has quit (%2)").arg(message->nick(), message->reason());
+    return QObject::tr("! %1 has quit (%2)").arg(message->nick(), contentFor(message->reason(), isForLua));
 }
 
 QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message, bool isForLua)
@@ -379,7 +409,7 @@ QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message, bool i
 
         QString topic;
         if (isForLua) {
-            topic = IrcTextFormat().toPlainText(message->topic());
+            topic = plainTextForLua(message->topic());
         } else {
             topic = IrcTextFormat().toHtml(message->topic());
         }

@@ -25,21 +25,32 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TLabelModel.h"
 #include "utils.h"
 
+#include <QColor>
 #include <QLabel>
 #include <QMovie>
+#include <QPixmap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
 #include <QVideoWidget>
 
+#include <memory>
+
 class Host;
+class QContextMenuEvent;
 class QMouseEvent;
+class QSvgRenderer;
 
 class TLabel : public QLabel
 {
     Q_OBJECT
+
+    // Declared ahead of every other member: the references below are initialised
+    // from it, so it has to be constructed first.
+    std::unique_ptr<TLabelModel> mpModel;
 
 public:
     Q_DISABLE_COPY(TLabel)
@@ -47,13 +58,6 @@ public:
     ~TLabel();
 
     void setText(const QString& text);
-    void setClick(const int func);
-    void setDoubleClick(const int func);
-    void setRelease(const int func);
-    void setMove(const int func);
-    void setWheel(const int func);
-    void setEnter(const int func);
-    void setLeave(const int func);
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -62,29 +66,67 @@ public:
     void leaveEvent(QEvent*) override;
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
+    void changeEvent(QEvent* event) override;
+    QSize sizeHint() const override;
+    void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
+    void setBackgroundColor(const QColor& color);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
+    bool setBackgroundImage(const QString& path);
+    void resetBackgroundImage();
+    bool setSvgImage(const QString& path);
+    void clearSvgImage();
+    static bool svgCandidate(const QString& path);
+    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
+    void setSvgTint(const QColor& color);
+    void clearSvgTint();
+    void setSvgRotation(double angle);
+    void setSvgShear(double shearX, double shearY);
+    void resetSvgTransform();
+    TLabelModel& model() { return *mpModel; }
 
-    QPointer<Host> mpHost;
-    QString mName;
-    int mClickFunction = 0;
-    int mDoubleClickFunction = 0;
-    int mReleaseFunction = 0;
-    int mMoveFunction = 0;
-    int mWheelFunction = 0;
-    int mEnterFunction = 0;
-    int mLeaveFunction = 0;
+    // The members below are references aliasing the model above. They stand for
+    // the label's identity, callback registry indexes, link colouring and
+    // background colour, which live in the core TLabelModel this label owns and
+    // the profile's TWindowRegistry indexes by name.
+    QPointer<Host>& mpHost;
+    QString& mName;
+    int& mClickFunction;
+    int& mDoubleClickFunction;
+    int& mReleaseFunction;
+    int& mMoveFunction;
+    int& mWheelFunction;
+    int& mEnterFunction;
+    int& mLeaveFunction;
     QMovie* mpMovie = nullptr;
+    QSvgRenderer* mpSvgRenderer = nullptr;
+    QColor& mSvgTintColor;
+    double& mSvgRotation;
+    double& mSvgShearX;
+    double& mSvgShearY;
     QVideoWidget* mpVideoWidget = nullptr;
-    QString mLinkColor;        // Store link color for inline style injection
-    QString mLinkVisitedColor; // Store visited color for inline style injection
-    bool mLinkUnderline = true; // Store underline preference
-    QSet<QString> mVisitedLinks; // Track which link URLs have been clicked
+    QString& mLinkColor;
+    QString& mLinkVisitedColor;
+    bool& mLinkUnderline;
+    QSet<QString>& mVisitedLinks;
 
 private:
-    void releaseFunc(const int existingFunction, const int newFunction);
+    QPixmap renderSvgPixmap(const QSize& size) const;
+    void refreshSvg();
+    void stopMovie();
+    // The selection flags would cost the label the press its click callback needs;
+    // the keyboard flag puts a link in reach of Tab and Return, through the focus
+    // policy QLabel derives from these flags.
+    static constexpr Qt::TextInteractionFlags scmLinkInteraction = Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard;
+
+    bool carriesLink() const;
+    void applyBackgroundColor();
+
+    QColor& mBackgroundColor;
+    QPixmap mSvgPixmapCache;
 
 private slots:
     void slot_linkActivated(const QString& link);

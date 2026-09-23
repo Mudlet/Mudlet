@@ -1,0 +1,452 @@
+#!/usr/bin/env python3
+"""Compare two benchmark runs and gate on performance regressions.
+
+Handles both report-only harnesses - PipelineBenchmark (text and trigger
+pipelines) and MapRenderBenchmark (the 2D mapper's paint path) - telling them
+apart by the metrics they emit and gating each on its own defaults.
+
+Absolute benchmark numbers are meaningless across machines, so the only valid
+comparison is an OLDER vs a NEWER Mudlet built and run on the SAME machine (the
+libmudlet refactor's 10% throughput-loss gate, issue #9011). This reads the
+`METRIC <name> <value>` lines PipelineBenchmark prints, computes per-metric
+deltas, and exits non-zero if any gated metric regressed past the threshold.
+
+Usage:
+  # run two already-built binaries:
+  test/compare-perf-baseline.py --run before-build/.../PipelineBenchmark \\
+      after-build/.../PipelineBenchmark
+  # or compare two captured METRIC dumps:
+  test/compare-perf-baseline.py before.txt after.txt
+
+Exit codes: 0 = within threshold, 1 = a gated metric regressed, 2 = usage error
+or the two runs are not comparable. This script is the arbiter of the gate, so it
+fails loud (exit 2) rather than silently passing on anything it cannot trust: a
+missing or unparseable gated metric, a missing invariant, a non-positive
+baseline, or a --gate name that matches no metric.
+"""
+
+import argparse
+import math
+import os
+import subprocess
+import sys
+
+# Fixed properties of the corpus/trigger set plus the build flavour; if any
+# differ, the two runs used different harnesses or build configurations and the
+# comparison is invalid - so we abort. build_asan guards against comparing an
+# ASan build to a release build, whose absolute numbers are incomparable;
+# corpus_version guards against comparing across a retune of the generated
+# corpus, which moves every absolute number the benchmark reports.
+# display_rows/cols_per_paint describe the display bench's workload the way
+# text_corpus_* describe the text bench's. They move with the font metrics and
+# the surrounding layout, and a build that draws a differently-sized screen did
+# not do the same work - which is a reason to refuse the comparison, not to
+# report the difference as a throughput change.
+# Holds for whichever harness produced the run.
+COMMON_INVARIANTS = ("build_asan",)
+
+# Each harness is recognised by a marker metric only it emits, and brings its own
+# invariants and its own default gate. A run is compared against a run of the same
+# harness or not at all.
+# MapRenderBenchmark's describe which map, area and Z level were drawn and at what
+# widget size: a build that drew a different area drew a different number of rooms,
+# which is a reason to refuse the comparison rather than to report it as a speedup.
+HARNESSES = {
+    "PipelineBenchmark": {
+        "marker": "text_corpus_lines",
+        "invariants": (
+            "text_corpus_lines",
+            "text_corpus_bytes",
+            "trigger_count",
+            "corpus_version",
+            "display_rows_per_paint",
+            "display_cols_per_paint",
+            # Every display timing is paid per device pixel while every other
+            # display invariant is logical, so two runs at different scale
+            # factors agree on the workload and disagree on every paint metric -
+            # the ratio reported as a code change. Invariants are compared by
+            # exact equality on the parsed value, so the %.2f the benchmark
+            # prints is what gives this one any tolerance: two runs whose real
+            # ratios differ below the second decimal both read 1.00 and compare
+            # equal, while a genuinely different scale factor still does not.
+            "display_device_pixel_ratio",
+            "display_tail_small_cells",
+            "display_tail_large_cells",
+            "display_overlay_small_cells",
+            "display_overlay_large_cells",
+            # 0 when the overlay bench's repaints stopped reusing the cached
+            # screen. An invariant rather than a gated metric because the timings
+            # of a build that lost that path are not slower versions of the same
+            # work, they are a different paint entirely - refusing to compare
+            # says so, where a percentage would bury it.
+            "display_overlay_cache_reused",
+        ),
+        # Invariants that also have to hold a particular value, not merely agree
+        # with each other. Two builds that have both lost the cached-screen path
+        # both emit 0, which equality is perfectly happy with - and the timings
+        # they carry then describe a repaint that skipped the damaged band on
+        # both sides, which is faster than the one the metric names.
+        "must_be_set": ("display_overlay_cache_reused",),
+        # Workload knobs the harness reads from the environment, as metric name
+        # to variable. Two runs that differ here did different work, so they are
+        # refused. A knob left unset did the default workload, whether the run
+        # reports it as 0 or leaves it out, and so did a dump from before it
+        # existed - so a missing one reads as 0 rather than as "skip the check",
+        # and a chunked run cannot slip past an old dump as a regression.
+        "workload_knobs": {
+            "feed_chunk_lines": "MUDLET_BENCH_CHUNK_LINES",
+            "bench_chunk_bytes": "MUDLET_BENCH_CHUNK_BYTES",
+        },
+        # Whether the trigger prescan ran in parallel: worth a note, since it
+        # moves trigger_lines_per_sec by a lot, but a fair comparison across
+        # the change that added it needs one side without it.
+        "soft_invariants": ("prescan_workers",),
+        # Throughput for the text and trigger pipelines, plus the shipped default
+        # packages on the same corpus - the pipeline metrics run on a bare
+        # profile, so only defaults_text_lines_per_sec can see a package costing
+        # every new user throughput. trigger_overhead_ms is deliberately absent:
+        # it is a difference of two noisy best-passes (up to ~16% run to run,
+        # wider than the 10% gate) so it would fire on noise. It stays emitted
+        # and reportable, and --gate trigger_overhead_ms turns it on for a change
+        # that targets matching.
+        "gate": ("text_lines_per_sec", "trigger_lines_per_sec", "defaults_text_lines_per_sec"),
+    },
+    "MapRenderBenchmark": {
+        "marker": "map_rooms",
+        "invariants": (
+            "map_format_version",
+            "map_rooms",
+            "map_areas",
+            "bench_area_id",
+            "bench_area_rooms",
+            "bench_z_level",
+            "bench_rooms_on_z_level",
+            "bench_grid_mode",
+            "bench_widget_width",
+            "bench_widget_height",
+            # Per scenario: the zoom, and how many rooms the viewport can reach
+            # at it. These describe the workload rather than the result - a
+            # build that renders fewer rooms has not got faster, it has stopped
+            # drawing the map, and without these that reads as a large win.
+            "render_close_zoom",
+            "render_close_units_across",
+            "render_near_zoom",
+            "render_near_units_across",
+            "render_mid_zoom",
+            "render_mid_units_across",
+            "render_fit_zoom",
+            "render_fit_units_across",
+        ),
+        # Reported, and a difference is worth a note, but not a reason to refuse
+        # the comparison. render_*_rooms_visible is read off the viewport at the
+        # end of a scenario, and a faster build fits more frames into a pass, so
+        # it stops with the map panned somewhere else and counts a different
+        # number of rooms - a 0.1% move that says nothing about what was drawn.
+        # It is also derived from the same viewport bounds the paint path uses
+        # rather than from the frame, so it could not catch a build that stopped
+        # drawing the map anyway: the FRAMEHASH digests are what guard the
+        # pixels, and MUDLET_BENCH_FRAME_HASH=1 on both builds is how to compare
+        # them.
+        "soft_invariants": (
+            "render_close_rooms_visible",
+            "render_near_rooms_visible",
+            "render_mid_rooms_visible",
+            "render_fit_rooms_visible",
+        ),
+        "gate": ("render_close_ms", "render_near_ms", "render_mid_ms", "render_fit_ms"),
+    },
+}
+
+# Not compared for equality - a dump captured before the metric existed does not
+# have it - but never read as a result either, so it stays out of the table.
+MODE_METRICS = ("bench_frame_hash_mode",)
+
+INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(
+    name
+    for harness in HARNESSES.values()
+    for name in harness["invariants"] + tuple(harness.get("workload_knobs", {}))
+)
+
+# Why a differing invariant means the runs are not comparable, where the default
+# answer - the two builds are not the same harness, rebuild them - would send
+# someone rebuilding over something no build can change.
+INVARIANT_HINTS = {
+    "display_device_pixel_ratio": (
+        "the two runs drew at different display scaling, and every paint metric is paid per "
+        "device pixel while every other display invariant is logical - so the ratio would be "
+        "reported as a paint regression. Re-run both at the same QT_SCALE_FACTOR, or with none "
+        "set at all; rebuilding cannot change it."
+    ),
+}
+
+# Wall-clock ceiling for a single benchmark run under --run. The ASan/offscreen
+# functional-test build feeds a huge corpus several times, so this is generous.
+RUN_TIMEOUT_SECONDS = 1200
+
+
+def fail(message):
+    """Abort with exit code 2: a usage error or two runs that cannot be compared."""
+    sys.stderr.write(f"error: {message}\n")
+    sys.exit(2)
+
+
+def classify(name):
+    """Return 'higher', 'lower', or 'invariant' for how to read a metric."""
+    if name in INVARIANTS:
+        return "invariant"
+    if name.endswith("_per_sec") or name.endswith("_fps"):
+        return "higher"  # throughput: bigger is better
+    if name.endswith("_ms") or name.endswith("_kb") or name.endswith("_seconds"):
+        return "lower"  # time / memory: smaller is better
+    return "info"
+
+
+def parse_metrics(text, source):
+    """Parse `METRIC <name> <value>` lines, failing hard on anything malformed.
+
+    Any line whose first whitespace-token is exactly `METRIC` must parse fully:
+    exactly three tokens, a finite numeric value, and no duplicate name.
+    Silently dropping such a line (a NaN/Inf value, a comma decimal, a
+    concatenated capture) would let a gated metric vanish and the gate pass by
+    default - the exact failure mode this arbiter must never have.
+    """
+    metrics = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line.startswith("METRIC"):
+            continue
+        parts = line.split()
+        if parts[0] != "METRIC":
+            continue  # e.g. a "METRICS ..." log line, not one of ours
+        if len(parts) != 3:
+            fail(f"{source}: malformed METRIC line {raw!r} (expected 'METRIC <name> <value>')")
+        name, raw_value = parts[1], parts[2]
+        try:
+            value = float(raw_value)
+        except ValueError:
+            fail(f"{source}: METRIC {name} has a non-numeric value {raw_value!r}")
+        if not math.isfinite(value):
+            fail(f"{source}: METRIC {name} value {raw_value!r} is not a finite number")
+        if name in metrics:
+            fail(f"{source}: METRIC {name} appears more than once")
+        metrics[name] = value
+    return metrics
+
+
+def run_binary(path):
+    if not os.path.isfile(path):
+        fail(f"{path} is not a file")
+    if not os.access(path, os.X_OK):
+        fail(f"{path} is not an executable benchmark binary")
+    env = dict(os.environ)
+    env.setdefault("QT_QPA_PLATFORM", "offscreen")
+    env.setdefault("ASAN_OPTIONS", "detect_leaks=0")
+    # Same environment ctest registers the benchmark with, so a run from here
+    # measures the profile a run from there does. Without it mpkg comes back,
+    # and with it the package listing download and the self-upgrade it can
+    # trigger - which is both noise in the numbers and a different profile.
+    env.setdefault("MUDLET_TEST_MODE", "1")
+    print(f"running {path} ...", file=sys.stderr)
+    try:
+        result = subprocess.run(
+            [os.path.abspath(path)],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=RUN_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        fail(f"{path} did not finish within {RUN_TIMEOUT_SECONDS}s")
+    if result.returncode != 0:
+        sys.stderr.write(result.stdout)
+        sys.stderr.write(result.stderr)
+        fail(f"{path} exited with {result.returncode}")
+    return result.stdout
+
+
+def load(source, run):
+    if run:
+        return parse_metrics(run_binary(source), source)
+    try:
+        with open(source, encoding="utf-8") as handle:
+            return parse_metrics(handle.read(), source)
+    except OSError as error:
+        fail(f"cannot read {source}: {error}")
+
+
+def identify_harness(metrics, source):
+    """Name the harness that produced a run, from the marker metric only it emits."""
+    found = [name for name, harness in HARNESSES.items() if harness["marker"] in metrics]
+    if len(found) != 1:
+        fail(
+            f"cannot tell which benchmark produced the {source} run: expected exactly one of "
+            f"{', '.join(sorted(harness['marker'] for harness in HARNESSES.values()))} among its metrics, found "
+            f"{len(found)}."
+        )
+    return found[0]
+
+
+def check_invariants(before, after):
+    before_harness = identify_harness(before, "before")
+    after_harness = identify_harness(after, "after")
+    if before_harness != after_harness:
+        fail(f"the before run is a {before_harness} and the after run is a {after_harness} - different benchmarks cannot be compared.")
+
+    for name in COMMON_INVARIANTS + HARNESSES[before_harness]["invariants"]:
+        in_before = name in before
+        in_after = name in after
+        if not in_before or not in_after:
+            missing = "before" if not in_before else "after"
+            fail(
+                f"invariant {name} is missing from the {missing} run - the two runs are not from "
+                f"the same {before_harness} harness/build and cannot be compared."
+            )
+        if before[name] != after[name]:
+            if name == "corpus_version" and 0 in (before[name], after[name]):
+                fail(
+                    "corpus_version 0 marks a run made with MUDLET_BENCH_LINES or MUDLET_BENCH_CHUNK_BYTES "
+                    "set, which reshapes the workload; such a run compares only with another made with the "
+                    "same settings."
+                )
+            reason = INVARIANT_HINTS.get(
+                name,
+                "the two runs measured different workloads or build configurations and cannot be "
+                f"compared. Rebuild both trees from the same {before_harness} harness, built the same way.",
+            )
+            fail(f"{name} differs ({before[name]:g} vs {after[name]:g}) - {reason}")
+
+    for name in HARNESSES[before_harness].get("must_be_set", ()):
+        for label in ("before", "after"):
+            run = before if label == "before" else after
+            if not run[name]:
+                fail(
+                    f"{name} is 0 in the {label} run - that run did not measure what the metric "
+                    "names, so comparing it says nothing. Both runs having lost it makes them "
+                    "equal, not comparable."
+                )
+
+    for name, knob in HARNESSES[before_harness].get("workload_knobs", {}).items():
+        old, new = before.get(name, 0), after.get(name, 0)
+        if old != new:
+            fail(
+                f"{name} differs ({old:g} vs {new:g}) - the two runs did different work and cannot "
+                f"be compared. Set {knob} the same way for both."
+            )
+
+    for name in HARNESSES[before_harness].get("soft_invariants", ()):
+        if name in before and name in after and before[name] != after[name]:
+            sys.stderr.write(f"note: {name} moved {before[name]:g} -> {after[name]:g}; see the note on it in this script - it does not invalidate the comparison.\n")
+    return before_harness
+
+
+def compare(before, after, threshold, gate):
+    rows = []
+    failed = False
+    for name in sorted(set(before) | set(after)):
+        kind = classify(name)
+        if kind == "invariant":
+            continue
+
+        gated = name in gate
+        if name not in before or name not in after:
+            if gated:
+                missing = "before" if name not in before else "after"
+                fail(f"gated metric {name} is missing from the {missing} run - cannot evaluate the gate.")
+            rows.append((name, "-", "MISSING", ""))
+            continue
+
+        old, new = before[name], after[name]
+        if old <= 0:
+            if gated:
+                fail(
+                    f"gated metric {name} has a non-positive 'before' value ({old:g}); a valid "
+                    "throughput/time baseline must be greater than zero, so the runs are not comparable."
+                )
+            rows.append((name, f"{old:g} -> {new:g}", "SKIP", "before <= 0"))
+            continue
+
+        change = (new / old) - 1.0  # signed fractional change, after vs before
+        if kind == "higher":
+            regressed = change < -threshold
+            delta = f"{change * 100:+.1f}%"
+        elif kind == "lower":
+            regressed = change > threshold
+            delta = f"{change * 100:+.1f}% (lower is better)"
+        else:
+            regressed = False
+            delta = f"{change * 100:+.1f}%"
+
+        if gated and regressed:
+            status = "FAIL"
+            failed = True
+        elif gated:
+            status = "PASS"
+        elif regressed:
+            status = "warn"
+        else:
+            status = "info"
+        rows.append((name, f"{old:g} -> {new:g}", status, delta))
+    return rows, failed
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Compare two benchmark runs of the same harness (older vs newer Mudlet, same machine).",
+        epilog="See docs/libmudlet-perf-baseline.md for the full before/after workflow.",
+    )
+    parser.add_argument("before", help="'before' METRIC file, or benchmark binary with --run")
+    parser.add_argument("after", help="'after' METRIC file, or benchmark binary with --run")
+    parser.add_argument("--run", action="store_true", help="treat the two arguments as benchmark binaries to run")
+    parser.add_argument("--threshold", type=float, default=0.10, help="max tolerated fractional regression (default 0.10); a value >= 1 is read as a percentage")
+    parser.add_argument("--gate", default=None, help="comma-separated metrics that fail the run (default: the detected harness's own)")
+    args = parser.parse_args()
+
+    threshold = args.threshold
+    if threshold <= 0:
+        fail("--threshold must be greater than 0")
+    if threshold >= 1:
+        sys.stderr.write(f"note: --threshold {threshold:g} looks like a percentage; reading it as {threshold / 100:g} ({threshold:g}%).\n")
+        threshold /= 100.0
+
+    before = load(args.before, args.run)
+    after = load(args.after, args.run)
+    if not before or not after:
+        fail("no METRIC lines found in one of the runs")
+
+    for label, metrics in (("before", before), ("after", after)):
+        if metrics.get("bench_frame_hash_mode", 0):
+            fail(
+                f"the {label} run was made with MUDLET_BENCH_FRAME_HASH set, which replaces the timed "
+                "passes with a pixel-digest pass, so it has no timings to gate on. Diff the two runs' "
+                "FRAMEHASH lines to compare the pixels, and re-run both builds without "
+                "MUDLET_BENCH_FRAME_HASH to compare the speed."
+            )
+
+    harness = check_invariants(before, after)
+    gate = {name.strip() for name in (args.gate or ",".join(HARNESSES[harness]["gate"])).split(",") if name.strip()}
+
+    known = set(before) | set(after)
+    unknown_gates = sorted(name for name in gate if name not in known)
+    if unknown_gates:
+        fail(f"--gate names not found in either run: {', '.join(unknown_gates)} - check for a typo.")
+
+    rows, failed = compare(before, after, threshold, gate)
+
+    name_width = max([len("metric")] + [len(row[0]) for row in rows])
+    value_width = max([len("before -> after")] + [len(row[1]) for row in rows])
+    print(f"Regression gate: {threshold * 100:.0f}%   gated metrics: {', '.join(sorted(gate))}\n")
+    print(f"{'metric'.ljust(name_width)}  {'before -> after'.ljust(value_width)}  status  delta")
+    print(f"{'-' * name_width}  {'-' * value_width}  ------  -----")
+    for name, value, status, delta in rows:
+        print(f"{name.ljust(name_width)}  {value.ljust(value_width)}  {status:<6}  {delta}")
+
+    print()
+    if failed:
+        print(f"FAIL: at least one gated metric lost more than {threshold * 100:.0f}%.")
+        return 1
+    print(f"PASS: all gated metrics stayed within {threshold * 100:.0f}%.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

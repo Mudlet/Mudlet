@@ -23,11 +23,15 @@
 
 #include "dlgPackageManager.h"
 
+#include "MudletPaths.h"
 #include "mudlet.h"
 
 #include <QCloseEvent>
 #include <QFileDialog>
+#include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
@@ -43,6 +47,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 , mpHost(pHost)
 {
     setupUi(this);
+    label_packageName->installEventFilter(this); // re-shortens the package name when the label is given a new width
     connect(lineEdit_searchBar, &QLineEdit::textChanged, this, &dlgPackageManager::slot_searchTextChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(packageList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_itemChanged);
@@ -79,6 +84,10 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     mCurrentView = NavigationView::Installed;
     slot_setPackageList();
 
+    // connected last: resetPackageList() dereferences mpNavigationGroup, which
+    // setupNavigationButtons() creates above
+    connect(mpHost, &Host::signal_packageListChanged, this, &dlgPackageManager::resetPackageList);
+
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -108,7 +117,9 @@ void dlgPackageManager::clearPackageDetails()
 {
     label_icon->clear();
     packageDescription->clear();
+    mPackageName.clear();
     label_packageName->clear();
+    label_packageName->setToolTip(QString());
     label_title->clear();
     label_author->clear();
     label_version->clear();
@@ -144,12 +155,15 @@ void dlgPackageManager::downloadIcon(const QString& packageName)
 
 void dlgPackageManager::downloadRepositoryIndex()
 {
-    const QString outputPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
+    const QString outputPath = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
     QNetworkReply* reply = manager->get(request);
-    QFile* file = new QFile(outputPath);
+    // Parented so that closing the dialog before the download has finished takes
+    // it with it: the handler below is the only other thing that deletes it, and
+    // the reply that would call it is a grandchild of this dialog.
+    QFile* file = new QFile(outputPath, this);
 
     if (!file->open(QIODevice::WriteOnly)) {
         file->deleteLater();
@@ -185,11 +199,39 @@ void dlgPackageManager::downloadRepositoryIndex()
     });
 }
 
+// The heading is a name of any length in a big font, so it is shortened to what
+// fits - but the details are first filled in while the dialog is still being put
+// together, before a layout pass has given the label the width it will have. The
+// name is kept so the shortening can be redone once the label has a width to
+// measure against, and every time that width or the font it is measured in
+// changes.
+void dlgPackageManager::elidePackageName()
+{
+    const int available = label_packageName->contentsRect().width();
+    if (available <= 0) {
+        // elidedText() returns nothing at all below the width of an ellipsis,
+        // and a blank heading reads as "no package selected"
+        return;
+    }
+
+    const QFontMetrics metrics(label_packageName->font());
+    const QString elidedName = metrics.elidedText(mPackageName, Qt::ElideRight, available);
+    label_packageName->setText(elidedName);
+    label_packageName->setToolTip(elidedName == mPackageName ? QString() : mPackageName);
+}
+
+bool dlgPackageManager::eventFilter(QObject* pWatched, QEvent* pEvent)
+{
+    if (pWatched == label_packageName && (pEvent->type() == QEvent::Resize || pEvent->type() == QEvent::FontChange)) {
+        elidePackageName();
+    }
+    return QDialog::eventFilter(pWatched, pEvent);
+}
+
 void dlgPackageManager::fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version)
 {
-    const QFontMetrics metrics(label_packageName->font());
-    const QString elidedText = metrics.elidedText(name, Qt::ElideRight, label_packageName->width());
-    label_packageName->setText(elidedText);
+    mPackageName = name;
+    elidePackageName();
     label_title->setText(title);
     label_author->setText(author);
     //: Package manager - label showing package version
@@ -225,7 +267,7 @@ void dlgPackageManager::populatePackagesWithUpdates()
 
 bool dlgPackageManager::readPackageRepositoryFile()
 {
-    QFile file(mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json")));
+    QFile file(MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json")));
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
@@ -283,7 +325,7 @@ void dlgPackageManager::resetPackageList()
         }
         const auto iconName = packageInfo.value(qsl("icon"));
         if (!iconName.isEmpty()) {
-            const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
+            const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
             item->setIcon(QIcon(iconDir));
         } else {
             QPixmap emptyPixmap(16, 16);
@@ -328,13 +370,12 @@ void dlgPackageManager::slot_installPackageFromFile()
     QStringList failedPackages;
 
     for (const QString& fileName : fileNames) {
-        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
-        if (success) {
+        if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
             mpHost->waitForProfileSave();
         } else {
             const QString baseName = QFileInfo(fileName).fileName();
             failedPackages << baseName;
-            qWarning() << "dlgPackageManager::slot_installPackageFromFile() ERROR - failed to import" << baseName << ":" << errorMsg;
+            qWarning() << "dlgPackageManager::slot_installPackageFromFile() ERROR - failed to import" << baseName;
         }
     }
 
@@ -367,6 +408,68 @@ void dlgPackageManager::slot_installPackageFromRepository()
     auto cancelled = std::make_shared<bool>(false);
     bool repoError = false;
 
+    // Installs whatever was downloaded and puts the batch away. It tears down the
+    // progress dialog and the network manager, so it has to run exactly once: from
+    // the reply that takes the outstanding count to zero, or from after the loop
+    // when the count is already zero by the time it ends. The guard is what keeps
+    // that true if the refusals below are ever rearranged to count themselves
+    // before their message box rather than after it, since the box runs an event
+    // loop of its own in which a download can finish
+    auto batchFinished = std::make_shared<bool>(false);
+    auto finishBatch = [this, pendingDownloads, manager, progress, batchFinished]() {
+        if (*batchFinished) {
+            return;
+        }
+        *batchFinished = true;
+
+        QStringList failedPackages;
+
+        for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
+            const QString& packageName = it.key();
+            const QString& filePath = it.value();
+
+            if (mpHost) {
+                // Ahead of both calls below, because the previous pass's install
+                // leaves a save in flight: during a save an uninstall is refused
+                // outright, and an install is put off until the save finishes - long
+                // after the archive is deleted below.
+                mpHost->waitForProfileSave();
+                bool readyToInstall = true;
+                if (mpHost->mInstalledPackages.contains(packageName)) {
+                    readyToInstall = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
+                    if (!readyToInstall) {
+                        // installing over a package still listed as installed
+                        // fails as "already installed", so the update would go
+                        // missing without ever being named as a failure
+                        failedPackages << packageName;
+                        qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not remove the installed" << packageName << "to update it";
+                    }
+                }
+                if (readyToInstall && !mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
+                    failedPackages << packageName;
+                    qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
+                }
+            }
+            QFile::remove(filePath);
+        }
+
+        progress->reset();
+        // QProgressDialog::closeEvent emits canceled(), so this runs the cancel
+        // handler below on the way out of every batch. Harmless only because it
+        // comes after the loop above: by now there is nothing left for that
+        // handler to abort, and the files it removes are already gone
+        progress->close();
+        progress->deleteLater();
+        manager->deleteLater();
+
+        resetPackageList();
+
+        if (!failedPackages.isEmpty()) {
+            //: Package manager - status message shown when some packages downloaded from the repository failed to install. %1 is a comma-separated list of package names
+            showImportStatus(tr("Failed to install: %1").arg(failedPackages.join(qsl(", "))));
+        }
+    };
+
     QObject::connect(progress, &QProgressDialog::canceled, [activeReplies, pendingDownloads, manager, progress, cancelled]() {
         *cancelled = true;
         for (QNetworkReply* reply : *activeReplies) {
@@ -394,6 +497,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
             //: Package manager: package couldn't be downloaded
             QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' not found in repository").arg(packageName));
             repoError = true;
+            (*remainingDownloads.get())--;
             continue;
         }
 
@@ -403,24 +507,37 @@ void dlgPackageManager::slot_installPackageFromRepository()
             //: Package manager: package couldn't be downloaded
             QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' not found in repository").arg(packageName));
             repoError = true;
+            (*remainingDownloads.get())--;
             continue;
         }
 
         const QByteArray encoded = QUrl::toPercentEncoding(remoteFileName);
-        const QString outDir = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
+        const QString outDir = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName());
         const QString outPath = outDir + QDir::separator() + remoteFileName;
         QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/%1").arg(QString::fromUtf8(encoded))));
         request.setTransferTimeout(30000);
         QNetworkReply* reply = manager->get(request);
-        activeReplies->append(reply);
 
-        QFile* file = new QFile(outPath);
+        // Parented, so closing the package manager mid-download takes the file, and
+        // the handle it is holding on the half-written package, with it. Once a
+        // download is under way nothing else would: the reply handler below is the
+        // only other thing that disposes of it, and it has this dialog for its
+        // context object, so it never runs once the dialog is gone
+        QFile* file = new QFile(outPath, this);
         if (!file->open(QIODevice::WriteOnly)) {
+            qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not open" << outPath << "for writing:" << file->errorString();
+            //: Package manager: the downloaded package could not be written to the profile folder. %1 is the package name, %2 the reason given by the operating system
+            QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' could not be saved to your profile folder: %2").arg(packageName, file->errorString()));
             (*remainingDownloads.get())--;
             file->deleteLater();
             reply->deleteLater();
             continue;
         }
+
+        // Tracked only once the file it writes into is open. The failure above
+        // deletes the reply, and this list holds raw pointers that a cancel calls
+        // abort() on, so a deleted reply must never reach it
+        activeReplies->append(reply);
 
         QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
             const QByteArray data = reply->readAll();
@@ -432,7 +549,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
 
         pendingDownloads->insert(packageName, outPath);
 
-        QObject::connect(reply, &QNetworkReply::finished, this, [reply, file, this, outPath, packageName, pendingDownloads, remainingDownloads, manager, progress, cancelled, activeReplies]() {
+        QObject::connect(reply, &QNetworkReply::finished, this, [reply, file, this, outPath, packageName, pendingDownloads, remainingDownloads, cancelled, activeReplies, finishBatch]() {
             const QByteArray data = reply->readAll();
             if (!data.isEmpty() && file->write(data) != data.size()) {
                 qWarning() << "dlgPackageManager::slot_installMultiple() ERROR - failed to write final data:" << file->errorString();
@@ -452,32 +569,25 @@ void dlgPackageManager::slot_installPackageFromRepository()
                 //: Package manager: network error, package couldn't be downloaded
                 QMessageBox::warning(this, tr("Installation Failed"), tr("Package '%1' could not be downloaded due to a network error").arg(packageName));
                 pendingDownloads->remove(packageName);
-                (*remainingDownloads.get())--;
             }
 
+            // Every download that gets past the cancel check above has to reach
+            // this exactly once. Zero is the only count that ends the batch, so a
+            // second decrement steps over it and leaves the progress dialog up for
+            // the rest of the session
             if (--(*remainingDownloads.get()) == 0) {
-                for (auto it = pendingDownloads->begin(); it != pendingDownloads->end(); ++it) {
-                    const QString& packageName = it.key();
-                    const QString& filePath = it.value();
-
-                    if (mpHost) {
-                        // Uninstall existing package first if this is an update
-                        if (mpHost->mInstalledPackages.contains(packageName)) {
-                            mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
-                        }
-                        mpHost->installPackage(filePath, enums::PackageModuleType::Package);
-                    }
-                    QFile::remove(filePath);
-                }
-
-                progress->reset();
-                progress->close();
-                progress->deleteLater();
-                manager->deleteLater();
-
-                resetPackageList();
+                finishBatch();
             }
         });
+    }
+
+    // The count can already be zero here: a selection refused above never had a
+    // download, and a reply can finish inside the modal message box those refusals
+    // put up, before the loop that started it has run out. The reply handler is the
+    // only other place the count is checked, so without this the batch is never
+    // installed and the progress dialog never closes
+    if (*remainingDownloads.get() == 0) {
+        finishBatch();
     }
 
     if (repoError) {
@@ -509,14 +619,14 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
 
         QString description = packageInfo.value(qsl("description"));
         if (!description.isEmpty()) {
-            QString packageDir = mudlet::self()->getMudletPath(enums::profileDataItemPath, mpHost->getName(), packageName);
+            QString packageDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), packageName);
             description.replace(QLatin1String("$packagePath"), packageDir);
             packageDescription->setMarkdown(description);
         }
 
         auto iconName = packageInfo.value(qsl("icon"));
         if (!iconName.isEmpty()) {
-            const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+            const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
             label_icon->setPixmap(QPixmap(iconDir).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         } else {
             QPixmap pixmap(":/icons/package-manager.png");
@@ -602,6 +712,16 @@ void dlgPackageManager::slot_openBugWebsite()
     mudlet::self()->openWebPage(qsl("https://github.com/Mudlet/mudlet-package-repository/issues/new?template=package-bug-or-issue.md&title=[Package%20Bug]%20") + currentItem->text());
 }
 
+QString dlgPackageManager::packageHelpUrl(const QString& packageName) const
+{
+    // a help URL set by the package's author takes precedence over the generic repository website
+    const QString url = mpHost->mPackageInfo.value(packageName).value(qsl("helpURL"));
+    if (!url.isEmpty()) {
+        return url;
+    }
+    return packageLookup.value(packageName).value(qsl("helpURL")).toString();
+}
+
 void dlgPackageManager::slot_openPackageWebsite()
 {
     const QListWidgetItem* currentItem = packageList->currentItem();
@@ -609,20 +729,63 @@ void dlgPackageManager::slot_openPackageWebsite()
         return;
     }
 
+    const QString helpUrl = packageHelpUrl(currentItem->text());
+    if (!helpUrl.isEmpty()) {
+        mudlet::self()->openWebPage(helpUrl);
+        return;
+    }
+
     mudlet::self()->openWebPage(qsl("https://packages.mudlet.org/packages#pkg-") + currentItem->text());
+}
+
+// Returns what to tell the user about the removals that did not happen, empty
+// when they all did. Separate from the slot so the wording can be tested: the
+// dialog has no Lua entry point and the box below blocks.
+QString dlgPackageManager::removePackages(const QStringList& packageNames)
+{
+    QStringList refusedWhileSaving;
+    QStringList noLongerInstalled;
+    for (const QString& package : packageNames) {
+        if (mpHost->uninstallPackage(package, enums::PackageModuleType::Package)) {
+            continue;
+        }
+        // A save in progress is the refusal the user can do something about. The
+        // other one is a package that has gone since the row was drawn - a
+        // sibling in this very selection can take it away from its sysUninstall
+        // handler - and the listing rebuild uninstallPackage() does clears that
+        // up, rather than blaming a save that is not running.
+        if (mpHost->currentlySavingProfile()) {
+            refusedWhileSaving << package;
+        } else {
+            noLongerInstalled << package;
+        }
+    }
+
+    QStringList sentences;
+    if (!refusedWhileSaving.isEmpty()) {
+        //: %1 is a comma separated list of the packages that are still installed
+        sentences << tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedWhileSaving.join(qsl(", ")));
+    }
+    if (!noLongerInstalled.isEmpty()) {
+        //: %1 is a comma separated list of the packages that turned out not to be installed any more
+        sentences << tr("These are no longer installed, so there was nothing to remove: %1.").arg(noLongerInstalled.join(qsl(", ")));
+    }
+    return sentences.join(qsl(" "));
 }
 
 void dlgPackageManager::slot_removePackages()
 {
     const QList<QListWidgetItem*> selectedItems = packageList->selectedItems();
-    QStringList removePackages;
+    QStringList selectedPackages;
 
     for (QListWidgetItem* item : selectedItems) {
-        removePackages << item->text();
+        selectedPackages << item->text();
     }
 
-    for (const QString& package : std::as_const(removePackages)) {
-        mpHost->uninstallPackage(package, enums::PackageModuleType::Package);
+    const QString msg = removePackages(selectedPackages);
+    if (!msg.isEmpty()) {
+        //: Title of the dialog that says why a package the user asked to remove was not removed
+        QMessageBox::warning(this, tr("Removal failed"), msg);
     }
 
     populatePackagesWithUpdates();
@@ -648,7 +811,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                 }
                 const auto iconName = value.value(qsl("icon"));
                 if (!iconName.isEmpty()) {
-                    const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
+                    const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
                     item->setIcon(QIcon(iconDir));
                 } else {
                     QPixmap emptyPixmap(16, 16);
@@ -694,7 +857,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                 }
                 const auto iconName = packageInfo.value(qsl("icon"));
                 if (!iconName.isEmpty()) {
-                    const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+                    const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
                     item->setIcon(QIcon(iconDir));
                 } else {
                     QPixmap emptyPixmap(16, 16);
@@ -732,7 +895,7 @@ void dlgPackageManager::slot_setPackageList()
                 item->setData(Qt::UserRole, title);
             }
             if (!iconName.isEmpty()) {
-                const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
+                const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
                 item->setIcon(QIcon(iconDir));
             } else {
                 QPixmap emptyPixmap(16, 16);
@@ -774,7 +937,7 @@ void dlgPackageManager::slot_setPackageList()
                 item->setData(Qt::UserRole, title);
             }
             if (!iconName.isEmpty()) {
-                const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+                const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
                 item->setIcon(QIcon(iconDir));
             } else {
                 QPixmap emptyPixmap(16, 16);

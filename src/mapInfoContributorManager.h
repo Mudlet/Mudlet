@@ -58,6 +58,10 @@ public:
     void registerContributor(const QString& name, MapInfoCallback callback);
     void registerContributor(const QString& name, MapInfoCallback callback, lua_State* L, int callbackRef);
     bool removeContributor(const QString& name);
+    // A Lua contributor cannot outlive the lua_State it was registered on: it
+    // holds a registry reference in that state and a callback that captures it,
+    // so call this before the state is closed.
+    void removeLuaContributors();
     bool enableContributor(const QString& name);
     bool disableContributor(const QString& name);
     MapInfoCallback getContributor(const QString& name);
@@ -69,6 +73,7 @@ signals:
     void signal_contributorsUpdated();
 
 private:
+    void registerBuiltInContributors();
     void releaseLuaCallbackRef(const QString& name);
 
     QList<QString> ordering;

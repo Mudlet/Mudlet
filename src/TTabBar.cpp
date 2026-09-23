@@ -29,6 +29,7 @@
 #include "utils.h"
 
 #include <QApplication>
+#include <QEvent>
 #include <QStyleOption>
 #include <QStyleOptionTab>
 #include <QPainter>
@@ -40,8 +41,6 @@
 #include <QDateTime>
 
 // Constants for improved drag detection
-static const int DETACH_DISTANCE_THRESHOLD = 80;         // Pixels to drag before tab detaches
-static const int DETACH_PIXEL_BUFFER = 20;               // Drag tolerance buffer
 static const int VERTICAL_MOVEMENT_RATIO_THRESHOLD = 60; // Percentage of movement that must be vertical
 static const int TAB_REORDER_DELAY_MS = 150;             // Delay before allowing tab detachment
 
@@ -113,6 +112,24 @@ QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, con
     }
 
     return rect;
+}
+
+// Tab geometry has to come from the same style that paints the tabs, which
+// drawControl() above delegates to the application style. Our proxy base is
+// null, so it resolves to a separate instance of the platform's native style;
+// letting the dark theme's Fusion style paint tabs sized by the macOS native
+// style clips the descenders off the tab text. styleHint() and
+// subElementRect() deliberately stay on the native base so the close button
+// keeps its platform-native side (the leading edge on macOS) - do not
+// delegate them to the application style as well.
+QSize TStyle::sizeFromContents(ContentsType type, const QStyleOption* option, const QSize& contentsSize, const QWidget* widget) const
+{
+    return qApp->style()->sizeFromContents(type, option, contentsSize, widget);
+}
+
+int TStyle::pixelMetric(PixelMetric metric, const QStyleOption* option, const QWidget* widget) const
+{
+    return qApp->style()->pixelMetric(metric, option, widget);
 }
 
 void TStyle::paintConnectionIndicator(QPainter* painter, const QStyleOptionTab* tabOption, TabConnectionIndicator state) const
@@ -310,6 +327,17 @@ QSize TTabBar::tabSizeHint(int index) const
     return s;
 }
 
+// QApplication::setStyle() delivers StyleChange only to widgets without
+// WA_SetStyle, and installing our TStyle sets that attribute - so the bar
+// keeps tab sizes computed against the previous application style unless
+// we hand it the event it was skipped for.
+void TTabBar::refreshAfterApplicationStyleChange()
+{
+    QEvent event(QEvent::StyleChange);
+    QApplication::sendEvent(this, &event);
+    updateGeometry();
+}
+
 QString TTabBar::tabName(const int index) const
 {
     QString tabName{tabData(index).toString()};
@@ -427,17 +455,16 @@ void TTabBar::mouseMoveEvent(QMouseEvent* event)
             const QPoint globalPos = mapToGlobal(event->pos());
             const QRect tabBarGlobalRect = QRect(mapToGlobal(rect().topLeft()), rect().size());
 
-            // Calculate distance from tab bar with enhanced threshold
-            if (!tabBarGlobalRect.contains(globalPos) && isVerticalMovement) {
-                const QPoint distanceFromBar = globalPos - tabBarGlobalRect.center();
-                const int distanceFromBarManhattan = distanceFromBar.manhattanLength();
-
-                // Use the improved threshold and ensure it's primarily vertical movement
-                if (distanceFromBarManhattan > DETACH_DISTANCE_THRESHOLD) {
-                    emit tabDetachRequested(mDragIndex, globalPos);
-                    mDragIndex = -1; // Reset drag state
-                    return;
-                }
+            // How far the cursor has come since the press, rather than how far
+            // it now is from the bar's centre: that centre measurement added the
+            // press point's own offset from the centre, so what it took to tear
+            // a tab out depended on where in the bar the tab sat and where in
+            // the tab it was grabbed. The metric is Manhattan, so horizontal
+            // travel counts toward the threshold as well.
+            if (!tabBarGlobalRect.contains(globalPos) && isVerticalMovement && totalDistance > DETACH_DISTANCE_THRESHOLD) {
+                emit tabDetachRequested(mDragIndex, globalPos);
+                mDragIndex = -1; // Reset drag state
+                return;
             }
         }
     }

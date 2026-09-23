@@ -31,6 +31,7 @@
 #include <QDesktopServices>
 #include <QFile>
 #include <QGuiApplication>
+#include <QLabel>
 #include <QMessageBox>
 #include <QPixmap>
 #include <QRegularExpression>
@@ -102,6 +103,12 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
     Q_ASSERT_X(settings, "UpdateDialog", "QSettings object is required");
     mUi->setupUi(this);
 
+    // Captured before the first substitution consumes the placeholders
+    for (auto* label : findChildren<QLabel*>()) {
+        mLabelTemplates.insert(label, label->text());
+    }
+    mWindowTitleTemplate = windowTitle();
+
     mUi->buttonCancel->addAction(mUi->actionCancel);
     mUi->buttonCancel->addAction(mUi->actionSkip);
     mUi->buttonCancel->setDefaultAction(mUi->actionCancel);
@@ -124,13 +131,24 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
         break;
     }
 
+    // Mudlet keeps this dialog for the whole session and checks for updates
+    // twice a day, so it stays connected to hear every one of those checks. A
+    // changelog dialog is a transient the user closes, and reports one load
+    const bool transient = (mType == ManualChangelog);
+    if (!transient) {
+        connect(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
+        connect(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
+    }
+
     if (mFeed->isReady()) {
         handleFeedReady();
     } else {
         setupLoadingUi();
         mFeed->load();
-        KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
-        KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
+        if (transient) {
+            KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
+            KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
+        }
     }
 }
 
@@ -292,17 +310,46 @@ void UpdateDialog::showIfUpdatesAvailable()
 void UpdateDialog::showIfUpdatesAvailableOrQuit()
 {
     if (mType == OnLastWindowClosed) {
-        auto* app = qobject_cast<QGuiApplication*>(QApplication::instance());
-        app->setQuitOnLastWindowClosed(true);
-        disconnect(app, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
+        disconnect(qApp, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
     }
     QString latestVersion = mLatestRelease.getVersion();
     bool skipRelease = (settingsValue(qsl("skipRelease"), "", mSettings).toString() == latestVersion);
     if (!latestVersion.isEmpty() && !skipRelease) {
+        // The main window is already gone, so this dialog is the only thing
+        // keeping Mudlet alive - quit once the user dismisses it. We keep
+        // quitOnLastWindowClosed disabled: re-enabling it makes Qt quit the
+        // instant this dialog is shown (the lastWindowClosed re-check runs
+        // before the user can act on it), which is the whole bug being fixed.
+        KDToolBox::connectSingleShot(this, &QDialog::finished, qApp, []() {
+            QCoreApplication::quit();
+        });
         show();
     } else {
         QCoreApplication::quit();
     }
+}
+
+/*!
+ * \brief Stops the dialog from showing itself when the last window closes.
+ *
+ * Used when the application is deliberately closing to restart into an
+ * already-installed update: offering the update again would leave this dialog
+ * as the only window of an instance the user expects to be gone, keeping it
+ * alive alongside the restarted one. As quitOnLastWindowClosed is disabled in
+ * OnLastWindowClosed mode, quit explicitly once the last window closes.
+ */
+void UpdateDialog::disableAutoShow()
+{
+    if (mType != OnLastWindowClosed) {
+        return;
+    }
+    disconnect(qApp, &QGuiApplication::lastWindowClosed, this, &UpdateDialog::showIfUpdatesAvailableOrQuit);
+    connect(qApp, &QGuiApplication::lastWindowClosed, qApp, &QCoreApplication::quit);
+}
+
+QString UpdateDialog::pendingDownloadPath(QSettings* settings)
+{
+    return settingsValue(qsl("updateFilePath"), QString(), settings).toString();
 }
 
 // "DBLSQD/" prefix retained for backward compatibility with user settings from the previous update system
@@ -375,7 +422,7 @@ void UpdateDialog::adjustDialogSize()
 
 void UpdateDialog::updateWindowTitle()
 {
-    QString title = windowTitle();
+    QString title = mWindowTitleTemplate;
     replaceAppVars(title);
     setWindowTitle(title);
 }
@@ -390,7 +437,8 @@ void UpdateDialog::resetUi()
                   << mUi->checkAutoDownload << mUi->buttonCancel << mUi->buttonCancelLoading << mUi->buttonConfirm << mUi->buttonInstall;
     for (auto* widget : hiddenWidgets) {
         widget->hide();
-        widget->disconnect();
+        // Not a wildcard disconnect(): that also severs Qt's style sheet destroyed() hook
+        widget->disconnect(this);
     }
     // Re-establish the changelog link handler broken by disconnect() above
     connect(mUi->labelChangelog, &QTextBrowser::anchorClicked, this, &UpdateDialog::onLinkActivated);
@@ -422,9 +470,7 @@ void UpdateDialog::setupUpdateUi()
     }
 
     for (auto* label : {mUi->labelHeadline, mUi->labelInfo}) {
-        QString text = label->text();
-        replaceAppVars(text);
-        label->setText(text);
+        applyAppVars(label);
     }
     mUi->labelChangelog->setMarkdown(generateChangelogDocument());
 
@@ -473,9 +519,7 @@ void UpdateDialog::setupChangelogUi()
         widget->show();
     }
     for (auto* label : {mUi->labelHeadlineChangelog, mUi->labelInfoChangelog}) {
-        QString text = label->text();
-        replaceAppVars(text);
-        label->setText(text);
+        applyAppVars(label);
     }
 
     updateWindowTitle();
@@ -496,9 +540,9 @@ void UpdateDialog::setupNoUpdatesUi()
     }
     mUi->buttonConfirm->setFocus();
 
-    QString text = mUi->labelHeadlineNoUpdates->text();
-    replaceAppVars(text);
-    mUi->labelHeadlineNoUpdates->setText(text);
+    // labelHeadlineNoUpdates is also where handleLoadError() reports a failed
+    // check, so it is restored from the template rather than reused
+    applyAppVars(mUi->labelHeadlineNoUpdates);
 
     updateWindowTitle();
 
@@ -525,12 +569,26 @@ void UpdateDialog::replaceAppVars(QString& string)
     string.replace("%UPDATE_VERSION%", mLatestRelease.getVersion());
 }
 
+void UpdateDialog::applyAppVars(QLabel* label)
+{
+    QString text = mLabelTemplates.value(label);
+    replaceAppVars(text);
+    label->setText(text);
+}
+
 QString UpdateDialog::generateChangelogDocument()
 {
     QString changelog;
     QList<Release> changelogReleases;
     if (mMinVersion.isEmpty() && mMaxVersion.isEmpty()) {
-        changelogReleases = mUpdates;
+        // Everything the offered release brings with it, off the unfiltered
+        // list: a release left out of mUpdates because it published no asset
+        // for this platform still ships its changes inside the one being
+        // offered, so the user is about to receive them either way. Bounded by
+        // the same release getUpdates() measures against, so what is listed and
+        // what is offered cannot disagree.
+        changelogReleases = Feed::selectReleasesBetween(mReleases, Release::getCurrentRelease(), mLatestRelease);
+        changelog = generateCompareLink();
     } else {
         Release minRelease(mMinVersion.isEmpty() ? QApplication::applicationVersion() : mMinVersion);
         Release maxRelease(mMaxVersion);
@@ -554,6 +612,23 @@ QString UpdateDialog::generateChangelogDocument()
         changelog.append(body + qsl("\n\n"));
     }
     return changelog;
+}
+
+QString UpdateDialog::generateCompareLink() const
+{
+    const QString installedVersion = QApplication::applicationVersion();
+    const QString updateVersion = mLatestRelease.getVersion();
+    if (installedVersion.isEmpty() || updateVersion.isEmpty()) {
+        return QString();
+    }
+    const QString base = Release::gitHubRef(installedVersion);
+    const QString head = Release::gitHubRef(updateVersion);
+    if (base == head || mFeed->getOwner().isEmpty() || mFeed->getRepo().isEmpty()) {
+        return QString();
+    }
+    const QString url = qsl("https://github.com/%1/%2/compare/%3...%4").arg(mFeed->getOwner(), mFeed->getRepo(), base, head);
+    //: Shown above the update changelog; the text in [] is a clickable link, %1 is the GitHub comparison URL
+    return tr("[See every change between your version and this update](%1) on GitHub.").arg(url) + qsl("\n\n");
 }
 
 void UpdateDialog::startDownload()
@@ -594,6 +669,9 @@ void UpdateDialog::handleFeedReady()
         return;
     }
 
+    // Re-derived from the settings on every check: the file a finished download
+    // left behind is deleted below once a later release supersedes it
+    mIsDownloadFinished = false;
     mUpdateFilePath = settingsValue(qsl("updateFilePath"), "", mSettings).toString();
     if (!mUpdateFilePath.isEmpty() && QFile::exists(mUpdateFilePath)) {
         QString updateFileVersion = settingsValue(qsl("updateFileVersion"), "", mSettings).toString();
@@ -623,9 +701,6 @@ void UpdateDialog::handleFeedReady()
 
     setupUpdateUi();
     emit ready();
-
-    KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
-    KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
 }
 
 void UpdateDialog::handleLoadError(const QString& message)
@@ -640,9 +715,6 @@ void UpdateDialog::handleLoadError(const QString& message)
         mUi->labelChangelog->show();
         adjustDialogSize();
     }
-    // Re-establish single-shot connections so the next feed load attempt reaches this dialog
-    KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
-    KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
 }
 
 void UpdateDialog::handleDownloadFinished()

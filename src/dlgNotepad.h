@@ -29,6 +29,7 @@
 
 class Host;
 class QCloseEvent;
+class QEvent;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
@@ -83,8 +84,10 @@ private slots:
 private:
     void timerEvent(QTimerEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
+    void changeEvent(QEvent* event) override;
     bool eventFilter(QObject* obj, QEvent* event) override;
     QPlainTextEdit* currentTextEdit() const;
+    void updateSendControlsToggleIcon();
     void setupAddTabButton();
     void setupFindBar();
     void highlightAllMatches();
@@ -94,6 +97,7 @@ private:
 
     QPointer<Host> mpHost;
     QToolButton* mpAddTabButton = nullptr;
+    bool mUiSetupComplete = false;
     bool mNeedToSave = false;
     QAction* action_stop = nullptr;
     QAction* action_prependText = nullptr;

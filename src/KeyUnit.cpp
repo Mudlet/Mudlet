@@ -26,8 +26,22 @@
 
 #include "Host.h"
 #include "TKey.h"
+#include "Tree.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
+#include "utils.h"
+
+#include <QFlags>
+#include <QKeySequence>
+#include <QLatin1Char>
+#include <QLatin1String>
+#include <QMutableSetIterator>
+#include <QScopeGuard>
+#include <QStringBuilder>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 KeyUnit::KeyUnit(Host* pHost)
 : mRunAllKeyMatches(false)
@@ -47,7 +61,8 @@ KeyUnit::~KeyUnit()
         key->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TKey*)> nullifyChildren = [&nullifyChildren](TKey* k) {
-            for (auto child : *k->mpMyChildrenList) {
+            for (auto* childNode : *k->mpMyChildrenList) {
+                auto* child = static_cast<TKey*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -68,8 +83,9 @@ void KeyUnit::resetStats()
 
 void KeyUnit::_uninstall(TKey* pChild, const QString& packageName)
 {
-    std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
-    for (auto key : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* keyNode : *childrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         _uninstall(key, packageName);
         uninstallList.append(key);
     }
@@ -84,7 +100,23 @@ void KeyUnit::uninstall(const QString& packageName)
             uninstallList.append(rootKey);
         }
     }
+    // Re-entrant uninstall (#9337): a key's own script (e.g. uninstallPackage())
+    // is removing its package while match()/processDataStream() are still on the
+    // stack for that key. Deleting now would be a use-after-free, so defer to
+    // doCleanup() at depth 0. Deactivating is enough to stop them firing for the
+    // rest of this pass: match() returns early on !isActive(), so the processing
+    // loop skips them without needing a loop-level guard.
+    if (mProcessingDepth > 0) {
+        for (auto key : uninstallList) {
+            key->setIsActive(false);
+            mCleanupSet.remove(key); // keep the two deferred-delete paths disjoint
+        }
+        return;
+    }
     for (auto& key : uninstallList) {
+        // in case the key was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(key);
         delete key;
     }
     uninstallList.clear();
@@ -95,6 +127,13 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
     bool isMatchFound = false;
 
     mProcessingDepth++;
+    const auto processingGuard = qScopeGuard([this] {
+        mProcessingDepth--;
+        Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth == 0) {
+            doCleanup();
+        }
+    });
 
     for (auto keyObject : mKeyRootNodeList) {
         // Skip null or invalid key objects during profile closing/destruction
@@ -104,24 +143,63 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 
         if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
-                mProcessingDepth--;
-                Q_ASSERT(mProcessingDepth >= 0);
-                if (mProcessingDepth == 0) {
-                    doCleanup();
-                }
                 return true;
             }
             isMatchFound = true;
         }
     }
 
-    mProcessingDepth--;
-    Q_ASSERT(mProcessingDepth >= 0);
-    if (mProcessingDepth == 0) {
-        doCleanup();
+    return isMatchFound;
+}
+
+bool KeyUnit::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    return firstMatch(key, modifiers) != nullptr;
+}
+
+const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    for (auto keyObject : mKeyRootNodeList) {
+        if (!keyObject || !keyObject->isActive() || (keyObject->mpHost && keyObject->mpHost->isClosingDown())) {
+            continue;
+        }
+
+        if (const TKey* match = keyObject->firstMatch(key, modifiers)) {
+            return match;
+        }
     }
 
-    return isMatchFound;
+    return nullptr;
+}
+
+void KeyUnit::warnIfAddonCommandHoldsKey(const TKey* pKey) const
+{
+    auto* pMudlet = mudlet::self();
+    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
+        return;
+    }
+    // A keypad or group-switch binding cannot be written as a key sequence, so
+    // no command's shortcut can be the one holding it
+    constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
+    if (pKey->getKeyModifiers() & ~sequenceModifiers) {
+        return;
+    }
+
+    const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
+    const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost);
+    if (holders.isEmpty()) {
+        return;
+    }
+    // Shown in the editor rather than on the main screen, for the reason
+    // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
+    // bindings at profile load would repeat this at every startup, and a line
+    // the player learns to ignore is worse than no line. The editor is where
+    // the binding is, and where it gets changed.
+    if (mpHost->mpEditorDialog) {
+        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
+        mpHost->mpEditorDialog->showWarning(
+                tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(sequence.toString(QKeySequence::NativeText), holders.join(qsl(", "))));
+    }
 }
 
 void KeyUnit::compileAll()
@@ -179,16 +257,28 @@ std::vector<int> KeyUnit::findItems(const QString& name, const bool exactMatch, 
 bool KeyUnit::enableKey(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
+    // equal_range visits every same-named key; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
         TKey* pT = it.value();
-        // Unlike the TTriggerUnit version of this code we directly set
-        // the mActive flag (and it shows up in the editor) rather than the
-        // mUserActiveState one (which does not)
-        // So do not use pT->setIsActive(true) here:
+        // A key queued for deletion stays in the lookup table until doCleanup()
+        // frees it - re-activating one resurrects a killKey()ed key, or one
+        // whose package a script uninstalled mid-pass, and it matches the next
+        // key press.
+        if (mCleanupSet.contains(pT) || uninstallList.contains(pT)) {
+            continue;
+        }
+        // enableKey() sets pT active and then walks pT's children for the same
+        // name without re-checking the skip above. That is only safe while no
+        // child key is ever queued for deletion under a live parent: killKey()
+        // and removeAllTempKeys() take root nodes only, and _uninstall() queues
+        // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
-        ++it;
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshKeyIcon(pT->getID());
+        }
     }
     return found;
 }
@@ -196,16 +286,17 @@ bool KeyUnit::enableKey(const QString& name)
 bool KeyUnit::disableKey(const QString& name)
 {
     bool found = false;
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
+    // equal_range visits every same-named key; constFind() + (++it) can start
+    // mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
         TKey* pT = it.value();
-        // Unlike the TTriggerUnit version of this code we directly clear
-        // the mActive flag (and it shows up in the editor) rather than the
-        // mUserActiveState one (which does not)
-        // So do not use pT->setIsActive(false) here:
+        // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
-        ++it;
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshKeyIcon(pT->getID());
+        }
     }
     return found;
 }
@@ -213,16 +304,27 @@ bool KeyUnit::disableKey(const QString& name)
 bool KeyUnit::killKey(QString& name)
 {
     for (auto pChild : mKeyRootNodeList) {
-        if (pChild->getName() == name) {
-            // only temporary Keys can be killed
-            if (!pChild->isTemporary()) {
-                return false;
-            } else {
-                pChild->setIsActive(false);
-                markCleanup(pChild);
-                return true;
-            }
+        if (pChild->getName() != name) {
+            continue;
         }
+        // Names are not unique, so keep looking rather than give up on the first
+        // same-named key that cannot be killed - a permanent key loaded from the
+        // profile precedes this session's temporaries in this list, and reporting
+        // a failure over it would strand a killable key
+        if (!pChild->isTemporary()) {
+            // only temporary Keys can be killed
+            continue;
+        }
+        // An already killed key is only unlinked from this list once doCleanup()
+        // gets to free it, which cannot happen while a key script is on the call
+        // stack - so until then it is still findable by name. Killing it a second
+        // time achieves nothing:
+        if (mCleanupSet.contains(pChild)) {
+            continue;
+        }
+        pChild->setIsActive(false);
+        markCleanup(pChild);
+        return true;
     }
     return false;
 }
@@ -302,11 +404,12 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->getName(), pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // Names are not unique - the lookup table is a QMultiMap - so drop this one
+    // key's entry rather than every entry filed under the name. The
+    // single-argument remove() used to be taken for temporary keys, which evicted
+    // live same-named keys and left them unreachable by name for the rest of the
+    // session
+    mLookupTable.remove(pT->getName(), pT);
     mKeyMap.remove(pT->getID());
     mKeyRootNodeList.remove(pT);
 }
@@ -330,11 +433,10 @@ bool KeyUnit::registerKey(TKey* pT)
 
     if (pT->getParent()) {
         addKey(pT);
-        return true;
     } else {
         addKeyRootNode(pT);
-        return true;
     }
+    return true;
 }
 
 void KeyUnit::unregisterKey(TKey* pT)
@@ -345,10 +447,8 @@ void KeyUnit::unregisterKey(TKey* pT)
     if (pT->getParent()) {
         removeKey(pT);
         return;
-    } else {
-        removeKeyRootNode(pT);
-        return;
     }
+    removeKeyRootNode(pT);
 }
 
 
@@ -371,11 +471,8 @@ void KeyUnit::removeKey(TKey* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->getName(), pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // see removeKeyRootNode(): one entry, not every same-named one
+    mLookupTable.remove(pT->getName(), pT);
     mKeyMap.remove(pT->getID());
 }
 
@@ -414,8 +511,9 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
 
 void KeyUnit::assembleReport(TKey* pItem)
 {
-    std::list<TKey*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TKey*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
@@ -458,12 +556,39 @@ void KeyUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
+    QSet<TKey*> deletedKeys;
     QMutableSetIterator<TKey*> itKey(mCleanupSet);
     while (itKey.hasNext()) {
         auto pKey = itKey.next();
         itKey.remove();
+        deletedKeys.insert(pKey);
         delete pKey;
     }
+    // Not a no-op: the drain above frees no buckets, so without this every later
+    // flush re-scans an array sized for the largest batch the set has ever held.
+    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    mCleanupSet.squeeze();
+    // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+    // children-before-parents and each ~Tree unlinks from its parent, so deleting
+    // children first empties the parent's child list (no double free); the seen
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that ended up in both containers is
+    // freed once. It matches on pointer identity only: a node freed indirectly, as
+    // a child of a queued parent, is not in the set (not reachable today - only
+    // temporary root nodes are ever queued, and those have no children).
+    for (auto key : uninstallList) {
+        if (!deletedKeys.contains(key)) {
+            deletedKeys.insert(key);
+            delete key;
+        }
+    }
+    uninstallList.clear();
 }
 
 void KeyUnit::setupKeyNames()

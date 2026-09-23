@@ -66,6 +66,9 @@ public:
     QString version = "Stub-1.0";
     bool linkMode;
 
+    QByteArray mEncoding = QByteArrayLiteral("UTF-8");
+    QByteArray getEncoding() const override { return mEncoding; }
+
     QString sentToServer;
 
     QString fgColor, bgColor;

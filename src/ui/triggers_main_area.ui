@@ -43,7 +43,7 @@
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_widget_top" stretch="0,1,0,0,1,0">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_top" stretch="0,1,0,1,0,0">
       <property name="leftMargin">
        <number>6</number>
       </property>
@@ -80,32 +80,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QToolButton" name="toolButton_toggleExtraControls">
-        <property name="toolTip">
-         <string>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../mudlet.qrc">
-          <normaloff>:/icons/arrow-right_grey-16x.png</normaloff>
-          <normalon>:/icons/arrow-down_grey-16x.png</normalon>
-          <activeoff>:/icons/arrow-right-16x.png</activeoff>
-          <activeon>:/icons/arrow-down-16x.png</activeon>:/icons/arrow-right_grey-16x.png</iconset>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <property name="autoRaise">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QLabel" name="label_trigger_command">
         <property name="text">
          <string>Command:</string>
@@ -125,6 +99,32 @@
         </property>
         <property name="placeholderText">
          <string>Text to send to the game (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="toolButton_toggleExtraControls">
+        <property name="toolTip">
+         <string>&lt;p&gt;Show or hide the advanced options for this trigger; hiding them leaves more room for the trigger &lt;i&gt;items&lt;/i&gt; on a smaller screen.&lt;/p&gt;</string>
+        </property>
+        <property name="text">
+         <string extracomment="Label of the disclosure button that shows or hides the trigger's less commonly used settings - the stay open, sound, multi-line, filter and colourise options. Keep it short, it shares one row with the Name and Command fields.">Advanced options</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../mudlet.qrc">
+          <normaloff>:/icons/arrow-right_grey-16x.png</normaloff>
+          <normalon>:/icons/arrow-down_grey-16x.png</normalon>
+          <activeoff>:/icons/arrow-right-16x.png</activeoff>
+          <activeon>:/icons/arrow-down-16x.png</activeon>:/icons/arrow-right_grey-16x.png</iconset>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <property name="toolButtonStyle">
+         <enum>Qt::ToolButtonTextBesideIcon</enum>
         </property>
        </widget>
       </item>

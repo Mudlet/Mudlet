@@ -22,17 +22,28 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QApplication>
+#include <QDateTime>
 #include <QEnterEvent>
-#include <QDir>
-#include <QRegularExpression>
 #include <QString>
-#include <QScreen>
-#include <QWidget>
 
+#include <cstdint>
 #include <cstring>
 
+class QDir;
+
 #define qsl(s) QStringLiteral(s)
+
+// user-defined literals to represent kilobytes and megabytes
+// C++ standard requires unsigned long long parameter for integer literal operators
+constexpr auto operator""_KB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
+{
+    return 1024LL * x;
+}
+
+constexpr auto operator""_MB(unsigned long long const x) -> int64_t // NOLINT(runtime/int)
+{
+    return 1024LL * 1024LL * x;
+}
 
 using TEnterEvent = QEnterEvent;
 
@@ -56,6 +67,30 @@ public:
             return 0;
         }
         const size_t copyLen = (srcLen < destSize) ? srcLen : destSize - 1;
+        std::memcpy(dest, src, copyLen);
+        dest[copyLen] = '\0';
+        return copyLen;
+    }
+
+    // As copyString(), but for UTF-8 data that has to stay valid UTF-8: the copy
+    // stops at the last character that fits whole rather than at the last byte,
+    // so no trailing half-character is left behind. Use it wherever a truncated
+    // copy is handed on to something that decodes it - Discord discards an
+    // entire presence frame whose JSON payload carries an incomplete sequence.
+    // Returns the number of bytes copied (excluding the null terminator).
+    static size_t copyUtf8String(char* dest, size_t destSize, const char* src, size_t srcLen)
+    {
+        if (destSize == 0) {
+            return 0;
+        }
+        size_t copyLen = (srcLen < destSize) ? srcLen : destSize - 1;
+        // Every byte after the first of a multi-byte character has the form
+        // 10xxxxxx, so a cut in front of one is a cut inside a character: walk
+        // back to where that character starts. A cut that took everything (or
+        // that landed on a character start) needs no adjustment.
+        while (copyLen > 0 && copyLen < srcLen && (static_cast<unsigned char>(src[copyLen]) & 0xC0u) == 0x80u) {
+            --copyLen;
+        }
         std::memcpy(dest, src, copyLen);
         dest[copyLen] = '\0';
         return copyLen;
@@ -89,131 +124,10 @@ public:
 #endif
     }
 
-    // Return a new QString with path made absolute, resolved against base and cleaned if it was relative
-    // Returns path unchanged if it was already absolute or an empty string
-    static QString pathResolveRelative(const QString& path, const QString& base)
-    {
-        if (path.isEmpty()) {
-            return path;
-        }
-        if (QDir::isAbsolutePath(path)) {
-            return path;
-        }
-        return QDir::cleanPath(base + "/" + path);
-    }
-
-    inline static const auto scmfileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
-    // Sanitize a string for safe use as filename/path component
-    // Replaces filesystem-unsafe characters with underscores and limits length
-    static QString sanitizeForPath(const QString& input)
-    {
-        QString sanitized = input;
-        // Replace filesystem-unsafe characters with underscores
-        sanitized.replace(scmfileSystemUnsafeChars, qsl("_"));
-        // Limit length to prevent filesystem issues
-        if (sanitized.length() > 50) {
-            sanitized = sanitized.left(50);
-        }
-        return sanitized;
-    }
-
-    // Position a dialog on the same screen as its parent window
-    // This improves multi-monitor UX by keeping dialogs with their parent windows
-    static void positionDialogOnParentScreen(QWidget* dialog, QWidget* parent)
-    {
-        if (!dialog || !parent) {
-            return;
-        }
-
-        // Get the screen containing the parent window
-        // Use mapToGlobal to get the actual screen position of the parent widget
-        QPoint parentPos = parent->mapToGlobal(parent->rect().center());
-        const QScreen* parentScreen = QApplication::screenAt(parentPos);
-        if (!parentScreen) {
-            // Fallback to parent's screen property if screenAt fails
-            parentScreen = parent->screen();
-        }
-
-        if (parentScreen) {
-            // Get the current screen of the dialog to see if it needs repositioning
-            // Use the dialog's current geometry center for more accurate screen detection
-            QPoint dialogCenter = dialog->mapToGlobal(dialog->rect().center());
-            const QScreen* dialogScreen = QApplication::screenAt(dialogCenter);
-
-            // If the dialog is not visible or not yet positioned, or if it's on the wrong screen,
-            // then reposition it. This handles cases where the dialog retains old positions.
-            if (!dialog->isVisible() || !dialogScreen || dialogScreen != parentScreen) {
-                centerDialogOnScreen(dialog, parentScreen);
-            }
-        }
-    }
-
-    // Position a dialog on the same screen as the active profile's console
-    // This version considers the actual console widget position for better accuracy
-    static void positionDialogOnActiveProfileScreen(QWidget* dialog, QWidget* parentWindow, QWidget* activeConsole)
-    {
-        if (!dialog) {
-            return;
-        }
-
-        // Prefer the active console position if available, otherwise fall back to parent window
-        QWidget* referenceWidget = activeConsole ? activeConsole : parentWindow;
-        if (referenceWidget) {
-            positionDialogOnParentScreen(dialog, referenceWidget);
-        }
-    }
-
-    // Force reposition a dialog on the specified screen, regardless of current position
-    // This is useful for singleton dialogs that may retain old positions
-    static void forceRepositionDialogOnParentScreen(QWidget* dialog, QWidget* parent)
-    {
-        if (!dialog || !parent) {
-            return;
-        }
-
-        // Get the screen containing the parent window
-        QPoint parentPos = parent->mapToGlobal(parent->rect().center());
-        const QScreen* parentScreen = QApplication::screenAt(parentPos);
-        if (!parentScreen) {
-            parentScreen = parent->screen();
-        }
-
-        if (parentScreen) {
-            // Always reposition, regardless of current dialog position
-            centerDialogOnScreen(dialog, parentScreen);
-        }
-    }
-
-    // Position a dialog in the center of the specified screen
-    static void centerDialogOnScreen(QWidget* dialog, const QScreen* screen)
-    {
-        if (!dialog || !screen) {
-            return;
-        }
-
-        const QRect screenGeometry = screen->availableGeometry();
-
-        // Ensure dialog has a size first
-        if (dialog->size().isEmpty()) {
-            dialog->adjustSize();
-        }
-
-        // Calculate center position
-        const QSize dialogSize = dialog->size();
-        const QPoint centerPoint = screenGeometry.center();
-        const QPoint newPos(
-            centerPoint.x() - dialogSize.width() / 2,
-            centerPoint.y() - dialogSize.height() / 2);
-
-        // Ensure dialog stays within screen bounds
-        QPoint constrainedPos = newPos;
-        constrainedPos.setX(qMax(screenGeometry.left(),
-                                qMin(newPos.x(), screenGeometry.right() - dialogSize.width())));
-        constrainedPos.setY(qMax(screenGeometry.top(),
-                                qMin(newPos.y(), screenGeometry.bottom() - dialogSize.height())));
-
-        dialog->move(constrainedPos);
-    }
+    // Unpacks archivePath into destination, creating any folders the archive needs
+    // through tmpDir. Called from a worker thread, so nothing in here may touch the
+    // UI.
+    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 };
 
-#endif // UPDATER_H
+#endif // MUDLET_UTILS_H
