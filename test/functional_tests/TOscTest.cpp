@@ -1686,6 +1686,56 @@ private slots:
     mpHost->setCaretEnabled(false);
   }
 
+  // An OSC 8 link the game never closes used to stay open for the rest of the
+  // session: every later line carried its id, so a click anywhere ran a command
+  // the server chose, on text that looks exactly like ordinary output. The link
+  // is bounded to the line it began on, the way the MXP parser resets per line
+  // and an abandoned CSI is dropped.
+  void test_AnUnclosedHyperlinkDoesNotClaimLaterLines() {
+    injectData(qsl("\x1b]8;;send:unclosed\x1b\\click me"));
+    injectData(qsl("FOLLOWING LINE"));
+    injectData(qsl("LATER LINE"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int lastLine = console->buffer.getLastLineNumber();
+    // The lines carrying the text fed above: the last one Mudlet has, and the
+    // two before it. The prompt-less feed puts one line in the buffer each.
+    const int laterLine = lastLine - 1;
+    const int followingLine = lastLine - 2;
+    const int linkLine = lastLine - 3;
+
+    QCOMPARE(console->buffer.line(followingLine).trimmed(), qsl("FOLLOWING LINE"));
+    QCOMPARE(console->buffer.line(laterLine).trimmed(), qsl("LATER LINE"));
+
+    QVERIFY2(console->buffer.getLinkIndexAt(linkLine, 0) > 0,
+             "the text the game did mark as a link is no longer a link at all");
+    QCOMPARE(console->buffer.getLinkIndexAt(followingLine, 0), 0);
+    QCOMPARE(console->buffer.getLinkIndexAt(laterLine, 0), 0);
+  }
+
+  // The same line-end ending finalises the link rather than dropping what it
+  // asked for: a spoiler whose closing sequence never arrives still has its
+  // text set aside and masked on the line it was on, where clearing the state
+  // alone would have left the spoiler on show.
+  void test_AnUnclosedSpoilerIsStillMaskedOnItsLine() {
+    injectData(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\SECRET"));
+    injectData(qsl("AFTER THE SPOILER"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int lastLine = console->buffer.getLastLineNumber();
+    const int afterLine = lastLine - 1;
+    const int spoilerLine = lastLine - 2;
+
+    QCOMPARE(console->buffer.line(afterLine).trimmed(), qsl("AFTER THE SPOILER"));
+    const int spoilerLinkId = console->buffer.getLinkIndexAt(spoilerLine, 0);
+    QVERIFY2(spoilerLinkId > 0, "the spoiler text the game marked is no longer a link");
+    QVERIFY2(console->buffer.isSpoilerUnrevealed(spoilerLinkId),
+             "the spoiler was not set aside, so its text is on show");
+    QVERIFY2(!console->buffer.line(spoilerLine).contains(qsl("SECRET")),
+             "the spoiler's own text is still visible on the line");
+    QCOMPARE(console->buffer.getLinkIndexAt(afterLine, 0), 0);
+  }
+
   void cleanupTestCase() {
     delete mpServer;
     mpServer = nullptr;

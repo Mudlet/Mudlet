@@ -511,6 +511,7 @@ private:
     void decodeSGR38(const SgrParameters&, bool isColonSeparated = true);
     void decodeSGR48(const SgrParameters&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
+    void finaliseActiveHyperlink();
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
     void commitLineData(QString line, std::vector<TChar> chars, char ch);
