@@ -29,7 +29,6 @@
 #include "TTextEdit.h"
 #include "TTrigger.h"
 #include "mudlet.h"
-#include "utils.h"
 
 
 dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const bool isBackGround, const QString& title)
@@ -195,8 +194,6 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const boo
     } else if ((mIsBackground && mpTrigger->mColorTriggerBgAnsi == TTrigger::scmIgnored) || (!mIsBackground && mpTrigger->mColorTriggerFgAnsi == TTrigger::scmIgnored)) {
         buttonBox->button(QDialogButtonBox::Ignore)->setFocus();
     }
-
-    utils::setAccessibleDescriptionsFromToolTips(this);
 }
 
 void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor, const QColor& color, const QString& colorText)
@@ -363,7 +360,6 @@ void dlgColorTrigger::slot_moreColorsClicked()
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 
     buttonBox->button(QDialogButtonBox::Apply)->setToolTip(utils::richText(tr("All color options are showing.")));
-    utils::setAccessibleDescriptionFromToolTip(buttonBox->button(QDialogButtonBox::Apply));
 
     if (groupBox_rgbScale->isHidden()) {
         groupBox_rgbScale->show();

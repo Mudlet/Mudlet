@@ -25,7 +25,6 @@
 #include "Host.h"
 #include "TMap.h"
 #include "TRoomDB.h"
-#include "utils.h"
 
 #include <QColorDialog>
 #include <QMenu>
@@ -38,7 +37,6 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
 {
     // init generated dialog
     setupUi(this);
-    utils::setAccessibleDescriptionsFromToolTips(this);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(comboBox_roomSymbol, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_symbolComboBoxItemChanged);
@@ -222,7 +220,6 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
  state of being hidden when the selection includes multiple rooms and they
  are not all in the same state.*/
         checkBox_hidden->setToolTip(utils::richText(tr("Leave as partially checked to not change the state of the selected rooms.")));
-        utils::setAccessibleDescriptionFromToolTip(checkBox_hidden);
         return;
     }
 
@@ -233,7 +230,6 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
                                 nullptr,
                                 mpRooms.size()));
     checkBox_hidden->setToolTip(QString());
-    utils::setAccessibleDescriptionFromToolTip(checkBox_hidden);
 }
 
 

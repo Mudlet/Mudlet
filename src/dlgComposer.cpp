@@ -29,7 +29,6 @@
 #include "TEncodingHelper.h"
 #include "TMainConsole.h"
 #include "mudlet.h"
-#include "utils.h"
 
 #include <QKeyEvent>
 #include <QMenu>
@@ -41,8 +40,6 @@ dlgComposer::dlgComposer(Host* pH)
 : mpHost(pH)
 {
     setupUi(this);
-    utils::setAccessibleDescriptionsFromToolTips(this);
-
     const QFont font = QFont(qsl("Bitstream Vera Sans Mono"), 10, QFont::Normal);
     edit->setFont(font);
     connect(saveButton, &QAbstractButton::clicked, this, &dlgComposer::slot_save);

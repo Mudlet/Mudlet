@@ -32,7 +32,6 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
 : QDialog(pParentWidget)
 {
     setupUi(this);
-    utils::setAccessibleDescriptionFromToolTip(checkBox_scaling);
 
     setAttribute(Qt::WA_DeleteOnClose);
     //: Create label dialog title
