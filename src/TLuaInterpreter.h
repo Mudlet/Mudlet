@@ -947,6 +947,8 @@ private:
     static bool globalsMetatablePristine(lua_State*, const int metatable);
     bool globalsHandlersInPlace(lua_State*);
     void standDownDeferral(lua_State*);
+    void stripGlobalsHandlers(lua_State*);
+    bool restoreGlobalsHandlers(lua_State*, const int metatable);
     void pushUnusedSpareMultimatches(lua_State*);
     void pushMatchesTable(lua_State*);
     void pushEmptyMatchesTable(lua_State*);
@@ -1057,6 +1059,19 @@ private:
     // are still there before anything is left out.
     lua_CFunction mStockMetatableFunctions[4] = {};
     bool mGlobalsMetatableTouched = false;
+    // Once nothing is left out the handlers only cost every read of a global
+    // that is not there a C call, so the next line takes them off. Not at once:
+    // setmetatable(_G, getmetatable(_G)) is how a script puts the deferral back,
+    // and it would find nothing to put back.
+    bool mGlobalsHandlersLinger = false;
+    // The metatable they were last taken off, held in a registry slot made at
+    // install so that filling it on the per-line path cannot allocate. Putting
+    // that table back on the globals table with both slots still empty puts
+    // them back too - held rather than flagged, as a script can put another
+    // metatable on in between and the original back afterwards.
+    int mStrippedMetatableRef = LUA_NOREF;
+    int mIndexHandlerRef = LUA_NOREF;
+    int mNewindexHandlerRef = LUA_NOREF;
     // An alias pass a script asks for - expandAlias() - sets "command" and the
     // capture groups for the scripts that pass runs. What the calling script was
     // given is parked here for the duration and handed back when the pass

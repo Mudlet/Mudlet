@@ -4514,7 +4514,13 @@ bool TLuaInterpreter::globalsMetatablePristine(lua_State* L, const int metatable
 // Whether a global can be left out for lazyGlobalsIndex() to build
 bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
 {
-    if (!mLazyGlobalsInstalled || mGlobalsMetatableTouched) {
+    if (!mLazyGlobalsInstalled) {
+        return false;
+    }
+    if (mGlobalsMetatableTouched) {
+        if (mGlobalsHandlersLinger) {
+            stripGlobalsHandlers(L);
+        }
         return false;
     }
     if (lua_topointer(L, LUA_GLOBALSINDEX) != mGlobalsTable) {
@@ -4533,6 +4539,7 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         // anything is left out, rather than trusted from the last setmetatable.
         mGlobalsMetatableTouched = true;
         standDownDeferral(L);
+        stripGlobalsHandlers(L);
         return false;
     }
     return true;
@@ -4565,6 +4572,67 @@ void TLuaInterpreter::standDownDeferral(lua_State* L)
         lua_rawset(L, globals);
     }
     lua_pop(L, 1);
+}
+
+// No documentation available in wiki - internal function
+// Takes whichever of Mudlet's two handlers is still on the globals metatable
+// off it. Nothing is left out by now, so neither has anything to answer for.
+// Only ever clears a key that holds a value, which cannot allocate and so
+// cannot raise here, outside any pcall.
+void TLuaInterpreter::stripGlobalsHandlers(lua_State* L)
+{
+    mGlobalsHandlersLinger = false;
+    const int callerStackTop = lua_gettop(L);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mGlobalsTableRef);
+    if (!lua_getmetatable(L, -1)) {
+        lua_settop(L, callerStackTop);
+        return;
+    }
+    const int metatable = lua_gettop(L);
+    int stripped = 0;
+    for (const auto& [keyRef, handler] : {std::pair{mIndexKeyRef, &TLuaInterpreter::lazyGlobalsIndex}, std::pair{mNewindexKeyRef, &TLuaInterpreter::lazyGlobalsNewindex}}) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+        lua_pushvalue(L, -1);
+        lua_rawget(L, metatable);
+        if (lua_tocfunction(L, -1) == handler) {
+            lua_pop(L, 1);
+            lua_pushnil(L);
+            lua_rawset(L, metatable);
+            ++stripped;
+        } else {
+            lua_pop(L, 2);
+        }
+    }
+    // Left as it was when there was nothing to take off: handing the metatable
+    // out again after they came off does not stop it being the one to put back
+    if (stripped == 2) {
+        lua_pushvalue(L, metatable);
+        lua_rawseti(L, LUA_REGISTRYINDEX, mStrippedMetatableRef);
+    }
+    lua_settop(L, callerStackTop);
+}
+
+// No documentation available in wiki - internal function
+// Puts the handlers stripGlobalsHandlers() took off back on the metatable at the
+// absolute index, provided both of its slots are still empty
+bool TLuaInterpreter::restoreGlobalsHandlers(lua_State* L, const int metatable)
+{
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mIndexKeyRef);
+    lua_rawget(L, metatable);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mNewindexKeyRef);
+    lua_rawget(L, metatable);
+    const bool vacant = lua_isnil(L, -1) && lua_isnil(L, -2);
+    lua_pop(L, 2);
+    if (!vacant) {
+        return false;
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mIndexKeyRef);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mIndexHandlerRef);
+    lua_rawset(L, metatable);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mNewindexKeyRef);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mNewindexHandlerRef);
+    lua_rawset(L, metatable);
+    return true;
 }
 
 // No documentation available in wiki - internal function
@@ -4827,18 +4895,32 @@ int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
     if (onGlobals) {
         self->materialisePendingGlobals(L);
     }
+    // setmetatable(_G, getmetatable(_G)) after the handlers were taken off is
+    // someone putting the deferral back, as it was before they came off
+    bool puttingBack = false;
+    if (setter && onGlobals && lua_istable(L, 2)) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, self->mStrippedMetatableRef);
+        puttingBack = lua_rawequal(L, -1, 2);
+        lua_pop(L, 1);
+    }
     const int results = self->mStockMetatableFunctions[slot](L);
     if (setter) {
         if (onGlobals) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, self->mGlobalsTableRef);
             const bool hasMetatable = lua_getmetatable(L, -1);
+            if (hasMetatable && puttingBack && self->restoreGlobalsHandlers(L, lua_gettop(L))) {
+                lua_pushboolean(L, false);
+                lua_rawseti(L, LUA_REGISTRYINDEX, self->mStrippedMetatableRef);
+            }
             self->mGlobalsMetatableTouched = !hasMetatable || !globalsMetatablePristine(L, lua_gettop(L));
+            self->mGlobalsHandlersLinger = self->mGlobalsMetatableTouched;
             lua_pop(L, hasMetatable ? 2 : 1);
         }
     } else if (onGlobals || self->globalsMetatableHandedOut(L, lua_gettop(L))) {
         // Also reached through any table or userdata given the same metatable
         self->materialisePendingGlobals(L);
         self->mGlobalsMetatableTouched = true;
+        self->mGlobalsHandlersLinger = true;
     }
     return results;
 }
@@ -4877,17 +4959,19 @@ void TLuaInterpreter::installLazyGlobals()
             lua_pushvalue(L, LUA_GLOBALSINDEX);
             mGlobalsTableRef = luaL_ref(L, LUA_REGISTRYINDEX);
 
-            lua_pushliteral(L, "__index");
             lua_pushlightuserdata(L, this);
             lua_pushcclosure(L, &TLuaInterpreter::lazyGlobalsIndex, 1);
-            lua_rawset(L, -3);
-            lua_pushliteral(L, "__newindex");
+            mIndexHandlerRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushlightuserdata(L, this);
             lua_pushcclosure(L, &TLuaInterpreter::lazyGlobalsNewindex, 1);
-            lua_rawset(L, -3);
+            mNewindexHandlerRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            restoreGlobalsHandlers(L, lua_gettop(L));
 
             mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
             mGlobalsMetatableTouched = false;
+            mGlobalsHandlersLinger = false;
+            lua_pushboolean(L, false);
+            mStrippedMetatableRef = luaL_ref(L, LUA_REGISTRYINDEX);
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
                                     && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3);
         }
@@ -4935,6 +5019,10 @@ void TLuaInterpreter::forgetLazyGlobals()
     mGlobalsTable = nullptr;
     mGlobalsTableRef = LUA_NOREF;
     mGlobalsMetatableTouched = false;
+    mGlobalsHandlersLinger = false;
+    mStrippedMetatableRef = LUA_NOREF;
+    mIndexHandlerRef = LUA_NOREF;
+    mNewindexHandlerRef = LUA_NOREF;
     mCaptureScopeOpen = false;
     mMatchesPending = false;
     mMultimatchesPending = PendingMultimatches::None;

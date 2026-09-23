@@ -4632,6 +4632,55 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- Once nothing is left out the handlers have nothing to answer for, and
+        -- every read of a global that is not there would still pay a C call
+        describe("the handlers once the metatable is handed out", function()
+            it("come off the globals metatable at the next line", function()
+                local metatable = getmetatable(_G)
+                local before = rawget(metatable, "__index")
+
+                feedTriggers("\nLazyHandlersIdle\n")
+                local index, newindex = rawget(metatable, "__index"), rawget(metatable, "__newindex")
+
+                assert.is_not_nil(before, "the handlers were not there to begin with, so this proves nothing")
+                assert.is_nil(index, "__index stayed on after nothing was left out any more")
+                assert.is_nil(newindex, "__newindex stayed on after nothing was left out any more")
+            end)
+
+            -- Handed out twice, as busted does around every file, so the second
+            -- line finds nothing left to take off
+            it("go back on when that metatable is put back on the globals table", function()
+                getmetatable(_G)
+                feedTriggers("\nLazyHandlersIdle\n")
+                local metatable = getmetatable(_G)
+                feedTriggers("\nLazyHandlersIdle\n")
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyHandlersBack (\\w+)$", function()
+                    seen.rawMatches = rawget(_G, "matches")
+                    seen.capture = matches[2]
+                end))
+
+                setmetatable(_G, metatable)
+                feedTriggers("\nLazyHandlersBack word\n")
+
+                assert.is_nil(seen.rawMatches, "nothing was left out after the metatable was put back")
+                assert.are.equal("word", seen.capture)
+            end)
+
+            it("leave a handler a package put there alone", function()
+                local original = getmetatable(_G)
+                local function theirs() return nil end
+                local replacement = {__index = theirs}
+
+                setmetatable(_G, replacement)
+                feedTriggers("\nLazyHandlersIdle\n")
+                local kept = rawget(replacement, "__index")
+                setmetatable(_G, original)
+
+                assert.are.equal(theirs, kept, "the package's own __index was taken off")
+            end)
+        end)
+
     end)
 
     -- Once a profile holds enough plain-text triggers, the engine files them by
