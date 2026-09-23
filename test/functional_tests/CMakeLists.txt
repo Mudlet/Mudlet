@@ -92,7 +92,9 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
+    ConnectionDialogNewProfileTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
+    ConnectionDialogOpenProfileTest.cpp
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
@@ -642,6 +644,11 @@ set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 600)
+
+# ConnectionDialogOpenProfileTest waits out a real reconnect (15s budget) on top
+# of two profile loads and a full mudlet start under ASan, so the 60s default is
+# too tight for a loaded machine even though the file runs in ~2s
+set_tests_properties(ConnectionDialogOpenProfileTest PROPERTIES TIMEOUT 300)
 
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for
