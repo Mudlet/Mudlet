@@ -143,10 +143,21 @@ public:
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
 
+private:
+    // Declared first, beside environment, hidden and highlight, so that all
+    // five share one cache line: the zoomed-out 2D map reads them for every
+    // room on screen, and apart they cost a main-memory miss each per room.
+    // Made private so we can catch all cases where they are to be modified:
+    int mX = 0;
+    int mY = 0;
+    int mZ = 0;
+
+public:
     int environment = -1;
 
     bool isLocked = false;
     bool hidden = false;
+    bool highlight = false;
     qreal min_x = 0.0;
     qreal min_y = 0.0;
     qreal max_x = 0.0;
@@ -166,7 +177,6 @@ public:
     QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
 
-    bool highlight = false;
     QColor highlightColor;
     QColor highlightColor2;
     float highlightRadius = 0.0f;
@@ -205,10 +215,6 @@ private:
     int id = 0;
     int area = -1;
     int weight = 1;
-    // Made private so we can catch all cases where they are to be modified:
-    int mX = 0;
-    int mY = 0;
-    int mZ = 0;
     // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
     int north = -1;
