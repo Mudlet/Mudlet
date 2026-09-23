@@ -3390,10 +3390,11 @@ describe("Trigger processing", function()
         end
 
         -- Once the metatable of the globals table is handed out Mudlet leaves
-        -- nothing out until it is put back, and busted hands it out around
-        -- every file
+        -- nothing out for the rest of the session, and busted hands it out
+        -- around every file, so the deferral is put back through a hook that
+        -- only exists in test mode
         local function rearm()
-            setmetatable(_G, getmetatable(_G))
+            rearmLazyGlobals()
         end
 
         -- "multimatches" is nil in a profile until the first dispatch is over.
@@ -4558,12 +4559,13 @@ describe("Trigger processing", function()
 
         end)
 
-        -- Handing the globals table a metatable carrying both handlers turns
-        -- the deferral back on, and the script that handed it over is still
-        -- holding that table. Changing a handler on it afterwards is an
-        -- assignment to a key that already has a value, so no metamethod and no
-        -- guard of Mudlet's hears about it. Nothing may be left out after that:
-        -- the read that would build it never reaches the handler.
+        -- A package that replaced getmetatable() after Mudlet's scripts loaded
+        -- holds the metatable without the guard having seen it go, so the
+        -- deferral is still on. Changing a handler on it is an assignment to a
+        -- key that already has a value, so no metamethod hears about it either.
+        -- Nothing may be left out after that: the read that would build it
+        -- never reaches the handler. rearmLazyGlobals() stands in for that
+        -- package, putting the deferral back on a table the script holds.
         describe("a metatable the globals table is given and then changed", function()
             local function readEverythingIn(seen)
                 return function()
@@ -4581,6 +4583,7 @@ describe("Trigger processing", function()
                 trigger(tempRegexTrigger("^LazyKeptMetatable (\\w+)$", readEverythingIn(seen)))
 
                 setmetatable(_G, copy)
+                rearmLazyGlobals()
                 copy.__index = nil
                 local ok, message = pcall(feedTriggers, "\nLazyKeptMetatable word\n")
                 setmetatable(_G, original)
@@ -4601,6 +4604,7 @@ describe("Trigger processing", function()
                 end))
 
                 setmetatable(_G, copy)
+                rearmLazyGlobals()
                 copy.__index = function(_, key)
                     asked[key] = true
                     return nil
@@ -4622,6 +4626,7 @@ describe("Trigger processing", function()
                 trigger(tempRegexTrigger("^LazyCopiedMetatable (\\w+)$", readEverythingIn(seen)))
 
                 setmetatable(_G, copy)
+                rearmLazyGlobals()
                 local ok, message = pcall(feedTriggers, "\nLazyCopiedMetatable word\n")
                 setmetatable(_G, original)
 
@@ -4647,11 +4652,7 @@ describe("Trigger processing", function()
                 assert.is_nil(newindex, "__newindex stayed on after nothing was left out any more")
             end)
 
-            -- Handed out twice, as busted does around every file, so the second
-            -- line finds nothing left to take off
-            it("go back on when that metatable is put back on the globals table", function()
-                getmetatable(_G)
-                feedTriggers("\nLazyHandlersIdle\n")
+            it("stay off when that metatable is put back on the globals table", function()
                 local metatable = getmetatable(_G)
                 feedTriggers("\nLazyHandlersIdle\n")
                 local seen = {}
@@ -4663,8 +4664,9 @@ describe("Trigger processing", function()
                 setmetatable(_G, metatable)
                 feedTriggers("\nLazyHandlersBack word\n")
 
-                assert.is_nil(seen.rawMatches, "nothing was left out after the metatable was put back")
+                assert.is_not_nil(seen.rawMatches, "a name was left out after the script put a metatable it still holds back")
                 assert.are.equal("word", seen.capture)
+                assert.is_nil(rawget(metatable, "__index"), "the handlers went back on a metatable the script still holds")
             end)
 
             it("leave a handler a package put there alone", function()
@@ -4678,6 +4680,61 @@ describe("Trigger processing", function()
                 setmetatable(_G, original)
 
                 assert.are.equal(theirs, kept, "the package's own __index was taken off")
+            end)
+        end)
+
+        -- Before, a metatable carrying both handlers put back on the globals
+        -- table turned the deferral on again - on a table the script still
+        -- held, and could change in place mid-fire, where nothing Mudlet
+        -- checks before a line could see it
+        describe("a metatable a script put on the globals table and kept", function()
+            local original, copy
+
+            before_each(function()
+                original = getmetatable(_G)
+                copy = {__index = rawget(original, "__index"), __newindex = rawget(original, "__newindex")}
+            end)
+
+            after_each(function()
+                setmetatable(_G, original)
+            end)
+
+            it("hands a fire its matches after the script changes it mid-fire", function()
+                local seen = "unset"
+                trigger(tempRegexTrigger("^LazyKeptMid (\\w+)$", function()
+                    copy.__index = nil
+                    seen = matches
+                end))
+
+                setmetatable(_G, copy)
+                feedTriggers("\nLazyKeptMid word\n")
+
+                assert.are.equal("table", type(seen), "matches read as nil after the metatable was changed in place mid-fire")
+                assert.are.equal("word", seen[2])
+            end)
+
+            it("hands a script the line after it changes the metatable between lines", function()
+                setmetatable(_G, copy)
+                feedTriggers("\nLazyKeptLine word\n")
+                copy.__index = nil
+
+                assert.are.equal("LazyKeptLine word", line)
+            end)
+
+            it("hands a fire its matches when a strict __index goes on for a moment", function()
+                local strict = function() return nil end
+                local seen = "unset"
+                trigger(tempRegexTrigger("^LazyKeptToggle (\\w+)$", function()
+                    local previous = rawget(original, "__index")
+                    rawset(original, "__index", strict)
+                    seen = matches
+                    rawset(original, "__index", previous)
+                end))
+
+                setmetatable(_G, original)
+                feedTriggers("\nLazyKeptToggle word\n")
+
+                assert.are.equal("table", type(seen), "matches read as nil while a strict __index was on")
             end)
         end)
 

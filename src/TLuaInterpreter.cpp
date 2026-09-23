@@ -4497,17 +4497,34 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L, const bool withNames)
     }
 }
 
-// No documentation available in wiki - internal function
-// Whether the metatable at the absolute index carries both of Mudlet's handlers
-bool TLuaInterpreter::globalsMetatablePristine(lua_State* L, const int metatable)
+// No documentation available in wiki - internal, test-only function
+// Turns leaving "matches", "multimatches" and "line" out back on after the
+// globals metatable was handed out, which nothing a script does can - busted
+// hands it out around every spec file, so the specs covering the deferral need
+// it back. Puts the handlers on whatever metatable the globals table carries if
+// both slots are empty there. Returns whether the deferral is on.
+int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
 {
-    lua_pushliteral(L, "__index");
-    lua_rawget(L, metatable);
-    lua_pushliteral(L, "__newindex");
-    lua_rawget(L, metatable);
-    const bool pristine = lua_tocfunction(L, -2) == &TLuaInterpreter::lazyGlobalsIndex && lua_tocfunction(L, -1) == &TLuaInterpreter::lazyGlobalsNewindex;
-    lua_pop(L, 2);
-    return pristine;
+    if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushnil(L);
+        lua_pushstring(L, "rearmLazyGlobals: only available in test mode (set the MUDLET_TEST_MODE environment variable)");
+        return 2;
+    }
+    TLuaInterpreter* self = getHostFromLua(L).getLuaInterpreter();
+    if (!self->mLazyGlobalsInstalled) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, self->mGlobalsTableRef);
+    if (lua_getmetatable(L, -1)) {
+        self->restoreGlobalsHandlers(L, lua_gettop(L));
+    }
+    lua_settop(L, 0);
+    const bool armed = self->globalsHandlersInPlace(L);
+    self->mGlobalsMetatableTouched = !armed;
+    self->mGlobalsHandlersLinger = !armed;
+    lua_pushboolean(L, armed);
+    return 1;
 }
 
 // No documentation available in wiki - internal function
@@ -4531,12 +4548,12 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         return false;
     }
     if (!globalsHandlersInPlace(L)) {
-        // A script handed the metatable can take a handler off it, or put its
-        // own there, in place - an assignment to a key that already holds a
-        // value, which no metamethod and so no guard of ours sees. Leaving a
-        // name out after that hands the script nil: the read that would have
-        // built it never reaches lazyGlobalsIndex(). So this is asked before
-        // anything is left out, rather than trusted from the last setmetatable.
+        // The guard turns the deferral off for good once the metatable is
+        // handed out, but a package that replaced getmetatable() after Mudlet's
+        // scripts loaded can reach it past the guard and take a handler off in
+        // place, which no metamethod sees. Leaving a name out after that hands
+        // the script nil, as the read that would have built it never reaches
+        // lazyGlobalsIndex(), so this is asked before anything is left out.
         mGlobalsMetatableTouched = true;
         standDownDeferral(L);
         stripGlobalsHandlers(L);
@@ -4589,7 +4606,6 @@ void TLuaInterpreter::stripGlobalsHandlers(lua_State* L)
         return;
     }
     const int metatable = lua_gettop(L);
-    int stripped = 0;
     for (const auto& [keyRef, handler] : {std::pair{mIndexKeyRef, &TLuaInterpreter::lazyGlobalsIndex}, std::pair{mNewindexKeyRef, &TLuaInterpreter::lazyGlobalsNewindex}}) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
         lua_pushvalue(L, -1);
@@ -4598,23 +4614,16 @@ void TLuaInterpreter::stripGlobalsHandlers(lua_State* L)
             lua_pop(L, 1);
             lua_pushnil(L);
             lua_rawset(L, metatable);
-            ++stripped;
         } else {
             lua_pop(L, 2);
         }
-    }
-    // Left as it was when there was nothing to take off: handing the metatable
-    // out again after they came off does not stop it being the one to put back
-    if (stripped == 2) {
-        lua_pushvalue(L, metatable);
-        lua_rawseti(L, LUA_REGISTRYINDEX, mStrippedMetatableRef);
     }
     lua_settop(L, callerStackTop);
 }
 
 // No documentation available in wiki - internal function
-// Puts the handlers stripGlobalsHandlers() took off back on the metatable at the
-// absolute index, provided both of its slots are still empty
+// Puts the handlers on the metatable at the absolute index, provided both of
+// its slots are still empty
 bool TLuaInterpreter::restoreGlobalsHandlers(lua_State* L, const int metatable)
 {
     lua_rawgeti(L, LUA_REGISTRYINDEX, mIndexKeyRef);
@@ -4895,26 +4904,16 @@ int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
     if (onGlobals) {
         self->materialisePendingGlobals(L);
     }
-    // setmetatable(_G, getmetatable(_G)) after the handlers were taken off is
-    // someone putting the deferral back, as it was before they came off
-    bool puttingBack = false;
-    if (setter && onGlobals && lua_istable(L, 2)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, self->mStrippedMetatableRef);
-        puttingBack = lua_rawequal(L, -1, 2);
-        lua_pop(L, 1);
-    }
     const int results = self->mStockMetatableFunctions[slot](L);
+    // Whatever a setter put on the globals table, the script that put it there
+    // still holds it and can change it in place without any metamethod or
+    // guard hearing of it - after a name has been left out as easily as before.
+    // So nothing is left out again, even if what it put there carries both of
+    // Mudlet's handlers.
     if (setter) {
         if (onGlobals) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, self->mGlobalsTableRef);
-            const bool hasMetatable = lua_getmetatable(L, -1);
-            if (hasMetatable && puttingBack && self->restoreGlobalsHandlers(L, lua_gettop(L))) {
-                lua_pushboolean(L, false);
-                lua_rawseti(L, LUA_REGISTRYINDEX, self->mStrippedMetatableRef);
-            }
-            self->mGlobalsMetatableTouched = !hasMetatable || !globalsMetatablePristine(L, lua_gettop(L));
-            self->mGlobalsHandlersLinger = self->mGlobalsMetatableTouched;
-            lua_pop(L, hasMetatable ? 2 : 1);
+            self->mGlobalsMetatableTouched = true;
+            self->mGlobalsHandlersLinger = true;
         }
     } else if (onGlobals || self->globalsMetatableHandedOut(L, lua_gettop(L))) {
         // Also reached through any table or userdata given the same metatable
@@ -4993,8 +4992,6 @@ void TLuaInterpreter::installLazyGlobals()
             mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
             mGlobalsMetatableTouched = false;
             mGlobalsHandlersLinger = false;
-            lua_pushboolean(L, false);
-            mStrippedMetatableRef = luaL_ref(L, LUA_REGISTRYINDEX);
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
                                     && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3);
         }
@@ -5043,7 +5040,6 @@ void TLuaInterpreter::forgetLazyGlobals()
     mGlobalsTableRef = LUA_NOREF;
     mGlobalsMetatableTouched = false;
     mGlobalsHandlersLinger = false;
-    mStrippedMetatableRef = LUA_NOREF;
     mIndexHandlerRef = LUA_NOREF;
     mNewindexHandlerRef = LUA_NOREF;
     mCaptureScopeOpen = false;
@@ -6061,8 +6057,9 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     // runs on the first write of a name that is absent - a raise from one
     // longjmps to the nearest pcall, skipping every C++ destructor between,
     // which is the class CI/check-lua-error-strands.lua exists for. Setting
-    // these was never something a package could usefully intercept anyway: the
-    // name is absent only until the first dispatch writes it.
+    // these was never something a package could usefully intercept anyway: a
+    // name Mudlet sets is absent only before Mudlet first sets it, or while it
+    // is left out for lazyGlobalsIndex() to build.
     // Held rather than pushed straight out of the member: lua_pushlstring()
     // runs a collection step before it copies the bytes, and a finaliser that
     // runs there can reach another dispatch - an alias pass caches its own name
@@ -6367,6 +6364,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "raiseEvent", TLuaInterpreter::raiseEvent);
     lua_register(pGlobalLua, "waitForEvent", TLuaInterpreter::waitForEvent);
     lua_register(pGlobalLua, "pumpEvents", TLuaInterpreter::pumpEvents);
+    lua_register(pGlobalLua, "rearmLazyGlobals", TLuaInterpreter::rearmLazyGlobals);
     lua_register(pGlobalLua, "deleteLine", TLuaInterpreter::deleteLine);
     lua_register(pGlobalLua, "copy", TLuaInterpreter::copy);
     lua_register(pGlobalLua, "cut", TLuaInterpreter::cut);

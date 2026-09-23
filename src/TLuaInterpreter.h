@@ -436,6 +436,7 @@ public:
     static int raiseEvent(lua_State*);
     static int waitForEvent(lua_State*);
     static int pumpEvents(lua_State*);
+    static int rearmLazyGlobals(lua_State*);
     static int deleteLine(lua_State*);
     static int copy(lua_State*);
     static int cut(lua_State*);
@@ -944,7 +945,6 @@ private:
     void setMatches(lua_State*, const MultimatchesSource source = MultimatchesSource::Untouched);
     void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
     bool lazyGlobalsUsable(lua_State*);
-    static bool globalsMetatablePristine(lua_State*, const int metatable);
     bool globalsHandlersInPlace(lua_State*);
     void standDownDeferral(lua_State*);
     void stripGlobalsHandlers(lua_State*);
@@ -1011,8 +1011,9 @@ private:
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
     // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
-    // builds them on first read. They are left out only while a capture scope
-    // is open, since clearCaptureGroups() is what puts them back.
+    // builds them on first read. "matches" is left out only while a capture
+    // scope is open, as clearCaptureGroups() puts it back; "multimatches" is
+    // left out between dispatches too - see mSpareMultimatchesRef.
     bool mCaptureScopeOpen = false;
     bool mMatchesPending = false;
     enum class PendingMultimatches { None, Spare, Captures, CapturesWithoutNames };
@@ -1048,28 +1049,21 @@ private:
     // The C functions getmetatable(), setmetatable() and their debug library
     // twins held before globalsMetatableGuard() took their place. A script
     // holding the metatable of the globals table can change it at any moment,
-    // so once it has been handed out nothing is left out until either setter
-    // puts one carrying both handlers back on the globals table.
+    // so once either getter hands it out or either setter puts one on the
+    // globals table, nothing is left out for the rest of the session.
     // Those four names as they stand once Mudlet's own scripts have loaded are
     // the whole of what this watches: a package that replaces one of them
     // afterwards hands the metatable out past the guard, with nothing here to
-    // notice. What that costs is only a deferral that stays on when it should
-    // not - the guard is no longer what stands between a changed metatable and
-    // a script reading nil, since lazyGlobalsUsable() asks whether the handlers
-    // are still there before anything is left out.
+    // notice. lazyGlobalsUsable() still asks whether the handlers are there
+    // before anything is left out, which covers a change made that way before
+    // a line, though not one made while a script is running.
     lua_CFunction mStockMetatableFunctions[4] = {};
     bool mGlobalsMetatableTouched = false;
     // Once nothing is left out the handlers only cost every read of a global
-    // that is not there a C call, so the next line takes them off. Not at once:
-    // setmetatable(_G, getmetatable(_G)) is how a script puts the deferral back,
-    // and it would find nothing to put back.
+    // that is not there a C call, so the next line takes them off. Not in the
+    // guard itself, so that a getter hands the script the metatable as it was
+    // when asked for.
     bool mGlobalsHandlersLinger = false;
-    // The metatable they were last taken off, held in a registry slot made at
-    // install so that filling it on the per-line path cannot allocate. Putting
-    // that table back on the globals table with both slots still empty puts
-    // them back too - held rather than flagged, as a script can put another
-    // metatable on in between and the original back afterwards.
-    int mStrippedMetatableRef = LUA_NOREF;
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
     // An alias pass a script asks for - expandAlias() - sets "command" and the
