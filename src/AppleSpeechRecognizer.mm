@@ -251,20 +251,23 @@ SpeechRecognizer::VocabularyResult AppleSpeechRecognizer::applyVocabulary(const 
 // goes on holding the terminal responsible, and that is how this check was
 // wrong the first time it was tried.
 //
-// Only a value that positively names something else counts. With the variable
-// absent there is nothing to go on, and refusing on that would deny speech to
-// a launch this does not understand rather than to one that is known to be
-// doomed; the ordinary Finder and `open` launches both set it to Mudlet's own
-// identifier.
+// Anything this cannot establish counts as not responsible, because the two
+// ways of being wrong do not cost the same: refusing a launch that would have
+// been fine shows a message, while asking from one that is not kills the
+// process and leaves a crash report blaming a usage string that is present.
+// A launch with no bundle identifier of its own has no Info.plist to carry
+// that string either, which is the case TCC kills outright. Every ordinary
+// launch - Finder, the Dock, `open` - sets the variable to Mudlet's own
+// identifier, so nothing a player does lands here.
 static bool mudletIsResponsibleForItself()
 {
     const char* launchedBundleId = getenv("__CFBundleIdentifier");
     if (!launchedBundleId) {
-        return true;
+        return false;
     }
     NSString* ownBundleId = [[NSBundle mainBundle] bundleIdentifier];
     if (!ownBundleId) {
-        return true;
+        return false;
     }
     return [ownBundleId isEqualToString:@(launchedBundleId)];
 }
@@ -285,7 +288,11 @@ void AppleSpeechRecognizer::doStartListening()
         // permission has never been granted: once it has, nothing below asks
         // again, and a build started from a shell works normally.
         if (!mudletIsResponsibleForItself()) {
-            qWarning().noquote() << "AppleSpeechRecognizer: not asking for speech recognition permission -" << QString::fromUtf8(qgetenv("__CFBundleIdentifier")) << "is responsible for this process, so macOS would ask it for the usage description and kill Mudlet when it has none";
+            const QByteArray responsible = qgetenv("__CFBundleIdentifier");
+            qWarning().noquote() << "AppleSpeechRecognizer: not asking for speech recognition permission -"
+                                 << (responsible.isEmpty() ? QString("this process does not say which application launched it")
+                                                           : qsl("%1 is responsible for this process").arg(QString::fromUtf8(responsible)))
+                                 << "- so macOS would ask that application for the usage description and kill Mudlet when it has none";
             // Error, as the denied and restricted cases below are, and for their
             // reason: which process macOS holds responsible is fixed at launch,
             // so no later call in this process can get any further than this one
