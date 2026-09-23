@@ -19,9 +19,19 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGING_DIR="$(cd "${SCRIPT_DIR}/../../CI/linux-packages" && pwd)"
 
+# 77 is ctest's SKIP_RETURN_CODE for this test. CI has no excuse to skip, so
+# there a missing prerequisite fails rather than leaving the check unrun.
+skip() {
+  if [ -n "${CI:-}" ]; then
+    echo "FAIL: $1" >&2
+    exit 1
+  fi
+  echo "SKIP: $1"
+  exit 77
+}
+
 if ! command -v gpg > /dev/null 2>&1; then
-  echo "SKIP: gpg is not installed"
-  exit 0
+  skip "gpg is not installed"
 fi
 
 WORK_DIR="$(mktemp -d)"
@@ -51,8 +61,7 @@ new_key() {
 }
 
 if ! SIGNING_KEY="$(new_key 'Mudlet key gate test')" || [ -z "${SIGNING_KEY}" ]; then
-  echo "SKIP: this gpg cannot generate a key here (no agent?)"
-  exit 0
+  skip "this gpg cannot generate a key here (no agent?)"
 fi
 OTHER_KEY="$(new_key 'Unrelated other key')"
 

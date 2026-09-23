@@ -61,7 +61,6 @@ The public half is published in two places:
 |------------------------|-----------------------------------------------------------------------------------------|
 | the package repository | `<base url>/mudlet.asc`                                                                 |
 | this git repository    | `https://raw.githubusercontent.com/Mudlet/Mudlet/<commit>/CI/linux-packages/mudlet.asc` |
-| this git repository    | `https://raw.githubusercontent.com/Mudlet/Mudlet/<commit>/CI/linux-packages/mudlet.asc`   |
 
 The two are the same bytes, which is what lets one be checked against the other:
 
@@ -98,20 +97,17 @@ For dnf the same idea is a `.repo` written in place of fetching `rpm/mudlet.repo
 keeping `repo_gpgcheck=1` - the directive that checks the index signature rather
 than the packages:
 
-```ini
-[mudlet]
-name=Mudlet
-baseurl=<base url>/rpm/fedora/$releasever/$basearch/
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mudlet
+```dockerfile
+ADD --chmod=644 https://raw.githubusercontent.com/Mudlet/Mudlet/<commit>/CI/linux-packages/mudlet.asc /etc/pki/rpm-gpg/RPM-GPG-KEY-mudlet
+RUN printf '[mudlet]\nname=Mudlet\nbaseurl=<base url>/rpm/fedora/$releasever/$basearch/\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mudlet\n' \
+      > /etc/yum.repos.d/mudlet.repo \
+ && dnf install -y mudlet
 ```
 
 Pin a commit, not a branch and not a release tag. The published key is whatever
 the default branch holds when the release workflow runs, because the jobs that
-sign and publish check out no particular ref; a release tag is not guaranteed to
-carry this file at all.
+sign and publish refuse to run from any other branch; a release tag is not
+guaranteed to carry this file at all.
 
 ### Rotating the key
 
