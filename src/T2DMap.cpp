@@ -2450,11 +2450,28 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
 
     int roomCount = 0;
 
+    // Zoomed out this far every room on screen is visited, and each visit is a
+    // chain of dependent main-memory misses - the id's hash bucket, then the
+    // room it points at. Walked in one loop, the drawing work in between keeps
+    // the CPU to one chain at a time; resolved first in a loop of their own,
+    // many lookups overlap, and the drawing loop prefetches the rooms ahead.
+    mLodRoomScratch.clear();
+    mLodRoomScratch.reserve(viewportRooms.size());
     for (const int roomId : viewportRooms) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        mLodRoomScratch.push_back(mpMap->mpRoomDB->getRoom(roomId));
+    }
+    constexpr qsizetype scmPrefetchDistance = 16;
+    const qsizetype candidateCount = viewportRooms.size();
+
+    for (qsizetype index = 0; index < candidateCount; ++index) {
+        if (index + scmPrefetchDistance < candidateCount) {
+            __builtin_prefetch(mLodRoomScratch[index + scmPrefetchDistance]);
+        }
+        TRoom* room = mLodRoomScratch[index];
         if (!room) {
             continue;
         }
+        const int roomId = viewportRooms.at(index);
 
         const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
         const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);

@@ -291,6 +291,9 @@ public:
     // comparing the two frames is the only check of that which does not have
     // to know which rooms those should be. Never set outside the tests.
     bool mLodExitIndexDisabled = false;
+    // drawNonGridModeRoomsLod()'s resolved rooms, kept between frames so that
+    // a zoomed-out frame does not allocate one entry per room on screen again.
+    QList<TRoom*> mLodRoomScratch;
     QPointer<QComboBox> arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom = 0;

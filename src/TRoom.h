@@ -145,8 +145,8 @@ public:
 
 private:
     // Declared first, beside environment, hidden and highlight, so that all
-    // five share one cache line: the zoomed-out 2D map reads them for every
-    // room on screen, and apart they cost a main-memory miss each per room.
+    // six share one cache line: the zoomed-out 2D map reads them for every
+    // room on screen, and its one prefetch per room only covers one line.
     // Made private so we can catch all cases where they are to be modified:
     int mX = 0;
     int mY = 0;
