@@ -2657,6 +2657,27 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- Only a perl regex contributes named captures, but every matched pattern
+        -- owns a row of multimatches - so the rows that have none still have to
+        -- take an empty slot, or a later pattern's named capture surfaces on an
+        -- earlier pattern's row (#8748).
+        it("keeps a named capture with its own pattern past patterns that have none", function()
+            withTrigger("named chain", function()
+                feedTriggers("tknamed alpha\n")
+                feedTriggers("chain gap\n")
+                feedTriggers("tkmiddle here\n")
+                feedTriggers("tknamed end omega\n")
+
+                local seen = _G.TriggerKindsSpec.namedChain
+                assert.is_table(seen, "the multiline trigger never completed, so nothing was read")
+                assert.are.equal(4, seen.rows, "a pattern of the chain took no multimatches row of its own")
+                assert.are.equal("alpha", seen.first, "the first pattern's named capture left row 1")
+                assert.are.equal("omega", seen.last, "the last pattern's named capture was not in its own row")
+                assert.is_nil(seen.spacerName, "the line spacer's row should carry no named capture")
+                assert.is_nil(seen.middleName, "the substring pattern's row should carry no named capture")
+            end)
+        end)
+
         it("sends the command a trigger carries", function()
             withTrigger("command", function(cleanup)
                 local aliasId = tempAlias("^tkcommand sent$", [==[_G.TriggerKindsSpec.commandSeen = true]==])
