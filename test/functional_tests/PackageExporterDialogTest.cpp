@@ -953,6 +953,31 @@ private slots:
         // the name is cleared so that another module can be made straight away
         QVERIFY2(nameField()->text().isEmpty(), "the module name was left in the field afterwards");
     }
+
+    // An item whose Lua does not work is the one thing the person at this dialog
+    // already knows about: it is the item they picked to export, the editor
+    // behind the dialog is showing it with an error against it, and nothing here
+    // went wrong - the module file is written and holds exactly the Lua the
+    // profile has. So the export is reported as what it is, and the broken item
+    // is left to the editor rather than restated in red over a good export.
+    void test_moduleCreationModeLeavesABrokenItemToTheEditor()
+    {
+        const QString moduleName = packageNamed(qsl("exporter-broken-module"));
+        makeScript(qsl("exporter module broken script"))->setScript(qsl("exporterModuleMissingFunction()"));
+
+        openExporter();
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(scriptsTop(), qsl("exporter module broken script")));
+        settleSaves();
+        nameField()->setText(moduleName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+
+        const QString said = infoLabel()->text();
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), qPrintable(qsl("The module it made was not installed. The dialog said: \"%1\"").arg(said)));
+        QVERIFY2(said.contains(qsl("created and installed successfully")), qPrintable(qsl("An export that worked was not reported as one: \"%1\"").arg(said)));
+        QVERIFY2(!said.contains(qsl("exporterModuleMissingFunction")), qPrintable(qsl("The dialog repeated the Lua error the editor already shows: \"%1\"").arg(said)));
+    }
 };
 
 #include "PackageExporterDialogTest.moc"
