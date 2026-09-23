@@ -20,6 +20,11 @@ describe("Tests StringUtils.lua functions", function()
       actualLength = actual:len()
       assert.equals(expectedLength, actualLength)
     end)
+
+    it("should return an empty string when asked for no characters at all", function()
+      assert.equals("", ("This is a test"):cut(0))
+      assert.equals("", (""):cut(0))
+    end)
   end)
 
   describe("Tests the functionality of string.enclose", function()
@@ -48,6 +53,14 @@ describe("Tests StringUtils.lua functions", function()
       local errfn = function() string.enclose(s,1) end
       assert.has_error(errfn, "error: maxlevel too low, 1")
     end)
+
+    it("should need a maxlevel above the level it actually settles on", function()
+      -- the ceiling is checked before the level is tried, so a string that needs
+      -- one = still fails at maxlevel 1 and only succeeds from 2 upwards
+      assert.has_error(function() string.enclose("[[x]]", 1) end, "error: maxlevel too low, 1")
+      assert.equals("[=[[[x]]]=]", string.enclose("[[x]]", 2))
+      assert.has_error(function() string.enclose("plain", 0) end, "error: maxlevel too low, 0")
+    end)
   end)
 
   describe("Tests the functionality of string.ends", function()
@@ -65,6 +78,14 @@ describe("Tests StringUtils.lua functions", function()
       local suffix = "system"
       assert.is_false(string.ends(s, suffix))
     end)
+
+    it("should return true for an empty suffix", function()
+      assert.is_true(("This is a test"):ends(""))
+    end)
+
+    it("should return false when the suffix is longer than the string", function()
+      assert.is_false(("hi"):ends("this is far too long"))
+    end)
   end)
 
   describe("Tests the functionality of string.genNocasePattern", function()
@@ -81,6 +102,20 @@ describe("Tests StringUtils.lua functions", function()
       local str = "123abc"
       local pattern = string.genNocasePattern(str)
       assert.is_truthy(str:find(pattern))
+    end)
+
+    it("should return only the pattern, not gsub's replacement count", function()
+      -- returning gsub directly would hand a second value to every caller, and
+      -- string.format("%s", str:genNocasePattern()) would still look right
+      assert.equals(1, select("#", ("abc"):genNocasePattern()))
+    end)
+
+    it("should leave bytes that are not ASCII letters alone", function()
+      -- %a is byte-wise, so the two bytes of á cannot be case-folded and have to
+      -- survive untouched or the pattern stops matching its own source string
+      local pattern = ("ábc"):genNocasePattern()
+      assert.equals("á[bB][cC]", pattern)
+      assert.is_truthy(("ábc"):find(pattern))
     end)
   end)
 
@@ -138,6 +173,25 @@ describe("Tests StringUtils.lua functions", function()
       local actual = str:split("")
       assert.same(expected, actual)
     end)
+
+    it("should split on a multi-character delimiter", function()
+      local str = "alpha::beta::gamma"
+      local expected = { "alpha", "beta", "gamma" }
+      assert.same(expected, str:split("::"))
+    end)
+
+    it("should treat the delimiter as a Lua pattern, not a plain string", function()
+      -- '.' is the 'any character' pattern, so it does not split on literal dots;
+      -- the dot must be escaped to split on real dots.
+      assert.same({ "1", "2", "3" }, ("1.2.3"):split("%."))
+      assert.are_not.same({ "1", "2", "3" }, ("1.2.3"):split("."))
+    end)
+
+    it("should produce empty leading and trailing segments when the delimiter is at the edges", function()
+      local str = ",a,b,"
+      local expected = { "", "a", "b", "" }
+      assert.same(expected, str:split(","))
+    end)
   end)
 
   describe("Tests the functionality of string.starts", function()
@@ -149,6 +203,15 @@ describe("Tests StringUtils.lua functions", function()
     it("should return false if str does not start with prefix", function()
       local str = "This is a test"
       assert.is_false(str:starts("Elephant"))
+    end)
+
+    it("should return true for an empty prefix", function()
+      assert.is_true(("This is a test"):starts(""))
+    end)
+
+    it("should return true when the prefix is the whole string", function()
+      local str = "This is a test"
+      assert.is_true(str:starts(str))
     end)
   end)
 
@@ -170,6 +233,23 @@ describe("Tests StringUtils.lua functions", function()
       local str = {}
       local errfn = function() string.title(str) end
       assert.has_error(errfn, "string.title: bad argument #1 type (string to title as string expected, got table!)")
+    end)
+
+    it("should return an empty string unchanged", function()
+      assert.equals("", string.title(""))
+    end)
+
+    it("should leave a string that does not start with a lowercase letter unchanged", function()
+      assert.equals("123abc", string.title("123abc"))
+    end)
+
+    it("should return only the titled string, not gsub's replacement count", function()
+      assert.equals(1, select("#", ("abc"):title()))
+      assert.equals(1, select("#", ("Abc"):title()))
+    end)
+
+    it("should only capitalise the first letter, not every word", function()
+      assert.equals("This is a test", ("this is a test"):title())
     end)
   end)
 
@@ -194,6 +274,20 @@ describe("Tests StringUtils.lua functions", function()
       local str = "This is a test"
       assert.equals(str, string.trim(str))
       assert.equals(str, str:trim())
+    end)
+
+    it("should strip leading and trailing tabs and newlines, not just spaces", function()
+      assert.equals("this is a test", ("\t\n  this is a test \n\t"):trim())
+    end)
+
+    it("should leave whitespace inside the string alone", function()
+      assert.equals("a  b", ("  a  b  "):trim())
+      assert.equals("", ("   "):trim())
+    end)
+
+    it("should return only the trimmed string, not gsub's replacement count", function()
+      assert.equals(1, select("#", ("  a  "):trim()))
+      assert.equals(1, select("#", ("a"):trim()))
     end)
   end)
 
@@ -314,6 +408,26 @@ describe("Tests StringUtils.lua functions", function()
 
     it("should error when passed in anything but a string", function()
       assert.has_error(function() f(true) end, "f: bad argument #1 type (str as string expected, got boolean)")
+    end)
+
+    it("should raise the compile error of an expression that is not valid Lua", function()
+      -- swallowing this would silently drop the whole interpolation from the
+      -- string, which is far harder to notice than a raised error
+      assert.error_matches(function() f("{1+}") end, "unexpected symbol")
+      assert.error_matches(function() f("{ this is not lua }") end, "expected near")
+    end)
+
+    it("should interpolate a global and render a missing name as nil", function()
+      _G.stringUtilsSpecGlobal = "seen"
+      local interpolated = f("a {stringUtilsSpecGlobal} b")
+      _G.stringUtilsSpecGlobal = nil
+      assert.equals("a seen b", interpolated)
+      assert.equals("nil", f("{stringUtilsSpecGlobal}"))
+    end)
+
+    it("should not treat % as a format directive", function()
+      assert.equals("100% sure", f("100% sure"))
+      assert.equals("50% of 4 is 2", f("50% of 4 is {4/2}"))
     end)
   end)
 end)

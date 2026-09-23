@@ -1,0 +1,657 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Mudlet Developers                               *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+/*
+ * Locks in the XDG_CONFIG_HOME resolution that the Lua busted suite (and any
+ * parallel run) relies on to isolate itself from the real ~/.config/mudlet, plus
+ * the migration guard that keeps existing users on their legacy config dir. The
+ * failure mode guarded against is a future refactor quietly dropping XDG support
+ * or the guard, which resurfaces as parallel-run sqlite flakiness or, worse,
+ * users' profiles appearing to vanish on upgrade.
+ *
+ * Creating $XDG_CONFIG_HOME/mudlet/profiles is the opt-in; the directory above it
+ * on its own is not, because that is a state other tooling creates by accident.
+ *
+ * The resolution logic lives in MudletPaths::xdgConfigDir(legacyDefault), which takes
+ * the legacy candidate as an argument, so most cases test it directly and stay
+ * platform-independent (no HOME/USERPROFILE juggling). The portable.txt leg above
+ * it is MudletPaths::resolveConfigRoot(execDir), tested the same way with a scratch
+ * executable directory. A couple of cases drive the real mudlet::setupConfig() to
+ * prove the wiring end-to-end.
+ *
+ * Run with: ctest -R ConfigDirOverrideTest -V
+ */
+
+#include <QtTest/QtTest>
+
+#include "MudletPaths.h"
+#include "PortableModeTestHelper.h"
+#include "mudlet.h"
+#include "utils.h"
+
+#include "GroupedTest.h"
+
+class ConfigDirOverrideTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QByteArray mSavedXdg;
+
+    QString mudletUnder(const QString& dir) const { return QDir::cleanPath(qsl("%1/mudlet").arg(dir)); }
+
+    bool makeProfile(const QString& configDir, const QString& profileName) const { return QDir().mkpath(qsl("%1/profiles/%2").arg(configDir, profileName)); }
+
+    bool makeSettingsFile(const QString& configDir) const
+    {
+        QFile ini(qsl("%1/Mudlet.ini").arg(configDir));
+        return ini.open(QIODevice::WriteOnly);
+    }
+
+    bool writeMarker(const QString& dir, const QByteArray& content) const
+    {
+        QFile marker(qsl("%1/portable.txt").arg(dir));
+        return marker.open(QIODevice::WriteOnly) && marker.write(content) == content.size();
+    }
+
+    bool makeFile(const QString& path) const
+    {
+        QFile file(path);
+        return file.open(QIODevice::WriteOnly);
+    }
+
+private slots:
+    void initTestCase()
+    {
+        mudlet::start();
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+    }
+
+    void cleanupTestCase()
+    {
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+        // The singleton is intentionally not deleted: it was never init()'d, so
+        // its destructor would touch members only set up by init(), and the
+        // process exits right after anyway.
+    }
+
+    // --- MudletPaths::xdgConfigDir() resolution table -------------------------------
+
+    void test_unsetUsesLegacy()
+    {
+        qunsetenv("XDG_CONFIG_HOME");
+        const QString legacy = qsl("/home/someone/.config/mudlet");
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(!r.migrationPending);
+    }
+
+    void test_emptyBehavesLikeUnset()
+    {
+        qputenv("XDG_CONFIG_HOME", QByteArray());
+        const QString legacy = qsl("/home/someone/.config/mudlet");
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(!r.migrationPending);
+    }
+
+    // A relative XDG_CONFIG_HOME is invalid per the spec and must be ignored, not
+    // turned into a cwd-relative config root.
+    void test_relativeXdgIgnored()
+    {
+        qputenv("XDG_CONFIG_HOME", QByteArray("relative/config"));
+        const QString legacy = qsl("/home/someone/.config/mudlet");
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(!r.migrationPending);
+    }
+
+    void test_emptyXdgDirWinsOverALegacyDirWithoutProfiles()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(target));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(QDir().mkpath(legacy));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(!r.migrationPending);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
+    }
+
+    // A dotfile manager, container script or aborted move leaves this directory behind.
+    void test_emptyXdgDirDoesNotHideLegacyProfiles()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        QVERIFY(QDir().mkpath(mudletUnder(xdg.path())));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(r.migrationPending);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
+    }
+
+    // The state one bad launch leaves behind, since Mudlet writes its Mudlet.ini
+    // into whichever dir it chose. Deleting that dir has to be enough to recover.
+    void test_xdgSettingsFileDoesNotHideLegacyProfiles()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/fonts").arg(target)));
+        QVERIFY(makeSettingsFile(target));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        QVERIFY(makeProfile(legacy, qsl("BetaGame")));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(r.migrationPending);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
+    }
+
+    void test_xdgProfilesDirWinsAndReportsShadowedLegacyProfiles()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(target)));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(!r.migrationPending);
+        QCOMPARE(r.shadowedProfilesPath, legacy);
+    }
+
+    void test_noShadowReportedWhenLegacyProfilesDirIsEmpty()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(target)));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(legacy)));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
+    }
+
+    void test_migratedXdgDirWinsOverLegacy()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(target))); // looks like Mudlet's
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(QDir().mkpath(legacy));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(!r.migrationPending);
+    }
+
+    // Regression: a stale $XDG_CONFIG_HOME/mudlet holding only the pre-4.19
+    // NativeFormat Mudlet.conf (no profiles) must NOT shadow the user's real
+    // profiles in the legacy dir - it must fall back and flag a migration.
+    void test_staleNativeFormatDirDoesNotShadowProfiles()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(target));
+        QFile stale(qsl("%1/Mudlet.conf").arg(target)); // the leftover, no Mudlet.ini/profiles
+        QVERIFY(stale.open(QIODevice::WriteOnly));
+        stale.close();
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame"))); // real profiles live here
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY2(r.migrationPending, "a stale non-Mudlet XDG dir must not shadow real profiles");
+    }
+
+    // Deleting the last profile leaves an empty legacy profiles/ behind, which
+    // must not pull a config root in active use back out of $XDG_CONFIG_HOME.
+    void test_emptyLegacyProfilesDirDoesNotOutrankXdgSettings()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(target));
+        QVERIFY(makeSettingsFile(target));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(legacy)));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(!r.migrationPending);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
+    }
+
+    void test_guardKeepsLegacyWhenXdgTargetMissing()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        QVERIFY(!QDir(mudletUnder(xdg.path())).exists());
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(QDir().mkpath(legacy));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(r.migrationPending);
+        QVERIFY(r.shadowedProfilesPath.isEmpty());
+    }
+
+    void test_freshInstallUsesXdgWhenNeitherExists()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(!QDir(target).exists());
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(!QDir(legacy).exists());
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, target);
+        QVERIFY(!r.migrationPending);
+    }
+
+    // With XDG_CONFIG_HOME=$HOME/.config the XDG target IS the legacy dir; an
+    // existing one must not be reported as a pending migration (it would
+    // otherwise nag the user on every startup).
+    void test_noMigrationWhenXdgTargetEqualsLegacy()
+    {
+        QTemporaryDir cfg; // stands in for $HOME/.config
+        QVERIFY(cfg.isValid());
+        const QString legacy = mudletUnder(cfg.path());
+        QVERIFY(QDir().mkpath(legacy));
+        qputenv("XDG_CONFIG_HOME", cfg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY2(!r.migrationPending, "no migration when the XDG target and legacy dir are the same");
+    }
+
+    // XDG_CONFIG_HOME=$HOME/.config is an ordinary export, and would otherwise
+    // warn on every startup about the directory it is using.
+    void test_noSelfShadowWhenXdgTargetEqualsLegacyWithProfiles()
+    {
+        QTemporaryDir cfg;
+        QVERIFY(cfg.isValid());
+        const QString legacy = mudletUnder(cfg.path());
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        qputenv("XDG_CONFIG_HOME", cfg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY2(r.shadowedProfilesPath.isEmpty(), "a directory cannot shadow itself");
+    }
+
+    void test_noSelfShadowThroughASymlinkedConfigDir()
+    {
+        QTemporaryDir real;
+        QTemporaryDir linkHome;
+        QVERIFY(real.isValid() && linkHome.isValid());
+        const QString legacy = mudletUnder(real.path());
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        const QString linked = qsl("%1/config-link").arg(linkHome.path());
+        if (!QFile::link(real.path(), linked)) {
+            QSKIP("this filesystem does not support symlinks");
+        }
+        qputenv("XDG_CONFIG_HOME", linked.toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QVERIFY2(r.shadowedProfilesPath.isEmpty(), "one directory under two names is still one directory");
+    }
+
+    // The only case that observes the settings tier, and losing those settings
+    // drops firstLaunchDate, which re-runs onboarding.
+    void test_settingsOnlyLegacyOutranksEmptyXdgDir()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        QVERIFY(QDir().mkpath(mudletUnder(xdg.path())));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(QDir().mkpath(legacy));
+        QVERIFY(makeSettingsFile(legacy));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        QCOMPARE(r.path, legacy);
+        QVERIFY(r.migrationPending);
+    }
+
+    void test_unreadableLegacyDirStillOutranksAnEmptyXdgDir()
+    {
+        QTemporaryDir xdg;
+        QTemporaryDir legacyHome;
+        QVERIFY(xdg.isValid() && legacyHome.isValid());
+        QVERIFY(QDir().mkpath(mudletUnder(xdg.path())));
+        const QString legacy = mudletUnder(legacyHome.path() + qsl("/.config"));
+        QVERIFY(makeProfile(legacy, qsl("AlphaGame")));
+        // No traverse bit either, or QDir::exists() on profiles/ still answers and
+        // the ranking never has to fall back
+        if (!QFile::setPermissions(legacy, QFileDevice::Permissions())) {
+            QSKIP("cannot drop permissions on this filesystem");
+        }
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::xdgConfigDir(legacy);
+        const bool readableAnyway = QFileInfo(legacy).isReadable();
+        QVERIFY(QFile::setPermissions(legacy, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        if (readableAnyway) {
+            QSKIP("running as a user that bypasses permission bits");
+        }
+        QCOMPARE(r.path, legacy);
+        QVERIFY(r.migrationPending);
+    }
+
+    // --- MudletPaths::resolveConfigRoot() portable.txt precedence ----------------
+
+    void test_resolveConfigRootEmptyMarkerFallsBackToPortableSubdir()
+    {
+        QTemporaryDir exec;
+        QVERIFY(exec.isValid());
+        QVERIFY(writeMarker(exec.path(), ""));
+
+        const auto r = MudletPaths::resolveConfigRoot(exec.path());
+        QVERIFY(r.portable);
+        QCOMPARE(r.path, QDir::cleanPath(qsl("%1/portable").arg(exec.path())));
+    }
+
+    void test_resolveConfigRootRelativeMarkerResolvesAgainstExecDir()
+    {
+        QTemporaryDir exec;
+        QVERIFY(exec.isValid());
+        QVERIFY(writeMarker(exec.path(), "../data\n"));
+
+        const auto r = MudletPaths::resolveConfigRoot(exec.path());
+        QVERIFY(r.portable);
+        QCOMPARE(r.path, QDir::cleanPath(qsl("%1/../data").arg(exec.path())));
+    }
+
+    void test_resolveConfigRootAbsoluteMarkerIsUsedAsIs()
+    {
+        QTemporaryDir exec;
+        QVERIFY(exec.isValid());
+        const QString target = QDir::cleanPath(qsl("%1/elsewhere").arg(QDir::tempPath()));
+        QVERIFY(writeMarker(exec.path(), target.toUtf8()));
+
+        const auto r = MudletPaths::resolveConfigRoot(exec.path());
+        QVERIFY(r.portable);
+        QCOMPARE(r.path, target);
+    }
+
+    void test_resolveConfigRootWithoutMarkerTakesXdgLeg()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - the home marker takes precedence over XDG");
+        }
+        QTemporaryDir exec;
+        QTemporaryDir xdg;
+        QVERIFY(exec.isValid() && xdg.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(mudletUnder(xdg.path()))));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        const auto r = MudletPaths::resolveConfigRoot(exec.path());
+        QVERIFY(!r.portable);
+        QCOMPARE(r.path, mudletUnder(xdg.path()));
+    }
+
+    // --- MudletPaths::portableMarkerPath() --------------------------------------
+
+    // The cheap question behind isPortableModeActive(), which runs on every
+    // credential operation: two stats, and no marker read
+    void test_portableMarkerPathPrefersTheOneBesideTheExecutable()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(writeMarker(exec.path(), "./portable"));
+        QVERIFY(writeMarker(configDir.path(), "./elsewhere"));
+
+        QCOMPARE(MudletPaths::portableMarkerPath(exec.path(), configDir.path()), qsl("%1/portable.txt").arg(exec.path()));
+    }
+
+    void test_portableMarkerPathFallsBackToTheConfigDirAndThenToNothing()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(MudletPaths::portableMarkerPath(exec.path(), configDir.path()).isEmpty());
+
+        QVERIFY(writeMarker(configDir.path(), ""));
+        QCOMPARE(MudletPaths::portableMarkerPath(exec.path(), configDir.path()), qsl("%1/portable.txt").arg(configDir.path()));
+    }
+
+    // --- an unusable portable root ----------------------------------------------
+
+    void test_portableRootUsableTakesADirectoryOrOneYetToBeCreated()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        QVERIFY(MudletPaths::portableRootUsable(root.path()));
+        QVERIFY(MudletPaths::portableRootUsable(qsl("%1/notyet").arg(root.path())));
+    }
+
+    void test_portableRootUsableRefusesAnUnnamedRoot()
+    {
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
+        QVERIFY(!MudletPaths::portableRootUsable(QString()));
+    }
+
+    void test_portableRootUsableRefusesAFile()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QString occupied = qsl("%1/portable").arg(root.path());
+        QVERIFY(makeFile(occupied));
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("is not a directory")));
+        QVERIFY(!MudletPaths::portableRootUsable(occupied));
+    }
+
+    // mkpath() cannot create through one, so the profiles would be unreachable
+    void test_portableRootUsableRefusesASymlinkWithNoTarget()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QString dangling = qsl("%1/portable").arg(root.path());
+        if (!QFile::link(qsl("%1/gone").arg(root.path()), dangling)) {
+            QSKIP("symlinks are not available here");
+        }
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("is not a directory")));
+        QVERIFY(!MudletPaths::portableRootUsable(dangling));
+    }
+
+    void test_portableRootUsableRefusesAMissingParent()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("parent directory")));
+        QVERIFY(!MudletPaths::portableRootUsable(qsl("%1/missing/portable").arg(root.path())));
+    }
+
+    // The marker in the config dir names no fallback location, so an empty one
+    // used to resolve to "" - every path then rooted at "/", and mkpath()ed
+    // there by the first caller to ask for one
+    void test_resolveConfigRootEmptyConfigDirMarkerFallsBackToTheConfigDir()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(writeMarker(configDir.path(), ""));
+        qunsetenv("XDG_CONFIG_HOME");
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
+        const auto r = MudletPaths::resolveConfigRoot(exec.path(), configDir.path());
+        QVERIFY(r.portable);
+        QVERIFY(r.portableRootRejected);
+        QCOMPARE(r.path, configDir.path());
+    }
+
+    void test_resolveConfigRootFallsBackWhenTheMarkerNamesAnUnusableRoot()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        // the empty marker beside the executable guesses "./portable", which is
+        // taken here by a file
+        QVERIFY(makeFile(qsl("%1/portable").arg(exec.path())));
+        QVERIFY(writeMarker(exec.path(), ""));
+        qunsetenv("XDG_CONFIG_HOME");
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("is not a directory")));
+        const auto r = MudletPaths::resolveConfigRoot(exec.path(), configDir.path());
+        QVERIFY(r.portable);
+        QVERIFY(r.portableRootRejected);
+        QCOMPARE(r.path, configDir.path());
+    }
+
+    // --- MudletPaths::getMudletPath() before setupConfig() ----------------------
+
+    // Engine code asks for paths before the main window has run setupConfig(),
+    // and headless code without one ever doing so
+    void test_getMudletPathResolvesTheRootItselfBeforeSetupConfig()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - the config root is deliberately relocated");
+        }
+        QTemporaryDir xdg;
+        QVERIFY(xdg.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(target)));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), target);
+        QCOMPARE(MudletPaths::getMudletPath(enums::profilesPath), qsl("%1/profiles").arg(target));
+    }
+
+    // Resolving costs a stat of both markers, a marker read and a walk of the
+    // config dirs, and getMudletPath() is called on nearly every profile, map,
+    // media and package operation - so the answer has to be remembered, whatever
+    // it turned out to be
+    void test_getMudletPathResolvesTheRootOnlyOnce()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - the config root is deliberately relocated");
+        }
+        QTemporaryDir first;
+        QTemporaryDir second;
+        QVERIFY(first.isValid() && second.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(mudletUnder(first.path()))));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(mudletUnder(second.path()))));
+
+        MudletPaths::setConfigPath(QString());
+        qputenv("XDG_CONFIG_HOME", first.path().toUtf8());
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), mudletUnder(first.path()));
+
+        // a second resolution would follow XDG_CONFIG_HOME to the other directory
+        qputenv("XDG_CONFIG_HOME", second.path().toUtf8());
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), mudletUnder(first.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::profilesPath), qsl("%1/profiles").arg(mudletUnder(first.path())));
+
+        // and an empty path is the one way to ask for the root to be resolved again
+        MudletPaths::setConfigPath(QString());
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), mudletUnder(second.path()));
+        MudletPaths::setConfigPath(QString());
+    }
+
+    // --- mudlet::setupConfig() end-to-end wiring ------------------------------
+
+    void test_setupConfigUsesPreCreatedXdgTarget()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - setupConfig() takes the portable branch");
+        }
+        QTemporaryDir xdg;
+        QVERIFY(xdg.isValid());
+        const QString target = mudletUnder(xdg.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(target)));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        mudlet::self()->setupConfig();
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), target);
+    }
+
+    // The warning is all that tells an affected user where their other profiles went.
+    void test_setupConfigWarnsAboutShadowedLegacyProfiles()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - setupConfig() takes the portable branch");
+        }
+        const QString legacy = qsl("%1/.config/mudlet").arg(QDir::homePath());
+        if (!MudletPaths::configDirHoldsProfiles(legacy)) {
+            QSKIP("no profiles in the real ~/.config/mudlet, so nothing can be shadowed");
+        }
+        QTemporaryDir xdg;
+        QVERIFY(xdg.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(mudletUnder(xdg.path()))));
+        qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("holds profiles as well")));
+        mudlet::self()->setupConfig();
+    }
+
+    // With XDG unset, the config root is the usual ~/.config/mudlet, so normal
+    // users are unaffected. Uses the real home dir - no HOME override.
+    void test_setupConfigUnsetUsesHomeConfigDir()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - config root is deliberately relocated");
+        }
+        qunsetenv("XDG_CONFIG_HOME");
+        mudlet::self()->setupConfig();
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/.config/mudlet").arg(QDir::homePath()));
+    }
+};
+
+#include "ConfigDirOverrideTest.moc"
+MUDLET_GROUPED_TEST_MAIN(ConfigDirOverrideTest)

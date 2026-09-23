@@ -339,10 +339,10 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
     using namespace AnsiColors;
 
     QString outMsg = qsl("%1%2\n%3%4 chats to the group, '%5'\n%6")
-                            .arg(static_cast<char>(TextGroup))
+                            .arg(QChar(static_cast<char>(TextGroup)))
                             .arg(group, -15)
                             .arg(getChatName(), FBLDRED, message)
-                            .arg(static_cast<char>(End));
+                            .arg(QChar(static_cast<char>(End)));
 
     bool groupNotEmpty = false;
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
@@ -994,8 +994,8 @@ void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
     // other end-of-line indications the text does not get flushed to the
     // display until it does - so actually we need to re-append a final
     // line-feed that we may have previously trimmed off!
-    mpHost->mpConsole->printOnDisplay(trimmedStdStr.append(1, '\n'), false);
-    mpHost->mpConsole->finalize();
+    mpHost->printOnDisplay(trimmedStdStr.append(1, '\n'), false);
+    mpHost->finalizeMainConsole();
 }
 
 /**
@@ -1011,8 +1011,8 @@ void MMCPServer::snoopMessage(const std::string& message)
 
     std::string outStr = ss.str();
 
-    mpHost->mpConsole->printOnDisplay(outStr, false);
-    mpHost->mpConsole->finalize();
+    mpHost->printOnDisplay(outStr, false);
+    mpHost->finalizeMainConsole();
 }
 
 

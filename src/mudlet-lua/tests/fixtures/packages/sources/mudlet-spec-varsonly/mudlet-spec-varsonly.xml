@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+		<Variable>
+			<name>mudletSpecVarsOnly</name>
+			<keyType>4</keyType>
+			<value>installed</value>
+			<valueType>4</valueType>
+		</Variable>
+	</VariablePackage>
+</MudletPackage>

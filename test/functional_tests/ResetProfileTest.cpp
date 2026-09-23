@@ -31,11 +31,19 @@
  * Run with: ctest -R ResetProfileTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
+#include <chrono>
 #include <QMouseEvent>
 
+#include "MudletPaths.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
+#include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
+#include "TAlias.h"
 #include "TEvent.h"
 #include "TKey.h"
 #include "TLabel.h"
@@ -46,9 +54,13 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "TVar.h"
 #include "TelnetServerStub.h"
+#include "VarUnit.h"
+#include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
 extern "C" {
@@ -63,21 +75,20 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForResetProfileTest();
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class ResetProfileTest : public QObject {
   Q_OBJECT
 
 private:
+  QTemporaryDir mConfigDir;
+  QByteArray mSavedXdg;
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "ResetProfile-Test";
-  const QString mPort = "4003";
+  QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
   const QString mLocalhost = "localhost";
 
   void performReset() {
@@ -107,12 +118,29 @@ private:
 
 private slots:
   void initTestCase() {
-    initializeQRCResourcesForResetProfileTest();
+    if (portableMarkerPresent()) {
+      QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
+            "so the config dir cannot be redirected");
+    }
+
+    // A config root of this process's own. Sharing the developer's
+    // ~/.config/mudlet means sharing a profile list, so a second copy of this
+    // test running at the same time is told the name it types is already in
+    // use and never gets an enabled Connect button. Since #9712 the opt-in
+    // that makes setupConfig() adopt a directory is
+    // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+    QVERIFY(mConfigDir.isValid());
+    QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+    mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
     mpServer = new TelnetServerStub(qApp);
-    mpServer->start(mLocalhost, mPort.toUShort());
+    mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+    mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
+    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
+             qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
             "MudletInstanceCoordinator"));
@@ -129,8 +157,13 @@ private slots:
     mpHost = nullptr;
     delete mpServer;
     mpServer = nullptr;
-    deleteProfileDirectory(mHostname);
-    delete mudlet::self();
+    // Null when initTestCase skipped or failed ahead of mudlet::start()
+    if (mudlet::self()) {
+      deleteProfileDirectory(mHostname);
+      delete mudlet::self();
+    }
+    mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
+                       : qputenv("XDG_CONFIG_HOME", mSavedXdg);
   }
 
   // Per-test cleanup: reset the profile so each test starts from clean state.
@@ -149,14 +182,18 @@ private slots:
   // -----------------------------------------------------------------------
 
   void test_tempTriggersRemovedAfterReset() {
+    // preinstalled packages (the starter UI) register their own temp triggers
+    // and re-register them when the profile comes back, so the count after a
+    // reset returns to that baseline rather than zero
+    const int baseline = countTempTriggers();
     int id = mpHost->mLuaInterpreter.startTempTrigger(qsl("test_pattern"),
                                                       qsl(""), -1);
     QVERIFY(id > 0);
-    QVERIFY(countTempTriggers() > 0);
+    QVERIFY(countTempTriggers() > baseline);
 
     performReset();
 
-    QCOMPARE(countTempTriggers(), 0);
+    QCOMPARE(countTempTriggers(), baseline);
   }
 
   void test_tempAliasesRemovedAfterReset() {
@@ -479,11 +516,11 @@ private slots:
     auto [ok, msg] =
         mpHost->createMiniConsole(qsl("main"), qsl("test_mc"), 0, 0, 100, 100);
     QVERIFY2(ok, qPrintable(msg));
-    QVERIFY(mpHost->mpConsole->mSubConsoleMap.contains(qsl("test_mc")));
+    QVERIFY(mpHost->windowRegistry().hasSubConsole(qsl("test_mc")));
 
     performReset();
 
-    QVERIFY2(!mpHost->mpConsole->mSubConsoleMap.contains(qsl("test_mc")),
+    QVERIFY2(!mpHost->windowRegistry().hasSubConsole(qsl("test_mc")),
              "Mini console should be removed after reset");
   }
 
@@ -491,11 +528,11 @@ private slots:
     auto [ok, msg] = mpHost->createLabel(qsl("main"), qsl("test_label"), 0, 0,
                                          100, 100, true, false);
     QVERIFY2(ok, qPrintable(msg));
-    QVERIFY(mpHost->mpConsole->mLabelMap.contains(qsl("test_label")));
+    QVERIFY(mpHost->mpConsole->labelWidget(qsl("test_label")));
 
     performReset();
 
-    QVERIFY2(!mpHost->mpConsole->mLabelMap.contains(qsl("test_label")),
+    QVERIFY2(!mpHost->mpConsole->labelWidget(qsl("test_label")),
              "Label should be removed after reset");
   }
 
@@ -504,6 +541,7 @@ private slots:
   // -----------------------------------------------------------------------
 
   void test_phase2RunsDeferredNotImmediate() {
+    const int baseline = countTempTriggers();
     int triggerId = mpHost->mLuaInterpreter.startTempTrigger(
         qsl("deferred_test"), qsl(""), -1);
     QVERIFY(triggerId > 0);
@@ -513,14 +551,14 @@ private slots:
     // Phase2 has NOT run yet
     QVERIFY2(mpHost->mResetProfile,
              "mResetProfile should be true before processEvents");
-    QVERIFY2(countTempTriggers() > 0,
+    QVERIFY2(countTempTriggers() > baseline,
              "Temp triggers should still exist before processEvents");
 
     QCoreApplication::processEvents();
 
     QVERIFY2(!mpHost->mResetProfile,
              "mResetProfile should be false after processEvents");
-    QCOMPARE(countTempTriggers(), 0);
+    QCOMPARE(countTempTriggers(), baseline);
   }
 
   // -----------------------------------------------------------------------
@@ -628,6 +666,7 @@ private slots:
   // -----------------------------------------------------------------------
 
   void test_doubleResetIsGuarded() {
+    const int baseline = countTempTriggers();
     mpHost->mLuaInterpreter.startTempTrigger(qsl("double_reset_test"), qsl(""),
                                              -1);
 
@@ -650,7 +689,7 @@ private slots:
     lua_pop(afterL, 1);
     QVERIFY2(!mpHost->mResetProfile,
              "mResetProfile should be false after reset");
-    QCOMPARE(countTempTriggers(), 0);
+    QCOMPARE(countTempTriggers(), baseline);
   }
 
   // -----------------------------------------------------------------------
@@ -724,7 +763,7 @@ private slots:
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 
     for (int i = 1; i <= kNumLabels; ++i) {
-      auto *pL = mpHost->mpConsole->mLabelMap.value(qsl("cb_label_%1").arg(i));
+      auto *pL = mpHost->mpConsole->labelWidget(qsl("cb_label_%1").arg(i));
       QVERIFY2(pL, qPrintable(qsl("post-reset label cb_label_%1 missing").arg(i)));
       QMouseEvent ev(QEvent::MouseButtonPress, QPointF(1, 1), QPointF(1, 1),
                      QPointF(1, 1), Qt::LeftButton, Qt::LeftButton,
@@ -747,35 +786,252 @@ private slots:
   }
 
   // -----------------------------------------------------------------------
+  // Group 17: VarUnit saved/hidden variable bookkeeping (#9430 follow-up)
+  // -----------------------------------------------------------------------
+
+  // The VarUnit's savedVars/hiddenByUser sets are name-keyed and independent
+  // of the lua_State (VarUnit::clear() deliberately preserves them), and
+  // nothing repopulates them after a reset - only XMLimport at profile open
+  // does. If replacing the LuaInterface in resetProfile_phase2() loses them,
+  // the first profile save after a reset silently drops every user-saved
+  // variable and hidden-variable preference from the profile XML.
+  void test_savedAndHiddenVarSetsSurviveReset() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    luaL_dostring(L, "resetSavedTestVar = 'important'");
+
+    LuaInterface *lI = mpHost->getLuaInterface();
+    VarUnit *vu = lI->getVarUnit();
+    lI->getVars(false);
+    TVar *var = findGlobalVar(vu, qsl("resetSavedTestVar"));
+    QVERIFY2(var, "test variable not found in the variable tree");
+    // as the Variables view does when the user ticks the save checkbox:
+    vu->addSavedVar(var);
+    // and as it does when the user hides a variable:
+    vu->addHidden(qsl("resetHiddenTestVar"));
+    QVERIFY(vu->savedVars.contains(qsl("resetSavedTestVar")));
+    QVERIFY(vu->hiddenByUser.contains(qsl("resetHiddenTestVar")));
+
+    performReset();
+
+    VarUnit *newVu = mpHost->getLuaInterface()->getVarUnit();
+    QVERIFY2(newVu->savedVars.contains(qsl("resetSavedTestVar")),
+             "user's saved-variable marking should survive resetProfile()");
+    QVERIFY2(newVu->hiddenByUser.contains(qsl("resetHiddenTestVar")),
+             "user's hidden-variable preference should survive resetProfile()");
+  }
+
+  // End-to-end version of the above: the saved variable must still be
+  // written out to profile XML after a reset.
+  void test_savedVariableExportedToXmlAfterReset() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    luaL_dostring(L, "xmlSavedTestVar = 'survives'");
+
+    LuaInterface *lI = mpHost->getLuaInterface();
+    VarUnit *vu = lI->getVarUnit();
+    lI->getVars(false);
+    TVar *var = findGlobalVar(vu, qsl("xmlSavedTestVar"));
+    QVERIFY2(var, "test variable not found in the variable tree");
+    vu->addSavedVar(var);
+
+    performReset();
+
+    // the reset wiped the Lua value; user scripts recreate it on
+    // sysLoadEvent, and opening the Variables view rebuilds the tree
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    luaL_dostring(newL, "xmlSavedTestVar = 'survives'");
+    mpHost->getLuaInterface()->getVars(false);
+
+    const QString xmlPath =
+        MudletPaths::getMudletPath(enums::profileHomePath, mHostname) +
+        qsl("/reset-var-test.xml");
+    auto writer = std::make_shared<XMLexport>(mpHost);
+    QVERIFY(writer->exportPackage(xmlPath, true, false));
+    QFile file(xmlPath);
+    QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QString xml = QString::fromUtf8(file.readAll());
+    file.close();
+    QFile::remove(xmlPath);
+    QVERIFY2(xml.contains(qsl("xmlSavedTestVar")),
+             "saved variable should still be exported to profile XML after "
+             "a reset");
+  }
+
+  // A fresh profile load runs hideMudletsVariables() right after
+  // loadGlobal() so the Variables view only shows the user's variables;
+  // a reset must do the same or the view fills up with Mudlet's entire
+  // internal Lua API.
+  void test_mudletInternalVariablesHiddenAfterReset() {
+    mpHost->hideMudletsVariables();
+    VarUnit *vu = mpHost->getLuaInterface()->getVarUnit();
+    QVERIFY(vu->hidden.contains(qsl("color_table")));
+    QVERIFY(vu->hidden.contains(qsl("Geyser")));
+
+    performReset();
+
+    VarUnit *newVu = mpHost->getLuaInterface()->getVarUnit();
+    QVERIFY2(newVu->hidden.contains(qsl("color_table")),
+             "Mudlet's internal variables should be re-hidden after reset, "
+             "as on profile load");
+    QVERIFY2(newVu->hidden.contains(qsl("Geyser")),
+             "Mudlet's internal variables should be re-hidden after reset, "
+             "as on profile load");
+  }
+
+  // -----------------------------------------------------------------------
+  // Group 18: MapInfoContributorManager stale lua_State (#10001)
+  // -----------------------------------------------------------------------
+
+  // registerMapInfo() stores the lua_State it was called on plus a registry
+  // reference, and the callback captures that state too, while phase2's
+  // initLuaGlobals() closes it. A contributor left registered across a reset
+  // therefore holds a dangling state: the next killMapInfo()/registerMapInfo()
+  // on that name unrefs into freed memory - which a package that does both in
+  // its init hits from compileAll() later in the same phase2 - and one that
+  // nothing re-registers is called on that state by every later map redraw.
+  void test_luaMapInfoContributorsRemovedByReset() {
+    auto *pManager = mpHost->mpMap->mMapInfoContributorManager;
+    QVERIFY(pManager);
+    QSignalSpy spy(pManager,
+                   &MapInfoContributorManager::signal_contributorsUpdated);
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('reset.contrib', function() "
+                              "return 'info' end)\n"
+                              "registerMapInfo('reset.contrib2', function() "
+                              "return 'info' end)"),
+             0);
+    QVERIFY(pManager->getContributorKeys().contains(qsl("reset.contrib")));
+    QVERIFY(pManager->getContributorKeys().contains(qsl("reset.contrib2")));
+    spy.clear();
+
+    performReset();
+
+    QCOMPARE(mpHost->mpMap->mMapInfoContributorManager, pManager);
+    QVERIFY2(!pManager->getContributorKeys().contains(qsl("reset.contrib")),
+             "Lua map info contributor should not outlive the lua_State it was "
+             "registered on");
+    QVERIFY2(!pManager->getContributorKeys().contains(qsl("reset.contrib2")),
+             "every Lua map info contributor should go, not just one");
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Short")),
+             "built-in contributors have no Lua reference and must stay");
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Full")),
+             "built-in contributors have no Lua reference and must stay");
+    QVERIFY2(
+        !spy.isEmpty(),
+        "the mapper rebuilds its info menu from signal_contributorsUpdated");
+  }
+
+  // The reporter's package kills a contributor before re-registering it, and
+  // after a reset that kill is the call that unrefs into the closed state. The
+  // dangling unref is not what fails here without the fix: liblua is linked as
+  // a prebuilt system library and so is not ASan-instrumented, and ASan leaves
+  // freed memory intact by default, so on Linux the read of the closed state
+  // goes unnoticed (on Windows it crashes with an access violation). What goes
+  // red is the kill still finding a contributor - which is also what a fix that
+  // dropped the name from the ordering but left it in the contributor map would
+  // do.
+  void test_mapInfoKillAfterResetFindsNothingToRemove() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('reset.stale', function() "
+                              "return 'info' end)"),
+             0);
+
+    performReset();
+
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(newL,
+                           "resetStaleKilled, resetStaleMessage = "
+                           "killMapInfo('reset.stale')\n"
+                           "registerMapInfo('reset.stale', function() return "
+                           "'info' end)"),
+             0);
+    lua_getglobal(newL, "resetStaleKilled");
+    QVERIFY2(lua_isnil(newL, -1),
+             "the reset should have left killMapInfo() nothing to remove");
+    lua_pop(newL, 1);
+    lua_getglobal(newL, "resetStaleMessage");
+    QVERIFY2(
+        lua_isstring(newL, -1),
+        "killMapInfo() should report the label as missing, as it does on a "
+        "profile that has just been loaded");
+    lua_pop(newL, 1);
+    QVERIFY2(mpHost->mpMap->mMapInfoContributorManager->getContributorKeys()
+                 .contains(qsl("reset.stale")),
+             "re-registering after a reset should work");
+
+    QCOMPARE(luaL_dostring(newL, "killMapInfo('reset.stale')"), 0);
+  }
+
+  // registerMapInfo() can be given a built-in's name, which replaces the
+  // built-in callback. Dropping that on reset must not leave the profile with
+  // fewer contributors than a freshly loaded one has.
+  void test_builtinMapInfoRestoredAfterShadowingContributorDropped() {
+    auto *pManager = mpHost->mpMap->mMapInfoContributorManager;
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('Short', function() return "
+                              "'shadowed' end)"),
+             0);
+
+    performReset();
+
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Short")),
+             "the built-in contributor should be back once the Lua one that "
+             "replaced it is dropped");
+    QColor color;
+    auto info = pManager->getContributor(qsl("Short"))(0, 0, -1, -1, color);
+    QVERIFY2(info.text.isEmpty(),
+             "'Short' should be Mudlet's own contributor again, which reports "
+             "nothing for a room that does not exist");
+  }
+
+  // Dropping the contributors is only acceptable because the script that
+  // registered them runs again in the same reset, in compileAll(); the enabled
+  // state is the user's saved choice and is deliberately not dropped with them,
+  // so the contributor comes back exactly as it was.
+  void test_scriptRegisteredMapInfoReturnsAfterReset() {
+    auto *pScript = new TScript(qsl("mapInfoRegisteringScript"), mpHost);
+    pScript->setScript(qsl("registerMapInfo('reset.pkg', function() return "
+                           "'info' end)"));
+    mpHost->getScriptUnit()->registerScript(pScript);
+    pScript->setIsActive(true);
+    pScript->compile();
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "enableMapInfo('reset.pkg')"), 0);
+    QVERIFY(mpHost->mMapInfoContributors.contains(qsl("reset.pkg")));
+
+    performReset();
+
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(newL, "resetPkgEnabled = getMapInfo()['reset.pkg']"),
+             0);
+    lua_getglobal(newL, "resetPkgEnabled");
+    QVERIFY2(lua_isboolean(newL, -1),
+             "the registering script should have put its contributor back");
+    QVERIFY2(lua_toboolean(newL, -1),
+             "the user's enabled choice should survive the reset");
+    lua_pop(newL, 1);
+
+    // stop the script re-registering into every later test's reset
+    pScript->setScript(qsl(""));
+    pScript->setIsActive(false);
+    QCOMPARE(luaL_dostring(newL, "killMapInfo('reset.pkg')"), 0);
+  }
+
+  // -----------------------------------------------------------------------
   // Helpers (reused from TOscTerminatorTest pattern)
   // -----------------------------------------------------------------------
 
+  TVar *findGlobalVar(VarUnit *vu, const QString &name) {
+    for (auto *child : vu->getBase()->getChildren(false)) {
+      if (child->getName() == name) {
+        return child;
+      }
+    }
+    return nullptr;
+  }
+
   void startProfile(const QString &hostname, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0, qApp, [hostname, address, port]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), hostname);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100);
-      QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    auto host = mudlet::self()->getActiveHost();
+    auto host = TestProfile::create(hostname, address, port);
     if (!host) {
       QFAIL("No active host available for the test.");
     }
@@ -788,7 +1044,7 @@ private slots:
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, profileName);
+        MudletPaths::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
 
     if (!dir.exists()) {
@@ -798,19 +1054,5 @@ private slots:
   }
 };
 
-void initializeQRCResourcesForResetProfileTest() {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-  qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-  qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-  qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-  qInitResources_mudlet();
-  qInitResources_qm();
-}
-
 #include "ResetProfileTest.moc"
-QTEST_MAIN(ResetProfileTest)
+MUDLET_GROUPED_TEST_MAIN(ResetProfileTest)

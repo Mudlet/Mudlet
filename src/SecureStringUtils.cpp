@@ -27,10 +27,12 @@
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QObject>
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSet>
 #include <QStandardPaths>
 #include <QVersionNumber>
 // Qt includes for encryption and SSL availability check
@@ -40,6 +42,75 @@
 #ifndef QT_NO_SSL
 #include <QSslSocket>
 #endif
+
+namespace {
+// Reported once per path per session rather than on every read and write of the same
+// credential, which would train a reader to skip the line, and kept for the connection dialog
+// to tell the user about - a warning on stderr is not something they will ever see
+QSet<QString> gPathsWarnedAbout;
+QString gUnprotectedSecretPath;
+
+bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPermissions)
+{
+#if defined(Q_OS_UNIX)
+    const QFileDevice::Permissions reachableByOthers =
+            QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::WriteOther | QFileDevice::ExeOther;
+
+    QFile::setPermissions(path, ownerPermissions);
+
+    // Read back rather than trusted: chmod reports success on a file system that cannot store
+    // permission bits - a FAT stick, or a Windows drive mounted into WSL without metadata -
+    // and leaves the secret as readable as it was
+    const QFileDevice::Permissions applied = QFileInfo(path).permissions();
+
+    if (applied.testFlag(QFileDevice::ReadOwner) && !applied.testAnyFlags(reachableByOthers)) {
+        return true;
+    }
+
+    gUnprotectedSecretPath = path;
+
+    if (!gPathsWarnedAbout.contains(path)) {
+        gPathsWarnedAbout.insert(path);
+        qWarning().nospace().noquote() << "SecureStringUtils: other accounts on this machine can still read \"" << path
+                                       << "\" - it holds a secret, but the file system would not take owner-only permissions for it.";
+    }
+
+    return false;
+#else
+    // Windows has no POSIX permission bits, and QFile::setPermissions() there only toggles the
+    // read-only attribute, so there is nothing useful to set. Whatever the secret inherits from
+    // the directory it is written into is all that protects it, which for a portable install on
+    // removable media may be nothing.
+    Q_UNUSED(ownerPermissions)
+    static bool warnedAboutTheAbsenceOfPermissionBits = false;
+
+    if (!warnedAboutTheAbsenceOfPermissionBits) {
+        warnedAboutTheAbsenceOfPermissionBits = true;
+        qWarning().nospace().noquote() << "SecureStringUtils: this platform has no file permissions to narrow, so a saved password such as \"" << path
+                                       << "\" is protected only by the access control it inherits from the folder holding it.";
+    }
+
+    return true;
+#endif
+}
+} // namespace
+
+bool SecureStringUtils::restrictFileToOwner(const QString& path)
+{
+    return restrictToOwner(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+}
+
+bool SecureStringUtils::restrictDirectoryToOwner(const QString& path)
+{
+    return restrictToOwner(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+}
+
+QString SecureStringUtils::takeUnprotectedSecretPath()
+{
+    QString path;
+    path.swap(gUnprotectedSecretPath);
+    return path;
+}
 
 QString SecureStringUtils::getSSLBackendInfo()
 {
@@ -116,6 +187,19 @@ void SecureStringUtils::secureByteArrayClear(QByteArray& array)
     if (!array.isEmpty()) {
         array.fill('\0');
         array.clear();
+    }
+}
+
+void SecureStringUtils::secureStdStringClear(std::string& str)
+{
+    // Overwrite through a volatile pointer so the compiler cannot treat the zeroing as a dead store and
+    // elide it (the buffer is not read again before it is cleared/freed).
+    if (!str.empty()) {
+        volatile char* data = str.data();
+        for (std::string::size_type i = 0; i < str.size(); ++i) {
+            data[i] = '\0';
+        }
+        str.clear();
     }
 }
 
@@ -347,6 +431,11 @@ QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileNa
         return QByteArray(); // File doesn't exist or can't be read
     }
 
+    restrictFileToOwner(keyFilePath);
+    // Nothing but this key and the passwords directory beside it lives under
+    // AppConfigLocation, so that directory is the owner's as well
+    restrictDirectoryToOwner(QFileInfo(keyFilePath).absolutePath());
+
     QDataStream ifs(&file);
     // Use compatible data stream format
     ifs.setVersion(QDataStream::Qt_5_12);
@@ -384,6 +473,11 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
         return false;
     }
 
+    // Narrowed before the key is written, not after: QSaveFile commits by renaming its
+    // temporary over the target, so a key narrowed only afterwards is there for the taking for
+    // the moment in between. Nothing but credentials lives in this directory.
+    restrictDirectoryToOwner(profileDir);
+
     QSaveFile file(keyFilePath);
 
     if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
@@ -404,6 +498,8 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
                                      << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
         return false;
     }
+
+    restrictFileToOwner(keyFilePath);
 
     return true;
 }
@@ -521,6 +617,8 @@ bool SecureStringUtils::storePassword(const QString& profileName, const QString&
         return false;
     }
 
+    restrictDirectoryToOwner(dir.absolutePath());
+
     // Encrypt the password
     QString encryptedPassword = encryptStringForProfile(password, profileName);
     if (encryptedPassword.isEmpty()) {
@@ -544,6 +642,8 @@ bool SecureStringUtils::storePassword(const QString& profileName, const QString&
         return false;
     }
 
+    restrictFileToOwner(filePath);
+
     return true;
 }
 
@@ -560,6 +660,8 @@ QString SecureStringUtils::retrievePassword(const QString& profileName, const QS
         // File doesn't exist or can't be read - not an error, just no password stored
         return QString();
     }
+
+    restrictFileToOwner(filePath);
 
     QDataStream ifs(&file);
     ifs.setVersion(QDataStream::Qt_5_12);

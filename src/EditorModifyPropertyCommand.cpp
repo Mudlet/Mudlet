@@ -281,7 +281,7 @@ QString EditorModifyPropertyCommand::generateText(EditorViewType viewType, const
         return QObject::tr("modify key \"%1\"").arg(itemName);
     case EditorViewType::cmActionView:
         //: Undo/redo menu text for modifying a button's properties
-        return QObject::tr("modify button \"%1\"").arg(itemName);
+        return QObject::tr("modify button/menu/toolbar \"%1\"").arg(itemName);
     default:
         //: Undo/redo menu text for modifying an unknown item's properties
         return QObject::tr("modify item \"%1\"").arg(itemName);

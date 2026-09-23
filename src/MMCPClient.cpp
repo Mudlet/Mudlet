@@ -28,6 +28,9 @@
 #include <QTcpSocket>
 #include <QRegularExpression>
 #include <QtGlobal>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 QString convertToIPv4(QHostAddress addr)
 {
@@ -283,7 +286,7 @@ void MMCPClient::slot_readData()
                     // Start 60 second timeout for pending connection
                     // We don't know what client the peer is using, their client may timeout the socket, or may not
                     // Regardless, we'll time it out after 60 seconds
-                    mPendingTimer.start(60000);
+                    mPendingTimer.start(1min);
                 }
             }
         }

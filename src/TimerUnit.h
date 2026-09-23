@@ -26,21 +26,31 @@
 
 #include "utils.h"
 
+#include <QList>
+#include <QMap>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
+#include <QtGlobal>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TTimer;
 class QTimer;
 
-// Note: Unlike AliasUnit/TriggerUnit/KeyUnit, TimerUnit does not use mProcessingDepth
-// because timers execute via Qt's event loop (QTimer signals), not synchronous loops.
-// Protection against re-entrancy is provided by the guard in TTimer::execute() and
-// by re-verifying timer existence after execute() in mudlet::slot_timerFires().
+// Note: mProcessingDepth tracks TTimer::execute() nesting (via begin/endProcessing())
+// so that uninstall() can defer deletion of a package's timers while one of them is
+// still on the call stack - a timer script calling uninstallPackage() on its own
+// package would otherwise free the very TTimer execute() is running on. Deferred
+// items are flushed by doCleanup() once no timer script is executing - primarily
+// by timerFired() right after it finishes with the fired timer, so
+// the "uninstalled" objects do not outlive the event loop iteration. This
+// complements the guard in TTimer::execute() and the re-verification of timer
+// existence after execute() in timerFired().
 class TimerUnit
 {
     friend class XMLexport;
@@ -64,28 +74,29 @@ public:
     int remainingTime(const int id) const;
     bool registerTimer(TTimer* pT);
     void unregisterTimer(TTimer* pT);
+    void timerFired(QTimer* pQTimer);
     void reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     void stopAllTriggers();
     void reenableAllTriggers();
     void markCleanup(TTimer*);
     void doCleanup();
+    void beginProcessing() { ++mProcessingDepth; }
+    void endProcessing()
+    {
+        --mProcessingDepth;
+        Q_ASSERT(mProcessingDepth >= 0);
+    }
     std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TTimer* pChild, const QString& packageName);
-    void changeHostName(const QString&);
 
 
     QMultiMap<QString, TTimer*> mLookupTable;
     QList<TTimer*> uninstallList;
-
-    // This will contain all the QTimers associated with the TTimer instances
-    // it is needed so that should mpHost be renamed we can update them to have
-    // the correct name (which is needed when they fire so the mudlet class
-    // knows when profile they belong to and where to find the TTimer that they
-    // are part of):
-    QSet<QTimer*> mQTimerSet;
+    QSet<TTimer*> mCleanupSet;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
 private:
     TimerUnit() = default;
@@ -103,7 +114,9 @@ private:
     std::list<TTimer*> mTimerRootNodeList;
     int mMaxID = 0;
     bool mModuleMember = false;
-    QSet<TTimer*> mCleanupSet;
+    // > 0 whilst a TTimer::execute() is on the call stack; uninstall() and
+    // doCleanup() must not delete timers then - see the note above the class:
+    int mProcessingDepth = 0;
     int statsActiveItems = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;

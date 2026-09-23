@@ -55,6 +55,7 @@ protected:
 
 private:
     void showImportStatus(const QString& message);
+    QString moduleHelpUrl(const QString& moduleName) const;
 
     Host* mpHost = nullptr;
 };

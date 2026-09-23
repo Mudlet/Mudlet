@@ -279,8 +279,8 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
     init();
 
-    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate);
-    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate);
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate(specialExits));
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate(specialExits));
 }
 
 dlgRoomExits::~dlgRoomExits() = default;
@@ -301,6 +301,25 @@ void dlgRoomExits::slot_endEditSpecialExits()
         mEditColumn = -1;
     }
     specialExits->clearSelection();
+}
+
+// The Delete key removes the selected special exits (see
+// ExitsTreeWidget::keyPressEvent()), and one of them may be the item being
+// edited.
+void dlgRoomExits::slot_specialExitRowsAboutToBeRemoved(const QModelIndex& parent, const int first, const int last)
+{
+    if (!mpEditItem || parent.isValid()) {
+        return;
+    }
+    for (int row = first; row <= last; ++row) {
+        if (specialExits->topLevelItem(row) == mpEditItem) {
+            mpEditItem = nullptr;
+            mEditColumn = -1;
+            button_endEditing->setDisabled(true);
+            button_addSpecialExit->setEnabled(true);
+            return;
+        }
+    }
 }
 
 void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
@@ -982,6 +1001,13 @@ void dlgRoomExits::save()
         pA->determineAreaExitsOfRoom(pR->getId());
     }
 
+    // Repaint the mapper so the changed exits/doors/locks show immediately -
+    // without this the map stays stale until the next scroll/pan forces a
+    // paint. updateArea() queues a throttled mp2dMap->update(). Also mark the
+    // map unsaved, since editing exits is a map change.
+    mpHost->mpMap->updateArea(pR->getArea());
+    mpHost->mpMap->setUnsaved(__func__);
+
     close();
 }
 
@@ -1191,11 +1217,10 @@ void dlgRoomExits::normalStubExitChanged(const int state,
             // Id still in that field - so clear it:
             pExit->setText(QString());
             setActionOnExit(pExit, mpAction_noExit);
-            pWeight->setValue(0);        // Can't have a weight for a stub pExit
-            pNoRoute->setChecked(false); // nor a "lock"
+            pWeight->setValue(0); // Can't have a weight for a stub pExit
         }
-        pNoRoute->setEnabled(false); // Disable "lock" on this exit
-        pExit->setEnabled(false);    // Prevent entry of an exit roomID
+        pNoRoute->setEnabled(true); // Permit a stub to be locked ("No route"), matching what the Lua API allows
+        pExit->setEnabled(false);   // Prevent entry of an exit roomID
         pExit->setToolTip(utils::richText(tr("Clear the stub exit for this exit to enter an exit roomID.")));
         pDoorType_none->setEnabled(true);
         pDoorType_open->setEnabled(true);
@@ -1206,8 +1231,11 @@ void dlgRoomExits::normalStubExitChanged(const int state,
         pExit->setEnabled(true);
         setActionOnExit(pExit, mpAction_noExit);
         pExit->setToolTip(noExitToolTipText);
-        //  pNoRoute->setEnabled(true); although this branch will enable the exit entry
-        //  there will not be a valid one there yet so don't enable the noroute(lock) control here!
+        // Although this branch enables the exit entry there will not be a valid
+        // exit nor a stub there yet, so there is nothing to lock - disable and
+        // clear the noroute(lock) control:
+        pNoRoute->setEnabled(false);
+        pNoRoute->setChecked(false);
         pDoorType_none->setEnabled(false);
         pDoorType_open->setEnabled(false);
         pDoorType_closed->setEnabled(false);
@@ -1416,7 +1444,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
     normalStubExitChanged(
-            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_n, utils::richText(tr("Set the number of the room northwest of this one.")));
+            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, utils::richText(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 
@@ -1605,16 +1633,16 @@ void dlgRoomExits::initExit(int direction,
     } else {                                             //No exit is set on initialisation
         exitLineEdit->setText(QString());                //Nothing to put in exitID box
         setActionOnExit(exitLineEdit, mpAction_noExit);
-        noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
-        noRoute->setChecked(false); //.. and ensure there isn't one
-        weight->setEnabled(false);  //Disable exit weight control...
-        weight->setValue(0);        //And reset to default value (which will now cause the room's one to be used
-        stub->setEnabled(true);     //Enable stub exit control
+        weight->setEnabled(false); //Disable exit weight control...
+        weight->setValue(0);       //And reset to default value (which will now cause the room's one to be used
+        stub->setEnabled(true);    //Enable stub exit control
         if (pR->hasExitStub(direction)) {
             exitLineEdit->setEnabled(false); //There is a stub exit, so prevent exit number entry...
             exitLineEdit->setToolTip(utils::richText(tr("Clear the stub exit for this exit to enter an exit roomID.")));
             stub->setChecked(true);
-            none->setEnabled(true); //Enable door type controls, can have a door on a stub exit..
+            noRoute->setEnabled(true);                       //A stub can be locked ("No route"), matching the Lua API
+            noRoute->setChecked(pR->hasExitLock(direction)); //Set/reset "lock" control as appropriate
+            none->setEnabled(true);                          //Enable door type controls, can have a door on a stub exit..
             open->setEnabled(true);
             closed->setEnabled(true);
             locked->setEnabled(true);
@@ -1622,8 +1650,10 @@ void dlgRoomExits::initExit(int direction,
             exitLineEdit->setEnabled(true);
             exitLineEdit->setToolTip(validExitToolTip);
             stub->setChecked(false);
-            none->setEnabled(false); //Disable door type controls, can't lock a non-existent exit..
-            open->setEnabled(false); //.. and ensure the "none" one is set if it ever gets enabled
+            noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
+            noRoute->setChecked(false); //.. and ensure there isn't one
+            none->setEnabled(false);    //Disable door type controls, can't lock a non-existent exit..
+            open->setEnabled(false);    //.. and ensure the "none" one is set if it ever gets enabled
             closed->setEnabled(false);
             locked->setEnabled(false);
             none->setChecked(true);
@@ -1904,6 +1934,7 @@ void dlgRoomExits::init()
     connect(button_addSpecialExit, &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_addSpecialExit);
     connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_editSpecialExit);
     connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_checkModified);
+    connect(specialExits->model(), &QAbstractItemModel::rowsAboutToBeRemoved,     this, &dlgRoomExits::slot_specialExitRowsAboutToBeRemoved);
     connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
     connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
     connect(nw,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_nw_textEdited);

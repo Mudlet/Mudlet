@@ -297,6 +297,72 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- The subject handed to PCRE is measured in UTF-8 bytes, not in the UTF-16
+    -- code units a QString counts: a length taken from the wrong one cuts a
+    -- multibyte line short and the end anchor then matches in the wrong place
+    it("matches a multibyte line right through to its end anchor", function()
+        local send = spy.on(_G, "send")
+        local snapshot = {}
+        local pattern = "^(\\w+) (\\w+) (\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            send("match")
+            snapshot = matches
+        end, 1)
+
+        feedTriggers("\nЗдравствуй уважаемый Mudlet\n")
+
+        assert.spy(send).was.called(1)
+        assert.are.equal("Здравствуй уважаемый Mudlet", snapshot[1])
+        assert.are.equal("Здравствуй", snapshot[2])
+        assert.are.equal("уважаемый", snapshot[3])
+        assert.are.equal("Mudlet", snapshot[4])
+        killTrigger(id)
+    end)
+
+    -- A capture's position comes back from PCRE as a byte offset and has to be
+    -- converted to the character position the console selects by. The dragon is
+    -- outside the BMP, so it is four UTF-8 bytes but two of those characters
+    it("selectCaptureGroup lands on the right characters after multibyte text", function()
+        local selection
+        local pattern = "^Цель: (\\S+) Оружие: (?<wpn>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("wpn")
+            selection = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nЦель: 🐉 Оружие: меч\n")
+
+        assert.are.equal("меч", selection)
+        killTrigger(id)
+    end)
+
+    -- PCRE2 returns the name table in alphabetical order, so the named-group
+    -- loop asks for positions in an order unrelated to where the groups sit in
+    -- the line: aaa is asked for first and zzz last. Converting zzz's offset
+    -- therefore walks back over the dragon - one character, four bytes, but two
+    -- UTF-16 code units - and over the sharp s. Selecting zzz, the furthest step
+    -- back, is what pins that walk; a rule that subtracted one code unit for the
+    -- dragon instead of two would select "ed " here and pass every other spec.
+    it("selectCaptureGroup lands on a named group asked for after a later one", function()
+        local selection
+        local pattern = "^(?<zzz>\\w+) (?<mmm>\\S+) (?<aaa>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("zzz")
+            selection = getSelection()
+            deselect()
+        end, 1)
+        finally(function() if type(id) == "number" and id > 0 then killTrigger(id) end end)
+
+        feedTriggers("\nzed 🐉ß alf\n")
+
+        assert.are.equal("zed", selection)
+        killTrigger(id)
+    end)
+
     -- selectCaptureGroup by name selects correct text
     it("selectCaptureGroup by name selects the right text", function()
         local selection_first, selection_second
@@ -315,6 +381,43 @@ describe("PCRE regex cases with tempRegexTrigger", function()
 
         assert.are.equal("Hello", selection_first)
         assert.are.equal("World", selection_second)
+        killTrigger(id)
+    end)
+
+    -- selecting a later group must leave the stored full match untouched
+    it("selectCaptureGroup by number leaves the other captures alone", function()
+        local later, full
+        local id = tempRegexTrigger("^(\\w+) (\\w+)$", function()
+            selectCaptureGroup(3)
+            later = getSelection()
+            deselect()
+            selectCaptureGroup(1)
+            full = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nHello World\n")
+
+        assert.are.equal("World", later)
+        assert.are.equal("Hello World", full)
+        killTrigger(id)
+    end)
+
+    it("a group number past the last capture returns -1 and keeps the selection", function()
+        local past, zero, still
+        local id = tempRegexTrigger("^(\\w+) (\\w+)$", function()
+            selectCaptureGroup(2)
+            past = selectCaptureGroup(4)
+            zero = selectCaptureGroup(0)
+            still = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nHello World\n")
+
+        assert.are.equal(-1, past)
+        assert.are.equal(-1, zero)
+        assert.are.equal("Hello", still)
         killTrigger(id)
     end)
 
@@ -420,6 +523,27 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- a group on the branch the alternation did not take has no capture at all,
+    -- as opposed to an empty one
+    it("leaves out a named group that took no part in the match", function()
+        local snapshot = {}
+        local pattern = "^alt (?:(?<left>aaa)|(?<right>bbb))$"
+
+        local id = tempRegexTrigger(pattern, function()
+            snapshot = {left = matches["left"], right = matches["right"], whole = matches[1]}
+        end, 1)
+        -- killed from here rather than after the assertions: a trigger that
+        -- never fired is what the first of them catches, and a kill they skip
+        -- leaves it live for the specs that follow
+        finally(function() killTrigger(id) end)
+
+        feedTriggers("\nalt bbb\n")
+
+        assert.are.equal("alt bbb", snapshot.whole, "the trigger should have matched at all")
+        assert.are.equal("bbb", snapshot.right)
+        assert.is_nil(snapshot.left)
+    end)
+
     -- no match
     it("doesnt falsely match a non matching line", function()
         local send = spy.on(_G, "send")
@@ -436,4 +560,17 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         assert.spy(send).was_not_called()
         killTrigger(id)
     end)    
+end)
+
+describe("the bundled PCRE binding", function()
+
+    -- Mudlet moved to lrexlib-pcre2, whose module is rex_pcre2; a script written
+    -- against the older binding still finds one because the same module is also
+    -- bound to the rex_pcre name
+    it("is reachable under the old rex_pcre name (#8599)", function()
+        assert.are.equal("table", type(rex_pcre))
+        assert.are.equal(package.loaded["rex_pcre2"], rex_pcre)
+        assert.are.equal("b", rex_pcre.match("abc", "b"))
+    end)
+
 end)

@@ -28,11 +28,16 @@
 #include "utils.h" // For NameGroupMatches
 
 #include <QDebug>
+#include <QDebugStateSaver>
 #include <QPointer>
 #include <QSharedPointer>
+#include <QString>
+#include <QVector>
+#include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
+#include <QCoreApplication>
 
 class Host;
 
@@ -76,6 +81,7 @@ public:
     QString mCommand;
     QString mRegexCode;
     QSharedPointer<pcre2_code> mpRegex;
+    QSharedPointer<pcre2_match_data> mpMatchData;
     QString mScript;
     QPointer<Host> mpHost;
     bool mModuleMember = false;

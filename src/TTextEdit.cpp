@@ -30,6 +30,8 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
+#include "TDebug.h"
+#include "TDebugFilterBar.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "THyperlinkSelectionManager.h"
@@ -39,10 +41,12 @@
 #include "widechar_width.h"
 #include "TTextProperties.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <QtEvents>
 #include <QtGlobal>
+#include <QtMath>
 #include <QAccessible>
 #include <QAccessibleTextCursorEvent>
 #include <QAccessibleTextInsertEvent>
@@ -57,9 +61,12 @@
 #include <QStringRef>
 #include <QTextBoundaryFinder>
 #include <QLabel>
+#include <QLineEdit>
 #include <QToolTip>
 #include <QWidgetAction>
 #include <QVersionNumber>
+
+using namespace std::chrono_literals;
 
 // Renders text on screen
 // Text data stored separately in a TBuffer
@@ -73,7 +80,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
-    mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
     Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
@@ -110,8 +116,17 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     // Scroll optimizations may use cached screen data, missing blinking content detection
     mpScrollStoppedTimer = new QTimer(this);
     mpScrollStoppedTimer->setSingleShot(true);
-    mpScrollStoppedTimer->setInterval(150);
+    mpScrollStoppedTimer->setInterval(150ms);
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
+
+    mpPaintPacer = new QTimer(this);
+    mpPaintPacer->setSingleShot(true);
+    connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        if (!mPendingPaintRegion.isEmpty()) {
+            update(mPendingPaintRegion);
+            mPendingPaintRegion = QRegion();
+        }
+    });
 
     showNewLines();
     setMouseTracking(true); // test fix for MAC
@@ -138,6 +153,49 @@ void TTextEdit::forceUpdate()
     update();
 }
 
+void TTextEdit::scheduleUpdate(const QRect& rect)
+{
+    mPendingPaintRegion += rect.isValid() ? rect : QWidget::rect();
+
+    // Nothing painted recently, so this frame's window is open: Qt still merges
+    // whatever else arrives before the event loop gets around to painting.
+    if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+        update(mPendingPaintRegion);
+        mPendingPaintRegion = QRegion();
+        return;
+    }
+
+    if (!mpPaintPacer->isActive()) {
+        mpPaintPacer->start(csmPaintPaceMs - static_cast<int>(mSincePaint.elapsed()));
+    }
+}
+
+void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
+{
+    if (firstLine < 0 || lastLine < firstLine) {
+        return;
+    }
+    mDirtyFirstLine = (mDirtyFirstLine < 0) ? firstLine : std::min(mDirtyFirstLine, firstLine);
+    mDirtyLastLine = (mDirtyLastLine < 0) ? lastLine : std::max(mDirtyLastLine, lastLine);
+
+    if (mFontHeight <= 0 || mScreenHeight <= 0) {
+        // Too early to work out where the lines sit, so fall back to the whole
+        // pane rather than leave the change unpainted.
+        scheduleUpdate();
+        return;
+    }
+
+    const int lineOffset = imageTopLine();
+    const int top = std::max(0, firstLine - lineOffset);
+    const int bottom = std::min(mScreenHeight - 1, lastLine - lineOffset);
+    if (bottom < top) {
+        // Off-screen for this pane. The range stays recorded because the pane
+        // may scroll onto it before the next paint.
+        return;
+    }
+    scheduleUpdate(QRect(0, top * mFontHeight, width(), (bottom - top + 1) * mFontHeight));
+}
+
 void TTextEdit::needUpdate(int y1, int y2)
 {
     if (!mIsTailMode) {
@@ -157,7 +215,7 @@ void TTextEdit::needUpdate(int y1, int y2)
     }
     QRect r(0, top * mFontHeight, mScreenWidth * mFontWidth, bottom * mFontHeight);
     mForceUpdate = true;
-    update(r);
+    scheduleUpdate(r);
 }
 
 void TTextEdit::focusInEvent(QFocusEvent* event)
@@ -282,6 +340,8 @@ void TTextEdit::updateScreenView()
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
     }
+    const int oldScreenWidth = mScreenWidth;
+    const int oldScreenHeight = mScreenHeight;
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     if (!mIsLowerPane) {
         updateScrollBar(mpBuffer->mCursorY);
@@ -298,6 +358,18 @@ void TTextEdit::updateScreenView()
         }
     } else {
         mScreenWidth = currentScreenWidth;
+    }
+    // When the pane dimensions change the cached mScreenMap pixmap no longer
+    // matches the current geometry. A subsequent partial-region repaint would
+    // otherwise reuse that stale cache (see drawForeground) and leave newly
+    // revealed columns/rows unpainted - e.g. growing the pane horizontally
+    // after it has been shrunk. Force a full repaint so the whole pane is
+    // re-rendered and the cache is rebuilt at the new size.
+    // Growing reveals cells and any change of height shifts every row, but
+    // losing columns does neither: wrapping happens on insert, so the cache
+    // still holds every column that is left.
+    if (mScreenWidth > oldScreenWidth || mScreenHeight != oldScreenHeight) {
+        forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
 }
@@ -335,7 +407,7 @@ void TTextEdit::showNewLines()
             updateScrollBar(mpBuffer->mCursorY);
         }
     }
-    update();
+    scheduleUpdate();
 
 
     if (mpHost && QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
@@ -439,31 +511,32 @@ void TTextEdit::scrollDown(int lines)
     }
 }
 
-void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, int* offset) const
+bool TTextEdit::hasBufferLine(int lineNumber) const
 {
+    return lineNumber >= 0 && lineNumber < static_cast<int>(mpBuffer->buffer.size());
+}
+
+TChar TTextEdit::timeStampCharStyle() const
+{
+    return TChar(QColor(200, 150, 0), mpConsole->getConsoleBgColor());
+}
+
+void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeStampStyle, LineLayout& layout, int* offset) const
+{
+    layout.clear();
     QPoint cursor(-mCursorX, lineOfScreen);
-    QString lineText = mpBuffer->lineBuffer.at(lineNumber);
+    const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
-        TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
-        QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
-        QVector<QColor> fgColors;
-        QVector<QRect> textRects;
-        QVector<int> charWidths;
-        QVector<QString> graphemes;
+        const QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
         for (const QChar c : timestamp) {
             // The column argument is not incremented here (is fixed at 0) so
             // the timestamp does not take up any places when it is clicked on
             // by the mouse...
-            cursor.setX(cursor.x() + drawGraphemeBackground(painter, fgColors, textRects, graphemes, charWidths, cursor, c, 0, lineNumber, timeStampStyle));
+            cursor.setX(cursor.x() + layoutGrapheme(layout, cursor, c, 0, lineNumber, timeStampStyle));
         }
-        int index = -1;
-        for (const QChar c : timestamp) {
-            ++index;
-            drawGraphemeForeground(painter, fgColors.at(index), textRects.at(index), c, timeStampStyle);
-        }
-        currentSize += mudlet::smTimeStampFormat.size();
+        currentSize += TBuffer::smTimeStampFormat.size();
     }
 
     //get the longest line
@@ -472,403 +545,428 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 
     int columnWithOutTimestamp = 0;
-    QVector<QColor> fgColors;
-    QVector<QRect> textRects;
-    QVector<int> charWidths;
-    QVector<QString> graphemes;
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
-        int nextBoundary = boundaryFinder.toNextBoundary();
+        const int nextBoundary = boundaryFinder.toNextBoundary();
+        if (Q_UNLIKELY(nextBoundary <= indexOfChar)) {
+            // toNextBoundary() reports -1 once it can no longer advance, which
+            // would send indexOfChar backwards and index the line out of bounds
+            break;
+        }
 
-        TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
-        int graphemeWidth = drawGraphemeBackground(
-                painter, fgColors, textRects, graphemes, charWidths, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, lineNumber, charStyle);
+        const TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
+        const int graphemeWidth = layoutGrapheme(layout, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, lineNumber, charStyle);
         cursor.setX(cursor.x() + graphemeWidth);
         indexOfChar = nextBoundary;
         columnWithOutTimestamp += graphemeWidth;
     }
-    boundaryFinder.toStart();
-    int index = -1;
-    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
-        int nextBoundary = boundaryFinder.toNextBoundary();
-
-        TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
-        ++index;
-        drawGraphemeForeground(painter, fgColors.at(index), textRects.at(index), graphemes.at(index), charStyle);
-        indexOfChar = nextBoundary;
-    }
 
     // If caret mode is enabled and the line is empty, still draw the caret.
     if (mpHost && mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
-        auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
-        painter.fillRect(textRect, mCaretColor);
+        GraphemeRun caretRun;
+        caretRun.textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
+        caretRun.bgColor = mCaretColor;
+        caretRun.fillsBackground = true;
+        layout.push_back(std::move(caretRun));
     }
 }
 
-void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, const QString& grapheme, const int column, QVector<QString>& graphemes, int& charWidth) const
+void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout) const
+{
+    for (const GraphemeRun& run : layout) {
+        if (run.fillsBackground) {
+            painter.fillRect(run.textRect, run.bgColor);
+        }
+    }
+}
+
+void TTextEdit::paintForegrounds(QPainter& painter, const LineLayout& layout, const QRect& clip) const
+{
+    if (layout.empty()) {
+        return;
+    }
+    if (!clip.isNull()) {
+        painter.save();
+        painter.setClipRect(clip);
+    }
+    for (const GraphemeRun& run : layout) {
+        if (run.style) {
+            paintGraphemeForeground(painter, run);
+        }
+    }
+    if (!clip.isNull()) {
+        painter.restore();
+    }
+}
+
+void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, const QString& grapheme, const int column, QString& outGrapheme, int& charWidth) const
 {
     switch (unicode) {
     case 0:
-        graphemes.append(QChar(0x2400));
+        outGrapheme = QChar(0x2400);
         charWidth = 1;
         break; // NUL - not sure that this can appear
     case 1:
-        graphemes.append(QChar(0x2401));
+        outGrapheme = QChar(0x2401);
         charWidth = 1;
         break; // SOH
     case 2:
-        graphemes.append(QChar(0x2402));
+        outGrapheme = QChar(0x2402);
         charWidth = 1;
         break; // STX
     case 3:
-        graphemes.append(QChar(0x2403));
+        outGrapheme = QChar(0x2403);
         charWidth = 1;
         break; // ETX
     case 4:
-        graphemes.append(QChar(0x2404));
+        outGrapheme = QChar(0x2404);
         charWidth = 1;
         break; // EOT
     case 5:
-        graphemes.append(QChar(0x2405));
+        outGrapheme = QChar(0x2405);
         charWidth = 1;
         break; // ENQ
     case 6:
-        graphemes.append(QChar(0x2406));
+        outGrapheme = QChar(0x2406);
         charWidth = 1;
         break; // ACK
     case 7:
-        graphemes.append(QChar(0x2407));
+        outGrapheme = QChar(0x2407);
         charWidth = 1;
         break; // BEL - the (audio) handling of this gets done when it is received, not when it is displayed here:
     case 8:
-        graphemes.append(QChar(0x2408));
+        outGrapheme = QChar(0x2408);
         charWidth = 1;
         break; // BS
     case 9:    // HT
         // Makes the spacing behave like a tab
         charWidth = mTabStopwidth - (column % mTabStopwidth);
         // But print the "control picture" on top
-        graphemes.append(QChar(0x2409));
+        outGrapheme = QChar(0x2409);
         break;
     case 10:
-        graphemes.append(QChar(0x240A));
+        outGrapheme = QChar(0x240A);
         charWidth = 1;
         break; // LF - may not ever appear!
     case 11:
-        graphemes.append(QChar(0x240B));
+        outGrapheme = QChar(0x240B);
         charWidth = 1;
         break; // VT
     case 12:
-        graphemes.append(QChar(0x240C));
+        outGrapheme = QChar(0x240C);
         charWidth = 1;
         break; // FF
     case 13:
-        graphemes.append(QChar(0x240D));
+        outGrapheme = QChar(0x240D);
         charWidth = 1;
         break; // CR - shouldn't appear but does seem to crop up somehow!
     case 14:
-        graphemes.append(QChar(0x240E));
+        outGrapheme = QChar(0x240E);
         charWidth = 1;
         break; // SO
     case 15:
-        graphemes.append(QChar(0x240F));
+        outGrapheme = QChar(0x240F);
         charWidth = 1;
         break; // SI
     case 16:
-        graphemes.append(QChar(0x2410));
+        outGrapheme = QChar(0x2410);
         charWidth = 1;
         break; // DLE
     case 17:
-        graphemes.append(QChar(0x2411));
+        outGrapheme = QChar(0x2411);
         charWidth = 1;
         break; // DC1
     case 18:
-        graphemes.append(QChar(0x2412));
+        outGrapheme = QChar(0x2412);
         charWidth = 1;
         break; // DC2
     case 19:
-        graphemes.append(QChar(0x2413));
+        outGrapheme = QChar(0x2413);
         charWidth = 1;
         break; // DC3
     case 20:
-        graphemes.append(QChar(0x2414));
+        outGrapheme = QChar(0x2414);
         charWidth = 1;
         break; // DC4
     case 21:
-        graphemes.append(QChar(0x2415));
+        outGrapheme = QChar(0x2415);
         charWidth = 1;
         break; // NAK
     case 22:
-        graphemes.append(QChar(0x2416));
+        outGrapheme = QChar(0x2416);
         charWidth = 1;
         break; // SYN
     case 23:
-        graphemes.append(QChar(0x2417));
+        outGrapheme = QChar(0x2417);
         charWidth = 1;
         break; // ETB
     case 24:
-        graphemes.append(QChar(0x2418));
+        outGrapheme = QChar(0x2418);
         charWidth = 1;
         break; // CAN
     case 25:
-        graphemes.append(QChar(0x2419));
+        outGrapheme = QChar(0x2419);
         charWidth = 1;
         break; // EM
     case 26:
-        graphemes.append(QChar(0x241A));
+        outGrapheme = QChar(0x241A);
         charWidth = 1;
         break; // SUB
     case 27:
-        graphemes.append(QChar(0x241B));
+        outGrapheme = QChar(0x241B);
         charWidth = 1;
         break; // ESC - shouldn't appear as will have been intercepted previously
     case 28:
-        graphemes.append(QChar(0x241C));
+        outGrapheme = QChar(0x241C);
         charWidth = 1;
         break; // FS
     case 29:
-        graphemes.append(QChar(0x241D));
+        outGrapheme = QChar(0x241D);
         charWidth = 1;
         break; // GS
     case 30:
-        graphemes.append(QChar(0x241E));
+        outGrapheme = QChar(0x241E);
         charWidth = 1;
         break; // RS
     case 31:
-        graphemes.append(QChar(0x241F));
+        outGrapheme = QChar(0x241F);
         charWidth = 1;
         break; // US
     case 127:
-        graphemes.append(QChar(0x2421));
+        outGrapheme = QChar(0x2421);
         charWidth = 1;
         break; // DEL
     default:
         charWidth = getGraphemeWidth(unicode);
-        graphemes.append((charWidth < 1) ? QChar() : grapheme);
+        outGrapheme = (charWidth < 1) ? QString() : grapheme;
     }
 }
 
-void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, const QString& grapheme, const int column, QVector<QString>& graphemes, int& charWidth) const
+void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, const QString& grapheme, const int column, QString& outGrapheme, int& charWidth) const
 {
     Q_UNUSED(column)
     switch (unicode) {
     case 0:
-        graphemes.append(QString(QChar::Space));
+        outGrapheme = QString(QChar::Space);
         charWidth = 1;
         break; // NUL - not sure that this can appear and the OEM font treats it as a space
     case 1:
-        graphemes.append(QChar(0x263A));
+        outGrapheme = QChar(0x263A);
         charWidth = 1;
         break; // SOH - White Smiling Face
     case 2:
-        graphemes.append(QChar(0x263B));
+        outGrapheme = QChar(0x263B);
         charWidth = 1;
         break; // STX - Black Smiling Face
     case 3:
-        graphemes.append(QChar(0x2665));
+        outGrapheme = QChar(0x2665);
         charWidth = 1;
         break; // ETX - Black Heart Suite
     case 4:
-        graphemes.append(QChar(0x2666));
+        outGrapheme = QChar(0x2666);
         charWidth = 1;
         break; // EOT - Black Diamond Suite
     case 5:
-        graphemes.append(QChar(0x2663));
+        outGrapheme = QChar(0x2663);
         charWidth = 1;
         break; // ENQ - Black ClubsSuite
     case 6:
-        graphemes.append(QChar(0x2660));
+        outGrapheme = QChar(0x2660);
         charWidth = 1;
         break; // ACK - Black Spade Suite
     case 7:
-        graphemes.append(QChar(0x2022));
+        outGrapheme = QChar(0x2022);
         charWidth = 1;
         break; // BEL - Bullet - the handling of this gets done when it is received, not when it is displayed here:
     case 8:
-        graphemes.append(QChar(0x25D8));
+        outGrapheme = QChar(0x25D8);
         charWidth = 1;
         break; // BS  - Inverse Bullet
     case 9:
         // NOTE THAT WE DO NOT USE TAB SPACING FOR THIS MODE:
-        graphemes.append(QChar(0x25CB));
+        outGrapheme = QChar(0x25CB);
         charWidth = 1;
         break; // HT  - Circle
     case 10:
-        graphemes.append(QChar(0x25D9));
+        outGrapheme = QChar(0x25D9);
         charWidth = 1;
         break; // LF  - Inverse Circle
     case 11:
-        graphemes.append(QChar(0x2642));
+        outGrapheme = QChar(0x2642);
         charWidth = 1;
         break; // VT  - Male Sign
     case 12:
-        graphemes.append(QChar(0x2640));
+        outGrapheme = QChar(0x2640);
         charWidth = 1;
         break; // FF  - Female Sign
     case 13:
-        graphemes.append(QChar(0x266A));
+        outGrapheme = QChar(0x266A);
         charWidth = 1;
         break; // CR  - Single Quaver - shouldn't appear but does seem to crop up somehow!
     case 14:
-        graphemes.append(QChar(0x266B));
+        outGrapheme = QChar(0x266B);
         charWidth = 1;
         break; // SO  - Double Quaver
     case 15:
-        graphemes.append(QChar(0x263C));
+        outGrapheme = QChar(0x263C);
         charWidth = 1;
         break; // SI  - White Sun with Rays
     case 16:
-        graphemes.append(QChar(0x25BA));
+        outGrapheme = QChar(0x25BA);
         charWidth = 1;
         break; // DLE - Black Right-Pointing Pointer
     case 17:
-        graphemes.append(QChar(0x25C4));
+        outGrapheme = QChar(0x25C4);
         charWidth = 1;
         break; // DC1 - Black Left-Pointing Pointer
     case 18:
-        graphemes.append(QChar(0x2195));
+        outGrapheme = QChar(0x2195);
         charWidth = 1;
         break; // DC2 - Up Down ArroW
     case 19:
-        graphemes.append(QChar(0x203C));
+        outGrapheme = QChar(0x203C);
         charWidth = 1;
         break; // DC3 - Double Exclaimation Mark
     case 20:
-        graphemes.append(QChar(0x00B6));
+        outGrapheme = QChar(0x00B6);
         charWidth = 1;
         break; // DC4 - Pilcrow
     case 21:
-        graphemes.append(QChar(0x00A7));
+        outGrapheme = QChar(0x00A7);
         charWidth = 1;
         break; // NAK - Section Sign
     case 22:
-        graphemes.append(QChar(0x25AC));
+        outGrapheme = QChar(0x25AC);
         charWidth = 1;
         break; // SYN - Black Rectangle
     case 23:
-        graphemes.append(QChar(0x21A8));
+        outGrapheme = QChar(0x21A8);
         charWidth = 1;
         break; // ETB - Up Down Arrow With Base
     case 24:
-        graphemes.append(QChar(0x2191));
+        outGrapheme = QChar(0x2191);
         charWidth = 1;
         break; // CAN - Up Arrow
     case 25:
-        graphemes.append(QChar(0x2193));
+        outGrapheme = QChar(0x2193);
         charWidth = 1;
         break; // EM  - Down Arrow
     case 26:
-        graphemes.append(QChar(0x2192));
+        outGrapheme = QChar(0x2192);
         charWidth = 1;
         break; // SUB - Right Arrow
     case 27:
-        graphemes.append(QChar(0x2190));
+        outGrapheme = QChar(0x2190);
         charWidth = 1;
         break; // ESC - Left Arrow - shouldn't appear as will have been intercepted previously
     case 28:
-        graphemes.append(QChar(0x221F));
+        outGrapheme = QChar(0x221F);
         charWidth = 1;
         break; // FS  - Right Angle
     case 29:
-        graphemes.append(QChar(0x2194));
+        outGrapheme = QChar(0x2194);
         charWidth = 1;
         break; // GS  - Left Right Arrow
     case 30:
-        graphemes.append(QChar(0x25B2));
+        outGrapheme = QChar(0x25B2);
         charWidth = 1;
         break; // RS  - Black Up-Pointing Pointer
     case 31:
-        graphemes.append(QChar(0x25BC));
+        outGrapheme = QChar(0x25BC);
         charWidth = 1;
         break; // US  - Black Down-Pointing Pointer
     case 127:
-        graphemes.append(QChar(0x2302));
+        outGrapheme = QChar(0x2302);
         charWidth = 1;
         break; // DEL - House
     default:
         charWidth = getGraphemeWidth(unicode);
-        graphemes.append((charWidth < 1) ? QChar() : grapheme);
+        outGrapheme = (charWidth < 1) ? QString() : grapheme;
     }
 }
 
-int TTextEdit::drawGraphemeBackground(QPainter& painter,
-                                      QVector<QColor>& fgColors,
-                                      QVector<QRect>& textRects,
-                                      QVector<QString>& graphemes,
-                                      QVector<int>& charWidths,
-                                      QPoint& cursor,
-                                      const QString& grapheme,
-                                      const int column,
-                                      const int line,
-                                      TChar& charStyle) const
+int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QString& grapheme, const int column, const int line, const TChar& charStyle) const
 {
-    uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+    const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
     int charWidth = 0;
+    GraphemeRun run;
+    run.style = &charStyle;
 
     switch (mpConsole->mControlCharacter) {
     default:
         // No special handling, except for these:
         if (Q_UNLIKELY(unicode == '\t')) {
             charWidth = mTabStopwidth - (column % mTabStopwidth);
-            graphemes.append(QString(QChar::Tabulation));
+            run.grapheme = QString(QChar::Tabulation);
         } else {
             charWidth = graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs);
-            graphemes.append((charWidth < 1) ? QChar() : grapheme);
+            run.grapheme = (charWidth < 1) ? QString() : grapheme;
         }
         break;
     case ControlCharacterMode::Picture:
-        replaceControlCharacterWith_Picture(unicode, grapheme, column, graphemes, charWidth);
+        replaceControlCharacterWith_Picture(unicode, grapheme, column, run.grapheme, charWidth);
         break;
     case ControlCharacterMode::OEM:
-        replaceControlCharacterWith_OEMFont(unicode, grapheme, column, graphemes, charWidth);
+        replaceControlCharacterWith_OEMFont(unicode, grapheme, column, run.grapheme, charWidth);
         break;
     } // End of switch
-    charWidths.append(charWidth);
 
-    QRect textRect;
     if (charWidth > 0) {
-        textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
+        run.textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     }
-    textRects.append(textRect);
-    QColor bgColor;
-    bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    const bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    const bool swapColors = charStyle.isReversed() != (charStyle.isSelected() != caretIsHere);
     if (Q_UNLIKELY(charStyle.isFound())) {
-        if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            fgColors.append(mSearchHighlightBgColor);
-            bgColor = mSearchHighlightFgColor;
+        if (Q_UNLIKELY(swapColors)) {
+            run.fgColor = mSearchHighlightBgColor;
+            run.bgColor = mSearchHighlightFgColor;
         } else {
-            fgColors.append(mSearchHighlightFgColor);
-            bgColor = mSearchHighlightBgColor;
+            run.fgColor = mSearchHighlightFgColor;
+            run.bgColor = mSearchHighlightBgColor;
+        }
+    } else if (Q_UNLIKELY(swapColors)) {
+        // When colors would be swapped (e.g., during selection)
+        // and foreground equals background (hidden text),
+        // only reverse one color to make the text readable
+        if (charStyle.foreground() == charStyle.background()) {
+            run.fgColor = charStyle.foreground();
+            // Invert background: use white for dark colors, black for light colors
+            run.bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
+        } else {
+            // A transparent cell (e.g. a system message) has no colour of its own
+            // to swap in as the text pen - painting with alpha 0 would make the
+            // glyph invisible - so fall back to the console's real background.
+            QColor background = charStyle.background();
+            if (background.alpha() == 0) {
+                background = mpConsole->getConsoleBgColor();
+            }
+            run.fgColor = background;
+            run.bgColor = charStyle.foreground();
         }
     } else {
-        if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            // When colors would be swapped (e.g., during selection)
-            // and foreground equals background (hidden text),
-            // only reverse one color to make the text readable
-            if (charStyle.foreground() == charStyle.background()) {
-                fgColors.append(charStyle.foreground());
-                // Invert background: use white for dark colors, black for light colors
-                bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
-            } else {
-                fgColors.append(charStyle.background());
-                bgColor = charStyle.foreground();
-            }
-        } else {
-            fgColors.append(charStyle.foreground());
-            bgColor = charStyle.background();
-        }
+        run.fgColor = charStyle.foreground();
+        run.bgColor = charStyle.background();
     }
     if (caretIsHere) {
-        bgColor = mCaretColor;
+        run.bgColor = mCaretColor;
     }
-    if (!textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole) || bgColor != mpConsole->getConsoleBgColor()) {
-        painter.fillRect(textRect, bgColor);
-    }
+    // Main console cells are always filled: over a background image or a
+    // translucent console background the cell has to be opaque (#8885), and
+    // keeping it unconditional leaves the paint order in drawForeground() as the
+    // only thing protecting ink that overflows its cell (#9070, #9719). Other
+    // console types skip cells matching the console background so that the
+    // widget underneath shows through.
+    run.fillsBackground = !run.textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole || run.bgColor != mpConsole->getConsoleBgColor());
+    layout.push_back(std::move(run));
     return charWidth;
 }
 
-void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor, const QRect& textRect, const QString& grapheme, TChar& charStyle) const
+void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& run) const
 {
-    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
+    const QColor& fgColor = run.fgColor;
+    const QRect& textRect = run.textRect;
+    const QString& grapheme = run.grapheme;
+    const TChar& charStyle = *run.style;
+    const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
 
@@ -923,16 +1021,17 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     if (painter.pen().color() != effectiveFgColor) {
         painter.setPen(effectiveFgColor);
     }
-    painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space || useQtUnderline || useQtOverline || useQtStrikeOut) {
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
     drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
 }
 
-void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, TChar& charStyle) const
+void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, const TChar& charStyle) const
 {
-    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    QFontMetrics fm(painter.font());
+    const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
 
     // Calculate decoration positions
     int underlineY = textRect.bottom() - 1;
@@ -1136,28 +1235,51 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
     mHasBlinkingContent = false;
+    bool reusedCachedScreenContent = false;
 
     qreal dpr = devicePixelRatioF();
-    QPixmap screenPixmap;
-    QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, mScreenHeight * mFontHeight * dpr);
-    pixmap.setDevicePixelRatio(dpr);
-    pixmap.fill(Qt::transparent);
+    // One spare row below the last character cell, so that ink which overflows
+    // the bottom cell - descenders and underscores do at many font sizes - has
+    // somewhere to go instead of being cut off by the edge of the pixmap.
+    const int pixmapHeight = (mScreenHeight + 1) * mFontHeight;
+    const QSize surfaceSize = smallestEnclosingSurfaceSize(mScreenWidth, mFontWidth, pixmapHeight, dpr);
+    // Building a pane-sized pixmap costs the same whether one line changed or
+    // all of them did, so it is only done when there is no buffer to reuse -
+    // the pane changed size or resolution, or nothing has been painted yet.
+    bool bufferWasJustCleared = false;
+    if (mRenderBuffer.size() != surfaceSize || !qFuzzyCompare(mRenderBuffer.devicePixelRatio(), dpr)) {
+        mRenderBuffer = QPixmap(surfaceSize);
+        mRenderBuffer.setDevicePixelRatio(dpr);
+        mRenderBuffer.fill(Qt::transparent);
+        bufferWasJustCleared = true;
+    }
+    QPixmap& pixmap = mRenderBuffer;
 
     QPainter p(&pixmap);
     // Setting the font here isn't academic as the text IS drawn with THIS painter (p)
     p.setFont(painter.font());
-    p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    // Source rather than SourceOver for the cache blits below: they have to
+    // overwrite whatever a reused buffer still holds from an earlier frame, and
+    // over a freshly cleared buffer the two modes produce identical pixels.
+    p.setCompositionMode(QPainter::CompositionMode_Source);
 
     int y_top = r.top() / mFontHeight;
     int y_bottom = r.bottom() / mFontHeight;
-    int x_right = std::min(r.right(), (mScreenWidth * mFontWidth)) / mFontWidth;
 
     int lineOffset = imageTopLine();
     int from = 0;
+
+    // A scroll moves every row, so the region handed to us is a floor and not a
+    // ceiling: taken as a ceiling it redraws only the rows named in it, leaving
+    // the rows the scroll exposed still showing pre-scroll ink.
+    const bool scrolledSinceLastPaint = (lineOffset != mLastRenderedOffset);
+    if (scrolledSinceLastPaint) {
+        y_bottom = mScreenHeight;
+    }
+
     if (lineOffset == 0) {
         mScrollVector = 0;
     } else {
-        // Was: mScrollVector = lineOffset - mLastRenderedOffset;
         if (mLastRenderedOffset) {
             mScrollVector = lineOffset - mLastRenderedOffset;
         } else {
@@ -1171,47 +1293,130 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
-    if ((r.height() < rect().height()) && (lineOffset > 0)) {
+    if (!scrolledSinceLastPaint && (r.height() < rect().height()) && (lineOffset > 0) && (mScreenMap.width() >= surfaceSize.width()) && (mScreenMap.height() >= surfaceSize.height())) {
         p.drawPixmap(0, 0, mScreenMap);
+        reusedCachedScreenContent = true;
         from = y_top;
         noScroll = true;
-        if (!mForceUpdate && !mMouseTracking) {
-            noCopy = true;
-        } else {
+        if (mForceUpdate || mMouseTracking) {
             y_bottom = mScreenHeight;
             mScrollVector = 0;
+        } else if (mDirtyFirstLine < 0) {
+            // A purely cosmetic repaint - hover, selection - which must not
+            // overwrite the cached screen with its transient state. A pending
+            // in-place change is the opposite: it HAS to reach the cache, or
+            // the next paint would seed from stale ink and lose it.
+            noCopy = true;
         }
     }
-    if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
-        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
-            && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
-            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight * dpr, mScreenWidth * mFontWidth * dpr, (mScreenHeight - mScrollVector) * mFontHeight * dpr);
-            p.drawPixmap(0, 0, screenPixmap);
-            from = mScreenHeight - mScrollVector - 1;
+    const int scrolledRows = qAbs(mScrollVector);
+    if (!noScroll && !mForceUpdate && scrolledRows <= mScreenHeight) {
+        if (scrolledRows * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - scrolledRows) * mFontHeight > 0
+            && (mScreenHeight - scrolledRows) * mFontHeight <= mScreenMap.height()) {
+            p.drawPixmap(0, -mScrollVector * mFontHeight, mScreenMap);
+            reusedCachedScreenContent = true;
+            if (mScrollVector >= 0) {
+                from = mScreenHeight - mScrollVector - 1;
+            } else {
+                from = 0;
+                y_bottom = scrolledRows;
+            }
         }
-    } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
-        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
-            && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
-            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth * dpr, (mScreenHeight - abs(mScrollVector)) * mFontHeight * dpr);
-            p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
-            from = 0;
-            y_bottom = abs(mScrollVector);
+    }
+
+    const int lastRow = mScreenHeight - 1;
+    int drawFrom = qMax(0, from);
+    // One row past the dirty region: the last dirty row's ink can spill into the
+    // row below, which would otherwise be left showing the ink of whatever used
+    // to be on that last row.
+    int drawTo = qMin(y_bottom + 1, lastRow);
+    // Rows carrying text that changed where it stands. The cache still holds
+    // their old ink, so they join the band whatever the scroll shortcut decided
+    // - which is what makes recolouring a line cost a line instead of a screen.
+    if (mDirtyFirstLine >= 0) {
+        const int dirtyTop = std::max(0, mDirtyFirstLine - lineOffset);
+        const int dirtyBottom = std::min(lastRow, mDirtyLastLine - lineOffset);
+        if (dirtyBottom >= dirtyTop) {
+            drawFrom = std::min(drawFrom, dirtyTop);
+            drawTo = std::max(drawTo, dirtyBottom);
         }
+    }
+    const bool bottomRowIsRepainted = drawTo == lastRow;
+
+    // Neither cache blit ran, so everything outside the band about to be redrawn
+    // is still the previous frame's ink rather than the transparency a newly
+    // allocated pixmap would have started with.
+    if (!reusedCachedScreenContent && !bufferWasJustCleared) {
+        p.setCompositionMode(QPainter::CompositionMode_Source);
+        p.fillRect(QRect(0, 0, mScreenWidth * mFontWidth, pixmapHeight), Qt::transparent);
     }
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
-    QRect deleteRect = QRect(0, from * mFontHeight, x_right * mFontWidth, (y_bottom + 1) * mFontHeight);
+    int clearHeight = (drawTo + 1 - drawFrom) * mFontHeight;
+    if (bottomRowIsRepainted) {
+        clearHeight += mFontHeight;
+    }
+    const QRect deleteRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, clearHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(deleteRect, Qt::transparent);
+    // Scrolling shifts the cached screen by whole cells, which drops a complete
+    // line of text into the spare row. Nothing but the bottom line's overflow
+    // belongs there, so rebuild it from scratch whenever it is not already part
+    // of the band above.
+    QRect spareRowRect;
+    if (!bottomRowIsRepainted) {
+        spareRowRect = QRect(0, mScreenHeight * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
+        p.fillRect(spareRowRect, Qt::transparent);
+    }
 
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    for (int i = from; i <= y_bottom; ++i) {
-        if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
+    const TChar timeStampStyle = timeStampCharStyle();
+
+    // The line above the cleared band keeps its cell but loses whatever it had
+    // spilled into the band, so put its glyphs back clipped to the band. Drawing
+    // the whole line again would paint it on top of itself and thicken its
+    // antialiasing.
+    mOverflowLineLayout.clear();
+    if (drawFrom > 0 && hasBufferLine(drawFrom - 1 + lineOffset)) {
+        layoutLine(drawFrom - 1 + lineOffset, drawFrom - 1, timeStampStyle, mOverflowLineLayout);
+    }
+
+    // Each line's backgrounds go down before the previous line's glyphs, so that
+    // no background fill can wipe out ink which overflowed out of its cell.
+    mPreviousLineLayout.clear();
+    bool lineAboveRestored = false;
+    for (int i = drawFrom; i <= drawTo; ++i) {
+        if (!hasBufferLine(i + lineOffset)) {
             break;
         }
-        drawLine(p, i + lineOffset, i, &mScreenOffset);
+        layoutLine(i + lineOffset, i, timeStampStyle, mCurrentLineLayout, &mScreenOffset);
+        paintBackgrounds(p, mCurrentLineLayout);
+        if (!lineAboveRestored) {
+            paintForegrounds(p, mOverflowLineLayout, deleteRect);
+            lineAboveRestored = true;
+        }
+        paintForegrounds(p, mPreviousLineLayout);
+        mPreviousLineLayout.swap(mCurrentLineLayout);
     }
+    if (!lineAboveRestored) {
+        paintForegrounds(p, mOverflowLineLayout, deleteRect);
+    }
+    // Anything below the band is cached content that already holds this line's
+    // overflow, so clip it away rather than compositing the same ink twice.
+    const QRect bandRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, (drawTo + 1 - drawFrom) * mFontHeight);
+    paintForegrounds(p, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
+
+    if (!spareRowRect.isNull() && hasBufferLine(lastRow + lineOffset)) {
+        layoutLine(lastRow + lineOffset, lastRow, timeStampStyle, mOverflowLineLayout);
+        paintForegrounds(p, mOverflowLineLayout, spareRowRect);
+    }
+    // The layouts borrow TChar pointers from the buffer, so do not keep them
+    // past the paint they were built for.
+    mPreviousLineLayout.clear();
+    mCurrentLineLayout.clear();
+    mOverflowLineLayout.clear();
+
     calculateHMaxRange();
     if (Q_UNLIKELY(mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar)) {
         updateHorizontalScrollBar();
@@ -1221,13 +1426,22 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawPixmap(0, 0, pixmap);
     if (!noCopy) {
-        mScreenMap = pixmap.copy();
+        // Swapped rather than assigned: leaving the two sharing one buffer would
+        // make the next paint's QPainter deep-copy the whole surface before it
+        // could draw a single glyph, which is the cost being avoided here.
+        mScreenMap.swap(mRenderBuffer);
     }
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
+    if (!noCopy) {
+        // noCopy left the cache untouched, so the change has not been preserved
+        // anywhere yet and the range has to stay pending for the next paint.
+        mDirtyFirstLine = -1;
+        mDirtyLastLine = -1;
+    }
 
-    const bool shouldBeRegistered = mEnableBlinkText && mHasBlinkingContent;
+    const bool shouldBeRegistered = shouldRegisterBlinkClient(mEnableBlinkText, mHasBlinkingContent, mIsBlinkClientRegistered, reusedCachedScreenContent);
     if (auto* pMudlet = mudlet::self()) {
         if (shouldBeRegistered && !mIsBlinkClientRegistered) {
             pMudlet->registerBlinkClient();
@@ -1239,8 +1453,42 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
 }
 
+QSize TTextEdit::smallestEnclosingSurfaceSize(const int screenWidth, const int fontWidth, const int pixmapHeight, const qreal devicePixelRatio)
+{
+    return QSize(qCeil(screenWidth * fontWidth * devicePixelRatio), qCeil(pixmapHeight * devicePixelRatio));
+}
+
+bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool hasBlinkingContentInRedrawnRegion, const bool isBlinkClientRegistered, const bool reusedCachedScreenContent)
+{
+    if (!enableBlinkText) {
+        return false;
+    }
+
+    if (hasBlinkingContentInRedrawnRegion) {
+        return true;
+    }
+
+    // When content is rendered by copying rows from mScreenMap (scroll or
+    // partial-height repaint), those rows are not re-scanned for blinking
+    // characters, so mHasBlinkingContent will be false even if blinking content
+    // is still visible. Preserve the blink timer in that case; the next full
+    // repaint will reset mHasBlinkingContent from scratch and unregister the
+    // timer if nothing blinking remains.
+    return isBlinkClientRegistered && reusedCachedScreenContent;
+}
+
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
+    mSincePaint.restart();
+    if (!mPendingPaintRegion.isEmpty()) {
+        // Whatever this paint covers is current now, so a deferred repaint of it
+        // would be redundant. Only the remainder - if a partial expose left one -
+        // still needs the pacer.
+        mPendingPaintRegion -= e->region();
+        if (mPendingPaintRegion.isEmpty()) {
+            mpPaintPacer->stop();
+        }
+    }
     const QRect& rect = e->rect();
 
     if (mFontWidth <= 0 || mFontHeight <= 0) {
@@ -1468,6 +1716,20 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
     QPoint cursorLocation(tCharIndex, lineIndex);
 
+    // A plain left-drag must not register a selection until the pointer has
+    // actually moved to a different character cell than where the button went
+    // down. Without this, the sub-pixel jitter of an ordinary focus-gaining
+    // click produces a one-character selection that then hijacks Ctrl+C away
+    // from the command line (see #3922). Only the very first move off the press
+    // cell is suppressed (mDragSelectionEnd still equals mDragStart): once a
+    // drag has genuinely started we keep processing even when the pointer comes
+    // back to the origin cell, so the selection collapses down again instead of
+    // freezing at its last extent. Multi-click (word/line) and Ctrl selections
+    // establish their selection in mousePressEvent and so are left untouched here.
+    if (!mCtrlSelecting && mMouseTrackLevel < 2 && cursorLocation == mDragStart && mDragSelectionEnd == mDragStart) {
+        return;
+    }
+
     if ((mDragSelectionEnd.y() < cursorLocation.y() || (mDragSelectionEnd.y() == cursorLocation.y() && mDragSelectionEnd.x() < cursorLocation.x()))) {
         mPA = mDragSelectionEnd;
         mPB = cursorLocation;
@@ -1512,42 +1774,49 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds)
 {
-    if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
-        if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
-            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
-                int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
+    const int lineCount = static_cast<int>(mpBuffer->buffer.size());
+    const int charCount = lineIndex < lineCount ? static_cast<int>(mpBuffer->buffer.at(lineIndex).size()) : 0;
+    if (lineIndex < lineCount && tCharIndex < charCount && mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
+        int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
 
-                setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
-                QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
-                // If a special tooltip hint was given, use that one.
-                QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
+        setCursor(Qt::PointingHandCursor);
+        QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
+        QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
+        // If a special tooltip hint was given, use that one.
+        // The server chooses this text and QToolTip renders anything
+        // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
+        // in an explicit document rather than letting that guess decide
+        // whether the markup is live. white-space:pre keeps the line
+        // breaks the plain-text path used to give.
+        // An empty string is how QToolTip is told to hide, so it has to
+        // stay empty rather than becoming an empty document.
+        const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
+        const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
+        QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
 
-                // Update hover state for CSS pseudo-class support
-                // Don't set hover state for disabled links - they should stay disabled
-                // Also don't set hover if this link was just clicked - wait for mouse to leave first
-                if (mpBuffer->getHoveredLink() != linkIndex) {
-                    auto currentState = mpBuffer->getLinkState(linkIndex);
-                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
-                        mpBuffer->setHoveredLink(linkIndex);
-                        forceUpdate(); // Trigger re-render with new hover state
-                    }
-                }
-            } else {
-                setCursor(Qt::IBeamCursor);
-                QToolTip::hideText();
-
-                // Clear hover state if we're not over a link
-                if (mpBuffer->getHoveredLink() != 0) {
-                    mpBuffer->setHoveredLink(0);
-                    forceUpdate(); // Trigger re-render
-                }
-
-                // Clear last clicked link when mouse leaves - allows hover to work again
-                if (mpBuffer->getLastClickedLinkIndex() != 0) {
-                    mpBuffer->clearLastClickedLinkIndex();
-                }
+        // Update hover state for CSS pseudo-class support
+        // Don't set hover state for disabled links - they should stay disabled
+        // Also don't set hover if this link was just clicked - wait for mouse to leave first
+        if (mpBuffer->getHoveredLink() != linkIndex) {
+            auto currentState = mpBuffer->getLinkState(linkIndex);
+            if (currentState != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
+                mpBuffer->setHoveredLink(linkIndex);
+                forceUpdate(); // Trigger re-render with new hover state
             }
+        }
+    } else {
+        setCursor(Qt::IBeamCursor);
+        QToolTip::hideText();
+
+        // Clear hover state if we're not over a link
+        if (mpBuffer->getHoveredLink() != 0) {
+            mpBuffer->setHoveredLink(0);
+            forceUpdate(); // Trigger re-render
+        }
+
+        // Clear last clicked link when mouse leaves - allows hover to work again
+        if (mpBuffer->getLastClickedLinkIndex() != 0) {
+            mpBuffer->clearLastClickedLinkIndex();
         }
     }
 }
@@ -1586,7 +1855,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             int charWidth = 0;
             // This could contain a surrogate pair (i.e. pair of QChars) and/or
             // include suffixed combining diacritical marks (additional QChars):
-            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
+            const QStringView grapheme = QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar);
             const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
@@ -1601,7 +1870,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             // Do an additional check if we need to establish whether we are
             // over just the timestamp part of the line:
             if (Q_UNLIKELY(isOverTimeStamp && mpConsole->showTimeStamps() && indexOfChar == 0)) {
-                if ((mouseX + offset) < (mudlet::smTimeStampFormat.size() * mFontWidth)) {
+                if ((mouseX + offset) < (TBuffer::smTimeStampFormat.size() * mFontWidth)) {
                     // The mouse position is actually over the timestamp region
                     // to the left of the main text:
                     *isOverTimeStamp = true;
@@ -1612,7 +1881,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             //mCursorX relevant for horizontal scrollbars
             //Otherwise the value is always 0
             if (mpConsole->showTimeStamps()) {
-                rightX = (mudlet::smTimeStampFormat.size() + column - mCursorX) * mFontWidth;
+                rightX = (TBuffer::smTimeStampFormat.size() + column - mCursorX) * mFontWidth;
             } else {
                 rightX = (column - mCursorX) * mFontWidth;
             }
@@ -1640,6 +1909,72 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
 
 void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 {
+    if (!(mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole)) {
+        event->accept();
+        return;
+    }
+
+    // Turning the line you are already looking at into a filter beats typing it
+    // into the box, so the selection drives most of this menu. establishSelectedText()
+    // is what actually decides whether there IS a selection - mPA and mPB keep
+    // their old values after one is dropped, so without it the menu offers text
+    // the user can no longer see highlighted:
+    QString selection = establishSelectedText() ? getSelectedText(QChar::Space).simplified() : QString();
+    // The profile marking is added after the filters have run, so a selection
+    // that starts at the beginning of a line would otherwise contain a prefix
+    // that no message can ever match:
+    static const QRegularExpression profileTag(qsl("^\\[(?:[A-Z]|\\?|\\x{2731})\\]\\s*"));
+    selection.remove(profileTag);
+
+    QMenu menu(this);
+
+    auto* pActionCopy = menu.addAction(tr("Copy"));
+    pActionCopy->setEnabled(!selection.isEmpty());
+    connect(pActionCopy, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboard);
+
+    if (!selection.isEmpty()) {
+        //: Central Debug Console right-click action, %1 is the text the user selected
+        auto* pActionFilter = menu.addAction(tr("Show only lines containing \"%1\"").arg(selection.left(40)));
+        connect(pActionFilter, &QAction::triggered, this, [selection]() {
+            TDebug::setTextFilter(selection, TDebug::textFilterCaseSensitivity());
+            if (mudlet::smpDebugFilterBar) {
+                mudlet::smpDebugFilterBar->refreshTextFilter();
+            }
+        });
+    }
+
+    if (!TDebug::textFilter().isEmpty()) {
+        auto* pActionClearFilter = menu.addAction(tr("Stop filtering by text"));
+        connect(pActionClearFilter, &QAction::triggered, this, []() {
+            TDebug::setTextFilter(QString(), TDebug::textFilterCaseSensitivity());
+            if (mudlet::smpDebugFilterBar) {
+                mudlet::smpDebugFilterBar->refreshTextFilter();
+            }
+        });
+    }
+
+    menu.addSeparator();
+    // The search strip is hidden until asked for, so this is where people find
+    // out it exists at all:
+    //: Central Debug Console right-click action that reveals its search box
+    auto* pActionFind = menu.addAction(tr("Find..."));
+    pActionFind->setShortcut(QKeySequence::Find);
+    connect(pActionFind, &QAction::triggered, this, [this]() {
+        mpConsole->showSearchBar();
+    });
+
+    //: Central Debug Console right-click action that empties it
+    connect(menu.addAction(tr("Clear console")), &QAction::triggered, this, [this]() {
+        if (mudlet::smpDebugFilterBar) {
+            // Goes through the toolbar so its "N messages held" label keeps up:
+            mudlet::smpDebugFilterBar->slot_clear();
+        } else {
+            mpConsole->clear();
+            TDebug::discardPausedMessages();
+        }
+    });
+
+    menu.exec(event->globalPos());
     event->accept();
 }
 
@@ -1719,7 +2054,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         if (mCtrlSelecting) {
             expandSelectionToLine(y);
-            highlightSelection();
             event->accept();
             return;
         }
@@ -1823,7 +2157,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             forceUpdate();
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
-        if (mLastClickTimer.elapsed() < 300) {
+        // Invalid until the first click, so a click soon after the console
+        // appears does not count as the second half of a double-click:
+        if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
             mMouseTracking = true;
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
@@ -1932,9 +2268,9 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     if (mpConsole->getType() == TConsole::CentralDebugConsole) {
         title = tr("Mudlet, debug console extract");
     } else if (mpConsole->getType() == TConsole::SubConsole) {
-        title = tr("Mudlet, %1 mini-console extract from %2 profile").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
+        title = tr("Mudlet, %1 mini-console extract from %2 profile").arg(mpHost->mpConsole->subConsoleName(mpConsole), mpHost->getName());
     } else if (mpConsole->getType() == TConsole::UserWindow) {
-        title = tr("Mudlet, %1 user window extract from %2 profile").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
+        title = tr("Mudlet, %1 user window extract from %2 profile").arg(mpHost->mpConsole->subConsoleName(mpConsole), mpHost->getName());
     } else {
         title = tr("Mudlet, main console extract from %1 profile").arg(mpHost->getName());
     }
@@ -2001,7 +2337,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
     // Is this a single line then we do NOT need to pad the first (and thus
     // only) line to the right:
-    bool isSingleLine = (mDragStart.y() == mDragSelectionEnd.y());
+    bool isSingleLine = (mPA.y() == mPB.y());
     for (int y = mPA.y(), total = mPB.y(); y <= total; ++y) {
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             return;
@@ -2023,24 +2359,34 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // The last two of these tags were missing and meant the HTML was not terminated properly
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(text);
-    mSelectedRegion = QRegion(0, 0, 0, 0);
-    forceUpdate();
+    // Deliberately leave mSelectedRegion intact (unlike the now-removed clear
+    // here) so a follow-up plain Copy still sees the selection - otherwise
+    // establishSelectedText() bails and the HTML is left on the clipboard. This
+    // matches slot_copySelectionToClipboard(), which also keeps the selection.
 }
 
+// The part of establishSelectedText()'s bail-out that is cheap enough to check
+// while building the context menu; its remaining checks (font metrics, pane
+// size) hold for any console the user can right-click on.
+bool TTextEdit::hasSelectedText() const
+{
+    // A double-click on a word separator highlights nothing, yet leaves a
+    // region behind and mPA one cell past mPB
+    const bool endpointsCrossed = mPA.y() > mPB.y() || (mPA.y() == mPB.y() && mPA.x() > mPB.x());
+    return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty() && !endpointsCrossed;
+}
+
+// Only checks that there is a selection to read. mPA and mPB stay as the
+// highlight set them: mDragSelectionEnd is just the pointer's cell, which word
+// and line selection widen past.
 bool TTextEdit::establishSelectedText()
 {
-    if (mpBuffer->lineBuffer.isEmpty()) {
-        // Prevent problems with trying to do a copy when TBuffer is empty:
+    if (!hasSelectedText()) {
         return false;
     }
 
-    // if selection was made backwards swap
-    // right to left
     if (mFontWidth <= 0 || mFontHeight <= 0) {
-        return false;
-    }
-
-    if (mSelectedRegion == QRegion(0, 0, 0, 0)) {
+        qWarning().nospace() << "TTextEdit::establishSelectedText() ERROR - font is " << mFontWidth << "x" << mFontHeight << " so the selection cannot be worked out";
         return false;
     }
 
@@ -2048,6 +2394,7 @@ bool TTextEdit::establishSelectedText()
         mScreenHeight = height() / mFontHeight;
         mScreenWidth = 100;
         if (mScreenHeight <= 0) {
+            qWarning().nospace() << "TTextEdit::establishSelectedText() ERROR - pane is only " << height() << "px high, too short for a line of text";
             return false;
         }
         if (mpConsole->getType() == TConsole::MainConsole && !mIsLowerPane) {
@@ -2055,11 +2402,19 @@ bool TTextEdit::establishSelectedText()
         }
     }
 
-    normaliseSelection();
-    if (mMouseTrackLevel == 2) {
-        expandSelectionToWords();
-    }
     return true;
+}
+
+// [first, last] line numbers, not clamped to the buffer - the caller must do that.
+std::pair<int, int> TTextEdit::visibleLines()
+{
+    if (mScreenHeight <= 0) {
+        // imageTopLine() works the top line out from mScreenHeight, so repair it
+        // first or the two disagree by a whole screen
+        mScreenHeight = std::max(1, height() / mFontHeight);
+    }
+    const int firstLine = std::max(0, imageTopLine());
+    return {firstLine, firstLine + mScreenHeight - 1};
 }
 
 // Technically this copies whole lines into the image even if the selection does
@@ -2069,20 +2424,58 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 {
     mCopyImageStartTime = std::chrono::high_resolution_clock::now();
 
-    if (!establishSelectedText()) {
+    if (mFontWidth <= 0 || mFontHeight <= 0) {
+        qWarning().nospace() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - font is " << mFontWidth << "x" << mFontHeight << ", nothing was copied to the clipboard";
         return;
     }
 
+    // drawLine() reads both halves of the buffer, so neither may be indexed past
+    // its end:
+    const int lastBufferLine = std::min(mpBuffer->lineBuffer.size(), static_cast<qsizetype>(mpBuffer->buffer.size())) - 1;
+    if (lastBufferLine < 0) {
+        qWarning() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - there is nothing in this console to copy";
+        return;
+    }
+
+    // Unlike Copy and Copy HTML, "as image" has an obvious default when nothing
+    // is selected: a picture of what the user is looking at (#9715).
+    bool copyingSelection = establishSelectedText();
+    if (copyingSelection && mPB.y() > lastBufferLine) {
+        // Lines lost off the front of a buffer that reached its limit shift every
+        // remaining index down; getSelectedText() compensates the same way. mPA
+        // and mPB move rather than a copy of them, so that the deselect below
+        // still finds the characters that are about to be drawn.
+        const int shift = mpBuffer->mBatchDeleteSize;
+        if (mPA.y() - shift >= 0 && mPB.y() - shift <= lastBufferLine) {
+            mPA.ry() -= shift;
+            mPB.ry() -= shift;
+        } else {
+            // The selected lines are gone for good, so copy the visible area
+            // rather than whatever has since taken their place in the buffer.
+            copyingSelection = false;
+        }
+    }
+
+    int firstLine = mPA.y();
+    int lastLine = mPB.y();
+    if (!copyingSelection) {
+        const auto [firstVisible, lastVisible] = visibleLines();
+        firstLine = firstVisible;
+        lastLine = lastVisible;
+    }
+    firstLine = std::clamp(firstLine, 0, lastBufferLine);
+    lastLine = std::clamp(lastLine, firstLine, lastBufferLine);
+
     // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
-    auto heightpx = std::min(65500, (mPB.y() - mPA.y() + 1) * mFontHeight);
-    auto lineOffset = mPA.y();
+    auto heightpx = std::min(65500, (lastLine - firstLine + 1) * mFontHeight);
+    auto lineOffset = firstLine;
 
     // find the biggest width of text we need to work with
     int largestLine{};
-    for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
+    for (int y = firstLine, total = lastLine + 1; y < total; ++y) {
         const QString lineText{mpBuffer->lineBuffer.at(y)};
         // Will accumulate the width in pixels of the current line:
-        auto lineWidth{(mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0) * mFontWidth};
+        auto lineWidth{(mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0) * mFontWidth};
         // Accumulated width in "normal" width characters:
         int column{};
         QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
@@ -2090,8 +2483,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             auto nextBoundary{boundaryFinder.toNextBoundary()};
             // Width in "normal" width equivalent of this grapheme:
             int charWidth{};
-            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
-            const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
+            const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
@@ -2104,40 +2496,72 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             // The timestamp is (currently) 13 "normal width" characters
             // but that might not always be the case in some future I18n
             // situations:
-            lineWidth = (mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() + column : column) * mFontWidth;
+            lineWidth = (mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() + column : column) * mFontWidth;
             indexOfChar = nextBoundary;
         }
         largestLine = std::max(static_cast<int>(lineWidth), largestLine);
     }
 
-    auto widthpx = std::min(65500, largestLine);
-    auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
-    auto pixmap = QPixmap(widthpx, heightpx);
+    // A zero width pixmap is null, so the painter below never activates and
+    // nothing at all reaches the clipboard. Floor the width at one character so a
+    // run of only blank lines (which is what makes largestLine zero) still copies:
+    auto widthpx = std::max(mFontWidth, std::min(65500, largestLine));
+    auto rect = QRect(0, 0, widthpx, heightpx);
+    // The bottom line's ink can reach past its cell, so paint into a spare row
+    // and keep only as much of it as the glyphs actually used.
+    auto pixmap = QPixmap(widthpx, std::min(65500, heightpx + mFontHeight));
     auto solidColor = QColor(mBgColor);
     solidColor.setAlpha(255);
     pixmap.fill(solidColor);
 
     QPainter painter(&pixmap);
     if (!painter.isActive()) {
+        qWarning().nospace() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - cannot paint a " << widthpx << "x" << heightpx << " image, nothing was copied to the clipboard";
         return;
     }
 
-    // deselect to prevent inverted colours in image
-    unHighlight();
-    mSelectedRegion = QRegion(0, 0, 0, 0);
+    if (copyingSelection) {
+        // deselect to prevent inverted colours in image
+        unHighlight();
+        mSelectedRegion = QRegion(0, 0, 0, 0);
+    }
 
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
-    highlightSelection();
-
-    // if we cut didn't finish painting the complete picture, trim the bottom of the image
-    if (!result.first) {
-        const auto& smallerPixmap = pixmap.scaled(QSize(widthpx, result.second * mFontHeight), Qt::KeepAspectRatio);
-        QApplication::clipboard()->setImage(smallerPixmap.toImage());
-        return;
+    if (copyingSelection) {
+        highlightSelection();
     }
+    // the pixmap cannot be read back while a painter is still active on it
+    painter.end();
 
-    QApplication::clipboard()->setImage(pixmap.toImage());
+    const QImage image = pixmap.toImage();
+    int keepHeight = heightpx + overflowRowsUsed(image, heightpx, solidColor);
+    if (!result.first) {
+        // Crop rather than scale an abandoned copy: scaling to fit would squash
+        // the lines that did get drawn instead of dropping the rest.
+        keepHeight = result.second * mFontHeight;
+        if (keepHeight <= 0) {
+            qWarning() << "TTextEdit::slot_copySelectionToClipboardImage() ERROR - ran out of time before drawing a single line, nothing was copied to the clipboard";
+            return;
+        }
+    }
+    QApplication::clipboard()->setImage(image.copy(0, 0, widthpx, std::min(image.height(), keepHeight)));
+}
+
+// How many rows below fromRow the glyph ink actually reached into.
+int TTextEdit::overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background)
+{
+    const QRgb backgroundPixel = background.rgb();
+    int used = 0;
+    for (int y = std::max(0, fromRow); y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if ((image.pixel(x, y) | 0xff000000) != backgroundPixel) {
+                used = y - fromRow + 1;
+                break;
+            }
+        }
+    }
+    return used;
 }
 
 // a stateless version of drawForeground that doesn't do any caching
@@ -2150,17 +2574,29 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
     int lineCount = rectangle.height() / mFontHeight;
     int linesDrawn = 0;
     auto timeout = mudlet::self()->mCopyAsImageTimeout;
-    for (int i = 0; i <= lineCount; i++, linesDrawn++) {
-        if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
+    const TChar timeStampStyle = timeStampCharStyle();
+    LineLayout previousLine;
+    LineLayout currentLine;
+    for (int i = 0; i < lineCount; ++i) {
+        if (!hasBufferLine(i + lineOffset)) {
             break;
         }
-        drawLine(painter, i + lineOffset, i);
+        // A line's backgrounds have to go down before the previous line's glyphs
+        layoutLine(i + lineOffset, i, timeStampStyle, currentLine);
+        paintBackgrounds(painter, currentLine);
+        paintForegrounds(painter, previousLine);
+        previousLine.swap(currentLine);
+        // counted here rather than in the loop's increment, so that the timeout
+        // below reports the line it just drew instead of the one before it
+        ++linesDrawn;
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
-            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
+            qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << linesDrawn << " lines";
+            paintForegrounds(painter, previousLine);
             return {false, linesDrawn};
         }
     }
+    paintForegrounds(painter, previousLine);
     return {true, linesDrawn};
 }
 
@@ -2220,12 +2656,9 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
             textLines[0] = textLines.at(0).mid(startPos, endPos - startPos + 1);
         }
     } else {
-        // replace a number of QChars at the front with a corresponding
-        // number of spaces to push the first line to the right so it lines up
-        // with the following lines:
+        // trim characters off the front of the first line according to startPos:
         if (!textLines.at(0).isEmpty()) {
             textLines[0] = textLines.at(0).mid(startPos);
-            textLines[0] = QString(QChar::Space).repeated(startPos) % textLines.at(0);
         }
         // and chop off the required number of QChars from the end of the last
         // line:
@@ -2308,6 +2741,9 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
                         if (!hyperlinkStyling.menuTitle.isEmpty()) {
                             auto titleLabel = new QLabel(hyperlinkStyling.menuTitle, popup);
+                            // The server picks this text and QLabel defaults to Qt::AutoText,
+                            // which would render markup in it.
+                            titleLabel->setTextFormat(Qt::PlainText);
                             titleLabel->setFont(font());
 
                             // Build stylesheet from title style properties
@@ -2382,6 +2818,10 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         popup->setAttribute(Qt::WA_DeleteOnClose);
         popup->setToolTipsVisible(true); // Not the default...
 
+        //: Tooltip shown on the console context menu's copy and search entries while they are disabled because nothing is selected
+        const QString noSelectionHint = utils::richText(tr("Select some text in the console first."));
+        const bool selectionAvailable = hasSelectedText();
+
         QAction* action = new QAction(tr("Copy"), popup);
         // According to the Qt Documentation:
         // "This text is used for the tooltip."
@@ -2398,6 +2838,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
 
         auto* actionCopyImage = new QAction(tr("Copy as image"), popup);
+        actionCopyImage->setToolTip(QString());
         connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
 
         QAction* action3 = new QAction(tr("Select all"), popup);
@@ -2408,6 +2849,28 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), popup);
         action4->setToolTip(QString());
         connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
+
+        // These have no sensible whole-console fallback, so they are disabled with
+        // a reason rather than left as entries that quietly do nothing. "Copy as
+        // image" is not among them: it falls back to the visible area (#9715).
+        // The object names let tests find each entry without matching translated text:
+        const QVector<std::pair<QAction*, QString>> selectionActions{{action, qsl("consoleCopy")}, {action2, qsl("consoleCopyHtml")}, {action4, qsl("consoleSearchOnline")}};
+        for (const auto& [selectionAction, objectName] : selectionActions) {
+            selectionAction->setObjectName(objectName);
+            selectionAction->setEnabled(selectionAvailable);
+            if (!selectionAvailable) {
+                selectionAction->setToolTip(noSelectionHint);
+            }
+        }
+        action3->setObjectName(qsl("consoleSelectAll"));
+
+        actionCopyImage->setObjectName(qsl("consoleCopyAsImage"));
+        if (mpBuffer->lineBuffer.isEmpty()) {
+            actionCopyImage->setEnabled(false);
+            //: Tooltip shown on the console context menu's "Copy as image" entry while it is disabled because the console holds no text at all
+            actionCopyImage->setToolTip(utils::richText(tr("This console is empty, there is nothing to copy.")));
+        }
+
         if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
             action->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
             action3->setIcon(QIcon::fromTheme(qsl("edit-select-all"), QIcon(qsl(":/icons/edit-select-all.png"))));
@@ -2502,7 +2965,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     // We have already bailed out before here for the Central Debug Console and
     // the editor Error console so those will avoid the focus being changed to
     // this profile now:
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         if (mpHost) {
             mudlet::self()->activateProfile(mpHost);
         }
@@ -2513,7 +2976,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 {
     updateScreenView();
     mScrollVector = 0;
-    repaint();
+    update();
     QWidget::showEvent(event);
 }
 
@@ -2611,13 +3074,13 @@ int TTextEdit::bufferScrollDown(int lines)
         }
         return lines;
 
-    } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) {
+    } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) { // NOLINT(readability-else-after-return)
         mIsTailMode = true;
         mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
         forceUpdate();
         return 0;
 
-    } else {
+    } else { // NOLINT(readability-else-after-return)
         lines = static_cast<int>(mpBuffer->size() - 1) - mpBuffer->mCursorY;
         if (mpBuffer->mCursorY + lines < mScreenHeight + lines) {
             mpBuffer->mCursorY = mScreenHeight + lines;
@@ -2860,10 +3323,10 @@ QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
 {
     if (!byte) {
         return QString();
-    } else if (static_cast<quint8>(*byte) < 0x20 || static_cast<quint8>(*byte) >= 0x7f) {
+    } else if (static_cast<quint8>(*byte) < 0x20 || static_cast<quint8>(*byte) >= 0x7f) { // NOLINT(readability-else-after-return)
         // Control character or not ASCII
         return qsl("\\%1").arg(static_cast<quint8>(*byte), 3, 10, QLatin1Char('0'));
-    } else if (static_cast<quint8>(*byte) == 0x3C) {
+    } else if (static_cast<quint8>(*byte) == 0x3C) { // NOLINT(readability-else-after-return)
         // '<' - which is noticed by the Qt library code and taken as an
         // HTML/Rich-text formatting opening tag and has to be converted to
         // "&lt;":
@@ -2884,7 +3347,6 @@ void TTextEdit::slot_analyseSelection()
     }
     // If we get here we must at least have a line 0!
 
-    normaliseSelection();
     // Get the smallest of the two lines in the range, but clamp it to the first
     // line which is zero and then the maximum line in existence:
     int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size() - 1));
@@ -2953,10 +3415,7 @@ void TTextEdit::slot_analyseSelection()
             quint8 columnsToUse = qMax(size_t{2}, utf8Width);
 
             if (includeThisCodePoint) {
-                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>")
-                                            .arg(QString::number(columnsToUse),
-                                                 QString::number(index + 1),
-                                                 QString::number(index + 2)));
+                utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
 
                 // The use of one qsl inside another is because it is
                 // impossible to force an upper-case alphabet to Hex digits otherwise
@@ -2964,19 +3423,18 @@ void TTextEdit::slot_analyseSelection()
                 // &#8232; is the Unicode Line Separator.
                 // The static casts are only needed since Qt 6.9.0 but they
                 // shouldn't do any harm prior to that:
-                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
-                                         .arg(QString::number(columnsToUse),
-                                              qsl("%1").arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index),
-                                                                                                         mpBuffer->lineBuffer.at(line).at(index + 1))),
-                                                            4, 16, zero).toUpper())
-                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
-                                         .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
+                utf16Vals.append(
+                        qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
+                                .arg(QString::number(columnsToUse),
+                                     qsl("%1")
+                                             .arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))), 4, 16, zero)
+                                             .toUpper())
+                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, zero)
+                                .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index + 1).unicode()), 4, 16, zero));
 
                 // Note the addition to the index here to jump over the low-surrogate:
                 graphemes.append(qsl("<td colspan=\"%1\">%2</td>")
-                                         .arg(QString::number(columnsToUse),
-                                              convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index),
-                                                                        mpBuffer->lineBuffer.at(line).at(index + 1))));
+                                         .arg(QString::number(columnsToUse), convertWhitespaceToVisual(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))));
             }
 
             switch (utf8Width) {
@@ -3486,7 +3944,18 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
     }
 
     const bool newSelected = mgr->isSelected(group, value);
-    uri = mgr->modifyUriForSelection(uri, group, value);
+
+    // A menu link's commands are built from its menu items and the base URI's
+    // command is discarded, so baseCommand matches none of what can actually be
+    // run here. Callers pass the item the user picked; rebuilding from the base
+    // would send something they did not choose.
+    if (mpBuffer->mLinkStore.getLinksConst(linkIndex).size() <= 1) {
+        const Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
+        const QString rebuiltUri = mgr->modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
+        if (!rebuiltUri.isEmpty()) {
+            uri = rebuiltUri;
+        }
+    }
 
     mpBuffer->setLinkSelected(linkIndex, newSelected);
     mpBuffer->setLinkState(linkIndex, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
@@ -3576,6 +4045,9 @@ void TTextEdit::showLinkContextMenu()
 
     if (!hyperlinkStyling.menuTitle.isEmpty()) {
         auto titleLabel = new QLabel(hyperlinkStyling.menuTitle, popup);
+        // The server picks this text and QLabel defaults to Qt::AutoText,
+        // which would render markup in it.
+        titleLabel->setTextFormat(Qt::PlainText);
         titleLabel->setFont(font());
 
         QStringList styleProps;
@@ -3643,6 +4115,23 @@ bool TTextEdit::focusNextPrevChild(bool next)
         return false;
     }
     return QWidget::focusNextPrevChild(next);
+}
+
+bool TTextEdit::event(QEvent* event)
+{
+    if (event->type() == QEvent::ShortcutOverride) {
+        auto* ke = static_cast<QKeyEvent*>(event);
+        // While caret mode is active its shortcut (Tab, Ctrl+Tab or F6) must
+        // beat any application-wide QShortcut - the profile-switching ones
+        // use Ctrl+Tab by default and all of them can be remapped onto these
+        // keys - so claim it here to make it arrive as a KeyPress for the
+        // caret-toggling code in keyPressEvent():
+        if (mpHost && mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
+            ke->accept();
+            return true;
+        }
+    }
+    return QWidget::event(event);
 }
 
 void TTextEdit::keyPressEvent(QKeyEvent* event)
@@ -3724,7 +4213,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             mDragStart.setY(mCaretLine);
             mDragStart.setX(mCaretColumn);
             mDragSelectionEnd.setY(newCaretLine);
-            mDragSelectionEnd.setX(mCaretColumn);
+            // Anchor the moving end at the new caret position (mirroring the
+            // continuation branch below). Using the old column here made the
+            // first Shift+Arrow press produce a zero-width selection, so the
+            // selection lagged one character/word behind the caret and an
+            // immediate Ctrl+C copied nothing. Guard against the sentinel
+            // newCaretColumn (-1) that Shift+Left leaves when the caret is
+            // already at the top-left (0, 0), keeping the safe fallback.
+            mDragSelectionEnd.setX(useNewColumn && newCaretColumn >= 0 ? newCaretColumn : mCaretColumn);
             unHighlight();
             normaliseSelection();
             highlightSelection();
@@ -3942,8 +4438,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
         break;
     case Qt::Key_Tab: {
-        if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
-            || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
+        if (mpHost->caretShortcutMatches(event)) {
             mpHost->setCaretEnabled(false);
             break;
         }
@@ -3977,7 +4472,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     }
 
     case Qt::Key_F6: {
-        if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+        if (mpHost->caretShortcutMatches(event)) {
             mpHost->setCaretEnabled(false);
         }
         break;

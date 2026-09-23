@@ -19,7 +19,15 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.3.0    Switch from MINGW64 to CLANG64 
+# Version: 2.6.0    Drop the Info-ZIP unzip pin: libarchive 3.8.9-3 opens
+#                   extracted files with O_BINARY, so bsdunzip no longer
+#                   mangles line endings
+#          2.5.0    Pin luarocks to Info-ZIP unzip, since libarchive now
+#                   hardlinks bsdunzip over "unzip" and it mangles line
+#                   endings when it unpacks a rock
+#          2.4.0    Add Python, needed by the fixture HTTP server the Lua
+#                   tests run against
+#          2.3.0    Switch from MINGW64 to CLANG64
 #          2.2.0    Add CMake package for CMake-based builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
@@ -41,8 +49,10 @@
 
 # To be used prior to building Mudlet, after that run:
 # * build-mudlet-for-window.sh to compile the currently checked out code
-# * package-mudlet-for-windows.sh to put everything together in an archive that
-#   will be deployed from a github workflow
+# * package-mudlet-for-windows.sh to assemble everything Mudlet needs to run
+# * create-portable-zip-for-windows.sh to zip that up as the portable build
+# * deploy-mudlet-for-windows.sh to build the installer and deploy it from a
+#   github workflow
 
 # Exit codes:
 # 0 - Everything is fine. 8-)
@@ -128,6 +138,7 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-ninja" \
     "${MINGW_PACKAGE_PREFIX}-assimp" \
     "${MINGW_PACKAGE_PREFIX}-curl" \
+    "${MINGW_PACKAGE_PREFIX}-python" \
     "${MINGW_PACKAGE_PREFIX}-uasm" \
     "${MINGW_PACKAGE_PREFIX}-cmake" \
     "${MINGW_PACKAGE_PREFIX}-jq"; then

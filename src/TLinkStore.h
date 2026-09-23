@@ -56,6 +56,9 @@ public:
 
     int getCurrentLinkID() const { return mLinkID; }
 
+    // true until a link is created since mLinkID never wraps back to zero
+    bool pristine() const { return mLinkID == 0; }
+
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
 
     void removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH = nullptr);
@@ -71,6 +74,7 @@ public:
 
 private:
     void freeReference(Host* pH, const QVector<int>& luaReference);
+    void clearStyling(int id);
     void removeLinkById(int id, Host* pH);
 
 

@@ -28,21 +28,24 @@
 
 
 #include "TBuffer.h"
+#include "TConsoleModel.h"
+#include "TDebug.h"
+#include "TPrintSink.h"
+#include "enums.h"
 
-#include <QDataStream>
 #include <QElapsedTimer>
 #include <QFont>
 #include <QIcon>
+#include <QPixmap>
 #include <QPointer>
-#include <QSaveFile>
 #include <QWidget>
 
 #include <hunspell/hunspell.h>
 
-#include <deque>
 #include <list>
 #include <map>
 #include <memory>
+#include <vector>
 
 // This contains the details of a font that we might want to maintain a record
 // of, independently of a QFont instance:
@@ -76,6 +79,7 @@ struct TFontAttributes
     bool operator==(const TFontAttributes& other) const = default;
     bool operator!=(const TFontAttributes& other) const = default;
 
+    TFontAttributes(const TFontAttributes& other) = default;
     TFontAttributes& operator=(const TFontAttributes& other) = default;
 
     QFont makeFont() const
@@ -150,16 +154,15 @@ class Host;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
-class THyperlinkCompactManager;
-class THyperlinkSelectionManager;
-class THyperlinkVisibilityManager;
 class TLabel;
 class TScrollBox;
 class TSplitter;
 class dlgNotepad;
 
 
-class TConsole : public QWidget
+// TPrintSink and TDebug::Sink are the write-only faces core code redirects
+// output to; QWidget stays first so moc sees the QObject base it needs.
+class TConsole : public QWidget, public TPrintSink, public TDebug::Sink
 {
     Q_OBJECT
 
@@ -175,13 +178,6 @@ public:
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
-    enum SearchOption {
-        // Unset:
-        SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1
-    };
-    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
-
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
     ~TConsole() override;
@@ -189,6 +185,8 @@ public:
     void reset();
     void resizeConsole();
     Host* getHost();
+    TConsoleModel& model() { return *mpModel; }
+    const TConsoleModel& model() const { return *mpModel; }
     void replace(const QString&);
     void insertHTML(const QString&);
     void insertText(const QString&);
@@ -202,7 +200,6 @@ public:
     void clear();
     void appendBuffer();
     void appendBuffer(const TBuffer&);
-    int getButtonState();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void pasteWindow(const TBuffer&);
@@ -250,25 +247,17 @@ public:
     void setCommandFgColor(const QColor&);
     void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
+    bool getScrollBarVisible() const;
     void setHorizontalScrollBar(bool);
     void setScrolling(const bool state);
     bool getScrolling() const { return mScrollingEnabled; }
 
-    THyperlinkCompactManager& getHyperlinkCompactManager()
-    {
-        Q_ASSERT(mpHyperlinkCompactManager);
-        return *mpHyperlinkCompactManager;
-    }
-    THyperlinkSelectionManager& getHyperlinkSelectionManager()
-    {
-        Q_ASSERT(mpHyperlinkSelectionManager);
-        return *mpHyperlinkSelectionManager;
-    }
-    THyperlinkVisibilityManager& getHyperlinkVisibilityManager()
-    {
-        Q_ASSERT(mpHyperlinkVisibilityManager);
-        return *mpHyperlinkVisibilityManager;
-    }
+    // Model state, not view state: the main console shares Host's, so a link
+    // concealed while the profile was open stays concealed once the widget has
+    // gone.
+    THyperlinkCompactManager& getHyperlinkCompactManager() { return mpModel->mHyperlinkCompactManager; }
+    THyperlinkSelectionManager& getHyperlinkSelectionManager() { return mpModel->mHyperlinkSelectionManager; }
+    THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
     void changeColors();
@@ -276,8 +265,27 @@ public:
     void scrollUp(int lines);
     void print(const QString& msg);
     void print(const char*);
-    void print(const QString& msg, QColor fgColor, QColor bgColor);
-    void printFormatted(const QString& text, const std::deque<TChar>& formatting, const TLinkStore& sourceLinkStore);
+    // timeStampOverride is for content being replayed after being held back -
+    // it keeps the time the text arrived instead of the time it is shown:
+    void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
+    // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
+    // until its right-click menu asks for it:
+    void showSearchBar();
+    // Copies text a caller is putting on this console to standard output for
+    // --mirror, one line per line shown, each prefixed with the profile and
+    // console names. Does nothing unless --mirror was given. The text is a
+    // fragment of a line as often as it is whole lines, so a line is written
+    // out once a line feed has ended it and what is left over is held until
+    // one does.
+    void mirrorToStdOut(const QString& text);
+    // The same for a line that is already complete: TBuffer::commitLineData()
+    // calls this with a line as the game sent it, before a trigger can gag or
+    // rewrite it.
+    void mirrorLineToStdOut(const QString& line);
+    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
+    void discardAll() override;
+    void discardLastLine() override;
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
@@ -285,11 +293,23 @@ public:
     int getLastLineNumber();
     void refresh();
     void refreshView() const;
+    // Repaint just the lines the current selection covers, for the callers that
+    // change their text where it stands instead of appending new text.
+    void markSelectionDirty();
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     void setFontSize(int);
     void setFontName(const QString& fontName);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
+    bool setWindowBackgroundImage(const QString&, int);
+    bool resetWindowBackgroundImage();
+    void updateMainFrameTransparency();
+    // False only when a scale failed; no source or an unsized widget defers to the next resize
+    bool updateWindowBackgroundCoverPixmap();
+    static QRect coverSourceRect(const QSize& sourceSize, const QSize& targetSize);
+    void setBorderColor(const QColor&);
+    QColor borderColor() const { return mBorderColor; }
+    void lowerMainDisplay();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -305,6 +325,9 @@ public:
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
+    // For a MainConsole put away by a tab switch, which no resize event reaches:
+    // works out the size it will come back to and has NAWS report it
+    void syncHiddenScreenDimensions();
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
     // In the next function the first element in the return is an
@@ -314,9 +337,11 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
-    void setSearchOptions(const SearchOptions);
+    void setSearchOptions(const enums::BufferSearchOptions);
     void setF3SearchEnabled(const bool enabled);
     void setProxyForFocus(TCommandLine*);
+    void setCompactInputLine(const bool state);
+    void repaintPanes() const;
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
     // Raises an event if the number of lines (in the
     // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
@@ -341,8 +366,19 @@ public:
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
+    // The Central Debug Console's find bar, floating over the bottom right of
+    // the console itself:
+    QPointer<QWidget> mpFindBar;
 
-    TBuffer buffer;
+    // The buffer, cursor/prompt state, selection, current format and fg/bg
+    // colours live in a core TConsoleModel reached through model(). For the
+    // main console that model is co-owned with Host (which drives the trigger
+    // pipeline through it - see Host::runTriggers); sub-consoles own theirs.
+    // The members below are references aliasing the model, so the existing
+    // buffer/mFgColor/... accesses across the codebase are unchanged - which is
+    // why the model has to stay declared ahead of every one of them.
+    std::shared_ptr<TConsoleModel> mpModel;
+    TBuffer& buffer;
     static const QString cmLuaLineVariable;
     TTextEdit* mUpperPane = nullptr;
     TTextEdit* mLowerPane = nullptr;
@@ -352,19 +388,25 @@ public:
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
 
-    QColor mBgColor = QColorConstants::Black;
-    QColor mFgColor = QColorConstants::LightGray;
+    QColor& mBgColor;
+    QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-    QColor mSystemMessageBgColor = mBgColor;
+    // Transparent so a system message blends into the console's real background
+    // instead of an opaque bar; TTextEdit's selection swap and TBuffer's HTML
+    // export both resolve alpha-0 against getConsoleBgColor() so the text stays
+    // visible when selected and the same colour is kept in copied/exported HTML.
+    QColor mSystemMessageBgColor = QColorConstants::Transparent;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
-    //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
-    int mButtonState = 1;
+    int& mButtonState;
 
     QString mConsoleName;
-    QString mCurrentLine;
-    int mEngineCursor = -1;
+    // What --mirror has been handed for the line this console is building, and
+    // has not written out yet because no line feed has ended it
+    QString mMirrorPendingLine;
+    QString& mCurrentLine;
+    int& mEngineCursor;
 
     int mIndentCount = 0;
     int mHangingIndentCount = 0;
@@ -372,7 +414,7 @@ public:
     int mOldX = 0;
     int mOldY = 0;
 
-    TChar mFormatCurrent;
+    TChar& mFormatCurrent;
     QString mFormatSequenceRest;
 
     QWidget* mpBaseVFrame = nullptr;
@@ -382,6 +424,7 @@ public:
     QWidget* mpMainFrame = nullptr;
     QWidget* mpRightToolBar = nullptr;
     QWidget* mpMainDisplay = nullptr;
+    QWidget* mpWindowBackground = nullptr;
 
     QPointer<dlgMapper> mpMapper;
 
@@ -389,20 +432,17 @@ public:
     QScrollBar* mpHScrollBar = nullptr;
 
     QElapsedTimer mProcessingTimer;
-    bool mRecordReplay = false;
-    QSaveFile mReplayFile;
-    QDataStream mReplayStream;
 
     bool mTriggerEngineMode = false;
 
-    QPoint mUserCursor;
+    QPoint& mUserCursor;
     int mWrapAt = 100;
     QLineEdit* mpLineEdit_networkLatency = nullptr;
-    QPoint P_begin;
-    QPoint P_end;
+    QPoint& P_begin;
+    QPoint& P_end;
     QString mProfileName;
     TSplitter* splitter = nullptr;
-    bool mIsPromptLine = false;
+    bool& mIsPromptLine;
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
     QToolButton* replayButton = nullptr;
@@ -421,7 +461,11 @@ public:
     QWidget* mpButtonMainLayer = nullptr;
     int mBgImageMode = 0;
     QString mBgImagePath;
+    int mWindowBgImageMode = 0;
+    QString mWindowBgImagePath;
+    QPixmap mWindowBgSourcePixmap;
     bool mHScrollBarEnabled = false;
+    bool mScrollBarEnabled = true;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
     QVideoWidget* mpVideoWidget = nullptr;
     QSplitter* commandSplitter = nullptr;
@@ -452,29 +496,31 @@ protected:
 private slots:
     void slot_adjustAccessibleNames();
     void slot_clearSearchResults();
+    void slot_hyperlinkVisibilityChanged();
     void focusOnSearchResultAndAnnounce(int searchX, int searchY);
+    void hideSearchBar();
 
 private:
+    void createFindBar();
+    void positionFindBar();
+    // MainConsole only - they take off the profile's own main window borders.
+    // The height is -1 when it cannot be known.
+    int upperPaneWidthFor(const int containerWidth) const;
+    int upperPaneHeightFor(const int containerHeight) const;
+    void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
-    void initializeOSC8StyleFeature();
-    void initializeOSC8MenuFeature();
-    void initializeOSC8TooltipFeature();
-    void initializeOSC8VisibilityFeature();
-    void initializeOSC8SelectionFeature();
-    void initializeOSC8SpoilerFeature();
-    void initializeOSC8DisabledFeature();
-    void initializeOSC8TitleFeature();
-
-    // OSC 8 hyperlink managers
-    std::unique_ptr<THyperlinkCompactManager> mpHyperlinkCompactManager;
-    std::unique_ptr<THyperlinkSelectionManager> mpHyperlinkSelectionManager;
-    std::unique_ptr<THyperlinkVisibilityManager> mpHyperlinkVisibilityManager;
+    void updateScrollBarStyle();
 
     ConsoleType mType = UnknownType;
+    // the size the last resize reported to Lua
     QSize mOldSize;
-    SearchOptions mSearchOptions = SearchOptionNone;
+    // only ever written from a size that was really measured, so what
+    // getMainWindowSize() falls back to while the console is hidden or too small
+    // to measure cannot be a size the window never had
+    mutable QSize mLastMeasuredSize;
+    enums::BufferSearchOptions mSearchOptions = enums::BufferSearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
     bool mScrollingEnabled = true;
@@ -486,6 +532,10 @@ private:
     // Whether to show (a 13 character by default) timestamp to the left of
     // each line of text:
     bool mShowTimeStamps = false;
+    // mpMainFrame's palette cannot hold this - it is rebuilt from scratch on every colour change
+    QColor mBorderColor = Qt::black;
+    // latches the 'cover' scale failure so a resize drag does not repeat the warning
+    bool mWindowBgCoverScaleFailed = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

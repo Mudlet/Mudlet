@@ -23,6 +23,8 @@
 #include <QString>
 #include <QByteArray>
 
+#include <string>
+
 /**
  * @brief Utility class for secure string operations
  *
@@ -69,15 +71,32 @@ public:
 
     /**
      * @brief Securely clear a QString from memory
+     *
+     * Assumes sole ownership: because QString is implicitly shared, clearing a string that is still
+     * referenced elsewhere detaches and zeroes this copy while leaving the shared buffer intact. The
+     * overwrite is also not guaranteed against dead-store elimination - use secureStdStringClear() for
+     * the strongest guarantee. Pass only uniquely-owned secrets here.
      * @param str String to clear
      */
     static void secureStringClear(QString& str);
 
     /**
      * @brief Securely clear a QByteArray from memory
+     *
+     * Same ownership/elision caveats as secureStringClear(): implicitly shared, so pass only
+     * uniquely-owned buffers; secureStdStringClear() gives the strongest (elision-proof) guarantee.
      * @param array Array to clear
      */
     static void secureByteArrayClear(QByteArray& array);
+
+    /**
+     * @brief Securely clear a std::string from memory
+     *
+     * Overwrites the buffer through a volatile pointer so the zeroing cannot be
+     * removed by dead-store elimination, unlike a plain assignment loop.
+     * @param str String to clear
+     */
+    static void secureStdStringClear(std::string& str);
 
     /**
      * @brief Check SSL backend configuration and report potential issues
@@ -90,6 +109,40 @@ public:
      * @return true if in test environment, false otherwise
      */
     static bool isTestEnvironment();
+
+    /**
+     * @brief Best-effort: set a file holding a secret to 0600
+     *
+     * Called both when such a file is written and when one is read, so that a file left behind
+     * by an earlier Mudlet is narrowed as well. The permissions are read back afterwards,
+     * because a file system that cannot store them reports the change as having worked.
+     * @param path Path of the file to restrict
+     * @return false when other accounts on the machine can still read the file. On a platform
+     * with no permission bits of this kind there is nothing to set, so this answers true after
+     * saying once that the secret is protected only by the folder holding it.
+     */
+    static bool restrictFileToOwner(const QString& path);
+
+    /**
+     * @brief Best-effort: set a directory holding secrets to 0700
+     *
+     * The same contract as restrictFileToOwner().
+     * @param path Path of the directory to restrict
+     * @return false when other accounts on the machine can still reach into the directory
+     */
+    static bool restrictDirectoryToOwner(const QString& path);
+
+    /**
+     * @brief The secret that could not be narrowed, forgetting it as it is handed over
+     *
+     * Lets a caller tell the user that a password it has just saved is readable by other
+     * accounts, without every caller in between having to carry the failure. What it holds
+     * belongs to no particular profile, so a caller that reports on one brackets its own
+     * write with this: ask once to discard what came before, and once afterwards for what
+     * that write left behind. CredentialManager::unprotectedSecretPath() is that answer.
+     * @return Path of that file or directory, empty when nothing failed since it was last asked
+     */
+    static QString takeUnprotectedSecretPath();
 
     // Convenience methods for password storage and retrieval
 
@@ -196,9 +249,7 @@ private:
      * @param hmac Output parameter for 32-byte HMAC
      * @return Encrypted data, or empty on failure
      */
-    static QByteArray encryptData(const QByteArray& plaintext, const QByteArray& key,
-                                 const QByteArray& salt, const QByteArray& nonce,
-                                 QByteArray& hmac);
+    static QByteArray encryptData(const QByteArray& plaintext, const QByteArray& key, const QByteArray& salt, const QByteArray& nonce, QByteArray& hmac);
 
     /**
      * @brief Decrypt data using XOR cipher + HMAC-SHA256
@@ -209,17 +260,15 @@ private:
      * @param hmac 32-byte HMAC for verification
      * @return Decrypted data, or empty on failure/authentication error
      */
-    static QByteArray decryptData(const QByteArray& ciphertext, const QByteArray& key,
-                                 const QByteArray& salt, const QByteArray& nonce,
-                                 const QByteArray& hmac);
+    static QByteArray decryptData(const QByteArray& ciphertext, const QByteArray& key, const QByteArray& salt, const QByteArray& nonce, const QByteArray& hmac);
 
     // Constants for the encrypted format
     static constexpr quint8 ENCRYPTION_VERSION_CURRENT = 2; // Current version
     static constexpr int SALT_SIZE = 16;
-    static constexpr int NONCE_SIZE = 16; // Nonce size
-    static constexpr int HMAC_SIZE = 32;  // HMAC-SHA256 size
-    static constexpr int KEY_SIZE = 32;   // 256-bit key
-    static constexpr int PBKDF2_ITERATIONS = 100000; // Strong key derivation
+    static constexpr int NONCE_SIZE = 16;                                             // Nonce size
+    static constexpr int HMAC_SIZE = 32;                                              // HMAC-SHA256 size
+    static constexpr int KEY_SIZE = 32;                                               // 256-bit key
+    static constexpr int PBKDF2_ITERATIONS = 100000;                                  // Strong key derivation
     static constexpr int MIN_ENCRYPTED_SIZE = 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE; // version + salt + nonce + hmac + at least some data
 };
 

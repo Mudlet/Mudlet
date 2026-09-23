@@ -60,6 +60,17 @@ private slots:
 
     }
 
+    void testMalformedNumericEntity()
+    {
+        TEntityResolver resolver;
+
+        // A numeric entity with no digits ("&#;") leaves an empty value that was
+        // previously passed to QString::front() (undefined behaviour). It must
+        // now resolve safely rather than crash/assert.
+        QCOMPARE(resolver.getResolution("&#;"), "");
+        QCOMPARE(resolver.getResolution("&#x;"), "");
+    }
+
     void testRegisteredEntities()
     {
         TEntityResolver resolver;

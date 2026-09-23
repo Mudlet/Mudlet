@@ -21,6 +21,8 @@
 
 #include <QtTest/QtTest>
 
+#include <climits>
+
 /*
  * Unit tests for TAreaGridIndex.
  *
@@ -35,11 +37,31 @@
  * - rebuild (per-Z): populates, overwrites prior Z level, does not affect other Z levels
  * - rebuild (full): populates all Z levels, overwrites previous state, empty map -> isEmpty
  * - roomsAt: existing cell, non-existent cell (no crash), stable empty reference
- * - roomsInViewport: all in, some out, empty Z, multiple rooms per cell, inclusive edges
- * - roomsInViewportWithCollisions: solo rooms, colliding rooms, out-of-viewport exclusion, empty Z
+ * - roomsInViewport: all in, some out, empty Z, multiple rooms per cell, inclusive edges, narrow range over a wide index, ranges reaching INT_MIN/INT_MAX
+ * - roomsInViewportWithCollisions: solo rooms, colliding rooms, out-of-viewport exclusion, empty Z, narrow range over a wide index, ranges reaching INT_MAX
  * - isEmpty / clear / size
  * - Integration: add + full rebuild + remove + move
  */
+namespace {
+// More occupied columns (rows) than any range below asks for, so the scan probes
+// the cells it wants instead of walking the ones the index has.
+constexpr int cOccupiedCells = 600;
+
+void addRoomsAlongX(TAreaGridIndex& idx)
+{
+    for (int i = 0; i < cOccupiedCells; ++i) {
+        idx.addRoom(i + 1, 0, i, 0);
+    }
+}
+
+void addRoomsAlongY(TAreaGridIndex& idx)
+{
+    for (int i = 0; i < cOccupiedCells; ++i) {
+        idx.addRoom(i + 1, 0, 0, i);
+    }
+}
+} // namespace
+
 class TAreaGridIndexTest : public QObject
 {
     Q_OBJECT
@@ -62,7 +84,7 @@ private slots:
         TAreaGridIndex idx;
         idx.addRoom(1, 0, 2, 2);
         idx.addRoom(2, 0, 2, 2);
-        const QSet<int>& cell = idx.roomsAt(0, 2, 2);
+        const TAreaGridIndex::RoomIds& cell = idx.roomsAt(0, 2, 2);
         QVERIFY(cell.contains(1));
         QVERIFY(cell.contains(2));
         QCOMPARE(cell.size(), 2);
@@ -265,8 +287,10 @@ private slots:
         TAreaGridIndex idx;
         idx.addRoom(7, 2, 10, 20);
         idx.addRoom(8, 2, 10, 20);
-        const QSet<int> expected = {7, 8};
-        QCOMPARE(idx.roomsAt(2, 10, 20), expected);
+        const TAreaGridIndex::RoomIds& cell = idx.roomsAt(2, 10, 20);
+        QCOMPARE(cell.size(), 2);
+        QVERIFY(cell.contains(7));
+        QVERIFY(cell.contains(8));
     }
 
     void roomsAt_nonExistentCell_returnsEmptySet()
@@ -281,9 +305,9 @@ private slots:
     {
         TAreaGridIndex idx;
         // Two calls to a non-existent cell must return references to the same
-        // static empty set (no dangling references).
-        const QSet<int>& ref1 = idx.roomsAt(77, 1, 2);
-        const QSet<int>& ref2 = idx.roomsAt(77, 1, 2);
+        // static empty cell (no dangling references).
+        const TAreaGridIndex::RoomIds& ref1 = idx.roomsAt(77, 1, 2);
+        const TAreaGridIndex::RoomIds& ref2 = idx.roomsAt(77, 1, 2);
         QVERIFY(&ref1 == &ref2);
         QVERIFY(ref1.isEmpty());
     }
@@ -364,6 +388,26 @@ private slots:
         QCOMPARE(visited.size(), 4);
     }
 
+    // A query narrower than the index has columns takes the other of the two
+    // ways through the range, probing the wanted columns rather than walking
+    // every key, so it needs its own case.
+    void roomsInViewport_narrowRangeOverWideIndex_onlyWantedCellsReturned()
+    {
+        TAreaGridIndex idx;
+        for (int x = 0; x < 50; ++x) {
+            if (x == 11) {
+                continue; // a gap, so an empty column is asked for as well
+            }
+            idx.addRoom(x + 1, 0, x, 0);
+        }
+        idx.addRoom(1000, 0, 10, 7); // a wanted column, but outside the Y range
+
+        const QList<int> result = idx.roomsInViewport(0, 10, 12, 0, 0);
+        const QSet<int> visited(result.constBegin(), result.constEnd());
+
+        QCOMPARE(visited, QSet<int>({11, 13}));
+    }
+
     // -------------------------------------------------------------------------
     // roomsInViewportWithCollisions
     // -------------------------------------------------------------------------
@@ -435,6 +479,125 @@ private slots:
 
         const auto result = idx.roomsInViewportWithCollisions(99, 0, 10, 0, 10);
         QVERIFY(result.isEmpty());
+    }
+
+    void roomsInViewportWithCollisions_narrowRangeOverWideIndex_onlyWantedCellsReturned()
+    {
+        TAreaGridIndex idx;
+        for (int x = 0; x < 50; ++x) {
+            if (x == 11) {
+                continue; // a gap, so an empty column is asked for as well
+            }
+            idx.addRoom(x + 1, 0, x, 0);
+        }
+        idx.addRoom(2000, 0, 12, 0); // shares a cell with room 13
+        idx.addRoom(1000, 0, 10, 7); // a wanted column, but outside the Y range
+
+        const auto result = idx.roomsInViewportWithCollisions(0, 10, 12, 0, 0);
+        QMap<int, bool> idToCollision;
+        for (const auto& [id, collision] : result) {
+            idToCollision[id] = collision;
+        }
+
+        QCOMPARE(idToCollision.keys(), QList<int>({11, 13, 2000}));
+        QVERIFY(!idToCollision[11]);
+        QVERIFY(idToCollision[13]);
+        QVERIFY(idToCollision[2000]);
+    }
+
+    // -------------------------------------------------------------------------
+    // Ranges that reach the limits of the coordinate space
+    //
+    // These cases hang rather than answer wrongly when they regress, so the
+    // binary needs a timeout to report them.
+    // -------------------------------------------------------------------------
+
+    void roomsInViewport_rangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongX(idx);
+        idx.addRoom(9999, 0, INT_MAX, 0);
+
+        // 201 of the 601 occupied columns are wanted, so probing them is the
+        // cheaper of the two ways through the range and the one taken.
+        const QList<int> result = idx.roomsInViewport(0, INT_MAX - 200, INT_MAX, -10, 10);
+
+        QCOMPARE(result, QList<int>({9999}));
+    }
+
+    void roomsInViewport_oneColumnWideAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongX(idx);
+        idx.addRoom(9999, 0, INT_MAX, 0);
+
+        const QList<int> result = idx.roomsInViewport(0, INT_MAX, INT_MAX, -10, 10);
+
+        QCOMPARE(result, QList<int>({9999}));
+    }
+
+    void roomsInViewport_rangeStartingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongX(idx);
+        idx.addRoom(9999, 0, INT_MIN, 0);
+
+        const QList<int> result = idx.roomsInViewport(0, INT_MIN, INT_MIN + 200, -10, 10);
+
+        QCOMPARE(result, QList<int>({9999}));
+    }
+
+    // Three rooms is fewer than the 2^32 columns the range covers, so this takes
+    // the key-walking branch rather than the probing one.
+    void roomsInViewport_theWholeCoordinateRange_returnsEveryRoom()
+    {
+        TAreaGridIndex idx;
+        idx.addRoom(1, 0, INT_MIN, INT_MIN);
+        idx.addRoom(2, 0, 0, 0);
+        idx.addRoom(3, 0, INT_MAX, INT_MAX);
+
+        const QList<int> result = idx.roomsInViewport(0, INT_MIN, INT_MAX, INT_MIN, INT_MAX);
+        const QSet<int> visited(result.constBegin(), result.constEnd());
+
+        QCOMPARE(visited, QSet<int>({1, 2, 3}));
+    }
+
+    void roomsInViewport_yRangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongY(idx);
+        idx.addRoom(9999, 0, 0, INT_MAX);
+
+        const QList<int> result = idx.roomsInViewport(0, 0, 0, INT_MAX - 200, INT_MAX);
+
+        QCOMPARE(result, QList<int>({9999}));
+    }
+
+    void roomsInViewportWithCollisions_rangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongX(idx);
+        idx.addRoom(9998, 0, INT_MAX, 0);
+        idx.addRoom(9999, 0, INT_MAX, 0);
+
+        const auto result = idx.roomsInViewportWithCollisions(0, INT_MAX - 200, INT_MAX, -10, 10);
+
+        QCOMPARE(result.size(), 2);
+        for (const auto& [id, collision] : result) {
+            QVERIFY(collision);
+        }
+    }
+
+    void roomsInViewportWithCollisions_yRangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongY(idx);
+        idx.addRoom(9999, 0, 0, INT_MAX);
+
+        const auto result = idx.roomsInViewportWithCollisions(0, 0, 0, INT_MAX - 200, INT_MAX);
+
+        QCOMPARE(result.size(), 1);
+        QCOMPARE(result.first().first, 9999);
     }
 
     // -------------------------------------------------------------------------

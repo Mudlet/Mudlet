@@ -26,7 +26,7 @@ Geyser.Window = Geyser.Container:new({
 --- Prints a message to the window
 -- @param message The message to print. Can contain html formatting.
 function Geyser.Window:echo(message)
-  self.message = message
+  self.message = message or self.message
   echo(self.name, self.message)
 end
 
@@ -34,21 +34,24 @@ end
 -- @param message The message to print. Uses color formatting information -
 -- a message of "<red>Hi" would make 'Hi' red.
 function Geyser.Window:cecho(message)
-  self.message = message or self.message cecho(self.name, self.message)
+  self.message = message or self.message
+  cecho(self.name, self.message)
 end
 
 --- Prints a message to the window.
 -- @param message The message to print. Uses color formatting information -
 -- a message of "<255,0,0>Hi" would make 'Hi' red.
 function Geyser.Window:decho(message)
-  self.message = message or self.message decho(self.name, self.message)
+  self.message = message or self.message
+  decho(self.name, self.message)
 end
 
 --- Prints a message to the window.
 -- @param message The message to print. Uses color formatting information -
 -- a message of "|cff0000Hi" would make 'Hi' red.
 function Geyser.Window:hecho(message)
-  self.message = message or self.message hecho(self.name, self.message)
+  self.message = message or self.message
+  hecho(self.name, self.message)
 end
 
 --- Get the window's foreground color.

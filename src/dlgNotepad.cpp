@@ -23,8 +23,11 @@
 
 #include "dlgNotepad.h"
 
-#include "mudlet.h"
+#include "MudletPaths.h"
+#include "Host.h"
+#include "utils.h"
 
+#include <QApplication>
 #include <QCloseEvent>
 #include <QDir>
 #include <QHBoxLayout>
@@ -32,17 +35,24 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
+#include <QJsonValue>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
+#include <QPalette>
 #include <QPlainTextEdit>
 #include <QSaveFile>
 #include <QShortcut>
+#include <QTabBar>
 #include <QStringConverter>
+#include <QTabBar>
 #include <QTextDocument>
+#include <QTextStream>
 #include <QTimer>
 #include <QToolButton>
+#include <chrono>
 
 using namespace std::chrono;
 
@@ -54,6 +64,8 @@ dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
 {
     setupUi(this);
+    mUiSetupComplete = true;
+    updateSendControlsToggleIcon();
 
     setupAddTabButton();
 
@@ -65,6 +77,7 @@ dlgNotepad::dlgNotepad(Host* pH)
     label_prependText = new QLabel(tr("Prepend"), this);
     action_prependTextLabel = toolBar->addWidget(label_prependText);
     lineEdit_prependText = new QLineEdit(this);
+    lineEdit_prependText->setObjectName(qsl("notepadPrependText"));
     //: placeholder text for text entry box in notepad - text which gets added before sending a line
     lineEdit_prependText->setPlaceholderText(tr("Text to prepend to lines"));
     lineEdit_prependText->setClearButtonEnabled(true);
@@ -84,6 +97,9 @@ dlgNotepad::dlgNotepad(Host* pH)
     if (mpHost) {
         restore();
         restoreSettings();
+        connect(mpHost, &Host::signal_profileStyleSheetChanged, this, &dlgNotepad::setStyleSheet);
+        connect(mpHost, &Host::signal_profileStyleSheetChanged, this, &dlgNotepad::setTabsStyleSheet);
+        connect(mpHost, &Host::signal_consoleFontChanged, this, &dlgNotepad::setFont);
     }
 
     setupFindBar();
@@ -107,29 +123,34 @@ void dlgNotepad::setupAddTabButton()
 void dlgNotepad::setupFindBar()
 {
     mpFindBar = new QWidget(this);
+    mpFindBar->setObjectName(qsl("notepadFindBar"));
     auto* layout = new QHBoxLayout(mpFindBar);
     layout->setContentsMargins(4, 2, 4, 2);
     layout->setSpacing(2);
 
     mpFindLineEdit = new QLineEdit(mpFindBar);
+    mpFindLineEdit->setObjectName(qsl("notepadFindBox"));
     //: Placeholder text for the search field in notepad
     mpFindLineEdit->setPlaceholderText(tr("Find"));
     mpFindLineEdit->setClearButtonEnabled(true);
     mpFindLineEdit->installEventFilter(this);
 
     mpFindPrevButton = new QToolButton(mpFindBar);
+    mpFindPrevButton->setObjectName(qsl("notepadFindPrevious"));
     mpFindPrevButton->setIcon(QIcon(qsl(":/icons/export.png")));
     mpFindPrevButton->setToolTip(tr("Find previous"));
     mpFindPrevButton->setAutoRaise(true);
     mpFindPrevButton->setMaximumSize(24, 24);
 
     mpFindNextButton = new QToolButton(mpFindBar);
+    mpFindNextButton->setObjectName(qsl("notepadFindNext"));
     mpFindNextButton->setIcon(QIcon(qsl(":/icons/import.png")));
     mpFindNextButton->setToolTip(tr("Find next"));
     mpFindNextButton->setAutoRaise(true);
     mpFindNextButton->setMaximumSize(24, 24);
 
     mpFindCloseButton = new QToolButton(mpFindBar);
+    mpFindCloseButton->setObjectName(qsl("notepadFindClose"));
     mpFindCloseButton->setIcon(QIcon(qsl(":/icons/dialog-close.png")));
     mpFindCloseButton->setToolTip(tr("Close find bar"));
     mpFindCloseButton->setAutoRaise(true);
@@ -306,8 +327,8 @@ QPlainTextEdit* dlgNotepad::currentTextEdit() const
 
 void dlgNotepad::save()
 {
-    const QString directoryPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
-    const QString fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString directoryPath = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName());
+    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     const QDir dir;
     if (!dir.exists(directoryPath)) {
@@ -348,11 +369,11 @@ void dlgNotepad::save()
 
 bool dlgNotepad::migrateOldNotesFile()
 {
-    QString oldFileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    QString oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
     bool useUtf8 = true;
 
     if (!QFile::exists(oldFileName)) {
-        oldFileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
+        oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
         useUtf8 = false;
 
         if (!QFile::exists(oldFileName)) {
@@ -382,7 +403,7 @@ bool dlgNotepad::migrateOldNotesFile()
 
 void dlgNotepad::restore()
 {
-    const QString fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     if (QFile::exists(fileName)) {
         QFile file(fileName);
@@ -504,7 +525,7 @@ void dlgNotepad::startSendingLines(const QStringList& lines)
     }
 
     action_stop->setEnabled(true);
-    mSendTimer->start(300);
+    mSendTimer->start(300ms);
 }
 
 void dlgNotepad::slot_sendNextLine()
@@ -592,6 +613,40 @@ void dlgNotepad::closeEvent(QCloseEvent* event)
 {
     saveSettings();
     QMainWindow::closeEvent(event);
+}
+
+// The grey arrows the .ui file gives the send controls toggle are all but invisible
+// against a dark background, so use the brighter green ones (which the .ui file already
+// uses for the hovered-over state) there instead. The background colour is what matters,
+// so go by the palette rather than by mudlet::inDarkMode() - the latter is only set when
+// Mudlet itself applies its dark theme, yet a dark system theme darkens the notepad as well.
+// The application palette is the one to read: when this runs in response to a style change
+// the widgets have not had the new palette propagated down to them yet
+void dlgNotepad::updateSendControlsToggleIcon()
+{
+    const bool darkBackground = QApplication::palette().color(QPalette::Window).lightness() <= 127;
+
+    QIcon icon;
+    if (darkBackground) {
+        icon.addFile(qsl(":/icons/arrow-right-16x.png"), QSize(), QIcon::Normal, QIcon::Off);
+        icon.addFile(qsl(":/icons/arrow-down-16x.png"), QSize(), QIcon::Normal, QIcon::On);
+    } else {
+        icon.addFile(qsl(":/icons/arrow-right_grey-16x.png"), QSize(), QIcon::Normal, QIcon::Off);
+        icon.addFile(qsl(":/icons/arrow-down_grey-16x.png"), QSize(), QIcon::Normal, QIcon::On);
+        icon.addFile(qsl(":/icons/arrow-right-16x.png"), QSize(), QIcon::Active, QIcon::Off);
+        icon.addFile(qsl(":/icons/arrow-down-16x.png"), QSize(), QIcon::Active, QIcon::On);
+    }
+    action_toggleSendControls->setIcon(icon);
+}
+
+void dlgNotepad::changeEvent(QEvent* event)
+{
+    QMainWindow::changeEvent(event);
+
+    // the appearance can be switched between light and dark while the notepad is open
+    if ((event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) && mUiSetupComplete) {
+        updateSendControlsToggleIcon();
+    }
 }
 
 bool dlgNotepad::eventFilter(QObject* obj, QEvent* event)

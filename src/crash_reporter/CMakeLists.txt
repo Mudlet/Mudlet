@@ -20,9 +20,9 @@ else()
 endif()
 message(STATUS "============================")
 
-find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Core Widgets Network REQUIRED)
 
-add_executable(MudletCrashReporter main.cpp)
+add_executable(MudletCrashReporter main.cpp sendCrashReport.cpp)
 
 
 if(TARGET ${EXE_MUDLET_TARGET})
@@ -31,57 +31,20 @@ if(TARGET ${EXE_MUDLET_TARGET})
     )
 endif()
 
-add_dependencies(MudletCrashReporter sentry_with_transport)
-
-target_include_directories(MudletCrashReporter PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/install_with_transport/include
-     ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/src
-)
+# Packaging copies this executable out of the build tree instead of installing
+# it, so BUILD_RPATH rather than INSTALL_RPATH is what ships. $ORIGIN/lib is the
+# AppImage layout and @executable_path/../Frameworks the .app bundle; with
+# neither, the shipped binary knows only the build machine's Qt path and the
+# loader kills it before it can report anything. Both are appended to the
+# automatically determined entries, so build-tree runs are unaffected.
+if(APPLE)
+    set_target_properties(MudletCrashReporter PROPERTIES BUILD_RPATH "@executable_path/../Frameworks")
+elseif(UNIX)
+    set_target_properties(MudletCrashReporter PROPERTIES BUILD_RPATH "$ORIGIN/lib")
+endif()
 
 target_compile_definitions(MudletCrashReporter PRIVATE
-    SENTRY_BUILD_STATIC
     SENTRY_DSN="${SENTRY_DSN}"
 )
 
-target_link_directories(MudletCrashReporter PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/install_with_transport/lib
-)
-
-set(MUDLET_CRASH_REPORTER_LIBS
-    Qt6::Core Qt6::Widgets
-    sentry
-    crashpad_client crashpad_handler_lib crashpad_minidump
-    crashpad_mpack crashpad_snapshot crashpad_tools crashpad_util
-    mini_chromium
-)
-
-if(WIN32)
-    list(APPEND MUDLET_CRASH_REPORTER_LIBS
-        crashpad_compat
-        ws2_32
-        shlwapi
-        winhttp
-        version
-        dbghelp
-        synchronization
-    )
-elseif(APPLE)
-    list(APPEND MUDLET_CRASH_REPORTER_LIBS
-        bsm
-        pthread
-        dl
-        z
-        curl
-    )
-elseif(UNIX)
-    list(APPEND MUDLET_CRASH_REPORTER_LIBS
-        crashpad_compat
-        unwind
-        pthread
-        dl
-        z
-        curl
-    )
-endif()
-
-target_link_libraries(MudletCrashReporter PRIVATE ${MUDLET_CRASH_REPORTER_LIBS})
+target_link_libraries(MudletCrashReporter PRIVATE Qt6::Core Qt6::Widgets Qt6::Network)

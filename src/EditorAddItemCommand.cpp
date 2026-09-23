@@ -54,7 +54,7 @@ void EditorAddItemCommand::undo()
     case EditorViewType::cmTriggerView: {
         TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(mItemID);
         if (trigger) {
-            std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
+            std::function<void(Tree<TTrigger>*)> collectIDs = [&](Tree<TTrigger>* t) {
                 if (!t) {
                     return;
                 }
@@ -76,7 +76,7 @@ void EditorAddItemCommand::undo()
     case EditorViewType::cmAliasView: {
         TAlias* alias = mpHost->getAliasUnit()->getAlias(mItemID);
         if (alias) {
-            std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
+            std::function<void(Tree<TAlias>*)> collectIDs = [&](Tree<TAlias>* a) {
                 if (!a) {
                     return;
                 }
@@ -98,7 +98,7 @@ void EditorAddItemCommand::undo()
     case EditorViewType::cmTimerView: {
         TTimer* timer = mpHost->getTimerUnit()->getTimer(mItemID);
         if (timer) {
-            std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
+            std::function<void(Tree<TTimer>*)> collectIDs = [&](Tree<TTimer>* t) {
                 if (!t) {
                     return;
                 }
@@ -120,7 +120,7 @@ void EditorAddItemCommand::undo()
     case EditorViewType::cmScriptView: {
         TScript* script = mpHost->getScriptUnit()->getScript(mItemID);
         if (script) {
-            std::function<void(TScript*)> collectIDs = [&](TScript* s) {
+            std::function<void(Tree<TScript>*)> collectIDs = [&](Tree<TScript>* s) {
                 if (!s) {
                     return;
                 }
@@ -142,7 +142,7 @@ void EditorAddItemCommand::undo()
     case EditorViewType::cmKeysView: {
         TKey* key = mpHost->getKeyUnit()->getKey(mItemID);
         if (key) {
-            std::function<void(TKey*)> collectIDs = [&](TKey* k) {
+            std::function<void(Tree<TKey>*)> collectIDs = [&](Tree<TKey>* k) {
                 if (!k) {
                     return;
                 }
@@ -164,7 +164,7 @@ void EditorAddItemCommand::undo()
     case EditorViewType::cmActionView: {
         TAction* action = mpHost->getActionUnit()->getAction(mItemID);
         if (action) {
-            std::function<void(TAction*)> collectIDs = [&](TAction* a) {
+            std::function<void(Tree<TAction>*)> collectIDs = [&](Tree<TAction>* a) {
                 if (!a) {
                     return;
                 }
@@ -329,7 +329,7 @@ void EditorAddItemCommand::redo()
 
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
-                std::function<void(TTrigger*)> collectIDs = [&](TTrigger* t) {
+                std::function<void(Tree<TTrigger>*)> collectIDs = [&](Tree<TTrigger>* t) {
                     if (!t)
                         return;
                     newDescendantIDs.append(t->getID());
@@ -367,7 +367,7 @@ void EditorAddItemCommand::redo()
 
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
-                std::function<void(TAlias*)> collectIDs = [&](TAlias* a) {
+                std::function<void(Tree<TAlias>*)> collectIDs = [&](Tree<TAlias>* a) {
                     if (!a)
                         return;
                     newDescendantIDs.append(a->getID());
@@ -405,7 +405,7 @@ void EditorAddItemCommand::redo()
 
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
-                std::function<void(TTimer*)> collectIDs = [&](TTimer* t) {
+                std::function<void(Tree<TTimer>*)> collectIDs = [&](Tree<TTimer>* t) {
                     if (!t)
                         return;
                     newDescendantIDs.append(t->getID());
@@ -443,7 +443,7 @@ void EditorAddItemCommand::redo()
 
                 // Collect all new descendant IDs after recreation
                 QList<int> newDescendantIDs;
-                std::function<void(TScript*)> collectIDs = [&](TScript* s) {
+                std::function<void(Tree<TScript>*)> collectIDs = [&](Tree<TScript>* s) {
                     if (!s)
                         return;
                     newDescendantIDs.append(s->getID());
@@ -496,7 +496,7 @@ void EditorAddItemCommand::redo()
 
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
-                std::function<void(TKey*)> collectIDs = [&](TKey* k) {
+                std::function<void(Tree<TKey>*)> collectIDs = [&](Tree<TKey>* k) {
                     if (!k)
                         return;
                     newDescendantIDs.append(k->getID());
@@ -534,7 +534,7 @@ void EditorAddItemCommand::redo()
 
                 // Collect all new descendant IDs and map to old IDs
                 QList<int> newDescendantIDs;
-                std::function<void(TAction*)> collectIDs = [&](TAction* a) {
+                std::function<void(Tree<TAction>*)> collectIDs = [&](Tree<TAction>* a) {
                     if (!a)
                         return;
                     newDescendantIDs.append(a->getID());
@@ -588,57 +588,50 @@ QString EditorAddItemCommand::generateText(EditorViewType viewType, const QStrin
         if (isFolder) {
             //: Undo/redo menu text for adding a trigger folder
             return QObject::tr("add trigger group \"%1\"").arg(itemName);
-        } else {
-            //: Undo/redo menu text for adding a trigger
-            return QObject::tr("add trigger \"%1\"").arg(itemName);
         }
+        //: Undo/redo menu text for adding a trigger
+        return QObject::tr("add trigger \"%1\"").arg(itemName);
     case EditorViewType::cmAliasView:
         if (isFolder) {
             //: Undo/redo menu text for adding an alias folder
             return QObject::tr("add alias group \"%1\"").arg(itemName);
-        } else {
-            //: Undo/redo menu text for adding an alias
-            return QObject::tr("add alias \"%1\"").arg(itemName);
         }
+        //: Undo/redo menu text for adding an alias
+        return QObject::tr("add alias \"%1\"").arg(itemName);
     case EditorViewType::cmTimerView:
         if (isFolder) {
             //: Undo/redo menu text for adding a timer folder
             return QObject::tr("add timer group \"%1\"").arg(itemName);
-        } else {
-            //: Undo/redo menu text for adding a timer
-            return QObject::tr("add timer \"%1\"").arg(itemName);
         }
+        //: Undo/redo menu text for adding a timer
+        return QObject::tr("add timer \"%1\"").arg(itemName);
     case EditorViewType::cmScriptView:
         if (isFolder) {
             //: Undo/redo menu text for adding a script folder
             return QObject::tr("add script group \"%1\"").arg(itemName);
-        } else {
-            //: Undo/redo menu text for adding a script
-            return QObject::tr("add script \"%1\"").arg(itemName);
         }
+        //: Undo/redo menu text for adding a script
+        return QObject::tr("add script \"%1\"").arg(itemName);
     case EditorViewType::cmKeysView:
         if (isFolder) {
             //: Undo/redo menu text for adding a key folder
             return QObject::tr("add key group \"%1\"").arg(itemName);
-        } else {
-            //: Undo/redo menu text for adding a key binding
-            return QObject::tr("add key \"%1\"").arg(itemName);
         }
+        //: Undo/redo menu text for adding a key binding
+        return QObject::tr("add key \"%1\"").arg(itemName);
     case EditorViewType::cmActionView:
         if (isFolder) {
             //: Undo/redo menu text for adding a button toolbar
             return QObject::tr("add button group \"%1\"").arg(itemName);
-        } else {
-            //: Undo/redo menu text for adding a button
-            return QObject::tr("add button \"%1\"").arg(itemName);
         }
+        //: Undo/redo menu text for adding a button
+        return QObject::tr("add button \"%1\"").arg(itemName);
     default:
         if (isFolder) {
             //: Undo/redo menu text for adding an unknown folder type
             return QObject::tr("add group \"%1\"").arg(itemName);
-        } else {
-            //: Undo/redo menu text for adding an unknown item type
-            return QObject::tr("add item \"%1\"").arg(itemName);
         }
+        //: Undo/redo menu text for adding an unknown item type
+        return QObject::tr("add item \"%1\"").arg(itemName);
     }
 }

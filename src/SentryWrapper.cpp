@@ -40,10 +40,6 @@
 #include <cstdlib>
 #include <algorithm>
 
-#ifdef WITH_SENTRY
-static bool s_sentryInitialized = false;
-#endif
-
 // Initializes Sentry options for crash/error reporting.
 // Crashes are first stored in a local cache folder, then automatically sent.
 //
@@ -54,15 +50,12 @@ static bool s_sentryInitialized = false;
 void initSentry()
 {
 #ifdef WITH_SENTRY
-    QString appBuild;
-    QFile gitShaFile(qsl(":/app-build.txt"));
-    if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-    }
-
-    // Skip Sentry on PTB builds: sentry_close() blocks on shutdown which can
-    // prevent Mudlet from quitting cleanly and stall Sparkle/Squirrel updates.
-    if (appBuild.startsWith(qsl("-ptb"))) {
+    // Never arm crashpad for a test run. The Lua suite drives this very binary with
+    // MUDLET_TEST_MODE set, and an armed crashpad answers a crash there by launching
+    // MudletCrashReporter, which blocks on a modal dialog unless "autoSendCrashReports" is already
+    // AlwaysSend. No CI runner has that setting, so a crash would hang the job to its timeout
+    // rather than fail it - and the report would go out as if a player had hit it.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
         return;
     }
 
@@ -74,6 +67,11 @@ void initSentry()
         return;
     }
 
+    QString appBuild;
+    QFile gitShaFile(qsl(":/app-build.txt"));
+    if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+    }
     const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, appBuild).toStdString();
 
     sentry_options_set_database_path(options, path.toUtf8().constData());
@@ -82,17 +80,6 @@ void initSentry()
     sentry_options_set_external_crash_reporter_path(options, makeExecutablePath(runtimeAppDir, "MudletCrashReporter").c_str());
 
     sentry_init(options);
-    s_sentryInitialized = true;
-#endif
-}
-
-void closeSentry()
-{
-#ifdef WITH_SENTRY
-    if (s_sentryInitialized) {
-        sentry_close();
-        s_sentryInitialized = false;
-    }
 #endif
 }
 
@@ -151,7 +138,10 @@ void crashIfRequested()
     const char* environmentVariable = std::getenv("MUDLET_CRASH_TEST");
 
     if (environmentVariable && *environmentVariable == '1') {
-        int* p = nullptr;
+        // volatile is important: a null write is undefined behaviour and
+        // clang -O2 deletes the branch without it, so the hook would do nothing
+        // on every Windows and macOS release.
+        volatile int* p = nullptr;
         *p = 42;
     }
 }

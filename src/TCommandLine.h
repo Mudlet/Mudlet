@@ -116,11 +116,13 @@ private:
     void enterCommand(QKeyEvent*);
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
+    bool keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent*) const;
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    int heightForRows(const int) const;
     void updatePasswordToggleButton();
     void positionPasswordToggleButton();
 

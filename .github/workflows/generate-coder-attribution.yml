@@ -21,9 +21,11 @@ jobs:
 
     steps:
     - name: Checkout Mudlet repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
+        # We are just reading the logs, so we don't need the files
+        filter: blob:none
 
     - name: Install Lua 5.1.5
       uses: leafo/gh-actions-lua@v13

@@ -34,6 +34,41 @@ private slots:
     QCOMPARE(stub.mHints[0], "áéíóúñ");
   }
 
+  // Attribute values must be decoded with the session encoding, not hardcoded
+  // UTF-8. On a Latin1 (ISO 8859-1) session, the href bytes "se\xF1or" are
+  // "señor" - decoding them as UTF-8 would corrupt the 0xF1 byte.
+  void testSendHrefNonUtf8FromMxpProcessor() {
+    TMxpStubClient stub;
+    stub.mEncoding = QByteArrayLiteral("ISO 8859-1");
+    TMxpProcessor processor(&stub);
+    processor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+
+    std::string input = "<SEND href=\"se\xF1or\">link</SEND>";
+    for (char &ch : input) {
+      processor.processMxpInput(ch, true);
+    }
+
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[señor]])");
+  }
+
+  // With no encoding negotiated yet (empty session encoding) attribute values
+  // must still decode as UTF-8, matching the historical default.
+  void testSendHrefEmptyEncodingDefaultsToUtf8() {
+    TMxpStubClient stub;
+    stub.mEncoding = QByteArray();
+    TMxpProcessor processor(&stub);
+    processor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+
+    std::string input = "<SEND href=\"áéíóúñ\">link</SEND>";
+    for (char &ch : input) {
+      processor.processMxpInput(ch, true);
+    }
+
+    QCOMPARE(stub.mHrefs.size(), 1);
+    QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+  }
+
   void testSendHrefUTF8() {
     // issue #4368
     QString input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
@@ -319,6 +354,31 @@ private slots:
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "west"); // Should be "west"
+  }
+
+  // MXP takes the menu's tooltip from the first hint when there are more hints
+  // than hrefs, so the excess has to be dropped from the end (#8382)
+  void testSendExcessHintsKeepTheFirstAsTooltip() {
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
+
+    auto startTag = parseNode(
+        R"(<SEND HREF="north|south" hint="Click for exits|Go north|Go south|Go nowhere">)");
+    auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
+
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("exits");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+    QCOMPARE(stub.mHrefs.size(), 2);
+    QCOMPARE(stub.mHints.size(), 3);
+    QCOMPARE(stub.mHints[0], "Click for exits");
+    QCOMPARE(stub.mHints[1], "Go north");
+    QCOMPARE(stub.mHints[2], "Go south");
   }
 };
 
