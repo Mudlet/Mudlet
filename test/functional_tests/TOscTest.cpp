@@ -1736,6 +1736,43 @@ private slots:
     QCOMPARE(console->buffer.getLinkIndexAt(afterLine, 0), 0);
   }
 
+  // A line break inside an OSC 8 sequence abandons it, which is right - honouring
+  // ECMA-48 and letting the payload run on would let one stray introducer black
+  // out the session. What was wrong is what became of the rest of the payload:
+  // "mple.com" was printed as game text, because the parser stopped discarding
+  // at the line ending.
+  void test_ALineBreakInsideAnOsc8SequenceShowsNoneOfTheUrl() {
+    injectData(qsl("B0 \x1b]8;;https://exa\nmple.com\x1b\\BTEXT\x1b]8;;\x1b\\ tail"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int lastLine = console->buffer.getLastLineNumber();
+    QStringList shown;
+    for (int line = qMax(0, lastLine - 3); line <= lastLine; ++line) {
+      shown << console->buffer.line(line).trimmed();
+    }
+
+    QVERIFY2(!shown.join(qsl("|")).contains(qsl("mple.com")), qPrintable(qsl("the URL's remainder was printed as game text: \"%1\"").arg(shown.join(qsl("|")))));
+    QVERIFY2(shown.join(qsl("|")).contains(qsl("BTEXT")), qPrintable(qsl("the text after the abandoned sequence went missing: \"%1\"").arg(shown.join(qsl("|")))));
+  }
+
+  // The swallowing is bounded, which is the whole reason a line ending abandons
+  // a sequence in the first place (#9765): a payload nothing ever terminates
+  // gives the game's text back after one payload's worth of bytes rather than
+  // blacking out the session.
+  void test_AnAbandonedSequenceThatIsNeverTerminatedGivesTextBack() {
+    const QString neverTerminated = QString(5000, QLatin1Char('x'));
+    injectData(qsl("C0 \x1b]8;;https://exa\n") + neverTerminated + qsl("\nVISIBLE AGAIN"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int lastLine = console->buffer.getLastLineNumber();
+    QStringList shown;
+    for (int line = qMax(0, lastLine - 4); line <= lastLine; ++line) {
+      shown << console->buffer.line(line).trimmed();
+    }
+
+    QVERIFY2(shown.join(qsl("|")).contains(qsl("VISIBLE AGAIN")), qPrintable(qsl("the game's text never came back: \"%1\"").arg(shown.join(qsl("|")).left(120))));
+  }
+
   void cleanupTestCase() {
     delete mpServer;
     mpServer = nullptr;
