@@ -51,7 +51,7 @@
 #include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
-.#include "TTextEdit.h"
+#include "TTextEdit.h"
 #include "TUiTour.h"
 #include "ctelnet.h"
 #include "mudlet.h"
