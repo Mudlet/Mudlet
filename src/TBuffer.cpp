@@ -537,8 +537,6 @@ TBuffer::TBuffer(const TBuffer& other)
 , mGotCSI(other.mGotCSI)
 , mGotOSC(other.mGotOSC)
 , mGotString(other.mGotString)
-, mAbandonedStringSequence(other.mAbandonedStringSequence)
-, mAbandonedStringSequenceBytes(other.mAbandonedStringSequenceBytes)
 , mIsDefaultColor(other.mIsDefaultColor)
 , mBlack(other.mBlack)
 , mLightBlack(other.mLightBlack)
@@ -585,8 +583,6 @@ TBuffer::TBuffer(const TBuffer& other)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
 , mLocalGotString(other.mLocalGotString)
-, mLocalAbandonedStringSequence(other.mLocalAbandonedStringSequence)
-, mLocalAbandonedStringSequenceBytes(other.mLocalAbandonedStringSequenceBytes)
 , mLocalIncompleteSequenceBytes(other.mLocalIncompleteSequenceBytes)
 , mProcessingLocalFeed(other.mProcessingLocalFeed)
 , lastLoggedFromLine(other.lastLoggedFromLine)
@@ -639,8 +635,6 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mGotCSI = other.mGotCSI;
         mGotOSC = other.mGotOSC;
         mGotString = other.mGotString;
-        mAbandonedStringSequence = other.mAbandonedStringSequence;
-        mAbandonedStringSequenceBytes = other.mAbandonedStringSequenceBytes;
         mIsDefaultColor = other.mIsDefaultColor;
         mBlack = other.mBlack;
         mLightBlack = other.mLightBlack;
@@ -687,8 +681,6 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
         mLocalGotString = other.mLocalGotString;
-        mLocalAbandonedStringSequence = other.mLocalAbandonedStringSequence;
-        mLocalAbandonedStringSequenceBytes = other.mLocalAbandonedStringSequenceBytes;
         mLocalIncompleteSequenceBytes = other.mLocalIncompleteSequenceBytes;
         mProcessingLocalFeed = other.mProcessingLocalFeed;
         lastLoggedFromLine = other.lastLoggedFromLine;
@@ -910,16 +902,12 @@ void TBuffer::resetSequenceParserState()
     mGotCSI = false;
     mGotOSC = false;
     mGotString = false;
-    mAbandonedStringSequence = false;
-    mAbandonedStringSequenceBytes = 0;
     mIncompleteSequenceBytes.clear();
     mLocalGotESC = false;
     mLocalGotEscCharset = false;
     mLocalGotCSI = false;
     mLocalGotOSC = false;
     mLocalGotString = false;
-    mLocalAbandonedStringSequence = false;
-    mLocalAbandonedStringSequenceBytes = 0;
     mLocalIncompleteSequenceBytes.clear();
     mWarnedAboutStringSequence = false;
 }
@@ -947,8 +935,6 @@ void TBuffer::swapParserSequenceState()
     std::swap(mGotCSI, mLocalGotCSI);
     std::swap(mGotOSC, mLocalGotOSC);
     std::swap(mGotString, mLocalGotString);
-    std::swap(mAbandonedStringSequence, mLocalAbandonedStringSequence);
-    std::swap(mAbandonedStringSequenceBytes, mLocalAbandonedStringSequenceBytes);
     std::swap(mIncompleteSequenceBytes, mLocalIncompleteSequenceBytes);
 }
 
@@ -1200,46 +1186,6 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // Any other byte is text: a stray ESC in the game's output must
             // not swallow it, and consuming a multibyte character's lead byte
             // would orphan its continuation bytes.
-        }
-
-        // A string sequence a line ending cut short, picked up again on the line
-        // that follows. Without this the rest of the payload - the tail of a
-        // URL, most often - was printed as game text, and the terminator that
-        // finally arrived vanished into the middle of a word. Bounded by the
-        // same byte cap the sequence itself has, counted across the lines it
-        // spans, so a stray introducer costs at most one payload's worth of
-        // text rather than the rest of the session that #9765 restored.
-        if (mAbandonedStringSequence && !endsStringSequence(ch) && ch != CHAR_CARRIAGE_RETURN) {
-            size_t spanEnd = localBufferPosition;
-            while (spanEnd < localBufferLength && mAbandonedStringSequenceBytes + (spanEnd - localBufferPosition) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07'
-                   && !endsStringSequence(localBuffer[spanEnd]) && !(spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\')) {
-                ++spanEnd;
-            }
-            mAbandonedStringSequenceBytes += spanEnd - localBufferPosition;
-
-            const bool endedWithBel = (spanEnd < localBufferLength && localBuffer[spanEnd] == '\x07');
-            const bool endedWithSt = (spanEnd < localBufferLength && spanEnd > 0 && localBuffer[spanEnd - 1] == '\033' && localBuffer[spanEnd] == '\\');
-
-            if (endedWithBel || endedWithSt) {
-                // The terminator the payload was waiting for: consumed here
-                // rather than shown, as it would have been had the line ending
-                // not interrupted it.
-                mAbandonedStringSequence = false;
-                mAbandonedStringSequenceBytes = 0;
-                localBufferPosition = spanEnd + 1;
-                continue;
-            }
-
-            if (mAbandonedStringSequenceBytes >= MAX_OSC_SEQUENCE_LENGTH) {
-                // Given up on: nothing is going to terminate this, and the only
-                // alternative is swallowing whatever the game sends next.
-                warnAboutDiscardedStringSequence(
-                        qsl("passed %1 bytes without a terminator, so what follows is treated as text again").arg(MAX_OSC_SEQUENCE_LENGTH), localBuffer, localBufferPosition, spanEnd);
-                mAbandonedStringSequence = false;
-                mAbandonedStringSequenceBytes = 0;
-            }
-            localBufferPosition = spanEnd;
-            continue;
         }
 
         if (mGotCSI) {
@@ -1517,11 +1463,6 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 warnAboutDiscardedStringSequence(qsl("was not terminated before the end of its line"), localBuffer, spanStart, spanEnd);
                 mGotOSC = false;
                 mGotString = false;
-                // Nothing is decoded from it, but what is left of the payload
-                // still belongs to the sequence rather than to the game's text,
-                // so the block above goes on swallowing it past this line.
-                mAbandonedStringSequence = true;
-                mAbandonedStringSequenceBytes = spanEnd - spanStart;
                 localBufferPosition = spanEnd;
                 continue;
             }

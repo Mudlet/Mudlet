@@ -571,11 +571,6 @@ private:
     // an OSC that grew past MAX_OSC_SEQUENCE_LENGTH so that only part of its
     // payload is still to hand:
     bool mGotString = false;
-    // A string sequence a line ending cut short: its payload goes on being
-    // swallowed on the lines that follow, up to the byte cap counted here,
-    // rather than being shown as the game's own text.
-    bool mAbandonedStringSequence = false;
-    size_t mAbandonedStringSequenceBytes = 0;
     // Keeps warnAboutDiscardedStringSequence() to one report per connection:
     bool mWarnedAboutStringSequence = false;
     bool mIsDefaultColor = true;
@@ -671,8 +666,6 @@ private:
     bool mLocalGotCSI = false;
     bool mLocalGotOSC = false;
     bool mLocalGotString = false;
-    bool mLocalAbandonedStringSequence = false;
-    size_t mLocalAbandonedStringSequenceBytes = 0;
     std::string mLocalIncompleteSequenceBytes;
     // Set whilst a locally generated feed is being processed, so a nested feed
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
