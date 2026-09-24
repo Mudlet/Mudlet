@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2026 by Mudlet Makers                                   *
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,33 +18,28 @@
  ***************************************************************************/
 
 /*
- * Why not a spec: viewportRoomBounds() has to be asked directly, because at the
- * zoom these cases cover the whole map is one pixel and nothing drawn differs
- * between the right answer and the wrong one; and loading a map file replaces
- * the map of the profile the specs share.
+ * The mapCenterSmallAreas option makes a paint centre the view on the area
+ * rather than on the player, when the whole area fits in the viewport.
  *
- * Both cases hang rather than fail when they regress, so what reports them is
- * the 60 second cap every functional test carries rather than an assertion.
+ * Why not a spec: the option is read from Mudlet.ini, and where the view ended
+ * up is mMapCenterX/mMapCenterY on the widget, which no Lua call reports.
  *
- * Run with: ctest -R MapCoordinateLimitTest -V
+ * Run with: ctest -R MapSmallAreaCenteringTest -V
  */
 
 #include <QPixmap>
-#include <QSaveFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include <climits>
-
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
 #include "TArea.h"
 #include "TMap.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -53,7 +48,7 @@
 
 #include "GroupedTest.h"
 
-class MapCoordinateLimitTest : public QObject
+class MapSmallAreaCenteringTest : public QObject
 {
     Q_OBJECT
 
@@ -62,20 +57,19 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
-    const QString mProfileName = qsl("MapCoordinateLimit-Test");
+    const QString mProfileName = qsl("MapSmallAreaCentering-Test");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
 
+    // Half again as wide as it is tall, so the two axes cannot be confused for
+    // each other: at this zoom the viewport holds 30 map units across and 20
+    // down.
     static constexpr int kWidgetWidth = 600;
     static constexpr int kWidgetHeight = 400;
-    // One pixel per room on a widget this tall, which puts the viewport's
-    // right-hand bound on the coordinate limit.
-    static constexpr double kOnePixelPerRoomZoom = 400.0;
-    // More occupied columns than the viewport at that zoom asks for, so the scan
-    // probes the columns it wants instead of walking the ones the area has. The
-    // margin is wide because how many it wants tracks the widget's width.
-    static constexpr int kOccupiedColumns = 2000;
-    static constexpr int kFarRoomId = 99999;
+    static constexpr double kZoom = 20.0;
+    static constexpr double kViewportUnitsAcross = kWidgetWidth / kZoom;
+    static constexpr double kViewportUnitsDown = kWidgetHeight / kZoom;
+    static constexpr int kPlayerRoomId = 1;
 
     TMap* map() const { return mpHost->mpMap.data(); }
 
@@ -89,30 +83,28 @@ private:
 
     bool addRoomAt(const int id, const int areaId, const int x, const int y) const { return map()->addRoom(id) && map()->setRoomArea(id, areaId) && map()->setRoomCoordinates(id, x, y, 0); }
 
-    // The player is left standing in the far room and the zoom is stored on the
-    // area, which is the state a saved map file carries.
-    int buildAreaWithARoomAtTheCoordinateLimit() const
+    // The player stands in the first room given, which is what decides where a
+    // paint that does not re-centre on the area leaves the view.
+    int buildArea(const QList<QPoint>& roomPositions) const
     {
         TMap* pMap = map();
         pMap->mapClear();
-        const int areaId = pMap->mpRoomDB->addArea(qsl("Coordinate Limit Area"));
+        const int areaId = pMap->mpRoomDB->addArea(qsl("Centering Area"));
         if (areaId <= 0) {
             return 0;
         }
-        for (int i = 0; i < kOccupiedColumns; ++i) {
-            if (!addRoomAt(i + 1, areaId, i, 0)) {
+        int roomId = kPlayerRoomId;
+        for (const QPoint& position : roomPositions) {
+            if (!addRoomAt(roomId++, areaId, position.x(), position.y())) {
                 return 0;
             }
         }
-        if (!addRoomAt(kFarRoomId, areaId, INT_MAX, 0)) {
-            return 0;
-        }
-        pMap->mRoomIdHash[pMap->mProfileName] = kFarRoomId;
+        pMap->mRoomIdHash[pMap->mProfileName] = kPlayerRoomId;
         TArea* pArea = pMap->mpRoomDB->getArea(areaId);
         if (!pArea) {
             return 0;
         }
-        pArea->set2DMapZoom(kOnePixelPerRoomZoom);
+        pArea->set2DMapZoom(kZoom);
         return areaId;
     }
 
@@ -128,11 +120,14 @@ private:
         T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
         p2dMap->init();
         p2dMap->resize(kWidgetWidth, kWidgetHeight);
-        // Both false is what makes paintEvent() centre on the player room and
-        // pick up the area and zoom the map file brought with it.
+        // Both false is what lets paintEvent() centre on the player room and
+        // pick up the area and zoom the rooms were given.
         p2dMap->mShiftMode = false;
         p2dMap->mPick = false;
         p2dMap->mMultiSelectionSet.clear();
+        p2dMap->mMapCenterX = 0.0;
+        p2dMap->mMapCenterY = 0.0;
+        p2dMap->mMapCenterZ = 0;
         return p2dMap;
     }
 
@@ -141,6 +136,22 @@ private:
         QPixmap target(kWidgetWidth, kWidgetHeight);
         target.fill(Qt::black);
         p2dMap->render(&target, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+        // paintEvent() works the viewport extents out for itself, so pin them
+        // against what the cases below assume rather than trusting the constants
+        QCOMPARE(static_cast<double>(p2dMap->mRoomWidth), kWidgetWidth / kViewportUnitsAcross);
+        QCOMPARE(static_cast<double>(p2dMap->mRoomHeight), kWidgetHeight / kViewportUnitsDown);
+    }
+
+    // The published span is in screen coordinates - the negated room y - so an
+    // area's height is read off the same values the paint works from.
+    void verifyAreaSpan(const int areaId, const double expectedWidth, const double expectedHeight) const
+    {
+        const TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        QVERIFY(pArea->xminForZ.contains(0));
+        QVERIFY(pArea->yminForZ.contains(0));
+        QCOMPARE(static_cast<double>(pArea->xmaxForZ.value(0) - pArea->xminForZ.value(0)), expectedWidth);
+        QCOMPARE(static_cast<double>(pArea->ymaxForZ.value(0) - pArea->yminForZ.value(0)), expectedHeight);
     }
 
 private slots:
@@ -173,6 +184,7 @@ private slots:
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
         QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        mpHost->mMapperCenterSmallAreas = true;
     }
 
     void cleanupTestCase()
@@ -187,96 +199,56 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    void test_theViewportCoversEveryCoordinateWhenARoomIsZeroPixelsAcross_data()
+    // An area narrow enough to fit across a wide mapper but far too tall for it
+    // used to be centred sideways anyway, which put the player hard against one
+    // edge of a view that was still following them (#8869).
+    void test_anAreaTallerThanTheViewportIsNotRecentredSideways()
     {
-        QTest::addColumn<float>("panOffset");
+        static constexpr double kAreaWidth = 10.0;
+        static constexpr double kAreaHeight = 40.0;
+        static_assert(kAreaWidth <= kViewportUnitsAcross, "the area has to fit across the viewport for this case to arise");
+        static_assert(kAreaHeight > kViewportUnitsDown, "the area has to be taller than the viewport for this case to arise");
 
-        // paintEvent() clamps its pan offset, so a NaN one reaches here as
-        // INT_MIN on every platform.
-        QTest::newRow("the pan offset a clamped NaN produces") << static_cast<float>(INT_MIN);
-        QTest::newRow("no pan") << 0.0f;
-        QTest::newRow("panned past the widget") << 1000.0f;
-    }
-
-    void test_theViewportCoversEveryCoordinateWhenARoomIsZeroPixelsAcross()
-    {
-        QFETCH(float, panOffset);
-
-        const QRect bounds = T2DMap::viewportRoomBounds(panOffset, panOffset, 0.0f, 0.0f, kWidgetWidth, kWidgetHeight);
-
-        // left/right/top/bottom rather than width() and height(), which the
-        // whole range overflows
-        QCOMPARE(bounds.left(), INT_MIN);
-        QCOMPARE(bounds.right(), INT_MAX);
-        QCOMPARE(bounds.top(), INT_MIN);
-        QCOMPARE(bounds.bottom(), INT_MAX);
-    }
-
-    void test_theViewportStaysNarrowAtAnOrdinaryZoom()
-    {
-        const QRect bounds = T2DMap::viewportRoomBounds(kWidgetWidth / 2.0f, kWidgetHeight / 2.0f, 20.0f, 20.0f, kWidgetWidth, kWidgetHeight);
-
-        QCOMPARE(bounds.left(), -16);
-        QCOMPARE(bounds.right(), 16);
-        QCOMPARE(bounds.top(), -11);
-        QCOMPARE(bounds.bottom(), 11);
-    }
-
-    void test_aMapFileHoldingARoomAtTheCoordinateLimitIsPaintedWhenItIsLoadedBack()
-    {
-        const int areaId = buildAreaWithARoomAtTheCoordinateLimit();
+        const int areaId = buildArea({QPoint(10, 0), QPoint(0, 0), QPoint(10, 40)});
         QVERIFY2(areaId > 0, "the area under test could not be built");
+        verifyAreaSpan(areaId, kAreaWidth, kAreaHeight);
 
-        const QString fileName = qsl("%1/coordinate-limit-map.dat").arg(mConfigDir.path());
-        QSaveFile file(fileName);
-        QVERIFY(file.open(QIODevice::WriteOnly));
-        QDataStream out(&file);
-        out.setVersion(QDataStream::Qt_5_12);
-        QVERIFY2(map()->serialize(out, map()->mDefaultVersion), "the map under test could not be saved");
-        QVERIFY(file.commit());
+        T2DMap* p2dMap = preparedWidget();
+        QVERIFY2(p2dMap, "the profile's mapper could not be created");
+        // The expected centre is also where a paint that never centred at all
+        // would leave it, so these say the centring really was on offer
+        QVERIFY(mpHost->mMapperCenterSmallAreas);
+        QVERIFY(!p2dMap->mMultiSelection);
+        QVERIFY(!p2dMap->mRoomBeingMoved);
+        renderFrame(p2dMap);
 
-        map()->mapClear();
-        QVERIFY2(map()->restore(fileName), "the map under test could not be read back");
+        // Where the player is, not the middle of the area's 0 to 10 span.
+        QCOMPARE(p2dMap->mMapCenterX, 10.0);
+        QCOMPARE(p2dMap->mMapCenterY, 0.0);
+    }
 
-        // Checked before the paint rather than after it: a paint that never
-        // returns reports nothing at all.
-        const TRoom* pFarRoom = map()->mpRoomDB->getRoom(kFarRoomId);
-        QVERIFY2(pFarRoom, "the room at the coordinate limit did not survive the save and load");
-        QCOMPARE(pFarRoom->x(), INT_MAX);
-        QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), kFarRoomId);
-        const TArea* pArea = map()->mpRoomDB->getArea(pFarRoom->getArea());
-        QVERIFY(pArea);
-        QCOMPARE(pArea->get2DMapZoom(), kOnePixelPerRoomZoom);
+    // TArea publishes its y bounds in screen coordinates, so paintEvent()
+    // negates them into room coordinates and has to negate the midpoint back
+    // again to land on a screen-coordinate centre. Leaving that last negation
+    // off put an area that did not straddle the origin twice its own offset
+    // away from where it belonged (#8814).
+    void test_aSmallAreaAwayFromTheOriginCentresOnWhereItsRoomsAre()
+    {
+        const int areaId = buildArea({QPoint(0, 10), QPoint(4, 14)});
+        QVERIFY2(areaId > 0, "the area under test could not be built");
+        verifyAreaSpan(areaId, 4.0, 4.0);
 
         T2DMap* p2dMap = preparedWidget();
         QVERIFY2(p2dMap, "the profile's mapper could not be created");
         renderFrame(p2dMap);
 
-        // Reached at all is the point: a paint whose scan never returns never
-        // gets here.
-        QCOMPARE(p2dMap->mAreaID, pFarRoom->getArea());
-    }
-
-    // The Y axis, not the X one: an unchecked conversion lands on INT_MIN at
-    // either end, and only Y overflows upward for a room at the limit, so only
-    // Y tells a clamped paint from an unclamped one where Qt's assertions are
-    // compiled out.
-    void test_theViewOriginIsClampedForARoomAtTheCoordinateLimit()
-    {
-        TMap* pMap = map();
-        pMap->mapClear();
-        const int areaId = pMap->mpRoomDB->addArea(qsl("Y Coordinate Limit Area"));
-        QVERIFY2(areaId > 0, "the area under test could not be built");
-        QVERIFY2(addRoomAt(kFarRoomId, areaId, 0, INT_MAX), "the room at the coordinate limit could not be added");
-        pMap->mRoomIdHash[pMap->mProfileName] = kFarRoomId;
-
-        T2DMap* p2dMap = preparedWidget();
-        QVERIFY2(p2dMap, "the profile's mapper could not be created");
-        renderFrame(p2dMap);
-
-        QCOMPARE(p2dMap->mRY, INT_MAX);
+        // Rooms at y 10 and 14 are drawn at screen y -10 and -14, so the middle
+        // of them is -12 - and not the -10 that following the player alone
+        // would have given, which is what says the centring ran at all.
+        QCOMPARE(p2dMap->mMapCenterX, 2.0);
+        QCOMPARE(p2dMap->mMapCenterY, -12.0);
     }
 };
 
-#include "MapCoordinateLimitTest.moc"
-MUDLET_GROUPED_TEST_MAIN(MapCoordinateLimitTest)
+#include "MapSmallAreaCenteringTest.moc"
+MUDLET_GROUPED_TEST_MAIN(MapSmallAreaCenteringTest)

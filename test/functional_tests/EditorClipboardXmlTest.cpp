@@ -51,6 +51,7 @@
 #include "TriggerUnit.h"
 #include "ctelnet.h"
 #include "dlgTriggerEditor.h"
+#include "dlgTriggersMainArea.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -368,6 +369,40 @@ private slots:
 
         mpEditor->mpUndoStack->redo();
         QCOMPARE(countNamed(EditorViewType::cmTriggerView, qsl("qaClipTrigger")), before + 1);
+    }
+
+    // A script creating an item rebuilds the editor's trees, which used to leave
+    // it with no view recorded until the next view button was pressed - and copy
+    // and paste both read that unset view: copy silently did nothing, and paste
+    // silently threw away the edit open in the form (#9421).
+    void test_copyAndPasteWorkWhileNoViewIsRecorded()
+    {
+        // the rest of the paste saves the form belonging to the pasted item, so
+        // copy an alias: only the save that runs before the paste can then reach
+        // the pending trigger edit below
+        mpEditor->slot_showAliases();
+        QVERIFY(selectInTree(EditorViewType::cmAliasView, {qsl("qaClipAlias")}));
+        QApplication::clipboard()->clear();
+
+        mpEditor->mCurrentView = EditorViewType::cmUnknownView;
+        mpEditor->slot_copyXml();
+        QVERIFY2(QApplication::clipboard()->text().contains(qsl("<AliasPackage>")), "nothing was copied while the editor had no view recorded");
+
+        mpEditor->slot_showTriggers();
+        QVERIFY(selectInTree(EditorViewType::cmTriggerView, {qsl("qaClipTrigger")}));
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(pItem, "nothing is selected in the triggers tree to type into");
+        mpEditor->slot_triggerSelected(pItem);
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY2(pTrigger, "the selected row does not stand for a trigger");
+        mpEditor->mpTriggersMainArea->lineEdit_trigger_command->setText(qsl("qaPendingEdit"));
+
+        const int before = countNamed(EditorViewType::cmAliasView, qsl("qaClipAlias"));
+        mpEditor->mCurrentView = EditorViewType::cmUnknownView;
+        mpEditor->slot_pasteXml();
+
+        QCOMPARE(countNamed(EditorViewType::cmAliasView, qsl("qaClipAlias")), before + 1);
+        QCOMPARE(pTrigger->getCommand(), qsl("qaPendingEdit"));
     }
 };
 

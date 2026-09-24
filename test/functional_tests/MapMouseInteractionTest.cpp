@@ -1643,6 +1643,25 @@ private slots:
         QCOMPARE(linePoints(), lineAsDrawn());
     }
 
+    // A point stays selected once the left button is released, so that the
+    // context menu can act on it. Every later move over the map therefore has
+    // to be told apart from a drag of that point by which button is held down
+    // (#8397).
+    void test_aSelectedPointIsOnlyDraggedByTheLeftButton()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 4));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+
+        // the right button held down on the way to the point's context menu
+        sendMouse(QEvent::MouseMove, pointUnitsFromCentre(2, 4), Qt::NoButton, Qt::RightButton, Qt::NoModifier);
+
+        QCOMPARE(linePoints(), lineAsDrawn());
+    }
+
     void test_theMenuOnASelectedLineCanDeleteIt()
     {
         buildMap();
