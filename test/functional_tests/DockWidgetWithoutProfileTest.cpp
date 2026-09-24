@@ -28,6 +28,8 @@
 #include <QCloseEvent>
 #include <QCoreApplication>
 #include <QDir>
+#include <QMoveEvent>
+#include <QResizeEvent>
 #include <QTemporaryDir>
 #include <QWidget>
 #include <QtTest/QtTest>
@@ -59,10 +61,9 @@ private slots:
     void test_aDockWidgetHidesItselfWhenItsProfileIsGone()
     {
         // A parent that is never shown, so no window is ever created for the
-        // dock and Qt sends it no resize or move - TDockWidget still walks
-        // into its profile unguarded in both of those. Declared first, so the
-        // dock is destroyed first and unparents itself; the other order is a
-        // double free.
+        // dock and the hide is the only thing under test here. Declared first,
+        // so the dock is destroyed first and unparents itself; the other order
+        // is a double free.
         QWidget parent;
         TDockWidget dock(nullptr, qsl("userwindow"));
         dock.setParent(&parent);
@@ -86,6 +87,24 @@ private slots:
         QCoreApplication::sendEvent(&dock, &event);
 
         QVERIFY2(event.isAccepted(), "the close was turned down, with no profile left to hide the user window on");
+    }
+
+    // A dock that is resized or moved after its profile has gone used to report
+    // the layout change to a profile that was no longer there.
+    void test_aDockWidgetTakesAResizeWhenItsProfileIsGone()
+    {
+        TDockWidget dock(nullptr, qsl("userwindow"));
+        QResizeEvent event(QSize(200, 100), QSize(100, 50));
+
+        QVERIFY2(QCoreApplication::sendEvent(&dock, &event), "the resize never reached the dock");
+    }
+
+    void test_aDockWidgetTakesAMoveWhenItsProfileIsGone()
+    {
+        TDockWidget dock(nullptr, qsl("userwindow"));
+        QMoveEvent event(QPoint(10, 10), QPoint(0, 0));
+
+        QVERIFY2(QCoreApplication::sendEvent(&dock, &event), "the move never reached the dock");
     }
 
     // The other half of the same hide guard: the profile is still there but its
