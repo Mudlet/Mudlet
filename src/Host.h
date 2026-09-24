@@ -393,6 +393,13 @@ public:
 
     void updateDisplayDimensions();
 
+    // When the bool is false the string is why the install was refused. When it
+    // is true the install was either carried out or - if a profile save was
+    // running - queued to be carried out later, and the string names each item
+    // of the package whose Lua did not work, as "<item name>: <error>". An empty
+    // string alongside true therefore means "nothing to add about its Lua", not
+    // "all well": a queued install, a config.lua that could not be read and an
+    // XML that stopped part-way report themselves on the console instead.
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
@@ -989,8 +996,6 @@ public:
     QMap<QString, QStringList> mConsoleActions;
 
     std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
-
-    bool mTutorialForCompactLineAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;

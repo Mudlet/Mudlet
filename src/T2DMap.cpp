@@ -1820,15 +1820,15 @@ QSize T2DMap::lodRoomBlobSize() const
     return QSize(qMax(1, qRound(mRoomWidth * rSize)), qMax(1, qRound(mRoomHeight * rSize)));
 }
 
-// A room coordinate as far out as this range can reach, which is further than
-// any room can be: the caller only asks the grid index about it, and the index
-// holds room coordinates, which are ints. The clamp is what keeps the cast
-// defined - a zoom has no upper bound, and at a ten-millionth of a pixel per
-// room the range is billions of cells wide, which a double holds and an int
-// does not.
-static int clampedRoomCoordinate(const double coordinate)
+// A double brought into the int range, which is the range the cast to int is
+// defined over. Callers can exceed it: a zoom has no upper bound, so at a
+// ten-millionth of a pixel per room the viewport spans billions of cells, and
+// the map's pixel origin scales the centre room coordinate, which a map can put
+// at INT_MAX, by how many pixels a room is drawn as. A NaN - which a zoom far
+// enough out makes of that product, as 0 * inf - comes back as the lower bound.
+static int clampedToIntRange(const double value)
 {
-    return static_cast<int>(qBound(static_cast<double>(INT_MIN), coordinate, static_cast<double>(INT_MAX)));
+    return static_cast<int>(qBound(static_cast<double>(INT_MIN), value, static_cast<double>(INT_MAX)));
 }
 
 // The inclusive range of room coordinates that can put a room on screen, given
@@ -1853,10 +1853,10 @@ QRect T2DMap::viewportRoomBounds(const float rx0, const float ry0, const float r
     if (!(roomWidth > 0.0f) || !(roomHeight > 0.0f)) {
         return QRect(QPoint(INT_MIN, INT_MIN), QPoint(INT_MAX, INT_MAX));
     }
-    const int minX = clampedRoomCoordinate(std::floor(static_cast<double>(-rx0) / roomWidth) - 1.0);
-    const int maxX = clampedRoomCoordinate(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth) + 1.0);
-    const int minY = clampedRoomCoordinate(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight) - 1.0);
-    const int maxY = clampedRoomCoordinate(std::ceil(static_cast<double>(ry0) / roomHeight) + 1.0);
+    const int minX = clampedToIntRange(std::floor(static_cast<double>(-rx0) / roomWidth) - 1.0);
+    const int maxX = clampedToIntRange(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth) + 1.0);
+    const int minY = clampedToIntRange(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight) - 1.0);
+    const int maxY = clampedToIntRange(std::ceil(static_cast<double>(ry0) / roomHeight) + 1.0);
     return QRect(QPoint(minX, minY), QPoint(maxX, maxY));
 }
 
@@ -2779,8 +2779,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
         mPrevRoomHeight = mRoomHeight;
     }
 
-    mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
-    mRY = qRound(mRoomHeight * ((yspan / 2.0) - mMapCenterY));
+    // std::round() rather than qRound(), which returns an int and so would
+    // overflow before the clamp could act on it.
+    mRX = clampedToIntRange(std::round(mRoomWidth * ((xspan / 2.0) - mMapCenterX)));
+    mRY = clampedToIntRange(std::round(mRoomHeight * ((yspan / 2.0) - mMapCenterY)));
     const QRect roomBounds = viewportRoomBounds(mRX, mRY, mRoomWidth, mRoomHeight, widgetWidth, widgetHeight);
     QFont roomVNumFont = mpMap->mMapSymbolFont;
 

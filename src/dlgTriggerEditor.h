@@ -110,6 +110,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     // Allow QTest-based test classes to access private members
     friend class AddonControlsTest;
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
     friend class EditorSearchTest;
@@ -117,6 +118,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class ScriptEventHandlerLifetimeTest;
     friend class TreeWidgetItemMoveTest;
     friend class TriggerEditorDisclosureTest;
+    friend class TriggerEditorTest;
     friend class TriggerPatternListLayoutTest;
     friend class VariableEditorWriteBackTest;
 
@@ -458,6 +460,7 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
+    void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
 
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -755,8 +758,45 @@ private:
     QSet<int> mPendingTriggerIconRefresh;
     bool mTriggerIconRefreshQueued = false;
     void flushPendingTriggerIconRefresh();
-    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
-    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT);
+    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bool touchNotification);
+
+    // Same coalescing as mPendingTriggerIconRefresh, for the other four unit
+    // types refreshXIcon() covers. The Flush/Paint counters exist only for
+    // TriggerEditorTest, to prove the queue collapses N pending toggles into
+    // one flush and that paintXItem() skips a setIcon() the cacheKey() guard
+    // finds unchanged, rather than just the end state those produce either way.
+    QSet<int> mPendingAliasIconRefresh;
+    bool mAliasIconRefreshQueued = false;
+    int mAliasIconFlushCount = 0;
+    int mAliasIconPaintCount = 0;
+    void flushPendingAliasIconRefresh();
+    void refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification);
+
+    QSet<int> mPendingTimerIconRefresh;
+    bool mTimerIconRefreshQueued = false;
+    int mTimerIconFlushCount = 0;
+    int mTimerIconPaintCount = 0;
+    void flushPendingTimerIconRefresh();
+    void refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT, bool touchNotification);
+
+    QSet<int> mPendingScriptIconRefresh;
+    bool mScriptIconRefreshQueued = false;
+    int mScriptIconFlushCount = 0;
+    int mScriptIconPaintCount = 0;
+    void flushPendingScriptIconRefresh();
+    void refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintScriptItem(QTreeWidgetItem* pItem, TScript* pT, bool touchNotification);
+
+    QSet<int> mPendingKeyIconRefresh;
+    bool mKeyIconRefreshQueued = false;
+    int mKeyIconFlushCount = 0;
+    int mKeyIconPaintCount = 0;
+    void flushPendingKeyIconRefresh();
+    void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touchNotification);
 
     // One QIcon per resource path: a tree of thousands of items would otherwise
     // decode the same handful of PNGs once per item, every time it is rebuilt
@@ -865,6 +905,7 @@ private:
     QString descNewFolder;
     QString descNewItem;
     QString descPackageItem;
+    QString descKeyTaken;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
