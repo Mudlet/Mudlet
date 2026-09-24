@@ -85,6 +85,7 @@ private slots:
     void testARefusalForOneProfileDoesNotSkipTheStoreForAnother();
     void testATrimmedLookupStillFindsTheProfilesOwnCopy();
     void testForgettingSaysSoWhenTheKeychainCopyRemains();
+    void testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain();
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
 
 private:
@@ -394,6 +395,19 @@ public:
     {
         mShouldStall = [this, n](QKeychain::Job* job) {
             return qobject_cast<T*>(job) && mSeen++ == n;
+        };
+    }
+
+    // Stalls several jobs of type T by index, counting from zero, so a test can let the store
+    // answer one read and refuse the two after it
+    template <typename T>
+    void stallNths(const QList<int>& indices)
+    {
+        mShouldStall = [this, indices](QKeychain::Job* job) {
+            if (!qobject_cast<T*>(job)) {
+                return false;
+            }
+            return indices.contains(mSeen++);
         };
     }
 
@@ -1452,6 +1466,33 @@ void CredentialManagerKeychainTest::testForgettingSaysSoWhenTheKeychainCopyRemai
     QVERIFY2(!removed, "a keychain copy that could not be removed was reported as forgotten");
     QVERIFY2(reported.contains(QStringLiteral("keychain")), qPrintable(QStringLiteral("the failure does not say where the credential still is: %1").arg(reported)));
     QVERIFY2(reported.contains(QStringLiteral("synthetic: this entry will not be deleted")), qPrintable(QStringLiteral("the keychain's own reason was dropped: %1").arg(reported)));
+}
+
+// Once the store has answered a read it is unlocked, so every refusal after that is one entry's
+// own however many of them arrive - and the password may be in a layout behind them. Two in a row
+// must not be read as a locked store here, which is what separates "nothing has answered" from
+// "this entry will not answer" (raised in review of #11031).
+void CredentialManagerKeychainTest::testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain()
+{
+    JobStaller staller;
+    // The first read answers, the two after it refuse
+    staller.stallNths<QKeychain::ReadPasswordJob>({1, 2});
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    for (int refusal = 0; refusal < 2; ++refusal) {
+        QKeychain::Job* refused = staller.waitForStalled(refusal);
+        QVERIFY(refused);
+        JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: this entry will not answer"));
+    }
+
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(staller.reads().size() == expectedReads(mProfile, mKey).size(),
+             qPrintable(QStringLiteral("the chain stopped after two refusals although the store had already answered: %1 of %2 layouts were read")
+                                .arg(staller.reads().size())
+                                .arg(expectedReads(mProfile, mKey).size())));
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
