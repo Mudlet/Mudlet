@@ -105,7 +105,10 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
         if (mMapWidget.mMoveLabel) {
             mMapWidget.mMoveLabel = false;
             context.isMoveLabelActive = false;
-            mMapWidget.setMouseTracking(false);
+            // The label-move drag turned mouse tracking on; turn it back off
+            // unless room hover tooltips are enabled (delay > 0), in which case
+            // tracking stays on so hovering keeps working after the move.
+            mMapWidget.setMouseTracking(mMapWidget.roomHoverEnabled());
             mMapWidget.mLabelHighlighted = false;
             context.isLabelHighlighted = false;
             mMapWidget.mHelpMsg.clear();
@@ -244,6 +247,15 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
 bool LabelInteractionHandler::handleMouseMove(T2DMap::MapInteractionContext& context) const
 {
     if (!mMapWidget.mpMap || !mMapWidget.mpMap->mpRoomDB) {
+        return false;
+    }
+
+    // Relocate highlighted labels only on an actual drag: either an active
+    // "Move label" operation (which drives no-button moves via mouse tracking)
+    // or a classic button-held drag. Plain hovering - which only reaches here
+    // because room hover tooltips keep mouse tracking on - must NOT move or
+    // mark-as-unsaved a label the user merely clicked to highlight.
+    if (!mMapWidget.mMoveLabel && !(context.buttons & Qt::LeftButton)) {
         return false;
     }
 
