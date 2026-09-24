@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "mudlet.h"
 #include "CredentialManager.h"
 #include "MudletPaths.h"
 #include "SecureStringUtils.h"
@@ -39,6 +40,7 @@
 #include <QTimer>
 #include <QVersionNumber>
 
+#include <optional>
 #include <memory>
 #include <utility>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
@@ -320,6 +322,25 @@ bool CredentialManager::isOperationValid() const
     return hasCallbacks;
 }
 
+/*static*/ std::optional<bool>& CredentialManager::profileStorageOverrideForTesting()
+{
+    static std::optional<bool> override;
+    return override;
+}
+
+/*static*/ std::optional<bool> CredentialManager::profileStoragePreferred()
+{
+    if (const std::optional<bool>& override = profileStorageOverrideForTesting(); override.has_value()) {
+        return override;
+    }
+    // No instance in a unit test, and nothing to read the preference from - the caller's own default
+    // stands, which keeps this the keychain as it was
+    if (!mudlet::self()) {
+        return std::nullopt;
+    }
+    return !mudlet::self()->storingPasswordsSecurely();
+}
+
 bool CredentialManager::isPortableModeActive() const
 {
     // Two stats: this runs on every credential operation, and resolving the
@@ -334,6 +355,16 @@ bool CredentialManager::shouldUseKeychain(const QString& profileName) const
     // If portable mode is active, prefer SecureStringUtils for portability
     if (isPortableModeActive()) {
         qDebug() << "CredentialManager: Using encrypted storage (portable mode)";
+        return false;
+    }
+
+    // The player's own choice, from Preferences -> Store passwords in. Profile passwords have always
+    // honoured it - Host::loadSecuredPassword() against readProfileData() - while everything stored
+    // through here, the Char.Login reconnect token above all, went to the keychain whatever it said.
+    // On a desktop keychain that meant prompts for a store the player had asked Mudlet not to use
+    // (#11029).
+    if (profileStoragePreferred().value_or(false)) {
+        qDebug() << "CredentialManager: Using encrypted storage (the profile is the chosen place for passwords)";
         return false;
     }
 
@@ -917,39 +948,29 @@ void CredentialManager::removePassword(const QString& profileName, const QString
 
         removeCredential(service, key, profileName, combinedCallback);
     } else {
-        // Use SecureStringUtils
-        bool success = removeCredentialFromFile(profileName, key);
+        // The file is where the preference says this credential lives, and it is cleared whatever
+        // the keychain does below
+        const bool success = removeCredentialFromFile(profileName, key);
+
+        // A credential this profile stored before the preference changed is still in the keychain,
+        // and forgetting has to mean forgetting: the entry is unreachable by every other path once
+        // the preference points at the file, so nothing else would ever clear it. Best effort -
+        // removal is something the player asked for, so a prompt here is theirs to answer, and a
+        // keychain that refused a read moments ago is left alone rather than asked again.
+        if (!storeRefusedRecently()) {
+            const QString service = generateServiceName(profileName, key);
+            removeCredential(service, key, profileName, [profileName](bool keychainSuccess, const QString& keychainError) {
+                if (!keychainSuccess) {
+                    qDebug().noquote() << "CredentialManager: nothing removed from the keychain for profile" << profileName << "-" << keychainError
+                                       << "- the copy the profile keeps is what the preference asks for";
+                }
+            });
+        }
 
         if (callback) {
             callback(success, success ? QString() : qsl("Failed to remove password with SecureStringUtils"));
         }
     }
-}
-
-void CredentialManager::migratePassword(const QString& profileName, const QString& key, const QString& plaintextPassword, CredentialCallback callback)
-{
-    if (profileName.isEmpty() || key.isEmpty() || plaintextPassword.isEmpty()) {
-        if (callback) {
-            callback(false, qsl("Profile name, key, and password cannot be empty"));
-        }
-
-        return;
-    }
-
-    // Safety check: Don't start new operations during shutdown
-    if (QCoreApplication::closingDown()) {
-        qWarning() << "CredentialManager: Rejecting migratePassword operation during shutdown";
-
-        if (callback) {
-            callback(false, qsl("Application is shutting down"));
-        }
-        return;
-    }
-
-    qDebug() << "CredentialManager: Migrating plaintext password to encrypted storage for profile" << profileName << "key" << key;
-
-    // Store the password using our hybrid approach
-    storePassword(profileName, key, plaintextPassword, callback);
 }
 
 void CredentialManager::storeCredential(const QString& service, const QString& account, const QString& password, const QString& profileName, CredentialCallback callback)

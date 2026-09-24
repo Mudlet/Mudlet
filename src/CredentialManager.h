@@ -26,6 +26,7 @@
 #include <QPointer>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 class QTimer;
@@ -104,8 +105,6 @@ private:
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);
 
-    // Password migration method - migrates plaintext passwords to encrypted storage
-    void migratePassword(const QString& profileName, const QString& key, const QString& plaintextPassword, CredentialCallback callback);
     static constexpr int OPERATION_TIMEOUT_MS = 30000; // 30 seconds
 
     // Portable mode detection
@@ -187,6 +186,13 @@ private:
     // Forgets the refusal window. Process-wide state outlives one test, and a case that refuses a
     // read would otherwise decide what the cases after it are allowed to ask the store.
     static void forgetStoreRefusal();
+
+    // Whether the player asked for passwords to be kept in the profile rather than in secure
+    // storage. Empty when there is nothing to ask - a unit test with no mudlet instance - so the
+    // caller keeps its own default.
+    static std::optional<bool> profileStoragePreferred();
+    // Test-only: stands in for that preference where there is no mudlet to read it from.
+    static std::optional<bool>& profileStorageOverrideForTesting();
     static bool storeRefusedRecently();
     static void noteStoreRefusal();
     static constexpr int scmStoreRefusalCooldownMs = 30000;

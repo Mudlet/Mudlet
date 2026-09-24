@@ -81,6 +81,7 @@ private slots:
     void testAKeychainErrorIsReportedRatherThanNothingFound();
     void testAStoreThatRefusesIsNotAskedForEveryOtherLayout();
     void testAFreshRefusalSparesTheNextLookupTheStore();
+    void testTheProfileStoragePreferenceKeepsTheKeychainOutOfIt();
 
 private:
     QTemporaryDir mConfigDir;
@@ -546,6 +547,7 @@ void CredentialManagerKeychainTest::init()
     // Process-wide, so a case that had a read refused would otherwise trim the chain of the
     // cases after it
     CredentialManager::forgetStoreRefusal();
+    CredentialManager::profileStorageOverrideForTesting().reset();
     const QString runId = QUuid::createUuid().toString(QUuid::Id128).left(8);
     mProfile = QStringLiteral("MudletKCTest-%1").arg(runId);
     mKey = QStringLiteral("kctest_%1").arg(runId);
@@ -1232,6 +1234,45 @@ void CredentialManagerKeychainTest::testAFreshRefusalSparesTheNextLookupTheStore
     QVERIFY(waitForAnswer(secondAnswer));
     QVERIFY(!secondAnswer->success);
     QVERIFY2(secondStaller.reads().isEmpty(), "the store was asked again moments after refusing, so the player is prompted twice");
+}
+
+// With the profile chosen as the place for passwords, nothing here may reach for the keychain:
+// that is what SlySven's setting asks for, and on his desktop every read of it costs a wallet
+// prompt. Stored, read back and removed without a single keychain job (#11029).
+void CredentialManagerKeychainTest::testTheProfileStoragePreferenceKeepsTheKeychainOutOfIt()
+{
+    CredentialManager::profileStorageOverrideForTesting() = true;
+    const QString secret = QStringLiteral("token-that-stays-in-the-profile");
+
+    JobStaller watcher;
+    watcher.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+
+    bool stored = false;
+    bool storeAnswered = false;
+    manager.storePassword(mProfile, mKey, secret, [&stored, &storeAnswered](bool success, const QString&) {
+        stored = success;
+        storeAnswered = true;
+    });
+    QTRY_VERIFY(storeAnswered);
+    QVERIFY(stored);
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(answer->success, qPrintable(QStringLiteral("the profile's own copy was not read back: %1").arg(answer->error)));
+    QCOMPARE(answer->password, secret);
+
+    bool removed = false;
+    bool removeAnswered = false;
+    manager.removePassword(mProfile, mKey, [&removed, &removeAnswered](bool success, const QString&) {
+        removed = success;
+        removeAnswered = true;
+    });
+    QTRY_VERIFY(removeAnswered);
+    QVERIFY(removed);
+
+    QVERIFY2(watcher.reads().isEmpty(), "the keychain was read although the player asked for passwords to be kept in the profile");
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
