@@ -54,6 +54,10 @@ class CredentialManagerKeychainTest : public QObject
 {
     Q_OBJECT
 
+public:
+    // Public, or QTEST_GUILESS_MAIN does not find it and silently skips it
+    static void initMain();
+
 private slots:
     void initTestCase();
     void init();
@@ -514,6 +518,19 @@ bool waitForAnswer(const std::shared_ptr<Answer>& answer, int timeoutMs = kWaitM
 
 Q_DECLARE_METATYPE(QKeychain::Error)
 
+// Called by QTEST_GUILESS_MAIN before it creates the application object, which is where Qt picks the
+// event dispatcher
+void CredentialManagerKeychainTest::initMain()
+{
+#if defined(Q_OS_MACOS)
+    // QtKeychain's Apple backend answers every job on the main dispatch queue, which only a Core
+    // Foundation run loop drains. QCoreApplication's default event dispatcher on macOS runs none, so no
+    // job that reached the keychain would ever answer here and every test that needs the store would
+    // skip. Mudlet itself is unaffected: a GUI application's dispatcher runs one.
+    qputenv("QT_EVENT_DISPATCHER_CORE_FOUNDATION", "1");
+#endif
+}
+
 void CredentialManagerKeychainTest::initTestCase()
 {
     // CredentialManagerTest forces file storage via this variable; this test exists to
@@ -532,7 +549,14 @@ void CredentialManagerKeychainTest::initTestCase()
     // On every platform: the Windows migration tests need it, and so do the tests of the lookup chain
     // that need its reads to be answered.
     const QString probe = QStringLiteral("MudletKCTest-probe-%1").arg(QUuid::createUuid().toString(QUuid::Id128).left(8));
-    mStoreAvailable = writeTarget(probe, QStringLiteral("probe")) && deleteTarget(probe);
+    // No service on Windows, for TargetName == key, the layout the Windows migration tests plant. A service
+    // everywhere else, like every entry planted there: Apple's keychain stores an empty service as none at
+    // all, and a removal naming the empty service does not find that entry again.
+    const QString probeService = onWindows() ? QString() : probe;
+    const bool probeWritten = writeEntry(probeService, probe, QStringLiteral("probe"));
+    // Removed whatever the write reported: a write that never answered may still have been stored
+    const bool probeRemoved = deleteEntry(probeService, probe);
+    mStoreAvailable = probeWritten && probeRemoved;
 
     if (!mStoreAvailable) {
         qWarning() << "CredentialManagerKeychainTest: credential store unavailable, tests will skip";
