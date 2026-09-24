@@ -677,8 +677,10 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         }
         if (error == QKeychain::NoError || readFoundNothing(error)) {
             // The store answered, even if this entry held nothing, so a refusal further down the
-            // chain is that entry's own and the layouts behind it are still worth reading
+            // chain starts counting again - and anything waiting on the refusal window can stop.
             lookup->storeHasAnswered = true;
+            lookup->consecutiveRefusals = 0;
+            forgetStoreRefusal();
         } else {
             // A hard keychain error is distinct from "no such entry" and is the likely reason a saved
             // password appears to have vanished - surface it rather than treating it as not found
@@ -686,15 +688,21 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
             if (lookup->keychainError.isEmpty()) {
                 lookup->keychainError = errorString;
             }
-            if (readWasRefusedOutright(error) && !lookup->storeHasAnswered) {
-                // Nothing has been read yet and the store has refused, so it is the store refusing
-                // rather than this entry: the layouts behind this one cannot be read either, and on
-                // a desktop keychain each of them would put another prompt in front of the player
-                // for an answer already given. The file is still read, and the refusal is still what
-                // the lookup reports if nothing turns up.
-                qWarning() << "CredentialManager: the keychain refused the first read for profile" << lookup->profileName << "- not asking it for the remaining formats";
-                lookup->storeRefused = true;
-                noteStoreRefusal();
+            if (readWasRefusedOutright(error)) {
+                ++lookup->consecutiveRefusals;
+                // One refusal can be this entry's own - a per-item ACL, or a keychain item another
+                // build saved under terms this one cannot meet - and an older layout behind it may
+                // still hold the password, so the next layout is read to find out which this is. A
+                // second refusal with nothing answered in between is the store itself: locked, or a
+                // prompt the player dismissed. Everything behind it would be refused the same way,
+                // at the cost of another prompt each, so the chain stops asking. The file is still
+                // read, and the refusal is still what the lookup reports if nothing turns up.
+                if (lookup->consecutiveRefusals >= scmRefusalsBeforeGivingUpOnTheStore) {
+                    qWarning() << "CredentialManager: the keychain refused" << lookup->consecutiveRefusals << "reads in a row for profile" << lookup->profileName
+                               << "- not asking it for the remaining formats";
+                    lookup->storeRefused = true;
+                    noteStoreRefusal();
+                }
             }
         }
         runLookupStage(lookup, index + 1);
@@ -1026,6 +1034,10 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
                     }
                 } else {
                     qDebug() << "CredentialManager: Password stored to keychain service:" << service;
+                    // The store took a write, so whatever refused a read moments ago has been
+                    // unlocked or answered: later lookups ask it again rather than reading only the
+                    // file until the window runs out.
+                    forgetStoreRefusal();
                 }
 
                 // Final validity check before calling callback
