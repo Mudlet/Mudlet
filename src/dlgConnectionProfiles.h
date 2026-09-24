@@ -213,10 +213,10 @@ private:
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;
-    QString mPendingProfileLoad;               // Profile name waiting for password load
-    bool mPendingConnect = false;              // Whether to connect (true) or just load (false)
-    bool mKeychainOperationInProgress = false; // Track if keychain op is active
-    bool mKeychainWaitShown = false;           // Whether the dialog is showing the keychain wait
+    QString mPendingProfileLoad;       // Profile name waiting for password load
+    bool mPendingConnect = false;      // Whether to connect (true) or just load (false)
+    QString mKeychainOperationProfile; // Whose password a keychain read is fetching, if any
+    bool mKeychainWaitShown = false;   // Whether the dialog is showing the keychain wait
 
 
 private slots:

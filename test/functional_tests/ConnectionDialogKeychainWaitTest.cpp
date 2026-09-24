@@ -130,7 +130,7 @@ private slots:
             dlg->character_password_entry->setText(qsl("typed-while-waiting"));
         }
 
-        dlg->mKeychainOperationInProgress = true;
+        dlg->mKeychainOperationProfile = mProfileName;
         dlg->mPendingProfileLoad = mProfileName;
         dlg->mPendingConnect = true;
         dlg->showKeychainWait();
@@ -138,7 +138,7 @@ private slots:
         dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
 
         QCOMPARE(dlg->character_password_entry->text(), qsl("typed-while-waiting"));
-        QVERIFY2(dlg->mKeychainOperationInProgress, "the late answer cleared the flag belonging to the read that is actually in flight");
+        QCOMPARE(dlg->mKeychainOperationProfile, mProfileName);
         QCOMPARE(dlg->mPendingProfileLoad, mProfileName);
         QVERIFY2(dlg->mPendingConnect, "the late answer dropped the queued connection");
         QVERIFY2(dlg->mKeychainWaitShown, "the late answer ended a wait that is still going on");
@@ -148,7 +148,7 @@ private slots:
         QVERIFY(dlg->profile_name_entry->text().isEmpty());
         dlg->passwordRetrieved(mProfileName, true, qsl("from-the-keychain"), QString());
 
-        QVERIFY2(!dlg->mKeychainOperationInProgress, "the answered read left its flag set");
+        QVERIFY2(dlg->mKeychainOperationProfile.isEmpty(), "the answered read is still recorded as in flight");
         QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "the queued load was left queued");
         QVERIFY2(!dlg->mKeychainWaitShown, "the dialog is still in its waiting-for-the-keychain state");
 
@@ -189,7 +189,7 @@ private slots:
         dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
         QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
 
-        dlg->mKeychainOperationInProgress = true;
+        dlg->mKeychainOperationProfile = mProfileName;
         dlg->passwordRetrieved(mProfileName, false, QString(), qsl("Operation timed out"));
 
         QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
@@ -197,8 +197,8 @@ private slots:
     }
 
     // An answer for a profile other than the queued one has nothing to run, but the wait it ends
-    // took Connect, Offline and the profile list away: they have to come back, or the dialog is
-    // stuck the way an unanswered read used to leave it.
+    // took Connect, Offline, the profile list and the form away: they have to come back, or the
+    // dialog is stuck the way an unanswered read used to leave it.
     void test_anAnswerForAnotherProfileHandsTheDialogBack()
     {
         auto* dlg = new dlgConnectionProfiles(mudlet::self());
@@ -209,7 +209,7 @@ private slots:
         dlg->offline_button->setEnabled(true);
         dlg->listWidget_profiles->setEnabled(true);
 
-        dlg->mKeychainOperationInProgress = true;
+        dlg->mKeychainOperationProfile = qsl("some-other-profile");
         dlg->mPendingProfileLoad = mProfileName;
         dlg->mPendingConnect = true;
         dlg->showKeychainWait();
@@ -220,10 +220,64 @@ private slots:
         QVERIFY2(dlg->connect_button->isEnabled(), "Connect was left disabled");
         QVERIFY2(dlg->offline_button->isEnabled(), "Offline was left disabled");
         QVERIFY2(dlg->listWidget_profiles->isEnabled(), "The profile list was left disabled");
+        QVERIFY2(dlg->tabWidget_connectionInfo->isEnabled(), "The connection details were left locked");
+        QVERIFY2(dlg->profileAdminArea->isEnabled(), "The profile buttons were left locked");
         QVERIFY2(!dlg->mKeychainWaitShown, "the dialog is still in its waiting-for-the-keychain state");
         QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "a load queued for another profile was left queued");
         QVERIFY2(!dlg->mPendingConnect, "a connection queued for another profile was left queued");
-        QVERIFY2(!dlg->mKeychainOperationInProgress, "the answered read left its flag set");
+        QVERIFY2(dlg->mKeychainOperationProfile.isEmpty(), "the answered read is still recorded as in flight");
+        dlg->deleteLater();
+    }
+
+    // A read in flight holds up the load of its own profile only. Connect on another profile has
+    // nothing to wait for, and queued behind that read it would be dropped when the read answers.
+    void test_aReadForAnotherProfileDoesNotHoldUpALoad()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+
+        QVERIFY2(dlg->hasPendingKeychainOperation(qsl("profile-being-read")), "a load did not wait for the read of its own profile's password");
+        QVERIFY2(!dlg->hasPendingKeychainOperation(mProfileName), "a load was held up behind the read of another profile's password");
+        dlg->deleteLater();
+    }
+
+    // The wait locks the form: an edit would run validateProfile(), which hands Connect and Offline
+    // back and clears the notice, and the queued load reads the fields as they are when it runs. A
+    // field that loses the focus as it is locked still runs that validation, which must not end the
+    // wait either.
+    void test_theWaitLocksTheFormAndValidationCannotEndIt()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker listBlocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+            const QSignalBlocker nameBlocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(mProfileName);
+            const QSignalBlocker hostBlocker(dlg->host_name_entry);
+            dlg->host_name_entry->setText(qsl("localhost"));
+            const QSignalBlocker portBlocker(dlg->port_entry);
+            dlg->port_entry->setText(qsl("4000"));
+        }
+        QVERIFY2(dlg->validateProfile(), "the form does not validate, so this test cannot show validation handing Connect back");
+
+        dlg->mKeychainOperationProfile = mProfileName;
+        dlg->mPendingProfileLoad = mProfileName;
+        dlg->mPendingConnect = true;
+        dlg->showKeychainWait();
+
+        QVERIFY2(!dlg->tabWidget_connectionInfo->isEnabled(), "the connection details could still be edited during the wait");
+        QVERIFY2(!dlg->profileAdminArea->isEnabled(), "profiles could still be added, copied or removed during the wait");
+
+        dlg->validateProfile();
+        QVERIFY2(!dlg->connect_button->isEnabled(), "validating the form during the wait handed Connect back");
+        QVERIFY2(!dlg->offline_button->isEnabled(), "validating the form during the wait handed Offline back");
+        QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "validating the form during the wait cleared the notice that explains it");
+
+        dlg->abandonPendingProfileLoad();
+        QVERIFY2(dlg->tabWidget_connectionInfo->isEnabled(), "the connection details were left locked after the wait");
+        QVERIFY2(dlg->profileAdminArea->isEnabled(), "the profile buttons were left locked after the wait");
         dlg->deleteLater();
     }
 
@@ -254,7 +308,7 @@ private slots:
         dlg->clearNotificationArea();
 
         // stands in for the read that slot_loadPasswordAsync() would have started
-        dlg->mKeychainOperationInProgress = true;
+        dlg->mKeychainOperationProfile = mProfileName;
 
         dlg->accept();
 
@@ -269,7 +323,7 @@ private slots:
         QVERIFY2(dlg->mPendingConnect, "Connect queued a load that would not connect");
 
         // what the keychain callback does once the read answers
-        dlg->mKeychainOperationInProgress = false;
+        dlg->mKeychainOperationProfile.clear();
         // the profile load itself is another test's business: loadProfile() returns at once on an
         // empty name, which keeps this from starting a real profile
         {

@@ -444,7 +444,7 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     mPendingPasswordSaveProfile.clear();
 
     // Clear any pending operation flags
-    mKeychainOperationInProgress = false;
+    mKeychainOperationProfile.clear();
     mPendingProfileLoad.clear();
 
     // Check if QCoreApplication is still valid during shutdown
@@ -543,6 +543,10 @@ void dlgConnectionProfiles::showKeychainWait()
     // is in flight - and would leave the queued load pointing at the profile that was left behind.
     // A disabled list gets no key events either, so the type-to-search stops with it.
     listWidget_profiles->setEnabled(false);
+    // An edit would run validateProfile(), which hands Connect and Offline back and clears the
+    // notice below, and what the queued load reads from these fields is what they held at Connect
+    tabWidget_connectionInfo->setEnabled(false);
+    profileAdminArea->setEnabled(false);
     //: Shown in the connection dialog while the profile's password is being fetched from the system keychain
     showNotification(tr("Waiting for the keychain..."), notificationAreaIconLabelInformation);
 }
@@ -560,6 +564,8 @@ void dlgConnectionProfiles::clearKeychainWait()
     connect_button->setEnabled(profileIsUsable);
     offline_button->setEnabled(profileIsUsable);
     listWidget_profiles->setEnabled(true);
+    tabWidget_connectionInfo->setEnabled(true);
+    profileAdminArea->setEnabled(true);
 }
 
 bool dlgConnectionProfiles::completePendingProfileLoad(const QString& profileName)
@@ -589,9 +595,9 @@ bool dlgConnectionProfiles::completePendingProfileLoad(const QString& profileNam
     return true;
 }
 
-// Either nothing was queued, or what was queued was for another profile and has nothing left to
-// wait for: drop it rather than let a later read connect out of nowhere, and hand the dialog its
-// buttons back so Connect can be pressed again
+// Nothing is queued for the profile whose read answered: drop whatever is, rather than let a
+// later read connect out of nowhere, and hand the dialog its buttons back so Connect can be
+// pressed again
 void dlgConnectionProfiles::abandonPendingProfileLoad()
 {
     mPendingProfileLoad.clear();
@@ -601,9 +607,9 @@ void dlgConnectionProfiles::abandonPendingProfileLoad()
 
 bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
 {
-    Q_UNUSED(profile_name)
-    // Simply check if we have a keychain operation in progress
-    return mKeychainOperationInProgress;
+    // Only a read of this profile's own password is worth waiting for: queued behind another
+    // profile's, the load would be dropped when that read answers
+    return !profile_name.isEmpty() && mKeychainOperationProfile == profile_name;
 }
 
 void dlgConnectionProfiles::slot_updateDescription()
@@ -2457,6 +2463,13 @@ bool dlgConnectionProfiles::validateProfile()
         return true;
     }
 
+    // The form is locked while the dialog waits for the keychain, so nothing in it has changed
+    // since it was last validated - but a field losing the focus as it is locked still asks, and
+    // an answer would hand Connect and Offline back and clear the notice in the middle of the wait
+    if (mKeychainWaitShown) {
+        return validName && validUrl && validPort;
+    }
+
     validName = true, validPort = true, validUrl = true;
 
     clearNotificationArea();
@@ -2952,7 +2965,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     const QString profile_name = timer->property("profileName").toString();
 
     // Prevent duplicate password loading operations for the same profile
-    if (mKeychainOperationInProgress) {
+    if (!mKeychainOperationProfile.isEmpty()) {
         return;
     }
 
@@ -2977,7 +2990,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 
     // If secure storage is enabled, try keychain first, then fallback to QSettings
     if (mudlet::self()->storingPasswordsSecurely()) {
-        mKeychainOperationInProgress = true;
+        mKeychainOperationProfile = profile_name;
         auto* credManager = new CredentialManager(this);
         credManager->retrievePassword(
                 profile_name,
@@ -3007,7 +3020,7 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
 
     // Clear the operation flag first
-    mKeychainOperationInProgress = false;
+    mKeychainOperationProfile.clear();
 
     // Check if profile selection has changed while we were waiting
     if (profileStillSelected) {
