@@ -4544,41 +4544,47 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 void Host::loadSecuredPassword()
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager(this);
+    lookUpSecuredPassword(new CredentialManager(this));
+}
 
-    // From here until the read answers there is a password on its way, which is what keeps the
+void Host::lookUpSecuredPassword(CredentialManager* credManager)
+{
+    // From here until the lookup answers there is a password on its way, which is what keeps the
     // auto-login arming its password step for it
     mSecuredPasswordPending = true;
 
-    // A keychain read that timed out can still be answered afterwards, which calls this back a
-    // second time - by then the manager below has been deleted, and this profile is what keeps
-    // the late answer deliverable at all, so the password it brings is set as any other would be
-    credManager->retrievePassword(getName(), "character", [this, safeCredManager = QPointer<CredentialManager>(credManager)](bool success, const QString& password, const QString& errorMessage) {
-        if (success && !password.isEmpty()) {
-            setPass(password);
-            // The auto-login is timer based, so a password this slow (the user answering the
-            // keychain prompt after the game had reached its password prompt) has already missed
-            // its turn. The telnet side knows whether the game is still waiting for it:
-            mTelnet.sendOutstandingAutoLoginPassword();
-            mSecuredPasswordPending = false;
-            QString passwordCopy = password; // Make a copy for secure clearing
-            SecureStringUtils::secureStringClear(passwordCopy);
-        } else {
-            // A read that ran out of time is the one failure that is not final - the user can
-            // still answer the system prompt behind it - so the password step stays armed for it
-            if (errorMessage != qsl("Operation timed out")) {
-                mSecuredPasswordPending = false;
-            }
-            if (!success && !errorMessage.isEmpty()) {
-                qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
-            }
-        }
+    credManager->retrievePassword(
+            getName(),
+            "character",
+            [this, credManager](bool success, const QString& password, const QString& errorMessage, bool timedOut) {
+                securedPasswordAnswered(success, password, errorMessage, timedOut);
 
-        // Clean up the credential manager
-        if (safeCredManager) {
-            safeCredManager->deleteLater();
-        }
-    });
+                // Clean up the credential manager
+                credManager->deleteLater();
+            },
+            this,
+            [this](bool success, const QString& password, const QString& errorMessage) {
+                securedPasswordAnswered(success, password, errorMessage, false);
+            });
+}
+
+void Host::securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut)
+{
+    // A lookup that gave up waiting on the keychain is the one failure that is not final: the
+    // user can still answer the prompt it was waiting behind, so the password step stays armed
+    mSecuredPasswordPending = !success && timedOut;
+
+    if (success && !password.isEmpty()) {
+        setPass(password);
+        // The auto-login is timer based, so a password this slow (the user answering the
+        // keychain prompt after the game had reached its password prompt) has already missed
+        // its turn. The telnet side knows whether the game is still waiting for it:
+        mTelnet.sendOutstandingAutoLoginPassword();
+        QString passwordCopy = password; // Make a copy for secure clearing
+        SecureStringUtils::secureStringClear(passwordCopy);
+    } else if (!success && !errorMessage.isEmpty()) {
+        qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
+    }
 }
 
 // Only needed for places outside of this class:

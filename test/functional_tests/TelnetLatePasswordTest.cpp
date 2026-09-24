@@ -37,10 +37,17 @@
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <chrono>
+#include <memory>
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
+#include <qtkeychain/keychain.h>
+#else
+#include <qt6keychain/keychain.h>
+#endif
 
 #include "AutoLoginDelaysTestHelper.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "CredentialManager.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletPaths.h"
@@ -425,7 +432,7 @@ private slots:
     void testALoginOnlyProfileNeverArmsThePasswordStep()
     {
         const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
-        Host* host = connectWithLoginAndNoPassword(false);
+        Host* host = connectWithLoginAndNoPassword(KeychainAnswer::NothingStored);
         QVERIFY(host);
 
         mpServer->sendRaw(csPasswordPrompt + csMaskOn);
@@ -439,13 +446,86 @@ private slots:
         QVERIFY2(!consoleContains(host, qsl("moved on from its password prompt")), "a profile that never had a password waiting was told one arrived too late");
     }
 
+    // N7: the keychain did answer after the lookup gave up, but without the password - the player
+    // denied the prompt. That answer is as final as any other, so the password step is not armed
+    // for a password that is no longer on its way.
+    void testALateRefusalLeavesThePasswordStepUnarmed()
+    {
+        const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
+        Host* host = connectWithLoginAndNoPassword(KeychainAnswer::TimedOutThenRefused);
+        QVERIFY(host);
+
+        mpServer->sendRaw(csPasswordPrompt + csMaskOn);
+        QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
+        waitOutThePasswordStep();
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+
+        deliverLatePassword(host);
+        QTest::qWait(500);
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+    }
+
+    // ---- The profile's own keychain lookup ---------------------------------
+
+    // K1: Host::loadSecuredPassword()'s lookup, from its start to its late answer, against a
+    // keychain that answers only when the test says so. A password is on its way - so the login
+    // step arms the password step - while the lookup is out and after its deadline, until the
+    // keychain answers; a refusal then is final.
+    void testTheProfilesLookupKeepsAPasswordOnItsWayUntilTheKeychainAnswers()
+    {
+        Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(QString());
+
+        auto reads = std::make_shared<QList<QPointer<QKeychain::Job>>>();
+        QPointer<CredentialManager> manager = new CredentialManager(host);
+        manager->mOperationTimeoutMs = 300;
+        // Never started, so nothing reaches the real keychain: the test answers each read itself
+        manager->mJobStartHook = [reads](QKeychain::Job* job) {
+            reads->append(job);
+            return false;
+        };
+        // The keychain path is the one under test, and MUDLET_TEST_MODE puts CredentialManager on
+        // file storage - it is read as the lookup starts, so it can go straight back
+        qunsetenv("MUDLET_TEST_MODE");
+        host->lookUpSecuredPassword(manager);
+        qputenv("MUDLET_TEST_MODE", "1");
+
+        QVERIFY2(!reads->isEmpty(), "the lookup never read the keychain, so this test cannot cover it");
+        QVERIFY2(host->hasAutoLoginCredentials(), "a password on its way from the keychain does not arm the password step");
+
+        // The lookup gives up at its deadline and the profile deletes its manager
+        QVERIFY2(QTest::qWaitFor(
+                         [&manager]() {
+                             return manager.isNull();
+                         },
+                         5000),
+                 "the lookup never answered at its deadline");
+        QVERIFY2(host->hasAutoLoginCredentials(), "a lookup that timed out stopped the password step waiting for the answer it still owes");
+
+        QPointer<QKeychain::Job> read = reads->constFirst();
+        QVERIFY2(read, "the read the lookup gave up on was deleted before the keychain answered it");
+        read->emitFinishedWithError(QKeychain::AccessDenied, qsl("synthetic: the prompt was denied"));
+        QVERIFY2(!host->hasAutoLoginCredentials(), "the keychain refusing the password late left the password step waiting for it");
+    }
+
 private:
-    // Drives the dialog to create and connect the profile, then hands it a login but no password -
-    // the state an unanswered keychain read leaves a profile in. Returns with the game's stub
-    // holding the login line, which is where each case takes over. securedPasswordPending is what
-    // a keychain read still in flight sets, and what arms the auto-login's password step; false
-    // gives a profile that has no password anywhere.
-    Host* connectWithLoginAndNoPassword(bool securedPasswordPending = true)
+    // How the profile's keychain lookup answered, which is what decides whether the auto-login
+    // arms its password step for a password still on its way
+    enum class KeychainAnswer {
+        // The lookup gave up waiting on the keychain, which may still answer
+        TimedOut,
+        // ... and the keychain then answered without the password
+        TimedOutThenRefused,
+        // Nothing is stored anywhere
+        NothingStored,
+    };
+
+    // Drives the dialog to create and connect the profile, then hands it a login, and answers its
+    // keychain lookup as answer says - before the username timer reads the result. Returns with
+    // the game's stub holding the login line, which is where each case takes over.
+    Host* connectWithLoginAndNoPassword(KeychainAnswer answer = KeychainAnswer::TimedOut)
     {
         Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
         if (!host) {
@@ -454,7 +534,18 @@ private:
         }
         host->setLogin(qsl("player"));
         host->setPass(QString());
-        host->setSecuredPasswordPending(securedPasswordPending);
+        switch (answer) {
+        case KeychainAnswer::TimedOut:
+            host->securedPasswordAnswered(false, QString(), qsl("Operation timed out"), true);
+            break;
+        case KeychainAnswer::TimedOutThenRefused:
+            host->securedPasswordAnswered(false, QString(), qsl("Operation timed out"), true);
+            host->securedPasswordAnswered(false, QString(), qsl("Could not read the keychain: access denied"), false);
+            break;
+        case KeychainAnswer::NothingStored:
+            host->securedPasswordAnswered(false, QString(), qsl("No stored credentials found for profile %1").arg(mHostname), false);
+            break;
+        }
 
         if (!waitForReceivedText(csLoginLine, 15000)) {
             qWarning() << "The auto-login never sent the login line - the stub has:" << mpServer->receivedText();
@@ -487,11 +578,8 @@ private:
                 timeoutMs);
     }
 
-    static void deliverLatePassword(Host* host)
-    {
-        host->setPass(qsl("secret"));
-        host->mTelnet.sendOutstandingAutoLoginPassword();
-    }
+    // What the keychain lookup's late answer hands the profile once the prompt is answered
+    static void deliverLatePassword(Host* host) { host->securedPasswordAnswered(true, qsl("secret"), QString(), false); }
 
     // The console wraps a printed line at its width, so the text is stitched back together and its
     // whitespace normalised before matching - a phrase must not stop being found because the line

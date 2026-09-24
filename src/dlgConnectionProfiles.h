@@ -137,8 +137,6 @@ private:
     bool setCustomIcon(const QString&, QListWidgetItem*) const;
     void setIconOfListedProfile(const QString& profileName, const QIcon& icon) const;
     QString selectedProfileName() const;
-    template <typename L>
-    void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
     void writeSecurePassword(const QString& profile, const QString& pass);
     void deleteSecurePassword(const QString& profile);
@@ -166,10 +164,11 @@ private:
     bool completePendingProfileLoad(const QString& profileName);
     // Drops a queued load that nothing is going to complete, and gives the dialog its buttons back
     void abandonPendingProfileLoad();
-    // What a keychain read answers with. A read that timed out can still be answered afterwards,
-    // and lateAnswer marks that second call: by then the load this dialog was holding has long
-    // since run, so all such an answer may still do is fill a password field left empty.
-    void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool lateAnswer);
+    // What a keychain read answers with
+    void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
+    // What a read that had timed out answers with afterwards, while the dialog is still open - a
+    // load that ran closed it - so all it may do is fill a password field left empty.
+    void passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
     void revealConnectionDetails();
     bool showingOnlyMyProfiles() const;
 

@@ -571,8 +571,8 @@ bool dlgConnectionProfiles::completePendingProfileLoad(const QString& profileNam
     qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profileName;
 
     const bool shouldConnect = mPendingConnect;
-    // cleared before the load, so that a keychain answer arriving late for the same profile
-    // cannot run it a second time
+    // cleared before the load, as the processEvents() below can deliver the answer of another
+    // read, which must not find it still queued and run it a second time
     mPendingProfileLoad.clear();
     mPendingConnect = false;
 
@@ -1905,35 +1905,6 @@ void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, co
     }
 }
 
-template <typename L>
-void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
-{
-    // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager(this);
-    // A read that timed out can still be answered afterwards, so the callback has to cope with
-    // running twice - once empty-handed and once with the password - and with the manager having
-    // been deleted in between
-    const QPointer<CredentialManager> safeCredManager = credManager;
-
-    credManager->retrievePassword(profile, "character", [safeCredManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
-        if (success) {
-            callback(password);
-            QString passwordCopy = password; // Make a copy for secure clearing
-            SecureStringUtils::secureStringClear(passwordCopy);
-        } else {
-            if (!errorMessage.isEmpty()) {
-                qDebug() << "dlgConnectionProfiles: Failed to retrieve password:" << errorMessage;
-            }
-            callback(QString()); // Call with empty string on failure
-        }
-
-        // Clean up the credential manager
-        if (safeCredManager) {
-            safeCredManager->deleteLater();
-        }
-    });
-}
-
 std::optional<QColor> getCustomColor(const QString& profileName)
 {
     auto profileColorPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
@@ -3008,22 +2979,18 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     if (mudlet::self()->storingPasswordsSecurely()) {
         mKeychainOperationInProgress = true;
         auto* credManager = new CredentialManager(this);
-        // A read that timed out can still be answered afterwards, which calls this back a second
-        // time with the password and with the manager below already deleted; the manager is a
-        // child of this dialog, so a callback only arrives at all while the dialog is alive
-        const QPointer<CredentialManager> safeCredManager = credManager;
+        credManager->retrievePassword(
+                profile_name,
+                "character",
+                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, bool) {
+                    passwordRetrieved(profile_name, success, retrievedPassword, errorMessage);
 
-        credManager->retrievePassword(profile_name, "character", [this, safeCredManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
-            // The first invocation deletes the manager below, so its absence is what tells this
-            // one apart: it is the answer to a read that had already timed out
-            const bool lateAnswer = safeCredManager.isNull();
-
-            passwordRetrieved(profile_name, success, retrievedPassword, errorMessage, lateAnswer);
-
-            if (safeCredManager) {
-                safeCredManager->deleteLater();
-            }
-        });
+                    credManager->deleteLater();
+                },
+                this,
+                [this, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
+                    passwordArrivedLate(profile_name, success, retrievedPassword, errorMessage);
+                });
     } else {
         // Secure storage disabled, use QSettings directly
         loadPasswordFromSettings(profile_name);
@@ -3035,22 +3002,9 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     }
 }
 
-void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool lateAnswer)
+void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage)
 {
     const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
-
-    if (lateAnswer) {
-        // Whatever this answer was holding up went ahead without it, so the flag, the queued load
-        // and the wait it left behind are no longer this read's to change. The field is: an empty
-        // one has nothing in it to lose, while a password typed in the meantime is the user's.
-        if (success && !password.isEmpty() && profileStillSelected && character_password_entry->text().isEmpty()) {
-            const QSignalBlocker blocker(character_password_entry);
-            character_password_entry->setText(password);
-            qDebug() << "dlgConnectionProfiles: A keychain read that had timed out was answered, filling the empty password field for" << profileName;
-        }
-
-        return;
-    }
 
     // Clear the operation flag first
     mKeychainOperationInProgress = false;
@@ -3075,8 +3029,11 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
                 qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profileName;
             }
         } else {
-            // Fallback to QSettings only if credential retrieval failed
-            loadPasswordFromSettings(profileName);
+            // Fallback to QSettings only if credential retrieval failed, and only into an empty
+            // field: one the keychain answered late for an earlier read has the password already
+            if (character_password_entry->text().isEmpty()) {
+                loadPasswordFromSettings(profileName);
+            }
             qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profileName << "-" << errorMessage;
         }
     }
@@ -3085,6 +3042,22 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // (do this regardless of profile selection state to avoid hanging)
     if (!completePendingProfileLoad(profileName)) {
         abandonPendingProfileLoad();
+    }
+}
+
+void dlgConnectionProfiles::passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage)
+{
+    if (!success) {
+        qDebug() << "dlgConnectionProfiles: Credential retrieval that had timed out was answered unsuccessfully for" << profileName << "-" << errorMessage;
+        return;
+    }
+
+    // An empty field has nothing in it to lose, while a password typed in the meantime is the user's
+    const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
+    if (!password.isEmpty() && profileStillSelected && character_password_entry->text().isEmpty()) {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(password);
+        qDebug() << "dlgConnectionProfiles: Credential retrieval that had timed out was answered, filling the empty password field for" << profileName;
     }
 }
 

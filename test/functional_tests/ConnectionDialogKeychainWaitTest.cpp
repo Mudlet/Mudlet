@@ -21,7 +21,8 @@
  * What the connection dialog does while a keychain read has not answered yet:
  * it stays on screen and says so, and the Connect toolbar button can always
  * bring it back. MUDLET_TEST_MODE keeps CredentialManager on file storage, so
- * the outstanding read is stood in for by the flag the real one sets.
+ * the outstanding read is stood in for by the state the real one sets, and its
+ * answers by calls to the handlers the real one calls.
  *
  * Run with: ctest -R ConnectionDialogKeychainWaitTest -V
  */
@@ -134,7 +135,7 @@ private slots:
         dlg->mPendingConnect = true;
         dlg->showKeychainWait();
 
-        dlg->passwordRetrieved(mProfileName, true, qsl("from-the-keychain"), QString(), true);
+        dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
 
         QCOMPARE(dlg->character_password_entry->text(), qsl("typed-while-waiting"));
         QVERIFY2(dlg->mKeychainOperationInProgress, "the late answer cleared the flag belonging to the read that is actually in flight");
@@ -145,18 +146,17 @@ private slots:
         // and the read in flight, answering properly, still completes the queued load. loadProfile()
         // returns at once on an empty profile name, which keeps this from starting a real profile
         QVERIFY(dlg->profile_name_entry->text().isEmpty());
-        dlg->passwordRetrieved(mProfileName, true, qsl("from-the-keychain"), QString(), false);
+        dlg->passwordRetrieved(mProfileName, true, qsl("from-the-keychain"), QString());
 
         QVERIFY2(!dlg->mKeychainOperationInProgress, "the answered read left its flag set");
         QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "the queued load was left queued");
         QVERIFY2(!dlg->mKeychainWaitShown, "the dialog is still in its waiting-for-the-keychain state");
-        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
 
         dlg->deleteLater();
     }
 
-    // The other half of the late answer: an empty field is what the queued load left behind when
-    // it ran without the password, and it is the only place the password can still reach.
+    // The other half of the late answer: a field still empty on a dialog nobody has pressed Connect
+    // on yet gets the password, which a Connect then loads the profile with.
     void test_aLateKeychainAnswerFillsAnEmptyPasswordField()
     {
         auto* dlg = new dlgConnectionProfiles(mudlet::self());
@@ -168,7 +168,29 @@ private slots:
         }
         QVERIFY2(dlg->character_password_entry->text().isEmpty(), "a fresh dialog's password field is not empty, so this test cannot cover the refill");
 
-        dlg->passwordRetrieved(mProfileName, true, qsl("from-the-keychain"), QString(), true);
+        dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
+        dlg->deleteLater();
+    }
+
+    // A later read of the same profile that fails falls back on the password kept in the settings,
+    // which is empty for a profile whose password lives in the keychain: it must not wipe the one an
+    // earlier read handed over late.
+    void test_aFailedReadKeepsAPasswordAlreadyInTheField()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
+
+        dlg->mKeychainOperationInProgress = true;
+        dlg->passwordRetrieved(mProfileName, false, QString(), qsl("Operation timed out"));
 
         QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
         dlg->deleteLater();
@@ -193,7 +215,7 @@ private slots:
         dlg->showKeychainWait();
         QVERIFY2(!dlg->connect_button->isEnabled(), "the wait did not take Connect away, so this test cannot cover handing it back");
 
-        dlg->passwordRetrieved(qsl("some-other-profile"), true, qsl("its-password"), QString(), false);
+        dlg->passwordRetrieved(qsl("some-other-profile"), true, qsl("its-password"), QString());
 
         QVERIFY2(dlg->connect_button->isEnabled(), "Connect was left disabled");
         QVERIFY2(dlg->offline_button->isEnabled(), "Offline was left disabled");
