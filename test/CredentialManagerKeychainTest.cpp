@@ -409,6 +409,9 @@ public:
             if (read) {
                 mReads.append({job->service(), job->key()});
             }
+            if (qobject_cast<QKeychain::DeletePasswordJob*>(job)) {
+                mDeletes.append({job->service(), job->key()});
+            }
             if (mShouldStall && mShouldStall(job)) {
                 watch(job);
                 mStalled.append(job);
@@ -426,6 +429,7 @@ public:
     }
 
     const QList<QPair<QString, QString>>& reads() const { return mReads; }
+    const QList<QPair<QString, QString>>& deletes() const { return mDeletes; }
 
     bool waitForAnyStalled()
     {
@@ -495,6 +499,7 @@ private:
     std::function<bool(QKeychain::Job*)> mShouldStall;
     QList<QPointer<QKeychain::Job>> mStalled;
     QList<QPair<QString, QString>> mReads;
+    QList<QPair<QString, QString>> mDeletes;
     QObject mWitness;
     int mOutsideAnswers = 0;
     int mSeen = 0;
@@ -1262,7 +1267,10 @@ void CredentialManagerKeychainTest::testTheProfileStoragePreferenceKeepsTheKeych
     const QString secret = QStringLiteral("token-that-stays-in-the-profile");
 
     JobStaller watcher;
-    watcher.stallEvery<QKeychain::ReadPasswordJob>();
+    // Deletes are taken over and answered here rather than reaching the machine's own keychain: the
+    // cleanup below is the one keychain job this mode starts, and the test has to see its outcome
+    // rather than wait on a real store.
+    watcher.stallEvery<QKeychain::DeletePasswordJob>();
     CredentialManager manager;
     manager.mJobStartHook = watcher.hook();
 
@@ -1273,7 +1281,7 @@ void CredentialManagerKeychainTest::testTheProfileStoragePreferenceKeepsTheKeych
         storeAnswered = true;
     });
     QTRY_VERIFY(storeAnswered);
-    QVERIFY(stored);
+    QVERIFY2(stored, "the profile's own store did not take the credential");
 
     const auto answer = startRetrieval(manager, mProfile, mKey);
     QVERIFY(waitForAnswer(answer));
@@ -1286,10 +1294,23 @@ void CredentialManagerKeychainTest::testTheProfileStoragePreferenceKeepsTheKeych
         removed = success;
         removeAnswered = true;
     });
+
+    // Forgetting reaches across to the keychain, because an entry stored before the preference
+    // changed is unreachable by every other path once it points at the file: both names a lookup
+    // would read are cleared, and "nothing there" is the ordinary answer for a profile that has only
+    // ever used the file.
+    for (int deletion = 0; deletion < 2; ++deletion) {
+        QKeychain::Job* cleanup = watcher.waitForStalled(deletion);
+        QVERIFY2(cleanup, "the keychain copy was not cleared, so forgetting a sign-in would leave one behind");
+        JobStaller::answer(cleanup, QKeychain::EntryNotFound, QStringLiteral("synthetic: nothing stored here"));
+    }
+
     QTRY_VERIFY(removeAnswered);
-    QVERIFY(removed);
+    QVERIFY2(removed, "the removal reported failure although both stores are clear");
 
     QVERIFY2(watcher.reads().isEmpty(), "the keychain was read although the player asked for passwords to be kept in the profile");
+    QCOMPARE(watcher.deletes().size(), 2);
+    QVERIFY2(watcher.deletes().at(0) != watcher.deletes().at(1), "the same keychain entry was cleared twice, so one of the two layouts a lookup reads was left behind");
 }
 
 // A single refusal can be one entry's own - a per-item ACL, or an item another build saved under

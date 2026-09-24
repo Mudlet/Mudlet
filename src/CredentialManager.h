@@ -21,6 +21,7 @@
 #define MUDLET_CREDENTIALMANAGER_H
 
 #include <QElapsedTimer>
+#include <QHash>
 #include <QObject>
 #include <QString>
 #include <QPointer>
@@ -181,14 +182,19 @@ private:
 
     void finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage);
     void runLookupStage(const LookupPtr& lookup, std::size_t index);
-    // When the store last refused a read before answering anything. Process-wide, because a caller
-    // asking about two keys - the profile preferences ask about "reconnect" and then
-    // "reconnect-token" - builds a CredentialManager for each, and the point is to spare the player
-    // a second prompt for the answer the first one already gave. A window rather than a latch, so a
-    // player who unlocks their keychain is not left without it until they restart.
-    static QElapsedTimer& storeRefusalTimer();
-    // Forgets the refusal window. Process-wide state outlives one test, and a case that refuses a
-    // read would otherwise decide what the cases after it are allowed to ask the store.
+    // When the store last refused a profile's reads before answering any of them. Kept per profile
+    // and across managers, because a caller asking about two keys - the profile preferences ask
+    // about "reconnect" and then "reconnect-token" - builds a CredentialManager for each, and the
+    // point is to spare the player a second prompt for the answer the first one already gave. Not
+    // wider than the profile: another profile's entries may be readable, and a lookup for one of
+    // those must not be answered out of the file because of a refusal that was nothing to do with
+    // it. A window rather than a latch, so a player who unlocks their keychain is not left without
+    // it until they restart.
+    static QHash<QString, QElapsedTimer>& storeRefusals();
+    static bool storeRefusedRecently(const QString& profileName);
+    static void noteStoreRefusal(const QString& profileName);
+    // Forgets every refusal window. The state outlives one test, and a case that had a read refused
+    // would otherwise decide what the cases after it are allowed to ask the store.
     static void forgetStoreRefusal();
 
     // Whether the player asked for passwords to be kept in the profile rather than in secure
@@ -197,8 +203,6 @@ private:
     static std::optional<bool> profileStoragePreferred();
     // Test-only: stands in for that preference where there is no mudlet to read it from.
     static std::optional<bool>& profileStorageOverrideForTesting();
-    static bool storeRefusedRecently();
-    static void noteStoreRefusal();
     static constexpr int scmStoreRefusalCooldownMs = 30000;
     // How many reads the store may refuse, without answering any of them, before a lookup stops
     // asking it. Two rather than one: a single refusal can be one entry's own, and an older layout
