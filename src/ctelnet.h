@@ -360,8 +360,11 @@ private:
 
     // Lets the functional test drive the real download entry point and inspect
     // the in-flight reply, reproducing the dialog-swap cancellation cascade.
-    friend class TelnetLatePasswordTest;
     friend class TelnetTlsPromptTest;
+
+    // Waits for the auto-login's password step to mark a password as owed, and
+    // checks that a game's greeting asked for SGA.
+    friend class TelnetLatePasswordTest;
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
     // the public loopbackTest() cannot express - see issue #1065 - and to seed
@@ -672,8 +675,6 @@ private:
     QVector<unsigned char> mNegotiationOrder;
 
     void checkCharacterModePattern();
-    // Starts the timer checkCharacterModePattern() answers on, measured from the line just sent
-    void armCharacterModeDetection();
     bool checkEchoAnomalyPattern();
 };
 

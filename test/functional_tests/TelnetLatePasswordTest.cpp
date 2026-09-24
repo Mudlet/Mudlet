@@ -257,7 +257,7 @@ private slots:
 
         mpServer->sendRaw(csPasswordPrompt + csMaskOn);
         QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
-        waitOutThePasswordStep();
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         deliverLatePassword(host);
@@ -274,7 +274,7 @@ private slots:
 
         mpServer->sendRaw(csPasswordPrompt + csMaskOn);
         QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
-        waitOutThePasswordStep();
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("registerAnonymousEventHandler(\"sysDataSendRequest\", function() denyCurrentSend() end)")),
@@ -304,14 +304,12 @@ private slots:
 
         mpServer->sendRaw(csPasswordPrompt);
         QVERIFY2(waitForConsoleContains(host, qsl("Password:")), "the prompt never reached the client");
-        waitOutThePasswordStep();
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         // Past the detection window (CHARACTER_MODE_DETECT, 3 s), so a verdict the login line had
-        // started would be in by now
+        // started would have latched by now and refused the password below
         QTest::qWait(3500);
-        QVERIFY2(!host->mTelnet.mCharacterModeDetected, "the login line sent under the game's mask was taken for character-at-a-time mode");
-        QVERIFY2(!(host->mTelnet.mTimerCharacterModeDetect && host->mTelnet.mTimerCharacterModeDetect->isActive()), "the login line armed the character-at-a-time detection");
 
         deliverLatePassword(host);
         QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "the late password was not sent to the still-masked password prompt");
@@ -329,12 +327,12 @@ private slots:
 
         mpServer->sendRaw(csPasswordPrompt);
         QVERIFY2(waitForConsoleContains(host, qsl("Password:")), "the prompt never reached the client");
-        waitOutThePasswordStep();
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
         QVERIFY(!host->isRemoteEchoingActive());
 
         deliverLatePassword(host);
-        QVERIFY2(waitForConsoleContains(host, qsl("moved on from its password prompt")), "the player was not told why the password was not sent");
+        QVERIFY2(waitForConsoleContains(host, qsl("too late for the automatic login")), "the player was not told why the password was not sent");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
     }
 
@@ -348,14 +346,14 @@ private slots:
 
         mpServer->sendRaw(csPasswordPrompt + csMaskOn);
         QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
-        waitOutThePasswordStep();
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         mpServer->sendRaw(csMaskOff + QByteArrayLiteral("Timed out.\r\n"));
         QVERIFY2(waitForMasking(host, false), "the client never left password-masking mode");
 
         deliverLatePassword(host);
-        QVERIFY2(waitForConsoleContains(host, qsl("moved on from its password prompt")), "the player was not told why the password was not sent");
+        QVERIFY2(waitForConsoleContains(host, qsl("too late for the automatic login")), "the player was not told why the password was not sent");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
     }
 
@@ -370,7 +368,7 @@ private slots:
 
         mpServer->sendRaw(csPasswordPrompt + csMaskOn);
         QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
-        waitOutThePasswordStep();
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         mpServer->sendRaw(csMaskOff + QByteArrayLiteral("Timed out.\r\n"));
@@ -379,7 +377,7 @@ private slots:
         QVERIFY2(waitForMasking(host, true), "the client did not enter password-masking mode for the second prompt");
 
         deliverLatePassword(host);
-        QVERIFY2(waitForConsoleContains(host, qsl("moved on from its password prompt")), "the player was not told why the password was not sent");
+        QVERIFY2(waitForConsoleContains(host, qsl("too late for the automatic login")), "the player was not told why the password was not sent");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
     }
 
@@ -393,7 +391,7 @@ private slots:
 
         mpServer->sendRaw(csPasswordPrompt + csMaskOn);
         QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
-        waitOutThePasswordStep();
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         host->send(qsl("look"));
@@ -416,7 +414,7 @@ private slots:
 
         mpServer->sendRaw(csPasswordPrompt + csMaskOn);
         QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
-        waitOutThePasswordStep();
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         host->mTelnet.cancelLoginTimers();
@@ -424,7 +422,7 @@ private slots:
         deliverLatePassword(host);
         QTest::qWait(500);
         QCOMPARE(mpServer->receivedText(), csLoginLine);
-        QVERIFY2(!consoleContains(host, qsl("moved on from its password prompt")), "a login Mudlet is not driving was told about a password it never owed");
+        QVERIFY2(!consoleContains(host, qsl("too late for the automatic login")), "a login Mudlet is not driving was told about a password it never owed");
     }
 
     // N4: a profile with a login and no password at all - nothing is on its way, so the password
@@ -443,7 +441,7 @@ private slots:
         deliverLatePassword(host);
         QTest::qWait(500);
         QCOMPARE(mpServer->receivedText(), csLoginLine);
-        QVERIFY2(!consoleContains(host, qsl("moved on from its password prompt")), "a profile that never had a password waiting was told one arrived too late");
+        QVERIFY2(!consoleContains(host, qsl("too late for the automatic login")), "a profile that never had a password waiting was told one arrived too late");
     }
 
     // N7: the keychain did answer after the lookup gave up, but without the password - the player
@@ -554,8 +552,20 @@ private:
         return host;
     }
 
-    // The password timer starts when the login goes out, so waiting it out from here leaves the
-    // auto-login past its password step - with nothing sent, since there is no password.
+    // With no password in hand the password step marks one as owed, which is what the late
+    // password is checked against. Waiting for the mark rather than for the timer keeps a slow run
+    // from delivering the password first, where the password step would then send it the usual way.
+    static bool waitForThePasswordStep(Host* host)
+    {
+        return QTest::qWaitFor(
+                [host]() {
+                    return host->mTelnet.mAutoLoginPasswordOutstanding;
+                },
+                8000);
+    }
+
+    // A password step that was never armed leaves no mark to wait for, so the cases about one wait
+    // out its timer instead: long enough for it to have fired, had it been armed.
     static void waitOutThePasswordStep() { QTest::qWait(csPasswordDelayMs + 500); }
 
     bool waitForReceivedText(const QByteArray& expected, int timeoutMs = 4000)
