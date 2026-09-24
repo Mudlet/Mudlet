@@ -40,6 +40,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QSignalSpy>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTreeWidget>
@@ -48,6 +49,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -108,7 +110,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -205,15 +207,15 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory();
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
-        mpHost = hostManager.getHost(mProfileName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
+        mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
     }
@@ -378,14 +380,6 @@ private slots:
         QVERIFY(pDlg->doortype_none_s->isChecked());
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * slot_stub_nw_stateChanged() hands normalStubExitChanged() the north row's
-     * doortype_locked_n where the northwest row's doortype_locked_nw was meant,
-     * so ticking the northwest stub leaves its own "locked door" choice greyed
-     * out and unticking it greys out north's instead. Correcting that one
-     * argument turns both QVERIFYs below green.
-     */
     void theNorthwestStubReachesIntoTheNorthRow()
     {
         buildMap();
@@ -394,13 +388,9 @@ private slots:
         QVERIFY(!pDlg->doortype_locked_nw->isEnabled());
 
         pDlg->stub_nw->setChecked(true);
-
-        QEXPECT_FAIL("", "issue #10421: the northwest stub enables north's locked-door choice instead of its own", Continue);
         QVERIFY(pDlg->doortype_locked_nw->isEnabled());
 
         pDlg->stub_nw->setChecked(false);
-
-        QEXPECT_FAIL("", "issue #10421: clearing the northwest stub disables north's locked-door choice", Continue);
         QVERIFY(pDlg->doortype_locked_n->isEnabled());
     }
 
@@ -672,6 +662,39 @@ private slots:
 
         QVERIFY(mpRoomIdDelegate.isNull());
         QVERIFY(mpWeightDelegate.isNull());
+    }
+
+    // Changing an exit (here flipping a door to locked) and closing the dialog
+    // must repaint the mapper and mark the map unsaved - previously the map
+    // stayed stale until the next scroll/pan, and the edit was not even marked
+    // unsaved.
+    void saveRepaintsTheMapAndMarksItUnsaved()
+    {
+        buildMap();
+        map()->resetUnsaved();
+        QCOMPARE(subject()->getDoor(qsl("n")), 2); // closed, from buildMap
+
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->doortype_closed_n->isChecked());
+        // Flip the north door to locked.
+        pDlg->doortype_locked_n->setChecked(true);
+        QVERIFY(pDlg->doortype_locked_n->isChecked());
+
+        QSignalSpy areaChangedSpy(map(), &TMap::signal_areaChanged);
+        QVERIFY(areaChangedSpy.isValid());
+        QVERIFY(!map()->isUnsaved());
+
+        pDlg->save();
+
+        // The door change was committed to the room.
+        QCOMPARE(subject()->getDoor(qsl("n")), 3); // locked
+        // The map was marked unsaved.
+        QVERIFY2(map()->isUnsaved(), "editing exits did not mark the map unsaved");
+        // updateArea() queues a throttled repaint that emits signal_areaChanged
+        // for the subject's area - drain the queued call and check it arrived.
+        QVERIFY2(areaChangedSpy.wait(1000), "updateArea() did not repaint the map (signal_areaChanged never fired)");
+        QCOMPARE(areaChangedSpy.count(), 1);
+        QCOMPARE(areaChangedSpy.takeFirst().at(0).toInt(), subject()->getArea());
     }
 };
 

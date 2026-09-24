@@ -5007,6 +5007,22 @@ describe("Window and label state", function()
       assert.is_nil(ok)
       assert.are.equal(("window '%s' not found"):format(unknown), err)
     end)
+
+    -- Moving the map out of its dock widget would split it from a parent it
+    -- cannot be put back into, and naming that widget as a destination would
+    -- otherwise fall through to a plain "not found", reading as though the
+    -- profile had no map at all
+    it("refuses to move the map out of its floating/dockable window, or to put anything into it (#6510)", function()
+      assert.is_true(openMapWidget())
+
+      local moved, movedErr = setWindow("main", "mapper", 0, 0, true)
+      assert.is_nil(moved)
+      assert.are.equal("element 'mapper' is the map in a floating/dockable window and may not be moved", movedErr)
+
+      local received, receivedErr = setWindow("mapper", label, 0, 0, true)
+      assert.is_nil(received)
+      assert.are.equal("window 'mapper' is the map in a floating/dockable window and may not receive other elements", receivedErr)
+    end)
   end)
 
   describe("user window title and stylesheet", function()
@@ -5101,8 +5117,8 @@ end)
 -- top-level block kept at the tail of the file; do not interleave it with the
 -- blocks above.
 describe("Widget state getters", function()
-  -- user windows and the map widget cannot be deleted from Lua, only hidden,
-  -- so keep the names unique per run
+  -- user windows cannot be deleted from Lua, only hidden, so keep the names
+  -- unique per run
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local function name(base)
     return base .. suffix
@@ -6594,7 +6610,7 @@ describe("Toolbar buttons", function()
     end)
 
     it("getButtonState with no arguments answers the console's own button state", function()
-      -- with no arguments this answers TConsole::mButtonState, which is 1 or 2
+      -- with no arguments this answers TConsoleModel::mButtonState, which is 1 or 2
       -- rather than the boolean the named form answers, and which only a real
       -- click on a push-down button writes - setButtonState never touches it
       local before = getButtonState()
@@ -7488,9 +7504,7 @@ describe("Argument checks on the user window functions", function()
 
   it("openUserWindow hard-errors on every argument it cannot use", function()
     local name = "argCheckUserWindow" .. suffix
-    -- the double space after the colon is a typo (#10418) and is pinned as-is;
-    -- fixing it means updating this string in the same change
-    assert.are.equal("openUserWindow:  bad argument #1 type (name as string expected, got table!)",
+    assert.are.equal("openUserWindow: bad argument #1 type (name as string expected, got table!)",
       errorFrom(openUserWindow, {}))
     assert.are.equal("openUserWindow: bad argument #2 type (loadLayout as boolean is optional, got string!)",
       errorFrom(openUserWindow, name, "yes"))
@@ -7540,5 +7554,39 @@ describe("Argument checks on the user window functions", function()
     local ok, err = resetBackgroundImage(absent, false)
     assert.is_nil(ok)
     assert.are.equal(("console '%s' not found"):format(absent), err)
+  end)
+end)
+
+describe("calcFontSize on the main window", function()
+
+  it("measures the main window when given no name at all", function()
+    local width, height = calcFontSize()
+    assert.is_number(width)
+    assert.is_number(height)
+    assert.is_true(width > 0)
+    assert.is_true(height > 0)
+  end)
+
+  it("gives the same answer for the main window by name", function()
+    local width, height = calcFontSize("main")
+    assert.is_true(width > 0)
+    assert.is_true(height > 0)
+    assert.are.same({width, height}, {calcFontSize()})
+  end)
+
+  it("answers nil for a console name nothing is registered under", function()
+    assert.is_nil(calcFontSize("calcFontSizeAbsent"))
+  end)
+
+  it("measures a miniconsole separately from the main window", function()
+    local console = "calcFontSizeMini"
+    finally(function() deleteMiniConsole(console) end)
+    createMiniConsole("main", console, 0, 0, 200, 60)
+    setMiniConsoleFontSize(console, 30)
+    local mainWidth = calcFontSize()
+    local miniWidth = calcFontSize(console)
+    assert.is_true(mainWidth > 0)
+    assert.is_true(miniWidth > 0)
+    assert.are_not.equal(mainWidth, miniWidth)
   end)
 end)

@@ -1,5 +1,6 @@
 -- This block must stay first in the file: once a later spec calls
--- openMapWidget(), the widget persists for the rest of the session and the
+-- openMapWidget(), the widget persists for the rest of the session - only an
+-- embedded mapper takes it away again, and no spec makes one - so the
 -- pre-widget state becomes unreachable.
 describe("Tests map events and menus before the map widget is opened", function()
   it("should return an empty table when nothing is registered yet", function()
@@ -2769,9 +2770,9 @@ end)
 --
 -- The map dock has no window name, so windowVisible() cannot reach it and these
 -- specs read the state through the map window functions instead. That works
--- because Host::mapWidget() derives its answer from the dock's own hidden
--- state: drop the hide() out of Host::closeMapWidget() and the two specs below
--- that assert the closed answers fail.
+-- because TMainConsole::mapWidget() derives its answer from the dock's own
+-- hidden state: drop the hide() out of TMainConsole::hideMapWidget() and the
+-- two specs below that assert the closed answers fail.
 describe("Tests the open and closed states of the map widget", function()
   setup(function()
     assert.is_true(openMapWidget())
@@ -2853,8 +2854,8 @@ describe("Tests the open and closed states of the map widget", function()
 
   -- Neither of these can be reached from Lua, so they are recorded rather than
   -- covered: the dock's own title bar close button and mudlet's map toolbar
-  -- button both hide the same dock, and Host::mapWidget() reads the dock's
-  -- hidden state so that it follows them without either having to know.
+  -- button both hide the same dock, and TMainConsole::mapWidget() reads the
+  -- dock's hidden state so that it follows them without either having to know.
   pending("the map dock's title bar close button leaves the map window functions reporting no map window - needs GUI automation")
 
   pending("the map toolbar button handing the map to a main window dock leaves the map window functions reporting no map window - needs GUI automation")
@@ -3939,6 +3940,34 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_not_nil(written, "saveJsonMap should have added the suffix itself")
       written:close()
       assert.is_nil(io.open(suffixlessPath, "r"))
+    end)
+
+    it("makes the profile's map folder when saving with no destination (#5955)", function()
+      local movedMapDirectory = getMudletHomeDir() .. "/mapper_spec_map_moved"
+      assert.are.equal("directory", lfs.attributes(mapDirectory, "mode"), "the block's backup folder has gone missing")
+      assert.is_nil(lfs.attributes(movedMapDirectory), "a previous run left the moved map folder behind")
+      assert(os.rename(mapDirectory, movedMapDirectory))
+      finally(function()
+        if lfs.attributes(mapDirectory, "mode") == "directory" then
+          -- the names come out first: removing while lfs.dir walks the folder
+          -- can skip an entry, and a leftover would strand the rename below
+          local written = {}
+          for entry in lfs.dir(mapDirectory) do
+            if entry ~= "." and entry ~= ".." then
+              written[#written + 1] = mapDirectory .. "/" .. entry
+            end
+          end
+          for _, path in ipairs(written) do
+            assert(os.remove(path))
+          end
+          assert(lfs.rmdir(mapDirectory))
+        end
+        assert(os.rename(movedMapDirectory, mapDirectory))
+      end)
+
+      assert.is_nil(lfs.attributes(mapDirectory))
+      assert.is_true(saveJsonMap())
+      assert.are.equal("directory", lfs.attributes(mapDirectory, "mode"))
     end)
 
     it("reports failure rather than raising when the file cannot be written", function()

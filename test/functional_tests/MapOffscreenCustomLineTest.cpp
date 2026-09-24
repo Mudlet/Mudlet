@@ -33,14 +33,18 @@
  * Run with: ctest -R MapOffscreenCustomLineTest -V
  */
 
+#include <QComboBox>
+#include <QDialog>
 #include <QFileInfo>
 #include <QPixmap>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
@@ -64,6 +68,9 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
+    // A member rather than a local because the timer that writes it is still
+    // queued if the test function returns early
+    bool mDialogAnswered = false;
     const QString mProfileName = qsl("MapOffscreenCustomLine-Test");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
@@ -85,7 +92,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -136,7 +143,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -332,6 +339,68 @@ private slots:
         pRoom->customLines.remove(qsl("s"));
         pRoom->calcRoomDimensions();
         QVERIFY2(!pArea->getCustomLineRoomsForZ(0).contains(1), "a room that lost its last custom line stayed in the index");
+    }
+
+    // The custom exit line properties dialog carried WA_DeleteOnClose and was
+    // run with exec(), so the combo boxes read out of it once exec() returned
+    // had already been freed. Reading them from an accepted() lambda instead
+    // means the slot now hands control back with the dialog still up, which is
+    // what this pins - and the mapper is no longer frozen behind it (#6754)
+    void test_theCustomLinePropertiesDialogDoesNotBlockTheRestOfMudlet()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Line Properties Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0));
+        QVERIFY(addRoomAt(2, areaId, 0, 1));
+
+        TRoom* pRoom = pRoomDB->getRoom(1);
+        QVERIFY(pRoom);
+        pRoom->setNorth(2);
+        pRoom->customLines[qsl("n")] = QList<QPointF>{QPointF(0.0, 1.0)};
+        pRoom->customLinesColor[qsl("n")] = lineColour();
+        pRoom->customLinesStyle[qsl("n")] = Qt::SolidLine;
+        pRoom->customLinesArrow[qsl("n")] = false;
+        pRoom->calcRoomDimensions();
+
+        mpHost->showHideOrCreateMapper(false);
+        QVERIFY(pMap->mpMapper);
+        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        QVERIFY(p2dMap);
+        // What clicking a custom line leaves behind for the context menu
+        p2dMap->mCustomLineSelectedRoom = 1;
+        p2dMap->mCustomLineSelectedExit = qsl("n");
+
+        // Armed before the call, because a dialog holding its own event loop
+        // would give the test no other moment to reach it. Nothing pumps the
+        // event loop between here and the slot returning, so this can only
+        // have run by then if the slot ran a loop itself.
+        mDialogAnswered = false;
+        QTimer::singleShot(0, p2dMap, [this, p2dMap]() {
+            auto* pDialog = p2dMap->findChild<QDialog*>();
+            QVERIFY(pDialog);
+            auto* pLineStyle = pDialog->findChild<QComboBox*>(qsl("lineStyle"));
+            QVERIFY(pLineStyle);
+            pLineStyle->setCurrentIndex(pLineStyle->findData(static_cast<int>(Qt::DashLine)));
+            pDialog->accept();
+            mDialogAnswered = true;
+        });
+
+        p2dMap->slot_customLineProperties();
+        QVERIFY2(!mDialogAnswered, "the slot did not hand control back until the dialog had been answered, so everything else in Mudlet was frozen behind it");
+        auto* pDialog = p2dMap->findChild<QDialog*>();
+        QVERIFY2(pDialog, "the dialog was not left open for the mapper to go on running behind");
+        QVERIFY2(pDialog->isVisible(), "the dialog was never put on screen, so there was nothing there for the user to answer");
+
+        QTRY_VERIFY2(mDialogAnswered, "the custom line properties dialog never appeared");
+        QTRY_COMPARE(pRoom->customLinesStyle.value(qsl("n")), Qt::DashLine);
+
+        // The dialog closes itself, but the deletion that follows is posted
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!p2dMap->findChild<QDialog*>(), "the dialog outlived its own closing");
     }
 };
 

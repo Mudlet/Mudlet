@@ -50,6 +50,7 @@
 
 #include <bitset>
 #include <iostream>
+#include <memory>
 #include <queue>
 #include <string>
 #include <utility>
@@ -71,6 +72,7 @@
 #endif
 
 class QJsonDocument;
+class QSaveFile;
 class QJsonObject;
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -204,10 +206,19 @@ public:
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
-    void recordReplay();
+    bool recordingReplay() const { return mRecordReplay; }
+    bool startReplayRecording(const QString& fileName);
+    bool stopReplayRecording();
+    QString replayRecordingFileName() const;
+    QString replayRecordingErrorString() const;
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
+    bool replayPaused() const { return mReplayPaused; }
+    void pauseReplay();
+    void resumeReplay();
+    void stopReplay();
+    void endReplay(const QString& message);
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QByteArray& getEncoding() const { return mEncoding; }
@@ -224,6 +235,10 @@ public:
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
+    static std::string escapeIac(std::string data);
+
+    // Wraps a two-byte Aardwolf 102 subchannel payload in its subnegotiation
+    static std::string buildChannel102Message(const std::string& payload);
     bool isNewEnvironEnabled() const { return enableNewEnviron; }
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
@@ -253,16 +268,16 @@ public:
         processSocketData(data.data(), data.size(), true);
     }
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
-    // Each nested processSocketData() puts ~100KB of buffers on the stack, so a
-    // self-feeding feedTelnet() loop overflows a 1MB (Windows) stack in only ~8
-    // levels - hence a much lower cap than TriggerUnit::scmMaxProcessingDepth.
+    // Every feedTelnet() level nests inside processSocketData(), so it also
+    // counts against scmMaxDecompressionRecursion; keep this below it, or a
+    // runaway loop reports as dropped data instead of the trigger-named Lua error.
     inline static const int scmMaxLoopbackProcessingDepth = 5;
-    // How many times processSocketData() may re-enter itself to drain data left
-    // over after a decompression pass (compressed input that did not fit in one
+    // How deep processSocketData() may nest (the outermost call counts as one)
+    // while draining data left over after a decompression pass (compressed input that did not fit in one
     // output buffer, or plain data following the compressed stream). Each level
-    // puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
-    // output at ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read,
-    // which bounds a decompression bomb.
+    // inflates at most one output buffer, so this caps decompressed output at
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read, which bounds
+    // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     void terminateConnection();
@@ -567,6 +582,8 @@ private:
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
+    std::unique_ptr<QSaveFile> mpReplayFile;
+    bool mRecordReplay = false;
     int mCycleCountMTTS = 0;
     QSet<QString> newEnvironVariablesSent;
     bool mReplayHasFaultyFormat = false;
@@ -588,6 +605,22 @@ private:
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
     bool loadingReplay = false;
+    // Playback is held. No chunk is handed to the parser and no chunk timer
+    // runs until resumeReplay() or stopReplay() clears this.
+    bool mReplayPaused = false;
+    // A chunk has been read into the global chunk buffer in ctelnet.cpp and has
+    // not been handed to the parser yet. Defensive: it guards the re-arm in
+    // resumeReplay() against the one window where no chunk is waiting, which
+    // needs a pause AND a resume to land inside one chunk's processing by way
+    // of a nested event loop.
+    bool mReplayChunkPending = false;
+    // What the pending chunk's timer is started with: the full gap scaled by
+    // the replay speed when the chunk was read, cut down to whatever was left
+    // of that wait if the replay is paused part-way through it.
+    int mReplayChunkDelay = 0;
+    // A member rather than a QTimer::singleShot so that pausing can stop it and
+    // take back the time still left on it.
+    QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;

@@ -40,7 +40,7 @@
 #include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
-#include "dlgTriggerEditor.h"
+#include "enums.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -50,6 +50,25 @@
 
 #include <memory>
 
+// A compile error is marked up for the editor's rich-text view (see
+// TLuaInterpreter::compile(), which is where this has to be kept in step by
+// hand), and everything else that shows it - the console line the install
+// writes, the reason installPackage() hands back - wants the text it was made
+// from. The escaping is undone in the reverse of the order it was applied, the
+// ampersand last of all, so that a script whose own text says "&amp;lt;b&amp;gt;" comes
+// back as itself rather than as markup.
+static QString compileErrorAsPlainText(const QString& error)
+{
+    QString plainText = error;
+    plainText.remove(qsl("<b>"));
+    plainText.remove(qsl("</b>"));
+    plainText.replace(qsl("&quot;"), qsl("\""));
+    plainText.replace(qsl("&lt;"), qsl("<"));
+    plainText.replace(qsl("&gt;"), qsl(">"));
+    plainText.replace(qsl("&amp;"), qsl("&"));
+    return plainText;
+}
+
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 {
@@ -58,6 +77,8 @@ XMLimport::XMLimport(Host* pH)
 std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
 {
     mPackageName = packName;
+    mItemsWithErrors.clear();
+    mItemsWithErrorNames.clear();
     setDevice(pfile);
 
     module = moduleFlag;
@@ -783,7 +804,13 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
-    setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    // Through the setter rather than at the field, so that turning spell check
+    // on always queues the dictionary read. Nothing is queued here: the whole
+    // import runs inside the profile loading sequence, which the setter skips,
+    // and the warm that follows the load covers whatever was read in.
+    bool enableSpellCheck = false;
+    setBoolAttribute(qsl("mEnableSpellCheck"), enableSpellCheck);
+    pHost->setEnableSpellCheck(enableSpellCheck);
     if (attributes().hasAttribute(QLatin1String("mShowInfo"))) {
         // Old - pre Map Info versions of Mudlet (those before
         // https://github.com/Mudlet/Mudlet/pull/4718) used the above
@@ -1024,7 +1051,7 @@ void XMLimport::readHost(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
-        pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
+        pHost->setSearchOptions(static_cast<enums::EditorSearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
     }
 
     pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
@@ -1256,8 +1283,6 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mWhite"), &Host::mWhite},
             {qsl("mLightWhite"), &Host::mLightWhite},
             {qsl("mFgColor2"), &Host::mFgColor_2},
-            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
-            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
             {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
             {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
             {qsl("mBlack2"), &Host::mBlack_2},
@@ -1284,6 +1309,8 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mBgColor2"), &Host::mBgColor_2},
             {qsl("mMapGridColor"), &Host::mMapGridColor},
             {qsl("mMapInfoBg"), &Host::mMapInfoBg},
+            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
+            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
     };
 
     const QString elemName = elementName.toString();
@@ -1390,6 +1417,8 @@ int XMLimport::readTrigger(TTrigger* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
@@ -1509,6 +1538,8 @@ int XMLimport::readTimer(TTimer* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTimer(...): ERROR: can not compile timer's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
@@ -1579,6 +1610,8 @@ int XMLimport::readAlias(TAlias* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
@@ -1647,6 +1680,8 @@ int XMLimport::readAction(TAction* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAction(...): ERROR: can not compile action's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("css")) {
                 pT->css = readElementText();
@@ -1742,6 +1777,8 @@ int XMLimport::readScript(TScript* pParent)
                 const QString tempScript = readScriptElement();
                 if (!script->setScript(tempScript)) {
                     qDebug().nospace().noquote() << "XMLimport::readScript(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
+                    mItemsWithErrors.append(qsl("%1: %2").arg(script->getName(), compileErrorAsPlainText(script->getError())));
+                    mItemsWithErrorNames.append(script->getName());
                 }
             } else if (name() == qsl("eventHandlerList")) {
                 readStringList(script->mEventHandlerList, what);
@@ -1806,6 +1843,8 @@ int XMLimport::readKey(TKey* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readKey(...): ERROR: can not compile key's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
@@ -2100,15 +2139,24 @@ void XMLimport::readStopWatchMap()
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;
                 pStopWatch->mIsInitialised = true;
+                // Both of the stored times come straight out of the profile
+                // file, so they are clamped to the range a stopwatch holds the
+                // same way its own operations are - otherwise an edited or
+                // damaged profile could load one whose time no longer fits:
                 if (attributes().value(qsl("running")) == YES) {
                     pStopWatch->mIsRunning = true;
                     // The stored value is the point in epoch time that the
                     // stopwatch appears to have been started so we need to
-                    // make that into a QDateTime that is the equivalent:
-                    pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(attributes().value(qsl("effectiveStartDateTimeEpochMSecs")).toLongLong());
+                    // make that into a QDateTime that is the equivalent.
+                    // Bounding that instant rather than the elapsed time it
+                    // implies keeps the subtraction which would work that time
+                    // out from overflowing on a wild value:
+                    const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
+                    pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(qBound(
+                            nowMSecs - stopWatch::csmMaximumMilliSeconds, attributes().value(qsl("effectiveStartDateTimeEpochMSecs")).toLongLong(), nowMSecs + stopWatch::csmMaximumMilliSeconds));
                 } else {
                     pStopWatch->mIsRunning = false;
-                    pStopWatch->mElapsedTime = attributes().value(qsl("elapsedDateTimeMSecs")).toLongLong();
+                    pStopWatch->mElapsedTime = stopWatch::clampToRange(attributes().value(qsl("elapsedDateTimeMSecs")).toLongLong());
                 }
                 mpHost->mStopWatchMap[watchId] = std::move(pStopWatch);
                 // A dummy read as there should not be any text for this element:

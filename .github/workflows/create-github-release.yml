@@ -5,9 +5,10 @@ on:
     types: [completed]
     branches: [master, development, release-*, Mudlet-*]
 
+# actions: write is for starting the Linux package build once a release is out
 permissions:
   contents: write
-  actions: read
+  actions: write
 
 # Both build workflows trigger this; don't cancel the first - the second trigger completes the release
 concurrency:
@@ -79,6 +80,8 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+          # We are just reading the logs, so we don't need the files
+          filter: blob:none
 
       # workflow_run always runs this file from the default branch, while the
       # checkout above is the commit that was built - which may predate the release
@@ -452,6 +455,17 @@ jobs:
           echo "Published assets:"
           cat published-final/assets.txt
           bash release-scripts/CI/verify-release-checksums.sh published-final/SHA256SUMS.txt published-final/assets.txt
+
+      # A release made with GITHUB_TOKEN fires no release event, so start the
+      # package build directly. It is not part of the release, so failing to start
+      # it must not fail the release.
+      - name: Start the Linux package build
+        if: steps.release-type.outputs.type == 'release' && vars.LINUX_PACKAGES_BASE_URL != ''
+        continue-on-error: true
+        env:
+          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run build-linux-packages.yml --repo "${GITHUB_REPOSITORY}" -f tag="${RELEASE_TAG}" -f publish=true
 
       # Generate and upload Sparkle appcast XML for macOS updates
       - name: Add SSH agent for appcast upload

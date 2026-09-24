@@ -22,6 +22,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "EditorUndoStack.h"
@@ -92,7 +93,7 @@ private:
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, profileName);
+        MudletPaths::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
     if (dir.exists()) {
       dir.removeRecursively();
@@ -138,7 +139,7 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
-    QCOMPARE(mudlet::getMudletPath(enums::mainPath),
+    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
              qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
@@ -206,8 +207,7 @@ private slots:
     mpHost = nullptr;
     delete mpServer;
     mpServer = nullptr;
-    // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-    // getMudletPath() dereferences the instance rather than checking it
+    // Null when initTestCase skipped or failed ahead of mudlet::start()
     if (mudlet::self()) {
       deleteProfileDirectory(mProfileName);
       delete mudlet::self();
@@ -1602,6 +1602,73 @@ private slots:
     QCOMPARE(pTimer->getTime(), expectedTime);
 
     cleanupAll(mItemTypes[1]);
+  }
+
+  void testTimerWithoutATimeIsFlagged() {
+    mpEditor->slot_showTimers();
+    cleanupAll(mItemTypes[1]);
+
+    mpEditor->addTimer(false);
+    QVERIFY(mpEditor->mpTimerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *timer = mpEditor->mpTimerBaseItem->child(0);
+    int timerID = timer->data(0, Qt::UserRole).toInt();
+    TTimer *pTimer = mpHost->getTimerUnit()->getTimer(timerID);
+    QVERIFY(pTimer != nullptr);
+
+    mpEditor->treeWidget_timers->setCurrentItem(timer);
+    mpEditor->slot_timerSelected(timer);
+    mpEditor->mpUndoStack->clear();
+
+    // a new timer has no time yet
+    mpEditor->saveTimer();
+    QVERIFY(!pTimer->state());
+    QVERIFY(!pTimer->getError().isEmpty());
+
+    mpEditor->mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 2, 0));
+    mpEditor->saveTimer();
+    QVERIFY(pTimer->state());
+
+    // edits of the time made in quick succession would merge into a single undo step
+    mpEditor->mpUndoStack->clear();
+    mpEditor->mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 0, 0));
+    mpEditor->saveTimer();
+    QVERIFY(!pTimer->state());
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(pTimer->getTime(), QTime(0, 0, 2, 0));
+    QVERIFY(pTimer->state());
+
+    mpEditor->mpUndoStack->redo();
+    QCOMPARE(pTimer->getTime(), QTime(0, 0, 0, 0));
+    QVERIFY(!pTimer->state());
+
+    cleanupAll(mItemTypes[1]);
+  }
+
+  void testTimerMovedUnderATimerNeedsNoTime() {
+    TLuaInterpreter *interpreter = mpHost->getLuaInterpreter();
+    const int parentID = interpreter->startPermTimer(qsl("W2aMoveParent"), QString(), 5, qsl("-- parent")).first;
+    const int zeroID = interpreter->startPermTimer(qsl("W2aMoveZero"), QString(), 0, qsl("-- zero")).first;
+    TTimer *pParent = mpHost->getTimerUnit()->getTimer(parentID);
+    TTimer *pZero = mpHost->getTimerUnit()->getTimer(zeroID);
+    QVERIFY(pParent != nullptr);
+    QVERIFY(pZero != nullptr);
+
+    pZero->validateTime();
+    QVERIFY(!pZero->state());
+
+    // an offset timer fires when its parent does, so it needs no time of its own
+    mpHost->getTimerUnit()->reParentTimer(zeroID, 0, parentID);
+    QVERIFY(pZero->isOffsetTimer());
+    QVERIFY(pZero->state());
+
+    mpHost->getTimerUnit()->reParentTimer(zeroID, parentID, 0);
+    QVERIFY(!pZero->isOffsetTimer());
+    QVERIFY(!pZero->state());
+
+    delete pZero;
+    delete pParent;
   }
 
   void testTriggerPatternTypeChanges() {

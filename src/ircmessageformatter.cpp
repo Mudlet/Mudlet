@@ -32,6 +32,17 @@ static QString plainTextForLua(const QString& text)
     return IrcTextFormat().toPlainText(text).replace(QStringLiteral("&lt;"), QStringLiteral("<")).replace(QStringLiteral("&amp;"), QStringLiteral("&"));
 }
 
+// Whatever a server or another user fills in reaches the IRC window as HTML and
+// a script as it was sent, so every such field goes through here rather than
+// being interpolated raw into a line that QTextBrowser will render as markup.
+static QString contentFor(const QString& text, bool isForLua)
+{
+    if (isForLua) {
+        return plainTextForLua(text);
+    }
+    return IrcTextFormat().toHtml(text);
+}
+
 QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
 {
     QString formatted;
@@ -178,8 +189,15 @@ QString IrcMessageFormatter::formatJoinMessage(IrcJoinMessage* message, bool isF
 
 QString IrcMessageFormatter::formatKickMessage(IrcKickMessage* message, bool isForLua)
 {
-    Q_UNUSED(isForLua)
-    return QObject::tr("! %1 kicked %2").arg(message->nick(), message->user());
+    const QString channel = contentFor(message->channel(), isForLua);
+
+    if (message->reason().isEmpty()) {
+        //: Shown in the IRC client when someone is kicked out of a channel without a reason being given. %1 is the nickname doing the kicking, %2 the nickname being kicked, %3 the channel.
+        return QObject::tr("! %1 kicked %2 from %3").arg(message->nick(), message->user(), channel);
+    }
+
+    //: Shown in the IRC client when someone is kicked out of a channel. %1 is the nickname doing the kicking, %2 the nickname being kicked, %3 the channel, %4 the reason the kicker gave.
+    return QObject::tr("! %1 kicked %2 from %3 (%4)").arg(message->nick(), message->user(), channel, contentFor(message->reason(), isForLua));
 }
 
 QString IrcMessageFormatter::formatModeMessage(IrcModeMessage* message, bool isForLua)
@@ -340,11 +358,10 @@ QString IrcMessageFormatter::formatErrorMessage(IrcErrorMessage* message, bool i
 
 QString IrcMessageFormatter::formatPartMessage(IrcPartMessage* message, bool isForLua)
 {
-    Q_UNUSED(isForLua)
     if (message->reason().isEmpty()) {
         return QObject::tr("! %1 has left %2").arg(message->nick(), message->channel());
     }
-    return QObject::tr("! %1 has left %2 (%3)").arg(message->nick(), message->channel(), message->reason());
+    return QObject::tr("! %1 has left %2 (%3)").arg(message->nick(), message->channel(), contentFor(message->reason(), isForLua));
 }
 
 QString IrcMessageFormatter::formatPongMessage(IrcPongMessage* message, bool isForLua)
@@ -377,11 +394,10 @@ QString IrcMessageFormatter::formatPrivateMessage(IrcPrivateMessage* message, bo
 
 QString IrcMessageFormatter::formatQuitMessage(IrcQuitMessage* message, bool isForLua)
 {
-    Q_UNUSED(isForLua)
     if (message->reason().isEmpty()) {
         return QObject::tr("! %1 has quit").arg(message->nick());
     }
-    return QObject::tr("! %1 has quit (%2)").arg(message->nick(), message->reason());
+    return QObject::tr("! %1 has quit (%2)").arg(message->nick(), contentFor(message->reason(), isForLua));
 }
 
 QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message, bool isForLua)

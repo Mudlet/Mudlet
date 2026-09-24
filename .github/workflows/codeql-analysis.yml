@@ -6,18 +6,11 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [development, main]
+  # Not on push: merges to development come in bursts and a scan takes an hour,
+  # so per-push runs either pile up or leave cancelled checks on merged commits.
   schedule:
-    - cron: '0 7 * * 3'
+    - cron: '0 7 * * *'
   workflow_dispatch:
-
-# A branch scan only needs the newest commit analysed: five pushes to
-# development in quick succession otherwise hold five full builds at once, and
-# the runner concurrency is shared with every other repository in the org.
-concurrency:
-  group: codeql-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   analyze:
@@ -36,7 +29,7 @@ jobs:
             qt: '6.11.1'
             triplet: x64-linux
             compiler: gcc_64
-            gcc_compiler_version: 10
+            gcc_compiler_version: 14
             os: ubuntu-latest
 
     env:
@@ -103,7 +96,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4.37.9
+      uses: github/codeql-action/init@v4.38.0
       with:
         config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
@@ -172,7 +165,7 @@ jobs:
         CMAKE_BUILD_PARALLEL_LEVEL: 3
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4.37.9
+      uses: github/codeql-action/analyze@v4.38.0
       with:
         category: "/language:${{ matrix.language }}"
         upload: false
@@ -187,6 +180,6 @@ jobs:
         output: sarif-results/${{ matrix.language }}.sarif
 
     - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif@v4.37.9
+      uses: github/codeql-action/upload-sarif@v4.38.0
       with:
         sarif_file: sarif-results/${{ matrix.language }}.sarif

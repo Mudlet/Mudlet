@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "Host.h"
+#include "SignInStoreReconciler.h"
 #include "utils.h"
 
 #include <QElapsedTimer>
@@ -28,6 +29,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
+#include <QScopedPointer>
 #include <QString>
 #include <QVariantMap>
 
@@ -40,22 +42,28 @@ class OAuthClientFlow;
 class GMCPAuthenticator
 {
     Q_DECLARE_TR_FUNCTIONS(GMCPAuthenticator)
+    friend class GMCPCharLoginTest;
 
 public:
     explicit GMCPAuthenticator(Host* pHost);
     ~GMCPAuthenticator() = default;
 
     void saveSupportsSet(const QString& packageMessage, const QString& data);
-    // Sends Char.Login.Credentials. With interactiveHandoff true it always sends the empty object {}
-    // (the "run your own sign-in screen" hand-off) even when the profile has stored credentials;
-    // otherwise it autofills the stored character name and password when the game accepts them.
+    // Sends Char.Login.Credentials. With interactiveHandoff true it always sends the "run your own
+    // sign-in screen" hand-off even when the profile has stored credentials; otherwise it autofills the
+    // stored character name and password when the game accepts them. A version 2 hand-off is the
+    // message with no account rather than a literally empty object - it carries the common fields (see
+    // addCommonFields) - while a version 1 one stays {}.
     void sendCredentials(bool interactiveHandoff = false);
     void handleAuthResult(const QString& packageMessage, const QString& data);
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
-    // Clears any stored password-less reconnect token for this profile, so the next connection signs in
-    // afresh. Invoked from the profile preferences "Forget saved sign-in" control. The optional callback
-    // reports whether the (asynchronous) keychain removal actually succeeded, so callers do not report
-    // success before the token is gone.
+    // Removes the whole stored sign-in for this profile - the token and the {account, provider} metadata
+    // that would otherwise resume the same provider - so the next connection signs in from scratch.
+    // Invoked from the profile preferences "Forget saved sign-in" control. It also bumps
+    // mForgetGeneration, so work already in flight stops putting back what it is removing. The optional
+    // callback reports whether the store really did end up empty, so callers do not report success
+    // before it is; a forget that a newer request supersedes reports false, since it did not complete as
+    // asked.
     void forgetSavedSignIn(std::function<void(bool success)> callback = {});
 
 private:
@@ -74,20 +82,51 @@ private:
     void selectAuthMethod();
     void scheduleSignInAttempt();
     void attemptReconnect();
-    // Reads the stored sign-in entry ({account, provider?, token?}) and acts on it: replay the token
+    // A profile's saved sign-in, assembled from both credential keys. token is empty when there is
+    // none to replay; it is a bearer secret, so whoever receives one scrubs it on every path.
+    struct StoredSignIn
+    {
+        QString account;
+        QString provider;
+        // Strict unless the store says otherwise, so an entry whose requirement is missing or
+        // unreadable never widens a stored token's exposure.
+        bool secureOnly = true;
+        QString token;
+        // The metadata named an account but its token could not be read - most often because a resume
+        // hint has none, but indistinguishably a store that failed to answer.
+        bool tokenUnreadable = false;
+    };
+    // Reads the stored sign-in as one entry, following the token wherever it lives: inline in the
+    // metadata for an entry written before the split, otherwise under its own key. Reports the auth
+    // attempt current when the read began rather than acting on it, because the two callers want
+    // different things from a stale result - one drops it, the other still has to decide whether it
+    // may rewrite the store. storeChangeRequested reports a save, forget or resume hint requested while
+    // the read ran, which will replace what it saw. The callback is never invoked at all if the Host goes
+    // away while a read is in flight, or if the read is still waiting its turn when the reconciler is
+    // destroyed.
+    void readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration, bool storeChangeRequested)> callback);
+    using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
+    // Reads one credential key; what mStoreReader does unless a test replaces it.
+    void readStoreKey(const QString& key, StoreReadDone done);
+    // Reads the stored sign-in - the {account, provider?, secure_only} metadata plus the token from
+    // wherever it lives, its own key or inline in a pre-split entry - and acts on it: replay the token
     // (when allowToken), else send the resume form for a remembered provider, else fall through to
     // selectAuthMethod(). allowToken is false on the connection straight after a rejection, so a
     // not-yet-rewritten entry cannot loop us back into another rejected reconnect.
     void readStoredSignIn(bool allowToken);
-    // Returns false when it refused to send: the token is a bearer secret and never goes out over a
-    // cleartext transport. It is scrubbed either way, and only a true return means a result is awaited.
-    bool sendReconnect(const QString& account, QString token);
-    // Sends the resume form of Char.Login.Credentials: {account, provider, version}, no password -
-    // asking the game to restart the browser sign-in for the provider remembered from an earlier
-    // Char.Login.URL. The absence of a password (not the presence of provider) is what distinguishes it.
+    // Returns false when it refused to send: the token is a bearer secret, and one the issuing server
+    // scoped to an encrypted transport (secureOnly) never goes out in the clear. It is scrubbed either
+    // way, and only a true return means a result is awaited.
+    bool sendReconnect(const QString& account, QString token, bool secureOnly);
+    // Sends the resume form of Char.Login.Credentials: an account and provider plus the common fields, no
+    // password - asking the game to restart the browser sign-in for the provider remembered from an
+    // earlier Char.Login.URL. The absence of a password (not the presence of provider) distinguishes it.
     void sendResume(const QString& account, const QString& provider);
     void handleAuthToken(const QString& packageMessage, const QString& data);
-    void storeReconnectToken(const QString& account, QString token);
+    // Requests that the stored sign-in become {account, provider, secureOnly} plus the token, and
+    // decides what to tell the player once it has - or has not. secureOnly is the token's transport
+    // requirement, stored with it because it belongs to the connection that minted it.
+    void storeReconnectToken(const QString& account, QString token, bool secureOnly);
     // After a rejected reconnect: re-reads the store first - another Mudlet instance sharing this
     // profile's keychain may have rotated the (single-use) token, in which case the fresh token is
     // replayed once instead of destroyed. Only a genuinely dead token is dropped, keeping the
@@ -96,17 +135,40 @@ private:
     // Takes the account and provider explicitly: the caller captures them before its keychain read, so
     // a Char.Login.Default arriving mid-read cannot clear mConn and turn this into a full discard.
     void dropTokenKeepResumeHint(const QString& account, const QString& provider);
-    // Rewrites the stored entry as {account, provider} with no token: enough to resume later, nothing
-    // any longer a bearer secret.
+    // Requests that the stored sign-in become a resume hint - {account, provider} and no token. Runs
+    // because a token is dead, so the token is removed before the metadata is rewritten. Any failure of
+    // that sequence falls back to forgetting the whole entry rather than risk leaving a dead token
+    // replayable - deliberately without checking which step failed, since the reconciler reports the
+    // outcome and the cost of an unnecessary forget is one provider menu.
     void storeResumeHint(const QString& account, const QString& provider);
+    // Requests that nothing be stored. The token goes first, and a failure to remove it leaves the
+    // metadata alone: deleting that half would hide the surviving token from the only UI that can
+    // offer to remove it again. callback reports whether the store really did become empty.
     void discardReconnectToken(std::function<void(bool success)> callback = {});
     void resetPerConnectionState();
     // Per socket connection, unlike resetPerConnectionState() which runs per Char.Login.Default.
     void resetForNewConnection();
 
+    // The mechanism the reconciler drives: one store operation against CredentialManager, mapped to
+    // the metadata or token key, with the same per-operation CredentialManager guard every credential
+    // callback in this file uses.
+    void performStoreOperation(SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done);
+
+    // Adds the two fields every client->server Char.Login message may carry: the negotiated version we
+    // are acting on, and token_storage - whether a reconnect token minted on this connection would
+    // actually be kept.
+    void addCommonFields(QJsonObject& payload) const;
+
     bool clientDrivenOAuthAvailable() const;
 
     Host* mpHost;
+    // Every mutation of the stored sign-in goes through here, so only one sequence of store
+    // operations runs at a time and a newer request supersedes an older one. Owned outright rather
+    // than parented to the Host: it must die with this authenticator, before the Host's own QObject
+    // teardown, so no completion can ever run against a destroyed `this`.
+    QScopedPointer<SignInStoreReconciler> mpStoreReconciler;
+    // Every read of the stored sign-in's keys goes through here, scheduled by mpStoreReconciler.
+    std::function<void(const QString& key, StoreReadDone done)> mStoreReader;
     QStringList mSupportedAuthTypes;
     // Version 2 client-driven OAuth capability, advertised by a server that is itself an OpenID
     // Provider. Only populated when the connection is encrypted: the flow's completing
@@ -122,8 +184,11 @@ private:
     // The negotiated Char.Login protocol version the server reported in Char.Login.Default. Absent (a
     // version 1 server or legacy exchange) is treated as 1; we echo this back on our client->server
     // messages (Credentials, Reconnect, resume, AuthCode) so both ends agree on the version even though
-    // base GMCP negotiation is one-directional. The one exception is the empty Char.Login.Credentials {}
-    // hand-off, which carries no fields at all by design.
+    // base GMCP negotiation is one-directional. The one exception is the hand-off on a version 1
+    // exchange, which stays the bare Char.Login.Credentials {} Mudlet has always sent such servers -
+    // a compatibility choice, not a protocol requirement, since the empty hand-off is itself a
+    // version 2 addition. From version 2 on it is the message with no account, so it carries the
+    // common fields like any other.
     int mNegotiatedVersion = 1;
 
     // Sign-in/token state for a single sign-in attempt, reset as one unit on every Char.Login.Default
@@ -139,9 +204,13 @@ private:
         // True on a connection that logged in by replaying a saved token, so a Char.Login.Token arriving
         // afterwards is a silent rotation rather than a first-time save worth announcing to the user.
         bool reconnectingWithToken = false;
-        // One-shot guard so the "you'll be signed in automatically next time" notice is shown at most
-        // once per connection, on the first token we persist.
-        bool announcedTokenSave = false;
+        // The forget generation (see mForgetGeneration) current when this connection replayed a saved
+        // token; set wherever reconnectingWithToken is, and only meaningful while a replay is what this
+        // connection is running on. Differing from mForgetGeneration later means the player has since
+        // forgotten that sign-in, so neither a rotation of the replayed token nor a resume hint built
+        // from it may be written back - either would restore what the forget just removed. A token from
+        // a sign-in the player began after the forget carries no such history and is stored normally.
+        unsigned int forgetAtReplay = 0;
         // One-shot guard: at most one rotated-token retry per connection, so two instances sharing a
         // store cannot ping-pong retries indefinitely.
         bool retriedRotatedToken = false;
@@ -168,16 +237,41 @@ private:
     // instead, and Char.Login 2 forbids replaying a token rejected on it - hence latching synchronously at
     // the rejection rather than when the read returns.
     //
-    // Consumed in one place (attemptReconnect()) but cleared or re-armed in two others, so audit all three
-    // together: retryOrDropRejectedToken() clears it when it replays a live rotated token, and re-arms it
-    // when a superseded recovery leaves the rejected token stored - by then the superseding Default has
-    // already consumed the latch, so without re-arming the Default after that could replay the dead token.
+    // Consumed in one place (attemptReconnect()) but cleared or re-armed at two further points, both
+    // inside retryOrDropRejectedToken(), so audit all three together: it is cleared when a live rotated
+    // token is replayed, and re-armed when a superseded recovery leaves the rejected token stored - by
+    // then the superseding Default has already consumed the latch, so without re-arming it the Default
+    // after that could replay the dead token.
     bool mReconnectRejected = false;
-    // Incremented on every per-connection auth reset (each Char.Login.Default). The asynchronous
-    // reconnect-token keychain read captures the value current when it started and re-checks it in its
-    // callback, so a result arriving after a newer connection began is discarded instead of driving a
-    // sign-in on the wrong attempt. Not part of mConn: it must monotonically increase, never reset.
+    // Incremented on every per-connection auth reset - each Char.Login.Default, and each socket connect
+    // or disconnect. The asynchronous reconnect-token keychain read captures the value current when it
+    // started and re-checks it in its callback, so a result arriving after a newer connection began is
+    // discarded instead of driving a sign-in on the wrong attempt. Only work that would *act* on the
+    // connection is gated this way: the token save's announcement deliberately is not, since it reports
+    // what became of the stored token rather than driving anything. Not part of mConn: it must
+    // monotonically increase, never reset.
     unsigned int mAuthAttemptGeneration = 0;
+    // The sign-in attempt whose successful token save has already been announced, so the "you'll be
+    // signed in automatically next time" notice is shown at most once per attempt, on the first token
+    // that attempt actually persists.
+    //
+    // Deliberately NOT part of mConn, unlike the other one-shot guards there: the announcement is made
+    // from the asynchronous save callback, so a save resolving after a newer Char.Login.Default would
+    // otherwise consume - or be suppressed by - a flag belonging to the attempt that replaced it.
+    // Stamping it with the generation keeps each attempt's announcement its own. Zero matches no
+    // attempt, since the constructor's reset makes the first generation 1.
+    unsigned int mAnnouncedSaveForAttempt = 0;
+    // Incremented by forgetSavedSignIn(). "Forget saved sign-in" has to beat whatever the sign-in
+    // machinery already had in flight, and none of that is a new sign-in attempt, so it cannot ride on
+    // mAuthAttemptGeneration - which also gates work the forget must not cancel. Three sites compare
+    // against it, and not all of them read the store: readStoredSignIn() captures it before its read and
+    // re-checks after, while retryOrDropRejectedToken() and storeReconnectToken() compare against
+    // mConn.forgetAtReplay - the value at the time this connection replayed its token, which is what
+    // makes a forget landing anywhere after that replay count. Without them a read still in flight
+    // replays the token being discarded, a rejection recovery writes a resume hint back over the entry
+    // just removed, and a rotation re-saves it under a fresh value - leaving Forget with nothing to show
+    // for itself. Not part of mConn: it must monotonically increase, never reset.
+    unsigned int mForgetGeneration = 0;
 
     // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in
     // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how

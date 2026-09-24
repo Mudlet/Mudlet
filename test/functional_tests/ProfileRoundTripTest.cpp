@@ -34,10 +34,12 @@
 #include <QFileInfo>
 #include <QtTest/QtTest>
 
+#include <QRegularExpression>
 #include <QTemporaryDir>
 
 #include <functional>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "AliasUnit.h"
@@ -100,11 +102,14 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpSource = nullptr;
     Host* mpTarget = nullptr;
+    Host* mpLegacyTarget = nullptr;
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
+    const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
     QTemporaryDir mSaveDir;
+    QString mExportedXml; // raw text of the saved profile XML, for format assertions
 
     // Expected item totals, kept explicit so an "everything got lost and both
     // sides are empty" scenario cannot pass the pairwise comparison:
@@ -113,6 +118,15 @@ private:
     static const int scmTimerCount = 6;
     static const int scmKeyCount = 6;
     static const int scmScriptCount = 6;
+
+    // A map info contributor name no Mudlet default can collide with - a fresh
+    // profile is given "Short", and a legacy map "Full".
+    inline static const QString scmContributorName = qsl("ProfileRoundTripContributor");
+
+    // An address of the target profile's own, so that keeping it can be told
+    // apart from blanking it.
+    inline static const QString scmTargetUrl = qsl("target.example.org");
+    static const int scmTargetPort = 4321;
 
     // -----------------------------------------------------------------------
     // Tree builders - these mirror the construction order XMLimport uses
@@ -244,6 +258,12 @@ private:
         auto scInner = addScript(scGroup, qsl("scripts <sub> & 'group'"), true, true, {}, QString());
         addScript(scInner, qsl("émoji🎉 script"), false, true, {qsl("emojiEvent🎉")}, qsl("-- emoji script\n"));
         addScript(nullptr, qsl("lone script"), false, false, {}, QString());
+
+        // Non-default, non-opaque map level colors, to prove the alpha
+        // channel survives XMLexport -> XMLimport rather than being dropped
+        // back to fully opaque:
+        mpSource->mLowerLevelColor = QColor(30, 60, 90, 120);
+        mpSource->mUpperLevelColor = QColor(200, 150, 100, 45);
     }
 
     // -----------------------------------------------------------------------
@@ -442,7 +462,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -472,7 +492,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -495,6 +515,12 @@ private slots:
             return;
         }
 
+        // Host attributes ride the same XML. Both are set off their defaults so
+        // an import that leaves them alone cannot pass.
+        mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
+        mpSource->setShowIdsInEditor(true);
+        mpSource->mMapInfoContributors.insert(scmContributorName);
+
         auto [saved, xmlPath, saveError] = mpSource->saveProfile(mSaveDir.path(), qsl("roundtrip"));
         QVERIFY2(saved, qPrintable(saveError));
         mpSource->waitForProfileSave();
@@ -502,32 +528,81 @@ private slots:
 
         // The import target is a bare Host, matching the state a profile is
         // in when mudlet::loadProfile() imports its XML at startup:
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
-        mpTarget = hostManager.getHost(mTargetName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
+        mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
+        mpTarget->setUrl(scmTargetUrl);
+        mpTarget->setPort(scmTargetPort);
 
         QFile file(xmlPath);
         QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        mExportedXml = QString::fromUtf8(file.readAll());
+        file.seek(0);
         XMLimport importer(mpTarget);
         auto [imported, importError] = importer.importPackage(&file);
         QVERIFY2(imported, qPrintable(importError));
+
+        // A second import target, fed a copy of the exported XML with the
+        // level colors' "alpha" attribute stripped out, to mimic a profile
+        // saved by a Mudlet version that predates this attribute - proving
+        // readHostColorElement()'s hasAttribute() guard still defaults the
+        // missing alpha to opaque instead of, say, an absent toInt() 0:
+        deleteProfileDirectory(mLegacyTargetName);
+        QVERIFY2(hostManager->addHost(mLegacyTargetName, mPort, QString(), QString()), "failed to create the legacy target Host");
+        mpLegacyTarget = hostManager->getHost(mLegacyTargetName);
+        QVERIFY(mpLegacyTarget);
+
+        QString legacyXml = mExportedXml;
+        legacyXml.replace(QRegularExpression(qsl(R"((<m(?:Lower|Upper)LevelColor) alpha="\d+">)")), qsl("\\1>"));
+        QVERIFY2(!legacyXml.contains(qsl("LevelColor alpha=")), "failed to strip the alpha attribute from the level color elements");
+
+        // The same copy also carries the map info contributors inside the one
+        // container they shared between #4718 and #5911 - the shape a profile
+        // last saved by a Mudlet of that vintage still has.
+        legacyXml.replace(QRegularExpression(qsl(R"(((?:\s*<mapInfoContributor>[^<]*</mapInfoContributor>)+))")), qsl("<mMapInfoContributors>\\1</mMapInfoContributors>"));
+        QCOMPARE(legacyXml.count(qsl("<mMapInfoContributors>")), 1);
+        const QString legacyContainer = QRegularExpression(qsl(R"(<mMapInfoContributors>[\s\S]*</mMapInfoContributors>)")).match(legacyXml).captured();
+        QVERIFY2(legacyContainer.contains(qsl("<mapInfoContributor>%1</mapInfoContributor>").arg(scmContributorName)), "failed to put this test's map info contributor back into the old container");
+
+        QTemporaryDir legacyDir;
+        QVERIFY(legacyDir.isValid());
+        const QString legacyPath = qsl("%1/legacy.xml").arg(legacyDir.path());
+        QFile legacyWriteFile(legacyPath);
+        QVERIFY2(legacyWriteFile.open(QFile::WriteOnly | QFile::Text), qPrintable(legacyWriteFile.errorString()));
+        QVERIFY(legacyWriteFile.write(legacyXml.toUtf8()) != -1);
+        legacyWriteFile.close();
+
+        QFile legacyReadFile(legacyPath);
+        QVERIFY2(legacyReadFile.open(QFile::ReadOnly | QFile::Text), qPrintable(legacyReadFile.errorString()));
+        XMLimport legacyImporter(mpLegacyTarget);
+        auto [legacyImported, legacyImportError] = legacyImporter.importPackage(&legacyReadFile);
+        QVERIFY2(legacyImported, qPrintable(legacyImportError));
     }
 
     void cleanupTestCase()
     {
         mpSource = nullptr;
         mpTarget = nullptr;
+        mpLegacyTarget = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);
+            deleteProfileDirectory(mLegacyTargetName);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // The editor search options are a Host-owned enum now; the XML carries the
+    // raw value, so every renumbering would come back as a different setting
+    void test_editorSettingsRoundTrip()
+    {
+        QCOMPARE(mpTarget->mSearchOptions, enums::EditorSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord));
+        QVERIFY(mpTarget->showIdsInEditor());
     }
 
     void test_triggersRoundTrip()
@@ -613,6 +688,68 @@ private slots:
                 return;
             }
         }
+    }
+
+    // mLowerLevelColor/mUpperLevelColor round-trip through XMLexport's "alpha"
+    // attribute (see readHostColorElement()'s alphaColors map) rather than
+    // being clipped back to opaque by QColor::name()'s #RRGGBB form:
+    void test_mapLevelColorsRoundTrip()
+    {
+        QCOMPARE(mpTarget->mLowerLevelColor, QColor(30, 60, 90, 120));
+        QCOMPARE(mpTarget->mUpperLevelColor, QColor(200, 150, 100, 45));
+    }
+
+    // The exporter must keep writing the RGB value and the alpha channel as
+    // two separate things - a #RRGGBB element text plus a numeric "alpha"
+    // attribute - rather than folding them into one combined ARGB hex string
+    // (e.g. via QColor::name(QColor::HexArgb)). Either form round-trips fine
+    // through this test's own XMLimport, but only the former stays readable
+    // by every Mudlet version that predates this attribute, which reads the
+    // element text as a plain #RRGGBB color.
+    void test_mapLevelColorsExportFormat()
+    {
+        QVERIFY2(mExportedXml.contains(qsl("<mLowerLevelColor alpha=\"120\">#1e3c5a</mLowerLevelColor>")), "expected mLowerLevelColor as #RRGGBB text with a separate alpha attribute");
+        QVERIFY2(mExportedXml.contains(qsl("<mUpperLevelColor alpha=\"45\">#c89664</mUpperLevelColor>")), "expected mUpperLevelColor as #RRGGBB text with a separate alpha attribute");
+        QVERIFY2(!mExportedXml.contains(qsl("#781e3c5a")), "alpha must not be folded into a combined ARGB hex color");
+        QVERIFY2(!mExportedXml.contains(qsl("#2dc89664")), "alpha must not be folded into a combined ARGB hex color");
+    }
+
+    // A profile exported by a Mudlet version that predates the "alpha"
+    // attribute on these two elements must still import as fully opaque,
+    // not as invisible: readHostColorElement()'s hasAttribute() guard is the
+    // whole of that behaviour (an absent attribute's toInt() would otherwise
+    // silently default to 0, making the mapper stop drawing these levels).
+    void test_legacyProfileWithoutAlphaAttributeDefaultsToOpaque()
+    {
+        QCOMPARE(mpLegacyTarget->mLowerLevelColor, QColor(30, 60, 90, 255));
+        QCOMPARE(mpLegacyTarget->mUpperLevelColor, QColor(200, 150, 100, 255));
+    }
+
+    // Map info contributors are written one per element straight into <Host>
+    // rather than wrapped in a container of their own (#5911). The container
+    // still has to be read on the way in, for profiles saved while it was in
+    // use.
+    void test_mapInfoContributorsRoundTripFlattenedAndFromTheOldContainer_5911()
+    {
+        QVERIFY2(mExportedXml.contains(qsl("<mapInfoContributor>%1</mapInfoContributor>").arg(scmContributorName)), "the contributor was not written as an element of its own");
+        QVERIFY2(!mExportedXml.contains(qsl("<mMapInfoContributors>")), "the contributors were written inside a container again");
+        QVERIFY2(mpTarget->mMapInfoContributors.contains(scmContributorName), "the contributor written straight into <Host> was not read back");
+        QVERIFY2(mpLegacyTarget->mMapInfoContributors.contains(scmContributorName), "the contributor in the old container was not read back");
+    }
+
+    // A game save is not where a profile's identity lives - the name, address
+    // and port are kept in the profile's base directory, and what the "Connect"
+    // dialog says there wins. A profile whose XML overwrote them connected to
+    // whatever game the save came from instead. The XML's own values are still
+    // read, into backup members.
+    void test_theProfileKeepsItsOwnNameAndAddressAfterImport_6709()
+    {
+        QCOMPARE(mpTarget->getName(), mTargetName);
+        QCOMPARE(mpTarget->getUrl(), scmTargetUrl);
+        QCOMPARE(mpTarget->getPort(), scmTargetPort);
+        QCOMPARE(mpTarget->mBackupHostName, mSourceName);
+        QCOMPARE(mpTarget->mBackupUrl, mpSource->getUrl());
+        QCOMPARE(mpTarget->mBackupPort, mpSource->getPort());
     }
 
     // The imported scripts registered their event handlers in the fresh Host:

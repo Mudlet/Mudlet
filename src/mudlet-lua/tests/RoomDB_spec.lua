@@ -389,6 +389,33 @@ describe("Tests the room and area database behind the map", function()
     end)
   end)
 
+  describe("Tests a neighbour's other exits while a room it also has a special exit to is deleted", function()
+    it("does not eat a neighbour's unrelated entrance during that neighbour's special-exit cleanup", function()
+      -- Deleting victim makes __removeRoom() find neighbour among the rooms
+      -- entering it, then call neighbour:removeAllSpecialExitsToRoom(victim),
+      -- which rebuilds every one of neighbour's entranceMap entries from
+      -- scratch via updateEntranceMap() - including the unrelated one this
+      -- checks survives that rebuild rather than being dropped.
+      local victim = makeRoom(areaHome, 25, 0, 0)
+      local neighbour = makeRoom(areaHome, 26, 0, 0)
+      local elsewhere = makeRoom(areaHome, 27, 0, 0)
+      finally(function()
+        deleteRoom(neighbour); deleteRoom(elsewhere)
+        if roomExists(victim) then deleteRoom(victim) end
+      end)
+
+      assert.is_true(addSpecialExit(neighbour, victim, "slip through"))
+      assert.is_true(setExit(neighbour, elsewhere, "north"))
+      assert.is_true(listHas(getAllRoomEntrances(elsewhere), neighbour))
+
+      assert.is_true(deleteRoom(victim))
+
+      assert.is_nil(getSpecialExitsSwap(neighbour)["slip through"])
+      assert.are.equal(elsewhere, getRoomExits(neighbour)["north"])
+      assert.is_true(listHas(getAllRoomEntrances(elsewhere), neighbour))
+    end)
+  end)
+
   describe("Tests room and exit weights", function()
     it("a room weight below one is clamped to one", function()
       local id = makeRoom(areaHome, 24, 0, 0)

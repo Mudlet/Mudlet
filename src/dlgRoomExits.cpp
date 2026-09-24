@@ -1001,6 +1001,13 @@ void dlgRoomExits::save()
         pA->determineAreaExitsOfRoom(pR->getId());
     }
 
+    // Repaint the mapper so the changed exits/doors/locks show immediately -
+    // without this the map stays stale until the next scroll/pan forces a
+    // paint. updateArea() queues a throttled mp2dMap->update(). Also mark the
+    // map unsaved, since editing exits is a map change.
+    mpHost->mpMap->updateArea(pR->getArea());
+    mpHost->mpMap->setUnsaved(__func__);
+
     close();
 }
 
@@ -1437,7 +1444,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
     normalStubExitChanged(
-            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_n, utils::richText(tr("Set the number of the room northwest of this one.")));
+            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, utils::richText(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 

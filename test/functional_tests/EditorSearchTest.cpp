@@ -27,11 +27,13 @@
 #include <QComboBox>
 #include <QTemporaryDir>
 #include <QTreeWidget>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <chrono>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
@@ -48,7 +50,12 @@
 #include "TTrigger.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgSourceEditorFindArea.h"
 #include "dlgTriggerEditor.h"
+#include "edbee/models/textdocument.h"
+#include "edbee/models/textrange.h"
+#include "edbee/texteditorcontroller.h"
+#include "edbee/texteditorwidget.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -72,7 +79,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -221,7 +228,7 @@ private slots:
         // does when a package is installed
         mpEditor->doCleanReset();
         QVERIFY2(waitForTreeToHold(qsl("qaSearchTrigger")), "the editor never rebuilt its trees around the items this test planted");
-        mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionNone);
+        mpEditor->setSearchOptions(enums::EditorSearchOptionNone);
     }
 
     void cleanupTestCase()
@@ -248,7 +255,7 @@ private slots:
     void cleanup()
     {
         if (mpEditor) {
-            mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionNone);
+            mpEditor->setSearchOptions(enums::EditorSearchOptionNone);
         }
     }
 
@@ -300,7 +307,7 @@ private slots:
         const int caseInsensitiveRows = totalResultRows();
         QVERIFY2(caseInsensitiveRows > 0, "a differently-cased needle found nothing while matching case-insensitively");
 
-        mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionCaseSensitive);
+        mpEditor->setSearchOptions(enums::EditorSearchOptionCaseSensitive);
         search(qsl("QAHAYSTACK"));
         QCOMPARE(totalResultRows(), 0);
 
@@ -313,7 +320,7 @@ private slots:
         search(qsl("qaSearchTrig"));
         QVERIFY2(totalResultRows() > 0, "a partial word found nothing while matching on substrings");
 
-        mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionWholeWord);
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
         search(qsl("qaSearchTrig"));
         QCOMPARE(totalResultRows(), 0);
 
@@ -328,7 +335,7 @@ private slots:
         search(qsl("qaSearchVariable"));
         QVERIFY2(!topLevelResultFor(qsl("Variable")), "a variable was searched without the option being set");
 
-        mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionIncludeVariables);
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
         search(qsl("qaSearchVariable"));
         auto* result = topLevelResultFor(qsl("Variable"));
         QVERIFY2(result, "the variable was not found with the option set");
@@ -385,6 +392,32 @@ private slots:
         QTreeWidgetItem* selected = mpEditor->treeWidget_triggers->currentItem();
         QVERIFY2(selected, "no trigger became current after its search result was chosen");
         QCOMPARE(selected->text(0), qsl("qaNestedTrigger"));
+    }
+
+    // The find box inside the script pane marks every match as the term is
+    // typed, so it waits until enough has been typed to be worth a pass over
+    // the document - one or two characters match most of a script (#3847).
+    void test_theScriptFindBoxIgnoresTermsOfTwoCharactersOrFewer()
+    {
+        // whatever item is selected owns this pane, and the next save writes
+        // the pane back into it, so put the script back before leaving
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorEdbee->controller()->borderedTextRanges()->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("aaa bbb aaa\n"));
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("aaa bbb aaa\n"));
+        edbee::TextRangeSet* marked = mpEditor->mpSourceEditorEdbee->controller()->borderedTextRanges();
+        marked->clear();
+
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aa"));
+        QCOMPARE(marked->rangeCount(), size_t{0});
+
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aaa"));
+        QCOMPARE(marked->rangeCount(), size_t{2});
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()

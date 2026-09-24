@@ -23,6 +23,7 @@
 
 #include "dlgPackageManager.h"
 
+#include "MudletPaths.h"
 #include "mudlet.h"
 
 #include <QCloseEvent>
@@ -46,6 +47,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 , mpHost(pHost)
 {
     setupUi(this);
+    label_packageName->installEventFilter(this); // re-shortens the package name when the label is given a new width
     connect(lineEdit_searchBar, &QLineEdit::textChanged, this, &dlgPackageManager::slot_searchTextChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(packageList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_itemChanged);
@@ -82,6 +84,10 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     mCurrentView = NavigationView::Installed;
     slot_setPackageList();
 
+    // connected last: resetPackageList() dereferences mpNavigationGroup, which
+    // setupNavigationButtons() creates above
+    connect(mpHost, &Host::signal_packageListChanged, this, &dlgPackageManager::resetPackageList);
+
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -111,7 +117,9 @@ void dlgPackageManager::clearPackageDetails()
 {
     label_icon->clear();
     packageDescription->clear();
+    mPackageName.clear();
     label_packageName->clear();
+    label_packageName->setToolTip(QString());
     label_title->clear();
     label_author->clear();
     label_version->clear();
@@ -147,7 +155,7 @@ void dlgPackageManager::downloadIcon(const QString& packageName)
 
 void dlgPackageManager::downloadRepositoryIndex()
 {
-    const QString outputPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
+    const QString outputPath = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
@@ -191,11 +199,39 @@ void dlgPackageManager::downloadRepositoryIndex()
     });
 }
 
+// The heading is a name of any length in a big font, so it is shortened to what
+// fits - but the details are first filled in while the dialog is still being put
+// together, before a layout pass has given the label the width it will have. The
+// name is kept so the shortening can be redone once the label has a width to
+// measure against, and every time that width or the font it is measured in
+// changes.
+void dlgPackageManager::elidePackageName()
+{
+    const int available = label_packageName->contentsRect().width();
+    if (available <= 0) {
+        // elidedText() returns nothing at all below the width of an ellipsis,
+        // and a blank heading reads as "no package selected"
+        return;
+    }
+
+    const QFontMetrics metrics(label_packageName->font());
+    const QString elidedName = metrics.elidedText(mPackageName, Qt::ElideRight, available);
+    label_packageName->setText(elidedName);
+    label_packageName->setToolTip(elidedName == mPackageName ? QString() : mPackageName);
+}
+
+bool dlgPackageManager::eventFilter(QObject* pWatched, QEvent* pEvent)
+{
+    if (pWatched == label_packageName && (pEvent->type() == QEvent::Resize || pEvent->type() == QEvent::FontChange)) {
+        elidePackageName();
+    }
+    return QDialog::eventFilter(pWatched, pEvent);
+}
+
 void dlgPackageManager::fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version)
 {
-    const QFontMetrics metrics(label_packageName->font());
-    const QString elidedText = metrics.elidedText(name, Qt::ElideRight, label_packageName->width());
-    label_packageName->setText(elidedText);
+    mPackageName = name;
+    elidePackageName();
     label_title->setText(title);
     label_author->setText(author);
     //: Package manager - label showing package version
@@ -231,7 +267,7 @@ void dlgPackageManager::populatePackagesWithUpdates()
 
 bool dlgPackageManager::readPackageRepositoryFile()
 {
-    QFile file(mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json")));
+    QFile file(MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json")));
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
@@ -289,7 +325,7 @@ void dlgPackageManager::resetPackageList()
         }
         const auto iconName = packageInfo.value(qsl("icon"));
         if (!iconName.isEmpty()) {
-            const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
+            const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
             item->setIcon(QIcon(iconDir));
         } else {
             QPixmap emptyPixmap(16, 16);
@@ -476,7 +512,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
         }
 
         const QByteArray encoded = QUrl::toPercentEncoding(remoteFileName);
-        const QString outDir = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
+        const QString outDir = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName());
         const QString outPath = outDir + QDir::separator() + remoteFileName;
         QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/%1").arg(QString::fromUtf8(encoded))));
         request.setTransferTimeout(30000);
@@ -583,14 +619,14 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
 
         QString description = packageInfo.value(qsl("description"));
         if (!description.isEmpty()) {
-            QString packageDir = mudlet::self()->getMudletPath(enums::profileDataItemPath, mpHost->getName(), packageName);
+            QString packageDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), packageName);
             description.replace(QLatin1String("$packagePath"), packageDir);
             packageDescription->setMarkdown(description);
         }
 
         auto iconName = packageInfo.value(qsl("icon"));
         if (!iconName.isEmpty()) {
-            const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+            const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
             label_icon->setPixmap(QPixmap(iconDir).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         } else {
             QPixmap pixmap(":/icons/package-manager.png");
@@ -775,7 +811,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                 }
                 const auto iconName = value.value(qsl("icon"));
                 if (!iconName.isEmpty()) {
-                    const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
+                    const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
                     item->setIcon(QIcon(iconDir));
                 } else {
                     QPixmap emptyPixmap(16, 16);
@@ -821,7 +857,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                 }
                 const auto iconName = packageInfo.value(qsl("icon"));
                 if (!iconName.isEmpty()) {
-                    const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+                    const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
                     item->setIcon(QIcon(iconDir));
                 } else {
                     QPixmap emptyPixmap(16, 16);
@@ -859,7 +895,7 @@ void dlgPackageManager::slot_setPackageList()
                 item->setData(Qt::UserRole, title);
             }
             if (!iconName.isEmpty()) {
-                const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
+                const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
                 item->setIcon(QIcon(iconDir));
             } else {
                 QPixmap emptyPixmap(16, 16);
@@ -901,7 +937,7 @@ void dlgPackageManager::slot_setPackageList()
                 item->setData(Qt::UserRole, title);
             }
             if (!iconName.isEmpty()) {
-                const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+                const auto iconDir = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
                 item->setIcon(QIcon(iconDir));
             } else {
                 QPixmap emptyPixmap(16, 16);

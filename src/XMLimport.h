@@ -56,6 +56,16 @@ public:
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<EditorViewType, int> importFromClipboard();
+    // Each item of the file just read whose Lua body did not compile, or stopped
+    // with an error while it ran, as "<item name>: <error>". A body that fails
+    // does not fail the read - the item is kept so that it can be fixed in the
+    // editor - so importPackage()'s own answer says nothing about it and this is
+    // where a caller has to look.
+    const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
+    // The same items by name alone, for saying on the console which parts of a
+    // package are not working without the Lua error text, which is written for
+    // whoever wrote the item rather than for whoever installed it.
+    const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
 
 private:
     const QString YES = qsl("yes");
@@ -113,6 +123,8 @@ private:
 
     QPointer<Host> mpHost;
     QString mPackageName;
+    QStringList mItemsWithErrors;
+    QStringList mItemsWithErrorNames;
     TTrigger* mpTrigger = nullptr;
     TTimer* mpTimer = nullptr;
     TAlias* mpAlias = nullptr;

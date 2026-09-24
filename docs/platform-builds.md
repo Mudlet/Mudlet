@@ -2,7 +2,7 @@
 
 ## Building on macOS
 
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_macOS
+For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#macOS
 
 **Essential build commands:**
 
@@ -12,9 +12,29 @@ cd /path/to/Mudlet
 cmake --preset macos-debug
 cmake --build --preset macos-debug
 
-# Run Mudlet
-./build/src/mudlet.app/Contents/MacOS/mudlet
+# Run Mudlet - as an application, not as the binary inside the bundle.
+# macos-debug is an AddressSanitizer preset, and run-mudlet launches the binary
+# directly there so the sanitizer's environment reaches it; build the -nosan
+# preset when you want the bundle launch described below.
+cmake --build --preset macos-debug-nosan --target run-mudlet
 ```
+
+That target runs `open`, so macOS holds Mudlet responsible for its own permission
+requests. Started from a shell instead, the responsible process is the application owning
+the terminal, and asking for speech recognition kills Mudlet outright - the report names a
+usage description that Mudlet's own `Info.plist` has carried all along. `open` detaches, so
+the target puts `qDebug()` and `qWarning()` output in `build/mudlet-run.log` rather than
+losing it.
+
+A sanitizer build runs the binary directly instead, which the target does for you: `open`
+hands the launch to launchd rather than passing your shell's environment on, so
+`ASAN_OPTIONS` would be ignored and the report would go to a terminal nothing is reading.
+That is why the run command above names `macos-debug-nosan`: under a sanitizer preset the
+target launches the binary, the terminal stays responsible, and speech refuses to ask for
+permission rather than showing the dialogs.
+Only the built-in macOS speech backend is affected by the launch method at all, and it
+declines to ask for permission rather than dying when it finds something else responsible
+for the process.
 
 Run `cmake --list-presets` to see the presets available on your machine; alongside `macos-debug`
 there are `-nosan`, `-tsan` and `-ubsan` variants, a `macos-static-analysis` preset and a
@@ -37,13 +57,18 @@ reached `Max cache size`, raise it with `ccache -M <n>G`.
 
 ## Building on Windows
 
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows
+For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Windows
 
 Builds run under MSYS2, in the **CLANG64** environment — open a CLANG64 shell, not MINGW64, and
 check it is a real MSYS2 shell rather than Git for Windows' bash carrying an inherited `MSYSTEM`
 (`MSYSTEM_PREFIX` is empty in the latter). `CI/setup-windows-sdk.sh` and
 `CI/build-mudlet-for-windows.sh` exit with an error on any other `MSYSTEM`, including the
 `CLANGARM64` environment native to ARM64 hosts.
+
+The toolchain has to be current enough to carry libc++ 22: the trigger match pool sleeps its helper
+threads in `std::atomic::wait`, which older libc++ builds implement on Windows as a polling loop, and
+`src/TriggerMatchPool.cpp` refuses them at compile time with a message saying so. `pacman -Syu`
+brings MSYS2 up to date.
 
 The `windows-debug` preset reads `MSYSTEM_PREFIX`, which MSYS2 sets in each of its shells, so the
 preset follows whichever environment is provisioned:
@@ -129,3 +154,23 @@ This applies only to those six. Other `WITH_*` names are ordinary options: `WITH
 - And others for encoding, MXP, map autosave, etc.
 
 **Usage**: Uncomment the relevant `target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_XXX)` lines when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.
+
+## Runtime tuning: the trigger match pool
+
+When a single chunk from the game carries many lines, `TriggerMatchPool` (`src/TriggerMatchPool.h`) spreads the "can this trigger match this line?" question over a few helper threads, for the triggers with a Perl regex pattern - the one pattern kind whose evaluation costs a search; substring, begin-of-line and exact-match patterns are answered on the main thread in a few instructions, so nothing is gained by handing them over. Four knobs tune it, read once when the pool starts; none are needed in normal use. Each has a key in `Mudlet.ini` (in the `[General]` section, alongside the other settings there) for a player who wants to keep a setting, and an environment variable that overrides the file for one run, which is what the tests and benchmarks use:
+
+| `Mudlet.ini` key | Environment variable | Default | Meaning |
+| --- | --- | --- | --- |
+| `triggerMatchThreads` | `MUDLET_MATCH_THREADS` | `min(4, cores / 2)` | Threads sharing a batch, the main thread included. Capped at the core count. Below 2 the pool is off, so `0` disables it and the trigger engine runs exactly as it did before the pool existed. |
+| `triggerMatchThreshold` | `MUDLET_MATCH_THRESHOLD` | `128` | Fewest regex searches the previous line must have run before this line's batch is shared out. Searches rather than triggers: a trigger that is disabled, multiline, or settled by an earlier pattern of its own runs none, and only work the pool would actually share out counts. `0` or below falls back to the default. |
+| `triggerMatchFloodLines` | `MUDLET_MATCH_FLOOD_LINES` | `8` | Fewest lines one incoming chunk must carry to count as a flood. `0` or below falls back to the default. |
+| `triggerMatchSpinMicroseconds` | `MUDLET_MATCH_SPIN_US` | `100` | Microseconds a helper keeps spinning after a batch before it parks. `0` parks at once, which is the setting for stressing the wake-up path. |
+
+A value that is set but does not parse as an integer, or is out of range, is refused with a warning on the console and the default is used. For example, to turn the pool off for good:
+
+```ini
+[General]
+triggerMatchThreads=0
+```
+
+Setting the threshold and flood lines to `1` puts every line through the pool, which is the way to run `src/mudlet-lua/tests/TriggerFlood_spec.lua` and the rest of the trigger specs against both paths; `MUDLET_MATCH_SPIN_US=0` on top makes every one of those lines a cold start. No checked-in CI job does this yet, so it is a local run, and the pool has to be on for it to mean anything - `MUDLET_MATCH_THREADS=2` on a small machine. `PipelineBenchmark` reads `MUDLET_BENCH_TRIGGERS` and `MUDLET_BENCH_CHUNK_LINES` to sweep trigger counts and chunk sizes against these thresholds - see the comment at the top of `test/functional_tests/PipelineBenchmark.cpp`.
