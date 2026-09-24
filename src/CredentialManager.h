@@ -167,7 +167,9 @@ private:
         QString keychainError;
         // Whether any read has reached the store, answering either with a password or with "no such
         // entry". Until one has, a refusal is the store itself saying no - locked, or a prompt the
-        // player dismissed - and the layouts behind it cannot be read either.
+        // player dismissed - and the layouts behind it cannot be read either. Once one has, every
+        // refusal after it is that entry's own, however many of them there are, and the chain runs
+        // to the end: the password may be in a layout behind them.
         bool storeHasAnswered = false;
         // Set when the store has refused scmRefusalsBeforeGivingUpOnTheStore reads in a row without
         // answering any: every remaining keychain read would ask it the same question, and be
@@ -188,8 +190,10 @@ private:
     // point is to spare the player a second prompt for the answer the first one already gave. Not
     // wider than the profile: another profile's entries may be readable, and a lookup for one of
     // those must not be answered out of the file because of a refusal that was nothing to do with
-    // it. A window rather than a latch, so a player who unlocks their keychain is not left without
-    // it until they restart.
+    // it. It runs out rather than latching, so a player who unlocks their keychain is not left
+    // without it until they restart: while it is open no read reaches the store, so the window's
+    // own expiry - or a lookup that began before it opened, whose reads the store then answers - is
+    // what ends it. A write is deliberately not enough, for the reason storeCredential() gives.
     static QHash<QString, QElapsedTimer>& storeRefusals();
     static bool storeRefusedRecently(const QString& profileName);
     static void noteStoreRefusal(const QString& profileName);
