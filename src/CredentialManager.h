@@ -167,7 +167,9 @@ private:
         QString keychainError;
         // Whether any read has reached the store, answering either with a password or with "no such
         // entry". Until one has, a refusal is the store itself saying no - locked, or a prompt the
-        // player dismissed - and the layouts behind it cannot be read either.
+        // player dismissed - and the layouts behind it cannot be read either. Once one has, every
+        // refusal after it is that entry's own, however many of them there are, and the chain runs
+        // to the end: the password may be in a layout behind them.
         bool storeHasAnswered = false;
         // Set when the store has refused scmRefusalsBeforeGivingUpOnTheStore reads in a row without
         // answering any: every remaining keychain read would ask it the same question, and be
@@ -185,8 +187,11 @@ private:
     // When the store last refused a read before answering anything. Process-wide, because a caller
     // asking about two keys - the profile preferences ask about "reconnect" and then
     // "reconnect-token" - builds a CredentialManager for each, and the point is to spare the player
-    // a second prompt for the answer the first one already gave. A window rather than a latch, so a
-    // player who unlocks their keychain is not left without it until they restart.
+    // a second prompt for the answer the first one already gave. It runs out rather than latching,
+    // so a player who unlocks their keychain is not left without it until they restart: while it is
+    // open no read reaches the store, so the window's own expiry - or a lookup begun before it
+    // opened, whose reads the store then answers - is what ends it. A write is deliberately not
+    // enough, for the reason storeCredential() gives.
     static QElapsedTimer& storeRefusalTimer();
     // Forgets the refusal window. Process-wide state outlives one test, and a case that refuses a
     // read would otherwise decide what the cases after it are allowed to ask the store.

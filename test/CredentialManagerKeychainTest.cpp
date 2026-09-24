@@ -82,7 +82,7 @@ private slots:
     void testAStoreThatRefusesIsNotAskedForEveryOtherLayout();
     void testAFreshRefusalSparesTheNextLookupTheStore();
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
-    void testAStoreThatAnswersAgainIsAskedAgain();
+    void testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain();
 
 private:
     QTemporaryDir mConfigDir;
@@ -381,6 +381,19 @@ public:
     {
         mShouldStall = [this, n](QKeychain::Job* job) {
             return qobject_cast<T*>(job) && mSeen++ == n;
+        };
+    }
+
+    // Stalls several jobs of type T by index, counting from zero, so a test can let the store
+    // answer one read and refuse the two after it
+    template <typename T>
+    void stallNths(const QList<int>& indices)
+    {
+        mShouldStall = [this, indices](QKeychain::Job* job) {
+            if (!qobject_cast<T*>(job)) {
+                return false;
+            }
+            return indices.contains(mSeen++);
         };
     }
 
@@ -1271,35 +1284,32 @@ void CredentialManagerKeychainTest::testOneUnreadableEntryDoesNotHideAnOlderLayo
     QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
 }
 
-// The refusal window is a window rather than a latch: once the store answers again - a player
-// unlocking their keychain, or a write that lands - lookups ask it rather than reading only the
-// file until the window runs out. Raised in review of #11031.
-void CredentialManagerKeychainTest::testAStoreThatAnswersAgainIsAskedAgain()
+
+// Once the store has answered a read it is unlocked, so every refusal after that is one entry's
+// own however many of them arrive - and the password may be in a layout behind them. Two in a row
+// must not be read as a locked store here, which is what separates "nothing has answered" from
+// "this entry will not answer" (raised in review of #11031).
+void CredentialManagerKeychainTest::testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain()
 {
-    JobStaller refusingStaller;
-    refusingStaller.stallEvery<QKeychain::ReadPasswordJob>();
-    CredentialManager refusedManager;
-    refusedManager.mJobStartHook = refusingStaller.hook();
+    JobStaller staller;
+    // The first read answers, the two after it refuse
+    staller.stallNths<QKeychain::ReadPasswordJob>({1, 2});
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
 
-    const auto refusedAnswer = startRetrieval(refusedManager, mProfile, mKey);
+    const auto answer = startRetrieval(manager, mProfile, mKey);
     for (int refusal = 0; refusal < 2; ++refusal) {
-        QKeychain::Job* read = refusingStaller.waitForStalled(refusal);
-        QVERIFY(read);
-        JobStaller::answer(read, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+        QKeychain::Job* refused = staller.waitForStalled(refusal);
+        QVERIFY(refused);
+        JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: this entry will not answer"));
     }
-    QVERIFY(waitForAnswer(refusedAnswer));
 
-    // What a read the store answers does, which is the path a real unlock takes
-    CredentialManager::forgetStoreRefusal();
-
-    JobStaller answeringStaller;
-    answeringStaller.answerOtherReadsNotFound();
-    CredentialManager answeringManager;
-    answeringManager.mJobStartHook = answeringStaller.hook();
-
-    const auto secondAnswer = startRetrieval(answeringManager, mProfile, mKey);
-    QVERIFY(waitForAnswer(secondAnswer));
-    QVERIFY2(!answeringStaller.reads().isEmpty(), "the store was not asked again after it had answered, so a keychain-only password stays unreadable");
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(staller.reads().size() == expectedReads(mProfile, mKey).size(),
+             qPrintable(QStringLiteral("the chain stopped after two refusals although the store had already answered: %1 of %2 layouts were read")
+                                .arg(staller.reads().size())
+                                .arg(expectedReads(mProfile, mKey).size())));
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)

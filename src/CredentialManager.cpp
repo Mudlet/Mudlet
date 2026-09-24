@@ -700,7 +700,7 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
                 // prompt the player dismissed. Everything behind it would be refused the same way,
                 // at the cost of another prompt each, so the chain stops asking. The file is still
                 // read, and the refusal is still what the lookup reports if nothing turns up.
-                if (lookup->consecutiveRefusals >= scmRefusalsBeforeGivingUpOnTheStore) {
+                if (!lookup->storeHasAnswered && lookup->consecutiveRefusals >= scmRefusalsBeforeGivingUpOnTheStore) {
                     qWarning() << "CredentialManager: the keychain refused" << lookup->consecutiveRefusals << "reads in a row for profile" << lookup->profileName
                                << "- not asking it for the remaining formats";
                     lookup->storeRefused = true;
@@ -1037,10 +1037,11 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
                     }
                 } else {
                     qDebug() << "CredentialManager: Password stored to keychain service:" << service;
-                    // The store took a write, so whatever refused a read moments ago has been
-                    // unlocked or answered: later lookups ask it again rather than reading only the
-                    // file until the window runs out.
-                    forgetStoreRefusal();
+                    // Deliberately not clearing the refusal window: on macOS an item this
+                    // application owns is written without a prompt while reading an existing one
+                    // whose ACL does not name this binary still prompts, so a write says nothing
+                    // about read access. Clearing it here would put the prompt the window exists to
+                    // spare the player straight back in front of them.
                 }
 
                 // Final validity check before calling callback
