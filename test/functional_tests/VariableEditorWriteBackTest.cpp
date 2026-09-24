@@ -33,12 +33,15 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TTreeWidget.h"
+#include "TVar.h"
 #include "VarUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -106,7 +109,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -127,8 +130,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mHostname);
             delete mudlet::self();
@@ -507,8 +509,117 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // The type a typed value is written back as was decided with toInt(), which
+    // reads "2.71" as no number at all, so editing a decimal turned it into a
+    // string (#9422).
+    void test_editingADecimalValueKeepsItANumber()
+    {
+        execLua(qsl("decimalGlobal = 3.14 decimalDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pGlobal = findVariableItem({qsl("decimalGlobal")});
+        QVERIFY2(pGlobal, "the Variables view did not show the global");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("decimalDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pGlobal);
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("2.71"));
+        selectVariable(pDecoy);
+
+        // neither of these catches the bug alone: the seed was already a number,
+        // and luaHolds() reads a number as happily as the string it turned into
+        QCOMPARE(luaTypeOf(qsl("decimalGlobal")), qsl("number"));
+        QVERIFY2(luaHolds(qsl("decimalGlobal"), qsl("2.71")), "the edited value did not reach Lua as the number that was typed");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("decimalGlobal = nil decimalDecoy = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // Asking for a boolean value gets one: the combobox entry used to carry the
+    // number type, which no "true" agrees with, so the value fell through to a
+    // string (#1591).
+    void test_choosingTheBooleanValueTypeStoresABoolean()
+    {
+        execLua(qsl("booleanTypeGlobal = 'not a boolean yet' booleanTypeDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pGlobal = findVariableItem({qsl("booleanTypeGlobal")});
+        QVERIFY2(pGlobal, "the Variables view did not show the global");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("booleanTypeDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pGlobal);
+        auto* pValueType = mpEditor->mpVarsMainArea->comboBox_variable_value_type;
+        const int booleanRow = pValueType->findText(dlgVarsMainArea::tr("boolean"));
+        QVERIFY2(booleanRow >= 0, "the value type combobox does not offer a boolean");
+        // if the entry ever went back to Auto-Type, a typed "true" would still
+        // land as a boolean and the check below would not notice
+        QCOMPARE(pValueType->itemData(booleanRow).toInt(), LUA_TBOOLEAN);
+        pValueType->setCurrentIndex(booleanRow);
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("true"));
+        selectVariable(pDecoy);
+
+        QCOMPARE(luaTypeOf(qsl("booleanTypeGlobal")), qsl("boolean"));
+        QVERIFY2(luaHolds(qsl("tostring(booleanTypeGlobal)"), qsl("true")), "the boolean that reached Lua is not the one that was typed");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("booleanTypeGlobal = nil booleanTypeDecoy = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // A variable added while a table is selected belongs to that table in the
+    // tree the profile writer walks, or it is saved beside the table instead of
+    // inside it (#9285).
+    void test_aVariableAddedInsideATableHangsOffThatTable()
+    {
+        execLua(qsl("nestingHolder = {existing = 'existing value'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("nestingHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table to add into");
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        TVar* pHolderVar = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pHolder);
+        QVERIFY2(pHolderVar, "the Variables view has no variable behind the table's row");
+
+        selectVariable(pHolder);
+        mpEditor->addVar(false);
+
+        const QString addedName = dlgTriggerEditor::tr("variable_name");
+        QVERIFY2(childNames(pHolderVar).contains(addedName), "the new variable was not attached to the table it was added into");
+        QVERIFY2(!childNames(pVarUnit->getBase()).contains(addedName), "the new variable was attached to the root of the variable tree as well");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("nestingHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
 private:
     QString keyTypeShown() const { return mpEditor->mpVarsMainArea->comboBox_variable_key_type->currentText(); }
+
+    QStringList childNames(TVar* pVar) const
+    {
+        QStringList names;
+        const QList<TVar*> children = pVar->getChildren(false);
+        for (TVar* pChild : children) {
+            names << pChild->getName();
+        }
+        return names;
+    }
+
+    QString luaTypeOf(const QString& expression)
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        const QString code = qsl("return type(%1)").arg(expression);
+        if (luaL_dostring(L, code.toUtf8().constData()) != 0) {
+            qWarning().noquote().nospace() << "luaTypeOf() could not run \"" << code << "\": " << lua_tostring(L, -1);
+            lua_pop(L, 1);
+            return QString();
+        }
+        const QString type = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return type;
+    }
 
     void execLua(const QString& code)
     {
@@ -612,7 +723,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

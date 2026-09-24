@@ -34,15 +34,21 @@
  * reached from Host::setDisplayFont(), i.e. from changing the display font in
  * Preferences.
  *
+ * It also covers hiding one rather than deleting it: a sub command line hidden
+ * while it holds the keyboard focus has to pass that focus to the main command
+ * line.
+ *
  * Bootstrap mirrors the other functional tests.
  */
 
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -106,12 +112,12 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -130,10 +136,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }
@@ -301,6 +306,41 @@ private slots:
         QVERIFY2(console->subCommandLineWidget(name) == replacement, "the old command line's deregistration took the replacement with it");
         console->deleteCommandLine(name);
         runDeferredDeletes();
+    }
+
+    // A sub command line that is hiding while it holds the keyboard focus has to
+    // hand that focus on, or the focus goes with the hidden widget and typing no
+    // longer reaches a command line at all (#8499)
+    void test_hidingAFocusedSubCommandLineHandsFocusToTheMainOne()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString name = qsl("hiddenWhileFocusedCmdLine");
+
+        auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(createMsg));
+        TCommandLine* subCommandLine = console->subCommandLineWidget(name);
+        QVERIFY(subCommandLine);
+        QVERIFY(console->mpCommandLine);
+
+        // a command line or a window left standing changes what the teardown at
+        // the end of this class exercises, so both go however this ends
+        const auto tidyUp = qScopeGuard([this, console, name]() {
+            console->deleteCommandLine(name);
+            runDeferredDeletes();
+            mudlet::self()->hide();
+        });
+
+        // Focus is only ever given to a widget in the active window, so the
+        // window has to be up and active before any of this means anything.
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::self()), "the main window never became active");
+        subCommandLine->setFocus();
+        QTRY_VERIFY2(subCommandLine->hasFocus(), "the sub command line never took the keyboard focus");
+
+        subCommandLine->hide();
+
+        QVERIFY2(console->mpCommandLine->hasFocus(), "hiding the focused sub command line left the keyboard focus nowhere");
     }
 
     // Kept last on purpose: it leaves a registered command line behind, so that

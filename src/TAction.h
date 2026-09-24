@@ -46,8 +46,6 @@ class TFlipButton;
 class TLuaInterpreter;
 class TToolBar;
 
-class QMenu;
-
 
 class TAction : public Tree<TAction>, public QObject
 {
@@ -108,7 +106,6 @@ public:
     int getSizeY() const { return mSizeY; }
     QSize getSize() const { return {mSizeX, mSizeY}; }
 
-    void fillMenu(TEasyButtonBar* pT, QMenu* menu);
     void compile();
     bool compileScript();
     void execute();
@@ -150,10 +147,6 @@ public:
     }
 
     bool registerAction();
-    void insertActions(TToolBar* pT, QMenu* menu);
-    void expandToolbar(TToolBar* pT);
-    void insertActions(TEasyButtonBar* pT, QMenu* menu);
-    void expandToolbar(TEasyButtonBar* pT);
     void setDataSaved() {
         if (mpParent) {
             mpParent->setDataSaved();

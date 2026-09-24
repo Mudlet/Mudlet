@@ -25,6 +25,8 @@
 #include <QObject>
 #include <QString>
 
+#include <functional>
+
 class SpeechRecognizer;
 
 // Factory class for creating speech recognition backends.
@@ -39,8 +41,9 @@ public:
     // Available speech recognition backends
     enum class Backend {
         Vosk,     // Offline recognition using Vosk/Kaldi
+        Sherpa,   // Offline streaming recognition using sherpa-onnx (Nemotron, Zipformer)
         Whisper,  // Offline recognition using whisper.cpp (future)
-        Platform, // Platform-native APIs: macOS Speech, Windows SAPI (future)
+        Platform, // Platform-native APIs: macOS Speech; Windows SAPI (future)
         Auto      // Automatically select best available backend
     };
 
@@ -55,12 +58,39 @@ public:
     // A backend is available if its library is loaded and functional.
     static QList<Backend> availableBackends();
 
+    // Check if a specific backend is available.
+    static bool backendAvailable(Backend backend);
+
+    // Get short identifier for a backend (for settings storage).
+    static QString backendIdentifier(Backend backend);
+
+    // Parse a backend identifier string back to enum.
+    // Returns Auto if the identifier is not recognized.
+    static Backend backendFromIdentifier(const QString& identifier);
 
     // Get the default model path for the specified backend (or Auto for first available).
     // Returns empty string if no model path is configured for the backend.
     static QString defaultModelPath(Backend backend = Backend::Auto);
 
+    // Identify which backend a model directory belongs to from its layout.
+    // Returns Auto when the layout matches no known engine.
+    static Backend backendForModelDir(const QString& modelPath);
+
+    // A stand-in engine for create() to hand back, so a test can drive the
+    // bridge that owns the microphone - what a session is worth to the profile
+    // that started it, what a refusal answers, who hears a fault - through the
+    // real wiring rather than a copy of it. No CI runner has a speech engine
+    // installed, so without this every one of those rules is only ever checked
+    // by hand on a developer's machine.
+    //
+    // A factory rather than a recognizer: mudlet retires the engine it replaces,
+    // so handing over one object would leave a second init dereferencing it.
+    using RecognizerFactory = std::function<SpeechRecognizer*(QObject* parent)>;
+    static void setFactoryOverride(RecognizerFactory factory);
+
 private:
+    inline static RecognizerFactory smFactoryOverride;
+
     SpeechRecognizerFactory() = default;
 };
 

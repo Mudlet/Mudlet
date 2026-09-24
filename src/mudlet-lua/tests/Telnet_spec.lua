@@ -500,7 +500,7 @@ describe("Tests MSDP subnegotiation handling", function()
   -- rather than one value if a control character arrives unescaped.
   local VAR, VAL = "<01>", "<02>"
   local TABLE_OPEN, TABLE_CLOSE = "<03>", "<04>"
-  local ARRAY_CLOSE = "<06>"
+  local ARRAY_OPEN, ARRAY_CLOSE = "<05>", "<06>"
 
   local function feedMsdp(payload)
     local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSDP>" .. payload .. "<T_IAC><T_SE>")
@@ -597,13 +597,205 @@ describe("Tests MSDP subnegotiation handling", function()
       -- top-level unmarked-list pattern, and used to make the whole variable gain
       -- an array level it never had
       feedMsdp(VAR .. "MSDPSHAPE" .. VAL .. TABLE_OPEN
-               .. VAR .. "L" .. VAL .. "<05>" .. VAL .. "a" .. VAL .. "b" .. "<06>"
+               .. VAR .. "L" .. VAL .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
                .. VAR .. "Z" .. VAL .. "plain"
                .. TABLE_CLOSE)
       assert.is_table(msdp.MSDPSHAPE, "the variable went missing entirely")
       assert.equals("plain", msdp.MSDPSHAPE.Z, "Z is not reachable, so the table gained a spurious array level")
       assert.same({"a", "b"}, msdp.MSDPSHAPE.L)
       assert.is_nil(msdp.MSDPSHAPE[1], "the whole table was wrapped in an array it never had")
+    end)
+
+    -- An array's elements are siblings, and an element may itself be a table or
+    -- an array. Games differ over whether each element carries a value marker of
+    -- its own, so both forms appear below.
+    it("keeps an array of tables, the form games send for a group roster", function()
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPGROUP", function() fired = true end)
+      feedMsdp(VAR .. "MSDPGROUP" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. VAR .. "HEALTH" .. VAL .. "90" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. VAR .. "HEALTH" .. VAL .. "50" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      killAnonymousEventHandler(id)
+      assert.same({{NAME = "Fred", HEALTH = "90"}, {NAME = "Barney", HEALTH = "50"}}, msdp.MSDPGROUP,
+                  "the whole variable went missing, so the array of tables never reached Lua")
+      assert.is_true(fired, "the roster arrived without raising its event, so no script would hear about it")
+    end)
+
+    it("keeps an array of tables whose elements each carry a value marker", function()
+      -- the form the specification spells out, which needed no separator of its
+      -- own and is here so the fix keeps working for it
+      feedMsdp(VAR .. "MSDPGROUPV" .. VAL .. ARRAY_OPEN
+               .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}, {NAME = "Barney"}}, msdp.MSDPGROUPV, "the whole variable went missing")
+    end)
+
+    it("keeps an array holding a single table", function()
+      -- one of the nested shapes that always worked: nothing precedes the table,
+      -- so no separator was ever needed - it guards against the fix overcorrecting
+      feedMsdp(VAR .. "MSDPSOLOT" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}}, msdp.MSDPSOLOT)
+    end)
+
+    it("keeps an array of arrays", function()
+      feedMsdp(VAR .. "MSDPMATRIX" .. VAL .. ARRAY_OPEN
+               .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. ARRAY_OPEN .. VAL .. "c" .. ARRAY_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{"a", "b"}, {"c"}}, msdp.MSDPMATRIX,
+                  "the whole variable went missing, so the nested arrays never reached Lua")
+    end)
+
+    it("keeps an array that mixes a plain value with a table", function()
+      feedMsdp(VAR .. "MSDPMIXED" .. VAL .. ARRAY_OPEN
+               .. VAL .. "solo"
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. VAL .. "tail"
+               .. ARRAY_CLOSE)
+      assert.same({"solo", {NAME = "Fred"}, "tail"}, msdp.MSDPMIXED,
+                  "the values around the nested table lost their place in the array")
+    end)
+
+    -- An array may hold elements of different kinds, and each pairing is its own
+    -- adjacency for the separator: a value before an array, a table before an
+    -- array, an array before a table.
+    it("keeps an array whose element after a plain value is an array", function()
+      feedMsdp(VAR .. "MSDPVALARR" .. VAL .. ARRAY_OPEN
+               .. VAL .. "solo"
+               .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({"solo", {"a", "b"}}, msdp.MSDPVALARR,
+                  "the value ahead of the nested array lost its place in the array")
+    end)
+
+    it("keeps an array whose element after a table is an array", function()
+      feedMsdp(VAR .. "MSDPTABARR" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}, {"a", "b"}}, msdp.MSDPTABARR,
+                  "the array following a table in the same array never reached Lua")
+    end)
+
+    it("keeps an array whose element after an array is a table", function()
+      feedMsdp(VAR .. "MSDPARRTAB" .. VAL .. ARRAY_OPEN
+               .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{"a", "b"}, {NAME = "Fred"}}, msdp.MSDPARRTAB,
+                  "the table following an array in the same array never reached Lua")
+    end)
+
+    it("keeps a table whose values are arrays of tables", function()
+      feedMsdp(VAR .. "MSDPDEEP" .. VAL .. TABLE_OPEN
+               .. VAR .. "MEMBERS" .. VAL .. ARRAY_OPEN
+                 .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+                 .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. TABLE_CLOSE
+               .. ARRAY_CLOSE
+               .. VAR .. "LEADER" .. VAL .. "Fred"
+               .. TABLE_CLOSE)
+      assert.same({MEMBERS = {{NAME = "Fred"}, {NAME = "Barney"}}, LEADER = "Fred"}, msdp.MSDPDEEP,
+                  "the array of tables, or the key after it, did not survive the nesting")
+    end)
+
+    it("keeps a table holding two tables side by side", function()
+      feedMsdp(VAR .. "MSDPROOMS" .. VAL .. TABLE_OPEN
+               .. VAR .. "HERE" .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "The Hall" .. TABLE_CLOSE
+               .. VAR .. "NORTH" .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "The Study" .. TABLE_CLOSE
+               .. TABLE_CLOSE)
+      assert.same({HERE = {NAME = "The Hall"}, NORTH = {NAME = "The Study"}}, msdp.MSDPROOMS,
+                  "the second table in the row did not reach Lua")
+    end)
+
+    it("keeps the characters JSON escapes inside a nested value", function()
+      -- names in a roster carry colour codes and punctuation, so the escaping
+      -- branches and the new separator meet on the very shape games send
+      feedMsdp(VAR .. "MSDPESCGROUP" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fr\"ed" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Bar\\ney<ESC>x" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fr\"ed"}, {NAME = "Bar\\ney" .. string.char(27) .. "x"}}, msdp.MSDPESCGROUP,
+                  "a quote, a backslash or an escape character in a nested value took the variable down with it")
+    end)
+
+    it("replaces a roster that is sent again with fewer members", function()
+      -- a game re-sends the whole list on every change, and the interesting
+      -- direction is shrinking: a member who left must not linger
+      feedMsdp(VAR .. "MSDPPARTY" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Wilma" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}, {NAME = "Barney"}, {NAME = "Wilma"}}, msdp.MSDPPARTY,
+                  "the first roster did not arrive with all three of its members")
+
+      feedMsdp(VAR .. "MSDPPARTY" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Wilma" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}, {NAME = "Wilma"}}, msdp.MSDPPARTY,
+                  "the member who left the roster is still in the table")
+    end)
+
+    it("keeps an empty table", function()
+      feedMsdp(VAR .. "MSDPEMPTYT" .. VAL .. TABLE_OPEN .. TABLE_CLOSE)
+      assert.same({}, msdp.MSDPEMPTYT, "an empty table did not arrive as an empty table")
+    end)
+
+    it("keeps an empty array", function()
+      feedMsdp(VAR .. "MSDPEMPTYA" .. VAL .. ARRAY_OPEN .. ARRAY_CLOSE)
+      assert.same({}, msdp.MSDPEMPTYA, "an empty array did not arrive as an empty table")
+    end)
+
+    it("keeps an array of empty tables", function()
+      feedMsdp(VAR .. "MSDPEMPTIES" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. TABLE_CLOSE .. TABLE_OPEN .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{}, {}}, msdp.MSDPEMPTIES, "the array did not arrive with both of its empty tables")
+    end)
+
+    -- A server answering REPORT sends the lot at once, so a structure is rarely
+    -- the last thing in a message. One case per shape rather than three feeds in
+    -- one, so a failure of any of them is its own report.
+    it("keeps a table and the variable that follows it in the same message", function()
+      feedMsdp(VAR .. "MSDPPAIRT" .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "The Hall" .. TABLE_CLOSE
+               .. VAR .. "MSDPAFTERT" .. VAL .. "after")
+      assert.same({NAME = "The Hall"}, msdp.MSDPPAIRT, "the table went missing because another variable followed it")
+      assert.equals("after", msdp.MSDPAFTERT, "the variable after the table went missing")
+    end)
+
+    it("keeps an array and the variable that follows it in the same message", function()
+      feedMsdp(VAR .. "MSDPPAIRA" .. VAL .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. VAR .. "MSDPAFTERA" .. VAL .. "after")
+      assert.same({"a", "b"}, msdp.MSDPPAIRA, "the array went missing because another variable followed it")
+      assert.equals("after", msdp.MSDPAFTERA, "the variable after the array went missing")
+    end)
+
+    it("keeps an array of tables and the variable that follows it in the same message", function()
+      feedMsdp(VAR .. "MSDPPAIRG" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. TABLE_CLOSE
+               .. ARRAY_CLOSE
+               .. VAR .. "MSDPAFTERG" .. VAL .. "after")
+      assert.same({{NAME = "Fred"}, {NAME = "Barney"}}, msdp.MSDPPAIRG,
+                  "the array of tables went missing because another variable followed it")
+      assert.equals("after", msdp.MSDPAFTERG, "the variable after the array of tables went missing")
+    end)
+
+    it("keeps an unmarked list that holds an array, and the variable after it", function()
+      -- the list the specification allows for command-like variables, with an
+      -- array as one of its entries: the wrap has to close around the structure,
+      -- not around a value left hanging open
+      feedMsdp(VAR .. "MSDPCMDLIST" .. VAL .. "look"
+               .. VAL .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. VAR .. "MSDPAFTERLIST" .. VAL .. "after")
+      assert.same({"look", {"a", "b"}}, msdp.MSDPCMDLIST,
+                  "the unmarked list holding an array never reached Lua")
+      assert.equals("after", msdp.MSDPAFTERLIST, "the variable after the unmarked list went missing")
     end)
 
     it("still turns adjacent top-level values into a list", function()
@@ -681,6 +873,34 @@ describe("Tests MSDP subnegotiation handling", function()
       strayCloseKeepsTheNextVariable(ARRAY_CLOSE, "MSDPSTRAYA")
     end)
 
+    -- A marker that opens a table or an array is not legal inside a name or a
+    -- value, so the two shapes below are malformed MSDP. Both used to arrive as
+    -- something the game never sent - a variable named after an inner key, and a
+    -- value with the markers swallowed into its text - and both now fail to
+    -- decode, which is what the end of a message has always done with them.
+    it("yields no variable and no event when a name runs straight into a table", function()
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPINNER", function() fired = true end)
+      feedMsdp(VAR .. "MSDPKEPTN" .. VAL .. "x"
+               .. VAR .. "MSDPRUNNAME" .. TABLE_OPEN .. VAR .. "MSDPINNER" .. VAL .. "v" .. TABLE_CLOSE)
+      killAnonymousEventHandler(id)
+      assert.equals("x", msdp.MSDPKEPTN, "the well-formed variable ahead of the malformed one has to survive")
+      assert.is_nil(msdp.MSDPINNER, "a key from inside the malformed table was stored as a variable of its own")
+      assert.is_nil(msdp.MSDPRUNNAME)
+      assert.is_false(fired, "a variable the game never sent raised an arrival event")
+    end)
+
+    it("yields no variable and no event when a value runs straight into a table", function()
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPRUNVAL", function() fired = true end)
+      feedMsdp(VAR .. "MSDPRUNVAL" .. VAL .. "a" .. TABLE_OPEN .. TABLE_CLOSE
+               .. VAR .. "MSDPAFTERRUN" .. VAL .. "b")
+      killAnonymousEventHandler(id)
+      assert.is_nil(msdp.MSDPRUNVAL, "the table markers were swallowed into the value as if they were text")
+      assert.is_false(fired, "a value that ran into a table marker raised an arrival event")
+      assert.equals("b", msdp.MSDPAFTERRUN, "the malformed variable took the rest of the message with it")
+    end)
+
     it("keeps the old value and stays silent when a decode fails", function()
       -- balanced markers can still make undecodable JSON (two roots), which slips
       -- past the structural checks and fails at the decoder - the arrival event
@@ -706,6 +926,154 @@ describe("Tests GMCP decode failures", function()
     killAnonymousEventHandler(id)
     assert.is_nil(gmcp.Spec and gmcp.Spec.BadJson)
     assert.is_false(fired, "a GMCP decode failure raised the arrival event anyway")
+  end)
+end)
+
+describe("Tests how a GMCP message is split into name and data", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  teardown(function()
+    gmcp.Spec = nil
+  end)
+
+  it("gives a message that carries no data an empty table of its own", function()
+    -- Core.Ping is the one every game sends, and a script reading gmcp.Core.Ping
+    -- would break on a nil
+    assert.is_nil(gmcp.Spec and gmcp.Spec.Ping)
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Ping<T_IAC><T_SE>")
+    assert.same({}, gmcp.Spec.Ping)
+
+    -- a name with nothing but the separator after it is the same case
+    feed("<T_IAC><T_SB><O_GMCP>Spec.PingSpace <T_IAC><T_SE>")
+    assert.same({}, gmcp.Spec.PingSpace)
+  end)
+
+  it("takes a newline as the separator when no space comes before it", function()
+    assert.is_nil(gmcp.Spec and gmcp.Spec.NewlineSplit)
+    feed("<T_IAC><T_SB><O_GMCP>Spec.NewlineSplit\n{\"a\": 1}<T_IAC><T_SE>")
+    assert.same({a = 1}, gmcp.Spec.NewlineSplit)
+  end)
+
+  it("reads a payload the game spread over several lines", function()
+    assert.is_nil(gmcp.Spec and gmcp.Spec.Pretty)
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Pretty {\r\n  \"b\": 2\r\n}<T_IAC><T_SE>")
+    assert.same({b = 2}, gmcp.Spec.Pretty)
+  end)
+
+  it("keeps an escape character a game left raw inside a string", function()
+    -- a raw ESC is not valid inside JSON, so without the escaping the decoder
+    -- would reject the whole message
+    assert.is_nil(gmcp.Spec and gmcp.Spec.Ansi)
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Ansi {\"t\": \"\27[31mred\"}<T_IAC><T_SE>")
+    assert.same({t = "\27[31mred"}, gmcp.Spec.Ansi)
+  end)
+
+  it("reads a payload that is a bare number", function()
+    pending("json_to_value returns a function rather than a number for a bare JSON number, so gmcp.X ends up holding a function (#10362)")
+  end)
+end)
+
+describe("Tests the Client.GUI package offer", function()
+
+  -- A game may send Client.GUI as JSON, or as the raw telnet form of a version
+  -- and a URL on two lines. Either way the offer only has to reach the
+  -- downloader, so the URL is one nothing answers: the harness's fixture server
+  -- 404s it when it started one, a closed port refuses it when it did not.
+  local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
+
+  local function offerUrl(packageName)
+    local port = (httpPort and httpPort ~= "" and httpPort) or "1"
+    return "http://127.0.0.1:" .. port .. "/not-served/" .. packageName .. ".mpackage"
+  end
+
+  local function displayedSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  -- the console wraps a line wherever it runs out of width, and these URLs are
+  -- long enough to be split, so the whitespace comes out of both sides first
+  local function shownSince(mark, text)
+    return displayedSince(mark):gsub("%s+", ""):find((text:gsub("%s+", "")), 1, true)
+  end
+
+  local function downloadStarted(mark, packageName)
+    return shownSince(mark, "Downloading and installing package '" .. packageName .. "'")
+  end
+
+  local function offerRawTelnetGui(packageName, version)
+    local mark = getLastLineNumber("main")
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>Client.GUI " .. version .. "\n" .. offerUrl(packageName) .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    if downloadStarted(mark, packageName) then
+      -- the download the offer started is this test's to finish: the next offer
+      -- aborts a reply still in flight, and the failure message would otherwise
+      -- land in a later test's window
+      local drained = false
+      for _ = 1, 150 do
+        if shownSince(mark, "Package download failed from '" .. offerUrl(packageName) .. "'") then
+          drained = true
+          break
+        end
+        local pumped, why = pumpEvents(20)
+        assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
+      end
+      assert.is_true(drained, "the download of '" .. packageName .. "' has not finished, so it will land in a later test: " .. displayedSince(mark))
+    end
+    return mark
+  end
+
+  it("acts on a Client.GUI offer sent as raw telnet rather than JSON (#7704)", function()
+    local mark = offerRawTelnetGui("RegressRawGui", "7704")
+    assert.is_truthy(downloadStarted(mark, "RegressRawGui"), "the raw telnet offer never reached the downloader: " .. displayedSince(mark))
+  end)
+
+  it("keeps a raw telnet Client.GUI out of the gmcp table (#7034)", function()
+    -- an earlier spec may have left a gmcp.Client of its own behind, which would
+    -- answer for this one
+    local previousClient = gmcp.Client
+    finally(function() gmcp.Client = previousClient end)
+    gmcp.Client = nil
+    local mark = offerRawTelnetGui("RegressRawGuiTable", "7034")
+    -- the gmcp.Client check below would be just as happy with an offer that was
+    -- ignored outright, so prove first that this one was acted on
+    assert.is_truthy(downloadStarted(mark, "RegressRawGuiTable"), "the offer never reached the downloader")
+    -- gmcp.Client.GUI stays nil either way, because parseJSON creates the parent
+    -- table before it fails on the payload - only the parent tells the two apart
+    assert.is_nil(gmcp.Client, "the raw telnet offer was pushed into the gmcp table")
+  end)
+end)
+
+describe("Tests Discord GMCP routing", function()
+
+  -- getDiscordState() is denied when the bundled discord-rpc library is not on
+  -- the library search path, which the harness arranges, or when the profile has
+  -- Discord switched off. The state text read back is Mudlet's own, so nothing
+  -- has to be listening on Discord.
+  local requireDiscord = os.getenv("MUDLET_TEST_REQUIRE_DISCORD")
+
+  local function discordUnavailable()
+    local state, denial = getDiscordState()
+    if state ~= nil then
+      return false
+    end
+    if requireDiscord then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_DISCORD is set but the Discord API is unavailable: " .. tostring(denial))
+    end
+    pending("the Discord API is unavailable: " .. tostring(denial))
+    return true
+  end
+
+  it("hands a Discord GMCP message to Discord under the message name alone (#2284)", function()
+    if discordUnavailable() then return end
+    local previousState = getDiscordState()
+    finally(function() setDiscordState(previousState) end)
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>External.Discord.Status {\"state\": \"RegressDiscordState\"}<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.equals("RegressDiscordState", getDiscordState(), "is this profile still set to show game details in its Discord settings?")
   end)
 end)
 
@@ -736,5 +1104,621 @@ describe("Tests addSupportedTelnetOption", function()
     local ok, err = pcall(function() addSupportedTelnetOption(2 ^ 40) end)
     assert.is_false(ok)
     assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
+  end)
+end)
+
+describe("Tests telnet option negotiation", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  -- Mode codes 5, 6 and 7 become the processor's default for the rest of the
+  -- connection and a DONT does not undo that, so anything that reaches one has to
+  -- put the default back. The escape only counts while the option is up, and it
+  -- has to be a read of its own: an ESC[#z arriving with MXP already off is what
+  -- cTelnet reads as a game wanting MXP without negotiating, and that forces the
+  -- processor on with its default locked to secure for good.
+  local function restoreMxpDefaultMode()
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("\27[5z\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+  end
+
+  -- Mudlet raises these from inside processSocketData, so they are all in by the
+  -- time feedTelnet returns and nothing has to be waited for.
+  local function protocolEventsFrom(data)
+    local seen = {}
+    local handlers = {}
+    for _, event in ipairs({"sysProtocolEnabled", "sysProtocolDisabled", "sysProtocolRejected"}) do
+      handlers[#handlers + 1] = registerAnonymousEventHandler(event, function(name, protocol)
+        seen[#seen + 1] = name .. ":" .. protocol
+      end)
+    end
+    feed(data)
+    for _, handler in ipairs(handlers) do
+      killAnonymousEventHandler(handler)
+    end
+    return seen
+  end
+
+  -- 102 is Aardwolf's channel, which the token table spells <O_AARDWULF>
+  local options = {
+    {"<O_GMCP>", "GMCP"},
+    {"<O_MSSP>", "MSSP"},
+    {"<O_MSDP>", "MSDP"},
+    {"<O_MSP>", "MSP"},
+    {"<O_MXP>", "MXP"},
+    {"<O_NENV>", "NEW_ENVIRON"},
+    {"<O_CHARS>", "CHARSET"},
+    {"<O_AARDWULF>", "channel102"},
+  }
+
+  -- An assertion that stops a test between turning a protocol on and turning it
+  -- off again would otherwise leave it on for the thousands of tests that follow.
+  after_each(function()
+    for _, option in ipairs(options) do
+      feed("<T_IAC><T_DONT>" .. option[1])
+    end
+  end)
+
+  teardown(function()
+    if channel102 then
+      channel102[5] = nil
+    end
+    if mssp then
+      mssp.TELNETSPLITVAR = nil
+    end
+  end)
+
+  it("takes up each protocol the server offers and drops it again on DONT", function()
+    for _, option in ipairs(options) do
+      local token, protocol = option[1], option[2]
+      assert.same({"sysProtocolEnabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_DO>" .. token))
+      assert.same({"sysProtocolDisabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_DONT>" .. token))
+    end
+  end)
+
+  -- The events alone cannot tell a negotiated protocol from one that was already
+  -- on, so these two go through a Lua call that refuses while the protocol is off
+  it("only lets a script talk on channel 102 while the server has it enabled", function()
+    local before, refusal = sendTelnetChannel102("ab")
+    assert.is_nil(before)
+    assert.is_truthy(tostring(refusal):find("102 subchannel support has not been enabled", 1, true), tostring(refusal))
+
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    assert.is_true(sendTelnetChannel102("ab"), "the channel stayed shut after the server enabled it")
+
+    feed("<T_IAC><T_DONT><O_AARDWULF>")
+    local after, refusedAgain = sendTelnetChannel102("ab")
+    assert.is_nil(after, "the channel stayed open after the server withdrew it")
+    assert.is_truthy(tostring(refusedAgain):find("102 subchannel support has not been enabled", 1, true), tostring(refusedAgain))
+  end)
+
+  it("only accepts MSP messages while the server has MSP enabled", function()
+    local before, refusal = receiveMSP("!!SOUND(Off)")
+    assert.is_nil(before)
+    assert.is_truthy(tostring(refusal):find("MSP is not currently enabled", 1, true), tostring(refusal))
+
+    feed("<T_IAC><T_DO><O_MSP>")
+    assert.is_true(receiveMSP("!!SOUND(Off)"), "MSP messages were still refused after the server enabled MSP")
+
+    feed("<T_IAC><T_DONT><O_MSP>")
+    local after = receiveMSP("!!SOUND(Off)")
+    assert.is_nil(after, "MSP messages were still accepted after the server withdrew MSP")
+  end)
+
+  it("turns an offer down when the profile has that protocol switched off", function()
+    -- both halves in one test: the refusal on its own would pass just as well
+    -- against a build that never enables MSSP at all
+    local original = getConfig("enableMSSP")
+    finally(function() setConfig("enableMSSP", original) end)
+    setConfig("enableMSSP", false)
+    assert.same({}, protocolEventsFrom("<T_IAC><T_DO><O_MSSP>"))
+
+    setConfig("enableMSSP", true)
+    assert.same({"sysProtocolEnabled:MSSP"}, protocolEventsFrom("<T_IAC><T_DO><O_MSSP>"))
+    feed("<T_IAC><T_DONT><O_MSSP>")
+  end)
+
+  it("answers a NAWS offer either way round, following the profile setting", function()
+    local original = getConfig("enableNAWS")
+    finally(function()
+      setConfig("enableNAWS", original)
+      feed("<T_IAC><T_DONT><O_NAWS>")
+    end)
+
+    setConfig("enableNAWS", false)
+    assert.same({"sysProtocolDisabled:NAWS"}, protocolEventsFrom("<T_IAC><T_DO><O_NAWS>"))
+
+    setConfig("enableNAWS", true)
+    assert.same({"sysProtocolEnabled:NAWS"}, protocolEventsFrom("<T_IAC><T_DO><O_NAWS>"))
+  end)
+
+  it("rejects the options that would take Mudlet out of line mode", function()
+    -- Mudlet only ever sends whole lines, so both of these are refused from
+    -- either direction rather than negotiated
+    assert.same({"sysProtocolRejected:LINEMODE"}, protocolEventsFrom("<T_IAC><T_DO>" .. string.char(34)))
+    assert.same({"sysProtocolRejected:LINEMODE"}, protocolEventsFrom("<T_IAC><T_WILL>" .. string.char(34)))
+    assert.same({"sysProtocolRejected:SUPPRESS_GO_AHEAD"}, protocolEventsFrom("<T_IAC><T_WILL><O_SGA>"))
+  end)
+
+  it("acts on a negotiation whose bytes are split across two packets", function()
+    -- a real socket read can end anywhere, including between the IAC and the
+    -- command that follows it, so the parser has to carry the partial sequence
+    local mark = getLastLineNumber("main")
+    assert.same({}, protocolEventsFrom("SPLITNEGBEFORE\r\n<T_IAC>"), "a lone IAC was acted on before the rest of the command arrived")
+    assert.same({"sysProtocolEnabled:MSSP"}, protocolEventsFrom("<T_DO><O_MSSP>SPLITNEGAFTER\r\n"))
+    feed("<T_IAC><T_DONT><O_MSSP>")
+
+    local displayed = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+    assert.is_truthy(displayed:find("SPLITNEGBEFORE", 1, true), displayed)
+    assert.is_truthy(displayed:find("SPLITNEGAFTER", 1, true), displayed)
+  end)
+
+  it("carries a subnegotiation split across two packets over to the next one", function()
+    feed("<T_IAC><T_SB><O_MSSP><01>TELNETSPLITVAR<02>par")
+    assert.is_nil(mssp and mssp.TELNETSPLITVAR, "the subnegotiation was acted on before its IAC SE arrived")
+    feed("t2<T_IAC><T_SE>")
+    assert.equals("part2", mssp.TELNETSPLITVAR)
+  end)
+
+  -- a variable with no value used to abandon the whole subnegotiation, so every
+  -- variable a game sent behind a malformed one went missing
+  it("keeps reading MSSP variables past one that arrives without a value (#4233)", function()
+    finally(function()
+      mssp.TELNETMSSPNOVALUE = nil
+      mssp.TELNETMSSPAFTERBAD = nil
+    end)
+
+    feed("<T_IAC><T_SB><O_MSSP><01>TELNETMSSPNOVALUE<01>TELNETMSSPAFTERBAD<02>arrived<T_IAC><T_SE>")
+    assert.is_nil(mssp.TELNETMSSPNOVALUE, "a variable with no value should not be recorded")
+    assert.equals("arrived", mssp.TELNETMSSPAFTERBAD)
+  end)
+
+  it("displays nothing for the commands it answers on the wire", function()
+    -- AYT and NOP produce no text of their own; a parser that lost track of
+    -- them would leak 0xff and the command byte into the line instead
+    local mark = getLastLineNumber("main")
+    feed("AYTBEFORE\r\n<T_IAC><T_AYT><T_IAC><T_NOP>AYTAFTER\r\n")
+    assert.same({"AYTBEFORE", "AYTAFTER"}, getLines("main", mark, getLastLineNumber("main")))
+  end)
+
+  it("hands the payload of a channel 102 subnegotiation to Lua as two numbers", function()
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    local seen
+    local handler = registerAnonymousEventHandler("channel102Message", function(_, variable, value)
+      seen = {variable, value}
+    end)
+    feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+    killAnonymousEventHandler(handler)
+    feed("<T_IAC><T_DONT><O_AARDWULF>")
+
+    assert.same({5, 3}, seen)
+    assert.equals(3, channel102[5])
+  end)
+
+  it("switches the MXP processor on for the rest of the connection", function()
+    -- the MXP mode escapes only act on data flagged as coming from a server, so
+    -- this is a path feedTriggers cannot reach at all
+    assert.same({"sysProtocolEnabled:MXP"}, protocolEventsFrom("<T_IAC><T_DO><O_MXP>"))
+
+    local mark = getLastLineNumber("main")
+    feed("\27[1z<B>MXPTELNETBOLD</B>\r\n")
+    assert.same({"MXPTELNETBOLD"}, getLines("main", mark, getLastLineNumber("main")))
+
+    -- leaving the processor on would change how every later spec file's data is
+    -- parsed, and only a DONT (or a fresh connection) turns it back off
+    assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
+  end)
+
+  it("switches the MXP processor on from a subnegotiation, in locked mode", function()
+    -- some games negotiate nothing and just send IAC SB MXP IAC SE. That starts
+    -- the processor in locked mode, where nothing is a tag until the game sends
+    -- a mode switch of its own
+    finally(restoreMxpDefaultMode)
+    assert.same({"sysProtocolEnabled:MXP"}, protocolEventsFrom("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>"))
+
+    local mark = getLastLineNumber("main")
+    feed("<B>MXPSUBNEGLOCKED</B>\r\n")
+    assert.same({"<B>MXPSUBNEGLOCKED</B>"}, getLines("main", mark, getLastLineNumber("main")))
+
+    mark = getLastLineNumber("main")
+    feed("\27[1z<B>MXPSUBNEGOPEN</B>\r\n")
+    assert.same({"MXPSUBNEGOPEN"}, getLines("main", mark, getLastLineNumber("main")))
+
+    assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
+  end)
+end)
+
+describe("Tests MCCP compressed streams", function()
+
+  -- feedTelnet() reads its argument as a C string and turns "<..>" tokens into
+  -- bytes, so a compressed stream has to reach it with its NULs written as the
+  -- token and its angle brackets doubled
+  local function escaped(bytes)
+    return (bytes:gsub("[%z<>]", {["\0"] = "<00>", ["<"] = "<<", [">"] = ">>"}))
+  end
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function linesSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  -- zlib.compress("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK\r\n"),
+  -- as the bytes a server would put on the wire after the start sequence
+  local COMPRESSED = "\120\218\243\117\118\14\112\113\117\246\247\13\8\114\13\14\118\117\241\247\86\240\37\70\136\151\11\0\228\236\16\9"
+
+  -- neither the end of a stream nor a broken one clears the WILL, so without this
+  -- every later spec's IAC SB is still a candidate MCCP start sequence
+  after_each(function()
+    feed("<T_IAC><T_WONT><O_MCCP2>")
+  end)
+
+  -- Both of these end their stream, and ending one leaks the zlib inflate state
+  -- for good (#10410), which turns the leak detection half of the Linux CI job
+  -- red. The fixture above and the helpers are kept so that un-parking them is
+  -- a one line change once that is fixed.
+
+  it("shows the text a server sends once it switches to MCCP v2", function()
+    pending("running a compressed stream to its end leaks the inflate state (#10410)")
+  end)
+
+  it("warns and falls back to plain text when the compressed stream is broken", function()
+    pending("a failed inflate leaks the inflate state the same way (#10410)")
+  end)
+end)
+
+describe("Tests CHARSET negotiation", function()
+
+  local encodingFile = getMudletHomeDir() .. "/encoding"
+  local hadEncodingFile, originalEncoding
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  -- an RFC 2066 CHARSET REQUEST: a separator byte followed by the names on offer
+  local function request(...)
+    feed("<T_IAC><T_SB><O_CHARS><01>;" .. table.concat({...}, ";") .. "<T_IAC><T_SE>")
+  end
+
+  setup(function()
+    -- setServerEncoding() writes the profile's "encoding" file, and a profile
+    -- that never had one must not be left with one
+    hadEncodingFile = lfs.attributes(encodingFile, "mode") ~= nil
+    originalEncoding = getServerEncoding()
+    feed("<T_IAC><T_DO><O_CHARS>")
+  end)
+
+  teardown(function()
+    feed("<T_IAC><T_DONT><O_CHARS>")
+    setServerEncoding(originalEncoding)
+    if not hadEncodingFile then
+      os.remove(encodingFile)
+    end
+  end)
+
+  before_each(function()
+    setServerEncoding("UTF-8")
+  end)
+
+  it("changes the game encoding to the character set the server offers", function()
+    assert.equals("UTF-8", getServerEncoding())
+    request("CP437")
+    assert.equals("CP437", getServerEncoding())
+  end)
+
+  it("keeps the encoding already in use when the server offers it too", function()
+    -- taking the first name on offer would let a game listing ASCII ahead of
+    -- UTF-8 quietly downgrade a UTF-8 profile
+    request("ASCII", "UTF-8")
+    assert.equals("UTF-8", getServerEncoding())
+  end)
+
+  it("keeps the encoding when nothing on offer is one Mudlet knows", function()
+    setServerEncoding("CP437")
+    request("NOSUCHCHARSET", "ALSOUNKNOWN")
+    assert.equals("CP437", getServerEncoding())
+
+    -- the same request with one name Mudlet does know, so the assertion above is
+    -- about the names rather than about the request never having been read
+    request("NOSUCHCHARSET", "UTF-8")
+    assert.equals("UTF-8", getServerEncoding())
+  end)
+
+  it("recognises a character set spelled the way a server writes it", function()
+    -- Mudlet keys its table by "ISO 8859-2"; a server writes it with a hyphen
+    request("ISO-8859-2")
+    assert.equals("ISO 8859-2", getServerEncoding())
+    setServerEncoding("UTF-8")
+    request("ISO8859-2")
+    assert.equals("ISO 8859-2", getServerEncoding())
+  end)
+
+  it("takes a variant spelling of ASCII as ASCII", function()
+    request("US-ASCII")
+    assert.equals("ASCII", getServerEncoding())
+  end)
+
+  it("ignores a request with nothing on offer after the separator", function()
+    setServerEncoding("CP437")
+
+    feed("<T_IAC><T_SB><O_CHARS><01>;<T_IAC><T_SE>")
+    assert.equals("CP437", getServerEncoding())
+
+    -- and the shorter form, a separator with nothing at all behind it: taking a
+    -- separator character out of that payload would read past the end of it
+    feed("<T_IAC><T_SB><O_CHARS><01><T_IAC><T_SE>")
+    assert.equals("CP437", getServerEncoding())
+
+    -- neither may leave the parser unable to act on the request that follows
+    request("UTF-8")
+    assert.equals("UTF-8", getServerEncoding())
+  end)
+
+  it("ignores a translate table it cannot use", function()
+    setServerEncoding("CP437")
+    -- Mudlet has no translate table support and answers TTABLE_REJECTED. The
+    -- payload is a character set list Mudlet would act on were this a request,
+    -- so a subcommand byte that went unchecked would show up as CP437 changing
+    feed("<T_IAC><T_SB><O_CHARS><04>;UTF-8<T_IAC><T_SE>")
+    assert.equals("CP437", getServerEncoding())
+  end)
+
+  it("ignores a request once the server has withdrawn CHARSET", function()
+    feed("<T_IAC><T_DONT><O_CHARS>")
+    request("CP437")
+    assert.equals("UTF-8", getServerEncoding(), "a request was acted on after CHARSET was turned off")
+    feed("<T_IAC><T_DO><O_CHARS>")
+  end)
+end)
+
+describe("Tests the encodings Mudlet carries its own tables for", function()
+  -- CP437, CP667, CP737, CP869 and MEDIEVIA have no converter in Qt, so Mudlet
+  -- transcodes them itself. Only the out-of-band and outgoing paths use those
+  -- tables; the main display has its own copy.
+
+  local encodingFile = getMudletHomeDir() .. "/encoding"
+  local hadEncodingFile, originalEncoding
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  -- what an MSSP variable carrying these raw bytes arrives as, once cTelnet has
+  -- transcoded the message out of the game's encoding. Cleared first: the table
+  -- keeps whatever the last message put there, so a feed that is accepted but
+  -- delivers no MSSP update would otherwise be answered with the previous
+  -- encoding's reading - and two of the encodings below expect the same
+  -- character, so that would pass.
+  local function msspValueOf(bytes)
+    if mssp then
+      mssp.TELNETENCPROBE = nil
+    end
+    feed("<T_IAC><T_SB><O_MSSP><01>TELNETENCPROBE<02>" .. bytes .. "<T_IAC><T_SE>")
+    return mssp and mssp.TELNETENCPROBE
+  end
+
+  -- the line feedTriggers put on the screen, or nil with the refusal if the
+  -- encoding cannot carry the text at all
+  local function displayed(text)
+    local mark = getLastLineNumber("main")
+    local ok, refusal = feedTriggers(text .. "\n", true)
+    if not ok then
+      return nil, refusal
+    end
+    return table.concat(getLines("main", mark, getLastLineNumber("main")), "\n")
+  end
+
+  setup(function()
+    hadEncodingFile = lfs.attributes(encodingFile, "mode") ~= nil
+    originalEncoding = getServerEncoding()
+  end)
+
+  teardown(function()
+    setServerEncoding(originalEncoding)
+    if not hadEncodingFile then
+      os.remove(encodingFile)
+    end
+    if mssp then
+      mssp.TELNETENCPROBE = nil
+    end
+  end)
+
+  it("reads an out-of-band message in the encoding the game is using", function()
+    -- one byte, five encodings: a decoder that fell back to Latin-1 would
+    -- answer "ã" every time
+    local cases = {
+      {"CP437", "π"},
+      {"CP667", "π"},
+      {"CP737", "ή"},
+      {"CP869", "ι"},
+      {"MEDIEVIA", "☠"},
+    }
+    for _, case in ipairs(cases) do
+      local encoding, expected = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding))
+      assert.equals(expected, msspValueOf(string.char(0xE3)), "byte 0xE3 came back wrong under " .. encoding)
+    end
+  end)
+
+  it("sends a character the encoding has and refuses one it does not", function()
+    -- the refusal is the half that bites: without it the character goes out as
+    -- a question mark and the game never sees what was typed
+    local cases = {
+      {"CP437", "π", "ą"},
+      {"CP667", "ą", "☠"},
+      {"CP737", "ή", "ą"},
+      {"CP869", "ι", "ß"},
+      {"MEDIEVIA", "☠", "ą"},
+    }
+    for _, case in ipairs(cases) do
+      local encoding, carried, refused = case[1], case[2], case[3]
+      assert.is_true(setServerEncoding(encoding))
+
+      local shown = displayed("TELNETENC" .. encoding .. " " .. carried)
+      assert.is_truthy(shown, encoding .. " refused " .. carried .. ", which it can carry")
+      assert.is_truthy(shown:find(carried, 1, true), encoding .. " did not round-trip " .. carried .. ": " .. shown)
+
+      local sent, refusal = displayed("TELNETENC" .. encoding .. " " .. refused)
+      assert.is_nil(sent, encoding .. " accepted " .. refused .. ", which it cannot carry")
+      assert.is_truthy(tostring(refusal):find("current game server encoding of '" .. encoding .. "'", 1, true), tostring(refusal))
+    end
+  end)
+
+  it("uses its own table for an encoding Qt spells differently", function()
+    -- Mudlet keys this one "ISO 8859-2"; Qt's converters only answer to
+    -- "ISO-8859-2", so the lookup table is what has to serve
+    assert.is_true(setServerEncoding("ISO 8859-2"))
+    assert.equals("ł", msspValueOf(string.char(0xB3)))
+
+    local shown = displayed("TELNETENCISO2 ł")
+    assert.is_truthy(shown and shown:find("ł", 1, true), tostring(shown))
+
+    local sent, refusal = displayed("TELNETENCISO2 ☠")
+    assert.is_nil(sent)
+    assert.is_truthy(tostring(refusal):find("current game server encoding of 'ISO 8859-2'", 1, true), tostring(refusal))
+  end)
+
+  it("carries the accented letters of CP437", function()
+    pending("TTextCodec_437's table holds Medievia's map glyphs from 0x80 to 0xAF, so CP437 can neither send nor read Ç, ü, é or Ü (#10395)")
+  end)
+
+  it("carries the lower case Greek letters of CP737", function()
+    pending("both CP737 tables hold CP437's characters from 0x98 to 0xAF, so bytes for α to ψ come out as ÿ, Ö, á and friends (#10395)")
+  end)
+end)
+
+describe("Tests MXP line modes", function()
+  -- MXP_spec.lua carries its tags in through feedTriggers, which TBuffer does not
+  -- flag as coming from a server, so the ESC[#z mode switches are inert there and
+  -- every tag is parsed in the forced processor's secure mode. Only a negotiated
+  -- processor fed server data runs the modes, which is what these pin.
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function displayed(data)
+    local mark = getLastLineNumber("main")
+    feed(data)
+    return table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
+  end
+
+  setup(function()
+    feed("<T_IAC><T_DO><O_MXP>")
+  end)
+
+  teardown(function()
+    -- back to the open default the processor starts on, then off entirely: a
+    -- locked-in secure mode would outlive this file otherwise
+    feed("\27[5z\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+  end)
+
+  it("acts only on the formatting tags while the line is open", function()
+    assert.equals("MXPOPENBOLD", displayed("\27[0z<B>MXPOPENBOLD</B>\r\n"))
+    assert.equals("MXPOPENFONT", displayed("\27[0z<FONT color=\"red\">MXPOPENFONT</FONT>\r\n"))
+    assert.equals("<SEND href=\"x\">MXPOPENSEND</SEND>", displayed("\27[0z<SEND href=\"x\">MXPOPENSEND</SEND>\r\n"))
+    assert.equals("<VERSION>", displayed("\27[0z<VERSION>\r\n"))
+  end)
+
+  it("acts on every tag while the line is secure", function()
+    assert.equals("<SEND href=\"x\">MXPPLAINSEND</SEND>", displayed("\27[0z<SEND href=\"x\">MXPPLAINSEND</SEND>\r\n"))
+    assert.equals("MXPSECURESEND", displayed("\27[1z<SEND href=\"x\">MXPSECURESEND</SEND>\r\n"))
+  end)
+
+  it("falls back to the default mode at the end of the line", function()
+    assert.equals("MXPONELINE", displayed("\27[1z<SEND href=\"x\">MXPONELINE</SEND>\r\n"))
+    assert.equals("<SEND href=\"x\">MXPNEXTLINE</SEND>", displayed("<SEND href=\"x\">MXPNEXTLINE</SEND>\r\n"))
+  end)
+
+  it("keeps a secure mode the server locked in until it unlocks it again", function()
+    feed("\27[6z\r\n")
+    assert.equals("MXPLOCKEDSECURE", displayed("<SEND href=\"x\">MXPLOCKEDSECURE</SEND>\r\n"))
+
+    feed("\27[5z\r\n")
+    assert.equals("<SEND href=\"x\">MXPUNLOCKED</SEND>", displayed("<SEND href=\"x\">MXPUNLOCKED</SEND>\r\n"))
+  end)
+
+  it("takes a temporary secure mode for one tag and no further", function()
+    -- VERSION is a tag of its own with nothing to close, so the second one
+    -- reaching the screen as text is the whole of what temp secure did not cover
+    assert.equals("MXPTEMPSECURE<VERSION>", displayed("\27[4z<VERSION>MXPTEMPSECURE<VERSION>\r\n"))
+  end)
+
+  it("ignores a mode code it has no meaning for and carries on", function()
+    assert.equals("MXPUNKNOWNMODE", displayed("\27[9zMXPUNKNOWNMODE\r\n"))
+    assert.equals("MXPSTILLPARSING", displayed("\27[1z<B>MXPSTILLPARSING</B>\r\n"))
+  end)
+end)
+
+describe("MXP auto-detection from the mode switch escape", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local promptedBefore, forcedBefore
+
+  before_each(function()
+    promptedBefore = getConfig("promptForMXPProcessorOn")
+    forcedBefore = getConfig("specialForceMXPProcessorOn")
+    setConfig("promptForMXPProcessorOn", false)
+    setConfig("specialForceMXPProcessorOn", false)
+  end)
+
+  -- detection turns MXP on for the rest of the connection as though the game
+  -- had negotiated it, and only a WONT from the game turns that off again
+  after_each(function()
+    setConfig("specialForceMXPProcessorOn", forcedBefore)
+    setConfig("promptForMXPProcessorOn", promptedBefore)
+    feed("<T_IAC><T_WONT><O_MXP>")
+  end)
+
+  it("turns MXP on when the game sends a mode switch", function()
+    feed("\27[1z<send>look</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+    assert.is_true(getConfig("specialForceMXPProcessorOn"))
+  end)
+
+  it("finds the switch in the middle of a read", function()
+    feed("Welcome, adventurer.\r\nThe gates are open. \27[7zLocked open.\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  it("finds the switch when it ends the read", function()
+    feed("prompt> \27[0z")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+    feed("\r\n")
+  end)
+
+  it("ignores a mode number MXP does not define", function()
+    feed("\27[8z<send>look</send>\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
+  -- the detection is ESC [ # z, not ESC anything # z: another escape family
+  -- carrying the same two bytes after it must not turn MXP on
+  it("ignores an escape that is not a control sequence introducer", function()
+    feed("\27X1z<send>look</send>\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
+  it("ignores SGR sequences and a bracket that is not part of an escape", function()
+    feed("\27[1mBold\27[0m and [1z in plain text\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
   end)
 end)

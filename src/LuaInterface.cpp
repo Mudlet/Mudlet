@@ -99,9 +99,8 @@ QStringList LuaInterface::varName(TVar* var)
     return names;
 }
 
-std::pair<bool, QString> LuaInterface::validMove(QTreeWidgetItem* pWidget)
+std::pair<bool, QString> LuaInterface::validMove(TVar* pNewParent) const
 {
-    TVar* pNewParent = varUnit->getWVar(pWidget);
     if (pNewParent && pNewParent->getValueType() != LUA_TTABLE) {
         //: Error message shown when user tries to drag a variable onto a non-table variable
         return {false, QObject::tr("Cannot move variable here - the target is not a table")};
@@ -298,53 +297,6 @@ bool LuaInterface::reparentCVariable(TVar* from, TVar* to, TVar* curVar)
         return true;
     }
     return false;
-}
-
-bool LuaInterface::reparentVariable(QTreeWidgetItem* newP, QTreeWidgetItem* cItem, QTreeWidgetItem* oldP)
-{
-    //if oldParent doesn't exist:
-    //this means we were moved to a table from the global namespace
-    //if newParent doesn't exist:
-    //we were moved to the global namespace
-    //if both exist:
-    //this means we were moved from inside a table to inside another table
-    //and in both instances, this table was not _G
-    TVar* curVar = varUnit->getWVar(cItem);
-    if (!curVar) {
-        return false;
-    }
-
-
-    TVar* newParent = varUnit->getWVar(newP);
-    TVar* oldParent = varUnit->getWVar(oldP);
-    TVar* from = oldParent;
-    TVar* to = newParent;
-    if (newParent && newParent->getValueType() != LUA_TTABLE) {
-        //FIXME: report why this fails to user
-        return false;
-    }
-
-    if (!newParent && !oldParent) {
-        //happens when we move from _G to _G
-        return false;
-    }
-
-    if (!oldParent) {
-        from = varUnit->getBase();
-        // newParent cannot be a nullptr here as we would have returned in
-        // previous if - so to won't be either:
-        to = newParent;
-    } else if (!newParent) {
-        // oldParent cannot be a nullptr here as we would have returned in
-        // previous if - so from won't be either:
-        from = oldParent;
-        to = varUnit->getBase();
-    }
-
-    // one of from and to must not be a nullptr here - so prior test for BOTH
-    // being a nullptr here and returning false in that case was dead code.
-
-    return reparentCVariable(from, to, curVar);
 }
 
 QList<TVar*> LuaInterface::varOrder(TVar* var)

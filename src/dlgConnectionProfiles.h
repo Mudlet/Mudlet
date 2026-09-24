@@ -40,8 +40,9 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 
-    // Allows the functional test to stand in for a keychain read that has not answered yet:
     friend class ConnectionDialogKeychainWaitTest;
+    friend class ConnectionDialogOfflineProfileTest;
+    friend class SelfTestProfileIconTest;
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
@@ -133,7 +134,7 @@ private:
     void setProfileIcon() const;
     void loadCustomProfile(const QString&) const;
     void generateCustomProfile(const QString&) const;
-    void setCustomIcon(const QString&, QListWidgetItem*) const;
+    bool setCustomIcon(const QString&, QListWidgetItem*) const;
     void setIconOfListedProfile(const QString& profileName, const QIcon& icon) const;
     QString selectedProfileName() const;
     template <typename L>
@@ -151,6 +152,7 @@ private:
     void fitWelcomeMessageToContents();
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
+    void setItemTooltip(QListWidgetItem*, const QString& description, const bool iconLoaded) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     void clearNotificationArea();

@@ -40,12 +40,14 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
+#include "TTreeWidget.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
@@ -109,7 +111,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -126,8 +128,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mHostname);
             delete mudlet::self();
@@ -970,11 +971,11 @@ private slots:
         // then has no node in it to be written from
         QVERIFY2(!xml.contains(qsl("seed member value")), "a member a script removed while the Variables view was open must not be saved back");
 
-        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        auto* pVariablesTree = mpEditor->findChild<TTreeWidget*>(qsl("treeWidget_variables"));
         QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
         QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
         QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
-        QVERIFY2(vu->getWVar(pBaseItem->child(0)), "a save taken with the Variables view on screen must leave its items resolving to their variables");
+        QVERIFY2(pVariablesTree->variableForRow(vu, pBaseItem->child(0)), "a save taken with the Variables view on screen must leave its items resolving to their variables");
 
         vu->savedVars.remove(qsl("varsViewTable"));
         vu->savedVars.remove(qsl("varsViewTable.seedMember"));
@@ -1003,27 +1004,27 @@ private slots:
     }
 
     // The other side: a save must not pull the tree out from under the editor.
-    // Its tree widget and search results resolve items through VarUnit's
-    // item -> TVar map, which rebuilding the shared tree empties.
+    // Its tree widget and search results resolve items through the tree
+    // widget's own row -> TVar map.
     void test_variablesEditorItemMappingSurvivesExport()
     {
         QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
         mpEditor->repopulateVars();
 
         VarUnit* vu = mpHost->getLuaInterface()->getVarUnit();
-        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        auto* pVariablesTree = mpEditor->findChild<TTreeWidget*>(qsl("treeWidget_variables"));
         QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
         QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
         QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
         QTreeWidgetItem* pVariableItem = pBaseItem->child(0);
-        TVar* pMappedBefore = vu->getWVar(pVariableItem);
+        TVar* pMappedBefore = pVariablesTree->variableForRow(vu, pVariableItem);
         QVERIFY2(pMappedBefore, "the Variables view's items should resolve to a variable");
 
         // any save does it: the Save Profile button, the autosave, a package change
         mpEditor->slot_showTriggers();
         QVERIFY(!exportProfileXml().isEmpty());
 
-        QVERIFY2(vu->getWVar(pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
+        QVERIFY2(pVariablesTree->variableForRow(vu, pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
     }
 
     // What the user actually cares about: the data is there again next session.
@@ -1046,7 +1047,7 @@ private slots:
             vu->savedVars.insert(name);
         }
 
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/reload-test.xml");
+        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/reload-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
 
@@ -1084,7 +1085,7 @@ private slots:
         QCOMPARE(luaL_dostring(L, "secondSessionTable = {member = 'second session value', nest = {deep = 'second session deep value'}}"), 0);
         vu->savedVars.insert(qsl("secondSessionTable"));
 
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/second-session-test.xml");
+        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/second-session-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
         QCOMPARE(luaL_dostring(L, "secondSessionTable = nil"), 0);
@@ -1135,7 +1136,7 @@ private slots:
                  0);
         vu->savedVars.insert(qsl("bracketReload"));
 
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/bracket-reload-test.xml");
+        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/bracket-reload-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
         QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
@@ -1181,7 +1182,7 @@ private:
 
     QString exportProfileXml()
     {
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/xmlexport-test.xml");
+        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/xmlexport-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         if (!writer->exportPackage(xmlPath, true, false)) {
             return {};
@@ -1211,7 +1212,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

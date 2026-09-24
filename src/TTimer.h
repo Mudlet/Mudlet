@@ -59,6 +59,9 @@ public:
     bool compileScript();
     void execute();
     void setTime(QTime time);
+    // Not part of setTime(): a new timer has no time yet, and whether it needs
+    // one depends on its parent, which a drag and drop can change later
+    void validateTime();
     const QString& getCommand() const { return mCommand; }
     void setCommand(const QString& cmd) { mCommand = cmd; }
     const QString& getScript() const { return mScript; }
@@ -113,7 +116,6 @@ public:
     bool exportItem = true;
     bool mModuleMasterFolder = false;
 
-    static const char* scmProperty_HostName;
     static const char* scmProperty_TTimerId;
 
     // temporary timers are single-shot by default, unless repeating is set
@@ -121,6 +123,15 @@ public:
 
 private:
     TTimer() = default;
+    // Whether this timer firing would do anything: run a script, send a command,
+    // or call the Lua function tempTimer() registered for it - that one lives in
+    // the Lua registry, so such a timer's script stays empty
+    bool hasPayload() const { return !mScript.isEmpty() || !mCommand.isEmpty() || mRegisteredAnonymousLuaFunction; }
+    // Hides Tree<TTimer>::activate(), which is not virtual: only calls made from
+    // TTimer validate the time, Tree's own one in setIsActive() does not, which
+    // is why setIsActive() validates for itself
+    bool activate();
+
     QString mName;
     QString mScript;
     QTime mTime;

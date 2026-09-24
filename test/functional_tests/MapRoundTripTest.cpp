@@ -36,6 +36,7 @@
  * Run with: ctest -R MapRoundTripTest -V
  */
 
+#include <QDataStream>
 #include <QFileInfo>
 #include <QtTest/QtTest>
 
@@ -43,6 +44,7 @@
 #include <QSaveFile>
 #include <QTemporaryDir>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -76,6 +78,15 @@ const QColor scmLabelOutline(1, 2, 3);
 const QColor scmSymbolColor(200, 100, 50);
 const QColor scmBorderColor(10, 200, 30, 128);
 const QColor scmCustomLineColor(10, 20, 30);
+
+// A version 7 room predates the '0'/'1' lock flag the special exit command
+// gained around version 11, and every field the reader added from version 9
+// onward, so its record is short enough to write by hand.
+const int scmPreLockPrefixFormatVersion = 7;
+const QString scmUnprefixedSpecialExit = qsl("open gate");
+
+const int scmNamedOnlyAreaId = 7777;
+const QString scmNamedOnlyAreaName = qsl("Named but absent");
 } // namespace
 
 class MapRoundTripTest : public QObject
@@ -461,7 +472,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -488,7 +499,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -497,12 +508,12 @@ private slots:
 
         QVERIFY(mSaveDir.isValid());
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
-        mpSource = hostManager.getHost(mSourceName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
+        mpSource = hostManager->getHost(mSourceName);
         QVERIFY(mpSource);
-        QVERIFY2(hostManager.addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
-        mpTarget = hostManager.getHost(mTargetName);
+        QVERIFY2(hostManager->addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
+        mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
 
         buildSourceMap();
@@ -519,8 +530,7 @@ private slots:
     {
         mpSource = nullptr;
         mpTarget = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);
@@ -627,6 +637,62 @@ private slots:
         QVERIFY2(pRoom1, "the room that was already there was evicted by the room refused for its id");
         QCOMPARE(pRoom1->mSymbol, qsl("⚔"));
         QCOMPARE(pRoom1->userData, expectedRoom1UserData());
+    }
+
+    // Maps written before the special exit command gained a '0'/'1' lock flag
+    // in front of it store the bare command, so nothing may be stripped off
+    // (#4574).
+    void test_aSpecialExitFromBeforeTheLockPrefixKeepsItsFirstCharacter()
+    {
+        QByteArray room;
+        QDataStream out(&room, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        out << 1 << 0 << 0 << 0; // area, then x, y and z
+        for (int i = 0; i < 12; ++i) {
+            out << -1; // the twelve compass, vertical and in/out exits
+        }
+        out << -1 << 1; // environment, then weight
+        // the rotations and the zoom that format version 8 dropped
+        out << 0.0f << 0.0f << 0.0f << 1.0f;
+        out << qsl("A room from 2010") << false;
+        QMultiMap<int, QString> oldSpecialExits;
+        oldSpecialExits.insert(scmRoom2, scmUnprefixedSpecialExit);
+        out << oldSpecialExits;
+
+        QDataStream in(&room, QIODevice::ReadOnly);
+        in.setVersion(QDataStream::Qt_5_12);
+        TRoom oldRoom(nullptr);
+        oldRoom.restore(in, scmRoom1, scmPreLockPrefixFormatVersion);
+
+        // a fixture that no longer matches the reader would leave the exit out
+        // and pass the comparison below for the wrong reason
+        QCOMPARE(in.status(), QDataStream::Ok);
+        QVERIFY2(in.atEnd(), "the version 7 fixture and TRoom::restore no longer agree on the layout");
+        QCOMPARE(oldRoom.getSpecialExits().value(scmUnprefixedSpecialExit, 0), scmRoom2);
+        QVERIFY2(oldRoom.getSpecialExitLocks().isEmpty(), "a command with no lock flag came back locked");
+    }
+
+    // An area id can reach the load as a name in the map's area table with no
+    // TArea of its own, and the audit is what makes one for it (#989). This
+    // slot wipes the shared target map, so it has to stay last.
+    void test_anAreaTheMapOnlyNamesIsCreatedByTheAudit()
+    {
+        QByteArray areaNames;
+        QDataStream out(&areaNames, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        out << QMap<int, QString>{{scmNamedOnlyAreaId, scmNamedOnlyAreaName}};
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QDataStream in(&areaNames, QIODevice::ReadOnly);
+        in.setVersion(QDataStream::Qt_5_12);
+        pTargetMap->mpRoomDB->restoreAreaMap(in);
+        QVERIFY(!pTargetMap->mpRoomDB->getArea(scmNamedOnlyAreaId));
+
+        pTargetMap->audit();
+
+        QVERIFY2(pTargetMap->mpRoomDB->getArea(scmNamedOnlyAreaId), "the area the map named but did not carry was not created");
+        QCOMPARE(pTargetMap->mpRoomDB->getAreaNamesMap().value(scmNamedOnlyAreaId), scmNamedOnlyAreaName);
     }
 };
 

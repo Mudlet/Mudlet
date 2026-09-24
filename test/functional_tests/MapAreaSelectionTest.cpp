@@ -35,6 +35,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "T2DMap.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -71,7 +72,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -121,15 +122,15 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory();
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
-        mpHost = hostManager.getHost(mProfileName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
+        mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
 
@@ -144,8 +145,7 @@ private slots:
     {
         delete mp2dMap;
         mp2dMap = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory();
         }
@@ -233,6 +233,35 @@ private slots:
         QCOMPARE(mp2dMap->mAreaID, mAreaB);
         QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{scmSecondRoomInA});
         QCOMPARE(mp2dMap->getCenterSelectedRoomId(), scmSecondRoomInA);
+    }
+
+    // Moving a label runs from the context menu until the next click, so
+    // switchArea() has to call it off - it is the only thing that does.
+    // Otherwise the widget stays in move mode over the new area, still tracking
+    // the mouse and still showing the banner, and the next click is swallowed
+    // by the label handler instead of doing what it was aimed at (#9131)
+    void switchingAreaCancelsALabelMove()
+    {
+        buildTwoAreaMap();
+        // getMousePosition() divides by these, and nothing has painted the
+        // widget to give them a size
+        mp2dMap->mRoomWidth = 20.0f;
+        mp2dMap->mRoomHeight = 20.0f;
+        // slot_moveLabel() does not read this - it is set so that the clearing
+        // switchArea() does can be seen
+        mp2dMap->mLabelHighlighted = true;
+        mp2dMap->slot_moveLabel();
+        QVERIFY(mp2dMap->mMoveLabel);
+        QVERIFY(mp2dMap->hasMouseTracking());
+        QVERIFY(!mp2dMap->mHelpMsg.isEmpty());
+
+        mp2dMap->switchArea(mAreaBName);
+
+        QCOMPARE(mp2dMap->mAreaID, mAreaB);
+        QVERIFY(!mp2dMap->mMoveLabel);
+        QVERIFY(!mp2dMap->hasMouseTracking());
+        QVERIFY(!mp2dMap->mLabelHighlighted);
+        QVERIFY(mp2dMap->mHelpMsg.isEmpty());
     }
 };
 

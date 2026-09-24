@@ -74,6 +74,9 @@ The plain `<platform>-debug` presets build into `build/`. Every variant builds i
 `build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
 without forcing each other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
 
+On Linux, add `-DUSE_ALTERNATE_LINKER=mold` to the configure command when mold is installed - it cut
+CI's link tail from 4m13s to 29s (PR #9927), and only takes effect on a tree configured with it.
+
 ### Reproducing what CI configures
 
 `ci-linux`, `ci-macos`, `ci-macos-no-tests`, `ci-windows` and `ci-codeql` are the presets the
@@ -135,12 +138,31 @@ Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
 ## Running the result
 
 ```bash
-# macOS
-./build/src/mudlet.app/Contents/MacOS/mudlet
+# macOS, through the build system - the preset has to be one this host has
+cmake --build --preset macos-debug-nosan --target run-mudlet
 
-# Linux
+# Linux, either way
+cmake --build --preset linux-debug --target run-mudlet
 ./build/src/mudlet
 ```
+
+On macOS, launch the **bundle** rather than the binary inside it. macOS attributes a
+permission request to the responsible process, which for anything started from a shell is
+the application owning the terminal - so the built-in speech backend asking for speech
+recognition kills Mudlet, blaming a usage description that Mudlet's `Info.plist` does
+carry. `run-mudlet` runs `open` and, because that detaches, keeps `qDebug()` and
+`qWarning()` output in `<build>/mudlet-run.log`. By hand:
+
+```bash
+open build/src/mudlet.app --stdout /tmp/mudlet.log --stderr /tmp/mudlet.log
+```
+
+A sanitizer build is the exception, and `run-mudlet` handles it: `open` hands the launch to
+launchd rather than passing the shell's environment on, so it runs the binary directly there
+and the sanitizer's options and reports work as usual. Speech declines to ask for permission
+in that case rather than dying - and since the plain `macos-debug` preset has
+AddressSanitizer on, exercising the built-in macOS speech backend means building
+`macos-debug-nosan` (or launching the bundle by hand).
 
 Mudlet is a graphical desktop application; launching it opens a window. Variant presets put the
 binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full build.
@@ -149,14 +171,14 @@ binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full b
 
 The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubuntu container:
 apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
-than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-debug-nosan`
-preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the documented preset
-commands work unchanged. On a warm container the hook finishes in seconds and a full build is
-mostly ccache hits — measured 5m25s wall for all targets at 99% hit rate, most of it linking —
-versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once.
-The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold`:
-linking is the bulk of a warm rebuild and mold shrinks it dramatically (PR #9927 measured a CI
-link tail of 4m13s → 29s). Keep that flag if you reconfigure the tree from scratch.
+than the 6.8.2 minimum), the Lua rocks, submodules, and a CMake configure of the
+`linux-debug-nosan` preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the
+documented preset commands work unchanged. It takes ~3 minutes on a cold container and seconds
+on a warm one. ccache starts cold, so budget ~18 minutes for the first full build of a session
+on the 4 cores these containers get.
+
+The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold` - keep
+that flag if you reconfigure the tree from scratch.
 Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
 
 Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted

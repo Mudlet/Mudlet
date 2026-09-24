@@ -53,6 +53,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "TLuaInterpreter.h"
 #include "mudlet.h"
@@ -145,7 +146,7 @@ private:
         return zip_close(archive) == 0;
     }
 
-    QString packageFolder(const QString& packageName) const { return mudlet::getMudletPath(enums::profilePackagePath, mProfileName, packageName); }
+    QString packageFolder(const QString& packageName) const { return MudletPaths::getMudletPath(enums::profilePackagePath, mProfileName, packageName); }
 
 private slots:
     void initTestCase()
@@ -171,10 +172,10 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QVERIFY2(mudlet::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
 
-        QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
 
         QVERIFY2(!bundledFontBytes().isEmpty(), "the bundled font could not be read out of the Qt resources");
@@ -188,6 +189,11 @@ private slots:
 
     void cleanupTestCase()
     {
+        if (mpHost) {
+            // every install and uninstall above arms a deferred profile save,
+            // and the Host is about to go away underneath it
+            mpHost->waitForProfileSave();
+        }
         mpHost = nullptr;
         if (mudlet::self()) {
             delete mudlet::self();
@@ -261,6 +267,69 @@ private slots:
         QVERIFY2(sawTheFont, "a script in the package could not use the font its own archive carries while it was being installed");
 
         QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package could not be uninstalled");
+    }
+
+    // Updating a package is an uninstall followed by an install of the new
+    // archive, so a font that was not forgotten on the way out is one the
+    // reinstall decides it has already loaded and never registers again - the
+    // update leaves the package without the font it ships (#9115).
+    void test_aReinstalledPackageBringsItsFontBack()
+    {
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "the font was already registered before this case installed anything, so nothing below can be told apart");
+
+        const QString packageName = qsl("font-reinstall-pkg");
+        const QString archivePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(packageName));
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("VeraMono.ttf"), bundledFontBytes()}, {qsl("%1.xml").arg(packageName), minimalPackageXml(packageName)}};
+        QVERIFY2(writeArchive(archivePath, entries), "could not write the test archive");
+
+        auto [ok, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::Package, true);
+        QVERIFY2(ok, qPrintable(message));
+        QVERIFY2(QFontDatabase::families().contains(mFontFamily), "the installed package's font was not registered");
+
+        QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package could not be uninstalled");
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "uninstalling the package left its font registered");
+
+        auto [reinstalled, reinstallMessage] = mpHost->installPackage(archivePath, enums::PackageModuleType::Package, true);
+        QVERIFY2(reinstalled, qPrintable(reinstallMessage));
+        QVERIFY2(QFontDatabase::families().contains(mFontFamily), "reinstalling the package did not bring its font back");
+
+        QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the reinstalled package could not be uninstalled");
+    }
+
+    // Two profiles can hold the same package, and each unpacks its own copy of
+    // the font under its own folder. One profile removing the package is not a
+    // reason to take the font away from the other, which still has it installed
+    // and is still drawing with it (#9238).
+    void test_oneProfileDroppingAPackageLeavesItsFontWithTheOther()
+    {
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "the font was already registered before this case installed anything, so nothing below can be told apart");
+
+        const QString secondProfileName = qsl("%1-second").arg(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(secondProfileName, QString(), QString(), QString()), "failed to create the second Host");
+        Host* pSecondHost = HostManager::self()->getHost(secondProfileName);
+        QVERIFY(pSecondHost);
+
+        const QString packageName = qsl("font-shared-pkg");
+        const QString archivePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(packageName));
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("VeraMono.ttf"), bundledFontBytes()}, {qsl("%1.xml").arg(packageName), minimalPackageXml(packageName)}};
+        QVERIFY2(writeArchive(archivePath, entries), "could not write the test archive");
+
+        auto [firstOk, firstMessage] = mpHost->installPackage(archivePath, enums::PackageModuleType::Package, true);
+        QVERIFY2(firstOk, qPrintable(firstMessage));
+        auto [secondOk, secondMessage] = pSecondHost->installPackage(archivePath, enums::PackageModuleType::Package, true);
+        QVERIFY2(secondOk, qPrintable(secondMessage));
+        QVERIFY2(QFontDatabase::families().contains(mFontFamily), "the font neither profile had before was not registered by installing the package");
+
+        QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package could not be uninstalled from the first profile");
+        QVERIFY2(QFontDatabase::families().contains(mFontFamily), "removing the package from one profile took the font away from the other, which still has it installed");
+
+        QVERIFY2(pSecondHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package could not be uninstalled from the second profile");
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "the font outlived the last profile that had the package");
+
+        // addHost() numbers a profile by how many are in the pool, so leaving
+        // this one there would change the shape of any case added after it
+        pSecondHost->waitForProfileSave();
+        HostManager::self()->deleteHost(secondProfileName);
     }
 };
 

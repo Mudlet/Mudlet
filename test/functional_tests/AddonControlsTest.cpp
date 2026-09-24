@@ -34,15 +34,19 @@
  */
 
 
+#include <QAccessible>
 #include <QAction>
 #include <QMenu>
 #include <QSignalSpy>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTreeWidgetItemIterator>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
+#include "ShortcutsManager.h"
 #include "TMainConsole.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -50,6 +54,7 @@
 #include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 extern "C" {
@@ -85,12 +90,12 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
-    Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
+    Host* hostFor(const QString& profileName) const { return HostManager::self()->getHost(profileName); }
 
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
-               && mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first;
+        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)) && MudletPaths::writeProfileData(profileName, qsl("url"), mLocalhost).first
+               && MudletPaths::writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
     // Returns the Lua error, or a null QString when the chunk ran
@@ -205,6 +210,76 @@ private:
         return !answer;
     }
 
+    // The clash warnings are shown in the editor rather than on the main
+    // screen, so reaching them means opening one. slot_showScriptDialog() acts
+    // on the active profile, which is why the host wanted has to be in front
+    // first.
+    dlgTriggerEditor* editorFor(Host* pHost) const
+    {
+        if (!pHost->mpEditorDialog) {
+            mudlet::self()->activateProfile(pHost);
+            QTest::qWait(100ms);
+            mudlet::self()->slot_showScriptDialog();
+            QTest::qWait(100ms);
+        }
+        return pHost->mpEditorDialog.data();
+    }
+
+    // Clearing a message hides the area but leaves its text behind
+    static QString editorSaid(dlgTriggerEditor* pEditor)
+    {
+        if (!pEditor || pEditor->mpSystemMessageArea->isHidden()) {
+            return QString();
+        }
+        return pEditor->mpSystemMessageArea->notificationAreaMessageBox->text();
+    }
+
+    static QTreeWidgetItem* keyItem(dlgTriggerEditor* pEditor, const int keyId)
+    {
+        for (QTreeWidgetItemIterator it(pEditor->treeWidget_keys); *it; ++it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == keyId) {
+                return *it;
+            }
+        }
+        return nullptr;
+    }
+
+    // What a screen reader is handed. Qt calls an installed handler in place of
+    // the platform's, but only while accessibility is active.
+    class AnnouncementRecorder
+    {
+    public:
+        AnnouncementRecorder()
+        : mWasActive(QAccessible::isActive())
+        , mpPrevious(QAccessible::installUpdateHandler(record))
+        {
+            QAccessible::setActive(true);
+            heard().clear();
+        }
+        ~AnnouncementRecorder()
+        {
+            QAccessible::installUpdateHandler(mpPrevious);
+            QAccessible::setActive(mWasActive);
+        }
+        static QStringList& heard()
+        {
+            static QStringList announcements;
+            return announcements;
+        }
+
+    private:
+        static void record(QAccessibleEvent* pEvent)
+        {
+            if (pEvent->type() == QAccessible::Announcement) {
+                heard().append(static_cast<QAccessibleAnnouncementEvent*>(pEvent)->message());
+            }
+        }
+        const bool mWasActive;
+        const QAccessible::UpdateHandler mpPrevious;
+    };
+
+    static QString accessibleDescription(const QTreeWidgetItem* pItem) { return pItem ? pItem->data(0, Qt::AccessibleDescriptionRole).toString() : QString(); }
+
     // On the main toolbar rather than merely somewhere in the window: a button
     // built but never added is still findable by name, and looks from here
     // exactly like one the player can press.
@@ -262,7 +337,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
         mudlet::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
@@ -317,13 +392,19 @@ private slots:
         }
     }
 
+    // A command is only on screen while the window is showing the profile that
+    // created it, so a case asserting on one has to say which profile it means
+    // to be looking at. Most of these are the first profile's, and without this
+    // they read whatever the last case happened to leave active.
+    void init() { mudlet::self()->activateProfile(mpFirstHost); }
+
     // The clash check only runs when a package asks for a key, and a package
-    // on another profile can hold one when the search is switched on: the
-    // menu carries every profile's commands, so this clash crosses profiles
-    // even though a package can never see it coming. Qt answers an ambiguous
-    // shortcut by disabling both, so the profile that switched the search on
-    // has to be told - without being told whose command it was, which is the
-    // other package's business and nothing this profile can act on.
+    // on another profile can hold one when the search is switched on: the key
+    // is checked against every window's commands, so this clash crosses
+    // profiles even though a package can never see it coming. The profile that
+    // switched the search on has to be told - without being told whose command
+    // it was, which is the other package's business and nothing this profile
+    // can act on.
     void test_theSearchSaysSoWhenAnotherProfilesCommandHoldsItsKey()
     {
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
@@ -332,20 +413,298 @@ private slots:
         const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileF3', menuPath = 'ClashTest', shortcut = 'F3'"));
         QVERIFY2(commandId > 0, "F3 could not be taken even with the search off");
 
-        // on the second profile because that is the visible one: a
-        // Qt::WindowShortcut candidate has to be visible to be ambiguous at
-        // all, and a console on a background tab is not
+        // Driven from the second profile because the message is raised on
+        // whichever profile switched the search on, and that is the profile
+        // whose console is read below
         runLua(mpSecondHost, qsl("clearWindow()"));
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', true)"));
         QTest::qWait(200ms);
-        runLua(mpSecondHost, qsl("_clashText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
-        const QString text = luaGlobalString(mpSecondHost, qsl("_clashText"));
+        runLua(mpSecondHost, qsl("_searchClashText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
+        const QString text = luaGlobalString(mpSecondHost, qsl("_searchClashText"));
 
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
         runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
 
         QVERIFY2(text.contains(QKeySequence(Qt::Key_F3).toString(QKeySequence::NativeText)), qPrintable(qsl("the search took F3 from another profile's command without saying so: %1").arg(text)));
         QVERIFY2(!text.contains(qsl("OtherProfileF3")), qPrintable(qsl("the warning names a command belonging to another profile: %1").arg(text)));
+    }
+
+    // The same clash the other way up, and across the profile boundary. A pinned
+    // command's shortcut stays on the menu whichever profile is in front, so it
+    // takes the key from a binding another profile has on it. Unpinned, it is
+    // hidden while that profile is in front and takes nothing. Refusing the command over that would make a package's success
+    // depend on which profiles the player happens to have open, so the command
+    // is placed and the profile losing its binding is told instead - in its
+    // editor, not on its main screen, because a package re-places its commands
+    // at every profile load and a startup line nobody can act on is one they
+    // learn to ignore.
+    //
+    // Both names have to be in that warning. The refusal a package receives
+    // withholds them, to stop it learning what a profile it cannot see has
+    // installed - but this line is read by the player, who owns both profiles,
+    // and naming neither leaves them nothing to go and change.
+    void test_anotherProfileIsToldWhenACommandTakesItsKeyBinding()
+    {
+        const QString sequence = QKeySequence(QKeyCombination(Qt::AltModifier, Qt::Key_F9)).toString(QKeySequence::NativeText);
+
+        QVERIFY2(runLua(mpSecondHost, qsl("_clashKeyId = tempKey(mudlet.keymodifier.Alt, mudlet.key.F9, [[echo('bound')]])")).isNull(), "the second profile's key binding could not be made");
+        dlgTriggerEditor* pEditor = editorFor(mpSecondHost);
+        QVERIFY2(pEditor, "the second profile's editor could not be opened");
+        pEditor->showInfo(QString());
+
+        // Opening the editor replaces the notice, so a closed one must not
+        // have it read out either
+        QStringList heard;
+        int commandId = 0;
+        QString textBeforePinning;
+        {
+            AnnouncementRecorder recorder;
+            pEditor->hide();
+            commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F9'"));
+            textBeforePinning = editorSaid(pEditor);
+            runLua(mpFirstHost, qsl("setCommandPinned(%1, true)").arg(commandId));
+            heard = recorder.heard();
+            pEditor->show();
+        }
+
+        const QString text = editorSaid(pEditor);
+
+        runLua(mpSecondHost, qsl("killKey(_clashKeyId)"));
+        if (commandId > 0) {
+            runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+        }
+
+        QVERIFY2(commandId > 0, "the command was refused over a binding belonging to a different profile");
+        QVERIFY2(!textBeforePinning.contains(sequence), qPrintable(qsl("an unpinned command, which never takes another profile's key, warned that it did: %1").arg(textBeforePinning)));
+        QVERIFY2(text.contains(sequence), qPrintable(qsl("a pinned command took another profile's key binding without saying so in its editor: %1").arg(text)));
+        QVERIFY2(text.contains(qsl("OtherProfileBinding")), qPrintable(qsl("the warning does not say which command took the key: %1").arg(text)));
+        QVERIFY2(text.contains(mFirstProfile), qPrintable(qsl("the warning does not say which profile the command is in: %1").arg(text)));
+        QVERIFY2(!heard.contains(text), qPrintable(qsl("the warning on another profile's closed editor was read out: %1").arg(heard.join(qsl(" | ")))));
+    }
+
+    // The same clash inside one profile, which is the direction a package meets
+    // most: its command goes on first, and a binding the player already had -
+    // or makes later - is the half that stops working. Warned about rather than
+    // refused, because the binding is the player's own item, and shown in the
+    // editor for the reason the cross-profile case above gives.
+    //
+    // This lived in AddonCommand_spec.lua while the warning went to the main
+    // window. It cannot: Lua can make the clash but cannot open the editor that
+    // now reports it.
+    void test_aProfileIsToldInItsEditorWhenACommandHoldsItsNewBindingsKey()
+    {
+        const QString sequence = QKeySequence(QKeyCombination(Qt::AltModifier, Qt::Key_F10)).toString(QKeySequence::NativeText);
+
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'SameProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F10'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+        pEditor->showInfo(QString());
+
+        QVERIFY2(runLua(mpFirstHost, qsl("_sameClashKeyId = tempKey(mudlet.keymodifier.Alt, mudlet.key.F10, [[echo('bound')]])")).isNull(), "the key binding could not be made");
+        const QString text = editorSaid(pEditor);
+
+        runLua(mpFirstHost, qsl("killKey(_sameClashKeyId)"));
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(text.contains(sequence), qPrintable(qsl("a binding was made over a command's key without the editor saying so: %1").arg(text)));
+        QVERIFY2(text.contains(qsl("SameProfileBinding")), qPrintable(qsl("the warning does not name the command holding the key: %1").arg(text)));
+    }
+
+    // Mudlet's own shortcuts get the key first in the same way. Ctrl+Alt+T and
+    // Ctrl+Alt+L are the same on every platform, unlike the Alt+letter keys,
+    // which are Ctrl+letter on macOS.
+    void test_aBindingOnOneOfMudletsOwnKeysIsWarnedAboutInTheEditor()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        pEditor->showInfo(QString());
+        QVERIFY2(runLua(mpFirstHost, qsl("_ownClashKeyId = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo('bound')]])")).isNull(),
+                 "the key binding could not be made");
+        const QString tempText = editorSaid(pEditor);
+        runLua(mpFirstHost, qsl("killKey(_ownClashKeyId)"));
+        QVERIFY2(tempText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("a temporary binding on one of Mudlet's own keys was not warned about: %1").arg(tempText)));
+
+        pEditor->showInfo(QString());
+        QVERIFY2(runLua(mpFirstHost, qsl("permKey('OwnClashPerm', '', mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.L, [[echo('bound')]])")).isNull(),
+                 "the key binding could not be made");
+        const QString permText = editorSaid(pEditor);
+        runLua(mpFirstHost, qsl("disableKey('OwnClashPerm')"));
+        QVERIFY2(permText.contains(qsl("Toggle Logging")), qPrintable(qsl("a permanent binding on one of Mudlet's own keys was not warned about: %1").arg(permText)));
+    }
+
+    // A key Mudlet has nothing on, and a profile switching key, which a binding
+    // wins because TCommandLine claims the ShortcutOverride for it, must both go
+    // by in silence
+    void test_aBindingThatWillFireIsNotWarnedAbout()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        const QStringList bindings{qsl("mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.F12"), qsl("mudlet.keymodifier.Control, mudlet.key['1']")};
+        for (const QString& binding : bindings) {
+            pEditor->showInfo(QString());
+            QVERIFY2(runLua(mpFirstHost, qsl("_quietKeyId = tempKey(%1, [[echo('bound')]])").arg(binding)).isNull(), "the key binding could not be made");
+            const QString text = editorSaid(pEditor);
+            runLua(mpFirstHost, qsl("killKey(_quietKeyId)"));
+            QVERIFY2(text.isEmpty(), qPrintable(qsl("a binding that fires (%1) was warned about: %2").arg(binding, text)));
+        }
+    }
+
+    // The way most bindings are made: pressing the key in the editor's grab box
+    void test_grabbingOneOfMudletsOwnKeysInTheEditorIsWarnedAbout()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        pEditor->slot_showKeys();
+        pEditor->addKey(false);
+        QTreeWidgetItem* pItem = pEditor->treeWidget_keys->currentItem();
+        QVERIFY2(pItem && pItem != pEditor->mpKeyBaseItem, "the new key binding is not the one selected");
+
+        QStringList heard;
+        QString takenDescription;
+        {
+            AnnouncementRecorder recorder;
+            pEditor->showInfo(QString());
+            pEditor->keyGrabCallback(Qt::Key_T, Qt::ControlModifier | Qt::AltModifier);
+            heard = recorder.heard();
+            takenDescription = accessibleDescription(pItem);
+        }
+        const QString text = editorSaid(pEditor);
+        pEditor->keyGrabCallback(Qt::Key_F12, Qt::ControlModifier | Qt::AltModifier);
+        const QString freedDescription = accessibleDescription(pItem);
+
+        pEditor->treeWidget_keys->setCurrentItem(pItem);
+        pEditor->slot_deleteItemOrGroup();
+        pEditor->mpUndoStack->clear();
+        QVERIFY2(text.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("grabbing one of Mudlet's own keys was not warned about: %1").arg(text)));
+        // The player just pressed the key, so it is read out
+        QVERIFY2(heard.contains(text), qPrintable(qsl("grabbing a taken key was not read out, heard: %1").arg(heard.join(qsl(" | ")))));
+        QVERIFY2(takenDescription.contains(pEditor->descKeyTaken), qPrintable(qsl("a binding on a taken key does not say so to a screen reader: %1").arg(takenDescription)));
+        QVERIFY2(!freedDescription.contains(pEditor->descKeyTaken), qPrintable(qsl("a binding moved to a free key still says its key is in use: %1").arg(freedDescription)));
+    }
+
+    // Nothing is read out for a binding a script makes while the editor is
+    // closed: opening the editor replaces the warning, and a script that makes
+    // its bindings on connect would have it read out at every connect
+    void test_aScriptsBindingIsReadOutOnlyWhileTheEditorIsOpen()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+        const QString makeBinding = qsl("_readOutKeyId = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo('bound')]])");
+
+        QStringList heardClosed;
+        QStringList heardOpen;
+        QString closedText;
+        QString openText;
+        {
+            AnnouncementRecorder recorder;
+            pEditor->hide();
+            pEditor->showInfo(QString());
+            runLua(mpFirstHost, makeBinding);
+            heardClosed = recorder.heard();
+            closedText = pEditor->mpSystemMessageArea->notificationAreaMessageBox->text();
+            runLua(mpFirstHost, qsl("killKey(_readOutKeyId)"));
+
+            pEditor->show();
+            recorder.heard().clear();
+            pEditor->showInfo(QString());
+            runLua(mpFirstHost, makeBinding);
+            heardOpen = recorder.heard();
+            openText = editorSaid(pEditor);
+            runLua(mpFirstHost, qsl("killKey(_readOutKeyId)"));
+        }
+
+        QVERIFY2(closedText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("the closed editor was not given the warning: %1").arg(closedText)));
+        QVERIFY2(!heardClosed.contains(closedText), qPrintable(qsl("a warning on the closed editor was read out: %1").arg(heardClosed.join(qsl(" | ")))));
+        QVERIFY2(openText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("the open editor did not show the warning: %1").arg(openText)));
+        QVERIFY2(heardOpen.contains(openText), qPrintable(qsl("a warning on the open editor was not read out, heard: %1").arg(heardOpen.join(qsl(" | ")))));
+    }
+
+    // A binding a script makes while the editor is closed is warned about on the
+    // hidden editor, which replaces the warning when it opens, so selecting the
+    // binding is where the player gets to see it
+    void test_selectingABindingOnATakenKeyInTheEditorWarnsAboutIt()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        QVERIFY2(runLua(mpFirstHost,
+                        qsl("_takenSelectId = permKey('TakenSelect', '', mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo('bound')]]) "
+                            "_freeSelectId = permKey('FreeSelect', '', mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.F12, [[echo('bound')]])"))
+                         .isNull(),
+                 "the key bindings could not be made");
+        const int takenId = luaGlobalNumber(mpFirstHost, qsl("_takenSelectId"));
+        const int freeId = luaGlobalNumber(mpFirstHost, qsl("_freeSelectId"));
+
+        // How the editor picks up items made from Lua
+        pEditor->enterEvent(nullptr);
+        pEditor->slot_showKeys();
+        QTreeWidgetItem* pTaken = keyItem(pEditor, takenId);
+        QTreeWidgetItem* pFree = keyItem(pEditor, freeId);
+        QVERIFY2(pTaken && pFree, "the key bindings are not in the editor's tree");
+
+        QStringList heard;
+        QString takenText;
+        QString takenDescription;
+        QString freeText;
+        QString freeDescription;
+        {
+            AnnouncementRecorder recorder;
+            pEditor->showInfo(QString());
+            // Twice, as a click selects it twice. Leaving an item redoes its
+            // description, so it is read while the item is still selected.
+            pEditor->slot_keySelected(pTaken);
+            pEditor->slot_keySelected(pTaken);
+            takenText = editorSaid(pEditor);
+            takenDescription = accessibleDescription(pTaken);
+            pEditor->slot_keySelected(pFree);
+            freeText = editorSaid(pEditor);
+            freeDescription = accessibleDescription(pFree);
+            heard = recorder.heard();
+        }
+
+        for (QTreeWidgetItem* pItem : {pTaken, pFree}) {
+            pEditor->treeWidget_keys->setCurrentItem(pItem);
+            pEditor->slot_deleteItemOrGroup();
+        }
+        pEditor->mpUndoStack->clear();
+        QVERIFY2(takenText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("selecting a binding on one of Mudlet's own keys did not warn about it: %1").arg(takenText)));
+        QVERIFY2(!freeText.contains(qsl("already used")), qPrintable(qsl("selecting a binding that fires warned about it: %1").arg(freeText)));
+        // Arrowing through the bindings would be talked over at every taken
+        // key, so selection leaves it to the item's own description
+        QVERIFY2(!heard.contains(takenText), qPrintable(qsl("selecting a binding read its warning out: %1").arg(heard.join(qsl(" | ")))));
+        QVERIFY2(takenDescription.count(pEditor->descKeyTaken) == 1, qPrintable(qsl("a binding on a taken key should say so to a screen reader once: %1").arg(takenDescription)));
+        QVERIFY2(!freeDescription.contains(pEditor->descKeyTaken), qPrintable(qsl("a binding that fires says its key is in use: %1").arg(freeDescription)));
+    }
+
+    // addCommand() turns down a key Mudlet holds, but the preferences will move
+    // one of Mudlet's shortcuts onto a command's key. Naming only Mudlet would
+    // send the player to change a shortcut that is not the only thing in the way.
+    void test_aKeyHeldByBothMudletAndACommandNamesBoth()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'BothHoldBinding', menuPath = 'ClashTest', shortcut = 'Ctrl+Alt+F11'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+
+        ShortcutsManager* pManager = mudlet::self()->shortcutsManager();
+        QKeySequence original = *pManager->getSequence(qsl("Toggle Time Stamps"));
+        QKeySequence moved(QKeyCombination(Qt::ControlModifier | Qt::AltModifier, Qt::Key_F11));
+        pManager->setShortcut(qsl("Toggle Time Stamps"), &moved);
+
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+        pEditor->showInfo(QString());
+        const bool made = runLua(mpFirstHost, qsl("_bothKeyId = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.F11, [[echo('bound')]])")).isNull();
+        const QString text = editorSaid(pEditor);
+
+        runLua(mpFirstHost, qsl("killKey(_bothKeyId)"));
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+        pManager->setShortcut(qsl("Toggle Time Stamps"), &original);
+        QVERIFY2(made, "the key binding could not be made");
+        QVERIFY2(text.contains(qsl("Toggle Time Stamps")) && text.contains(qsl("BothHoldBinding")), qPrintable(qsl("the warning does not name both holders of the key: %1").arg(text)));
     }
 
     // docs/addon-ui-api.md gives the click event the id as addCommand returned
@@ -412,6 +771,41 @@ private slots:
 
         QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(secondId)));
         QTest::qWait(100ms);
+    }
+
+    // A package removes commands while its profile is in the background as a
+    // matter of course - a timer, a trigger, or the player switching tabs while
+    // a package reloads. Every one of that profile's items is hidden then, so a
+    // submenu holding nothing but its own hidden siblings must not read as one
+    // that has been emptied: taking it down takes them with it, and nothing
+    // puts them back for the rest of the session.
+    void test_removingACommandWhileItsProfileIsHiddenKeepsItsSiblings()
+    {
+        const int keptId = addCommand(mpFirstHost, qsl("name = 'KeptWhileHidden', menuPath = 'HiddenSiblings', shortcut = 'Ctrl+Alt+F8'"));
+        const int removedId = addCommand(mpFirstHost, qsl("name = 'RemovedWhileHidden', menuPath = 'HiddenSiblings'"));
+        QVERIFY2(keptId > 0 && removedId > 0, "the two commands sharing a submenu were not placed");
+
+        mudlet::self()->activateProfile(mpSecondHost);
+        QTest::qWait(100ms);
+        QVERIFY2(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(removedId)), "the hidden profile's command could not be removed");
+
+        // the deletions the removal deferred happen here
+        QTest::qWait(200ms);
+        QCoreApplication::processEvents();
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        QTest::qWait(100ms);
+
+        QAction* kept = menuActionNamed(qsl("KeptWhileHidden"));
+        const bool keptSurvived = kept != nullptr;
+        const QString keptShortcut = keptSurvived ? kept->shortcut().toString(QKeySequence::NativeText) : QString();
+        if (keptSurvived) {
+            runLua(mpFirstHost, qsl("removeCommand(%1)").arg(keptId));
+            QTest::qWait(100ms);
+        }
+
+        QVERIFY2(keptSurvived, "a command was removed while its profile was in the background and took the other command in its submenu with it");
+        QVERIFY2(keptShortcut == QKeySequence(qsl("Ctrl+Alt+F8")).toString(QKeySequence::NativeText), qPrintable(qsl("the surviving command lost its shortcut: \"%1\"").arg(keptShortcut)));
     }
 
     // Ids come from one sequence, so a second profile can name the first

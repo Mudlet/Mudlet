@@ -420,6 +420,7 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachName)
       assert.is_nil(Adjustable.Container.Attached.left.gasDetachName)
+      assert.is_nil(Adjustable.Container.Attached.left.gasDetachFresh)
     end)
 
     it("reserves a border while attached and gives it back on detach", function()
@@ -432,6 +433,15 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_false(container.attached)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
       assert.are.equal(0, getBorderLeft())
+    end)
+
+    -- handing the border back raises a resize event, which a container with no recorded size would answer
+    it("gives the border back when detached before any resize event reached it", function()
+      local container = make("gasDetachFresh", 200)
+      container:attachToBorder("left")
+      assert.is_nil(container.old_w_value)
+      container:detach()
+      assert.are.equal(borderBefore, getBorderLeft())
     end)
 
     it("detaches a same named container it takes the registration from", function()
@@ -646,6 +656,165 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.is_truthy(tostring(container.height):find("%%$"))
       -- the mouse did not move, so the left edge it grabbed stays where it was
       assert.is_true(math.abs(container:get_width() - 200) <= 1)
+    end)
+
+    -- the border an attached container reserves is the container's own size, so
+    -- it has to be measured from the geometry the drag applied and not from the
+    -- geometry that drag replaced
+    it("leaves the border matching the size the drag just applied", function()
+      -- resizeBorder arms a timer on the resize event that setBorder raises, and
+      -- nothing keeps its id, so it would fire on a deleted container later.
+      -- finally() only holds one function, so both stand-ins are undone from the
+      -- same one. The top border needs no restore of its own: the after_each
+      -- deletes the container, and type_delete() detaches, which hands it back.
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+      end)
+      _G.tempTimer = function() return -1 end
+
+      container:move(0, 0)
+      container:attachToBorder("top")
+
+      -- adjust_Info reads the grabbed edge from the pointer against the label,
+      -- so a click within ten pixels of the bottom takes the bottom edge
+      local grabY = container:get_height() - 5
+      local pointerY = 300
+      _G.getMousePosition = function() return 100, pointerY end
+
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, grabY))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, grabY))
+      -- the drag pulls the bottom edge thirty pixels further down
+      pointerY = pointerY + 30
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, grabY))
+
+      assert.are.equal("top", container.attached)
+      -- the drag stores the height as a percentage, so it comes back as a
+      -- fraction of a pixel and setBorderTop takes the whole part of it
+      local reserved = container:get_height() + container:get_y() + container.attachedMargin
+      assert.are.equal(math.floor(reserved), getBorderTop())
+      -- and it really did follow the drag: the height it replaced was 200
+      assert.is_true(container:get_height() > 200)
+    end)
+
+    -- The three specs below drive the left border rather than the top one: the
+    -- self-test profile's main window is only a handful of pixels tall, so
+    -- validAttachPositions()' "top" test (get_y() <= winh*0.2) can never go
+    -- false there, and a move drag is clamped to winh - height anyway. The
+    -- width is ordinary, so the same reach limit is reachable on the left.
+
+    -- adjustBorder() is what notices the container has left its border's reach,
+    -- so running it after the move means the move that carries it out of reach
+    -- is the one that detaches, rather than the one after it
+    it("detaches within the mouse move that carried it out of reach", function()
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+      end)
+      _G.tempTimer = function() return -1 end
+
+      container:move(0, 0)
+      container:attachToBorder("left")
+      assert.are.equal("left", container.attached)
+
+      local winw = getMainWindowSize()
+      local pointerX = 200
+      _G.getMousePosition = function() return pointerX, 100 end
+      -- the middle of the label is clear of every edge, so this grabs a move
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+      -- one move, far enough right to put the left edge out of reach
+      pointerX = pointerX + math.floor(winw * 0.5)
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+
+      assert.is_true(container:get_x() > winw * 0.2)
+      assert.is_false(container.attached)
+    end)
+
+    -- Coverage rather than a regression guard: the suite never drove a drag on a
+    -- container with a connected one before. Measured to pass under both
+    -- orderings, so it does not pin the reorder - the follower is attached in its
+    -- own right, and whatever it writes to the border it writes either way.
+    it("hands a connected container the size the drag just applied", function()
+      local follower
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+        if follower then
+          follower:delete()
+        end
+      end)
+      _G.tempTimer = function() return -1 end
+
+      container:move(0, 0)
+      container:attachToBorder("left")
+      follower = Adjustable.Container:new({
+        name = "gapDragFollower",
+        x = 0, y = 200, width = 60, height = 50,
+        autoLoad = false, autoSave = false,
+      })
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+
+      local grabX = container.adjLabel:get_width() - 2
+      local pointerX = 300
+      _G.getMousePosition = function() return pointerX, 100 end
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+      -- the drag pulls the right edge thirty pixels further out
+      pointerX = pointerX + 30
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+
+      assert.is_true(container:get_width() > 200)
+      -- same border, so the follower is given the anchor's new width
+      assert.are.equal(container:get_width(), follower:get_width())
+      local reserved = container:get_width() + container:get_x() + container.attachedMargin
+      assert.are.equal(math.floor(reserved), getBorderLeft())
+    end)
+
+    -- the only script-visible surface of the reordering, and the suite asserted
+    -- nothing about it before: every other reposition spec watches the Finish
+    -- event, which a mouse move does not raise
+    it("raises AdjustableContainerReposition while the drag is in progress", function()
+      local seen = {}
+      local handler = registerAnonymousEventHandler("AdjustableContainerReposition",
+        function(_, name, width, height, x, y, isMouseAction)
+          seen[#seen + 1] = {name = name, isMouseAction = isMouseAction}
+        end)
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        killAnonymousEventHandler(handler)
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+      end)
+      _G.tempTimer = function() return -1 end
+
+      container:move(0, 0)
+      container:attachToBorder("left")
+
+      local pointerX = 300
+      _G.getMousePosition = function() return pointerX, 100 end
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+      pointerX = pointerX + 30
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+
+      local mine = {}
+      for _, event in ipairs(seen) do
+        if event.name == containerName then
+          mine[#mine + 1] = event
+        end
+      end
+      -- four under this ordering and three under the old one, measured both
+      -- ways: the border write now lands after the drag has applied, which
+      -- repositions once more. That extra event is the one script-visible
+      -- consequence the change has
+      assert.are.equal(4, #mine)
+      -- the drag is a mouse action, and the flag is what tells a script that
+      assert.is_true(mine[#mine].isMouseAction)
     end)
   end)
 
@@ -1335,6 +1504,7 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
   local containers
   local topLevelBefore
   local borderBefore
+  local bordersBefore
   local scratchDir = getMudletHomeDir() .. "/gapAdjustableScratch/"
 
   local function newTopLevelObjects()
@@ -1362,13 +1532,30 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
     return container
   end
 
+  -- setMainWindowSize sizes the application window while getMainWindowSize
+  -- reads the console inside it, so the difference between the two has to be
+  -- measured before the console can be resized to a wanted size. Measuring it
+  -- means shrinking the window, so this puts it back before it returns
+  local function consoleChrome()
+    local width, height = getMainWindowSize()
+    setMainWindowSize(width, height)
+    pumpEvents(50)
+    local innerWidth, innerHeight = getMainWindowSize()
+    setMainWindowSize(width + (width - innerWidth), height + (height - innerHeight))
+    pumpEvents(50)
+    return width - innerWidth, height - innerHeight
+  end
+
   before_each(function()
     containers = {}
     borderBefore = getBorderLeft()
-    -- the border a container reserves is the widest reservation on that edge,
-    -- so an exact comparison below is only meaningful while this block owns it
+    -- every border of an axis is written when either side of it is reserved, so an
+    -- exact comparison below is only meaningful while this block owns both sides -
+    -- and a reservation stranded here would follow the shared console into the next
+    -- spec file, so all four are put back in after_each rather than per spec
+    bordersBefore = {getBorderTop(), getBorderBottom(), getBorderLeft(), getBorderRight()}
     assert.is_true(table.is_empty(Adjustable.Container.Attached.left or {}),
-                   "something outside this file is attached to the left border")
+                   "something is still attached to the left border")
     topLevelBefore = {}
     for name in pairs(Geyser.windowList) do
       topLevelBefore[name] = true
@@ -1425,9 +1612,14 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       end
       lfs.rmdir(scratchDir)
     end
-    -- last, because detaching above is what hands the border back: a restore
-    -- from an inner after_each would run before that and net nothing
-    setBorderLeft(borderBefore)
+    -- last, because detaching above is what hands the borders back: a restore from
+    -- an inner after_each, or from a spec's own finally(), runs before that and nets
+    -- nothing. Before the raise too, so a teardown failure cannot strand a
+    -- reservation on the console every later spec file shares
+    setBorderTop(bordersBefore[1])
+    setBorderBottom(bordersBefore[2])
+    setBorderLeft(bordersBefore[3])
+    setBorderRight(bordersBefore[4])
     if teardownError then
       error(teardownError)
     end
@@ -1516,6 +1708,294 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:resetBorder("left")
       assert.are.equal(0, getBorderLeft())
     end)
+
+    it("leaves the console some of the window when the container is as big as it", function()
+      local winw = getMainWindowSize()
+      local container = make("gapFullWidth", {width = winw})
+      container:attachToBorder("left")
+      assert.is_true(getBorderLeft() < winw, "the container reserved the whole window")
+      assert.is_true(getColumnCount() > 0, "no columns were left for text")
+    end)
+
+    -- the top and bottom borders are bounded against the window's height, which
+    -- the left-attached cases above never reach
+    it("leaves the console some of the window when the container is as tall as it", function()
+      local _, winh = getMainWindowSize()
+      local topBefore = getBorderTop()
+      finally(function() setBorderTop(topBefore) end)
+      local container = make("gapFullHeight", {height = winh})
+      container:attachToBorder("top")
+      assert.is_true(getBorderTop() < winh, "the container reserved the whole window")
+      assert.is_true(getRowCount() > 0, "no rows were left for text")
+    end)
+
+    -- a container that stops short of the edge keeps the reservation that clears
+    -- its own far edge, so no text is laid out underneath it
+    it("leaves a container that does not reach the edge reserving its whole width", function()
+      local winw = getMainWindowSize()
+      local container = make("gapShortOfEdge", {width = math.floor(winw * 0.85)})
+      container:attachToBorder("left")
+      assert.are.equal(container:get_width() + container:get_x() + container.attachedMargin, getBorderLeft())
+    end)
+
+    -- detaching re-settles the whole axis, so the border left behind is what the
+    -- containers still on it ask for and not what the one that left was holding
+    it("keeps the capped reservation when a smaller container detaches", function()
+      local winw = getMainWindowSize()
+      local narrow = make("gapCapNarrow", {width = 100})
+      local wide = make("gapCapWide", {width = winw})
+      narrow:attachToBorder("left")
+      wide:attachToBorder("left")
+      local capped = getBorderLeft()
+
+      narrow:detach()
+
+      assert.are.equal(capped, getBorderLeft())
+      assert.is_true(getColumnCount() > 0, "no columns were left for text")
+    end)
+
+    -- the pair the specs below share: one container filling the window from the top
+    -- edge, and a short one sitting on the bottom edge. The exact comparisons they
+    -- make are only meaningful while this block owns both sides of the axis
+    local function oppositePair(prefix)
+      local _, winh = getMainWindowSize()
+      assert.is_true(table.is_empty(Adjustable.Container.Attached.top or {}),
+                     "something is still attached to the top border")
+      assert.is_true(table.is_empty(Adjustable.Container.Attached.bottom or {}),
+                     "something is still attached to the bottom border")
+      local short = make(prefix .. "Short", {height = math.floor(winh * 0.12), y = math.floor(winh * 0.88)})
+      local tall = make(prefix .. "Tall", {height = winh})
+      return short, tall
+    end
+
+    -- what the two borders of the vertical axis have between them, by the same rule
+    -- the library uses. Derived from the font rather than written down, so these
+    -- specs hold at whatever size the console happens to be
+    local function spareHeight()
+      local _, winh = getMainWindowSize()
+      local _, charHeight = calcFontSize("main")
+      return winh - math.max(40, 2 * charHeight)
+    end
+
+    local function wantedBottom(container)
+      local _, winh = getMainWindowSize()
+      return winh + container.attachedMargin - container:get_y()
+    end
+
+    -- a bound that only looks at one border is no bound at all: the container facing
+    -- it across the console reserves against the same height
+    it("leaves the console rows with a container on the top and the bottom at once", function()
+      local _, winh = getMainWindowSize()
+      local short, tall = oppositePair("gapOpposite")
+
+      short:attachToBorder("bottom")
+      tall:attachToBorder("top")
+
+      -- the premise: a short container is only allowed onto the bottom border while
+      -- it is near it, and these figures are meaningless once it has been turned away
+      assert.are.equal("bottom", short.attached)
+      assert.is_true(getBorderTop() + getBorderBottom() < winh, "the two containers reserved the whole height")
+      assert.is_true(getRowCount() > 0, "no rows were left for text")
+      -- exact, both sides: the short container asks for less than half of what the
+      -- axis can spare and so keeps all of it, and the tall one keeps the rest. An
+      -- implementation that halved the axis, or reserved nothing at all, satisfies
+      -- the two assertions above and fails these
+      assert.are.equal(wantedBottom(short), getBorderBottom())
+      assert.are.equal(spareHeight() - getBorderBottom(), getBorderTop())
+    end)
+
+    it("leaves the console columns with a container on the left and the right at once", function()
+      local winw = getMainWindowSize()
+      local charWidth = calcFontSize("main")
+      local spare = winw - math.max(40, 2 * charWidth)
+      assert.is_true(table.is_empty(Adjustable.Container.Attached.right or {}),
+                     "something is still attached to the right border")
+      local first = make("gapOppositeFirst", {width = winw})
+      local second = make("gapOppositeSecond", {width = winw})
+
+      first:attachToBorder("left")
+      second:attachToBorder("right")
+
+      assert.is_true(getBorderLeft() + getBorderRight() < winw, "the two containers reserved the whole width")
+      assert.is_true(getColumnCount() > 0, "no columns were left for text")
+      -- two equally greedy containers halve what the axis can spare. The equality
+      -- alone would also hold of an implementation that reserved nothing
+      assert.are.equal(math.floor(spare / 2), getBorderLeft())
+      assert.are.equal(math.floor(spare / 2), getBorderRight())
+    end)
+
+    it("hands a side back exactly what it gave up when the container facing it detaches", function()
+      local short, tall = oppositePair("gapReturn")
+      short:attachToBorder("bottom")
+      tall:attachToBorder("top")
+      local shared = getBorderTop()
+
+      short:detach()
+
+      assert.is_true(shared < getBorderTop(), "the top border gave up nothing to the container below it")
+      assert.are.equal(spareHeight(), getBorderTop())
+      assert.are.equal(0, getBorderBottom(), "the border the detached container held was not released")
+      assert.is_true(getRowCount() > 0, "no rows were left for text")
+
+      tall:detach()
+
+      assert.are.equal(0, getBorderTop())
+      assert.are.equal(0, getBorderBottom())
+    end)
+
+    -- the other detach order settles an axis whose near side is empty and whose far
+    -- side still has a container on it, which nothing else here reaches
+    it("releases both borders when the greedy container detaches first", function()
+      local short, tall = oppositePair("gapReverse")
+      short:attachToBorder("bottom")
+      tall:attachToBorder("top")
+
+      tall:detach()
+
+      assert.are.equal(0, getBorderTop())
+      assert.are.equal(wantedBottom(short), getBorderBottom())
+
+      short:detach()
+
+      assert.are.equal(0, getBorderTop())
+      assert.are.equal(0, getBorderBottom())
+    end)
+
+    -- both sides are measured whenever either is reserved, so neither container gets
+    -- a better share for having been attached first
+    it("reserves the same borders whichever of two opposite containers is attached first", function()
+      local short, tall = oppositePair("gapOrder")
+
+      short:attachToBorder("bottom")
+      tall:attachToBorder("top")
+      local topFirst, bottomFirst = getBorderTop(), getBorderBottom()
+      short:detach()
+      tall:detach()
+
+      tall:attachToBorder("top")
+      short:attachToBorder("bottom")
+
+      assert.are.equal(topFirst, getBorderTop())
+      assert.are.equal(bottomFirst, getBorderBottom())
+      -- the discriminating one: both orders agree on an unbounded pair too, so what
+      -- has to be pinned is that the pair they agree on is the whole of what the
+      -- axis can spare and no more
+      assert.are.equal(spareHeight(), getBorderTop() + getBorderBottom())
+      assert.is_true(getRowCount() > 0, "no rows were left for text")
+    end)
+
+    -- the facing side is measured again rather than read from what it last asked
+    -- for: only a fresh measurement notices that the container facing this one has
+    -- changed size without its own handler running
+    it("measures the facing side again when that is the side that changed", function()
+      local _, winh = getMainWindowSize()
+      local shrunk = math.floor(winh * 0.5)
+      local short, tall = oppositePair("gapStale")
+      short:attachToBorder("bottom")
+      tall:attachToBorder("top")
+      assert.is_true(getBorderTop() > shrunk + tall.attachedMargin,
+                     "the top container is not the one giving room up, so shrinking it proves nothing")
+
+      -- Geyser's own resize, so the Adjustable override and its adjustBorder() are
+      -- both bypassed and tall's reservation is left stale
+      Geyser.Container.resize(tall, nil, shrunk)
+      short:adjustBorder()
+
+      assert.are.equal(shrunk + tall:get_y() + tall.attachedMargin, getBorderTop())
+      assert.are.equal(wantedBottom(short), getBorderBottom())
+    end)
+
+    -- hide() on its own leaves a container attached, so the first border written
+    -- here dispatches a resize event into a handler that detaches it: the facing
+    -- border has to be measured after that, or it reserves room for something that
+    -- is no longer there and the console is left with no rows after all
+    it("reserves nothing for a container a nested detach took off the facing border", function()
+      local _, winh = getMainWindowSize()
+      local short, tall = oppositePair("gapNested")
+      short:attachToBorder("bottom")
+      short:hide()
+
+      tall:attachToBorder("top")
+
+      assert.is_false(short.attached)
+      assert.are.equal(0, getBorderBottom(), "room was kept for a container that is no longer attached")
+      assert.are.equal(spareHeight(), getBorderTop())
+      assert.is_true(getRowCount() > 0, "no rows were left for text")
+    end)
+
+    -- a border nobody is attached to is not this code's to write
+    it("leaves a hand-set border on a side nothing is attached to alone", function()
+      local winw = getMainWindowSize()
+      assert.is_true(table.is_empty(Adjustable.Container.Attached.right or {}),
+                     "something is still attached to the right border")
+      setBorderRight(120)
+      local wide = make("gapHandSet", {width = winw})
+
+      wide:attachToBorder("left")
+
+      assert.are.equal(120, getBorderRight())
+      assert.is_true(getBorderLeft() > 0, "the container on the left reserved nothing")
+    end)
+
+    -- the widest container on a side decides what that side asks for, and the split
+    -- is then between the two sides rather than between the containers
+    it("takes the widest request on a crowded side into a contested axis", function()
+      local _, winh = getMainWindowSize()
+      local short, tall = oppositePair("gapCrowd")
+      local shorter = make("gapCrowdShorter", {height = math.floor(winh * 0.05), y = math.floor(winh * 0.95)})
+
+      short:attachToBorder("bottom")
+      shorter:attachToBorder("bottom")
+      tall:attachToBorder("top")
+
+      assert.are.equal(wantedBottom(short), getBorderBottom())
+      assert.are.equal(spareHeight() - getBorderBottom(), getBorderTop())
+      assert.is_true(getRowCount() > 0, "no rows were left for text")
+    end)
+
+    -- settling an axis writes two borders, and each write dispatches a resize event
+    -- into every attached container's handler, which settles the axis again. Only
+    -- Host::setBorders ignoring an unchanged border ends that chain, so a change
+    -- that broke the chain would hang the suite rather than fail it
+    it("settles a contested axis in a bounded number of border writes", function()
+      local short, tall = oppositePair("gapWrites")
+      short:attachToBorder("bottom")
+      local writes = 0
+      local realTop, realBottom = setBorderTop, setBorderBottom
+      _G.setBorderTop = function(...) writes = writes + 1 return realTop(...) end
+      _G.setBorderBottom = function(...) writes = writes + 1 return realBottom(...) end
+      finally(function() _G.setBorderTop, _G.setBorderBottom = realTop, realBottom end)
+
+      tall:attachToBorder("top")
+
+      assert.is_true(writes > 0, "no border was written at all")
+      assert.is_true(writes <= 8,
+        string.format("attaching the second container of a pair wrote a border %d times", writes))
+    end)
+
+    it("keeps the console its rows through a window resize with both sides attached", function()
+      local chromeWidth, chromeHeight = consoleChrome()
+      local startWidth, startHeight = getMainWindowSize()
+      local short, tall = oppositePair("gapResizePair")
+      short:attachToBorder("bottom")
+      tall:attachToBorder("top")
+      assert.are.equal(spareHeight(), getBorderTop() + getBorderBottom())
+
+      setMainWindowSize(startWidth + chromeWidth, math.floor(startHeight * 0.6) + chromeHeight)
+      pumpEvents(50)
+      local shrunkHeight = select(2, getMainWindowSize())
+      local shrunkTop, shrunkBottom, shrunkRows = getBorderTop(), getBorderBottom(), getRowCount()
+      local shrunkSpare = spareHeight()
+      setMainWindowSize(startWidth + chromeWidth, startHeight + chromeHeight)
+      pumpEvents(50)
+
+      assert.is_true(shrunkHeight < startHeight * 0.8,
+        string.format("the window did not resize, so nothing here is under test: asked for 60%% of %dpx and the console became %dpx", startHeight, shrunkHeight))
+      assert.are.equal(shrunkSpare, shrunkTop + shrunkBottom)
+      assert.is_true(shrunkRows > 0, "no rows were left for text in the shrunk window")
+      assert.are.equal(spareHeight(), getBorderTop() + getBorderBottom())
+      assert.is_true(getRowCount() > 0, "no rows were left for text once the window was put back")
+    end)
   end)
 
   describe("Adjustable.Container:connectToBorder/disconnect", function()
@@ -1580,12 +2060,8 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
   end)
 
   describe("Adjustable.Container:resizeBorder", function()
-    -- the border is re-measured off a timer rather than on the resize event,
-    -- because setting a border raises another resize event and doing the work
-    -- inline would loop
-    -- resizeBorder does not keep the id of the timer it arms, so nothing can
-    -- kill one: the timer is stubbed out rather than spied on, or every spec
-    -- here would leave one to fire on a deleted container 0.2s later
+    -- measured on the resize event itself: a border that trails the window by a timer is one the text lags behind for a whole drag
+    -- tempTimer is stubbed so a regression to the deferred form leaves no timer to fire on a deleted container 0.2s later; armed() catches one that defers as well as measures
     local function countTimers()
       local armed = 0
       local realTempTimer = tempTimer
@@ -1594,16 +2070,103 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       return function() return armed end
     end
 
-    it("arms a timer the first time the window size is seen to have changed", function()
-      local container = make("gapResizeBorder")
+    -- resize() renews the reservation itself now, so this goes behind the border's back: bump the margin, forget the size last seen
+    local function stale(container)
+      container.attachedMargin = container.attachedMargin + 15
+      container.old_w_value, container.old_h_value = -1, -1
+    end
+
+    it("re-measures the border on the event, arming no timer", function()
+      local container = make("gapResizeBorder", {width = 200})
+      container:attachToBorder("left")
       local armed = countTimers()
 
+      stale(container)
       container:resizeBorder()
-      assert.are.equal(1, armed())
 
-      -- the size has not moved since, so a second event has nothing to do
+      assert.are.equal(container:get_width() + container:get_x() + container.attachedMargin, getBorderLeft())
+      assert.are.equal(0, armed())
+    end)
+
+    it("re-measures a container attached to the top, so a vertical resize is not deferred either", function()
+      local topBefore = getBorderTop()
+      finally(function() setBorderTop(topBefore) end)
+      local container = make("gapResizeBorderTop", {height = 100})
+      container:attachToBorder("top")
+      local armed = countTimers()
+
+      stale(container)
       container:resizeBorder()
-      assert.are.equal(1, armed())
+
+      assert.are.equal(container:get_height() + container:get_y() + container.attachedMargin, getBorderTop())
+      assert.are.equal(0, armed())
+    end)
+
+    it("leaves the border alone when the window size has not moved", function()
+      local container = make("gapResizeUnmoved", {width = 200})
+      container:attachToBorder("left")
+      countTimers()
+      container:resizeBorder()
+      local reserved = getBorderLeft()
+
+      container.attachedMargin = container.attachedMargin + 15
+      container:resizeBorder()
+
+      assert.are.equal(reserved, getBorderLeft())
+    end)
+
+    it("sets the border once, though setting it raises another resize event", function()
+      local container = make("gapResizeOnce", {width = 200})
+      container:attachToBorder("left")
+      local sets = 0
+      local real = setBorderLeft
+      _G.setBorderLeft = function(...) sets = sets + 1 return real(...) end
+      finally(function() _G.setBorderLeft = real end)
+
+      stale(container)
+      container:resizeBorder()
+
+      assert.are.equal(container:get_width() + container:get_x() + container.attachedMargin, getBorderLeft())
+      assert.are.equal(1, sets)
+    end)
+
+    it("is run by the resize event itself", function()
+      local container = make("gapResizeEvent", {width = 200})
+      container:attachToBorder("left")
+
+      stale(container)
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      assert.are.equal(container:get_width() + container:get_x() + container.attachedMargin, getBorderLeft())
+    end)
+
+    -- handlers run in registration order, so one registered after attaching finds the border already measured
+    it("follows a container that a later handler of the same event resizes", function()
+      local container = make("gapResizeLater", {width = 150})
+      container:attachToBorder("left")
+      local handler = registerAnonymousEventHandler("sysWindowResizeEvent", function() container:resize(400, nil) end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      container.old_w_value, container.old_h_value = -1, -1
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      assert.are.equal(400 + container:get_x() + container.attachedMargin, getBorderLeft())
+    end)
+
+    it("moves a connected container along with it", function()
+      local anchor = make("gapResizeAnchor", {width = 150})
+      local follower = make("gapResizeFollower", {width = 150, y = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+      anchor.old_w_value, anchor.old_h_value = getMainWindowSize()
+      follower.old_w_value, follower.old_h_value = getMainWindowSize()
+
+      anchor:resize(300, 100)
+      anchor.old_w_value, anchor.old_h_value = -1, -1
+      anchor:resizeBorder()
+
+      assert.are.equal(300, follower:get_width())
     end)
 
     it("remembers the size it last saw", function()
@@ -1686,6 +2249,38 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.has_error(function() container:load({}) end)
       assert.has_error(function() container:load(nil, 5) end)
       assert.has_error(function() container:deleteSaveFile(5) end)
+    end)
+
+    -- which border a container was on is part of what it saves, so a layout that left
+    -- the console without room for text would come back that way every time the
+    -- profile was opened
+    it("brings back a pair of opposite containers with the console still usable", function()
+      local _, winh = getMainWindowSize()
+      assert.is_true(table.is_empty(Adjustable.Container.Attached.top or {}),
+                     "something is still attached to the top border")
+      assert.is_true(table.is_empty(Adjustable.Container.Attached.bottom or {}),
+                     "something is still attached to the bottom border")
+      local short = make("gapSavedShort", {height = math.floor(winh * 0.12), y = math.floor(winh * 0.88)})
+      local tall = make("gapSavedTall", {height = winh})
+      short:attachToBorder("bottom")
+      tall:attachToBorder("top")
+      local savedTop, savedBottom = getBorderTop(), getBorderBottom()
+      short:save(nil, scratchDir)
+      tall:save(nil, scratchDir)
+      short:detach()
+      tall:detach()
+
+      -- the order the two are restored in is whatever pairs() hands loadAll, so both
+      -- have to end up at the same pair
+      for _, order in ipairs({{short, tall}, {tall, short}}) do
+        order[1]:load(nil, scratchDir)
+        order[2]:load(nil, scratchDir)
+        assert.are.equal(savedTop, getBorderTop())
+        assert.are.equal(savedBottom, getBorderBottom())
+        assert.is_true(getRowCount() > 0, "a saved layout came back with no rows for text")
+        short:detach()
+        tall:detach()
+      end
     end)
 
     it("deleteSaveFile removes the file and says so when there is none", function()
@@ -2043,6 +2638,346 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
         container.Inside:get_width(),
         container.Inside:get_height(),
       }, {x, y, width, height})
+    end)
+  end)
+  describe("Tests the functionality of Adjustable.Container:connectToBorder", function()
+    local containers
+    local bordersBefore
+
+    local function make(props)
+      props.autoLoad = false
+      props.autoSave = false
+      local container = Adjustable.Container:new(props)
+      containers[#containers + 1] = container
+      return container
+    end
+
+    before_each(function()
+      containers = {}
+    end)
+
+    after_each(function()
+      for index = #containers, 1, -1 do
+        local container = containers[index]
+        if container.attached then
+          container:detach()
+        end
+        container:delete()
+      end
+      containers = {}
+    end)
+
+    -- The connected container's new size is worked out in pixels, so storing it
+    -- as one froze it at the window size it was connected at and it stopped
+    -- following the window from then on
+    it("leaves a connected container's size able to follow the window", function()
+      make({name = "gasConnectTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSide", x = "0%", y = "10%", width = "25%", height = "90%", attached = "left"})
+      local heightBefore = side:get_height()
+
+      side:connectToBorder("top")
+
+      assert.is_truthy(tostring(side.height):find("%%"),
+        "the height came back as " .. tostring(side.height) .. ", which cannot follow the window")
+      assert.is_true(math.abs(side:get_height() - heightBefore) <= 1,
+        "connecting to the border moved the bottom edge, it should only have made the height scalable")
+    end)
+
+    it("leaves a container that was sized absolutely absolute", function()
+      make({name = "gasConnectTopFixed", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSideFixed", x = "0%", y = "10%", width = "25%", height = 300, attached = "left"})
+
+      side:connectToBorder("top")
+
+      assert.is_falsy(tostring(side.height):find("%%"),
+        "an absolute height came back as " .. tostring(side.height) .. ", so it would start following the window")
+    end)
+
+    it("leaves a container that was positioned absolutely absolute", function()
+      make({name = "gasConnectTopPos", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSidePos", x = 0, y = 120, width = "25%", height = "90%", attached = "left"})
+
+      side:connectToBorder("top")
+
+      assert.is_falsy(tostring(side.y):find("%%"),
+        "an absolute y came back as " .. tostring(side.y) .. ", so it would start following the window")
+    end)
+
+    -- What the share is for: asserting on the constraint string cannot show
+    -- that the container actually tracks the window afterwards
+    it("keeps a connected container following the window once it is resized", function()
+      local chromeWidth, chromeHeight = consoleChrome()
+      local startWidth, startHeight = getMainWindowSize()
+
+      make({name = "gasFollowTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasFollowSide", x = "0%", y = "10%", width = "25%", height = "90%", attached = "left"})
+
+      side:connectToBorder("top")
+      local before = side:get_height()
+      setMainWindowSize(startWidth + chromeWidth, math.floor(startHeight * 0.6) + chromeHeight)
+      pumpEvents(50)
+      local shrunkWidth, shrunkHeight = getMainWindowSize()
+      local after = side:get_height()
+      setMainWindowSize(startWidth + chromeWidth, startHeight + chromeHeight)
+      pumpEvents(50)
+
+      assert.is_true(shrunkHeight < startHeight * 0.8,
+        string.format("the window did not resize, so nothing here is under test: asked for 60%% of %dpx and the console became %dpx", startHeight, shrunkHeight))
+      assert.is_true(after < before * 0.8,
+        "the container was " .. before .. "px and stayed " .. after .. "px in a window shrunk to 60%, so it is not following it")
+    end)
+
+    -- Dragging the anchor past the connected container's far edge makes the new
+    -- size negative, and Geyser reads a negative share as its complement - so an
+    -- unclamped -5% comes back as 95% of the parent
+    it("does not balloon a connected container when the anchor passes its far edge", function()
+      local top = make({name = "gasNegTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasNegSide", x = "0%", y = "10%", width = "25%", height = "30%", attached = "left"})
+
+      side:connectToBorder("top")
+      local heightBefore = side:get_height()
+      top:resize(nil, "45%")
+      top:adjustConnectedContainers()
+
+      assert.is_falsy(tostring(side.height):find("^%-"),
+        "the height came back as " .. tostring(side.height) .. ", which Geyser resolves as its complement")
+      assert.is_true(side:get_height() <= heightBefore,
+        "the container grew from " .. heightBefore .. "px to " .. side:get_height() .. "px when the anchor swallowed it")
+    end)
+
+    -- Geyser resolves a share against the container's own parent, so measuring
+    -- one against the main window gives a container in a smaller parent a size
+    -- that has nothing to do with the space it is in
+    it("measures a nested container's share against its own parent", function()
+      local dock = Geyser.Container:new({name = "gasDock", x = "0%", y = "0%", width = "40%", height = 400})
+      make({name = "gasNestTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = Adjustable.Container:new({
+        name = "gasNestSide", x = "0%", y = "10%", width = "50%", height = "90%",
+        attached = "left", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = side
+      local heightBefore = side:get_height()
+
+      side:connectToBorder("top")
+      local heightAfter = side:get_height()
+      local dockHeight = dock:get_height()
+      dock:hide()
+
+      -- measured against the main window instead, the share comes out roughly
+      -- the parent's size over the window's and the container shrinks to it
+      assert.is_true(heightAfter >= heightBefore * 0.9,
+        "the nested container was " .. heightBefore .. "px in a " .. dockHeight .. "px parent and came back "
+          .. heightAfter .. "px, so its share was measured against the main window rather than that parent")
+    end)
+
+    -- Geyser resolves a percentage against the parent, so a parent with no size
+    -- gives nothing to measure against. Dividing by it makes a nan that
+    -- calc_constraints raises on, and this runs from onMove on every mouse move
+    it("leaves a connected container alone inside a parent with no size", function()
+      local dock = Geyser.Container:new({name = "gasZeroDock", x = "0%", y = "10%", width = "40%", height = 0})
+      local top = Adjustable.Container:new({
+        name = "gasZeroTop", x = "0%", y = "0%", width = "100%", height = "10%",
+        attached = "top", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = top
+      local side = Adjustable.Container:new({
+        name = "gasZeroSide", x = "0%", y = "10%", width = "50%", height = "90%",
+        attached = "left", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = side
+
+      local ok, err = pcall(function() side:connectToBorder("top") end)
+      local heightAfter, yAfter = tostring(side.height), tostring(side.y)
+      dock:hide()
+
+      assert.is_true(ok, "connecting inside a parent with no size raised: " .. tostring(err))
+      assert.is_falsy(heightAfter:find("nan") or yAfter:find("nan"),
+        "the constraints came back as " .. heightAfter .. " and " .. yAfter .. ", which calc_constraints cannot parse")
+    end)
+
+    -- A position is resolved from the parent's corner, so the parent's own origin
+    -- has to come off the pixels before they become a share of it. The dock sits
+    -- part way down the window on purpose: at the top its origin is zero and
+    -- leaving it in would make no difference
+    it("measures a nested container's position from its own parent's origin", function()
+      local dock = Geyser.Container:new({name = "gasOriginDock", x = "0%", y = "20%", width = "40%", height = 300})
+      local top = Adjustable.Container:new({
+        name = "gasOriginTop", x = "0%", y = "0%", width = "100%", height = "10%",
+        attached = "top", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = top
+      local side = Adjustable.Container:new({
+        name = "gasOriginSide", x = "0%", y = "10%", width = "50%", height = "90%",
+        attached = "left", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = side
+
+      side:connectToBorder("top")
+      local anchorBottom = top:get_y() + top:get_height()
+      local sideTop = side:get_y()
+      dock:hide()
+
+      assert.is_true(math.abs(sideTop - anchorBottom) <= 1,
+        "the anchor's bottom is at " .. anchorBottom .. "px and the container's top at " .. sideTop
+          .. "px, so the parent's own origin was left in the share")
+    end)
+
+    -- A negative constraint is a fixed gap from the parent's far edge. Turning
+    -- it into a share of the parent would change what the constraint means, and
+    -- save() would persist the new meaning
+    it("does not turn a height measured from the far edge into a share", function()
+      make({name = "gasFarTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasFarSide", x = "0%", y = "10%", width = "25%", height = "-100", attached = "left"})
+
+      side:connectToBorder("top")
+
+      assert.is_falsy(tostring(side.height):find("%%"),
+        "a far-edge height came back as " .. tostring(side.height) .. ", so the fixed gap became a proportional one that save() would persist")
+    end)
+
+    -- A far-edge constraint recomputes itself from wherever its container ends
+    -- up, so it has to come through untouched. Rewritten as the pixels it
+    -- happens to measure right now it stops following the far edge, which only
+    -- shows once the window changes without the anchor moving
+    it("leaves a far-edge constraint measuring from the far edge", function()
+      local chromeWidth, chromeHeight = consoleChrome()
+      local startWidth, startHeight = getMainWindowSize()
+
+      make({name = "gasKeepTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasKeepSide", x = "0%", y = "10%", width = "25%", height = "-100", attached = "left"})
+      side:connectToBorder("top")
+      local gapBefore = startHeight - (side:get_y() + side:get_height())
+
+      setMainWindowSize(startWidth + chromeWidth, math.floor(startHeight * 0.7) + chromeHeight)
+      pumpEvents(50)
+      local shrunkHeight = select(2, getMainWindowSize())
+      local gapAfter = shrunkHeight - (side:get_y() + side:get_height())
+      setMainWindowSize(startWidth + chromeWidth, startHeight + chromeHeight)
+      pumpEvents(50)
+
+      assert.is_true(shrunkHeight < startHeight * 0.9,
+        string.format("the window did not resize, so nothing here is under test: asked for 70%% of %dpx and the console became %dpx", startHeight, shrunkHeight))
+      assert.is_true(math.abs(gapAfter - gapBefore) <= 2,
+        "the container sat " .. gapBefore .. "px above the parent's bottom and " .. gapAfter
+          .. "px above it once the window changed, so its constraint was rewritten as a fixed size")
+    end)
+
+    -- Geyser reads a percentage before it reads a negative, so a negative share
+    -- is a share of the parent and not a gap from its far edge. Mistaken for one
+    -- it would be left alone, and the container would keep a height that no
+    -- longer fits under the anchor
+    it("treats a negative share as a share rather than a far-edge constraint", function()
+      local top = make({name = "gasNegPctTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasNegPctSide", x = "0%", y = "10%", width = "25%", height = "-25%", attached = "left"})
+      side:connectToBorder("top")
+      local bottomBefore = side:get_y() + side:get_height()
+
+      top:resize(nil, "30%")
+      top:adjustConnectedContainers()
+
+      local bottomAfter = side:get_y() + side:get_height()
+      assert.is_true(math.abs(bottomAfter - bottomBefore) <= 1,
+        "the container's bottom was at " .. bottomBefore .. "px and moved to " .. bottomAfter
+          .. "px, so its negative share was taken for a far-edge constraint and left as it was")
+    end)
+
+    -- Squeezed to nothing the container has no size left to show, but the far
+    -- edge it had has to survive, or the anchor coming back leaves it somewhere
+    -- it has never been
+    it("gives a squeezed connected container its size back when the anchor returns", function()
+      local top = make({name = "gasSqueezeTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasSqueezeSide", x = "0%", y = "10%", width = "25%", height = "20%", attached = "left"})
+      side:connectToBorder("top")
+      local bottomBefore = side:get_y() + side:get_height()
+
+      top:resize(nil, "40%")
+      top:adjustConnectedContainers()
+      top:resize(nil, "10%")
+      top:adjustConnectedContainers()
+
+      local bottomAfter = side:get_y() + side:get_height()
+      assert.is_true(math.abs(bottomAfter - bottomBefore) <= 1,
+        "the container's bottom was at " .. bottomBefore .. "px and came back at " .. bottomAfter
+          .. "px, so the anchor pushing past it moved the bottom for good")
+    end)
+
+    -- Only a size counted from the far edge re-derives itself from the container's
+    -- own position: Geyser gives a negative width and height the container's own x
+    -- or y to work from and a negative x and y nothing, so a position measured that
+    -- way is fixed and has to take the new value like a plain one would
+    it("moves a connected container whose position is counted from the far edge", function()
+      local top = make({name = "gasNegPosTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasNegPosSide", x = "0%", y = "-300", width = "25%", height = 200, attached = "left"})
+      side:connectToBorder("top")
+
+      top:resize(nil, "30%")
+      top:adjustConnectedContainers()
+
+      local anchorBottom = top:get_y() + top:get_height()
+      assert.is_true(math.abs(side:get_y() - anchorBottom) <= 1,
+        "the anchor's bottom is at " .. anchorBottom .. "px and the container's top is at " .. side:get_y()
+          .. "px, so a position counted from the far edge did not follow the anchor")
+    end)
+
+    -- adjustConnectedContainers runs from onMove on every mouse-move event, and
+    -- Geyser stores a pixel value with its fraction truncated. Working the size
+    -- out from the position asked for rather than the one the move stored drops
+    -- that fraction twice, so the container loses a pixel every pass
+    it("does not shrink a connected container over repeated adjustment", function()
+      local top = make({name = "gasRepeatTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasRepeatSide", x = "0%", y = 120, width = "25%", height = 200, attached = "left"})
+      side:connectToBorder("top")
+      local bottomBefore = side:get_y() + side:get_height()
+
+      for _ = 1, 40 do
+        top:adjustConnectedContainers()
+      end
+
+      local bottomAfter = side:get_y() + side:get_height()
+      assert.is_true(math.abs(bottomAfter - bottomBefore) <= 1,
+        "the container's bottom was at " .. bottomBefore .. "px and drifted to " .. bottomAfter
+          .. "px over 40 passes, so every pass costs it a pixel")
+    end)
+
+    -- The left branch is the mirror of the top one and carries the same three
+    -- writes, so it needs its own case rather than the assumption that the two
+    -- behave alike
+    it("holds a container connected to a left border anchor inside its right edge", function()
+      local anchor = make({name = "gasLeftAnchor", x = "0%", y = "0%", width = "10%", height = "100%", attached = "left"})
+      local top = make({name = "gasLeftTop", x = "10%", y = "0%", width = "60%", height = "20%", attached = "top"})
+      top:connectToBorder("left")
+      local rightBefore = top:get_x() + top:get_width()
+
+      anchor:resize("95%", nil)
+      anchor:adjustConnectedContainers()
+      local squeezed = top:get_width()
+      anchor:resize("10%", nil)
+      anchor:adjustConnectedContainers()
+
+      local rightAfter = top:get_x() + top:get_width()
+      assert.is_true(squeezed <= 1,
+        "the container stayed " .. squeezed .. "px wide with the anchor over it, so it did not collapse")
+      assert.is_true(math.abs(rightAfter - rightBefore) <= 1,
+        "the container's right edge was at " .. rightBefore .. "px and came back at " .. rightAfter
+          .. "px, so the anchor passing it moved the edge for good")
+    end)
+
+    -- An anchor that only resizes its connected container has no move to hold
+    -- back, so the share itself has to be floored: Geyser reads a negative share
+    -- as its complement and the container fills the parent instead of emptying
+    it("does not balloon a connected container when a bottom anchor passes its top", function()
+      local bar = make({name = "gasBotBar", x = "0%", y = "80%", width = "100%", height = "20%", attached = "bottom"})
+      local side = make({name = "gasBotSide", x = "0%", y = "60%", width = "25%", height = "20%", attached = "left"})
+      side:connectToBorder("bottom")
+      local heightBefore = side:get_height()
+
+      bar:move(nil, "20%")
+      bar:resize(nil, "80%")
+      bar:adjustConnectedContainers()
+
+      assert.is_true(side:get_height() <= heightBefore,
+        "the container was " .. heightBefore .. "px and grew to " .. side:get_height()
+          .. "px when the anchor passed its top, so a negative share came back as its complement")
     end)
   end)
 end)
