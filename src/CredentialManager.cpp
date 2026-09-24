@@ -461,6 +461,16 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         // that holds it. Whatever is recovered from an older layout is re-filed under the current
         // name, so once that succeeds the next lookup finds it sooner.
         auto& stages = lookup->stages;
+        // The sign-in keys cannot be in a layout that predates them. The colliding format was
+        // written by 4.20.0 and 4.20.1 alone - February 2026 - and the key=account layout by builds
+        // before the Windows keychain fix; saved sign-ins arrived months after both. Reading those
+        // layouts for one can never find anything, and on a keychain that asks per item - as macOS
+        // does for a build not named in an item's own access list - each read costs the player
+        // another prompt: two per profile, on the two keys the profile preferences ask about.
+        //
+        // Named rather than inferred from the age of the key, because a key this does not know
+        // about may well be in an older layout, and missing a password is worse than a prompt.
+        const bool keyPredatesTheOlderLayouts = key.compare(qsl("reconnect")) && key.compare(qsl("reconnect-token"));
         // Use service as the key - on Windows with qtkeychain before 0.17, only setKey() value is used as
         // the credential target, so using account ("character") would make all profiles share one
         stages.push_back({qsl("current format"), service, service, false, nullptr});
@@ -475,9 +485,11 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
 #endif
         // Before the Windows keychain fix, credentials were stored with key=account, so on Windows
         // every profile shared one "character" entry
-        stages.push_back({qsl("old key=account format"), oldFormatService, key, false, [this, service, oldFormatService, key](const QString& password) {
-                              migrateOldFormatEntry(service, oldFormatService, key, password);
-                          }});
+        if (keyPredatesTheOlderLayouts) {
+            stages.push_back({qsl("old key=account format"), oldFormatService, key, false, [this, service, oldFormatService, key](const QString& password) {
+                                  migrateOldFormatEntry(service, oldFormatService, key, password);
+                              }});
+        }
         // The pre-4.20.0 keychain format, only ever used for these two keys
         if (!key.compare(qsl("password")) || !key.compare(qsl("character"))) {
             stages.push_back({qsl("pre-4.20.0 format"), qsl("Mudlet profile"), profileName, false, [this, profileName, key](const QString& password) {
@@ -490,12 +502,14 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         const auto recoverColliding = [this, profileName, key, legacyService](const QString& password) {
             migrateCollidingEntry(profileName, key, legacyService, password);
         };
-        stages.push_back({qsl("colliding format"), legacyService, legacyService, false, recoverColliding});
+        if (keyPredatesTheOlderLayouts) {
+            stages.push_back({qsl("colliding format"), legacyService, legacyService, false, recoverColliding});
 #if defined(Q_OS_WIN)
-        stages.push_back({qsl("colliding format under pre-0.17 qtkeychain naming"), QString(), legacyService, false, recoverColliding});
+            stages.push_back({qsl("colliding format under pre-0.17 qtkeychain naming"), QString(), legacyService, false, recoverColliding});
 #else
-        stages.push_back({qsl("colliding format with key=account"), legacyService, key, false, recoverColliding});
+            stages.push_back({qsl("colliding format with key=account"), legacyService, key, false, recoverColliding});
 #endif
+        }
 
         // A refusal the store gave moments ago is the answer it will give again, so the chain is
         // trimmed to the file for as long as that holds. This is what spares the player a second
