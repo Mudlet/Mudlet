@@ -401,9 +401,25 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
 
 void CredentialManager::retrievePassword(const QString& profileName, const QString& key, CredentialRetrievalCallback callback)
 {
+    retrievePassword(
+            profileName,
+            key,
+            [callback = std::move(callback)](bool success, QString password, const QString& errorMessage, bool) {
+                if (callback) {
+                    callback(success, std::move(password), errorMessage);
+                } else {
+                    SecureStringUtils::secureStringClear(password);
+                }
+            },
+            nullptr,
+            nullptr);
+}
+
+void CredentialManager::retrievePassword(const QString& profileName, const QString& key, TimedRetrievalCallback callback, QObject* lateContext, CredentialRetrievalCallback lateCallback)
+{
     if (profileName.isEmpty() || key.isEmpty()) {
         if (callback) {
-            callback(false, QString(), qsl("Profile name and key cannot be empty"));
+            callback(false, QString(), qsl("Profile name and key cannot be empty"), false);
         }
 
         return;
@@ -414,7 +430,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
     // where the static API - the migration and cleanup path - could never look for it.
     if (!isValidKeyName(key)) {
         if (callback) {
-            callback(false, QString(), scmInvalidKeyNameError);
+            callback(false, QString(), scmInvalidKeyNameError, false);
         }
 
         return;
@@ -425,7 +441,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         qWarning() << "CredentialManager: Rejecting retrievePassword operation during shutdown";
 
         if (callback) {
-            callback(false, QString(), qsl("Application is shutting down"));
+            callback(false, QString(), qsl("Application is shutting down"), false);
         }
 
         return;
@@ -436,6 +452,10 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         lookup->profileName = profileName;
         lookup->key = key;
         lookup->callback = std::move(callback);
+        if (lateContext && lateCallback) {
+            lookup->lateContext = lateContext;
+            lookup->lateCallback = std::move(lateCallback);
+        }
         lookup->scope = new QObject(this);
 
         const QString service = generateServiceName(profileName, key);
@@ -499,7 +519,9 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
             qWarning().noquote().nospace() << "CredentialManager: gave up looking up the saved password for profile \"" << lookup->profileName << "\", key \"" << lookup->key << "\" after "
                                            << mOperationTimeoutMs << "ms, waiting on the read of the " << lookup->stages[lookup->currentStage].description
                                            << " (or on another keychain job ahead of it in the queue)";
-            finishLookup(lookup, false, QString(), qsl("Operation timed out"));
+            // Before finishLookup() lets go of the read that is still out
+            awaitLateAnswer(lookup);
+            finishLookup(lookup, false, QString(), qsl("Operation timed out"), true);
         });
         deadline->start(mOperationTimeoutMs);
 
@@ -512,7 +534,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         if (callback) {
             // Empty password is normal for first-time profiles - not an error. Move the buffer so the
             // receiver takes sole ownership and can scrub the secret in place.
-            callback(success, std::move(password), success ? QString() : qsl("No password stored in encrypted file storage"));
+            callback(success, std::move(password), success ? QString() : qsl("No password stored in encrypted file storage"), false);
         }
     }
 }
@@ -540,7 +562,7 @@ void CredentialManager::startJob(QKeychain::Job* job)
     job->start();
 }
 
-void CredentialManager::finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage)
+void CredentialManager::finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage, bool timedOut)
 {
     if (lookup->answered) {
         SecureStringUtils::secureStringClear(password);
@@ -558,10 +580,48 @@ void CredentialManager::finishLookup(const LookupPtr& lookup, bool success, QStr
     auto callback = std::exchange(lookup->callback, nullptr);
     if (callback) {
         // Move so ownership of the secret buffer threads through to the final callback.
-        callback(success, std::move(password), errorMessage);
+        callback(success, std::move(password), errorMessage, timedOut);
     } else {
         SecureStringUtils::secureStringClear(password);
     }
+}
+
+void CredentialManager::awaitLateAnswer(const LookupPtr& lookup)
+{
+    QKeychain::ReadPasswordJob* read = lookup->currentRead;
+    if (lookup->answered || !lookup->lateCallback || !read) {
+        return;
+    }
+
+    // The read is the context: finishLookup() detaches it, so it outlives the lookup and this
+    // manager and deletes itself once the keychain answers, taking this handler with it. A
+    // password found in an older layout is handed over without being re-filed, which the next
+    // lookup does.
+    connect(read,
+            &QKeychain::Job::finished,
+            read,
+            [read, lateContext = lookup->lateContext, lateCallback = lookup->lateCallback, profileName = lookup->profileName, description = lookup->stages[lookup->currentStage].description]() {
+                const QKeychain::Error error = read->error();
+                QString password = (error == QKeychain::NoError) ? read->textData() : QString();
+                if (!lateContext) {
+                    qWarning().noquote() << "CredentialManager: the keychain answered the read of the" << description << "for profile" << profileName
+                                         << "after its lookup had timed out, but whatever asked for it has gone";
+                    SecureStringUtils::secureStringClear(password);
+                    return;
+                }
+                if (password.isEmpty()) {
+                    // Told apart from a prompt that never gets an answer, which logs nothing further
+                    qWarning().noquote() << "CredentialManager: the keychain answered the read of the" << description << "for profile" << profileName
+                                         << "after its lookup had timed out, without the password -" << read->errorString();
+                    // That read alone: the places the lookup had not reached are still unread
+                    const QString errorMessage = (error == QKeychain::NoError || readFoundNothing(error)) ? qsl("No password in the %1 for profile %2").arg(description, profileName)
+                                                                                                          : qsl("Could not read the keychain: %1").arg(read->errorString());
+                    lateCallback(false, QString(), errorMessage);
+                    return;
+                }
+                qDebug().noquote() << "CredentialManager: the keychain answered the read of the" << description << "for profile" << profileName << "after its lookup had timed out, with the password";
+                lateCallback(true, std::move(password), QString());
+            });
 }
 
 void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t index)
@@ -593,7 +653,9 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
     auto* job = new QKeychain::ReadPasswordJob(stage.service, lookup->scope);
     job->setKey(stage.key);
     job->setAutoDelete(false);
+    lookup->currentRead = job;
     connect(job, &QKeychain::Job::finished, lookup->scope, [this, lookup, job, index]() {
+        lookup->currentRead = nullptr;
         // Not before the lookup has moved on: the job is still emitting finished(), and a caller's
         // callback can flush deferred deletes - loading a profile does - which would free it
         // underneath QtKeychain.
