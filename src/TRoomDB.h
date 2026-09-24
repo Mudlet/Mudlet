@@ -77,7 +77,7 @@ public:
     const QMap<int, QString>& getAreaNamesMap() const { return areaNamesMap; }
     // Whether an area is already using this name, without areaNamesMap.values()'s
     // full copy of every area name just to scan it once.
-    bool isAreaNameInUse(const QString& name) const;
+    bool hasAreaName(const QString& name) const;
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
     void updateEntranceMap(int);
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
@@ -134,8 +134,10 @@ private:
     QMap<int, QString> areaNamesMap;
     // Where createNewAreaID() resumes searching from, so repeated area
     // creation does not rescan every already-taken ID from 1 every time. Only
-    // ever advances, so an ID freed by removing an area is not reused - see
-    // createNewAreaID()'s definition for why that trade is intentional.
+    // advances while this map is loaded (clearMapDB() resets it to 1), so an
+    // ID freed by removing an area is not reused within that load - see
+    // createNewAreaID()'s definition for why that trade is intentional, and
+    // for the explicit-ID paths that bypass this hint entirely.
     int mNextAreaIdHint = 1;
     TMap* mpMap;
     QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
