@@ -20,6 +20,7 @@
 #ifndef MUDLET_CREDENTIALMANAGER_H
 #define MUDLET_CREDENTIALMANAGER_H
 
+#include <QElapsedTimer>
 #include <QObject>
 #include <QString>
 #include <QPointer>
@@ -164,11 +165,31 @@ private:
         // The first read that failed for a reason other than there being no such entry, reported in
         // place of "not found" if nothing turns up.
         QString keychainError;
+        // Whether any read has reached the store, answering either with a password or with "no such
+        // entry". Until one has, a refusal is the store itself saying no - locked, or a prompt the
+        // player dismissed - and the layouts behind it cannot be read either.
+        bool storeHasAnswered = false;
+        // Set when the store refused before answering anything: every remaining keychain read would
+        // ask it the same question, and be refused the same way, at the cost of another prompt. Only
+        // the file is read from then on.
+        bool storeRefused = false;
     };
     using LookupPtr = std::shared_ptr<Lookup>;
 
     void finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage);
     void runLookupStage(const LookupPtr& lookup, std::size_t index);
+    // When the store last refused a read before answering anything. Process-wide, because a caller
+    // asking about two keys - the profile preferences ask about "reconnect" and then
+    // "reconnect-token" - builds a CredentialManager for each, and the point is to spare the player
+    // a second prompt for the answer the first one already gave. A window rather than a latch, so a
+    // player who unlocks their keychain is not left without it until they restart.
+    static QElapsedTimer& storeRefusalTimer();
+    // Forgets the refusal window. Process-wide state outlives one test, and a case that refuses a
+    // read would otherwise decide what the cases after it are allowed to ask the store.
+    static void forgetStoreRefusal();
+    static bool storeRefusedRecently();
+    static void noteStoreRefusal();
+    static constexpr int scmStoreRefusalCooldownMs = 30000;
 
     // Each re-files a password a lookup recovered from an older format. Started just before the lookup
     // answers and independent of it, so a write that stalls cannot hold back the recovered password,
