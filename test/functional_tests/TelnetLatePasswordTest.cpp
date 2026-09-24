@@ -262,6 +262,8 @@ private slots:
 
         deliverLatePassword(host);
         QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "the late password was not sent to the still-masked prompt");
+        QVERIFY2(host->mTelnet.mTimerPasswordModeTimeout && host->mTelnet.mTimerPasswordModeTimeout->isActive(),
+                 "the late password did not start the safety timeout against a game that never releases the mask, as the auto-login password does");
     }
 
     // P2: the mask is still on, and a command the player's own package turned down never reached

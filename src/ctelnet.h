@@ -363,7 +363,8 @@ private:
     friend class TelnetTlsPromptTest;
 
     // Waits for the auto-login's password step to mark a password as owed, and
-    // checks that a game's greeting asked for SGA.
+    // checks that a game's greeting asked for SGA and that a late password
+    // starts the password-mask safety timeout.
     friend class TelnetLatePasswordTest;
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
@@ -371,6 +372,11 @@ private:
     // mDecompressionRecursionDepth so the over-limit refusal can be reached
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
+
+    // Reads the password-mode safety timer, the connection clock and the
+    // character-at-a-time detection timer and flags, which have no public face,
+    // and fires those timers early rather than waiting them out.
+    friend class TelnetPasswordMaskTimeoutTest;
 
     // Calls reset() from its constructor. It has to be the Host that does that,
     // and not cTelnet itself, because reset() clears Host members declared after
@@ -448,6 +454,7 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
+    void slot_passwordMaskTimeout();
 
 private:
 #if !defined(QT_NO_SSL)
@@ -676,6 +683,7 @@ private:
 
     void checkCharacterModePattern();
     bool checkEchoAnomalyPattern();
+    void restartPasswordMaskTimeout();
 };
 
 #endif // MUDLET_CTELNET_H
