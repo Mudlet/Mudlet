@@ -280,6 +280,10 @@ public:
     // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
+    // Called when a password turns up after the auto-login already reached the password step -
+    // a keychain read the user only answered by then. Sends it only while the game is provably
+    // still waiting at that prompt, see the definition.
+    void sendOutstandingAutoLoginPassword();
     void terminateConnection();
     bool currentlySecure() const
     {
@@ -357,6 +361,11 @@ private:
     // Lets the functional test drive the real download entry point and inspect
     // the in-flight reply, reproducing the dialog-swap cancellation cascade.
     friend class TelnetTlsPromptTest;
+
+    // Waits for the auto-login's password step to mark a password as owed, and
+    // checks that a game's greeting asked for SGA and that a late password
+    // starts the password-mask safety timeout.
+    friend class TelnetLatePasswordTest;
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
     // the public loopbackTest() cannot express - see issue #1065 - and to seed
@@ -576,6 +585,16 @@ private:
 
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    // Set when the auto-login reached the password step with no password in hand, which is where
+    // an unanswered keychain prompt leaves it. It is the record of the game sitting at its
+    // password prompt that sendOutstandingAutoLoginPassword() needs to decide whether a password
+    // arriving later may still be typed for the player. Per-connection, so reset() clears it.
+    bool mAutoLoginPasswordOutstanding = false;
+    QElapsedTimer mAutoLoginPasswordOutstandingSince;
+    // Set by a WONT ECHO and cleared when the password step marks the prompt above: the mask the
+    // password was owed under has ended, so a mask a later WILL ECHO puts up belongs to another
+    // question and proves nothing about that prompt.
+    bool mAutoLoginPasswordMaskWithdrawn = false;
     QTimer* mTimerPasswordModeTimeout = nullptr;
     QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
