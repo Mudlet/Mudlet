@@ -87,6 +87,7 @@ private slots:
     void testForgettingSaysSoWhenTheKeychainCopyRemains();
     void testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain();
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
+    void testASignInKeyIsNotLookedForInLayoutsOlderThanItself();
 
 private:
     QTemporaryDir mConfigDir;
@@ -349,23 +350,33 @@ QList<ExpectedRead> expectedReads(const QString& profileName, const QString& key
 {
     const QString service = expectedServiceName(profileName, key);
     const QString legacyService = expectedLegacyServiceName(profileName, key);
+    // The sign-in keys are not read out of a layout older than they are: the colliding format
+    // belongs to 4.20.0 and 4.20.1 and the key=account layout to builds before the Windows keychain
+    // fix, both of which predate saved sign-ins (#11029).
+    const bool olderLayouts = key != QStringLiteral("reconnect") && key != QStringLiteral("reconnect-token");
     QList<ExpectedRead> reads;
     reads.append({QStringLiteral("current format"), service, service});
 #if defined(Q_OS_WIN)
     reads.append({QStringLiteral("pre-0.17 naming"), QString(), service});
-    reads.append({QStringLiteral("old key=account format"), QString(), key});
+    if (olderLayouts) {
+        reads.append({QStringLiteral("old key=account format"), QString(), key});
+    }
 #else
-    reads.append({QStringLiteral("old key=account format"), service, key});
+    if (olderLayouts) {
+        reads.append({QStringLiteral("old key=account format"), service, key});
+    }
 #endif
     if (key == QStringLiteral("character") || key == QStringLiteral("password")) {
         reads.append({QStringLiteral("pre-4.20.0 format"), QStringLiteral("Mudlet profile"), profileName});
     }
-    reads.append({QStringLiteral("colliding format"), legacyService, legacyService});
+    if (olderLayouts) {
+        reads.append({QStringLiteral("colliding format"), legacyService, legacyService});
 #if defined(Q_OS_WIN)
-    reads.append({QStringLiteral("colliding format under pre-0.17 naming"), QString(), legacyService});
+        reads.append({QStringLiteral("colliding format under pre-0.17 naming"), QString(), legacyService});
 #else
-    reads.append({QStringLiteral("colliding format with key=account"), legacyService, key});
+        reads.append({QStringLiteral("colliding format with key=account"), legacyService, key});
 #endif
+    }
     return reads;
 }
 
@@ -1493,6 +1504,32 @@ void CredentialManagerKeychainTest::testRefusalsAfterTheStoreHasAnsweredDoNotSto
              qPrintable(QStringLiteral("the chain stopped after two refusals although the store had already answered: %1 of %2 layouts were read")
                                 .arg(staller.reads().size())
                                 .arg(expectedReads(mProfile, mKey).size())));
+}
+
+// A reconnect token cannot be in the colliding format - that layout belongs to 4.20.0 and 4.20.1,
+// months before the sign-in keys existed - nor in the key=account layout that the Windows keychain
+// fix replaced. Reading them anyway found nothing and cost the player a prompt each, on a keychain
+// that asks per item: two of them per profile, on the two keys the profile preferences ask about
+// (#11029, reported against a development build).
+void CredentialManagerKeychainTest::testASignInKeyIsNotLookedForInLayoutsOlderThanItself()
+{
+    JobStaller staller;
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, QStringLiteral("reconnect-token"));
+    QVERIFY(waitForAnswer(answer));
+
+    const QString service = expectedServiceName(mProfile, QStringLiteral("reconnect-token"));
+    QList<QPair<QString, QString>> expected;
+    expected.append({service, service});
+#if defined(Q_OS_WIN)
+    // The bare-name read stays: it is the same entry under the naming a qtkeychain before 0.17 used,
+    // not an older layout of Mudlet's own
+    expected.append({QString(), service});
+#endif
+    QCOMPARE(staller.reads(), expected);
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
