@@ -438,6 +438,23 @@ public:
     // The first stalled job, while it is still alive
     QKeychain::Job* waitForStalled() { return waitForAnyStalled() ? mStalled.constFirst().data() : nullptr; }
 
+    // The nth stalled job, counting from zero, once the staller has taken that many over. A test
+    // answering one refusal and then waiting again would otherwise be handed the same job back -
+    // mStalled keeps what it has taken over, and the one just answered is on its way to deletion -
+    // so a chain of refusals has to name which of them it means.
+    QKeychain::Job* waitForStalled(int index)
+    {
+        const bool arrived = QTest::qWaitFor(
+                [this, index]() {
+                    return mStalled.size() > index;
+                },
+                kWaitMs);
+        if (!arrived) {
+            return nullptr;
+        }
+        return mStalled.at(index).data();
+    }
+
     bool firstStalledAlive() const { return !mStalled.isEmpty() && mStalled.constFirst(); }
 
     // Answers a job the staller took over, with an error of the test's choosing
@@ -1189,11 +1206,12 @@ void CredentialManagerKeychainTest::testAStoreThatRefusesIsNotAskedForEveryOther
     manager.mJobStartHook = staller.hook();
 
     const auto answer = startRetrieval(manager, mProfile, mKey);
-    QKeychain::Job* firstRead = staller.waitForStalled();
+    QKeychain::Job* firstRead = staller.waitForStalled(0);
     QVERIFY(firstRead);
     JobStaller::answer(firstRead, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
-    QKeychain::Job* secondRead = staller.waitForStalled();
+    QKeychain::Job* secondRead = staller.waitForStalled(1);
     QVERIFY2(secondRead, "one refusal was taken for the whole store, so an entry locked on its own would lose the layouts behind it");
+    QVERIFY2(secondRead != firstRead, "the second refusal answered the same read again, so the chain was never followed");
     JobStaller::answer(secondRead, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
 
     QVERIFY(waitForAnswer(answer));
@@ -1216,7 +1234,7 @@ void CredentialManagerKeychainTest::testAFreshRefusalSparesTheNextLookupTheStore
     const auto firstAnswer = startRetrieval(firstManager, mProfile, mKey);
     // Two, because one refusal could be that entry's own
     for (int refusal = 0; refusal < 2; ++refusal) {
-        QKeychain::Job* refused = firstStaller.waitForStalled();
+        QKeychain::Job* refused = firstStaller.waitForStalled(refusal);
         QVERIFY(refused);
         JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
     }
@@ -1265,7 +1283,7 @@ void CredentialManagerKeychainTest::testAStoreThatAnswersAgainIsAskedAgain()
 
     const auto refusedAnswer = startRetrieval(refusedManager, mProfile, mKey);
     for (int refusal = 0; refusal < 2; ++refusal) {
-        QKeychain::Job* read = refusingStaller.waitForStalled();
+        QKeychain::Job* read = refusingStaller.waitForStalled(refusal);
         QVERIFY(read);
         JobStaller::answer(read, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
     }

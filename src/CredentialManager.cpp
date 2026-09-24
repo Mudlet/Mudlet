@@ -664,6 +664,9 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         const LookupStage& finishedStage = lookup->stages[index];
         if (error == QKeychain::NoError && !password.isEmpty()) {
             qDebug() << "CredentialManager: Found the password for profile" << lookup->profileName << "in the" << finishedStage.description;
+            // The clearest proof there is that the store is reachable, and this path returns before
+            // the one below: a refusal window opened while this read was in flight is over.
+            forgetStoreRefusal();
             if (finishedStage.recover && lookup->keychainError.isEmpty()) {
                 finishedStage.recover(password);
             } else if (finishedStage.recover) {
