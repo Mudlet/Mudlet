@@ -185,9 +185,13 @@ void TMapView::slot_switchArea(int index)
     }
 
     const QString areaName = mpAreaComboBox->itemText(index);
-    const int areaId = mpMap->mpRoomDB->getAreaNamesMap().key(areaName, -1);
+    // 0 is never a valid area id (the default area is -1, every other area
+    // is >= 1), unlike -1, so it is safe to use as the "not found" sentinel
+    // here - the default area's own name must still resolve to switching.
+    constexpr int notFound = 0;
+    const int areaId = mpMap->mpRoomDB->getAreaNamesMap().key(areaName, notFound);
 
-    if (areaId != -1) {
+    if (areaId != notFound) {
         mp2dMap->switchArea(areaId);
     } else {
         qWarning() << "TMapView::slot_switchArea() - area" << areaName << "not found in area names map";

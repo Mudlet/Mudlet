@@ -43,7 +43,7 @@
 #include "RoomMoveActivationHandler.h"
 #include "RoomMoveDragHandler.h"
 #include "SelectionRectangleHandler.h"
-#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -5696,20 +5696,20 @@ void T2DMap::slot_configureAreas()
             }
         }
 
-        // Update the combo box of whichever view opened this dialog - a
-        // secondary TMapView has its own area combo box, separate from the
-        // primary mapper's, and must not have the primary's dropdown pushed
-        // into it instead.
-        if (auto* view = qobject_cast<TMapView*>(parentWidget())) {
-            view->updateAreaComboBox();
-        } else if (mpMap && mpMap->mpMapper) {
+        // Refresh every dropdown that lists area names - the primary
+        // mapper's and every secondary view's, not just whichever one
+        // opened this dialog.
+        if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
             // Only follow the rename into the dropdown if it's the area the
-            // map is actually showing - otherwise this would move the
-            // dropdown to an area the map isn't displaying.
-            if (areaId == mAreaID && mpMap->mpMapper->comboBox_showArea) {
+            // primary mapper is actually showing - otherwise this would
+            // move the dropdown to an area the map isn't displaying.
+            if (mpMap->mpMapper->mp2dMap && areaId == mpMap->mpMapper->mp2dMap->getAreaId() && mpMap->mpMapper->comboBox_showArea) {
                 mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
             }
+        }
+        if (mpMap && mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
         }
     });
 
@@ -5743,13 +5743,11 @@ void T2DMap::slot_configureAreas()
             }
         }
 
-        if (auto* view = qobject_cast<TMapView*>(parentWidget())) {
-            view->updateAreaComboBox();
-        } else if (mpMap && mpMap->mpMapper) {
+        if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
-            }
+        }
+        if (mpMap && mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
         }
     });
 
@@ -5781,31 +5779,29 @@ void T2DMap::slot_configureAreas()
 
         repopulate();
 
-        // The view that opened this dialog owns the combo box and the
-        // switch-away call to use below - a secondary TMapView has its own,
-        // separate from the primary mapper's.
-        auto* view = qobject_cast<TMapView*>(parentWidget());
-        if (view) {
-            view->updateAreaComboBox();
-        } else if (mpMap && mpMap->mpMapper) {
+        // Refresh every dropdown that lists area names - the primary
+        // mapper's and every secondary view's, not just whichever one
+        // opened this dialog.
+        if (mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
         }
+        if (mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
+        }
 
-        if (areaId == mAreaID) {
-            // The area the map was showing is gone - paintEvent() can't draw
-            // an area that no longer exists, so move to another one rather
-            // than leaving the map blank until the player moves or another
-            // area is picked.
-            if (view) {
-                view->switchToAnotherArea();
+        // Every map that was showing the deleted area needs to move off it -
+        // paintEvent() can't draw an area that no longer exists - not just
+        // whichever view opened this dialog.
+        if (mpMap->mpMapper && mpMap->mpMapper->mp2dMap && mpMap->mpMapper->mp2dMap->getAreaId() == areaId) {
+            auto* comboBox = mpMap->mpMapper->comboBox_showArea;
+            if (comboBox && comboBox->count() > 0) {
+                mpMap->mpMapper->slot_switchArea(comboBox->currentIndex());
             } else {
-                auto* comboBox = mpMap->mpMapper ? mpMap->mpMapper->comboBox_showArea : nullptr;
-                if (comboBox && comboBox->count() > 0) {
-                    mpMap->mpMapper->slot_switchArea(comboBox->currentIndex());
-                } else {
-                    switchArea(mpMap->getDefaultAreaName());
-                }
+                mpMap->mpMapper->mp2dMap->switchArea(mpMap->getDefaultAreaName());
             }
+        }
+        if (mpMap->getViewManager()) {
+            mpMap->getViewManager()->switchViewsShowingArea(areaId);
         }
         update();
     });

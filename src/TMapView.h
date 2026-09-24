@@ -57,9 +57,11 @@ public:
     int getZLevel() const;
 
     void updateAreaComboBox();
-    // Called when the area this view is showing has been deleted elsewhere -
-    // moves to another area so paintEvent() isn't left drawing one that no
-    // longer exists.
+    // Called via TMapViewManager::switchViewsShowingArea() when a Configure
+    // Areas dialog - the primary mapper's or any view's - deletes the area
+    // this view is showing, so it moves to another area rather than leaving
+    // paintEvent() drawing one that no longer exists. Deleting an area
+    // through Lua's deleteArea() does not reach this.
     void switchToAnotherArea();
 
 private slots:
