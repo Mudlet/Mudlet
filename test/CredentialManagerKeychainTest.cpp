@@ -82,6 +82,8 @@ private slots:
     void testAStoreThatRefusesIsNotAskedForEveryOtherLayout();
     void testAFreshRefusalSparesTheNextLookupTheStore();
     void testTheProfileStoragePreferenceKeepsTheKeychainOutOfIt();
+    void testOneUnreadableEntryDoesNotHideAnOlderLayout();
+    void testAStoreThatAnswersAgainIsAskedAgain();
 
 private:
     QTemporaryDir mConfigDir;
@@ -436,6 +438,23 @@ public:
 
     // The first stalled job, while it is still alive
     QKeychain::Job* waitForStalled() { return waitForAnyStalled() ? mStalled.constFirst().data() : nullptr; }
+
+    // The nth stalled job, counting from zero, once the staller has taken that many over. A test
+    // answering one refusal and then waiting again would otherwise be handed the same job back -
+    // mStalled keeps what it has taken over, and the one just answered is on its way to deletion -
+    // so a chain of refusals has to name which of them it means.
+    QKeychain::Job* waitForStalled(int index)
+    {
+        const bool arrived = QTest::qWaitFor(
+                [this, index]() {
+                    return mStalled.size() > index;
+                },
+                kWaitMs);
+        if (!arrived) {
+            return nullptr;
+        }
+        return mStalled.at(index).data();
+    }
 
     bool firstStalledAlive() const { return !mStalled.isEmpty() && mStalled.constFirst(); }
 
@@ -1050,12 +1069,6 @@ void CredentialManagerKeychainTest::testALookupFindsThePasswordInTheEncryptedFil
             expected.append({read.service, read.key});
         }
     }
-    if (firstReadRefused) {
-        // The store refused before answering anything, so the layouts behind that read are not
-        // asked for - each would be another prompt for the answer just given - and the file, which
-        // is not the store's to refuse, is read and holds the password.
-        expected = {expected.first()};
-    }
     QCOMPARE(recorder.reads(), expected);
 }
 
@@ -1177,15 +1190,10 @@ void CredentialManagerKeychainTest::testAKeychainErrorIsReportedRatherThanNothin
     QVERIFY(!answer->success);
     QVERIFY2(answer->error.contains(QStringLiteral("synthetic: access refused")),
              qPrintable(QStringLiteral("a keychain that refused the read may still hold the password, but the lookup said: %1").arg(answer->error)));
-    // A refused read is one place the password is not known to be missing from, so the layouts behind
-    // it are still read - unless the store refused before answering anything at all, which is the
-    // store rather than the entry saying no: asking the rest would prompt the player once each for
-    // the answer already given (#11029).
-    if (refusedRead == 0) {
-        QCOMPARE(staller.reads().size(), 1);
-    } else {
-        QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
-    }
+    // A refused read is one place the password is not known to be missing from, not a reason to stop
+    // looking in the others: the read after it is answered here, so the chain runs to the end. Only
+    // refusals with nothing answered between them are the store itself saying no (#11029).
+    QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
 }
 
 // SlySven's report (#11029): a locked or dismissed keychain was asked once per historical layout,
@@ -1200,14 +1208,20 @@ void CredentialManagerKeychainTest::testAStoreThatRefusesIsNotAskedForEveryOther
     manager.mJobStartHook = staller.hook();
 
     const auto answer = startRetrieval(manager, mProfile, mKey);
-    QKeychain::Job* firstRead = staller.waitForStalled();
+    QKeychain::Job* firstRead = staller.waitForStalled(0);
     QVERIFY(firstRead);
     JobStaller::answer(firstRead, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+    QKeychain::Job* secondRead = staller.waitForStalled(1);
+    QVERIFY2(secondRead, "one refusal was taken for the whole store, so an entry locked on its own would lose the layouts behind it");
+    QVERIFY2(secondRead != firstRead, "the second refusal answered the same read again, so the chain was never followed");
+    JobStaller::answer(secondRead, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
 
     QVERIFY(waitForAnswer(answer));
     QVERIFY(!answer->success);
     QVERIFY2(answer->error.contains(QStringLiteral("synthetic: the wallet is locked")), qPrintable(QStringLiteral("the refusal was not what the lookup reported: %1").arg(answer->error)));
-    QCOMPARE(staller.reads().size(), 1);
+    // Two reads to tell a locked store from one unreadable entry, and no more: the chain has five or
+    // six layouts and each would prompt the player again
+    QCOMPARE(staller.reads().size(), 2);
 }
 
 // The profile preferences ask about "reconnect" and then "reconnect-token", each through a
@@ -1220,9 +1234,12 @@ void CredentialManagerKeychainTest::testAFreshRefusalSparesTheNextLookupTheStore
     firstManager.mJobStartHook = firstStaller.hook();
 
     const auto firstAnswer = startRetrieval(firstManager, mProfile, mKey);
-    QKeychain::Job* refused = firstStaller.waitForStalled();
-    QVERIFY(refused);
-    JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+    // Two, because one refusal could be that entry's own
+    for (int refusal = 0; refusal < 2; ++refusal) {
+        QKeychain::Job* refused = firstStaller.waitForStalled(refusal);
+        QVERIFY(refused);
+        JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+    }
     QVERIFY(waitForAnswer(firstAnswer));
 
     JobStaller secondStaller;
@@ -1273,6 +1290,57 @@ void CredentialManagerKeychainTest::testTheProfileStoragePreferenceKeepsTheKeych
     QVERIFY(removed);
 
     QVERIFY2(watcher.reads().isEmpty(), "the keychain was read although the player asked for passwords to be kept in the profile");
+}
+
+// A single refusal can be one entry's own - a per-item ACL, or an item another build saved under
+// terms this one cannot meet - while the rest of the store reads perfectly well, so the password
+// kept in a layout behind it still has to be found. Raised in review of #11031.
+void CredentialManagerKeychainTest::testOneUnreadableEntryDoesNotHideAnOlderLayout()
+{
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QKeychain::Job* refused = staller.waitForStalled();
+    QVERIFY(refused);
+    JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: this one entry is not readable"));
+
+    QVERIFY(waitForAnswer(answer));
+    QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
+}
+
+// The refusal window is a window rather than a latch: once the store answers again - a player
+// unlocking their keychain, or a write that lands - lookups ask it rather than reading only the
+// file until the window runs out. Raised in review of #11031.
+void CredentialManagerKeychainTest::testAStoreThatAnswersAgainIsAskedAgain()
+{
+    JobStaller refusingStaller;
+    refusingStaller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager refusedManager;
+    refusedManager.mJobStartHook = refusingStaller.hook();
+
+    const auto refusedAnswer = startRetrieval(refusedManager, mProfile, mKey);
+    for (int refusal = 0; refusal < 2; ++refusal) {
+        QKeychain::Job* read = refusingStaller.waitForStalled(refusal);
+        QVERIFY(read);
+        JobStaller::answer(read, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+    }
+    QVERIFY(waitForAnswer(refusedAnswer));
+
+    // What a read the store answers does, which is the path a real unlock takes
+    CredentialManager::forgetStoreRefusal();
+
+    JobStaller answeringStaller;
+    answeringStaller.answerOtherReadsNotFound();
+    CredentialManager answeringManager;
+    answeringManager.mJobStartHook = answeringStaller.hook();
+
+    const auto secondAnswer = startRetrieval(answeringManager, mProfile, mKey);
+    QVERIFY(waitForAnswer(secondAnswer));
+    QVERIFY2(!answeringStaller.reads().isEmpty(), "the store was not asked again after it had answered, so a keychain-only password stays unreadable");
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)

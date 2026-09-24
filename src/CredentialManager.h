@@ -168,10 +168,14 @@ private:
         // entry". Until one has, a refusal is the store itself saying no - locked, or a prompt the
         // player dismissed - and the layouts behind it cannot be read either.
         bool storeHasAnswered = false;
-        // Set when the store refused before answering anything: every remaining keychain read would
-        // ask it the same question, and be refused the same way, at the cost of another prompt. Only
-        // the file is read from then on.
+        // Set when the store has refused scmRefusalsBeforeGivingUpOnTheStore reads in a row without
+        // answering any: every remaining keychain read would ask it the same question, and be
+        // refused the same way, at the cost of another prompt. Only the file is read from then on.
         bool storeRefused = false;
+        // Refusals since the last read the store answered. One can be an entry of its own that the
+        // player - or a per-item ACL - has locked away while the rest of the store is readable, so
+        // one is not enough to give up on the layouts behind it.
+        int consecutiveRefusals = 0;
     };
     using LookupPtr = std::shared_ptr<Lookup>;
 
@@ -196,6 +200,11 @@ private:
     static bool storeRefusedRecently();
     static void noteStoreRefusal();
     static constexpr int scmStoreRefusalCooldownMs = 30000;
+    // How many reads the store may refuse, without answering any of them, before a lookup stops
+    // asking it. Two rather than one: a single refusal can be one entry's own, and an older layout
+    // behind it may still hold the password, so the second read is what tells a locked or dismissed
+    // store apart from an entry that is simply not readable.
+    static constexpr int scmRefusalsBeforeGivingUpOnTheStore = 2;
 
     // Each re-files a password a lookup recovered from an older format. Started just before the lookup
     // answers and independent of it, so a write that stalls cannot hold back the recovered password,
