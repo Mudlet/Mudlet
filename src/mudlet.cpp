@@ -1308,14 +1308,15 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // on every profile load, so this clash is found again at every startup
         // for as long as it lasts - on the main screen that is a line the
         // player is told to ignore, which is worse than not saying it. The
-        // editor is where a key binding is looked at and where it is changed,
-        // so the notice waits there for whoever goes to fix it, and says
-        // nothing to anyone who does not.
+        // editor is where a key binding is looked at and where it is changed.
+        // Opening it replaces this notice, so it is read out only if the editor
+        // is open; selecting the binding says it again.
         if (pOtherHost->mpEditorDialog) {
             //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
             pOtherHost->mpEditorDialog->showWarning(
                     tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
-                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()));
+                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()),
+                    pOtherHost->mpEditorDialog->isVisible());
         }
     }
 }
@@ -1510,6 +1511,37 @@ QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, con
         holders.append(tr("a command from another profile"));
     }
     return holders;
+}
+
+// No QAction scan as in addonShortcutUsable(): it would only add add-on
+// commands, which are addonCommandsUsingShortcut()'s to report. Covers the
+// shortcuts the preferences list, not the buffer search's opt-in F3 keys.
+QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    if (!mpShortcutsManager || key == Qt::Key_unknown) {
+        return {};
+    }
+    // The profile switching keys are the exception: TCommandLine claims the
+    // ShortcutOverride for a key press a binding would match, so the press
+    // arrives after all and the binding is the one that fires.
+    if (profileSwitchShortcutMatches(key, modifiers)) {
+        return {};
+    }
+
+    // The registry rather than the widgets: hiding the menu bar moves every menu
+    // key onto a QShortcut and clears the action it came from
+    const QKeySequence sequence(QKeyCombination(modifiers, key));
+    QStringListIterator keys = mpShortcutsManager->iterator();
+    while (keys.hasNext()) {
+        const QString name = keys.next();
+        const QKeySequence* pMudletSequence = mpShortcutsManager->getSequence(name);
+        // A shortcut cleared in the preferences holds an empty sequence, which
+        // is nobody's key - the same reading profileSwitchShortcutMatches() takes
+        if (pMudletSequence && !pMudletSequence->isEmpty() && *pMudletSequence == sequence) {
+            return mpShortcutsManager->getLabel(name);
+        }
+    }
+    return {};
 }
 
 void mudlet::removeAddonCommandsForHost(Host* pHost)
@@ -3728,9 +3760,11 @@ bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
         return false;
     }
 
-    const auto key = static_cast<Qt::Key>(ke->key());
-    const Qt::KeyboardModifiers modifiers = ke->modifiers();
+    return profileSwitchShortcutMatches(static_cast<Qt::Key>(ke->key()), ke->modifiers());
+}
 
+bool mudlet::profileSwitchShortcutMatches(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
     // QShortcutMap retries with the modifiers the platform consumed producing
     // the character stripped off, so Ctrl and a numpad digit activates Ctrl+1,
     // and so does Ctrl+Shift+1 on layouts needing Shift for a top-row digit
