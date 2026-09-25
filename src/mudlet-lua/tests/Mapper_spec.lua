@@ -1356,6 +1356,37 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(getRoomExits(far)["west"])
     end)
 
+    it("connectExitStub given only up takes the room straight above that faces back", function()
+      local area = addAreaName("MapperSpecStubUpArea")
+      local rooms = {}
+      finally(function()
+        for _, id in ipairs(rooms) do deleteRoom(id) end
+        deleteArea(area)
+      end)
+      local function placed(x, z)
+        local id = createRoomID(); addRoom(id); setRoomArea(id, area)
+        setRoomCoordinates(id, x, 0, z)
+        rooms[#rooms + 1] = id
+        setExitStub(id, "down", true)
+        return id
+      end
+      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+      setRoomCoordinates(from, 0, 0, 0)
+      rooms[#rooms + 1] = from
+      setExitStub(from, "up", true)
+      -- a room below faces back but is the wrong way, one a level up is off
+      -- to the side, and the one to take is further up but directly above
+      local below = placed(0, -1)
+      local aside = placed(1, 1)
+      local above = placed(0, 3)
+
+      assert.is_true(connectExitStub(from, "up"))
+      assert.are.equal(above, getRoomExits(from)["up"])
+      assert.are.equal(from, getRoomExits(above)["down"])
+      assert.is_nil(getRoomExits(below)["down"])
+      assert.is_nil(getRoomExits(aside)["down"])
+    end)
+
     it("connectExitStub given only a direction reports when nothing faces back", function()
       local area = addAreaName("MapperSpecStubLonelyArea")
       local from = createRoomID(); addRoom(from); setRoomArea(from, area)
@@ -3803,6 +3834,19 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({10, 20, 30, 255}, getCustomEnvColorTable()[501])
     end)
 
+    it("puts the player's room back", function()
+      buildMap()
+      assert.is_true(centerview(roomB))
+      assert.is_true(saveJsonMap(jsonPath))
+      deleteMap()
+      -- so only the import can put the player back there
+      assert.are_not.equal(roomB, getPlayerRoom())
+
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.equal(roomB, getPlayerRoom())
+    end)
+
     it("puts a symbol font scaling below one back, rather than rounding it away", function()
       deleteMap()
       local area = addAreaName("MapperSpecJsonScalingArea")
@@ -4141,6 +4185,36 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       -- is merely absent the audit never runs and leaves no note behind
       assert.are.equal("", getRoomUserData(roomA, "audit.removed_valid_but_missing_special_exit.squeeze through"))
       assert.are.equal(roomB, getRoomExits(roomA)["east"])
+    end)
+
+    it("drops a normal exit whose target id is below one before the audit sees it", function()
+      buildMap()
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "east").exitId = 0
+      end)
+
+      assert.is_nil(getRoomExits(roomA)["east"])
+      -- unlike an exit to a room that is merely absent, the reader refuses
+      -- this one outright, so no stub is made and no note is left behind
+      assert.are.same({1}, getExitStubs1(roomA))
+      assert.are.equal("", getRoomUserData(roomA, "audit.made_stub_of_invalid_exit.4"))
+      assert.are.equal(roomB, getRoomExits(roomA)["west"])
+    end)
+
+    it("reads a custom line with no style or arrow as a plain solid line", function()
+      buildMap()
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "east").customLine = {
+          coordinates = {{1.5, 2.5}},
+          color24RGB = {7, 8, 9}
+        }
+      end)
+
+      local line = getCustomLines1(roomA)["e"]
+      assert.are.equal("solid line", line.attributes.style)
+      assert.is_false(line.attributes.arrow)
+      assert.are.same({7, 8, 9}, line.attributes.color)
+      assert.are.same({1.5, 2.5}, {line.points[1][1], line.points[1][2]})
     end)
 
     it("drops a stub that stands in the same direction as a real exit", function()
