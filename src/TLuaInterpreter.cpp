@@ -4951,7 +4951,7 @@ static bool lazyCaptureGlobalsWanted()
         }
         qWarning().noquote() << "MUDLET_LAZY_GLOBALS is set to" << qEnvironmentVariable("MUDLET_LAZY_GLOBALS") << "but is not 0 or 1; ignoring it";
     }
-    QSettings* settings = mudlet::self() ? mudlet::getQSettings() : nullptr;
+    QSettings* settings = mudlet::self() ? MudletApp::getQSettings() : nullptr;
     return !settings || settings->value(qsl("lazyCaptureGlobals"), true).toBool();
 }
 
