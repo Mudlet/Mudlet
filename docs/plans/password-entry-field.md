@@ -2,7 +2,8 @@
 
 Issue: https://github.com/Mudlet/Mudlet/issues/11024
 Branch: `claude/password-masking-architecture-78y96u`
-Status: v3, after two red-team rounds (five reviewers, then two). §9 records what changed and why.
+Status: v3.1, after three red-team rounds (five reviewers, then two, then one confirmation pass).
+§9 records what changed and why.
 
 This is an execution plan for coding agents. Read it end to end before touching code. Every
 line reference is an orientation aid, not a fact: verify against the tree you are on.
@@ -25,10 +26,11 @@ The new design has one structural rule:
 And one rule about when protection ends:
 
 > **Protection is removed only by the game or by the player.** The field closes when the game
-> releases ECHO (WONT, the existing safety timeout, disconnect), when the player steps past it
-> with Esc, or when the player turns it off in the profile's settings. Mudlet's own guesses
-> (character-at-a-time recognition) never close a field; they only change what Esc does and what
-> the field says. So a wrong guess can never put a password in the clear.
+> releases ECHO (WONT, disconnect, or the existing 60 s login-phase safety timeout that stands in
+> for a WONT the game forgot), when the player steps past it with Esc, or when the player turns it
+> off in the profile's settings. Mudlet's own guess (character-at-a-time recognition) never closes
+> a field; it only changes what Esc does and what the field says. So a wrong guess can never put a
+> password in the clear. Invariant 7 lists the exact exceptions, all of them about the auto-login.
 
 What falls out, with no per-feature guard:
 
@@ -58,7 +60,14 @@ What it also does not fix, stated up front so nobody claims otherwise in the PR:
   "secure" anywhere in the code.
 - A game that hides all input for the whole session (character-at-a-time, or a line-mode game
   that masks everything) shows a hidden-input box until the player presses Esc, at most twice per
-  session, or turns the field off for that profile. The info line and the placeholder say how.
+  ECHO hold, or turns the field off for that profile. The info line and the placeholder say how.
+  (Without SGA the 60 s login-phase timeout can end a hold the game never releases, and a fresh
+  WILL then starts a new hold, so "per hold" is not "per session".)
+- While the auto-login still intends to send the stored password (by default the first 3 s of a
+  connection, up to two minutes with custom delays), no field opens. A password typed by hand at
+  a masked prompt inside that window goes through the command line in the clear, where today it
+  would be masked. The window exists so that a command typed ahead of an auto-login stays in the
+  command line (#7921).
 
 ## 2. Where things are today (orientation, verify each)
 
@@ -78,10 +87,12 @@ What it also does not fix, stated up front so nobody claims otherwise in the PR:
     a user binding on the profile-switch shortcut (~200-219); Tab/F6 turning caret mode on
     (~306-341); Ctrl+digit tab switching (`handleCtrlTabChange`); Escape = select all (~518-528);
     PageUp/PageDown scroll the console; keypad keys offered to `KeyUnit` first (~273). Edits happen
-    on several branches: `default:` via `processNormalKey`, Backspace/Delete (~397-440) calling
-    `QPlainTextEdit::event` directly, Shift+Return `insertBlock` (~445), Space falling through to
+    on several branches: `default:` via `processNormalKey`, Backspace/Delete (~352-403) calling
+    `QPlainTextEdit::event` directly, Shift+Return `insertBlock` (~412), Space falling through to
     the base at ~637, Tab completion, plus `InputMethod` events, `insertFromMimeData` (paste, drop,
-    middle-click) and the spell-check popup.
+    middle-click) and the spell-check popup. Lua can run from inside a key press:
+    `keybindingMatched()`, the keypad `processDataStream()` call, and everything under
+    `enterCommand()`.
   - `focusInEvent()` (~639-653): `mpHost->recordActiveCommandLine(this)`; `mousePressEvent` /
     `mouseReleaseEvent` call `mudlet::self()->activateProfile(mpHost)`.
 - `src/TCommandLine.h`: members `mIsEchoSuppressed`, `mPasswordVisible`, `mpPasswordToggleButton`,
@@ -127,8 +138,9 @@ What it also does not fix, stated up front so nobody claims otherwise in the PR:
   - `checkEchoAnomalyPattern()` (~6451-6470): the count rises while consecutive toggles are less
     than 5 s apart and only resets after a longer gap; five latch the process until `reset()`.
     WONT counts too.
-  - `restartPasswordMaskTimeout()` (~6482-6501): 60 s, restarted by every line sent under ECHO,
-    armed only inside the first 5 min of a connection and never once recognition fired;
+  - `restartPasswordMaskTimeout()` (~6482-6501): 60 s, restarted by every game-command line sent
+    under ECHO and by the auto-login password whether or not ECHO is on, armed only inside the
+    first 5 min of a connection and never once recognition fired;
     `slot_passwordMaskTimeout()` (~6503) sends DONT ECHO, resets the announced state and clears
     the echo state, so a later WILL is honoured.
   - Auto-login: `mTimerLogin` starts at connect (~1079); `slot_send_login()` (~904) sends the name
@@ -197,10 +209,12 @@ What it also does not fix, stated up front so nobody claims otherwise in the PR:
 2. Text in the field is sent by exactly one function, `Host::sendPasswordEntry()`, which calls
    `cTelnet::sendData(text, /*permitDataSendRequestEvent=*/false, /*isGameCommand=*/true)`.
    No alias pass, no `sysDataSendRequest`, no command-separator split, no local echo, no history.
-3. In `src/`, `QLineEdit::text()` is called on the field in exactly one place: the Return branch
-   of `TPasswordEntry`. There is no accessor and no text-carrying signal, and no close path reads
-   it. Tests may read it. Put `grep -rn "text()" src/TPasswordEntry.cpp` and a grep for the field
-   across the rest of `src/` in the PR body's test case.
+3. In `src/`, the field's text is read in exactly one place: the Return branch of
+   `TPasswordEntry` (`text()`). Nothing else in `src/` calls `text()`, `selectedText()`,
+   `displayText()` or connects to `textChanged`/`textEdited` on the field; the one `textEdited`
+   connection (B.7) is inside `TPasswordEntry` and discards its argument. There is no accessor and
+   no text-carrying signal, and no close path reads it. Tests may read it. Put the greps in the PR
+   body's test case.
 4. The inputs to "should the field be up" are combined in one function,
    `Host::passwordEntryWanted()`, and its own mutators. Other code reads outputs -
    `passwordEntryWanted()`, `TMainConsole::passwordEntry()`, `TCommandLine::focusProxy()` - never
@@ -213,10 +227,15 @@ What it also does not fix, stated up front so nobody claims otherwise in the PR:
 6. The field exists only while it is wanted. It is created on open and deleted on close, so no
    text, undo state or reveal state carries from one prompt to the next. It is deleted in password
    echo mode, so Qt zero-fills whatever it still holds.
-7. Only the game or the player ends protection. No timer, guess or inference of Mudlet's closes an
-   open field or prevents the next one from opening, with one deliberate exception: after the
-   auto-login has sent the stored password under the game's mask, no field opens until the game
-   releases ECHO (§4.5 says why and what it costs).
+7. Only the game or the player ends protection. No guess or inference of Mudlet's closes an open
+   field or prevents the next one from opening. The complete list of exceptions, each of them
+   existing behaviour or the auto-login's own:
+   - the 60 s login-phase timeout (`slot_passwordMaskTimeout`) stands in for a WONT the game
+     forgot and closes the field as a WONT would; existing behaviour;
+   - the ECHO anomaly latch refuses WILL, so no field opens; existing behaviour;
+   - while the auto-login still intends to send the stored password, no field opens (§4.5);
+   - after the auto-login has sent the stored password under the game's mask, no field opens until
+     the game releases ECHO (§4.5).
 8. Everything else about `TCommandLine` behaves exactly as with no prompt open: history, Tab,
    aliases, `sysDataSendRequest`, sub command lines, `callCmdLineAction()`. When no field is shown
    under ECHO, typed input goes the ordinary way, and that is the player's choice every time.
@@ -232,43 +251,58 @@ bool passwordEntryWanted() const;
 //   = mIsRemoteEchoingActive
 //     && !mDisablePasswordMasking
 //     && !mPasswordEntrySuppressed        // until the game releases ECHO
-//     && !mPasswordEntryDismissed         // until the next line goes to the game
+//     && !mPasswordEntryDismissed         // until the player's next line goes to the game
 //     && !mTelnet.autoLoginPending();     // the auto-login still intends to send a password
 
 // The state of the current ECHO hold, and how it is written:
-void setRemoteEchoingActive(bool);          // exists. On false: clears the three flags below
+void setRemoteEchoingActive(bool);          // exists. On false: clears every per-hold flag below
                                             // UNCONDITIONALLY, before its change guard, then
                                             // recomputes. On true: marks the hold if
                                             // mTelnet.characterModeDetected() already is.
 void setDisablePasswordMasking(bool);       // new; the only write path for the preference
 bool disablePasswordMasking() const;
-void suppressPasswordEntryUntilEchoReleased(); // the auto-login answered under the mask, or Esc
-                                               // on an empty field during a marked hold
-void dismissPasswordEntry();                // Esc on an empty field: marked hold → suppress;
-                                            // otherwise mPasswordEntryDismissed = true
-void clearPasswordEntryDismissal();         // Host::send() calls it: a line went to the game.
-                                            // If ECHO is still held, the hold becomes marked
-                                            // (the game hid input across a line the player sent
-                                            // normally). Recompute is deferred one event-loop
-                                            // turn (QTimer::singleShot(0)), so a re-open never
-                                            // happens inside enterCommand() or a Lua send().
-void markPasswordEntryHold();               // cTelnet's recognition hook; also set by the two
-                                            // paths above. Emits signal_passwordEntryHoldMarked()
-                                            // on the false→true edge so an open field can change
-                                            // its placeholder. Not an input to passwordEntryWanted().
+void dismissPasswordEntry();                // Esc on an empty field. Marked hold, or the second
+                                            // Esc within one hold → mPasswordEntrySuppressed;
+                                            // otherwise mPasswordEntryDismissed = true and
+                                            // mPasswordEntryDismissedOnce = true.
+void clearPasswordEntryDismissal();         // a line the PLAYER submitted from a command line went
+                                            // to the game (TCommandLine::enterCommand), or the
+                                            // auto-login sent the name (slot_send_login). Not a
+                                            // script's, trigger's or timer's send. Recompute is
+                                            // deferred one event-loop turn (QTimer::singleShot(0,
+                                            // this, ...)), so a re-open never happens inside
+                                            // enterCommand(); a re-opened field says it is one.
+void markPasswordEntryHold();               // cTelnet's recognition hook. Emits
+                                            // signal_passwordEntryHoldMarked() on the false→true
+                                            // edge. Not an input to passwordEntryWanted().
 bool passwordEntryHoldMarked() const;
+bool passwordEntryReopened() const;         // mPasswordEntryDismissedOnce, for the placeholder
+void autoLoginPasswordSent();               // cTelnet's one call for that transition: if ECHO is
+                                            // up, mPasswordEntrySuppressed = true; then
+                                            // mTelnet.setAutoLoginPending(false) with recompute
+                                            // suppressed; then ONE recompute.
 void recomputePasswordEntryWanted();        // cTelnet calls this when autoLoginPending changes
-void passwordEntryEdited();                 // first edit in the field: mTelnet.cancelLoginTimers()
+void passwordEntryEdited();                 // first edit in the field, or text moved into it on
+                                            // open: mTelnet.cancelLoginTimers()
 bool sendPasswordEntry(QString);            // invariant 2
 signals:
     void signal_passwordEntryWantedChanged(bool);
     void signal_passwordEntryHoldMarked();
 ```
 
-- The three flags (`mPasswordEntrySuppressed`, `mPasswordEntryDismissed`,
-  `mPasswordEntryHoldMarked`) are cleared by every call of `setRemoteEchoingActive(false)`,
-  including the one `cTelnet::reset()` makes while ECHO is already off, so nothing outlives a
-  hold or a connection. Put the clearing *before* the existing "value unchanged → return" guard.
+- Recompute is synchronous (a Lua spec must see the field the moment `feedTelnet` returns), and
+  the discipline that makes that safe: **a transition that changes two inputs goes through one
+  Host method that writes both and recomputes once.** `autoLoginPasswordSent()` is that method for
+  the auto-login; `setRemoteEchoingActive(false)` for a release; `dismissPasswordEntry()` for Esc.
+  Never write two inputs from two calls in a row - between them `passwordEntryWanted()` can flip
+  true, open a field, move typed-ahead text into it (C.3) and destroy that text when the second
+  call closes it.
+- The per-hold flags (`mPasswordEntrySuppressed`, `mPasswordEntryDismissed`,
+  `mPasswordEntryDismissedOnce`, `mPasswordEntryHoldMarked`) are cleared by every call of
+  `setRemoteEchoingActive(false)`, including the one `cTelnet::reset()` makes while ECHO is already
+  off, so nothing outlives a hold or a connection. Put the clearing *before* the existing "value
+  unchanged → return" guard. `reset()` must clear `autoLoginPending` (E.4) *after* that call, not
+  before, or a disconnect during the pending window opens a field on a dead connection.
 - `sendPasswordEntry(QString line)`:
   ```cpp
   mUserSentInputThisConnection = true;   // as Host::send() does, for the GMCP auth path
@@ -285,12 +319,11 @@ signals:
                                          // owner; best effort, nothing more
   return sent;
   ```
-  An empty string sends an empty line (a blank password, or "press Enter to continue").
+  An empty string sends an empty line (a blank password, or "press Enter to continue"). It does
+  not touch the dismissal: an open field cannot be dismissed.
 - `mDisablePasswordMasking` becomes private behind the getter/setter. Every site in §2 changes:
   readers use the getter, `XMLimport` reads into a local and calls the setter, tests call the
   setter. The XML attribute name `disablePasswordMasking` is unchanged.
-- `Host::send()` calls `clearPasswordEntryDismissal()` once per call (a no-op unless dismissed).
-  Any line to the game ends a dismissal: the player's, a trigger's, a key binding's.
 - Remove `signal_remoteEchoChanged` in the commit that removes its only listener.
 
 #### B. `TPasswordEntry` (new, `src/TPasswordEntry.h`, `src/TPasswordEntry.cpp`)
@@ -317,18 +350,23 @@ A `QLineEdit` subclass. Keep it small; the red team estimates ~200 lines with he
    (`TCommandLine.cpp` ~1504): name `tr("Hidden input")` (with the profile name when several are
    open); description saying Enter sends it straight to the game without aliases or history, and
    Esc empties it and, when it is already empty, closes it to use the command line instead.
-   Placeholder text, three states, each with a `//:` comment:
-   - fresh, unmarked hold: `tr("Hidden input - Esc to answer in the command line instead")`;
+   Placeholder text, four states, each with a `//:` comment, and the accessible description
+   updated alongside so a screen-reader user learns what Esc now does:
+   - fresh: `tr("Hidden input - Esc to answer in the command line instead")`;
    - after a submit while the game still holds ECHO: `tr("Sent - waiting for the game")`;
-   - marked hold (B.5.3 says what Esc does then): `tr("This game seems to hide everything you type
-     - Esc to stop hiding it until the game says otherwise")`.
+   - re-opened after a one-line dismissal (`Host::passwordEntryReopened()`): `tr("Still hidden -
+     Esc again to stop hiding input until the game says otherwise")`;
+   - marked hold (recognition fired; it may still be a real password prompt, so do not tell the
+     player it is not): `tr("Hidden input - if this game hides everything you type, Esc stops the
+     hiding until the game says otherwise")`.
    Font and palette from the command line (`font()`, `mRegularPalette`).
 5. Key handling in `event()`, because `QWidget::event` consumes Tab before `keyPressEvent`:
    - `ShortcutOverride`: claim it (accept, return true) when `mpHost->caretShortcutMatches(ke)` or
      when a user key binding matches the profile-switch shortcut - the same two checks
      `TCommandLine::event()` makes at ~200-219. Lift them into one shared helper (a static on
      `TCommandLine`, or `Host::inputShortcutOverrideClaims(const QKeyEvent*)`) rather than copying.
-     Never accept any other ShortcutOverride: that would kill every application shortcut.
+     Every other ShortcutOverride goes to `QLineEdit::event()`, which claims only its own editing
+     keys. Never accept one wholesale: that would kill every application shortcut.
    - `KeyPress`, in this order:
      1. caret shortcut → `mpHost->setCaretEnabled(true)`; accept. (Screen-reader users must be able
         to leave the field to re-read the prompt without losing it.)
@@ -339,8 +377,8 @@ A `QLineEdit` subclass. Keep it small; the red team estimates ~200 lines with he
         history, no completion). On macOS arrows carry `KeypadModifier`; treat it as "no modifier"
         exactly as `TCommandLine` does (~453-500).
      5. `Key_PageUp`/`Key_PageDown`, no modifier → scroll the console as `TCommandLine` does.
-     6. `ke->matches(QKeySequence::Copy | Cut | Undo | Redo)` → accept, do nothing, in both echo
-        modes.
+     6. `ke->matches(QKeySequence::Copy)`, `Cut`, `Undo`, `Redo` (four calls; `matches` takes one
+        sequence) → accept, do nothing, in both echo modes.
      7. Ctrl+digit tab switching: reuse `handleCtrlTabChange` if it lifts out of `TCommandLine`
         cheaply; otherwise list it in §4.10 as dropped while the field is open.
      8. Everything else. Let `text = ke->text()`, `printable = !text.isEmpty() &&
@@ -368,8 +406,8 @@ A `QLineEdit` subclass. Keep it small; the red team estimates ~200 lines with he
    `mpHost->recordActiveCommandLine(mpCommandLine)`, so `setFocusOnHostActiveCommandLine()` and
    the caret forwarder keep landing here through the proxy. `mousePressEvent`/`mouseReleaseEvent`
    call `mudlet::self()->activateProfile(mpHost)` as the command line does.
-9. `setHoldMarked()` switches the placeholder to the marked text. Signals: `submitted()`,
-   `dismissed()`. No text anywhere in the API.
+9. `setHoldMarked()` and `setReopened()` switch the placeholder and the accessible description.
+   Signals: `submitted()`, `dismissed()`. No text anywhere in the API.
 10. Destructor: nothing. Do not `clear()` before destruction: Qt zero-fills the buffer it still
     holds only when the echo mode is not Normal, and `clear()` would leave characters in spare
     capacity. (Submitted text is handed to the send path, which zeroes its local; the field's own
@@ -394,22 +432,26 @@ the command line. Members: `QPointer<TPasswordEntry> mpPasswordEntry`; accessor
      `mpCommandLine->installEventFilter(this)`: on `Resize`/`Move` copy the geometry again (window
      resizes, font changes, a label `prompt:` link growing the line).
   3. Typed-ahead text: if `mpCommandLine->playerTypedLine()` (D.3), move its text into the field
-     (`setText`, line breaks stripped) and `mpCommandLine->clear()` (drops the command line's undo
-     history; being programmatic, it also resets the flag). Otherwise leave the command line alone.
-     Rationale in §4.4.
-  4. `mpCommandLine->setFocusProxy(mpPasswordEntry)` (invariant 5). Qt moves focus to the proxy if
-     the command line had it, with normal focus events.
-  5. Focus rule: `QWidget* f = window()->focusWidget();` (the window's focus child, valid even
+     (`setText`, line breaks stripped), `mpCommandLine->clear()` (drops the command line's undo
+     history; being programmatic, it also resets the flag), and `mpHost->passwordEntryEdited()`
+     (moved text is the player's answer in progress; a late keychain password must not be typed
+     over it - `setText` does not emit `textEdited`, so B.7 would not see it). Otherwise leave the
+     command line alone. Rationale in §4.4.
+  4. Capture `QWidget* f = window()->focusWidget();` *now* (the window's focus child, valid even
      while Mudlet is not the active application - `QApplication::focusWidget()` is null then).
-     If `f` is null, `mpCommandLine`, or any `TCommandLine` of this profile,
-     `mpPasswordEntry->setFocus(Qt::OtherFocusReason)`. Otherwise do not steal (editor, dialogs,
-     another profile's widgets in multi-view, an output pane in caret mode) and call
-     `mudlet::self()->announce(text, {}, true)` with a short "the game asks for hidden input" line
-     so a screen-reader user knows the field is there. A printable key typed on the pane in caret
-     mode reaches the field through the proxy (D.2).
+     Then `mpCommandLine->setFocusProxy(mpPasswordEntry)` (invariant 5); Qt moves focus to the
+     proxy if the command line had it, with normal focus events.
+  5. Focus rule on the captured `f`: if it is null, `mpCommandLine`, or any `TCommandLine` of this
+     profile, `mpPasswordEntry->setFocus(Qt::OtherFocusReason)` (a no-op with correct events if
+     step 4 already moved it). Otherwise do not steal (editor, dialogs, another profile's widgets
+     in multi-view, an output pane in caret mode) and call `mudlet::self()->announce(text, {}, true)`
+     with a short "the game asks for hidden input" line so a screen-reader user knows the field is
+     there. Never announce when the field took focus: the focus event already speaks. A printable
+     key typed on the pane in caret mode reaches the field through the proxy (D.2).
   6. connect `dismissed` → `mpHost->dismissPasswordEntry()`, which flips `passwordEntryWanted()`
      false and closes the field through the one signal. `submitted` needs no connection.
-  7. If `mpHost->passwordEntryHoldMarked()` already, `setHoldMarked()`.
+  7. If `mpHost->passwordEntryHoldMarked()` already, `setHoldMarked()`; else if
+     `mpHost->passwordEntryReopened()`, `setReopened()`.
   8. First time in this profile (`readProfileData("passwordEntryIntroduced")` empty): post one
      `[ INFO ]` line naming Enter, Esc (once to start over, again on an empty box to step past),
      that aliases do not apply in the box, and the profile setting for games that hide all input;
@@ -456,22 +498,27 @@ the command line. Members: `QPointer<TPasswordEntry> mpPasswordEntry`; accessor
 3. Add a fact: `bool playerTypedLine() const` - "everything on the line was typed or pasted by
    the player, starting from an empty or wholly selected line, and nothing else has changed it
    since". Not a heuristic about history or timing. Implementation:
-   - a `mUserEditInProgress` guard set around every path where the player edits: the whole of
-     `event()` for `KeyPress` and `InputMethod` events (that covers `processNormalKey`, Backspace,
-     Delete, Space, Shift+Return, Tab completion), and an `insertFromMimeData()` override (paste,
-     drop, middle-click). Record `mEditStartedOnBlankLine = toPlainText().isEmpty() ||
-     (the selection covers the whole document)` when the guard is raised.
-   - a `QTextDocument::contentsChange` handler: if `!mUserEditInProgress` → `mPlayerTypedLine =
+   - a `mUserEditInProgress` guard raised only around the code that turns a key or a paste into
+     text: `processNormalKey()`'s `QPlainTextEdit::event()` call, the Backspace and Delete
+     branches' base calls, the Space fall-through, Shift+Return's `insertBlock`, `InputMethod`
+     events, and an `insertFromMimeData()` override (paste, drop, middle-click). Record
+     `mEditStartedOnBlankLine = toPlainText().isEmpty() || (the selection covers the whole
+     document)` when the guard is raised.
+   - the guard is **never** raised around anything that can run Lua: `keybindingMatched()`, the
+     keypad `processDataStream()` call, the whole of `enterCommand()` (aliases, `sysDataSendRequest`
+     and any `printCmdLine` they make must count as script writes), `handleTabCompletion()` (a word
+     from the game's buffer is not typed), `historyMove()`, the spell-check popup's replacement.
+   - a `QTextDocument::contentsChange` handler: if the plain text is unchanged (a spell-check
+     underline, `recheckWholeLine`) → ignore; else if `!mUserEditInProgress` → `mPlayerTypedLine =
      false` (a script's `setPlainText`, a `clear()`, a history recall changed the line); else if
      `mEditStartedOnBlankLine` → `mPlayerTypedLine = true`; else leave it (typing more into a line
-     keeps whatever it was).
+     keeps whatever it was). Keep the last plain text in a member to make the first test cheap.
    - `enterCommand()` sets `mPlayerTypedLine = false` as its first statement, before
-     `emit commandSubmitted()` and the send (an alias or handler may open the field synchronously),
-     and its own `clear()`/`selectAll()` runs with the guard lowered. `historyMove()` and
-     `handleTabCompletion()`'s programmatic writes, and anything else that writes the document from
-     inside a guarded section, lower the guard first so the change counts as non-user.
-   - The spell-check suggestion replacement counts as a user edit; the guard covers `slot_popupMenu`.
-   C.3 reads it once, when the field opens.
+     `emit commandSubmitted()` and the send, and calls `mpHost->clearPasswordEntryDismissal()` next
+     to its `mpHost->send(command)` call (the non-action branch only: a line handed to a Lua action
+     did not go to the game). That call is a notification of an input event, not a guard; it is
+     the second and last password-related line in this file.
+   C.3 reads `playerTypedLine()` once, when the field opens.
 
 #### E. Small consumers
 
@@ -495,16 +542,21 @@ the command line. Members: `QPointer<TPasswordEntry> mpPasswordEntry`; accessor
   2. `checkCharacterModePattern()`: after setting the flag, `mpHost->markPasswordEntryHold()`.
      Add `bool characterModeDetected() const` so `Host::setRemoteEchoingActive(true)` can mark a
      hold that begins after recognition already fired on this connection.
-  3. `slot_send_pass()` and `sendOutstandingAutoLoginPassword()`: after a successful send,
-     `if (mpHost->isRemoteEchoingActive()) mpHost->suppressPasswordEntryUntilEchoReleased();`.
-     Never while ECHO is off: there would be no WONT to end it.
+  3. `slot_send_pass()` and `sendOutstandingAutoLoginPassword()`: after a successful send, one
+     call, `mpHost->autoLoginPasswordSent()`, which suppresses (only if ECHO is up: there would be
+     no WONT to end it otherwise), clears the pending flag and recomputes once (A's discipline).
+     `slot_send_pass()`'s no-password branch clears pending on its own.
   4. `bool autoLoginPending() const` backed by an explicit member, written only through
-     `setAutoLoginPending(bool)`, which calls `mpHost->recomputePasswordEntryWanted()`. Set to
-     `mpHost->hasAutoLoginCredentials()` where `mTimerLogin` starts (~1079) and again at the end
-     of `slot_send_login()`; to false in `slot_send_pass()` (both branches), `cancelLoginTimers()`
-     and `reset()`. `Host::securedPasswordAnswered()` on a denied lookup calls
+     `setAutoLoginPending(bool)`, which calls `mpHost->recomputePasswordEntryWanted()` unless asked
+     not to. Set to `mpHost->hasAutoLoginCredentials()` where `mTimerLogin` starts (~1079) and
+     again at the end of `slot_send_login()`; to false in `cancelLoginTimers()` and, *after* the
+     `setRemoteEchoingActive(false)` call, in `reset()`. `slot_send_login()` also calls
+     `mpHost->clearPasswordEntryDismissal()` when it sends the name: the auto-login answered a
+     prompt the player stepped past, so the next prompt gets its field.
+     `Host::securedPasswordAnswered()` always ends with
      `mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning())`
-     so a refused keychain does not hold the field back. `cancelLoginTimers()` already does what
+     (denied, timed out, empty or errored: every outcome that ends the pending lookup) so a
+     refused keychain does not hold the field back. `cancelLoginTimers()` already does what
      "abandon the auto-login" needs (stops both timers, clears the outstanding marker); reuse it.
   5. `restartPasswordMaskTimeout()` reads the preference through the getter.
   No change to negotiation, the anomaly latch, the timers' logic or the recognition flag's home.
@@ -525,22 +577,23 @@ the command line. Members: `QPointer<TPasswordEntry> mpPasswordEntry`; accessor
 | Player types password, Enter | text goes out via `sendPasswordEntry()`; field empties, placeholder says it was sent, and it stays open until the game releases ECHO (RFC 857: the game is still echoing) |
 | Game sends WONT ECHO | field closes; any text in it is discarded; focus returns to the command line if the field had it; the hold's flags are cleared; a typed-ahead command left in the line is still there |
 | Password rejected, game re-prompts with ECHO still held | field is still up; the retry is protected, however long the player takes (this sinks the "close on Enter" alternative, §4.1) |
-| Password rejected, game toggles WONT then WILL (Circle/tba style) | field closes and a fresh one opens. Note the anomaly latch: the count rises while consecutive toggles are under 5 s apart and only resets after a longer gap, so a fast fourth attempt (fifth toggle) gets no field and is typed in the clear, as today. Documented; not this PR's to change |
+| Password rejected, game toggles WONT then WILL (Circle/tba style) | field closes and a fresh one opens. Note the anomaly latch: the count rises while consecutive toggles are under 5 s apart and only resets after a longer gap; the fifth toggle latches (it may be a WONT, still honoured) and the next WILL is refused, so a fast run of retries ends with one typed in the clear, as today. Documented; not this PR's to change |
 | Esc with text in the field | text discarded, field stays (start over) |
-| Esc on an empty field, unmarked hold | field closes, focus to the command line; the next line to reach the game from anywhere (the command line, a trigger, a key) ends the dismissal. If ECHO is still held then, the hold becomes *marked* and a fresh field opens, one event-loop turn later, saying so |
-| Esc on an empty field, marked hold | no field until the game releases ECHO. On a game that hides everything, the player turns the preference on for that profile; the one-time info line says so |
-| Game negotiates SGA and holds ECHO past a submitted line (GoMud, or a line-mode game masking both prompts) | recognition fires ~3 s after the most recent line; the open field stays and switches to the marked placeholder. Nothing closes. Esc on the empty field then stops the field until the game releases ECHO. A wrong first password on such a game is retried inside the field |
-| Game holds ECHO, no SGA | same as above without recognition: Esc, one line, the field comes back marked, Esc again. Two Escs per session, or the preference |
-| Auto-login with stored credentials | no field while the auto-login still intends to send a password; the stored password goes out by its own path; if the game had ECHO up at that moment, no field until it releases ECHO; typed-ahead text stays in the command line (#7921). A late keychain password, once sent under ECHO, suppresses the same way. Cost (invariant 7's one exception): if the game rejects the stored password and holds ECHO, the retry is typed in the clear - into history, through aliases and the event, on screen |
+| Esc on an empty field, first time in this hold, unmarked | field closes, focus to the command line; the next line the *player* submits from a command line (or the auto-login's name) ends the dismissal. If ECHO is still held then, a fresh field opens one event-loop turn later, saying it is still hidden. A trigger's, timer's or key binding's send does not end the dismissal (a mapper sending at 10 Hz must not bring the field back) |
+| Esc on an empty field, second time in this hold, or on a marked hold | no field until the game releases ECHO. On a game that hides everything, the player turns the preference on for that profile; the one-time info line says so |
+| Game negotiates SGA and holds ECHO past a submitted line (GoMud, or a line-mode game masking both prompts) | recognition fires ~3 s after the most recent line; the open field stays and switches to the marked placeholder. Nothing closes. Esc on the empty field then stops the field until the game releases ECHO. A wrong first password on such a game is retried inside the field. One Esc |
+| Game holds ECHO, no SGA | Esc, one line, the field comes back saying it is still hidden, Esc again. Two Escs per hold, or the preference. Without recognition the 60 s login-phase timeout stays armed, so an idle minute inside the first five can end the hold and a fresh WILL starts another |
+| Player at a marked or re-opened field types an alias name (`pw`) | Esc, `pw`, Enter: the alias expands through `Host::send()`; ECHO is usually released by the reply. If it is not, the field returns as re-opened for the next prompt |
+| Auto-login with stored credentials | no field while the auto-login still intends to send a password (a password typed by hand in that window goes through the command line in the clear; invariant 7); the stored password goes out by its own path; if the game had ECHO up at that moment, no field until it releases ECHO; typed-ahead text stays in the command line (#7921). A late keychain password, once sent under ECHO, suppresses the same way. Cost: if the game rejects the stored password and holds ECHO, the retry is typed in the clear - into history, through aliases and the event, on screen |
 | Auto-login on a game that never negotiates ECHO at login | nothing is suppressed (ECHO was off at the send), so a mid-session WILL ECHO an hour later gets a field |
 | Keychain prompt unanswered or refused, player types the password | a field opens (nothing is pending); its first edit cancels the auto-login, so the late password cannot be sent on top |
-| A trigger/script/key binding sends the password | goes through `Host::send()` as today, alias pass and all (#10968's requirement); the field closes when the game releases ECHO |
+| A trigger/script/key binding sends the password | goes through `Host::send()` as today, alias pass and all (#10968's requirement); the field closes when the game releases ECHO. Such a send never ends a dismissal |
 | F-key bound to a login alias pressed while the field has focus | forwarded to `KeyUnit`, binding runs, field stays |
 | ECHO anomaly latch | cTelnet refuses ECHO as today; no field; input in the clear, as today |
 | Preference turned on mid-prompt | field closes now, text discarded; typed input ordinary, history works (#8902) |
 | Preference turned off mid-prompt | field opens, unless the hold is suppressed (auto-login answered, or Esc on a marked hold) |
 | The 60 s timeout or a disconnect while the player is away with text in the field | field closes, text discarded; a paste made afterwards lands in the command line, visibly. Same as today's `clear()` on unsuppress |
-| Sub command line / miniconsole command line during a prompt | untouched, and its Lua action now runs (E). The field takes focus from it when it opens, so the password does not land there by momentum. A line it sends to the game ends a dismissal like any other |
+| Sub command line / miniconsole command line during a prompt | untouched, and its Lua action now runs (E). The field takes focus from it when it opens, so the password does not land there by momentum. A line it submits to the game (no action) ends a dismissal like one from the main line |
 | Script calls `printCmdLine("main", pw)` / `sendCmdLine(pw)` / MXP `prompt:` link during a prompt | the text goes into the field; Enter sends it through the field's path; `getCmdLine("main")` still reads the command line; WONT discards it as it discards anything in the field |
 | Caret mode: printable key on the output pane during a prompt | `TTextEdit` forwards to the command line; the D.2 redirect hands it to the field |
 | Caret shortcut (Tab / Ctrl+Tab / F6) while the field has focus | caret mode turns on, focus goes to the pane; the field stays; typing a printable key comes back to it |
@@ -589,12 +642,16 @@ are unchanged. Anyone tempted to improve them in this PR: do not.
    field then lasts until the game releases ECHO rather than one line. The player decides; a wrong
    guess costs a placeholder, never a password.
 3. **Esc is "start over", then "step past", then "stop".** With text, Esc empties the field. On an
-   empty field it dismisses until the next line reaches the game. If the game still holds ECHO
-   after that line, it evidently hid a line the player sent normally, so the hold is marked and the
-   field returns saying so; a second Esc then lasts until the game releases ECHO. One line also
-   serves the player who types an alias name at the prompt: Esc, `pw`, Enter, and the field is
-   back for whatever comes next. A game that hides everything is a per-game property, so its
-   lasting answer is the per-profile preference.
+   empty field it dismisses until the player's next line goes to the game. If the game still holds
+   ECHO after that, the field returns saying it is still hidden, and a second Esc in the same hold
+   lasts until the game releases ECHO. Two Escs, both intuitive, and the count is per hold: v3
+   tried to *mark* the hold on that re-open as evidence the game hides everything, but at send
+   time the game cannot have answered yet, so every re-open was marked and a Diku player using an
+   alias at the prompt saw the "hides everything" text on every login. Only the player's own lines
+   (and the auto-login's name) end a dismissal: a trigger or a mapper sending ten times a second
+   must not keep bringing the field back. One line also serves the player who types an alias name
+   at the prompt: Esc, `pw`, Enter, and the field is back for whatever comes next. A game that
+   hides everything is a per-game property, so its lasting answer is the per-profile preference.
 4. **Text the player was typing when the prompt arrives moves into the field.** v1 left it in the
    command line, which split a fast typist's password (`hunt` behind the field, `er2` sent) and
    failed the login. The rule is a fact - every character on the line came from the player's keys
@@ -609,7 +666,10 @@ are unchanged. Anyone tempted to improve them in this PR: do not.
    session. The cost is invariant 7's one exception: a *wrong stored password* on such a game is
    retried in the clear. That is the auto-login's own failure, on a rare game class, and the player
    sees it happen. The suppression is only set when ECHO was up at the send, so a game that never
-   negotiates ECHO at login keeps its field for a later prompt.
+   negotiates ECHO at login keeps its field for a later prompt. The pending window itself has a
+   cost too: a password typed by hand at a masked prompt in the first seconds of an auto-login
+   connection goes through the command line in the clear (today it would be masked). Both costs
+   belong to the auto-login and are listed in invariant 7.
 6. **Lua writes to "main" go into the field; reads do not.** A script that pre-fills the line for
    the player to press Enter wants that text where the keyboard is. Reads keep the "getCmdLine
    never returns the password" guarantee; the existing spec case about the prompt ending keeps its
@@ -640,6 +700,13 @@ are unchanged. Anyone tempted to improve them in this PR: do not.
 14. **The auto-login-pending input is an explicit flag, not a timer query.** Its transitions are
     many (connect, name sent, password sent, GMCP takeover, keychain refused, reset); a flag with
     one setter that recomputes is auditable, a `QTimer::isActive()` read at recompute time is not.
+15. **Synchronous recompute, one Host call per transition.** A deferred, coalesced recompute would
+    make ordering irrelevant, but a Lua spec that feeds WILL ECHO must see the field before its
+    next statement, and a busted `it` block never yields to the event loop. So the recompute is
+    synchronous and every transition that changes two inputs (the auto-login sending under ECHO:
+    suppress + pending false; a release: echo false + four flags) is one Host method. Round three
+    found the bug this prevents: pending cleared first opened a field for an instant, moved the
+    typed-ahead `look` into it, and destroyed it when the suppression closed it.
 
 ## 5. Work breakdown
 
@@ -666,8 +733,9 @@ named after the class; `friend class PasswordEntryPolicyTest` in both `ctelnet.h
   and the signal count (one emission per change, none for a no-op). WONT clears all three flags;
   so does `reset()` while ECHO is already off (call `setRemoteEchoingActive(false)` twice).
   `markPasswordEntryHold()` changes nothing about wanted and emits its own signal once. Esc on an
-  unmarked hold is undone by `Host::send()` (after the deferred recompute: `QTRY_`), which also
-  marks the hold if ECHO is still up; Esc on a marked hold lasts until WONT. `setAutoLoginPending`
+  unmarked hold is undone by `clearPasswordEntryDismissal()` (after the deferred recompute:
+  `QTRY_`) and `passwordEntryReopened()` is then true; a second Esc in the same hold, or an Esc on
+  a marked hold, lasts until WONT; a Lua `send()` in between changes nothing. `setAutoLoginPending`
   transitions: start `mTimerPass` with `start(0ms)` (not by calling `slot_send_pass()` directly,
   which would leave the timer live for the next case) and `QTRY_` the suppression; with ECHO off
   at the send, nothing is suppressed. `sendPasswordEntry("x")` reaches the server, raises no
@@ -763,18 +831,22 @@ where no single line does:
 5. WONT while the field holds text: nothing sent, text gone, command line unchanged.
 6. Esc with text empties the field and keeps it; Esc on the empty field closes it; a line typed
    into the command line now expands an alias although ECHO is held; after that line a fresh field
-   (different `QPointer`) is open and marked; Esc on it closes it and nothing re-opens after a
-   further line; loopback WONT then WILL opens one again.
+   (different `QPointer`) is open with the re-opened placeholder; Esc on it closes it and nothing
+   re-opens after a further line; loopback WONT then WILL opens a fresh one. Also: after the first
+   Esc, a `tempTimer`/trigger `send()` does not bring the field back (`qWait` past the deferred
+   recompute), a typed line does.
 7. Preference on: no field on WILL ECHO (the history half of #8902 is not red-able: today's guard
    already allows it; assert it anyway).
 8. Recognition with a field open: loopback WILL SGA + WILL ECHO, a submitted line, fire the
    detector; the field is still open and marked; a further Return keeps it open; Esc on the empty
    field closes it; no field re-opens while ECHO is held; loopback WONT then WILL opens a new one,
    already marked because recognition fired on this connection; Esc on it closes it again.
-9. Auto-login: with credentials set and `mTimerPass` started, WILL ECHO opens no field; fire the
-   timer with `start(0ms)` and `QTRY_` that the password went out; still no field until WONT;
-   typed-ahead text in the command line survived. Then the same with ECHO off at the send: a
-   later WILL opens a field.
+9. Auto-login: with credentials set and `mTimerPass` started, WILL ECHO opens no field; *type*
+   `look` into the command line with keys (a `printCmdLine` line is not player-typed and would
+   pass with the round-three ordering bug); fire the timer with `start(0ms)` and `QTRY_` that the
+   password went out; still no field until WONT; `look` is still in the command line. Then the
+   same with ECHO off at the send: a later WILL opens a field. Then: Esc at a name prompt, and
+   `slot_send_login()`'s name send re-opens the field for the password.
 10. A key binding on F7 doing `send("frombinding")` fires from the field, the server receives it,
     the field is still open; a binding on plain `a` does not fire and `a` is typed.
 11. Reveal toggle flips `echoMode()`; select all, Ctrl+C in the revealed field leaves the
@@ -906,3 +978,22 @@ preference rows.
 Rejected: ending an auto-login suppression at the next submitted line (moot: it is no longer set
 while ECHO is off); a link in the info line that flips the preference (no `setConfig` key exists;
 name the setting instead).
+
+### Round three (v3 → v3.1): one reviewer walking twelve sequences against the code
+
+Accepted: two inputs written by two calls in one auto-login transition opening a field for an
+instant and destroying typed-ahead text (§4.15: one Host call per transition; `reset()` order);
+"mark on re-open" being always true at send time (§4.3: second-Esc rule, re-opened placeholder);
+triggers and timers ending a dismissal (A: only player-submitted lines and the auto-login's name);
+invariant 7 missing the timeout, the latch and the pending window; the typed-ahead guard spanning
+code that runs Lua, Tab completion listed on both sides, and format-only changes flipping the
+flag (D.3); moved text not counting as the player's first edit (C.3); the focus capture after
+`setFocusProxy` causing a spurious announce (C.4/C.5); the marked placeholder telling a player at
+a real password prompt to press Esc, and the accessible description never updating (B.4);
+`securedPasswordAnswered()` recomputing only on denial (E.4); E.3's stray read of the echo state
+(folded into `autoLoginPasswordSent()`); invariant 3's grep too narrow; `matches()` taking one
+sequence; "twice per session" being per hold; §2 line numbers and the timeout's arming rule.
+
+Rejected: a deferred, coalesced recompute (§4.15: specs cannot yield); ending a dismissal from
+`cTelnet::sendData` (the auto-login name is not a game command there, and lines an alias swallows
+were still the player's answer).
