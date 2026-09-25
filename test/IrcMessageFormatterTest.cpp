@@ -132,26 +132,113 @@ private slots:
 
     // Everything the server sends is put into an HTML document, so the markup
     // characters in it have to be escaped on the way - in every field of every
-    // line, not just the ones that are obviously free text
+    // line, not just the ones that are obviously free text. The window links
+    // anchors through QDesktopServices::openUrl(), so markup that got through
+    // could plant a link to anything. <u> is used because the formatter adds
+    // <b> of its own around a channel message's sender.
     void window_escapesMarkupInEveryField_data()
     {
         QTest::addColumn<QByteArray>("raw");
 
-        QTest::newRow("information numeric") << QByteArrayLiteral(":server 001 me :<b>not bold</b>");
-        QTest::newRow("kick reason") << QByteArrayLiteral(":bob!u@h KICK #mudlet alice :<b>not bold</b>");
+        QTest::newRow("information numeric") << QByteArrayLiteral(":server 001 me :<u>not underlined</u>");
+        QTest::newRow("kick reason") << QByteArrayLiteral(":bob!u@h KICK #mudlet alice :<u>not underlined</u>");
         // a channel name may hold anything but NUL, BEL, CR, LF, space, comma
         // and colon, so it is markup a channel operator can choose
-        QTest::newRow("kick channel") << QByteArrayLiteral(":bob!u@h KICK #<b>bold</b> alice :hi");
-        QTest::newRow("part reason") << QByteArrayLiteral(":bob!u@h PART #mudlet :<b>not bold</b>");
-        QTest::newRow("quit reason") << QByteArrayLiteral(":bob!u@h QUIT :<b>not bold</b>");
+        QTest::newRow("kick channel") << QByteArrayLiteral(":bob!u@h KICK #<u>underlined</u> alice :hi");
+        QTest::newRow("part reason") << QByteArrayLiteral(":bob!u@h PART #mudlet :<u>not underlined</u>");
+        QTest::newRow("quit reason") << QByteArrayLiteral(":bob!u@h QUIT :<u>not underlined</u>");
+        QTest::newRow("join channel") << QByteArrayLiteral(":bob!u@h JOIN #<u>underlined</u>");
+        QTest::newRow("own join channel") << QByteArrayLiteral(":me!u@h JOIN #<u>underlined</u>");
+        QTest::newRow("part channel") << QByteArrayLiteral(":bob!u@h PART #<u>underlined</u>");
+        QTest::newRow("part channel with a reason") << QByteArrayLiteral(":bob!u@h PART #<u>underlined</u> :bye");
+        QTest::newRow("invite channel") << QByteArrayLiteral(":bob!u@h INVITE me #<u>underlined</u>");
+        QTest::newRow("mode target") << QByteArrayLiteral(":bob!u@h MODE #<u>underlined</u> +o alice");
+        // a ban mask is whatever the channel operator typed
+        QTest::newRow("mode argument") << QByteArrayLiteral(":bob!u@h MODE #mudlet +b <u>underlined</u>!*@*");
+        QTest::newRow("notice target") << QByteArrayLiteral(":bob!u@h NOTICE #<u>underlined</u> :hi");
+        // the text of a CTCP reply is whatever the other user's client says
+        QTest::newRow("CTCP VERSION reply") << QByteArrayLiteral(":bob!u@h NOTICE me :\001VERSION <u>not underlined</u>\001");
+        QTest::newRow("CTCP TIME reply") << QByteArrayLiteral(":bob!u@h NOTICE me :\001TIME <u>not underlined</u>\001");
+        QTest::newRow("version numeric") << QByteArrayLiteral(":server 351 me <u>not underlined</u> irc.example.org :comments");
+        QTest::newRow("time numeric") << QByteArrayLiteral(":server 391 me irc.example.org :<u>not underlined</u>");
+        QTest::newRow("error") << QByteArrayLiteral("ERROR :<u>not underlined</u>");
+        QTest::newRow("unknown command") << QByteArrayLiteral(":bob!u@h FROBNICATE :<u>not underlined</u>");
+        // nick rules are the server's to enforce, and it is the server that is not trusted
+        QTest::newRow("new nick") << QByteArrayLiteral(":old!u@h NICK :<u>underlined</u>");
+        QTest::newRow("channel message sender") << QByteArrayLiteral(":<u>underlined</u>!u@h PRIVMSG #mudlet :hi");
+        QTest::newRow("away nick") << QByteArrayLiteral(":<u>underlined</u>!u@h AWAY :brb");
+        QTest::newRow("kicked nick") << QByteArrayLiteral(":bob!u@h KICK #mudlet <u>underlined</u> :bye");
+        QTest::newRow("quitting nick") << QByteArrayLiteral(":<u>underlined</u>!u@h QUIT");
+        QTest::newRow("topic setter") << QByteArrayLiteral(":<u>underlined</u>!u@h TOPIC #mudlet :new");
+        QTest::newRow("pong sender") << QByteArrayLiteral(":<u>underlined</u>!u@h PONG me :1");
+    }
+
+    // Names are escaped rather than formatted, so a channel that looks like a
+    // web address is not made into a link to it
+    void window_leavesANameUnlinked()
+    {
+        const QString join = forWindow(":bob!u@h JOIN #www.example.org");
+        QVERIFY2(join.contains(QStringLiteral("! bob has joined #www.example.org")) && !join.contains(QStringLiteral("href")), qPrintable(join));
+        const QString kick = forWindow(":bob!u@h KICK #www.example.org alice");
+        QVERIFY2(!kick.contains(QStringLiteral("href")), qPrintable(kick));
     }
 
     void window_escapesMarkupInEveryField()
     {
         QFETCH(QByteArray, raw);
         const QString html = forWindow(raw);
-        QVERIFY2(!html.contains(QStringLiteral("<b>")), qPrintable(html));
-        QVERIFY2(html.contains(QStringLiteral("&lt;b")), qPrintable(html));
+        QVERIFY2(!html.contains(QStringLiteral("<u>")), qPrintable(html));
+        QVERIFY2(html.contains(QStringLiteral("&lt;u")), qPrintable(html));
+    }
+
+    // The composed replies carry the fields any user fills in about themselves
+    void window_escapesMarkupInAWhoisReply()
+    {
+        auto* whois = new IrcWhoisMessage(&mConnection);
+        whois->setPrefix(QStringLiteral("bob!ident@example.org"));
+        // realName, server, info, account, address, connected since, idle, secure, channels, away reason
+        whois->setParameters({QStringLiteral("<u>real name</u>"),
+                              QStringLiteral("irc.example.org"),
+                              QStringLiteral("<u>server info</u>"),
+                              QStringLiteral("<u>account</u>"),
+                              QStringLiteral("192.0.2.1"),
+                              QStringLiteral("0"),
+                              QStringLiteral("5"),
+                              QString(),
+                              QStringLiteral("#<u>channel</u>"),
+                              QStringLiteral("<u>away</u>")});
+        const QString whoisHtml = IrcMessageFormatter::formatMessage(whois, false);
+        QVERIFY2(!whoisHtml.contains(QStringLiteral("<u>")), qPrintable(whoisHtml));
+        QCOMPARE(whoisHtml.count(QStringLiteral("&lt;u")), 5);
+    }
+
+    void window_escapesMarkupInAWhowasReply()
+    {
+        auto* whowas = new IrcWhowasMessage(&mConnection);
+        whowas->setPrefix(QStringLiteral("bob!ident@example.org"));
+        whowas->setParameters({QStringLiteral("<u>real name</u>"), QStringLiteral("irc.example.org"), QStringLiteral("<u>server info</u>"), QStringLiteral("<u>account</u>")});
+        const QString whowasHtml = IrcMessageFormatter::formatMessage(whowas, false);
+        QVERIFY2(!whowasHtml.contains(QStringLiteral("<u>")), qPrintable(whowasHtml));
+        QCOMPARE(whowasHtml.count(QStringLiteral("&lt;u")), 3);
+    }
+
+    void window_escapesMarkupInAWhoReply()
+    {
+        auto* who = new IrcWhoReplyMessage(&mConnection);
+        who->setPrefix(QStringLiteral("bob!ident@example.org"));
+        who->setParameters({QStringLiteral("ident@example.org"), QStringLiteral("irc.example.org"), QStringLiteral("H"), QStringLiteral("<u>real name</u>")});
+        const QString whoHtml = IrcMessageFormatter::formatMessage(who, false);
+        QVERIFY2(!whoHtml.contains(QStringLiteral("<u>")), qPrintable(whoHtml));
+        QVERIFY2(whoHtml.contains(QStringLiteral("&lt;u")), qPrintable(whoHtml));
+    }
+
+    void window_escapesMarkupInANamesReply()
+    {
+        auto* names = new IrcNamesMessage(&mConnection);
+        names->setParameters({QStringLiteral("#<u>channel</u>"), QStringLiteral("alice")});
+        const QString namesHtml = IrcMessageFormatter::formatMessage(names, false);
+        QVERIFY2(!namesHtml.contains(QStringLiteral("<u>")), qPrintable(namesHtml));
+        QVERIFY2(namesHtml.contains(QStringLiteral("&lt;u")), qPrintable(namesHtml));
     }
 
     // communi escapes & and < for the window before it strips the formatting
@@ -174,6 +261,13 @@ private slots:
         QTest::newRow("kick channel") << QByteArrayLiteral(":bob!u@h KICK #a&b<c> alice :hi") << QStringLiteral("! bob kicked alice from #a&b<c> (hi)");
         QTest::newRow("part reason") << QByteArrayLiteral(":bob!u@h PART #mudlet :Fish & Chips <here>") << QStringLiteral("! bob has left #mudlet (Fish & Chips <here>)");
         QTest::newRow("quit reason") << QByteArrayLiteral(":bob!u@h QUIT :Fish & Chips <here>") << QStringLiteral("! bob has quit (Fish & Chips <here>)");
+        QTest::newRow("join channel") << QByteArrayLiteral(":bob!u@h JOIN #a&b<c>") << QStringLiteral("! bob has joined #a&b<c>");
+        // a name is given as the server spelled it, formatting codes and all,
+        // so that it still matches the channel a script is told the line is for
+        QTest::newRow("join channel with formatting codes") << QByteArrayLiteral(":bob!u@h JOIN #\002a\002") << QStringLiteral("! bob has joined #\002a\002");
+        QTest::newRow("CTCP VERSION reply") << QByteArrayLiteral(":bob!u@h NOTICE me :\001VERSION Fish & Chips <here>\001") << QStringLiteral("! bob version is Fish & Chips <here>");
+        QTest::newRow("ban mask") << QByteArrayLiteral(":bob!u@h MODE #mudlet +b a&b<c>!*@*") << QStringLiteral("! bob sets mode #mudlet +b a&b<c>!*@*");
+        QTest::newRow("error") << QByteArrayLiteral("ERROR :Fish & Chips <here>") << QStringLiteral("[ERROR] Fish & Chips <here>");
         // Somebody typing an entity by hand must see it come out as typed
         QTest::newRow("a literal entity survives") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :&amp; &lt; &amp;lt;") << QStringLiteral("&amp; &lt; &amp;lt;");
         // The formatting codes are still stripped, which is why the plain text
@@ -188,6 +282,20 @@ private slots:
         QFETCH(QByteArray, raw);
         QFETCH(QString, expected);
         QCOMPARE(forLua(raw), expected);
+    }
+
+    void lua_getsComposedRepliesAsSent()
+    {
+        auto* who = new IrcWhoReplyMessage(&mConnection);
+        who->setPrefix(QStringLiteral("bob!ident@example.org"));
+        who->setParameters({QStringLiteral("ident@example.org"), QStringLiteral("irc.example.org"), QStringLiteral("H"), QStringLiteral("Fish & Chips <here>")});
+        QCOMPARE(IrcMessageFormatter::formatMessage(who, true), QStringLiteral("[WHO] bob (Fish & Chips <here>)"));
+
+        auto* whois = new IrcWhoisMessage(&mConnection);
+        whois->setPrefix(QStringLiteral("bob!ident@example.org"));
+        whois->setParameters({QStringLiteral("Fish & Chips <here>"), QStringLiteral("irc.example.org"), QStringLiteral("Example Network")});
+        const QString text = IrcMessageFormatter::formatMessage(whois, true);
+        QVERIFY2(text.contains(QStringLiteral("[WHOIS] bob is ident@example.org (Fish & Chips <here>)")), qPrintable(text));
     }
 
     // The same characters still have to be escaped on their way into the window
