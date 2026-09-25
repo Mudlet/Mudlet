@@ -409,8 +409,7 @@ int TLuaInterpreter::sendIrc(lua_State* L)
         return lua_error(L);
     }
 
-    // read with the length rather than as a C string, so that an embedded NUL is
-    // seen by the check below instead of silently truncating what gets sent
+    // with the length, so an embedded NUL is caught below rather than truncating what is sent
     size_t targetLength = 0;
     const char* targetText = lua_tolstring(L, 1, &targetLength);
     const QString target{QString::fromUtf8(targetText, static_cast<qsizetype>(targetLength))};
@@ -418,8 +417,7 @@ int TLuaInterpreter::sendIrc(lua_State* L)
     const char* msgText = lua_tolstring(L, 2, &msgLength);
     const QString msg{QString::fromUtf8(msgText, static_cast<qsizetype>(msgLength))};
 
-    // checked here as well as in dlgIRC::sendMsg() so that a call which cannot be
-    // sent is refused before it brings an IRC client into being
+    // also checked in dlgIRC::sendMsg(), but here too so a bad call doesn't open an IRC client
     const auto arguments = dlgIRC::validateMsgArguments(target, msg);
     if (!arguments.first) {
         return warnArgumentValue(L, __func__, arguments.second);
@@ -505,7 +503,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     }
 
     // No isMSDPEnabled() check, unlike sendGMCP/sendATCP: sysConnectionEvent fires
-    // before negotiation, so one here silently drops packages' subscriptions.
+    // before negotiation, so one here would silently drop packages' subscriptions.
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
@@ -533,14 +531,10 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     if (!host.mTelnet.isChannel102Enabled()) {
         return warnArgumentValue(L, __func__, "unable to send message as the 102 subchannel support has not been enabled by the game server");
     }
-    // The payload is two raw bytes, so it needs no encoding conversion - only the
-    // IAC escaping buildChannel102Message() applies to it
+    // Two raw bytes: no encoding conversion, only IAC escaping
     std::string output = cTelnet::buildChannel102Message(msg);
-    // socketOutRaw() is equally false for a profile that holds no socket at all,
-    // and unlike sendATCP/sendGMCP/sendMSDP there is no connection-state guard in
-    // front of this call to sort the two apart - so refusing on a false would
-    // report the channel as shut on every offline profile, which is the state
-    // feedTelnet() drives the telnet specs in.
+    // Result ignored: with no connection guard here (unlike sendGMCP etc.), false would also fail
+    // every offline profile, which is how feedTelnet() drives the telnet specs.
     host.mTelnet.socketOutRaw(output);
     lua_pushboolean(L, true);
     return 1;
@@ -599,8 +593,7 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
         return lua_error(L);
     }
 
-    // read with the length rather than as a C string, so that an embedded NUL is
-    // refused below instead of silently truncating the nick - as for sendIrc()
+    // with the length, so an embedded NUL can't truncate the nick
     size_t nickLength = 0;
     const char* nickText = lua_tolstring(L, 1, &nickLength);
     const QString nick{QString::fromUtf8(nickText, static_cast<qsizetype>(nickLength))};
@@ -651,17 +644,14 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 
     QString password;
     if (passwordGiven) {
-        // with the length, as for the nick above: a NUL here would truncate the
-        // credential that goes out as "PASS :<password>"
+        // with the length, so a NUL can't truncate the credential
         size_t passwordLength = 0;
         const char* passwordText = lua_tolstring(L, 4, &passwordLength);
         password = QString::fromUtf8(passwordText, static_cast<qsizetype>(passwordLength));
     }
 
-    // Everything that can be judged without touching the profile is judged here,
-    // before the first write: setIrcServer stores either all of what it was given
-    // or none of it, and a password refused after the host and port had been
-    // written would leave the new server paired with the old credential.
+    // Validate before the first write, so a refused password can't leave the new server
+    // paired with the old credential.
     if (passwordGiven) {
         const QPair<bool, QString> passwordValid = dlgIRC::validateIrcPassword(password);
         if (!passwordValid.first) {

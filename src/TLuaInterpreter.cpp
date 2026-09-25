@@ -90,11 +90,8 @@ int luaopen_yajl(lua_State*);
 }
 
 
-// A Host outlives its main console: closing a profile's window destroys the view
-// while triggers, the buffer, logging and Lua all keep running. The live
-// Hunspell handles and the user dictionary's word set belong to that view, so
-// the spelling functions have to report this rather than dereference what is
-// gone.
+// Closing a profile's window destroys the view, with its Hunspell handles and user dictionary, while
+// the Host and Lua keep running, so spelling functions must report this rather than dereference them.
 static const char* no_main_window_value = "the profile has no main window";
 
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
@@ -1346,12 +1343,8 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     QString saveAsFile;
     if (!lua_isnoneornil(L, 2)) {
         saveAsFile = lua_tostring(L, 2);
-        // The join below hands an absolute file name back as it is, dropping the
-        // folder that was asked for and putting the save outside it, so such a
-        // name is refused instead. Without a folder there is nothing to drop, and
-        // an absolute name is then the only way to say where the save goes. What
-        // counts as absolute is the platform's own rule: a leading separator on
-        // Unix, a drive or a UNC share on Windows.
+        // The join below returns an absolute name as-is, escaping the folder; without a folder,
+        // an absolute name is the only way to say where the save goes.
         if (!saveToDir.isEmpty() && QDir::isAbsolutePath(saveAsFile)) {
             return warnArgumentValue(L, __func__, qsl("file name '%1' cannot be an absolute path when a folder is given as well").arg(saveAsFile));
         }
@@ -1360,11 +1353,8 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         }
     }
 
-    // A folder from a script can already end in a separator, and this string is
-    // the file saveProfileAs() writes as well as the one handed back, so QDir
-    // does the join: exactly one separator, and nothing else about the path
-    // touched. An empty folder keeps naming the filesystem root, as it always
-    // has - QDir would make that the working directory instead.
+    // QDir joins with exactly one separator even if the folder ends in one. An empty folder still
+    // means the filesystem root, which QDir would make the working directory.
     const QString saveAsPathFileName = saveToDir.isEmpty() ? qsl("/%1").arg(saveAsFile) : QDir(saveToDir).filePath(saveAsFile);
     auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
@@ -2732,12 +2722,8 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 }
 
 
-// An install that went through, with or without something to own up to: the
-// install did succeed, so the answer stays true rather than nil plus a message,
-// and a part of the package whose Lua did not work rides along as a second
-// value only when there is one - the way setConfig()'s successWithWarning()
-// reports a setting that was made with a consequence a script has no other way
-// of learning about.
+// The install succeeded, so true rather than nil plus a message; a warning (e.g. part of the package's
+// Lua failed) rides along as a second value, as with setConfig()'s successWithWarning().
 static int pushInstallSucceeded(lua_State* L, const QString& warning)
 {
     lua_pushboolean(L, true);
@@ -3053,11 +3039,8 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     }
     const QString payload{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
-    // This runs a whole alias pass inside whatever script called it, and that
-    // pass sets "command" and the capture groups for its own scripts. Park what
-    // the caller was given so it is still there when the pass returns - an alias
-    // or trigger script would otherwise resume holding the nested command and an
-    // emptied matches table:
+    // The nested alias pass sets "command" and captures for its own scripts; park the caller's so it
+    // doesn't resume with the nested command and an emptied matches table:
     TLuaInterpreter* pL = host.getLuaInterpreter();
     const int dispatchDepth = pL->pushNestedDispatchState();
     // Host::send will encode the UTF encoded data here in the wanted Server
@@ -3493,9 +3476,7 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
-    // Take back the storage clearCaptureGroups() parked, unless a nested pass is
-    // still holding it - assigning over the recycled std::strings reuses their
-    // buffers, which is worth having on a path that runs per trigger fire
+    // Reclaim the parked storage, unless a nested pass holds it, to reuse its string buffers
     if (mCaptureGroupList.empty()) {
         mCaptureGroupList.swap(mSpareCaptureGroupList);
         mCaptureGroupPosList.swap(mSpareCaptureGroupPosList);
@@ -3517,10 +3498,8 @@ void TLuaInterpreter::clearCaptureGroups()
     if (mSpareCaptureGroupList.empty()) {
         mSpareCaptureGroupList.swap(mCaptureGroupList);
         mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
-        // A match-all trigger's /g loop accumulates every match on the line into
-        // one capture list, so what it parks scales with matches per line rather
-        // than with the pattern's group count. Past the cap the cost is the
-        // allocation this parking exists to save, never unbounded memory.
+        // A match-all trigger parks a capture per match on the line, so cap it; past the cap we only
+        // lose the allocation saving.
         if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
             mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
             mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
@@ -3557,15 +3536,11 @@ void TLuaInterpreter::clearCaptureGroups()
 }
 
 // No documentation available in wiki - internal function
-// Returns the depth of the entry it parked, for the matching
-// popNestedDispatchState() to unwind to.
+// Returns the depth to pass to the matching popNestedDispatchState().
 int TLuaInterpreter::pushNestedDispatchState()
 {
-    // Every Lua call is made before the entry goes onto the stack, and each one
-    // is raw. A package is free to put __index on the globals table, and running
-    // one here could raise past the pop this pairs with - raw reads cannot, and
-    // an entry that is not on the stack yet cannot be handed to the wrong caller
-    // by a pop that some later raise skips.
+    // Lua reads are raw, as a package's __index on the globals table could raise past the paired pop,
+    // and made before the push, so a raise can't leave the entry for the wrong caller to pop.
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
     lua_pushliteral(L, "matches");
@@ -3583,10 +3558,8 @@ int TLuaInterpreter::pushNestedDispatchState()
     saved.matchesRef = matchesRef;
     saved.multimatchesRef = multimatchesRef;
     saved.commandRef = commandRef;
-    // Copies rather than moves: a script the dispatch runs before any pattern has
-    // matched - a sysDataSendRequest handler, say - still reads these through
-    // selectCaptureGroup(), and setCaptureGroups() assigns over the vector left
-    // here, reusing its buffers exactly as it would have without the parking
+    // Copied, not moved: scripts run before any pattern matches (e.g. sysDataSendRequest handlers) still
+    // read these via selectCaptureGroup(), and setCaptureGroups() reuses the buffers left here
     saved.captureGroupList = mCaptureGroupList;
     saved.captureGroupPosList = mCaptureGroupPosList;
     saved.multiCaptureGroupList = mMultiCaptureGroupList;
@@ -3618,9 +3591,7 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
         return;
     }
 
-    // Anything above this entry belongs to a dispatch that a Lua error raised
-    // straight past its own restore. Those are stale, and handing one back here
-    // would give this caller some other script's captures and command.
+    // Entries above this one are stale, left by dispatches a Lua error unwound past their restore.
     const std::size_t wanted = static_cast<std::size_t>(depth) + 1;
     if (mNestedDispatchStates.size() > wanted) {
         qWarning().nospace() << "TLuaInterpreter::popNestedDispatchState(" << depth << ") WARNING - discarding " << (mNestedDispatchStates.size() - wanted)
@@ -3631,8 +3602,7 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
         }
     }
 
-    // Off the stack before any Lua runs, so nothing holds a reference into a
-    // vector that a re-entrant push could reallocate
+    // Moved out before any Lua runs: a re-entrant push could reallocate the vector
     NestedDispatchState saved = std::move(mNestedDispatchStates.back());
     mNestedDispatchStates.pop_back();
 
@@ -3644,8 +3614,7 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     mCapturedNameGroupsPosList = std::move(saved.capturedNameGroupsPosList);
     mMultiCaptureNameGroups = std::move(saved.multiCaptureNameGroups);
 
-    // Raw again, and for the same reason: a reference to a global that was nil
-    // reads back as nil, which is what it has to be put back as
+    // Raw, as in pushNestedDispatchState(); a reference to a nil global reads back as nil, as it must
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
     lua_pushliteral(L, "matches");
@@ -3698,18 +3667,12 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
-// A single GMCP frame can run to tens of kilobytes, which would bury everything
-// around it in the debug console - past this much of one the remainder is left
-// to display():
+// A GMCP frame can be tens of KB and bury the debug console; the rest is left to display():
 static constexpr qsizetype csmMaxInlinedProtocolPayload = 1000;
 
-// One debug console line for a protocol event: the event name first, then the
-// data that came with it so that reading it does not need a second command.
 static QString protocolEventLine(const QString& protocol, const QString& token, const QString& payload)
 {
-    // Collapsed to a single line: an event spread over several lines cannot be
-    // told apart from several events, and only the first would be marked with
-    // the profile it came from:
+    // One line: several would look like several events, and only the first gets the profile mark:
     const QString oneLine = payload.simplified();
     if (oneLine.isEmpty()) {
         return qsl("%1 event <%2>\n").arg(protocol, token);
@@ -3721,8 +3684,7 @@ static QString protocolEventLine(const QString& protocol, const QString& token, 
             .arg(protocol, token, oneLine.left(csmMaxInlinedProtocolPayload), QString::number(oneLine.size() - csmMaxInlinedProtocolPayload));
 }
 
-// What signalMXPEvent() puts in the mxp table, in the same terms: the tag's
-// attributes, the actions it carried and its text.
+// Mirrors the mxp table signalMXPEvent() builds.
 static QString mxpPayload(const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption)
 {
     QStringList parts;
@@ -3982,9 +3944,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         event.mArgumentList.append(key);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         if (TDebug::wants(TDebug::Category::Protocol)) {
-            // One event is raised per level of the key - gmcp.Char, then
-            // gmcp.Char.Vitals - all carrying the same frame, so only the event
-            // the data actually arrived for prints it:
+            // One event per key level (gmcp.Char, gmcp.Char.Vitals) carries the same frame; print it once:
             const bool isDeepestToken = (k == total - 1);
             TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(protocol, token, isDeepestToken ? string_data : QString()) >> &host;
         }
@@ -4121,20 +4081,16 @@ static QByteArray jsonEscapedControlByte(const char byte)
     }
 }
 
-// Punctuation for the table or array opening at this marker: the caller writes
-// the '{' or '[' itself, this only ends what stood in front of it. A string still
-// open ends here - the value marker of a structure opens none, so only a text
-// value or, on malformed input, a variable name leaves one - and a sibling that
-// already closed is separated from this one.
+// The caller writes the '{' or '['; this closes a string still open (only a text value or, if
+// malformed, a variable name leaves one) and separates an already-closed sibling.
 static void closeBeforeNestedStructure(QByteArray& script, const quint8 last, const int nest, const bool valueQuoted)
 {
     const bool endsString = (last == MSDP_VAL && valueQuoted) || last == MSDP_VAR;
     if (endsString) {
         script.append('\"');
     }
-    // Siblings exist only inside a structure: a variable's own value stands alone,
-    // and a comma in front of it would make JSON no decoder accepts. Only
-    // malformed input reaches this line at the top level.
+    // Only inside a structure: at top level a variable's value stands alone and a comma before it
+    // is invalid JSON (only malformed input reaches here at top level).
     if (nest && (endsString || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE)) {
         script.append(',');
     }
@@ -4163,9 +4119,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
     // strip: a name holding a byte JSON has to escape is longer in script than
     // the raw name is, and the strip then leaves part of the prefix behind.
     int topLevelPrefixLength = 0;
-    // whether the value being written opened a quote, which only a text value
-    // does - read while last is still MSDP_VAL, which is why the text cases below
-    // leave last alone
+    // whether the current value opened a quote (only text does); read while last is still
+    // MSDP_VAL, which is why the text cases below leave last alone
     bool valueQuoted = false;
     for (int i = 0; i < textLength; ++i) {
         switch (transcodedSrc.at(i)) {
@@ -4206,9 +4161,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             last = MSDP_ARRAY_CLOSE;
             break;
         case MSDP_VAR:
-            // the name starting here ends the string in front of it - a value, or
-            // the name of a variable that never got one; a table or an array
-            // closed its own, as the check at the end of the message assumes too
+            // ends a string still open: a value, or a name that never got one. Tables and arrays
+            // close their own, as the end-of-message check also assumes
             if (last == MSDP_VAL || last == MSDP_VAR) {
                 script.append('\"');
             }
@@ -4245,7 +4199,6 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                 // flag lands on whichever variable does flush next.
                 malformed = false;
             }
-            // opens the name starting now
             script.append('\"');
             last = MSDP_VAR;
             lastVar.clear();
@@ -4363,7 +4316,6 @@ void TLuaInterpreter::setMatches(lua_State* L)
         return;
     }
 
-    // presized, so filling it in does not rehash the table on the way up
     lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
 
     // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
@@ -5374,9 +5326,8 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    // This runs once per incoming line, and both toUtf8() calls it replaces
-    // allocated a QByteArray every time. The name is nearly always the same one,
-    // and the value is encoded into a buffer that is kept between calls.
+    // Runs per incoming line: the name's UTF-8 is cached and the value encoded into a kept buffer,
+    // avoiding toUtf8()'s allocation each time.
     if (mLastGlobalName != varName) {
         mLastGlobalName = varName;
         mLastGlobalNameUtf8 = varName.toUtf8();
@@ -5385,22 +5336,15 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     mUtf8Scratch.resize(encoder.requiredSpace(varValue.size()));
     const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), varValue);
     if (Q_UNLIKELY(encoder.hasError())) {
-        // The encoder writes a replacement character where an unpaired
-        // surrogate was, while toUtf8() drops it. That path can afford the
-        // copy and stay byte for byte what a script used to be given.
+        // The encoder writes U+FFFD for an unpaired surrogate but toUtf8() drops it; keep toUtf8()'s bytes.
         mUtf8Scratch = varValue.toUtf8();
     } else {
         mUtf8Scratch.resize(end - mUtf8Scratch.constData());
     }
 
-    // Raw, because this is how Mudlet hands a dispatch its own "command" and
-    // "line", and it runs with the whole dispatch on the C++ stack below it. The
-    // globals table can carry a metatable, and a __newindex a package put there
-    // runs on the first write of a name that is absent - a raise from one
-    // longjmps to the nearest pcall, skipping every C++ destructor between,
-    // which is the class CI/check-lua-error-strands.lua exists for. Setting
-    // these was never something a package could usefully intercept anyway: the
-    // name is absent only until the first dispatch writes it.
+    // Raw: the whole dispatch is on the C++ stack below, and a package's __newindex on the globals table
+    // could raise and longjmp past its destructors (see CI/check-lua-error-strands.lua). Nothing useful
+    // is lost: the name is absent only until the first dispatch writes it.
     lua_pushstring(L, mLastGlobalNameUtf8.constData());
     lua_pushstring(L, mUtf8Scratch.constData());
     lua_rawset(L, LUA_GLOBALSINDEX);
@@ -5560,10 +5504,8 @@ void TLuaInterpreter::abortAllDownloads()
 void TLuaInterpreter::initLuaGlobals()
 {
     if (pGlobalLua) {
-        // Every reference a parked nested dispatch holds belongs to the state
-        // about to go. Reusing one against the state that replaces it would
-        // corrupt a freshly-issued registry index, which is what
-        // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
+        // Parked references belong to the closing state; reused on the new one they would corrupt fresh
+        // registry indices (as Host::resetProfile_phase2() drains DeferredDelete to prevent for labels).
         mNestedDispatchStates.clear();
         lua_close(pGlobalLua);
     }
@@ -6966,9 +6908,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(keycode == -1);
-    // A folder has no key code of its own to fire, but leaving it inactive
-    // silences every key placed inside it, so groups start active here just as
-    // the alias and trigger ones do:
+    // An inactive folder silences every key inside it, so groups start active like alias and trigger ones:
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerKey();
