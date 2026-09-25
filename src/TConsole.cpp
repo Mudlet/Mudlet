@@ -58,6 +58,7 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QProxyStyle>
+#include <QResizeEvent>
 #include <QSaveFile>
 #include <QScrollBar>
 #include <QSettings>
@@ -65,6 +66,7 @@
 #include <QSplitter>
 #include <QStyleOptionSlider>
 #include <QTextBoundaryFinder>
+#include <QToolButton>
 #include <QVideoWidget>
 #include <cerrno>
 #include <chrono>
@@ -3203,7 +3205,11 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
         setFocusProxy(pCommandLine);
         mUpperPane->setFocusProxy(pCommandLine);
         mLowerPane->setFocusProxy(pCommandLine);
-        QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+        // For the deepest proxy: while the hidden-input box stands in for the
+        // command line, a screen reader told that the command line has focus
+        // may treat its typed-character echo as unprotected
+        QWidget* pFocusTarget = (pCommandLine && pCommandLine->focusProxy()) ? pCommandLine->focusProxy() : pCommandLine;
+        QAccessibleEvent event(pFocusTarget, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);
     } else if (mType == UserWindow) {
         if (pCommandLine && pCommandLine->isVisible()) {

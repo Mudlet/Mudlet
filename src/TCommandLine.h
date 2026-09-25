@@ -32,11 +32,10 @@
 #include <QString>
 #include <QStringList>
 #include <QStringDecoder>
-#include <QToolButton>
-#include <QResizeEvent>
 
 class Host;
 class KeyUnit;
+class QMimeData;
 class TConsole;
 
 class TCommandLine : public QPlainTextEdit //QLineEdit
@@ -77,7 +76,16 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const;
-    void setEchoSuppression(bool suppress);
+    // Whether everything on the line was typed or pasted by the player, starting
+    // from an empty or wholly selected line, and nothing else has changed it
+    // since. A fact about how the text got there, not a guess about history or
+    // timing: a command recalled with Up, left selected by auto-clear-off or
+    // written by a script is not the player's typing.
+    bool playerTypedLine() const { return mPlayerTypedLine; }
+    // The two ShortcutOverride claims this widget makes - the caret-mode
+    // shortcut and a user binding on a profile-switch shortcut - so that the
+    // hidden-input box standing in for it can make the same two.
+    bool claimsShortcutOverride(const QKeyEvent*) const;
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -109,6 +117,8 @@ private:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion();
+    void insertFromMimeData(const QMimeData*) override;
+    void slot_contentsChange();
     void spellCheck();
     void fillSpellCheckList(QMouseEvent*, QMenu*);
     void handleTabCompletion(bool);
@@ -120,11 +130,7 @@ private:
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
-    void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
     int heightForRows(const int) const;
-    void updatePasswordToggleButton();
-    void positionPasswordToggleButton();
 
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
@@ -152,22 +158,25 @@ private:
     // The file used to store the command history between sessions:
     QString mBackingFileName;
 
-    // Track echo suppression state
-    bool mIsEchoSuppressed = false;
-    // Track password visibility state when echo is suppressed
-    bool mPasswordVisible = false;
-    // Button to toggle password visibility
-    QToolButton* mpPasswordToggleButton = nullptr;
-    // Store text that was in the command line before echo suppression started
-    // This allows us to restore user input after password prompts complete
-    QString mTextToRestoreAfterEchoSuppression;
-    // Track whether the preserved text was originally selected (for auto-clear OFF)
-    bool mRestoredTextShouldBeSelected = false;
-    // Track whether user typed anything during echo suppression mode
-    bool mUserTypedDuringEchoSuppression = false;
+    // Raised only around the code that turns a key or a paste into text, never
+    // around anything that can run Lua, so that slot_contentsChange() can tell
+    // the player's edits from everything else's. See playerTypedLine().
+    bool mUserEditInProgress = false;
+    bool mEditStartedOnBlankLine = false;
+    bool mPlayerTypedLine = false;
+    QString mLastPlainText;
 
-private slots:
-    void slot_togglePasswordVisibility();
+    // Raises mUserEditInProgress for the scope of one key or paste.
+    class UserEditScope
+    {
+    public:
+        explicit UserEditScope(TCommandLine& line);
+        ~UserEditScope();
+        Q_DISABLE_COPY(UserEditScope)
+
+    private:
+        TCommandLine& mLine;
+    };
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

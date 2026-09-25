@@ -1092,7 +1092,6 @@ signals:
     void signal_saveCommandLinesHistory();
     void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
-    void signal_remoteEchoChanged(bool enabled);
     // Emitted only when passwordEntryWanted() changes.
     void signal_passwordEntryWantedChanged(bool wanted);
     void signal_forceMXPProcessorOnChanged(bool enabled);

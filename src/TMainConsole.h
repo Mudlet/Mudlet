@@ -38,6 +38,7 @@
 class TAction;
 class TEasyButtonBar;
 class TMediaPlayer;
+class TPasswordEntry;
 class TScrollBox;
 class TTextBox;
 class TToolBar;
@@ -169,8 +170,20 @@ public:
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
     void setCommandLinePlaceholderText(const QString& text);
     void updateCommandLineSpellCheck(bool enabled);
+    // Writes to the main command line follow the keyboard: while the
+    // hidden-input box is up they go into it, so a script pre-filling the line
+    // for the player to press Enter puts the text where Enter is. Reads never
+    // see the box.
     void setCommandLineText(const QString& text);
+    void printToCommandLine(const QString& text);
+    void appendToCommandLine(const QString& text);
+    void clearCommandLine();
+    void selectCommandLineText();
+    QString commandLineText() const;
     TCommandLine* raiseCommandLine();
+    // The box the game's request for hidden input is answered with, while one
+    // is up - for tests; nothing else needs the widget.
+    TPasswordEntry* passwordEntry() const;
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // One set of operations for scroll boxes, command lines and text boxes
     // together rather than one per kind: each is the same plain QWidget call
@@ -260,6 +273,7 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
+    void slot_passwordEntryWanted(const bool wanted);
 
 
 signals:
@@ -270,6 +284,9 @@ signals:
 
 
 private:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    void openPasswordEntry();
+    void closePasswordEntry();
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     // Where reparentLabel() and reparentWindow() parent an element named as a
     // setWindow() destination, shared so the two cannot disagree about what
@@ -320,6 +337,10 @@ private:
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
+
+    // Created when Host::passwordEntryWanted() turns true and deleted when it
+    // turns false: a fresh widget per prompt, so nothing carries over.
+    QPointer<TPasswordEntry> mpPasswordEntry;
 
     bool mEnableClose = false;
 };

@@ -288,6 +288,16 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
+    if (isMain(QString{name})) {
+        auto pConsole = getHostFromLua(L).mpConsole;
+        if (!pConsole) {
+            lua_pushnil(L);
+            lua_pushfstring(L, bad_cmdline_value, name);
+            return 2;
+        }
+        pConsole->appendToCommandLine(text);
+        return 0;
+    }
     auto pN = COMMANDLINE(L, QString{name});
 
     const QString curText = pN->toPlainText();
@@ -307,6 +317,16 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     const char* name = "main";
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
+    }
+    if (isMain(QString{name})) {
+        auto pConsole = getHostFromLua(L).mpConsole;
+        if (!pConsole) {
+            lua_pushnil(L);
+            lua_pushfstring(L, bad_cmdline_value, name);
+            return 2;
+        }
+        pConsole->clearCommandLine();
+        return 0;
     }
     auto pN = COMMANDLINE(L, QString{name});
     pN->clear();
@@ -659,6 +679,18 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     const char* name = "main";
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
+    }
+    if (isMain(QString{name})) {
+        // Always the command line's own text: a hidden-input box standing over
+        // it is not readable from Lua, by design
+        auto pConsole = getHostFromLua(L).mpConsole;
+        if (!pConsole) {
+            lua_pushnil(L);
+            lua_pushfstring(L, bad_cmdline_value, name);
+            return 2;
+        }
+        lua_pushstring(L, pConsole->commandLineText().toUtf8().constData());
+        return 1;
     }
     auto commandline = COMMANDLINE(L, QString{name});
     const QString text = commandline->toPlainText();
@@ -1489,6 +1521,16 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
 
+    if (isMain(QString{name})) {
+        auto pConsole = getHostFromLua(L).mpConsole;
+        if (!pConsole) {
+            lua_pushnil(L);
+            lua_pushfstring(L, bad_cmdline_value, name);
+            return 2;
+        }
+        pConsole->printToCommandLine(text);
+        return 0;
+    }
     auto pN = COMMANDLINE(L, QString{name});
     pN->setPlainText(text);
     QTextCursor cur = pN->textCursor();

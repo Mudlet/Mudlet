@@ -62,6 +62,7 @@
 #include "SecureStringUtils.h"
 
 #include <chrono>
+#include <QResizeEvent>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
@@ -6388,10 +6389,7 @@ void Host::setRemoteEchoingActive(bool active)
         mPasswordEntryDismissed = false;
         mPasswordEntryDismissedOnce = false;
     }
-    if (mIsRemoteEchoingActive != active) {
-        mIsRemoteEchoingActive = active;
-        emit signal_remoteEchoChanged(active);
-    }
+    mIsRemoteEchoingActive = active;
     recomputePasswordEntryWanted();
 }
 
