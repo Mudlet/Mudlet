@@ -110,6 +110,15 @@ private:
     void readStoreKey(const QString& key, StoreReadDone done);
     // Clears a metadata entry the credential store still holds from before it moved into the profile
     void forgetAnyStoredMetadata(const QString& profileName);
+
+public:
+    // Where a profile's saved sign-in record is filed, for the preferences deciding whether there is
+    // one to offer forgetting. Spelled here rather than at the caller: the key is written in one
+    // place for the reason metadataKey() gives, and a second spelling of it would read a file that
+    // is never written.
+    static QString savedSignInRecordPath(const QString& profileName);
+
+private:
     // Reads the stored sign-in - the {account, provider?, secure_only} metadata plus the token from
     // wherever it lives, its own key or inline in a pre-split entry - and acts on it: replay the token
     // (when allowToken), else send the resume form for a remembered provider, else fall through to

@@ -32,6 +32,7 @@
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDesktopServices>
+#include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QJsonArray>
@@ -144,26 +145,43 @@ QString metadataKey()
 // name the running build, which every development build is, so writing this alongside the token
 // asked the player twice per sign-in for one secret; reading it back asked again.
 //
-// The token stays where it was. Only this half moves.
+// The token stays where it was. Only this half moves - and it is a trade rather than a free win:
+// the credential store keeps its contents encrypted at rest behind a per-application access list,
+// while this is a file in the profile. No secret is in it, but the account identifier and the
+// provider are, so the file is narrowed to its owner rather than left at the default.
+QString metadataPathInProfile(const QString& profileName)
+{
+    return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, metadataKey());
+}
+
 QString readMetadataFromProfile(const QString& profileName)
 {
     return MudletPaths::readProfileData(profileName, metadataKey());
 }
 
-bool writeMetadataToProfile(const QString& profileName, const QString& payload)
+QPair<bool, QString> writeMetadataToProfile(const QString& profileName, const QString& payload)
 {
-    return MudletPaths::writeProfileData(profileName, metadataKey(), payload).first;
+    const auto written = MudletPaths::writeProfileData(profileName, metadataKey(), payload);
+    if (written.first) {
+        // Who the player signs in as is nobody else's business on a shared machine
+        QFile::setPermissions(metadataPathInProfile(profileName), QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    }
+    return written;
 }
 
-bool removeMetadataFromProfile(const QString& profileName)
+QPair<bool, QString> removeMetadataFromProfile(const QString& profileName)
 {
     // Written as a file of its own by writeProfileData(), so removing it is removing that file.
     // Absent is the answer the caller wanted, so it counts as done.
-    const QString path = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, metadataKey());
+    const QString path = metadataPathInProfile(profileName);
     if (!QFileInfo::exists(path)) {
-        return true;
+        return qMakePair(true, QString());
     }
-    return QFile::remove(path);
+    QFile file(path);
+    if (file.remove()) {
+        return qMakePair(true, QString());
+    }
+    return qMakePair(false, file.errorString());
 }
 
 // Holds the raw token and nothing else, so the *stored* token never passes through a QJsonDocument -
@@ -483,15 +501,32 @@ void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation o
         // sequences on is called before this returns, exactly as a store callback would have been.
         const QString profileName = mpHost->getName();
         if (op == Operation::WriteMetadata) {
-            const bool written = writeMetadataToProfile(profileName, payload);
-            done(written, written ? QString() : qsl("Could not write the saved sign-in to the profile"));
+            const auto written = writeMetadataToProfile(profileName, payload);
+            done(written.first, written.first ? QString() : qsl("Could not write the saved sign-in to the profile: %1").arg(written.second));
             return;
         }
-        const bool removed = removeMetadataFromProfile(profileName);
-        // A copy the credential store still holds from before this moved is cleared too, so a
-        // forget does not leave the account name behind where the read path would find it again.
-        forgetAnyStoredMetadata(profileName);
-        done(removed, removed ? QString() : qsl("Could not remove the saved sign-in from the profile"));
+
+        const auto removed = removeMetadataFromProfile(profileName);
+        if (!removed.first) {
+            done(false, qsl("Could not remove the saved sign-in from the profile: %1").arg(removed.second));
+            return;
+        }
+
+        // A copy the credential store still holds from before this moved has to go as well, and the
+        // answer is waited for: a forget that reported success while that copy survived would be
+        // undone by the next connect, which reads the store when the profile has nothing and moves
+        // what it finds back in. The player would be told the sign-in was forgotten and then watch
+        // Mudlet offer it again.
+        QPointer<CredentialManager> remover = new CredentialManager();
+        remover->removePassword(profileName, metadataKey(), [remover, profileName, done = std::move(done)](bool storeCleared, const QString& error) mutable {
+            if (remover) {
+                remover->deleteLater();
+            }
+            if (!storeCleared) {
+                qWarning().noquote() << "GMCP Char.Login - the saved sign-in is gone from the profile, but the credential store still holds the copy written before it moved there:" << error;
+            }
+            done(storeCleared, storeCleared ? QString() : qsl("Removed from the profile, but the credential store's older copy remains: %1").arg(error));
+        });
         return;
     }
 
@@ -1231,6 +1266,11 @@ void GMCPAuthenticator::attemptReconnect()
 // Clears a metadata entry the credential store still holds from before this moved into the profile.
 // Best effort and unwaited: it is not a secret, the profile's copy is what is read now, and a store
 // that refuses has nothing here worth holding a forget open for.
+/*static*/ QString GMCPAuthenticator::savedSignInRecordPath(const QString& profileName)
+{
+    return metadataPathInProfile(profileName);
+}
+
 void GMCPAuthenticator::forgetAnyStoredMetadata(const QString& profileName)
 {
     QPointer<CredentialManager> remover = new CredentialManager();
@@ -1263,13 +1303,33 @@ void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
             if (reader) {
                 reader->deleteLater();
             }
-            // Only the split record moves. A sign-in saved before the token had a key of its own
-            // carries it inside this JSON, and the profile is not a place for a secret: that entry
-            // is left exactly where it is, and the next save writes the split form in both places.
-            if (success && !value.isEmpty() && safeHost && !QJsonDocument::fromJson(value.toUtf8()).object().contains(qsl("token"))) {
-                if (writeMetadataToProfile(profileName, value)) {
-                    qDebug().noquote() << "GMCP Char.Login - moved the saved sign-in for profile" << profileName << "out of the credential store and into the profile";
-                    forgetAnyStoredMetadata(profileName);
+            // Only a record this can read and prove holds no token moves. A sign-in saved before
+            // the token had a key of its own carries it inside this JSON, and the profile is no
+            // place for a secret; so does anything that will not parse, because "no token member"
+            // is not something an empty parse result can be trusted to say - a truncated entry
+            // would answer it the same way. Either stays exactly where it is.
+            if (success && !value.isEmpty() && safeHost) {
+                QByteArray recordBytes = value.toUtf8();
+                QJsonParseError parseError{};
+                const QJsonDocument record = QJsonDocument::fromJson(recordBytes, &parseError);
+                SecureStringUtils::secureByteArrayClear(recordBytes);
+                const bool readable = parseError.error == QJsonParseError::NoError && record.isObject();
+                const bool holdsNoToken = readable && !record.object().contains(qsl("token"));
+
+                if (!holdsNoToken) {
+                    qDebug().noquote() << "GMCP Char.Login - the saved sign-in for profile" << profileName
+                                       << "stays in the credential store:" << (readable ? "it carries its token inline" : qPrintable(qsl("it does not parse - %1").arg(parseError.errorString())));
+                } else {
+                    const auto written = writeMetadataToProfile(profileName, value);
+                    if (written.first) {
+                        qDebug().noquote() << "GMCP Char.Login - moved the saved sign-in for profile" << profileName << "out of the credential store and into the profile";
+                        forgetAnyStoredMetadata(profileName);
+                    } else {
+                        // Said out loud: the alternative is the store being read, and prompted for,
+                        // on every connect from here on with nothing to say why
+                        qWarning().noquote() << "GMCP Char.Login - could not move the saved sign-in for profile" << profileName
+                                             << "into the profile, so it stays in the credential store and is read from there again:" << written.second;
+                    }
                 }
             }
             done(success, std::move(value), errorMessage);

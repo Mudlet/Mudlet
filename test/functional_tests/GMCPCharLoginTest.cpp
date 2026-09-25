@@ -948,7 +948,12 @@ private slots:
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
-        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"token\": \"inline-token\", \"secure_only\": true}"), qsl("stale-key-token")));
+        // The credential store, where a Mudlet from before the split wrote it. It stays there: the
+        // record moved into the profile, but this one carries the token inside it and the profile is
+        // no place for a secret.
+        const QString inlineRecord = qsl("{\"account\": \"acct:char\", \"token\": \"inline-token\", \"secure_only\": true}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), inlineRecord));
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect-token"), qsl("stale-key-token")));
 
         mpServer->clearReceived();
         mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
@@ -956,6 +961,12 @@ private slots:
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay a token");
         QCOMPARE(sent.value(qsl("token")).toString(), qsl("inline-token"));
+
+        // Reading it must not have copied it anywhere: this is the one record the move leaves alone,
+        // and writing it to the profile would put an OAuth token in a plain file on disk.
+        QVERIFY2(MudletPaths::readProfileData(host->getName(), qsl("reconnect")).isEmpty(),
+                 qPrintable(qsl("a record carrying an inline token was written to the profile: %1").arg(MudletPaths::readProfileData(host->getName(), qsl("reconnect")))));
+        QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the inline-token record was cleared from the store it still has to be read from");
     }
 
     void testMetadataWithoutATokenSendsTheResumeForm()
@@ -1228,6 +1239,101 @@ private slots:
         QVERIFY2(removed, "forgetting a saved sign-in should report success");
         QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty(), "the token key should be gone");
         QVERIFY2(MudletPaths::readProfileData(host->getName(), qsl("reconnect")).isEmpty(), "the metadata key should be gone");
+        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(),
+                 "a copy the credential store held from before the record moved survived the forget, and the next connect would move it back");
+    }
+
+    // A record saved before it moved into the profile is still in the credential store, and
+    // forgetting has to reach it: left there, the next connect reads it, writes it to the profile,
+    // and offers the player the sign-in they just discarded.
+    void testForgettingClearsTheCopyTheStoreStillHolds()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}")));
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect-token"), qsl("forget-me")));
+
+        bool reported = false;
+        bool removed = false;
+        host->mpAuth->forgetSavedSignIn([&](bool success) {
+            reported = true;
+            removed = success;
+        });
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return reported;
+                         },
+                         4000),
+                 "forgetSavedSignIn never reported an outcome");
+        QVERIFY2(removed, "forgetting a saved sign-in should report success");
+        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the record the store held was left behind");
+        QVERIFY2(MudletPaths::readProfileData(host->getName(), qsl("reconnect")).isEmpty(), "the forget put the record into the profile instead of removing it");
+    }
+
+    // A forget that cannot clear the store's copy has not forgotten anything: the next connect
+    // reads that copy, writes it to the profile and offers the sign-in again. Reporting success
+    // there tells the player it is gone while Mudlet is about to bring it back.
+    void testForgettingSaysSoWhenTheStoresCopyCannotBeCleared()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}")));
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect-token"), qsl("forget-me")));
+
+        // A directory where the store files that entry, so removing it fails - the same trick the
+        // blocked-write cases use, and cleanup() clears it
+        const QString storedRecordPath = reconnectCredentialPath(host->getName(), qsl("reconnect"));
+        QVERIFY(QFile::remove(storedRecordPath));
+        QVERIFY(QDir().mkpath(storedRecordPath));
+
+        bool reported = false;
+        bool removed = true;
+        host->mpAuth->forgetSavedSignIn([&](bool success) {
+            reported = true;
+            removed = success;
+        });
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return reported;
+                         },
+                         4000),
+                 "forgetSavedSignIn never reported an outcome");
+        QVERIFY2(!removed, "a forget that left the store's copy behind was reported as done, and the next connect would offer the sign-in again");
+    }
+
+    // The one-time move: a record saved before this lived in the profile is read from the store
+    // once, written where it belongs, and cleared from the store so no later read asks for it - on
+    // macOS, so no later read prompts for it.
+    void testARecordSavedInTheStoreMovesIntoTheProfile()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString record = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), record));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the record in the store was not read at all");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return !MudletPaths::readProfileData(host->getName(), qsl("reconnect")).isEmpty();
+                         },
+                         4000),
+                 "the record was read from the store but never written to the profile");
+        QCOMPARE(QJsonDocument::fromJson(MudletPaths::readProfileData(host->getName(), qsl("reconnect")).toUtf8()).object().value(qsl("provider")).toString(), qsl("discord"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty();
+                         },
+                         4000),
+                 "the store's copy was left behind, so every later read still asks the store for it");
     }
 
     void testForgettingBeatsARotationOfTheReplayedToken()

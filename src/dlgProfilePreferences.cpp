@@ -67,6 +67,7 @@
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFontDialog>
 #include <QIcon>
 #include <QJsonArray>
@@ -4521,7 +4522,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         // asking whether there is one to forget costs nothing - no keychain job, and on macOS no
         // prompt for an entry whose access list does not name this build. Anything still in the
         // store predates that move, and the read below is what finds those.
-        const bool signInRecordedInProfile = !MudletPaths::readProfileData(profileName, qsl("reconnect")).isEmpty();
+        //
+        // Whether the file is there, rather than whether it reads back: one that cannot be read is
+        // still a sign-in the player has, and hiding the control would leave them no way to revoke
+        // a token that is live. It is also what the removal keys off, so the two agree.
+        const bool signInRecordedInProfile = QFileInfo::exists(GMCPAuthenticator::savedSignInRecordPath(profileName));
         pushButton_forgetSavedSignIn->setVisible(signInRecordedInProfile);
 
         QPointer<CredentialManager> credentialManager = signInRecordedInProfile ? nullptr : new CredentialManager();
