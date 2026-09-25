@@ -123,6 +123,31 @@ describe("Tests MXP handling", function()
       local width = math.max(getWindowWrap("main"), 40)
       assertLineShown("\27[1zMXPRULE1<HR>MXPRULE2", ("-"):rep(width))
     end)
+
+    -- an ANSI escape cannot be part of a tag, so one arriving before the tag
+    -- closed shows what had been read of the tag as plain text and still acts
+    it("shows a tag an escape sequence cut short as the text it was", function()
+      local mark = getLastLineNumber("main")
+      feedTriggers("MXPESC1<B\27[31mred\27[0m tail\n")
+      local row
+      for candidate = mark, getLastLineNumber("main") do
+        if getLines("main", candidate, candidate + 1)[1] == "MXPESC1<Bred tail" then
+          row = candidate
+        end
+      end
+      assert.is_not_nil(row, "no line reads \"MXPESC1<Bred tail\"")
+
+      -- and the escape sequence still coloured the text after it
+      moveCursor("main", 0, row)
+      selectSection("main", 0, 1)
+      local before = {getFgColor("main")}
+      selectSection("main", #"MXPESC1<B", 1)
+      local after = {getFgColor("main")}
+      deselect("main")
+      moveCursorEnd("main")
+      assert.are_not.same(before, after)
+      assert.same(color_table.ansi_001, after)
+    end)
   end)
 
   -- A colour name the client does not know gives an invalid QColor, and a
