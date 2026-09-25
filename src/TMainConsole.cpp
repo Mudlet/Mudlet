@@ -1802,8 +1802,9 @@ bool TMainConsole::resetCommandLineAction(const QString& name)
     return true;
 }
 
-void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)
+void TMainConsole::setProfileStyleSheet(const QString& styleSheet)
 {
+    setStyleSheet(styleSheet);
     for (auto& pDockWidget : mDockWidgetMap) {
         pDockWidget->setStyleSheet(styleSheet);
     }
@@ -1994,6 +1995,8 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 
 void TMainConsole::setProfileName(const QString& newName)
 {
+    // mudlet::slot_tabMoved() finds the console for each tab by this
+    setProperty("HostName", newName);
     TConsole::setProfileName(newName);
 
     for (const auto& pC : std::as_const(mSubConsoleMap)) {
@@ -2407,6 +2410,43 @@ bool TMainConsole::hideMapWidget()
 void TMainConsole::showMapWidget()
 {
     mpDockableMapWidget->show();
+}
+
+bool TMainConsole::requestClose()
+{
+    return close();
+}
+
+void TMainConsole::requestRepaint()
+{
+    update();
+}
+
+QFont TMainConsole::displayFont() const
+{
+    return font();
+}
+
+void TMainConsole::applyBorders()
+{
+    // A console put away by a tab switch is zero pixels wide, so the resize
+    // event below tells it nothing about the room its new borders leave
+    syncHiddenScreenDimensions();
+    const QSize s = size();
+    QResizeEvent event(s, s);
+    QCoreApplication::sendEvent(this, &event);
+    raiseMudletSysWindowResizeEvent(s.width(), s.height());
+}
+
+// createMapper() records the embedded mapper here and puts it in the main frame
+// or a user window, so a profile that has one is never the docked mapper case.
+void TMainConsole::restoreOwnMapper()
+{
+    if (mpMapper) {
+        mpHost->mpMap->mpMapper = mpMapper;
+    } else if (auto* hostMapper = dockedMapper()) {
+        mpHost->mpMap->mpMapper = hostMapper;
+    }
 }
 
 dlgMapper* TMainConsole::dockedMapper() const

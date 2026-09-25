@@ -563,22 +563,22 @@ bool Host::requestClose()
     }
 
     // This call ends up at the (void) TMainConsole::closeEvent(...) and causes
-    // the close() method called here to return a true if the event was
+    // the requestClose() method called here to return a true if the event was
     // accepted:
-    if (!mpConsole->close()) {
+    if (!mpConsole->requestClose()) {
         // Nope the user doesn't want this to close - and it won't have set its
         // mEnableClose flag:
         return false;
     }
 
     // The above will have initiated a save of the profile (and its map) if it
-    // got a true returned from the TMainConsole::close() call.
+    // got a true returned from the TMainConsole::requestClose() call.
 
     // Get rid of any dialogs we might have open:
     closeChildren();
 
     // This time this will succeed as mEnableClose is set:
-    mpConsole->close();
+    mpConsole->requestClose();
     return true;
 }
 
@@ -1520,16 +1520,16 @@ void Host::updateConsolesFont()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(qsl("main window font"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(mpConsole->font().family());
+    event.mArgumentList.append(mpConsole->displayFont().family());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(mpConsole->font().pointSize()));
+    event.mArgumentList.append(QString::number(mpConsole->displayFont().pointSize()));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     raiseEvent(event);
 
-    emit signal_consoleFontChanged(mpConsole->font());
+    emit signal_consoleFontChanged(mpConsole->displayFont());
 
     if (mudlet::self()->smpDebugArea && mudlet::self()->smpDebugConsole) {
-        mudlet::self()->smpDebugConsole->setFont(mpConsole->font());
+        mudlet::self()->smpDebugConsole->setFont(mpConsole->displayFont());
     }
 }
 
@@ -1592,7 +1592,7 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
     }
 
     if (mpConsole) {
-        if (mpConsole->font() != font) {
+        if (mpConsole->displayFont() != font) {
             mpConsole->setFont(font);
 
             updateConsolesFont();
@@ -1637,7 +1637,7 @@ void Host::setDisplayFontFromString(const QString& fontData)
 void Host::setDisplayFontSize(int size)
 {
     if (mpConsole) {
-        if (mpConsole->font().pointSize() != size) {
+        if (mpConsole->displayFont().pointSize() != size) {
             mpConsole->setFontSize(size);
             updateConsolesFont();
         }
@@ -1962,13 +1962,13 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             mpConsole->printCommand(cmd);
         }
 
-        //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
+        //If 3D Mapper is active mpConsole->requestRepaint(); seems to be superfluous and even cause problems in MacOS
 #if defined(INCLUDE_3DMAPPER)
         if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
 #else
         if (!mpMap->mpMapper) {
 #endif
-            mpConsole->update();
+            mpConsole->requestRepaint();
         }
     }
 
@@ -4677,8 +4677,7 @@ void Host::setName(const QString& name)
     }
 
     if (mpConsole) {
-        // If skipped they will be taken care of in the TMainConsole constructor:
-        mpConsole->setProperty("HostName", name);
+        // If skipped it will be taken care of in the TMainConsole constructor:
         mpConsole->setProfileName(name);
     }
 }
@@ -4819,21 +4818,15 @@ void Host::setShowIdsInEditor(const bool isShown)
 
 // Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
 // detached windows borrow it while they show a map of their own, and every one
-// of them gives it back through here. createMapper() records the embedded
-// mapper on the console and puts it in the main frame or a user window, so a
-// profile that has one is never the docked mapper case below.
+// of them gives it back through here.
 void Host::restoreOwnMapper()
 {
     if (!mpMap) {
         return;
     }
 
-    if (mpConsole && mpConsole->mpMapper) {
-        mpMap->mpMapper = mpConsole->mpMapper;
-    } else if (mpConsole) {
-        if (auto* hostMapper = mpConsole->dockedMapper()) {
-            mpMap->mpMapper = hostMapper;
-        }
+    if (mpConsole) {
+        mpConsole->restoreOwnMapper();
     }
 #if defined(DEBUG_WINDOW_HANDLING)
     qDebug() << "Host::restoreOwnMapper:" << getName() << "- map is now drawn by" << mpMap->mpMapper.data();
@@ -5642,9 +5635,8 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     }
 
     mProfileStyleSheet = styleSheet;
-    mpConsole->setStyleSheet(styleSheet);
+    mpConsole->setProfileStyleSheet(styleSheet);
     emit signal_profileStyleSheetChanged(styleSheet);
-    mpConsole->setDockWidgetStyleSheets(styleSheet);
     if (this == mudlet::self()->mpCurrentActiveHost) {
         mudlet::self()->setGlobalStyleSheet(styleSheet);
     }
@@ -6312,15 +6304,7 @@ void Host::setBorders(QMargins borders)
     if (mpConsole.isNull()) {
         return;
     }
-    // A console put away by a tab switch is zero pixels wide, so the resize
-    // event below tells it nothing about the room its new borders leave
-    mpConsole->syncHiddenScreenDimensions();
-    auto x = mpConsole->width();
-    auto y = mpConsole->height();
-    const QSize s = QSize(x, y);
-    QResizeEvent event(s, s);
-    QCoreApplication::sendEvent(mpConsole, &event);
-    mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+    mpConsole->applyBorders();
 }
 
 void Host::setUserBorders(const QMargins borders)
@@ -6384,7 +6368,7 @@ void Host::setRemoteEchoingActive(bool active)
 QFont Host::getDisplayFont()
 {
     if (mpConsole) {
-        return mpConsole->font();
+        return mpConsole->displayFont();
     }
 
     qDebug().noquote().nospace() << "Host::getDisplayFont() INFO - No TMainConsole to get font from - faking it";

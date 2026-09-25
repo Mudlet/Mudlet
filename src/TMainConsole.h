@@ -66,6 +66,18 @@ public:
     bool printWindow(const QString& name, const QString& text);
     bool clear(const QString& name);
     void setProfileName(const QString&) override;
+    // What Host needs of this console's own widget, named rather than reached
+    // through the QWidget API so that a view with no widget could answer too.
+    // False when closeEvent() refused, e.g. the user cancelled the save prompt:
+    bool requestClose();
+    void requestRepaint();
+    QFont displayFont() const;
+    void setProfileStyleSheet(const QString& styleSheet);
+    // Lays the console out again for Host's current borders and raises
+    // sysWindowResizeEvent with the room they leave
+    void applyBorders();
+    // Hands TMap::mpMapper back to this profile's own mapper, if it has one
+    void restoreOwnMapper();
     void selectCurrentLine(std::string&);
     std::list<int> getFgColor(QString& buf);
     std::list<int> getBgColor(QString& buf);
@@ -162,7 +174,6 @@ public:
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color);
     std::optional<QRect> getSubConsoleGeometry(const QString& name) const;
     std::optional<bool> getSubConsoleVisible(const QString& name) const;
-    void setDockWidgetStyleSheets(const QString& styleSheet);
     void setDockLayoutChanged(const QString& name);
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
@@ -195,7 +206,6 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
-    dlgMapper* dockedMapper() const;
     void showMapWidget();
     void dockMapWidget(Qt::DockWidgetArea area);
     std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
@@ -270,6 +280,7 @@ signals:
 
 
 private:
+    dlgMapper* dockedMapper() const;
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     // Where reparentLabel() and reparentWindow() parent an element named as a
     // setWindow() destination, shared so the two cannot disagree about what
