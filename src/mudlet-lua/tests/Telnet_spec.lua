@@ -1413,6 +1413,24 @@ describe("Tests MCCP compressed streams", function()
     assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
   end)
 
+  -- a broken stream is refused on the wire, so a start sequence the game sends
+  -- after that is not the start of a stream until it offers MCCP again
+  it("stops decompressing after a broken stream until the game offers MCCP again", function()
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>MCCPNOTCOMPRESSED\r\n")
+
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED) .. "\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCPDECOMPRESSEDOK", 1, true), "a refused stream was decompressed: " .. shown)
+
+    mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
+  end)
+
   it("shows the text a server sends once it switches to MCCP v1", function()
     local mark = getLastLineNumber("main")
     feed("<T_IAC><T_WILL><O_MCCP>")

@@ -530,6 +530,8 @@ private:
     z_stream mZstream = {};
 
     bool mNeedDecompression = false;
+    // The MCCP version whose start sequence began the stream being inflated
+    char mCompressionOption = OPT_COMPRESS2;
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;

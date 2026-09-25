@@ -5398,10 +5398,17 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         postMessage(tr("[ WARN  ]  - MCCP decompression error (%1), compression disabled.\n"
                        "If the display looks garbled, please reconnect to the game.")
                             .arg(QString::fromUtf8(zError(zval))));
-        sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
+        // Refuse the version the broken stream was using - with both negotiated,
+        // refusing the other one leaves the game compressing - and stop taking
+        // its start sequence as one until the game offers it again.
+        sendTelnetOption(TN_DONT, mCompressionOption);
+        hisOptionState.reset(static_cast<size_t>(mCompressionOption));
+        if (mCompressionOption == OPT_COMPRESS) {
+            mMCCP_version_1 = false;
+        } else {
+            mMCCP_version_2 = false;
+        }
         mNeedDecompression = false;
-        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
-        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
         // the next start sequence initialises a stream of its own
         inflateEnd(&mZstream);
         return outSize;
@@ -5918,7 +5925,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     // TODO this code looks ahead instead of using the state machine.
                     // This is not a good idea.
                     char _ch = buffer[i];
-                    if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
+                    if (((_ch == OPT_COMPRESS) && mMCCP_version_1) || ((_ch == OPT_COMPRESS2) && mMCCP_version_2)) {
                         bool _compress = false;
 
                         if ((i > 1) && (i + 2 < datalen)) {
@@ -5935,6 +5942,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
                         if (_compress) {
                             mNeedDecompression = true;
+                            mCompressionOption = _ch;
                             // from this position in stream onwards, data will be compressed by zlib
                             gotRest(cleandata);
                             cleandata = "";
