@@ -1358,51 +1358,74 @@ describe("Trigger processing", function()
         -- every capture, which made a match-all line cost the square of its
         -- length rather than growing with it (#10869).
         --
-        -- What is asserted on is the cost the armed trigger *adds*: the same two
-        -- lines are fed with nothing armed first and that subtracted, so the
-        -- console's own per-line work - which is linear, and is not what this
-        -- pins - cannot decide the outcome. Each measurement is the cheapest of
-        -- three runs, because scheduling noise only ever adds. Eight times the
-        -- line is eight times the added work while the walk is linear and
-        -- sixty-four times while it is quadratic, so sixteen lies between the
-        -- two with a factor of two of room on either side.
-        it("adds under sixteen times as much work for eight times the line", function()
+        -- What is compared is the whole cost of feeding each line with the
+        -- trigger armed, not what arming it adds. The console's own per-line
+        -- work is linear, and so is the trigger once the walk is, so eight
+        -- times the line is eight times the total whatever share of it the
+        -- trigger holds: measured at 7.1 to 8.3 with the walk linear against
+        -- 54 to 58 with it quadratic, so sixteen lies between the two. Each
+        -- measurement is the cheapest of three runs, because scheduling noise
+        -- only ever adds.
+        --
+        -- Subtracting an unarmed baseline to leave only what the trigger adds
+        -- is what this did first, and it could not be made to hold. On the
+        -- 8 kB line that difference is about two milliseconds - the size of
+        -- the noise a shared CI runner puts on either measurement on its own -
+        -- so it came out anywhere from double to negative, and the long line's
+        -- cost was then divided by it. A negative one made the bound tighter
+        -- than the constant meant to absorb it, which no amount of speed could
+        -- then satisfy.
+        it("costs under sixteen times as much for eight times the line", function()
             -- "word " is five bytes, so this is an 8 kB line and one eight times longer
             local shortReps, longReps = 1638, 13104
             local function costOf(repeats)
                 local line = string.rep("word ", repeats)
                 local best
                 for _ = 1, 3 do
+                    -- os.clock() resolves to about a millisecond on Windows,
+                    -- which is the whole cost of the shorter line there, so a
+                    -- single feed can measure exactly 0 and leave the ratio
+                    -- below nothing to divide by. Feeding until the run is
+                    -- clear of that floor and dividing by the number of feeds
+                    -- keeps both measurements per-feed and comparable.
+                    local feeds, taken = 0, 0
                     local started = os.clock()
-                    feedTriggers("\n" .. line .. "\n")
-                    local taken = os.clock() - started
+                    repeat
+                        feedTriggers("\n" .. line .. "\n")
+                        feeds = feeds + 1
+                        taken = os.clock() - started
+                    -- a clock that never advanced would spin here forever and
+                    -- hang CI with no diagnostic, which is worse than the
+                    -- failure this loop replaced. 100 feeds is far more than
+                    -- any platform needs, so giving up past it leaves the
+                    -- short > 0 assertion below to report the dead clock.
+                    until taken >= 0.02 or feeds >= 100
+                    taken = taken / feeds
                     if not best or taken < best then
                         best = taken
                     end
                 end
                 return best
             end
-            local baseShort, baseLong = costOf(shortReps), costOf(longReps)
             _G.TrigSpec = {captures = 0}
             local id = tempComplexRegexTrigger("SpecComplexMatchAllCost", [[(\S+)]],
                 [[_G.TrigSpec.captures = #matches]],
                 0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
             assert.is_number(id)
             finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end end)
-            local armedShort = costOf(shortReps)
+            local short = costOf(shortReps)
             local shortCaptures = _G.TrigSpec.captures
-            local armedLong = costOf(longReps)
+            local long = costOf(longReps)
             local longCaptures = _G.TrigSpec.captures
             assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
             -- without this the trigger could have stopped matching, or stopped
             -- matching all, and the two costs would agree on measuring nothing
             assert.are.equal(shortReps * 2, shortCaptures, "match-all should collect the whole match and its capture group for every word")
             assert.are.equal(longReps * 2, longCaptures, "match-all should collect the whole match and its capture group for every word")
-            local short = armedShort - baseShort
-            local long = armedLong - baseLong
-            assert.is_true(long <= short * 16 + 0.01,
-                string.format("arming the trigger added %.3fs to a 64 kB line against %.3fs to an 8 kB one, %.0fx for eight times the line - the capture positions may be counted from the start of the line again",
-                    long, short, long / math.max(short, 0.000001)))
+            assert.is_true(short > 0, "os.clock() did not resolve the 8 kB line's cost, so the ratio below has nothing to divide by")
+            assert.is_true(long <= short * 16,
+                string.format("feeding a 64 kB line took %.3fs against %.3fs for an 8 kB one, %.1fx for eight times the line - the capture positions may be counted from the start of the line again",
+                    long, short, long / short))
         end)
 
         it("rejects a non-string, non-function body (argument 3)", function()
@@ -2631,6 +2654,27 @@ describe("Trigger processing", function()
                     feedTriggers("spacer settle " .. i .. "\n")
                 end
                 assert.are.equal(1, _G.TriggerKindsSpec.spacerFired, "no second state should be left waiting behind it")
+            end)
+        end)
+
+        -- Only a perl regex contributes named captures, but every matched pattern
+        -- owns a row of multimatches - so the rows that have none still have to
+        -- take an empty slot, or a later pattern's named capture surfaces on an
+        -- earlier pattern's row (#8748).
+        it("keeps a named capture with its own pattern past patterns that have none", function()
+            withTrigger("named chain", function()
+                feedTriggers("tknamed alpha\n")
+                feedTriggers("chain gap\n")
+                feedTriggers("tkmiddle here\n")
+                feedTriggers("tknamed end omega\n")
+
+                local seen = _G.TriggerKindsSpec.namedChain
+                assert.is_table(seen, "the multiline trigger never completed, so nothing was read")
+                assert.are.equal(4, seen.rows, "a pattern of the chain took no multimatches row of its own")
+                assert.are.equal("alpha", seen.first, "the first pattern's named capture left row 1")
+                assert.are.equal("omega", seen.last, "the last pattern's named capture was not in its own row")
+                assert.is_nil(seen.spacerName, "the line spacer's row should carry no named capture")
+                assert.is_nil(seen.middleName, "the substring pattern's row should carry no named capture")
             end)
         end)
 

@@ -27,6 +27,7 @@
 #include <QComboBox>
 #include <QTemporaryDir>
 #include <QTreeWidget>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -49,7 +50,12 @@
 #include "TTrigger.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgSourceEditorFindArea.h"
 #include "dlgTriggerEditor.h"
+#include "edbee/models/textdocument.h"
+#include "edbee/models/textrange.h"
+#include "edbee/texteditorcontroller.h"
+#include "edbee/texteditorwidget.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -386,6 +392,32 @@ private slots:
         QTreeWidgetItem* selected = mpEditor->treeWidget_triggers->currentItem();
         QVERIFY2(selected, "no trigger became current after its search result was chosen");
         QCOMPARE(selected->text(0), qsl("qaNestedTrigger"));
+    }
+
+    // The find box inside the script pane marks every match as the term is
+    // typed, so it waits until enough has been typed to be worth a pass over
+    // the document - one or two characters match most of a script (#3847).
+    void test_theScriptFindBoxIgnoresTermsOfTwoCharactersOrFewer()
+    {
+        // whatever item is selected owns this pane, and the next save writes
+        // the pane back into it, so put the script back before leaving
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorEdbee->controller()->borderedTextRanges()->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("aaa bbb aaa\n"));
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("aaa bbb aaa\n"));
+        edbee::TextRangeSet* marked = mpEditor->mpSourceEditorEdbee->controller()->borderedTextRanges();
+        marked->clear();
+
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aa"));
+        QCOMPARE(marked->rangeCount(), size_t{0});
+
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aaa"));
+        QCOMPARE(marked->rangeCount(), size_t{2});
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()
