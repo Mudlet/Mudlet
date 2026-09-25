@@ -1639,11 +1639,6 @@ int TConsole::getLineCount()
     return buffer.getLastLineNumber();
 }
 
-QStringList TConsole::getLines(int from, int to)
-{
-    return mpModel->lines(from, to);
-}
-
 void TConsole::selectCurrentLine()
 {
     selectSection(0, buffer.line(mUserCursor.y()).size());

@@ -338,9 +338,15 @@ private slots:
         destroyTheView(host);
         host->reenableAllTriggers();
 
+        // One line of each kind, so that neither answer can come from a
+        // no-view fallback rather than from the line itself
+        const int promptLine = appendModelLine(model->buffer, qsl("ViewlessContext prompt>"));
+        model->buffer.promptBuffer[promptLine] = true;
+        host->runTriggers(promptLine);
+        QCOMPARE(luaGlobalString(host, "viewlessPrompt"), qsl("true"));
+
         const int fedLine = appendModelLine(model->buffer, qsl("ViewlessContext delta"));
         host->runTriggers(fedLine);
-
         QCOMPARE(luaGlobalString(host, "viewlessPrompt"), qsl("false"));
 
         const auto [success, lines] = host->getLines(qsl("main"), fedLine, fedLine + 1);

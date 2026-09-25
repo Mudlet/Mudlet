@@ -174,6 +174,22 @@ describe("Tests undoing the game's own line wrapping", function()
     assert.is_true(bufferHasLine(segment1), "held full-width line was not flushed after the game went quiet")
   end)
 
+  it("runs the flushed line's triggers in trigger context, and only them", function()
+    -- the flush timer commits the held line itself, so it has to put the
+    -- console in trigger context for the triggers that line fires - an echo
+    -- from one belongs on the line it matched - and take it out again after
+    local id = tempTrigger(segment1, function()
+      echo(" [tagged]")
+    end)
+    feed(segment1 .. "\r\n")
+    settle()
+    killTrigger(id)
+    assert.is_true(bufferHasLine(segment1 .. " [tagged]"), "a trigger's echo on the flushed line did not land on that line")
+
+    echo("after the flush\n")
+    assert.is_true(bufferHasLine("after the flush"), "an echo outside any trigger was still written into the flushed line")
+  end)
+
   it("ends a paragraph at a blank line", function()
     feedAndSettle(segment1 .. "\r\n\r\n" .. segment2 .. "\r\n")
 

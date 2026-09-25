@@ -116,10 +116,13 @@ struct TConsoleModel
     // The format text is written into the buffer with.
     TChar mFormatCurrent;
     bool mIsPromptLine = false;
-    // Set while this console's buffer is being fed text that triggers will
-    // match against, so that the functions a trigger script calls - isPrompt(),
-    // and the link and format writers - act on the line being processed rather
-    // than on the end of the buffer.
+    // Set while the buffer is being fed text that triggers match against, so
+    // that what a trigger script writes - echo(), insertText(), replace(), the
+    // command echo and links - goes into the line being processed, shifting
+    // the capture groups to match, instead of starting new lines and moving
+    // the user cursor. isPrompt() also reads it. Only TMainConsole::printOnDisplay()
+    // and the server-wrap flush timer raise it, so it is only ever set on the
+    // main console's model.
     bool mTriggerEngineMode = false;
     // 1 = up, 2 = down, 0 is not valid: the state of the toolbar button pressed
     // most recently (a plain button sets it back to 1), read back by

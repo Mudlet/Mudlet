@@ -2394,7 +2394,9 @@ void Host::printOnDisplay(std::string& data, bool isFromServer)
 
 void Host::finalizeMainConsole()
 {
-    mpConsole->finalize();
+    if (mpConsole) {
+        mpConsole->finalize();
+    }
 }
 
 bool Host::mainConsoleShowsTimeStamps() const
