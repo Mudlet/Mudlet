@@ -1165,14 +1165,27 @@ private slots:
         // Counted rather than captured: the contract is that the profile losing
         // the microphone is told once, on the attempt that is refused - not
         // again when the asking profile retries.
+        // Recorded in order, not just counted: docs/stt-api.md, and the comment on
+        // the guard itself, have a script rely on the handover arriving before the
+        // state change that follows it. Announcing the handover after the stop
+        // instead would reverse them, and nothing here would have noticed.
         QVERIFY(runLua(mpSecondHost,
                        qsl("_handoversToSecond = 0\n"
                            "_handoverNamed = nil\n"
+                           "_eventsSecond = {}\n"
                            "registerAnonymousEventHandler('sysSTTHandover', function(_, name)\n"
                            "  _handoversToSecond = _handoversToSecond + 1\n"
                            "  _handoverNamed = name\n"
+                           "  _eventsSecond[#_eventsSecond + 1] = 'handover'\n"
+                           "end)\n"
+                           "registerAnonymousEventHandler('sysSTTStateChanged', function(_, state)\n"
+                           "  _eventsSecond[#_eventsSecond + 1] = 'state:' .. tostring(state)\n"
                            "end)"))
                         .isNull());
+        // The refusal is the asking profile's to hear about: routed to the owner
+        // instead, the profile losing the microphone would be handed an error
+        // about a start it never asked for.
+        listenFor(mpFirstHost, qsl("sysSTTError"), qsl("_errorFirst"));
 
         QVERIFY(runLua(mpSecondHost, qsl("_sttSpeakerStart = stt.start()")).isNull());
         QVERIFY2(luaGlobalBoolean(mpSecondHost, qsl("_sttSpeakerStart")), "the second profile could not start a session");
@@ -1206,6 +1219,9 @@ private slots:
         const Host* pOwnerAfterRetry = mudlet::self()->microphoneOwner();
         const int handoversToSecond = luaGlobalString(mpSecondHost, qsl("_handoversToSecond")).toInt();
         const QString handoverNamed = luaGlobalString(mpSecondHost, qsl("_handoverNamed"));
+        QVERIFY(runLua(mpSecondHost, qsl("_orderSecond = table.concat(_eventsSecond, ',')")).isNull());
+        const QString orderSecond = luaGlobalString(mpSecondHost, qsl("_orderSecond"));
+        const QString errorFirst = luaGlobalString(mpFirstHost, qsl("_errorFirst"));
         retireStandInEngine();
 
         QVERIFY2(heardFirst.isEmpty(), qPrintable(qsl("the phrase the second profile spoke was delivered to the first: \"%1\"").arg(heardFirst)));
@@ -1219,6 +1235,52 @@ private slots:
         QVERIFY2(pOwnerAfterRetry == mpFirstHost, "the retry did not leave the microphone with the profile that asked");
         QCOMPARE(handoverNamed, mFirstHostname);
         QVERIFY2(handoversToSecond == 1, qPrintable(qsl("the profile losing the microphone was told %1 times, where docs/stt-api.md promises once").arg(handoversToSecond)));
+
+        const int handoverAt = orderSecond.indexOf(qsl("handover"));
+        const int processingAt = orderSecond.indexOf(qsl("state:processing"));
+        QVERIFY2(handoverAt >= 0, qPrintable(qsl("no handover was recorded on the losing profile: \"%1\"").arg(orderSecond)));
+        QVERIFY2(processingAt >= 0, qPrintable(qsl("the losing profile never saw the decode begin: \"%1\"").arg(orderSecond)));
+        QVERIFY2(handoverAt < processingAt, qPrintable(qsl("the handover was announced after the state change it is documented to precede: \"%1\"").arg(orderSecond)));
+
+        QVERIFY2(errorFirst.contains(qsl("still finishing a phrase")), qPrintable(qsl("the refusal did not reach the profile that asked for the microphone as sysSTTError: \"%1\"").arg(errorFirst)));
+    }
+
+    // stt.toggle() carries its own copy of the refusal, on its own claim, so the
+    // case above cannot speak for it: changing or deleting that branch leaves
+    // every assertion there green.
+    void test_toggleRefusesToTakeAMicrophoneStillFinishingAPhrase()
+    {
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->finalisesAfterTheStopReturns();
+
+        listenFor(mpFirstHost, qsl("sysSTTResult"), qsl("_heardFirst"));
+        listenFor(mpSecondHost, qsl("sysSTTResult"), qsl("_heardSecond"));
+        listenFor(mpFirstHost, qsl("sysSTTError"), qsl("_errorFirst"));
+
+        QVERIFY(runLua(mpSecondHost, qsl("_sttSpeakerStart = stt.start()")).isNull());
+        QVERIFY2(luaGlobalBoolean(mpSecondHost, qsl("_sttSpeakerStart")), "the second profile could not start a session");
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_sttToggleOk, _sttToggleWhy = stt.toggle()")).isNull());
+        const bool toggleSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttToggleOk"));
+        const QString toggleWhy = luaGlobalString(mpFirstHost, qsl("_sttToggleWhy"));
+        const Host* pOwnerAfterToggle = mudlet::self()->microphoneOwner();
+
+        pEngine->finishPhrase(qsl("kill hound"));
+        const QString heardFirst = luaGlobalString(mpFirstHost, qsl("_heardFirst"));
+        const QString heardSecond = luaGlobalString(mpSecondHost, qsl("_heardSecond"));
+        const QString errorFirst = luaGlobalString(mpFirstHost, qsl("_errorFirst"));
+        retireStandInEngine();
+
+        QVERIFY2(!toggleSucceeded, "toggle took the microphone while the phrase the previous profile spoke was still being decoded");
+        QVERIFY2(toggleWhy.contains(qsl("still finishing a phrase")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(toggleWhy)));
+        QVERIFY2(pOwnerAfterToggle == mpSecondHost, "toggle moved the microphone off the profile whose phrase was still being decoded");
+        QVERIFY2(heardFirst.isEmpty(), qPrintable(qsl("the phrase the second profile spoke was delivered to the first: \"%1\"").arg(heardFirst)));
+        QCOMPARE(heardSecond, qsl("kill hound"));
+        QVERIFY2(errorFirst.contains(qsl("still finishing a phrase")), qPrintable(qsl("toggle's refusal did not reach the profile that asked as sysSTTError: \"%1\"").arg(errorFirst)));
     }
 
     // A command created by a profile that is not the one on screen must arrive
