@@ -43,7 +43,6 @@
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -72,7 +71,6 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QMovie>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -211,19 +209,6 @@ static QColor colorFromColorTable(lua_State* L, const QString& name)
             return 2;                                                                                                                                                                                  \
         }                                                                                                                                                                                              \
         cmdLine_;                                                                                                                                                                                      \
-    })
-
-#define LABEL(ARG_L, ARG_name)                                                                                                                                                                         \
-    ({                                                                                                                                                                                                 \
-        const QString& name_ = (ARG_name);                                                                                                                                                             \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto label_ = console_ ? console_->labelWidget(name_) : nullptr;                                                                                                                               \
-        if (!label_) {                                                                                                                                                                                 \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());                                                                                                                       \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        label_;                                                                                                                                                                                        \
     })
 
 // Parsing a command or a commands table anchors each function it holds in the
@@ -2055,8 +2040,15 @@ int TLuaInterpreter::windowVisible(lua_State* L)
 int TLuaInterpreter::getLabelText(lua_State* L)
 {
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
-    auto label = LABEL(L, labelName);
-    lua_pushstring(L, label->text().toUtf8().constData());
+    const Host& host = getHostFromLua(L);
+    const auto text = host.mpConsole ? host.mpConsole->getLabelText(labelName) : std::nullopt;
+    if (!text) {
+        lua_pushnil(L);
+        lua_pushfstring(L, bad_label_value, labelName.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushstring(L, text->toUtf8().constData());
     return 1;
 }
 
@@ -4663,35 +4655,43 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
     }
     const QLatin1StringView func{funcName};
 
-    TLabel* pN = nullptr;
-    QMovie* movie = nullptr;
+    TMainConsole* console = getHostFromLua(L).mpConsole;
     {
         const QString labelName{lua_tostring(L, 1)};
         if (labelName.isEmpty()) {
             return warnArgumentValue(L, __func__, "label name cannot be an empty string");
         }
-        pN = LABEL(L, labelName);
-        movie = pN->movie();
-        if (!movie) {
+        const auto showsMovie = console ? console->labelShowsMovie(labelName) : std::nullopt;
+        if (!showsMovie) {
+            lua_pushnil(L);
+            lua_pushfstring(L, bad_label_value, labelName.toUtf8().constData());
+            return 2;
+        }
+        if (!*showsMovie) {
             return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
         }
     }
+    // The name is read again for each operation rather than kept, as a QString
+    // alive across the raising checks below would leak
+    const auto labelName = [L]() {
+        return QString{lua_tostring(L, 1)};
+    };
 
     if (func == qsl("startMovie")) {
-        movie->start();
+        console->startLabelMovie(labelName());
     } else if (func == qsl("pauseMovie")) {
-        movie->setPaused(true);
+        console->pauseLabelMovie(labelName());
     } else if (func == qsl("setMovieFrame")) {
         if (!checkIntArg(L, funcName, 2, "movie frame number")) {
             return lua_error(L);
         }
-        lua_pushboolean(L, movie->jumpToFrame(static_cast<int>(lua_tointeger(L, 2))));
+        lua_pushboolean(L, console->setLabelMovieFrame(labelName(), static_cast<int>(lua_tointeger(L, 2))));
         return 1;
     } else if (func == qsl("setMovieSpeed")) {
         if (!checkIntArg(L, funcName, 2, "movie playback speed in %")) {
             return lua_error(L);
         }
-        movie->setSpeed(static_cast<int>(lua_tointeger(L, 2)));
+        console->setLabelMovieSpeed(labelName(), static_cast<int>(lua_tointeger(L, 2)));
     } else if (func == qsl("scaleMovie")) {
         bool autoScale{true};
         const int n = lua_gettop(L);
@@ -4701,16 +4701,7 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
             }
             autoScale = lua_toboolean(L, 2);
         }
-        movie->setScaledSize(pN->size());
-        if (autoScale) {
-            connect(pN, &TLabel::resized, movie, [=] {
-                movie->setScaledSize(pN->size());
-            });
-        } else {
-            // only drop the movie-scaling connection(s); other consumers of
-            // the label's resized signal must stay connected
-            QObject::disconnect(pN, &TLabel::resized, movie, nullptr);
-        }
+        console->scaleLabelMovie(labelName(), autoScale);
     } else {
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }

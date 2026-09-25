@@ -128,6 +128,16 @@ public:
     std::optional<bool> getLabelVisible(const QString& name) const;
     std::optional<QFont> getLabelFont(const QString& name) const;
     bool setLabelFont(const QString& name, const QFont& font);
+    std::optional<QString> getLabelText(const QString& name) const;
+    // No value for a name that is not a label's, false for a label that is not
+    // showing a movie; the movie operations below report failure for either.
+    std::optional<bool> labelShowsMovie(const QString& name) const;
+    bool startLabelMovie(const QString& name);
+    bool pauseLabelMovie(const QString& name);
+    // Also false when the movie has no such frame.
+    bool setLabelMovieFrame(const QString& name, int frame);
+    bool setLabelMovieSpeed(const QString& name, int percent);
+    bool scaleLabelMovie(const QString& name, bool followLabelSize);
     // For callers that need the widget itself. An accessor rather than the open
     // map, so that inserting and removing entries stays in this class, which is
     // what keeps the window registry in step with it.

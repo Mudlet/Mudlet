@@ -44,7 +44,6 @@
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
-#include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -94,7 +93,6 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileInfo>
-#include <QMovie>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -210,19 +208,6 @@ static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double ad
             return 2;                                                                                                                                                                                  \
         }                                                                                                                                                                                              \
         cmdLine_;                                                                                                                                                                                      \
-    })
-
-#define LABEL(ARG_L, ARG_name)                                                                                                                                                                         \
-    ({                                                                                                                                                                                                 \
-        const QString& name_ = (ARG_name);                                                                                                                                                             \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto label_ = console_ ? console_->labelWidget(name_) : nullptr;                                                                                                                               \
-        if (!label_) {                                                                                                                                                                                 \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());                                                                                                                       \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        label_;                                                                                                                                                                                        \
     })
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
