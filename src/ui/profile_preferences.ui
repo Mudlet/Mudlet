@@ -602,13 +602,13 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Disable password masking when servers request hidden input.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Warning:&lt;/b&gt; This is not recommended for security reasons as passwords will be visible in plain text.&lt;/p&gt;</string>
+             <string extracomment="Tooltip of the profile preference that stops the hidden-input box opening when the game asks for hidden input">&lt;p&gt;Turn this on for a game that hides everything you type, not only passwords. Everything you type then goes through the normal command line, and is shown, kept in the history and run through your aliases as usual.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>Disable password masking when servers request hidden input. Warning: This is not recommended for security reasons as passwords will be visible in plain text.</string>
+             <string extracomment="Accessibility-friendly description of the profile preference that stops the hidden-input box opening when the game asks for hidden input">Turn this on for a game that hides everything you type, not only passwords. Everything you type then goes through the normal command line.</string>
             </property>
             <property name="text">
-             <string>Disable password masking</string>
+             <string extracomment="Label of the profile preference that stops the hidden-input box opening when the game asks for hidden input">Do not open a hidden-input box when the game asks for hidden input</string>
             </property>
            </widget>
           </item>
