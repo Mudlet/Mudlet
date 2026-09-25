@@ -47,8 +47,8 @@
 #include <chrono>
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
 #include "TMainConsole.h"
@@ -148,11 +148,11 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -186,7 +186,7 @@ private slots:
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -532,6 +532,25 @@ private slots:
         ti->scrollToSubstring(offsetOfLine(line), offsetOfLine(line) + 3);
 
         QVERIFY2(lineIsOnScreen(line), qPrintable(qsl("line %1 is still not showing - the screen starts at line %2").arg(line).arg(pane()->imageTopLine())));
+    }
+
+    // A screen reader measures the text, then asks for it a moment later, and
+    // the buffer can have moved on in between - so an offset past the end is
+    // something that happens rather than a caller's mistake. Before #8752 the
+    // offset resolved to one line past the last line of the buffer and the view
+    // was scrolled there.
+    void test_scrollToSubstringLeavesTheViewAloneForAnOffsetPastTheEnd()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        pane()->scrollTo(lines().length() / 2);
+        const int topLine = pane()->imageTopLine();
+        QVERIFY2(topLine > 0, "the view is at the top of the buffer, where staying put and scrolling to the start look the same");
+        QVERIFY2(!lineIsOnScreen(lines().length() - 1), "the view is already at the end of the buffer, where a scroll to the end would not show");
+
+        ti->scrollToSubstring(ti->characterCount() + 1, ti->characterCount() + 1);
+
+        QCOMPARE(pane()->imageTopLine(), topLine);
     }
 
     // The state a bridge reads to decide how to present the widget.

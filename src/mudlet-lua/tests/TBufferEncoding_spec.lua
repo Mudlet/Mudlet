@@ -448,6 +448,35 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     return table.concat(payload), #payload, payload
   end
 
+  -- Feeds "CSI 31 m RED" parted at the point its arguments name and checks the
+  -- colour reached the screen, rather than only that the sequence stopped
+  -- printing as text. Which colour ANSI 31 is depends on the profile's palette,
+  -- so the same sequence arriving whole says what to expect - and a line with no
+  -- sequence at all says what a lost colour looks like, without which a
+  -- regression that stopped SGR 31 applying anywhere would leave both
+  -- deliveries default-coloured and both comparisons content. A mark is the
+  -- number of the empty line the next feed fills, so each one is taken just
+  -- before the feed it belongs to.
+  local function expectRedSurvivesSplit(...)
+    local plainMark = getLastLineNumber("main")
+    feed("plain:RED\n")
+    beQuiet()
+
+    local splitMark = getLastLineNumber("main")
+    local text, lines, perLine = splitAcrossTimeout(...)
+    assert.equals("RED:end", text)
+    assert.equals(2, lines)
+    assert.same({"", "RED:end"}, perLine)
+
+    local splitColour = redForegroundFrom(splitMark)
+    assert.is_not_nil(splitColour, "no coloured text to read a colour from")
+    local wholeMark = getLastLineNumber("main")
+    feed("whole:\27[31mRED\27[m\n")
+    beQuiet()
+    assert.same(redForegroundFrom(wholeMark), splitColour)
+    assert.are_not.same(redForegroundFrom(plainMark), splitColour)
+  end
+
   it("breaks an ASCII line at the flush marker", function()
     if timerUnavailable() then return end
     using("UTF-8")
@@ -556,20 +585,87 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     -- character: held with the half of "CSI 31 m" that had arrived, it would
     -- never match a parameter byte when the rest turned up, so the colour would
     -- be dropped and the "1m" that completes it printed as text
-    local splitMark = getLastLineNumber("main")
-    local text, lines, perLine = splitAcrossTimeout("\27[3", "1mRED\27[m")
-    assert.equals("RED:end", text)
-    assert.equals(2, lines)
-    assert.same({"", "RED:end"}, perLine)
+    expectRedSurvivesSplit("\27[3", "1mRED\27[m")
+  end)
 
-    -- and the colour the game asked for was applied, rather than the sequence
-    -- merely being swallowed. Which colour ANSI 31 is depends on the profile's
-    -- palette, so the same sequence arriving whole says what to expect:
-    local wholeMark = getLastLineNumber("main")
-    feed("whole:\27[31mRED\27[m\n")
+  it("keeps an ANSI colour sequence the marker lands right after its escape", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- The narrowest place the marker can part a sequence: the escape has
+    -- arrived and nothing else has. Read as the byte after the escape it names
+    -- no sequence, so the escape used to be taken for a stray one and thrown
+    -- away, leaving the whole of "[31m" to print as text once it turned up
+    -- - see issue #10874
+    expectRedSurvivesSplit("\27", "[31mRED\27[m")
+  end)
+
+  it("keeps a character set designation the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- ESC ( B names a character set and shows nothing, but its final byte waits
+    -- on a second latch (mGotEscCharset) rather than the one the case above
+    -- exercises: with the marker taken for that byte the designation was
+    -- abandoned and the "B" printed as text - see issue #10874
+    local text, lines, perLine = splitAcrossTimeout("\27(", "B")
+    assert.equals(":end", text)
+    assert.equals(2, lines)
+    assert.same({"", ":end"}, perLine)
+  end)
+
+  it("keeps an operating system command the marker lands right after its escape", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- The same split where the escape turns out to open an OSC rather than a
+    -- colour sequence - the branch Mudlet reads hyperlinks on: with the escape
+    -- gone the payload used to be put on the line as text
+    local text, lines, perLine = splitAcrossTimeout("\27", "]0;title\27\\")
+    assert.equals(":end", text)
+    assert.equals(2, lines)
+    assert.same({"", ":end"}, perLine)
+  end)
+
+  it("spends a held character set designation on the byte after the pause", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- What holding the latch costs, which is the same as what an ordinary
+    -- packet boundary costs: a designation the game never completes takes the
+    -- next byte it sends, however long the quiet spell was. A held escape on
+    -- its own does not - "H" names no sequence, so it stays text. The two
+    -- latches part company here, which makes this the easiest place for a
+    -- later tidy-up to go wrong
+    local eaten = splitAcrossTimeout("\27(", "Hello")
+    assert.equals("ello:end", eaten)
+    local kept = splitAcrossTimeout("\27", "Hello")
+    assert.equals("Hello:end", kept)
+  end)
+
+  it("keeps the held escape when locally fed text arrives during the pause", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- Holding the latch opens a window nothing could land in before: the game
+    -- is part way through a sequence and quiet, so anything the profile itself
+    -- prints meanwhile meets that parser. Local text runs through it on a copy
+    -- of the sequence state of its own (TBuffer::swapParserSequenceState()) and
+    -- has to leave the game's alone
+    local mark = getLastLineNumber("main")
+    feed("split:\27")
     beQuiet()
-    assert.same(redForegroundFrom(wholeMark), redForegroundFrom(splitMark))
-    assert.is_not_nil(redForegroundFrom(splitMark), "no coloured text to read a colour from")
+    feedTriggers("interleaved\n")
+    feed("[31mRED\27[m:end\n")
+    beQuiet()
+
+    local seen = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line ~= "" then
+        seen[#seen + 1] = line
+      end
+    end
+    assert.same({"split:", "interleaved", "RED:end"}, seen)
   end)
 
   it("takes a carriage return in locally fed text as data, not as a marker", function()

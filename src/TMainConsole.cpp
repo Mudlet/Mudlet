@@ -21,7 +21,7 @@
  ***************************************************************************/
 
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 
 
@@ -46,9 +46,7 @@
 
 #include <QDataStream>
 #include <QDialog>
-#include <QDir>
 #include <QDockWidget>
-#include <QFileInfo>
 #include <QIcon>
 #include <QLabel>
 #include <QLayout>
@@ -61,9 +59,7 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
-#include <QTextBoundaryFinder>
 #include <QTextCodec>
-#include <QTimer>
 #include <QPainter>
 #include <QVideoWidget>
 
@@ -83,33 +79,6 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
     }
 }
 
-// A ".dic" file holds one word per line, below a count of how many lines
-// follow, and hunspell reads a "/" on such a line as the start of that word's
-// affix flags and a tab as the start of its morphological description. So a
-// word can only be stored if the file gives it back as itself:
-//   - a blank word writes a line the next load skips;
-//   - a line feed writes two lines that come back as two separate words;
-//   - a carriage return is dropped by the QFile::Text reader, so "qa\rword"
-//     comes back as "qaword";
-//   - leading whitespace leaves hunspell not recognising the word at all, and a
-//     tab or a "/" leaves it knowing only the part in front - "TCP/IP" teaches
-//     the spell checker "TCP" instead - while the word list still reports the
-//     word that was added.
-// Hunspell does read "\/" as an escaped "/", but our own reader would then hand
-// the backslash back as part of the word, so escaping would mean changing both
-// halves of the format and misreading every ".dic" file already written.
-// A trailing space, and a word of nothing but spaces, do come back intact; the
-// same test refuses those because they are not words.
-bool storableWord(const QString& word)
-{
-    return !word.isEmpty() && word == word.trimmed() && !word.contains(QChar::LineFeed) && !word.contains(QChar::CarriageReturn) && !word.contains(QChar::Tabulation)
-           && !word.contains(QLatin1Char('/'));
-}
-
-QString unstorableWordMessage()
-{
-    return qsl("the word \"%1\" cannot be stored in the user dictionary, it must have some text in it, fit on a single line, not start or end with whitespace, and contain no tab or \"/\" character");
-}
 } // namespace
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
@@ -135,20 +104,32 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TMainConsole::slot_reloadMap, Qt::UniqueConnection);
     connect(this, &TMainConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
 
-    setSystemSpellDictionary(mpHost->getSpellDic());
-    // Reading it costs tens of milliseconds, so it is not read here - but
-    // leaving it for the first spell-check would put that wait in front of the
-    // first word typed, so a queued connection has the event loop do it once
-    // the profile has finished loading:
-    connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
+    // Reading the dictionaries costs tens of milliseconds, so they are not read
+    // here - but leaving that for the first spell-check would put the wait in
+    // front of the first word typed, so a queued connection has the event loop
+    // do it once the profile has finished loading:
+    connect(
+            mudlet::self(),
+            &mudlet::signal_profileLoaded,
+            this,
+            [this]() {
+                if (mpHost) {
+                    mpHost->spellChecker().warmDictionaries();
+                }
+            },
+            Qt::QueuedConnection);
     // ...and turning spell check on mid-session is the other moment the
     // dictionary goes from unwanted to wanted, so it is read the same way
-    connect(mpHost, &Host::signal_spellCheckEnabled, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
-
-    // Load up the spelling dictionary for the profile - needs to handle the
-    // absence of files for the first run in a new profile or from an older
-    // Mudlet version:
-    setProfileSpellDictionary();
+    connect(
+            mpHost,
+            &Host::signal_spellCheckEnabled,
+            this,
+            [this]() {
+                if (mpHost) {
+                    mpHost->spellChecker().warmDictionaries();
+                }
+            },
+            Qt::QueuedConnection);
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
@@ -215,19 +196,6 @@ TMainConsole::~TMainConsole()
     }
     if (mpUnpackingDialog) {
         mpUnpackingDialog->deleteLater();
-    }
-    if (mpHunspell_system) {
-        Hunspell_destroy(mpHunspell_system);
-        mpHunspell_system = nullptr;
-    }
-    if (mpHunspell_profile) {
-        Hunspell_destroy(mpHunspell_profile);
-        mpHunspell_profile = nullptr;
-        if (mudlet::self()) {
-            // Need to commit any changes to personal dictionary
-            qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
-        }
     }
 }
 
@@ -992,9 +960,37 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
-    auto pM = mpDockableMapWidget;
-    if (pM) {
-        return {false, qsl("cannot create mapper. Do you already use a map window?")};
+    // an embedded map can only be put in a user window, so - unlike
+    // Host::parentWindowMissing() - a scroll box is not a parent it can use
+    // either; without this the map goes on the main console over the game text
+    // and the caller is told it worked
+    const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
+    if (!pW && !wantsMainConsole) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+    // Only the profile's own map dock, and only while it is on screen, holds the
+    // mapper slot. One that is merely hidden - by closeMapWidget(), by the dock's
+    // own close button, by a restored layout, or by mudlet::slot_showMapperDialog()
+    // handing the map over to a main window dock - used to refuse an embedded mapper
+    // for the rest of the session, while the map window getters, setMapWindowTitle()
+    // and closeMapWidget() reported no map window at all. Asking mapWidget() rather
+    // than the raw pointer is what keeps those answers the same as this one.
+    if (mpDockableMapWidget) {
+        if (mapWidget()) {
+            return {false, qsl("cannot create mapper. Do you already use a map window?")};
+        }
+        // The dock is the dlgMapper's parent, so taking it away takes the mapper
+        // with it. deleteLater() leaves every QPointer to the pair set until the
+        // event loop gets to run, which the script that called this will not let
+        // it do, so drop ours now. Conditional because the map may be being drawn
+        // by a main window or detached window dock instead, which this leaves
+        // alone; when it is not, the mapper below takes TMap::mpMapper over.
+        if (mpHost->mpMap->mpMapper.data() == mpDockableMapWidget->widget()) {
+            mpHost->mpMap->mpMapper = nullptr;
+        }
+        qDebug() << "TMainConsole::createMapper() INFO - removing the closed map widget so an embedded mapper can take the map over.";
+        mpDockableMapWidget->deleteLater();
+        mpDockableMapWidget = nullptr;
     }
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
@@ -1036,6 +1032,11 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
+    } else if (!mpHost->mpMap->mpMapper) {
+        // Nothing is drawing the map: either the map widget taken away above was
+        // doing it, or a window that borrowed TMap::mpMapper went without handing
+        // it back. The mapper this console already has takes over.
+        mpHost->restoreOwnMapper();
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
@@ -1064,18 +1065,16 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         return {false, QLatin1String("a commandLine cannot have an empty string as its name")};
     }
 
+    // there is no Host::createCommandLine() wrapper, so the refusal the other
+    // creators make in Host::create...() is made here
+    if (mpHost->parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     auto pN = mSubCommandLineMap.value(name);
-    auto pW = mDockWidgetMap.value(windowname);
-    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pN) {
-        if (pS) {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pS->widget());
-        } else if (pW) {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pW->widget());
-        } else {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
-        }
+        pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, parentWidgetFor(windowname));
         registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
@@ -1158,24 +1157,51 @@ void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
     });
 }
 
+void TMainConsole::setCommandLinePlaceholderText(const QString& text)
+{
+    mpCommandLine->setPlaceholderText(text);
+}
+
+void TMainConsole::updateCommandLineSpellCheck(bool enabled)
+{
+    if (enabled) {
+        mpCommandLine->recheckWholeLine();
+    } else {
+        mpCommandLine->clearMarksOnWholeLine();
+    }
+}
+
+void TMainConsole::setCommandLineText(const QString& text)
+{
+    mpCommandLine->setPlainText(text);
+    mpCommandLine->selectAll();
+}
+
+TCommandLine* TMainConsole::raiseCommandLine()
+{
+    mpCommandLine->activateWindow();
+    show();
+    raise();
+    repaint();
+    return mpCommandLine;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
         return {false, QLatin1String("a text edit cannot have an empty string as its name")};
     }
 
+    // there is no Host::createTextEdit() wrapper, so the refusal the other
+    // creators make in Host::create...() is made here
+    if (mpHost->parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     auto pT = mTextBoxMap.value(name);
-    auto pW = mDockWidgetMap.value(windowname);
-    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pT) {
-        if (pS) {
-            pT = new TTextBox(mpHost, name, pS->widget());
-        } else if (pW) {
-            pT = new TTextBox(mpHost, name, pW->widget());
-        } else {
-            pT = new TTextBox(mpHost, name, mpMainFrame);
-        }
+        pT = new TTextBox(mpHost, name, parentWidgetFor(windowname));
         registerTextBox(name, pT);
         pT->resize(width, height);
         pT->move(x, y);
@@ -1363,8 +1389,7 @@ bool TMainConsole::setLabelBackgroundImage(const QString& name, const QString& p
     if (!pL) {
         return false;
     }
-    pL->setPixmap(QPixmap(path));
-    return true;
+    return pL->setBackgroundImage(path);
 }
 
 bool TMainConsole::resetLabelBackgroundImage(const QString& name)
@@ -1373,7 +1398,77 @@ bool TMainConsole::resetLabelBackgroundImage(const QString& name)
     if (!pL) {
         return false;
     }
-    pL->clear();
+    pL->resetBackgroundImage();
+    return true;
+}
+
+bool TMainConsole::setLabelSvgTint(const QString& name, const QColor& color)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgTint(color);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgTint(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->clearSvgTint();
+    return true;
+}
+
+bool TMainConsole::setLabelSvgRotation(const QString& name, double angle)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgRotation(angle);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgRotation(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgRotation(0.0);
+    return true;
+}
+
+bool TMainConsole::setLabelSvgShear(const QString& name, double shearX, double shearY)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgShear(shearX, shearY);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgShear(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgShear(0.0, 0.0);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgTransform(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->resetSvgTransform();
     return true;
 }
 
@@ -1528,14 +1623,13 @@ bool TMainConsole::pasteToSubConsole(const QString& name)
     return true;
 }
 
-std::optional<QSize> TMainConsole::subConsoleFontSize(const QString& name) const
+std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
 {
-    auto pC = mSubConsoleMap.value(name);
+    const TConsole* pC = (name.isEmpty() || name == qsl("main")) ? this : mSubConsoleMap.value(name).data();
     if (!pC) {
         return {};
     }
 
-    Q_ASSERT_X(pC->mUpperPane, "TMainConsole::subConsoleFontSize", "located console does not have the upper pane available");
     const QFontMetrics fontMetrics(pC->mUpperPane->fontMetrics());
     return {QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height())};
 }
@@ -1712,6 +1806,9 @@ void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)
 {
     for (auto& pDockWidget : mDockWidgetMap) {
         pDockWidget->setStyleSheet(styleSheet);
+    }
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->setStyleSheet(styleSheet);
     }
 }
 
@@ -1895,208 +1992,6 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
     return getMainWindowSize();
 }
 
-QPair<bool, QString> TMainConsole::addWordToSet(const QString& word)
-{
-    const QString errMsg = qsl("the word \"%1\" already seems to be in the user dictionary");
-    QPair<bool, QString> result{};
-    if (!mEnableUserDictionary) {
-        return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
-    }
-
-    if (!storableWord(word)) {
-        return qMakePair(false, unstorableWordMessage().arg(word));
-    }
-
-    if (!mUseSharedDictionary) {
-        // The return value from this function is unclear - it does not seems to
-        // indicate anything useful
-        Hunspell_add(mpHunspell_profile, word.toUtf8().constData());
-        if (!mWordSet_profile.contains(word)) {
-            mWordSet_profile.insert(word);
-            qDebug().noquote().nospace() << "TConsole::addWordToSet(\"" << word << "\") INFO - word added to profile mWordSet.";
-            result.first = true;
-        } else {
-            result.second = errMsg.arg(word);
-        }
-
-    } else {
-        auto pMudlet = mudlet::self();
-        QPair<bool, bool> sharedDictionaryResult = pMudlet->addWordToSet(word);
-        while (!sharedDictionaryResult.first) {
-            qDebug() << "TConsole::addWordToSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
-            sharedDictionaryResult = pMudlet->addWordToSet(word);
-        }
-
-        if (sharedDictionaryResult.second) {
-            // Successfully added word:
-            result.first = true;
-        } else {
-            // Word already present
-            result.second = errMsg.arg(word);
-        }
-    }
-
-    return result;
-}
-
-QPair<bool, QString> TMainConsole::removeWordFromSet(const QString& word)
-{
-    // A word that could not have been written into the ".dic" file cannot have
-    // come back out of one either, so say why it can never be in there rather
-    // than merely that it is not. Removal is not refused outright, so that a
-    // word an older version stored can still be taken out again:
-    const QString errMsg = storableWord(word) ? qsl("the word \"%1\" does not seem to be in the user dictionary") : unstorableWordMessage();
-    QPair<bool, QString> result{};
-    if (!mEnableUserDictionary) {
-        return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
-    }
-
-    if (!mUseSharedDictionary) {
-        // The return value from this function is unclear - it does not seems to
-        // indicate anything useful
-        Hunspell_remove(mpHunspell_profile, word.toUtf8().constData());
-        if (mWordSet_profile.remove(word)) {
-            qDebug().noquote().nospace() << "TConsole::removeWordFromSet(\"" << word << "\") INFO - word removed from profile mWordSet.";
-            result.first = true;
-        } else {
-            result.second = errMsg.arg(word);
-        }
-
-    } else {
-        auto pMudlet = mudlet::self();
-        QPair<bool, bool> sharedDictionaryResult = pMudlet->removeWordFromSet(word);
-        while (!sharedDictionaryResult.first) {
-            qDebug() << "TConsole::removeWordFromSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
-            sharedDictionaryResult = pMudlet->removeWordFromSet(word);
-        }
-
-        if (sharedDictionaryResult.second) {
-            // Successfully added word:
-            result.first = true;
-        } else {
-            // Word already present
-            result.second = errMsg.arg(word);
-        }
-    }
-
-    return result;
-}
-
-void TMainConsole::setSystemSpellDictionary(const QString& newDict)
-{
-    if (newDict.isEmpty() || mSystemDictionary == newDict) {
-        return;
-    }
-
-    mSystemDictionary = newDict;
-
-    if (mpHunspell_system) {
-        Hunspell_destroy(mpHunspell_system);
-        mpHunspell_system = nullptr;
-        mHunspellCodecName_system.clear();
-    }
-
-    // A dictionary picked in the preferences leaves the handle cold, and only
-    // another profile being opened would emit signal_profileLoaded to warm it
-    // again - so read the new one here instead of in front of the next word
-    // typed. During a profile load the handle is warmed once at the end, after
-    // the profile's own choice of dictionary has been read from its XML.
-    if (!mpHost->mIsProfileLoadingSequence) {
-        QTimer::singleShot(0, this, &TMainConsole::slot_warmSystemSpellDictionary);
-    }
-}
-
-void TMainConsole::slot_warmSystemSpellDictionary()
-{
-    // spellCheck() and spellSuggestWord() do not consult this flag, so the
-    // lazy getter still serves a script in a profile that has spell check off:
-    if (mpHost && mpHost->getEnableSpellCheck()) {
-        getHunspellHandle_system();
-    }
-}
-
-Hunhandle* TMainConsole::getHunspellHandle_system()
-{
-    if (!mpHunspell_system && !mSystemDictionary.isEmpty()) {
-        loadSystemSpellDictionary();
-    }
-    return mpHunspell_system;
-}
-
-const QByteArray& TMainConsole::getHunspellCodecName_system()
-{
-    getHunspellHandle_system();
-    return mHunspellCodecName_system;
-}
-
-void TMainConsole::loadSystemSpellDictionary()
-{
-    // Everywhere but macOS getMudletPath() probes for "<name>.aff" to settle
-    // which directory wins, so it has to get the same name the files are then
-    // loaded by.
-    const QString path = MudletPaths::getMudletPath(enums::hunspellDictionaryPath, mSystemDictionary);
-    QString spell_aff = qsl("%1%2.aff").arg(path, mSystemDictionary);
-    QString spell_dic = qsl("%1%2.dic").arg(path, mSystemDictionary);
-
-#if defined(Q_OS_WINDOWS)
-    // strip non-ASCII characters from the path because hunspell can't handle them
-    // when compiled with MinGW 7.3.0
-    mudlet::self()->sanitizeUtf8Path(spell_aff, qsl("%1.aff").arg(mSystemDictionary));
-    mudlet::self()->sanitizeUtf8Path(spell_dic, qsl("%1.dic").arg(mSystemDictionary));
-#endif
-
-    mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
-    if (mpHunspell_system) {
-        mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
-        qDebug().noquote().nospace() << "TMainConsole::loadSystemSpellDictionary() INFO - System Hunspell dictionary \"" << mSystemDictionary << "\" loaded for profile, it uses a \""
-                                     << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
-    }
-}
-
-// NOTE: mEnabledUserDictionary has been wedged on (it will never be false)
-void TMainConsole::setProfileSpellDictionary()
-{
-    // Determine and copy the configuration settings from the Host instance:
-    mpHost->getUserDictionaryOptions(mEnableUserDictionary, mUseSharedDictionary);
-    if (!mEnableUserDictionary) {
-        if (mpHunspell_profile) {
-            Hunspell_destroy(mpHunspell_profile);
-            mpHunspell_profile = nullptr;
-            // Need to commit any changes to personal dictionary
-            qDebug() << "TMainConsole::setProfileSpellDictionary() INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
-        }
-        // Nothing else to do if not using the shared one
-
-    } else {
-        if (!mUseSharedDictionary) {
-            // Want to use per profile dictionary, is it loaded?
-            if (!mpHunspell_profile) {
-                // No - so load it
-                qDebug() << "TMainConsole::setProfileSpellDictionary() INFO - Preparing profile's own Hunspell dictionary...";
-                mpHunspell_profile = mudlet::self()->prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
-            }
-            // Else no need to load it
-
-        } else {
-            // Want to use the shared dictionary - this will open it if needed:
-            mpHunspell_shared = mudlet::self()->prepareSharedDictionary();
-        }
-    }
-}
-
-QSet<QString> TMainConsole::getWordSet() const
-{
-    if (!mEnableUserDictionary) {
-        return QSet<QString>();
-    }
-
-    if (!mUseSharedDictionary) {
-        return mWordSet_profile;
-    }
-    return mudlet::self()->getWordSet();
-}
-
 void TMainConsole::setProfileName(const QString& newName)
 {
     TConsole::setProfileName(newName);
@@ -2261,212 +2156,6 @@ void TMainConsole::finalize()
     }
 }
 
-// TODO: It may be worth considering moving the (now) three following methods
-// to the TMap class...?
-bool TMainConsole::saveMap(const QString& location, int saveVersion)
-{
-    QString filename_map = location;
-    if (filename_map.isEmpty()) {
-        filename_map = MudletPaths::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-    } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
-        // Resolve the name relative to the profile home directory the way
-        // TMainConsole::importMap does, rather than against whatever directory
-        // Mudlet happens to have been started in:
-        filename_map = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
-    }
-
-    const QDir dir_map(MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName));
-    if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
-        qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
-        return false;
-    }
-
-    QSaveFile file_map(filename_map);
-    if (!file_map.open(QIODevice::WriteOnly)) {
-        // Naming the file matters more than usual: a relative location is not
-        // the path the caller typed
-        qDebug().noquote() << "Error saving map to" << filename_map << ":" << file_map.errorString();
-        return false;
-    }
-
-    QDataStream out(&file_map);
-    out.setVersion(QDataStream::Qt_5_12);
-
-    bool saved = mpHost->mpMap->serialize(out, saveVersion);
-    if (saved && !file_map.commit()) {
-        qDebug() << "Error saving map: " << (file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString());
-        saved = false;
-    }
-
-    if (saved) {
-        mpHost->mpMap->resetUnsaved();
-        mpHost->mpMap->setSaveError(false);
-    } else {
-        mpHost->mpMap->setSaveError(true);
-    }
-
-    return saved;
-}
-
-bool TMainConsole::loadMap(const QString& location)
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
-        // in later software versions and is a weak pointer until used
-        // (I think - Slysven ?)
-        return false;
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // No map or map currently loaded - so try and created mapper
-        // but don't load a map here by default, we do that below and it may not
-        // be the default map anyhow
-        pHost->showHideOrCreateMapper(false);
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // And that failed so give up
-        return false;
-    }
-
-    pHost->mpMap->mapClear();
-
-    // The same resolution saveMap and importMap use, so that a map written
-    // under a bare name is looked for where it was written:
-    QString filePathName = location;
-    if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
-        filePathName = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
-    }
-
-    qDebug() << "TMainConsole::loadMap() - restore map case 1.";
-    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
-    const QDateTime now(QDateTime::currentDateTime());
-
-    bool result = false;
-    if (pHost->mpMap->restore(filePathName)) {
-        pHost->mpMap->audit();
-        pHost->mpMap->mpMapper->mp2dMap->init();
-        pHost->mpMap->mpMapper->updateAreaComboBox();
-        pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        pHost->mpMap->mpMapper->show();
-        result = true;
-    } else {
-        pHost->mpMap->mpMapper->mp2dMap->init();
-        pHost->mpMap->mpMapper->updateAreaComboBox();
-        pHost->mpMap->mpMapper->show();
-    }
-
-    if (filePathName.isEmpty()) {
-        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
-    } else {
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(filePathName, now.toString(Qt::ISODate)), true);
-    }
-
-    pHost->mpMap->updateArea(-1);
-
-    return result;
-}
-
-// Used by TLuaInterpreter::loadMap() and dlgProfilePreferences for import/load
-// of files ending in ".xml"
-// The TLuaInterpreter::loadMap() supplies a pointer to an error Message which
-// it requires in the event of an error (it should be written in a structure
-// to match "loadMap: XXXXX." format) - the presence of a non-null pointer here
-// should be used to suppress the writing of error messages direct to the
-// console - if possible!
-bool TMainConsole::importMap(const QString& location, QString* errMsg)
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
-        // in later software versions and is a weak pointer until used
-        // (I think - Slysven ?)
-        if (errMsg) {
-            *errMsg = qsl("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
-        }
-        return false;
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // No map or mapper currently loaded/present - so try and create mapper
-        pHost->showHideOrCreateMapper(false);
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // And that failed so give up
-        if (errMsg) {
-            *errMsg = qsl("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
-        }
-        return false;
-    }
-
-    // Dump any outstanding map errors from past activities that had not yet
-    // been logged...
-    qDebug() << "TMainConsole::importingMap() - importing map case 1.";
-    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map importing(1) report"), true);
-    const QDateTime now(QDateTime::currentDateTime());
-
-    bool result = false;
-
-    const QFileInfo fileInfo(location);
-    QString filePathNameString;
-    if (!fileInfo.filePath().isEmpty()) {
-        if (fileInfo.isRelative()) {
-            // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
-        } else {
-            if (fileInfo.exists()) {
-                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
-            } else {
-                filePathNameString = fileInfo.absoluteFilePath();
-            }
-        }
-    }
-
-    QFile file(filePathNameString);
-    if (!file.exists()) {
-        if (!errMsg) {
-            const QString infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
-                                       "%1.")
-                                            .arg(filePathNameString);
-            pHost->postMessage(infoMsg);
-        } else {
-            // error message for lua loadMap()
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" was not found).")
-                              .arg(filePathNameString);
-        }
-        return false;
-    }
-
-    if (file.open(QFile::ReadOnly | QFile::Text)) {
-        if (!errMsg) {
-            const QString infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
-            pHost->postMessage(infoMsg);
-        }
-
-        result = pHost->mpMap->importMap(file, errMsg);
-
-        file.close();
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Importing map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)));
-    } else {
-        if (!errMsg) {
-            const QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
-            pHost->postMessage(infoMsg);
-        } else {
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" could not be opened for reading).")
-                              .arg(filePathNameString);
-        }
-        return false;
-    }
-
-    pHost->mpMap->updateArea(-1);
-
-    return result;
-}
-
 void TMainConsole::slot_reloadMap(QList<QString> profilesList)
 {
     Host* pHost = getHost();
@@ -2483,7 +2172,7 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
     pHost->postMessage(infoMsg);
 
     QString outcomeMsg;
-    if (loadMap(QString())) {
+    if (pHost->loadMapFile(QString())) {
         outcomeMsg = tr("[  OK  ]  - ... System Map reload request completed.");
     } else {
         outcomeMsg = tr("[ WARN ]  - ... System Map reload request failed.");
@@ -2654,6 +2343,138 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpHost->mpMap->mpMapper = new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data());
     mpHost->mpMap->mpMapper->setStyleSheet(mpHost->mProfileStyleSheet);
     mpDockableMapWidget->setWidget(mpHost->mpMap->mpMapper);
+}
+
+QDockWidget* TMainConsole::mapWidget() const
+{
+    if (!mpDockableMapWidget || mpDockableMapWidget->isHidden()) {
+        return nullptr;
+    }
+
+    return mpDockableMapWidget;
+}
+
+bool TMainConsole::mapWidgetCreated() const
+{
+    return !mpDockableMapWidget.isNull();
+}
+
+bool TMainConsole::setMapWidgetTitle(const QString& title)
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return false;
+    }
+
+    pM->setWindowTitle(title);
+    return true;
+}
+
+std::optional<QString> TMainConsole::mapWidgetTitle() const
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return {};
+    }
+
+    return {pM->windowTitle()};
+}
+
+// pos()/size() rather than geometry() for the same reason as
+// Host::windowGeometry(): they are what move()/resize() were given, while a
+// floating dock's geometry() reports the client area instead.
+std::optional<QRect> TMainConsole::mapWidgetGeometry() const
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return {};
+    }
+
+    return {QRect(pM->pos(), pM->size())};
+}
+
+bool TMainConsole::hideMapWidget()
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return false;
+    }
+
+    pM->hide();
+    return true;
+}
+
+void TMainConsole::showMapWidget()
+{
+    mpDockableMapWidget->show();
+}
+
+dlgMapper* TMainConsole::dockedMapper() const
+{
+    if (!mpDockableMapWidget) {
+        return nullptr;
+    }
+
+    return qobject_cast<dlgMapper*>(mpDockableMapWidget->widget());
+}
+
+void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
+{
+    mudlet::self()->addDockWidget(area, mpDockableMapWidget);
+}
+
+std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
+{
+    auto pM = mpDockableMapWidget;
+    if (!pM) {
+        return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::RightDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::LeftDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::TopDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::BottomDockWidgetArea);
+        return {true, QString()};
+    }
+
+    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
 }
 
 void TMainConsole::showMapperScriptReminder()
@@ -2940,7 +2761,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
-            if (!saveMap(QString())) {
+            if (!mpHost->saveMapFile(QString())) {
                 qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close map save failed";
             }
         }
@@ -2973,7 +2794,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
             if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!
             ASK_MAP:
-                if (!saveMap(QString())) {
+                if (!mpHost->saveMapFile(QString())) {
                     const int mapChoice = QMessageBox::warning(this,
                                                                tr("Could not save map"),
                                                                tr("Sorry, could not save the map. Would you like to retry or close without saving the map?"),

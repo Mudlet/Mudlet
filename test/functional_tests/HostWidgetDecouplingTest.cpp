@@ -22,17 +22,20 @@
 
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
+#include "TMap.h"
+#include "HostManager.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgMapper.h"
 #include "dlgNotepad.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
@@ -42,6 +45,7 @@
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/texteditorwidget.h"
 
+#include <QApplication>
 #include <QDialog>
 #include <QDockWidget>
 #include <QLabel>
@@ -101,7 +105,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -145,6 +149,103 @@ private slots:
         auto [okWithDock, messageWithDock] = host->setMapperTitle(qsl("Custom map title"));
         QVERIFY2(okWithDock, qPrintable(messageWithDock));
         QCOMPARE(host->mpConsole->mpDockableMapWidget->windowTitle(), qsl("Custom map title"));
+    }
+
+    // closeMapWidget tells three states apart and Lua reads the difference from
+    // the message, so a dock that was never made must not report as one that has
+    // already been put away.
+    void test_closeMapWidgetTellsNeverMadeFromAlreadyClosed()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        auto [neverMade, neverMadeMessage] = host->closeMapWidget();
+        QVERIFY2(!neverMade, "closeMapWidget must fail on a profile that never made a map widget.");
+        QCOMPARE(neverMadeMessage, qsl("no map widget found to close"));
+
+        host->showHideOrCreateMapper(true);
+        QVERIFY2(host->mpConsole->mpDockableMapWidget, "The mapper dock was not created.");
+
+        auto [closed, closedMessage] = host->closeMapWidget();
+        QVERIFY2(closed, qPrintable(closedMessage));
+
+        auto [alreadyClosed, alreadyClosedMessage] = host->closeMapWidget();
+        QVERIFY2(!alreadyClosed, "Closing an already closed map widget must fail.");
+        QCOMPARE(alreadyClosedMessage, qsl("map widget already closed"));
+    }
+
+    // The appearance switch used to walk into every profile's console, mapper
+    // and sub-consoles from the host manager; the profile does that walk
+    // itself now. Driven from the entry point that changed, with all three
+    // limbs painted an unmistakably wrong colour first, so a limb that stops
+    // being reached goes red on its own rather than riding on another's work.
+    void test_appearanceChangeRepaintsConsoleMapperAndSubConsoles()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        host->showHideOrCreateMapper(true);
+        auto mapper = host->mpMap->mpMapper;
+        QVERIFY2(mapper, "The mapper was not created.");
+
+        const QString miniName = qsl("colourRefreshMini");
+        auto [miniMade, miniMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 100, 100);
+        QVERIFY2(miniMade, qPrintable(miniMessage));
+        auto mini = host->mpConsole->subConsoleWidget(miniName);
+        QVERIFY2(mini, "The mini console was not created.");
+
+        auto commandLine = host->mpConsole->mpCommandLine;
+        QVERIFY2(commandLine, "The main console has no command line.");
+
+        const QColor wrongColour(1, 2, 3);
+        // Whether the mapper's Window role ends up on the application colour or
+        // inherited from its parent depends on the platform theme's resolve
+        // mask, so record what it settles on rather than predicting it.
+        const QColor settledMapperColour = mapper->palette().color(QPalette::Window);
+        QVERIFY2(settledMapperColour != wrongColour, "The sabotage colour must differ from the mapper's own, or the test proves nothing.");
+        QVERIFY2(host->mCommandLineBgColor != wrongColour, "The sabotage colour must differ from the command line background.");
+
+        const auto paint = [](QWidget* widget, QPalette::ColorRole role, const QColor& colour) {
+            QPalette palette = widget->palette();
+            palette.setColor(role, colour);
+            widget->setPalette(palette);
+        };
+
+        paint(mapper, QPalette::Window, wrongColour);
+        paint(commandLine, QPalette::Base, wrongColour);
+        paint(mini->mpMainFrame, QPalette::Window, wrongColour);
+        QCOMPARE(mapper->palette().color(QPalette::Window), wrongColour);
+        QCOMPARE(commandLine->palette().color(QPalette::Base), wrongColour);
+        QCOMPARE(mini->mpMainFrame->palette().color(QPalette::Window), wrongColour);
+
+        HostManager::self()->changeAllHostColour(host);
+
+        QCOMPARE(mapper->palette().color(QPalette::Window), settledMapperColour);
+        QCOMPARE(commandLine->palette().color(QPalette::Base), host->mCommandLineBgColor);
+        QCOMPARE(mini->mpMainFrame->palette().color(QPalette::Window), QColor(0, 0, 0, 0));
+    }
+
+    // changeAllHostColour() walks the whole pool, so a profile whose console
+    // has gone must not take the appearance switch down with it. Without the
+    // guard in Host::refreshColours() this case dies rather than fails.
+    void test_appearanceChangeSkipsAProfileWithNoConsole()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto console = host->mpConsole;
+        QVERIFY2(console, "The active host has no main console.");
+
+        host->mpConsole = nullptr;
+        HostManager::self()->changeAllHostColour(host);
+        host->mpConsole = console;
+
+        QVERIFY2(host->mpConsole, "The console must be back before the fixture tears down.");
     }
 
     // The mapping-script reminder used to be a QDialog built inside Host; it is
@@ -584,7 +685,7 @@ private slots:
     // Utility function
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

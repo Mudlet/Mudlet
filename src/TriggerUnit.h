@@ -36,6 +36,7 @@
 #include <QSet>
 #include <QString>
 
+#include <limits>
 #include <list>
 #include <memory>
 #include <vector>
@@ -83,14 +84,21 @@ public:
     // Called by anything that changes whether one trigger can be ruled out of a
     // line by its text alone.
     void markPrescanStale(TTrigger* pT);
-    // As above, but for the changes that make a trigger fire without matching
-    // text. Those have to reach the line already being processed, whose
-    // candidate list was settled before the change - see processDataStream().
-    void markRootUnfilterable()
+    // As above, for a change a script makes part-way through a line. The line
+    // being processed settled its candidate list before the change, so the
+    // epoch sends the rest of it down the unfiltered path; the index itself
+    // only has to carry the one trigger over, the same way match() does it when
+    // a stay-open window opens or closes under its own steam.
+    void markPrescanStaleForLineInFlight(TTrigger* pT)
     {
         ++mUnfilterableEpoch;
-        markRootNodeListReordered();
+        markPrescanStale(pT);
     }
+    // How often the whole prescan index has been thrown away and built again.
+    // The incremental path exists to keep this flat while a profile runs, and
+    // nothing else tells the two apart - both arrive at the same index, by very
+    // different amounts of work - so this is what a test can watch.
+    quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -146,6 +154,8 @@ private:
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
     void startOrExtendSameLineChain(TTrigger* pT);
+    void collectPrescanTasks(TTrigger* pT);
+    void rebuildPrescanTasksIfStale();
     void stopSameLineCreationLoop(const int chainId);
     void markRootNodeAppended(TTrigger* pT);
     void markRootNodeRemoved(TTrigger* pT);
@@ -167,6 +177,17 @@ private:
     // than any game sends.
     static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
     QByteArray mUtf8Scratch;
+    // Every trigger in the tree whose own patterns gate what is below it, in
+    // the order they are reached, so a line's worth of them can be handed to
+    // the match pool as one list. Rebuilt only when the tree changes - see
+    // rebuildPrescanTasksIfStale().
+    std::vector<TTrigger*> mPrescanTasks;
+    quint64 mPrescanTasksGeneration = std::numeric_limits<quint64>::max();
+    // How many regex searches the previous line took, on whichever path it
+    // went, which stands in for how many this one will take - the work the
+    // pool could share out, as opposed to how many triggers hold a regex,
+    // most of which may be disabled or settled before their regex is reached.
+    int mRegexSearchesOnTheLastLine = 0;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
     // What processDataStream() iterates instead of mTriggerRootNodeList itself -
@@ -195,6 +216,7 @@ private:
     std::vector<int> mRootNodesRefiled;
     std::vector<int> mCandidateScratch;
     std::vector<int> mCandidates;
+    quint64 mPrescanRebuilds = 0;
     quint32 mUnfilterableEpoch = 0;
     int mMaxID;
     bool mModuleMember;

@@ -5,11 +5,12 @@
 #   publish assemble DIR SITE  lay out DIR's packages as repositories in SITE
 #   publish upload SITE        mirror SITE to the R2 bucket, replacing its contents
 #
-# Signing uses the first secret key in the gpg keyring. assemble needs BASE_URL,
-# the address SITE is served from; upload needs R2_ACCOUNT_ID, R2_BUCKET,
+# Signing uses the first secret key in the gpg keyring, whose public half must
+# be committed as CI/linux-packages/mudlet.asc. assemble needs BASE_URL, the
+# address SITE is served from; upload needs R2_ACCOUNT_ID, R2_BUCKET,
 # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
 set -euo pipefail
-shopt -s nullglob
+shopt -s nullglob globstar
 
 HERE="$(dirname "$(readlink -f "$0")")"
 
@@ -17,6 +18,19 @@ signing_key() {
   local key
   key="$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')"
   [[ -n "$key" ]] || { echo "no secret key in the gpg keyring" >&2; exit 1; }
+  # named before the comparison below, which would otherwise fail with gpg
+  # complaining about a broken pipe rather than about the file
+  [[ -f "$HERE/mudlet.asc" ]] || { echo "CI/linux-packages/mudlet.asc is missing - it holds the public half of $key" >&2; exit 1; }
+  # Anything pinning the committed copy checks the published key against it, so
+  # that copy has to be this key's public half and nothing else. Comparing the
+  # whole export rather than the fingerprint is what makes that hold: a
+  # fingerprint also matches a file carrying a second key every install would
+  # trust, a private key, or a copy frozen before the key grew a signing subkey,
+  # which would publish a key that cannot verify what was just signed.
+  gpg --batch --armor --export "$key" | cmp -s - "$HERE/mudlet.asc" || {
+    echo "CI/linux-packages/mudlet.asc is not the public half of $key - write it with: gpg --armor --export $key > CI/linux-packages/mudlet.asc" >&2
+    exit 1
+  }
   printf '%s' "$key"
 }
 
@@ -118,6 +132,37 @@ EOF
 
   gpg --batch --armor --export "$key" > "$SITE/mudlet.asc"
   sed "s|@BASE_URL@|${BASE_URL}|g" "$HERE/install.sh.in" > "$SITE/install.sh"
+  write_indexes
+}
+
+# R2 lists no directories and serves no index documents, so each directory gets
+# a page and links name index.html explicitly
+write_indexes() {
+  local dir path entry name
+  for dir in "$SITE"/**/; do
+    path="${dir#"$SITE"}"
+    {
+      printf '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+      printf '<title>Mudlet packages %s</title>\n</head>\n<body>\n<h1>Mudlet packages %s</h1>\n' "$path" "$path"
+      if [[ "$path" == / ]]; then
+        printf '<p>Install with <code>curl -fsSL %s/install.sh | sudo sh</code></p>\n' "$BASE_URL"
+      fi
+      printf '<ul>\n'
+      if [[ "$path" != / ]]; then
+        printf '<li><a href="../index.html">../</a></li>\n'
+      fi
+      for entry in "$dir"*/; do
+        name="$(basename "$entry")"
+        printf '<li><a href="%s/index.html">%s/</a></li>\n' "$name" "$name"
+      done
+      for entry in "$dir"*; do
+        name="$(basename "$entry")"
+        [[ -f "$entry" && "$name" != index.html ]] || continue
+        printf '<li><a href="%s">%s</a> %s</li>\n' "$name" "$name" "$(numfmt --to=iec-i --suffix=B "$(stat -c %s "$entry")")"
+      done
+      printf '</ul>\n</body>\n</html>\n'
+    } > "${dir}index.html"
+  done
 }
 
 upload() {

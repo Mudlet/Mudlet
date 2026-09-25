@@ -40,8 +40,6 @@
 #include <QPointer>
 #include <QWidget>
 
-#include <hunspell/hunspell.h>
-
 #include <list>
 #include <map>
 #include <memory>
@@ -271,6 +269,17 @@ public:
     // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
     // until its right-click menu asks for it:
     void showSearchBar();
+    // Copies text a caller is putting on this console to standard output for
+    // --mirror, one line per line shown, each prefixed with the profile and
+    // console names. Does nothing unless --mirror was given. The text is a
+    // fragment of a line as often as it is whole lines, so a line is written
+    // out once a line feed has ended it and what is left over is held until
+    // one does.
+    void mirrorToStdOut(const QString& text);
+    // The same for a line that is already complete: TBuffer::commitLineData()
+    // calls this with a line as the game sent it, before a trigger can gag or
+    // rewrite it.
+    void mirrorLineToStdOut(const QString& line);
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
     void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
     void discardAll() override;
@@ -329,6 +338,8 @@ public:
     void setSearchOptions(const enums::BufferSearchOptions);
     void setF3SearchEnabled(const bool enabled);
     void setProxyForFocus(TCommandLine*);
+    void setCompactInputLine(const bool state);
+    void repaintPanes() const;
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
     // Raises an event if the number of lines (in the
     // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
@@ -357,13 +368,13 @@ public:
     // the console itself:
     QPointer<QWidget> mpFindBar;
 
-    // The buffer, cursor/prompt state and fg/bg colours live in a core
-    // TConsoleModel reached through model(). For the main console that model is
-    // co-owned with Host (which drives the trigger pipeline through it - see
-    // Host::runTriggers); sub-consoles own theirs. The members below are
-    // references aliasing the model, so the existing buffer/mFgColor/...
-    // accesses across the codebase are unchanged - which is why the model has
-    // to stay declared ahead of every one of them.
+    // The buffer, cursor/prompt state, selection, current format and fg/bg
+    // colours live in a core TConsoleModel reached through model(). For the
+    // main console that model is co-owned with Host (which drives the trigger
+    // pipeline through it - see Host::runTriggers); sub-consoles own theirs.
+    // The members below are references aliasing the model, so the existing
+    // buffer/mFgColor/... accesses across the codebase are unchanged - which is
+    // why the model has to stay declared ahead of every one of them.
     std::shared_ptr<TConsoleModel> mpModel;
     TBuffer& buffer;
     static const QString cmLuaLineVariable;
@@ -379,15 +390,19 @@ public:
     QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-    // Not mBgColor: captured once and never updated, so it only ever held the
-    // built-in default - which the model can now have replaced with the
-    // profile's before the console is built.
-    QColor mSystemMessageBgColor = QColorConstants::Black;
+    // Transparent so a system message blends into the console's real background
+    // instead of an opaque bar; TTextEdit's selection swap and TBuffer's HTML
+    // export both resolve alpha-0 against getConsoleBgColor() so the text stays
+    // visible when selected and the same colour is kept in copied/exported HTML.
+    QColor mSystemMessageBgColor = QColorConstants::Transparent;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
     int& mButtonState;
 
     QString mConsoleName;
+    // What --mirror has been handed for the line this console is building, and
+    // has not written out yet because no line feed has ended it
+    QString mMirrorPendingLine;
     QString& mCurrentLine;
     int& mEngineCursor;
 
@@ -397,7 +412,7 @@ public:
     int mOldX = 0;
     int mOldY = 0;
 
-    TChar mFormatCurrent;
+    TChar& mFormatCurrent;
     QString mFormatSequenceRest;
 
     QWidget* mpBaseVFrame = nullptr;
@@ -421,8 +436,8 @@ public:
     QPoint& mUserCursor;
     int mWrapAt = 100;
     QLineEdit* mpLineEdit_networkLatency = nullptr;
-    QPoint P_begin;
-    QPoint P_end;
+    QPoint& P_begin;
+    QPoint& P_end;
     QString mProfileName;
     TSplitter* splitter = nullptr;
     bool& mIsPromptLine;

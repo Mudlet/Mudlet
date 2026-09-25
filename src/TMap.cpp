@@ -24,7 +24,7 @@
 #include "TMap.h"
 
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -181,6 +181,13 @@ TMap::~TMap()
         for (const auto& message : std::as_const(mStoredMessages)) {
             qWarning() << message << "\n------------";
         }
+    }
+}
+
+void TMap::refreshMapperColours()
+{
+    if (mpMapper) {
+        mpMapper->refreshColours();
     }
 }
 
@@ -1781,7 +1788,7 @@ bool TMap::restore(QString location)
     QStringList entries;
 
     if (location.isEmpty()) {
-        folder = MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName);
+        folder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
         const QDir dir(folder);
         QStringList filters;
         filters << qsl("*.[dD][aA][tT]");
@@ -2128,7 +2135,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
     QString folder;
     QStringList entries;
-    folder = MudletPaths::getMudletPath(enums::profileMapsPath, profile);
+    folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     entries = dir.entryList(QDir::Filters(QDir::Files | QDir::NoDotAndDotDot), QDir::Time);
@@ -2162,7 +2169,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
+        if (MudletApp::release() || MudletApp::publicTest()) {
             // This is a release/public test version - should not support any map file versions higher that it was built for
             if (fileVersion) {
                 *fileVersion = otherProfileVersion;
@@ -2665,7 +2672,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(MudletPaths::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
+                            .arg(MudletApp::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
     } else if (mIsFileViewingRecommended && smShowMapAuditErrors) {
         postMessage(tr("[ INFO ]  - The equivalent to the above information about that last map\n"
                        "operation has been saved for review as the most recent report in\n"
@@ -2673,7 +2680,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(MudletPaths::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
+                            .arg(MudletApp::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
     }
 
     mIsFileViewingRecommended = false;
@@ -2731,7 +2738,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     // Check to ensure we have a map directory to save the map files to.
     const QDir toProfileDir;
-    const QString toProfileDirPathString = MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName);
+    const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
     if (!toProfileDir.mkpath(toProfileDirPathString)) {
         const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
                                   "Please check that you have permissions/access to:\n"
@@ -2745,9 +2752,9 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     if (localFileName.isEmpty()) {
         if (url.path().endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
-            mLocalMapFileName = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+            mLocalMapFileName = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         } else {
-            mLocalMapFileName = MudletPaths::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
+            mLocalMapFileName = MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
         }
     } else {
         mLocalMapFileName = localFileName;
@@ -2755,7 +2762,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     QNetworkRequest request = QNetworkRequest(url);
     pHost->updateProxySettings(mpNetworkAccessManager);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
 
     mExpectedFileSize = 4000000;
 
@@ -2775,7 +2782,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 }
 
 // Called from TLuaInterpreter::loadFile() or dlgProfilePreferences's "loadMap"
-// both via TConsole::importMap( QFile & ) - it is intended to prevent
+// both via Host::importMapFile(...) - it is intended to prevent
 // readXmlMapFile( QFile & ) from being used more than once at a time and to
 // prevent the above callers from using that when a map download is in progress!
 // errMsg if, non-null is for a suitable structured error message to return to
@@ -3031,7 +3038,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     QString parsingFileName;
     if (!readFile.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
         parsingFileName = readFile.fileName();
-        parsingWasSuccessful = pHost->mpConsole->loadMap(parsingFileName);
+        parsingWasSuccessful = pHost->loadMapFile(parsingFileName);
     } else {
         parsingFileName = mLocalMapFileName;
         if (!readFile.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
@@ -3387,12 +3394,12 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QString destination{dest};
 
     if (destination.isEmpty()) {
-        const QString destFolder = MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName);
+        const QString destFolder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
         const QDir destDir(destFolder);
         if (!destDir.exists()) {
             destDir.mkdir(destFolder);
         }
-        destination = MudletPaths::getMudletPath(enums::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        destination = MudletApp::getMudletPath(enums::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     }
 
     if (!destination.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {

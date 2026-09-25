@@ -20,7 +20,7 @@ describe("stt bridge", function()
 
     it("provides every documented function", function()
       local documented = {
-        "init", "start", "stop", "toggle", "close",
+        "init", "start", "stop", "cancel", "toggle", "close",
         "available", "initialized", "listening",
         "getInfo", "getModelPath", "getLibraryPath", "listModels",
         "getPlatformKey", "reloadLibrary", "unloadLibrary",
@@ -73,6 +73,7 @@ describe("stt bridge", function()
       assert.is_boolean(info.capabilities.biasing)
       assert.is_boolean(info.capabilities.grammar)
       assert.is_boolean(info.capabilities.words)
+      assert.is_boolean(info.capabilities.sensitivityTuning)
       assert.is_boolean(info.capabilities.onDevice)
       assert.is_number(info.silenceTimeout, "0 while disabled, not absent")
       assert.is_number(info.audioLevel)
@@ -104,8 +105,103 @@ describe("stt bridge", function()
     it("names the engine it would use", function()
       -- Asserting "non-empty or the string none" was a test that could not
       -- fail, since every string is one or the other. The contract worth
-      -- holding is that the name is one this build actually has.
-      assert.are.equal("Vosk", stt.getInfo().backend)
+      -- holding is that the name is one this build actually has - and that it
+      -- is empty rather than a guess before any engine has been built, since
+      -- this key names whichever engine is loaded rather than a fixed value.
+      local backend = stt.getInfo().backend
+      assert.is_string(backend)
+      -- The gate is not quite the question. backend is empty when no recognizer
+      -- object exists; initialized() is also false in Error, where one does
+      -- exist and does have a name. Nothing earlier in this file builds one, so
+      -- the two agree here - but that is an ordering the file does not state,
+      -- and a case added above this one that leaves a recognizer in Error would
+      -- send it down the wrong branch.
+      if stt.initialized() then
+        assert.is_truthy(backend == "Vosk" or backend == "sherpa-onnx" or backend == "Apple Speech",
+                         "backend should name an engine this build has, got: " .. backend)
+      else
+        -- Asserted rather than skipped: with no engine built this is the whole
+        -- contract, and CI runs with none. Allowing "" *or* "Vosk" - as this
+        -- did - meant reverting the fix that stopped it guessing "Vosk" left
+        -- the spec green, which is the one case it exists to catch.
+        assert.are.equal("", backend, "backend names an engine before one is built")
+      end
+    end)
+  end)
+
+  describe("capability announcements", function()
+
+    -- getInfo().capabilities and sysSTTCapabilitiesChanged have to describe the
+    -- same thing in both directions. docs/stt-api.md offers following the event
+    -- as an equivalent to re-reading after init(), so a package that follows it
+    -- must not be told about a change getInfo() cannot see, nor left unaware of
+    -- one it can. The asymmetry that broke this was a recognizer coming into
+    -- existence: every capability reads false while there is none, so the
+    -- transition is real to Lua even though the recognizer is not asked until
+    -- the next init(), long after Lua's answer changed.
+    --
+    -- With no engine installed nothing here creates a recognizer, so this
+    -- degrades to asserting that nothing was announced either - true, but
+    -- proving little. It bites where an engine exists.
+    it("agrees with getInfo about what counts as a change", function()
+      local events = 0
+      local handler = registerAnonymousEventHandler("sysSTTCapabilitiesChanged", function() events = events + 1 end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local function capabilities()
+        local current = stt.getInfo().capabilities
+        return ("%s|%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.sensitivityTuning), tostring(current.onDevice))
+      end
+
+      local before, announced = capabilities(), events
+      -- Enough to create the recognizer if nothing has yet, and harmless if
+      -- something already did
+      stt.setSilenceTimeout(1500)
+      local after = capabilities()
+
+      if after ~= before then
+        assert.is_true(events > announced, "capabilities changed with no sysSTTCapabilitiesChanged to say so")
+      else
+        assert.are.equal(announced, events, "sysSTTCapabilitiesChanged announced a change getInfo() cannot see")
+      end
+    end)
+  end)
+
+  describe("capability announcements", function()
+
+    -- getInfo().capabilities and sysSTTCapabilitiesChanged have to describe the
+    -- same thing in both directions. docs/stt-api.md offers following the event
+    -- as an equivalent to re-reading after init(), so a package that follows it
+    -- must not be told about a change getInfo() cannot see, nor left unaware of
+    -- one it can. The asymmetry that broke this was a recognizer coming into
+    -- existence: every capability reads false while there is none, so the
+    -- transition is real to Lua even though the recognizer is not asked until
+    -- the next init(), long after Lua's answer changed.
+    --
+    -- With no engine installed nothing here creates a recognizer, so this
+    -- degrades to asserting that nothing was announced either - true, but
+    -- proving little. It bites where an engine exists.
+    it("agrees with getInfo about what counts as a change", function()
+      local events = 0
+      local handler = registerAnonymousEventHandler("sysSTTCapabilitiesChanged", function() events = events + 1 end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local function capabilities()
+        local current = stt.getInfo().capabilities
+        return ("%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.onDevice))
+      end
+
+      local before, announced = capabilities(), events
+      -- Enough to create the recognizer if nothing has yet, and harmless if
+      -- something already did
+      stt.setSilenceTimeout(1500)
+      local after = capabilities()
+
+      if after ~= before then
+        assert.is_true(events > announced, "capabilities changed with no sysSTTCapabilitiesChanged to say so")
+      else
+        assert.are.equal(announced, events, "sysSTTCapabilitiesChanged announced a change getInfo() cannot see")
+      end
     end)
   end)
 
@@ -185,12 +281,38 @@ describe("stt bridge", function()
     -- directory a model belongs in. It used to report a made-up default path
     -- as missing, which named a directory the reader never created and left
     -- the "install a model" message unreachable.
-    it("names where a model belongs when none is installed", function()
+    it("names where a model belongs when none is installed, or succeeds via a model-less backend", function()
       if not stt.available() or #stt.listModels() > 0 then return end
       local ok, err = stt.init()
+
+      -- stt.available() is true here with no model installed and no
+      -- listable models only when a model-less backend - the built-in macOS
+      -- one today - is what made it true. stt.init() must be able to reach
+      -- it with no argument, since it needs nothing installed to begin with.
+      if ok then
+        assert.is_true(ok)
+        assert.are.equal("Apple Speech", stt.getInfo().backend, "only a model-less backend should succeed with nothing installed")
+        return
+      end
+
       assert.is_nil(ok, "init with no model installed should fail")
       assert.is_string(err)
-      assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
+      -- Two different refusals reach here, and only one has a directory to
+      -- name. A machine with a model-based engine and no model must name where
+      -- one belongs. A Mac whose built-in recogniser made available() true and
+      -- then could not start has no models directory in the picture at all -
+      -- that backend installs nothing - so requiring the path there asserts a
+      -- contract this refusal was never part of.
+      local namesADirectory = err:find("no language model is installed", 1, true)
+      local isModelLessRefusal = err:find("failed to initialize model", 1, true)
+      -- Total on purpose. Matching a literal from the C++ and doing nothing
+      -- when it misses means rewording that message turns this into a silent
+      -- pass, which is the failure mode both harnesses have.
+      assert.is_truthy(namesADirectory or isModelLessRefusal,
+                       "unrecognised refusal, so neither branch below was checked: " .. err)
+      if namesADirectory then
+        assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
+      end
     end)
 
     it("refuses to start before a model is loaded", function()
@@ -228,6 +350,126 @@ describe("stt bridge", function()
       assert.is_false(stt.listening(), "a refused toggle must leave nothing listening")
     end)
 
+    -- Semantics rule 2 has one exception: a sysSTTError handler's own calls
+    -- answer it through their return values. Raising a refusal from inside the handler would run
+    -- the handler again, making the same call, until Lua's C stack overflows.
+    -- Reachable on any machine: a path that is not there is refused, and
+    -- announced, before the bridge looks for an engine at all.
+    it("does not run a sysSTTError handler inside itself for its own refused call", function()
+      local depth, deepest, calls = 0, 0, 0
+      local innerOk, innerErr
+      local handler = registerAnonymousEventHandler("sysSTTError", function()
+        calls = calls + 1
+        depth = depth + 1
+        deepest = math.max(deepest, depth)
+        if calls < 20 then
+          innerOk, innerErr = stt.init("/no/such/speech/model")
+        end
+        depth = depth - 1
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      stt.init("/no/such/speech/model")
+
+      assert.are.equal(1, deepest, "the handler ran inside itself")
+      assert.are.equal(1, calls)
+      assert.is_nil(innerOk)
+      assert.is_string(innerErr, "the call inside the handler was refused without saying why")
+    end)
+
+    -- #10759. stt.init() reaches Lua before it returns: setState(Ready) raises
+    -- sysSTTStateChanged from inside the load, and a handler is free to call
+    -- stt.close(), to load another model, or to ask for another engine. Any of
+    -- those leaves the caller holding a bridge it was told was ready and is
+    -- not, so the next stt.start() fails on a session nothing loaded.
+    --
+    -- Checked at the bridge rather than in a backend, which is why these are
+    -- worth having as specs: there are three engines now, and the hazard is in
+    -- the events the bridge raises while one of them loads, not in anything
+    -- Vosk, sherpa or Apple does. A guard in one backend is a guard the other
+    -- two silently lack.
+    --
+    -- A named model rather than stt.init(), so this is the engine under test
+    -- rather than whichever one Auto settles on - on a Mac that is the built-in
+    -- recogniser, which loads no model and so cannot be asked this question.
+    it("refuses a load a handler closed while it was still loading", function()
+      -- Said rather than passed over: on a runner with nothing installed this
+      -- case cannot reach the bridge check it is about, and returning quietly
+      -- reported a green test for something nobody ran.
+      if not stt.available() then
+        pending("no speech engine is installed here, so no model can be loaded to be closed under")
+      end
+      local models = stt.listModels()
+      if #models < 1 then
+        pending("no speech model is installed here, so there is nothing to load")
+      end
+      stt.close()
+
+      local closed = false
+      local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
+        if state == "ready" and not closed then
+          closed = true
+          stt.close()
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        stt.close()
+      end)
+
+      local ok, err = stt.init(models[1].path)
+      -- The load never reached ready, so the handler never had its moment. A
+      -- refusal for some other reason is not what this is about.
+      if not closed then
+        pending("the load never reached ready here, so the handler this case needs never ran")
+      end
+
+      assert.is_nil(ok, "a load a handler closed under it reported success")
+      -- The wording, not merely that something was refused: a backend refusing
+      -- for its own reasons answers "failed to initialize model from ...", so
+      -- asserting is_string(err) alone would be satisfied without the bridge
+      -- ever asking the question this case is about.
+      assert.is_string(err)
+      assert.is_truthy(err:find("closed it before it could be used", 1, true), "the refusal did not come from the bridge's own check: " .. err)
+      assert.is_false(stt.initialized(), "initialized() stayed true with the model closed")
+      assert.are.equal("uninitialized", stt.getInfo().state, "the state outlived the model it described")
+    end)
+
+    -- The other half of #10759: a handler that loads a different model rather
+    -- than closing leaves a working engine behind, so state alone would call
+    -- the outer load a success. Only the path it was asked for settles it.
+    it("answers for the model it was asked for, not the one a handler loaded", function()
+      if not stt.available() then
+        pending("no speech engine is installed here, so no model can be loaded to be replaced")
+      end
+      local models = stt.listModels()
+      if #models < 2 then
+        pending("this case needs two installed models, so that a handler can load the other one")
+      end
+      stt.close()
+
+      local replaced = false
+      local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
+        if state == "ready" and not replaced then
+          replaced = true
+          stt.init(models[2].path)
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        stt.close()
+      end)
+
+      local ok, err = stt.init(models[1].path)
+      if not replaced then
+        pending("the load never reached ready here, so the handler this case needs never ran")
+      end
+
+      assert.is_nil(ok, "a load answered true for a model a handler had already replaced")
+      assert.is_truthy(err:find("replaced it with another", 1, true), "the refusal did not come from the bridge's own check: " .. tostring(err))
+      assert.are.equal(models[2].path, stt.getInfo().modelPath, "modelPath should name the model that is actually loaded")
+    end)
+
     it("raises on a vocabulary that is not a table", function()
       assert.has_error(function() stt.setVocabulary("kill") end)
       assert.has_error(function() stt.setVocabulary(nil) end)
@@ -247,6 +489,17 @@ describe("stt bridge", function()
         return
       end
       assert.is_true(stt.stop(), "stopping nothing is not an error")
+    end)
+
+    it("cancels without complaint when nothing is listening", function()
+      -- The same two answers as stt.stop(), for the same reason
+      if stt.getInfo().state == "error" then
+        local ok, err = stt.cancel()
+        assert.is_nil(ok, "cancelling in an error state should not claim a clean cancel")
+        assert.is_string(err)
+        return
+      end
+      assert.is_true(stt.cancel(), "cancelling nothing is not an error")
     end)
 
     it("closes without complaint when nothing is initialized", function()
@@ -307,8 +560,14 @@ describe("stt bridge", function()
       local hadLibrary = stt.available()
       finally(function() stt.reloadLibrary() end)
 
-      assert.is_true(stt.unloadLibrary(), "unloading with nothing in use should succeed")
-      if hadLibrary then
+      local unloaded, unloadError = stt.unloadLibrary()
+      assert.is_true(unloaded, "unloading with nothing in use should succeed, got: " .. tostring(unloadError))
+      -- The latch is about the library. Availability is not only about the
+      -- library on a Mac, where the built-in backend needs none and keeps
+      -- stt.available() true however completely Vosk's module is released -
+      -- so asserting it goes false there asks unloadLibrary() for something it
+      -- cannot deliver and was never meant to.
+      if hadLibrary and getOS() ~= "mac" then
         -- the latch is the whole point: without it the next read-shaped call
         -- maps the module straight back in and the file the caller meant to
         -- replace is locked again

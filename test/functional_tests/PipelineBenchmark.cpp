@@ -36,6 +36,18 @@
  * -DREGISTER_PERF_BENCHMARK=ON to also get it under ctest:
  *   QT_QPA_PLATFORM=offscreen ./PipelineBenchmark
  *
+ * Two knobs for sweeping the trigger engine, both read from the environment
+ * and both refused unless they parse as a positive integer:
+ *   MUDLET_BENCH_TRIGGERS=<n>     install n triggers instead of one copy of
+ *                                 the set in installTriggerSet() - the set is
+ *                                 repeated or cut short, and it is interleaved
+ *                                 by kind so any prefix keeps the same mix
+ *   MUDLET_BENCH_CHUNK_LINES=<n>  feed the corpus n lines at a time instead of
+ *                                 as one chunk, which is what decides whether
+ *                                 TriggerUnit treats it as a flood
+ * Either changes what is being measured, so compare-perf-baseline.py refuses a
+ * comparison across two runs that set them differently.
+ *
  * Companion for the live-GUI display/echo path is the Stressinator display
  * package; see docs/libmudlet-perf-baseline.md.
  */
@@ -70,7 +82,7 @@
 #define BENCH_BUILD_ASAN 0
 #endif
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -80,6 +92,8 @@
 #include "TTextEdit.h"
 #include "TTrigger.h"
 #include "TelnetServerStub.h"
+#include "TriggerMatchPool.h"
+#include "TriggerUnit.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -106,8 +120,8 @@ private:
     // Both phases feed these identical bytes, so text and trigger numbers are
     // directly comparable.
     QByteArray mCorpus;
-    // The corpus cut into reads when MUDLET_BENCH_CHUNK_BYTES is set:
-    QList<QByteArray> mChunks;
+    QByteArrayList mFeedChunks;
+    int mWantedTriggers = 0;
     int mCorpusLines = 0;
     qint64 mCorpusBytes = 0;
     double mTextBestPassSeconds = 0.0;
@@ -387,6 +401,15 @@ private:
         return out;
     }
 
+    struct BenchTrigger
+    {
+        QStringList patterns;
+        int kind = REGEX_SUBSTRING;
+        bool multiline = false;
+        // A colour trigger on this foreground when non-negative.
+        int ansiFg = -1;
+    };
+
     // A realistic ~four-dozen always-active trigger mix. Some patterns never
     // match, so the miss path is costed too. Lua-code matchers are excluded and
     // every trigger carries an empty script, so a match runs the full regex +
@@ -398,27 +421,59 @@ private:
     // whether the prescan index can be maintained rather than rebuilt. One
     // trigger that matches every line and churns one temporary trigger per line
     // is the worst case of that, so it is the arm to measure the index against.
+    // MUDLET_BENCH_CHURN=stayOpen churns through setTriggerStayOpen() instead of
+    // through arming and killing. Both move a trigger in and out of what the
+    // index can filter, but they reach the index by different routes: arming
+    // and killing add and empty a slot, while a stay-open window files an
+    // existing one again.
     int installChurnTrigger(Host* host, bool& allOk)
     {
-        if (qgetenv("MUDLET_BENCH_CHURN").isEmpty()) {
+        const QByteArray churnMode = qgetenv("MUDLET_BENCH_CHURN");
+        if (churnMode.isEmpty()) {
             return 0;
+        }
+        const bool churnByStayOpen = (churnMode == "stayOpen");
+        if (churnByStayOpen) {
+            // setTriggerStayOpen() reopens a standing trigger rather than making
+            // one, so the arm needs something for it to reopen. Its pattern never
+            // matches: every firing it gets is one the stay-open count bought it,
+            // which is what takes it out of the index.
+            auto* pStay = new TTrigger(qsl("bench_stayopen"), {qsl("__bench_never_matches__")}, {REGEX_SUBSTRING}, false, host);
+            pStay->setIsFolder(false);
+            pStay->setTemporary(false);
+            pStay->setIsActive(true);
+            allOk = pStay->registerTrigger() && allOk;
+            // The constructor sets the name but only setName() enters it in the
+            // lookup table setTriggerStayOpen() searches, so without this the
+            // arm reopens nothing and times an empty Lua call.
+            pStay->setName(qsl("bench_stayopen"));
+            allOk = pStay->setScript(QString()) && allOk;
+            allOk = pStay->state() && allOk;
+            allOk = (host->getTriggerUnit()->findTrigger(qsl("bench_stayopen")) != nullptr) && allOk;
         }
         auto* pT = new TTrigger(qsl("bench_churn"), {qsl("e")}, {REGEX_SUBSTRING}, false, host);
         pT->setIsFolder(false);
         pT->setTemporary(false);
         pT->setIsActive(true);
         allOk = pT->registerTrigger() && allOk;
-        // The kill is held back a few lines so that the arming has been applied
-        // to the index before the killing reaches it. Arming and killing on the
-        // same line is the commoner shape, but the two cancel out before the
-        // index sees either, so it measures nothing about maintaining one.
-        allOk = pT->setScript(qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
-                                  "__bench_churn_q = __bench_churn_q or {} "
-                                  "__bench_churn_q[#__bench_churn_q + 1] = tempTrigger('__bench_churn__', '--') "
-                                  "if #__bench_churn_q > 8 then killTrigger(table.remove(__bench_churn_q, 1)) end"))
-                && allOk;
+        QString churnScript;
+        if (churnByStayOpen) {
+            churnScript = qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
+                              "setTriggerStayOpen('bench_stayopen', 1)");
+        } else {
+            // The kill is held back a few lines so that the arming has been
+            // applied to the index before the killing reaches it. Arming and
+            // killing on the same line is the commoner shape, but the two
+            // cancel out before the index sees either, so it measures nothing
+            // about maintaining one.
+            churnScript = qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
+                              "__bench_churn_q = __bench_churn_q or {} "
+                              "__bench_churn_q[#__bench_churn_q + 1] = tempTrigger('__bench_churn__', '--') "
+                              "if #__bench_churn_q > 8 then killTrigger(table.remove(__bench_churn_q, 1)) end");
+        }
+        allOk = pT->setScript(churnScript) && allOk;
         allOk = pT->state() && allOk;
-        return 1;
+        return churnByStayOpen ? 2 : 1;
     }
 
     int installTriggerSet(Host* host, bool& allOk)
@@ -452,40 +507,14 @@ private:
             return n + installChurnTrigger(host, allOk);
         }
 
-        auto addKind = [&](const QStringList& patterns, int kind, bool multiline) {
-            QList<int> kinds;
-            kinds.reserve(patterns.size());
-            for (int i = 0; i < patterns.size(); ++i) {
-                kinds << kind;
-            }
-            auto* pT = new TTrigger(qsl("bench_%1").arg(n), patterns, kinds, multiline, host);
-            pT->setIsFolder(false);
-            pT->setTemporary(false);
-            pT->setConditionLineDelta(5);
-            pT->setIsActive(true);
-            allOk = pT->registerTrigger() && allOk;
-            allOk = pT->setScript(QString()) && allOk;
-            allOk = pT->state() && allOk;
-            ++n;
-        };
-
-        auto addColor = [&](int ansiFg, int ansiBg) {
-            auto* pT = new TTrigger(nullptr, host);
-            pT->setIsFolder(false);
-            pT->setTemporary(false);
-            allOk = pT->setupTmpColorTrigger(ansiFg, ansiBg) && allOk;
-            pT->setIsActive(true);
-            allOk = pT->registerTrigger() && allOk;
-            allOk = pT->setScript(QString()) && allOk;
-            allOk = pT->state() && allOk;
-            pT->setName(qsl("bench_%1").arg(n));
-            ++n;
-        };
-
+        QList<QList<BenchTrigger>> groups;
+        QList<BenchTrigger> group;
         for (const QString& s :
              {qsl("forest"), qsl("orc"), qsl("gold"), qsl("experience"), qsl("sword"), qsl("tower"), qsl("damage"), qsl("coins"), qsl("café"), qsl("Square"), qsl("dragon"), qsl("teleport")}) {
-            addKind({s}, REGEX_SUBSTRING, false);
+            group << BenchTrigger{{s}, REGEX_SUBSTRING};
         }
+        groups << group;
+        group.clear();
 
         for (const QString& r : {qsl("^(\\w+) tells you '(.+)'$"),
                                  qsl("You gain (\\d+) experience"),
@@ -499,12 +528,16 @@ private:
                                  qsl("^\\[(\\d{2}):(\\d{2})\\]"),
                                  qsl("reaches level (\\d+)"),
                                  qsl("(\\w+) arrives from the (\\w+)")}) {
-            addKind({r}, REGEX_PERL, false);
+            group << BenchTrigger{{r}, REGEX_PERL};
         }
+        groups << group;
+        group.clear();
 
         for (const QString& s : {qsl("You are"), qsl("The"), qsl("HP:"), qsl("You gain")}) {
-            addKind({s}, REGEX_BEGIN_OF_LINE_SUBSTRING, false);
+            group << BenchTrigger{{s}, REGEX_BEGIN_OF_LINE_SUBSTRING};
         }
+        groups << group;
+        group.clear();
 
         // Exact-match patterns cost the whole line on every call, so they are
         // costed at the same count as the substring group.
@@ -520,16 +553,68 @@ private:
                                  qsl("You are hidden."),
                                  qsl("A cool breeze blows."),
                                  qsl("You cannot go that way.")}) {
-            addKind({s}, REGEX_EXACT_MATCH, false);
+            group << BenchTrigger{{s}, REGEX_EXACT_MATCH};
+        }
+        groups << group;
+        group.clear();
+
+        for (const int fg : {1, 2, 3, 6}) {
+            group << BenchTrigger{{}, REGEX_SUBSTRING, false, fg};
+        }
+        groups << group;
+        group.clear();
+
+        group << BenchTrigger{{qsl("The (\\w+) hits you"), qsl("damage")}, REGEX_PERL, true};
+        group << BenchTrigger{{qsl("(\\w+) tells you"), qsl("tower")}, REGEX_PERL, true};
+        groups << group;
+
+        // Round-robin over the kinds, so a MUDLET_BENCH_TRIGGERS cut anywhere
+        // keeps the mix instead of turning into all substrings.
+        QList<BenchTrigger> order;
+        for (int i = 0;; ++i) {
+            bool more = false;
+            for (const QList<BenchTrigger>& kind : groups) {
+                if (i < kind.size()) {
+                    order << kind.at(i);
+                    more = true;
+                }
+            }
+            if (!more) {
+                break;
+            }
         }
 
-        addColor(1, TTrigger::scmIgnored);
-        addColor(2, TTrigger::scmIgnored);
-        addColor(3, TTrigger::scmIgnored);
-        addColor(6, TTrigger::scmIgnored);
-
-        addKind({qsl("The (\\w+) hits you"), qsl("damage")}, REGEX_PERL, true);
-        addKind({qsl("(\\w+) tells you"), qsl("tower")}, REGEX_PERL, true);
+        const bool capped = mWantedTriggers > 0;
+        do {
+            for (const BenchTrigger& spec : order) {
+                if (capped && n >= mWantedTriggers) {
+                    break;
+                }
+                TTrigger* pT = nullptr;
+                if (spec.ansiFg >= 0) {
+                    pT = new TTrigger(nullptr, host);
+                    pT->setIsFolder(false);
+                    pT->setTemporary(false);
+                    allOk = pT->setupTmpColorTrigger(spec.ansiFg, TTrigger::scmIgnored) && allOk;
+                    pT->setName(qsl("bench_%1").arg(n));
+                } else {
+                    QList<int> kinds;
+                    kinds.reserve(spec.patterns.size());
+                    for (int i = 0; i < spec.patterns.size(); ++i) {
+                        kinds << spec.kind;
+                    }
+                    pT = new TTrigger(qsl("bench_%1").arg(n), spec.patterns, kinds, spec.multiline, host);
+                    pT->setIsFolder(false);
+                    pT->setTemporary(false);
+                    pT->setConditionLineDelta(5);
+                }
+                pT->setIsActive(true);
+                allOk = pT->registerTrigger() && allOk;
+                allOk = pT->setScript(QString()) && allOk;
+                allOk = pT->state() && allOk;
+                ++n;
+            }
+        } while (capped && n < mWantedTriggers);
 
         return n + installChurnTrigger(host, allOk);
     }
@@ -540,16 +625,33 @@ private:
         for (int i = 0; i < passes; ++i) {
             QElapsedTimer timer;
             timer.start();
-            if (mChunks.isEmpty()) {
-                host->mTelnet.loopbackTest(mCorpus);
-            } else {
-                for (QByteArray& chunk : mChunks) {
-                    host->mTelnet.loopbackTest(chunk);
-                }
+            for (QByteArray& chunk : mFeedChunks) {
+                host->mTelnet.loopbackTest(chunk);
             }
             best = std::min(best, timer.nsecsElapsed() / 1.0e9);
         }
         return best;
+    }
+
+    // Breaks only at line ends, so no line straddles two chunks. A non-positive
+    // count is the default: the whole corpus as one piece.
+    static QByteArrayList splitCorpus(const QByteArray& corpus, int linesPerChunk)
+    {
+        if (linesPerChunk <= 0) {
+            return {corpus};
+        }
+        QByteArrayList chunks;
+        qsizetype start = 0;
+        while (start < corpus.size()) {
+            qsizetype end = start;
+            for (int line = 0; line < linesPerChunk && end < corpus.size(); ++line) {
+                const qsizetype newline = corpus.indexOf('\n', end);
+                end = newline < 0 ? corpus.size() : newline + 1;
+            }
+            chunks << corpus.mid(start, end - start);
+            start = end;
+        }
+        return chunks;
     }
 
     // A knob that is set but not a positive whole number fails the run rather
@@ -655,9 +757,12 @@ private slots:
         // script refuses to set such a run against a standard run.
         const int requestedLines = positiveKnob("MUDLET_BENCH_LINES");
         const int chunkBytes = positiveKnob("MUDLET_BENCH_CHUNK_BYTES");
+        const int chunkLines = positiveKnob("MUDLET_BENCH_CHUNK_LINES");
+        mWantedTriggers = positiveKnob("MUDLET_BENCH_TRIGGERS");
         if (QTest::currentTestFailed()) {
             return;
         }
+        QVERIFY2(chunkBytes == 0 || chunkLines == 0, "MUDLET_BENCH_CHUNK_BYTES and MUDLET_BENCH_CHUNK_LINES are both set - they cut the corpus two different ways, so set one");
         const bool linesOverridden = requestedLines > 0;
         const bool chunked = chunkBytes > 0;
 
@@ -671,10 +776,20 @@ private slots:
         }
         if (chunked) {
             for (qsizetype offset = 0; offset < mCorpus.size(); offset += chunkBytes) {
-                mChunks.append(mCorpus.mid(offset, chunkBytes));
+                mFeedChunks.append(mCorpus.mid(offset, chunkBytes));
             }
-            qInfo().nospace() << "Feeding in " << mChunks.size() << " reads of up to " << chunkBytes << " bytes";
+            qInfo().nospace() << "Feeding in " << mFeedChunks.size() << " reads of up to " << chunkBytes << " bytes";
+        } else {
+            mFeedChunks = splitCorpus(mCorpus, chunkLines);
         }
+        qint64 fedBytes = 0;
+        for (const QByteArray& chunk : mFeedChunks) {
+            fedBytes += chunk.size();
+        }
+        QCOMPARE(fedBytes, mCorpusBytes);
+        // The value that took effect: a chunk size past the corpus is one chunk,
+        // the same workload as unset, and has to compare as such.
+        emitMetric("feed_chunk_lines", static_cast<qint64>(mFeedChunks.size() == 1 ? 0 : chunkLines));
         // Invariants, emitted here so they are present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison,
         // and a comparison across two different corpora or workloads.
@@ -686,7 +801,13 @@ private slots:
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
 
-    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+    void cleanupTestCase()
+    {
+        // A QTEST_MAIN binary, so nothing else joins the helpers before the
+        // QApplication goes.
+        TriggerMatchPool::shutdown();
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
 
     void init()
     {
@@ -697,7 +818,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -771,7 +892,9 @@ private slots:
         QVERIFY2(rootTriggers == triggerCount,
                  qPrintable(qsl("installed %1 root triggers but %2 are running - something else registered triggers on this profile").arg(triggerCount).arg(rootTriggers)));
 
+        const quint64 prescansBefore = TriggerMatchPool::instance().prescanCount();
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
+        const quint64 prescans = TriggerMatchPool::instance().prescanCount() - prescansBefore;
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
@@ -800,6 +923,10 @@ private slots:
         }
 
         emitMetric("trigger_count", static_cast<qint64>(triggerCount));
+        // Whether the parallel prescan took part, so a sweep across its gates
+        // can be read off the dump rather than inferred from the timings.
+        emitMetric("prescan_workers", static_cast<qint64>(TriggerMatchPool::instance().workerCount()));
+        emitMetric("trigger_prescans", static_cast<qint64>(prescans));
         emitMetric("trigger_lines_per_sec", mCorpusLines / seconds);
         emitMetric("trigger_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
         emitMetric("trigger_best_pass_ms", seconds * 1000.0);
@@ -1287,7 +1414,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();

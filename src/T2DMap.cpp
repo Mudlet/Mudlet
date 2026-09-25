@@ -27,7 +27,7 @@
 
 
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -43,6 +43,7 @@
 #include "RoomMoveActivationHandler.h"
 #include "RoomMoveDragHandler.h"
 #include "SelectionRectangleHandler.h"
+#include "TMapViewManager.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -251,7 +252,7 @@ QSet<int> T2DMap::roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TA
 
 void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
 {
-    mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
+    mMultiRect = QRectF(context.widgetPosition, context.widgetPosition);
 
     context.hasClickedRoom = false;
     context.clickedRoomId = 0;
@@ -521,6 +522,12 @@ T2DMap::T2DMap(QWidget* parent)
 
     mCustomLineSession = std::make_unique<CustomLineSession>(*this);
 
+    // A hands-free pan ends on the next press of any other button, so this
+    // handler has to see every press before one of the others consumes it.
+    // It only takes middle-button events for itself and passes the rest on.
+    mMiddleMousePanHandler = std::make_unique<MiddleMousePanHandler>(*this);
+    registerInteractionHandler(mMiddleMousePanHandler.get(), 500);
+
     mCustomLineDrawContextMenuHandler = std::make_unique<CustomLineDrawContextMenuHandler>(*this);
     registerInteractionHandler(mCustomLineDrawContextMenuHandler.get(), 450);
 
@@ -547,9 +554,6 @@ T2DMap::T2DMap(QWidget* parent)
 
     mLabelInteractionHandler = std::make_unique<LabelInteractionHandler>(*this);
     registerInteractionHandler(mLabelInteractionHandler.get(), 150);
-
-    mMiddleMousePanHandler = std::make_unique<MiddleMousePanHandler>(*this);
-    registerInteractionHandler(mMiddleMousePanHandler.get(), 110);
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
@@ -1817,15 +1821,15 @@ QSize T2DMap::lodRoomBlobSize() const
     return QSize(qMax(1, qRound(mRoomWidth * rSize)), qMax(1, qRound(mRoomHeight * rSize)));
 }
 
-// A room coordinate as far out as this range can reach, which is further than
-// any room can be: the caller only asks the grid index about it, and the index
-// holds room coordinates, which are ints. The clamp is what keeps the cast
-// defined - a zoom has no upper bound, and at a ten-millionth of a pixel per
-// room the range is billions of cells wide, which a double holds and an int
-// does not.
-static int clampedRoomCoordinate(const double coordinate)
+// A double brought into the int range, which is the range the cast to int is
+// defined over. Callers can exceed it: a zoom has no upper bound, so at a
+// ten-millionth of a pixel per room the viewport spans billions of cells, and
+// the map's pixel origin scales the centre room coordinate, which a map can put
+// at INT_MAX, by how many pixels a room is drawn as. A NaN - which a zoom far
+// enough out makes of that product, as 0 * inf - comes back as the lower bound.
+static int clampedToIntRange(const double value)
 {
-    return static_cast<int>(qBound(static_cast<double>(INT_MIN), coordinate, static_cast<double>(INT_MAX)));
+    return static_cast<int>(qBound(static_cast<double>(INT_MIN), value, static_cast<double>(INT_MAX)));
 }
 
 // The inclusive range of room coordinates that can put a room on screen, given
@@ -1850,10 +1854,10 @@ QRect T2DMap::viewportRoomBounds(const float rx0, const float ry0, const float r
     if (!(roomWidth > 0.0f) || !(roomHeight > 0.0f)) {
         return QRect(QPoint(INT_MIN, INT_MIN), QPoint(INT_MAX, INT_MAX));
     }
-    const int minX = clampedRoomCoordinate(std::floor(static_cast<double>(-rx0) / roomWidth) - 1.0);
-    const int maxX = clampedRoomCoordinate(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth) + 1.0);
-    const int minY = clampedRoomCoordinate(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight) - 1.0);
-    const int maxY = clampedRoomCoordinate(std::ceil(static_cast<double>(ry0) / roomHeight) + 1.0);
+    const int minX = clampedToIntRange(std::floor(static_cast<double>(-rx0) / roomWidth) - 1.0);
+    const int maxX = clampedToIntRange(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth) + 1.0);
+    const int minY = clampedToIntRange(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight) - 1.0);
+    const int maxY = clampedToIntRange(std::ceil(static_cast<double>(ry0) / roomHeight) + 1.0);
     return QRect(QPoint(minX, minY), QPoint(maxX, maxY));
 }
 
@@ -2776,26 +2780,30 @@ void T2DMap::paintEvent(QPaintEvent* e)
         mPrevRoomHeight = mRoomHeight;
     }
 
-    mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
-    mRY = qRound(mRoomHeight * ((yspan / 2.0) - mMapCenterY));
+    // std::round() rather than qRound(), which returns an int and so would
+    // overflow before the clamp could act on it.
+    mRX = clampedToIntRange(std::round(mRoomWidth * ((xspan / 2.0) - mMapCenterX)));
+    mRY = clampedToIntRange(std::round(mRoomHeight * ((yspan / 2.0) - mMapCenterY)));
     const QRect roomBounds = viewportRoomBounds(mRX, mRY, mRoomWidth, mRoomHeight, widgetWidth, widgetHeight);
     QFont roomVNumFont = mpMap->mMapSymbolFont;
 
     bool isFontBigEnoughToShowRoomVnum = false;
     if (mShowRoomID) {
-        /*
-         * If we are to show the room Id numbers - find out the number of digits
-         * that we will need to use; actually, knowing the digit count is also
-         * useful for the room selection widget so perform this check EVERY time.
-         * TODO: Eventually move this check to the TArea class and just redo it
-         * when areas' room content changes.
-         */
-        int maxUsedRoomId = 0;
-        QSetIterator<int> itRoomId(pDrawnArea->getAreaRooms());
-        while (itRoomId.hasNext()) {
-            maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
+        // Find out the number of digits the biggest room Id number in the area
+        // needs; also useful for the room selection widget. Rescanning every
+        // room here on every single paint made a large area's room-ID display
+        // cost more than everything else in the frame put together, so this is
+        // only redone when the area or its room membership has actually moved
+        // on since the value was last cached.
+        if (mCachedRoomIdDigitsVersion != pDrawnArea->getRoomsVersion()) {
+            int maxUsedRoomId = 0;
+            QSetIterator<int> itRoomId(pDrawnArea->getAreaRooms());
+            while (itRoomId.hasNext()) {
+                maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
+            }
+            mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
+            mCachedRoomIdDigitsVersion = pDrawnArea->getRoomsVersion();
         }
-        mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
 
         QRectF roomTestRect;
         if (pDrawnArea->gridMode) {
@@ -3884,14 +3892,13 @@ void T2DMap::paintRoomExits(QPainter& painter,
                     }
                 }
                 if (!oneWayToDestination) {
-                    // Two way exit
+                    // Two way exit. drawLine() does not itself touch any
+                    // painter state, so there is nothing here for save()
+                    // /restore() to protect - removed along with the QPen
+                    // copy that was never installed via setPen() and so
+                    // never actually took effect.
                     const QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    painter.save();
-                    QPen exitPen = painter.pen();
-                    // We need the line not to extend past the actual end point:
-                    exitPen.setCapStyle(Qt::FlatCap);
                     painter.drawLine(l0);
-                    painter.restore();
                 } else {
                     // one way non-area exit - draw arrow
                     QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
@@ -4141,12 +4148,30 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=, this]() {
-        updateMapLabel(labelRectangle, labelId, pArea);
+    // A script can clear or replace the map while the dialog is open (the user
+    // can too, as it is not modal), deleting the area from under it: look it up
+    // again by id rather than keep the pointer. The ids alone are not enough to
+    // find it again either - a map loaded after the clear numbers its areas
+    // from the lowest free one and its labels from zero in each area, so the
+    // pair can just as well name a label of the new map that this dialog has
+    // nothing to do with. The map's generation says which map they came from.
+    const int areaId = mAreaID;
+    const unsigned int mapGeneration = mpMap->mpRoomDB->mapGeneration();
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, labelId, areaId, mapGeneration]() {
+        if (mpMap->mpRoomDB->mapGeneration() != mapGeneration) {
+            return;
+        }
+        if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
+            updateMapLabel(labelRectangle, labelId, pLabelArea);
+        }
     });
 
-    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=, this]() mutable {
-        pArea->mMapLabels.remove(labelId);
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [this, labelId, areaId, mapGeneration]() {
+        if (mpMap->mpRoomDB->mapGeneration() == mapGeneration) {
+            if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pLabelArea->mMapLabels.remove(labelId);
+            }
+        }
         update();
     });
 
@@ -4184,9 +4209,10 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     label.showOnTop = mpDlgMapLabel->isOnTop();
     label.noScaling = mpDlgMapLabel->noScale();
 
-    QPixmap pixmap(static_cast<int>(fabs(labelRectangle.width())), static_cast<int>(fabs(labelRectangle.height())));
+    const QRectF box = labelRectangle.normalized();
+    QPixmap pixmap(static_cast<int>(box.width()), static_cast<int>(box.height()));
     pixmap.fill(Qt::transparent);
-    QRect drawRectangle = labelRectangle.normalized().toRect();
+    QRect drawRectangle = box.toRect();
     drawRectangle.moveTo(0, 0);
     QPainter lp(&pixmap);
     lp.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
@@ -4221,12 +4247,11 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     }
 
     label.pix = pixmap.copy(drawRectangle);
-    auto normalizedLabelRectangle = labelRectangle.normalized();
-    const float mx = (normalizedLabelRectangle.topLeft().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mMapCenterY;
+    const float mx = (box.left() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my = (yspan / 2.0) - (box.top() / mRoomHeight) - mMapCenterY;
 
-    const float mx2 = (normalizedLabelRectangle.bottomRight().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mMapCenterY;
+    const float mx2 = (box.right() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my2 = (yspan / 2.0) - (box.bottom() / mRoomHeight) - mMapCenterY;
     label.pos = QVector3D(mx, my, mMapCenterZ);
     label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
 
@@ -5295,7 +5320,7 @@ void T2DMap::slot_spread()
             for (auto& customLinePoint : customLinePoints) {
                 const QPointF movingPoint = customLinePoint;
                 customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) * spread + dx));
-                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) * spread + dy));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dy) * spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
@@ -5365,7 +5390,7 @@ void T2DMap::slot_shrink()
             for (auto& customLinePoint : customLinePoints) {
                 const QPointF movingPoint = customLinePoint;
                 customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) / spread + dx));
-                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) / spread + dy));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dy) / spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
@@ -5404,8 +5429,8 @@ void T2DMap::slot_loadMap()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(this,
@@ -5422,9 +5447,9 @@ void T2DMap::slot_loadMap()
     settings.setValue("lastFileDialogLocation", lastDir);
 
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-        mpHost->mpConsole->importMap(fileName);
+        mpHost->importMapFile(fileName);
     } else {
-        mpHost->mpConsole->loadMap(fileName);
+        mpHost->loadMapFile(fileName);
     }
 }
 
@@ -5446,7 +5471,9 @@ void T2DMap::slot_newMap()
 
     mpMap->mRoomIdHash[mpMap->mProfileName] = roomID;
     mpMap->mNewMove = true;
-    slot_toggleMapViewOnly();
+    if (mMapViewOnly) {
+        slot_toggleMapViewOnly();
+    }
 
     isCenterViewCall = true;
     mpMap->updateArea(-1);
@@ -5582,10 +5609,16 @@ void T2DMap::slot_configureAreas()
 
     repopulate();
 
-    const int currentAreaIndex = mpMap->mpMapper ? mpMap->mpMapper->getCurrentShownAreaIndex() : -1;
-    if (currentAreaIndex >= 0 && currentAreaIndex < listWidget->count()) {
-        listWidget->setCurrentRow(currentAreaIndex);
-        listWidget->scrollToItem(listWidget->currentItem(), QAbstractItemView::PositionAtCenter);
+    // mAreaID is the area the map is actually showing; the mapper's dropdown
+    // index can't be used here as it omits the default area when hidden,
+    // while this list always includes it.
+    for (int i = 0; i < listWidget->count(); ++i) {
+        auto* it = listWidget->item(i);
+        if (it && it->data(Qt::UserRole).toInt() == mAreaID) {
+            listWidget->setCurrentRow(i);
+            listWidget->scrollToItem(it, QAbstractItemView::PositionAtCenter);
+            break;
+        }
     }
 
     auto* buttonBar = new QWidget(dialog);
@@ -5653,6 +5686,7 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Rename failed"), tr("Unable to rename area. Name may be invalid or already in use."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
         for (int i = 0; i < listWidget->count(); ++i) {
@@ -5664,11 +5698,20 @@ void T2DMap::slot_configureAreas()
             }
         }
 
+        // Refresh every dropdown that lists area names - the primary
+        // mapper's and every secondary view's, not just whichever one
+        // opened this dialog.
         if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
+            // Only follow the rename into the dropdown if it's the area the
+            // primary mapper is actually showing - otherwise this would
+            // move the dropdown to an area the map isn't displaying.
+            if (mpMap->mpMapper->mp2dMap && areaId == mpMap->mpMapper->mp2dMap->getAreaId() && mpMap->mpMapper->comboBox_showArea) {
                 mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
             }
+        }
+        if (mpMap && mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
         }
     });
 
@@ -5690,6 +5733,7 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Create failed"), tr("Unable to create area. Name may be invalid or already in use."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
         for (int i = 0; i < listWidget->count(); ++i) {
@@ -5703,9 +5747,9 @@ void T2DMap::slot_configureAreas()
 
         if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
-            }
+        }
+        if (mpMap && mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
         }
     });
 
@@ -5733,13 +5777,33 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Delete failed"), tr("Unable to delete area."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
-        if (mpMap && mpMap->mpMapper) {
+
+        // Refresh every dropdown that lists area names - the primary
+        // mapper's and every secondary view's, not just whichever one
+        // opened this dialog.
+        if (mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+        }
+        if (mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
+        }
+
+        // Every map that was showing the deleted area needs to move off it -
+        // paintEvent() can't draw an area that no longer exists - not just
+        // whichever view opened this dialog.
+        if (mpMap->mpMapper && mpMap->mpMapper->mp2dMap && mpMap->mpMapper->mp2dMap->getAreaId() == areaId) {
+            auto* comboBox = mpMap->mpMapper->comboBox_showArea;
+            if (comboBox && comboBox->count() > 0) {
+                mpMap->mpMapper->slot_switchArea(comboBox->currentIndex());
+            } else {
+                mpMap->mpMapper->mp2dMap->switchArea(mpMap->getDefaultAreaName());
             }
+        }
+        if (mpMap->getViewManager()) {
+            mpMap->getViewManager()->switchViewsShowingArea(areaId);
         }
         update();
     });
@@ -7356,13 +7420,13 @@ void T2DMap::slot_exportAreaToImage()
         areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAreaID, areaName);
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastExportAreaImageDirectory", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).toString();
 
     QString defaultFileName;
     if (!areaName.isEmpty()) {
         // Use sanitized area name for filename
-        defaultFileName = qsl("%1.png").arg(MudletPaths::sanitizeForPath(areaName));
+        defaultFileName = qsl("%1.png").arg(MudletApp::sanitizeForPath(areaName));
     } else {
         // Fall back to area ID if no area name
         defaultFileName = qsl("area_%1.png").arg(mAreaID);

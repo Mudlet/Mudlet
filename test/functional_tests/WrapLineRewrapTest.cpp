@@ -21,7 +21,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -89,7 +89,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -98,7 +98,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -513,6 +513,23 @@ private slots:
         QVERIFY(console->buffer.lineBuffer.constLast().isEmpty());
     }
 
+    // Declared last: without the clamp this aborts, taking the rest of the run
+    // with it. The Lua setter refuses a negative now, so the indent is written
+    // from C++ to reach wrapLine()'s clamp at all.
+    void test_aNegativeIndentIndentsByNothing()
+    {
+        auto* console = consoleWithWrapWidth(4);
+        QVERIFY(console);
+        console->setIndentCount(-2);
+        console->setHangingIndentCount(-3);
+
+        echo(qsl("abcdefghijklmnopqrstuvwxyz\\n"));
+
+        QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
+        const QString firstLine = console->buffer.line(0);
+        QVERIFY2(!firstLine.startsWith(qsl(" ")), qPrintable(qsl("a negative indent padded the line: '%1'").arg(firstLine)));
+    }
+
 private:
     void runLua(const QString& script)
     {
@@ -637,7 +654,7 @@ private:
         return QString::fromUtf8(logFile.readAll());
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {

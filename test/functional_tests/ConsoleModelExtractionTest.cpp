@@ -30,7 +30,7 @@
 #include <tuple>
 
 #include "GifTestHelper.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "GifTracker.h"
 #include "Host.h"
@@ -44,6 +44,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TScrollBox.h"
+#include "TSpellChecker.h"
 #include "TTextBox.h"
 #include "TTrigger.h"
 #include "TWindowRegistry.h"
@@ -54,6 +55,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+#include <hunspell/hunspell.h>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -316,6 +319,136 @@ private slots:
         QVERIFY2(!model->mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
     }
 
+    // A colorizer trigger recolors its match by selecting a run of the line and
+    // painting it, all of which is model state. The return that used to guard
+    // those calls left the whole function, so with no view the trigger did not
+    // merely lose its color - the script, the capture groups and any child
+    // filters never ran either. One case per matcher that carried the guard;
+    // the color-pattern matcher is the case after this one.
+    void test_colorizerTriggersRunAndPaintTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QColor highlightFg(12, 34, 56);
+        const QColor highlightBg(65, 43, 21);
+        struct ColorizerCase
+        {
+            QString name;
+            int patternKind;
+            QString pattern;
+            QString lineText;
+            int matchStart;
+        };
+        // A pattern of its own per case, so a line can only ever be painted by
+        // the trigger it is meant for.
+        const QList<ColorizerCase> colorizerCases{
+                {qsl("substring"), REGEX_SUBSTRING, qsl("paint alpha"), qsl("before paint alpha after"), 7},
+                {qsl("perl"), REGEX_PERL, qsl("paint beta"), qsl("before paint beta after"), 7},
+                {qsl("beginOfLine"), REGEX_BEGIN_OF_LINE_SUBSTRING, qsl("paint gamma"), qsl("paint gamma and the rest"), 0},
+                {qsl("exact"), REGEX_EXACT_MATCH, qsl("paint delta"), qsl("paint delta"), 0},
+        };
+
+        // Built while the view is still up: setScript() compiles against the
+        // profile's Lua state, which is what the trigger's own script proves ran.
+        for (const ColorizerCase& colorizerCase : colorizerCases) {
+            auto* trigger = new TTrigger(qsl("viewless-%1").arg(colorizerCase.name), QStringList{colorizerCase.pattern}, QList<int>{colorizerCase.patternKind}, false, host);
+            trigger->setIsColorizerTrigger(true);
+            trigger->setColorizerFgColor(highlightFg);
+            trigger->setColorizerBgColor(highlightBg);
+            trigger->setIsActive(true);
+            QVERIFY2(host->getTriggerUnit()->registerTrigger(trigger), qPrintable(qsl("%1: the colorizer trigger was not registered.").arg(colorizerCase.name)));
+            // Only registering gives a trigger its id, and the script is compiled
+            // into a Lua function named after that id: scripted before it is
+            // registered, every one of these would compile into Trigger0 and the
+            // last body would answer for all of them.
+            QVERIFY2(trigger->setScript(qsl("viewlessColorizerRan = '%1'").arg(colorizerCase.name)), qPrintable(qsl("%1: the colorizer trigger's script did not compile.").arg(colorizerCase.name)));
+        }
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        // Closing the profile emergency-stops the trigger engine
+        // (Host::closeChildren()), which a profile that simply never had a view
+        // would not do:
+        host->reenableAllTriggers();
+
+        for (const ColorizerCase& colorizerCase : colorizerCases) {
+            const QString& name = colorizerCase.name;
+            runLua(host, qsl("viewlessColorizerRan = 'none'"));
+
+            const int fedLine = appendModelLine(model->buffer, colorizerCase.lineText);
+            QVERIFY2(fedLine >= 0, qPrintable(qsl("%1: the line never reached the view-less buffer.").arg(name)));
+            QCOMPARE(model->buffer.line(fedLine), colorizerCase.lineText);
+
+            host->runTriggers(fedLine);
+
+            QVERIFY2(luaGlobalString(host, "viewlessColorizerRan") == name, qPrintable(qsl("%1: the colorizer trigger's own script never ran, so the trigger was skipped entirely.").arg(name)));
+
+            const auto& chars = model->buffer.buffer.at(fedLine);
+            const int start = colorizerCase.matchStart;
+            const int end = start + colorizerCase.pattern.size() - 1;
+            QVERIFY2(static_cast<int>(chars.size()) > end, qPrintable(qsl("%1: the buffer line is shorter than the match.").arg(name)));
+            QVERIFY2(chars.at(start).foreground() == highlightFg && chars.at(start).background() == highlightBg,
+                     qPrintable(qsl("%1: the start of the match was not painted with the trigger's colors.").arg(name)));
+            QVERIFY2(chars.at(end).foreground() == highlightFg && chars.at(end).background() == highlightBg,
+                     qPrintable(qsl("%1: the end of the match was not painted with the trigger's colors.").arg(name)));
+            if (start > 0) {
+                QVERIFY2(chars.at(start - 1).foreground() != highlightFg, qPrintable(qsl("%1: the color spilled in front of the match.").arg(name)));
+            }
+            if (end + 1 < static_cast<int>(chars.size())) {
+                QVERIFY2(chars.at(end + 1).foreground() != highlightFg, qPrintable(qsl("%1: the color spilled past the match.").arg(name)));
+            }
+        }
+
+        // The format the model prints with has to be back to the profile's own
+        // pair, which is what the reset at the end of each colorizer pass does.
+        QCOMPARE(model->mFormatCurrent.foreground(), model->mFgColor);
+        QCOMPARE(model->mFormatCurrent.background(), model->mBgColor);
+    }
+
+    // The fifth guarded matcher. A color pattern is matched out of the model's
+    // buffer rather than compiled as a regex, so it takes a trigger built the
+    // way tempAnsiColorTrigger() builds one.
+    void test_aColorPatternColorizerTriggerRunsWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QColor highlightFg(9, 87, 65);
+        const QColor highlightBg(21, 43, 65);
+        auto* trigger = new TTrigger(nullptr, host);
+        trigger->setIsFolder(false);
+        trigger->setTemporary(true);
+        QVERIFY2(trigger->setupTmpColorTrigger(TTrigger::scmDefault, TTrigger::scmIgnored), "The color pattern was not set up.");
+        trigger->setIsColorizerTrigger(true);
+        trigger->setColorizerFgColor(highlightFg);
+        trigger->setColorizerBgColor(highlightBg);
+        trigger->setIsActive(true);
+        QVERIFY2(trigger->registerTrigger(), "The color pattern trigger was not registered.");
+        QVERIFY2(trigger->setScript(qsl("viewlessColorPatternRan = 'yes'")), "The color pattern trigger's script did not compile.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->reenableAllTriggers();
+
+        runLua(host, qsl("viewlessColorPatternRan = 'none'"));
+        // The default foreground is what the pattern matches, and it is the one
+        // an unstyled appended line is stamped with:
+        QCOMPARE(model->mFgColor, QColorConstants::LightGray);
+        const int fedLine = appendModelLine(model->buffer, qsl("color pattern line"));
+        host->runTriggers(fedLine);
+
+        QCOMPARE(luaGlobalString(host, "viewlessColorPatternRan"), qsl("yes"));
+        const auto& chars = model->buffer.buffer.at(fedLine);
+        QVERIFY2(!chars.empty(), "The line never reached the view-less buffer.");
+        QVERIFY2(chars.front().foreground() == highlightFg && chars.front().background() == highlightBg, "The color pattern's match was not painted with the trigger's colors.");
+        QVERIFY2(chars.back().foreground() == highlightFg && chars.back().background() == highlightBg, "The color pattern's match was not painted to the end of the line.");
+    }
+
     // sysBufferShrinkEvent tells scripts their stored line indexes just shifted.
     // With a view attached it has to carry that console's name and the batch
     // size that went away.
@@ -405,7 +538,7 @@ private slots:
         const QString stopAnnouncement = TMainConsole::tr("Logging has been stopped. Log file is %1");
         // The sentinel is what makes logging resume at the next launch
         // (Host::mLogStatus), so it has to appear and disappear with the log.
-        const QString sentinel = MudletPaths::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
+        const QString sentinel = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
         QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging before one has been started.");
 
         // Through the toolbar button rather than toggleLogging() directly: that
@@ -508,10 +641,44 @@ private slots:
         QFile::remove(logFileName);
     }
 
+    // rgb(22,22,22) is the colour the console's own background replaced (#9419)
+    void test_htmlLogTimestampTakesTheConsoleBackground()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QColor background{12, 34, 56};
+        QVERIFY2(background != QColorConstants::Black, "The colour under test is the default background, which cannot tell a hardcoded colour apart.");
+        host->mBgColor = background;
+        host->refreshMainConsoleColors();
+        QCOMPARE(host->mpConsole->getConsoleBgColor(), background);
+        host->mIsNextLogFileInHtmlFormat = true;
+        host->mIsLoggingTimestamps = true;
+
+        auto& model = host->mainConsoleModel();
+        model.toggleLogging(false);
+        QVERIFY2(model.mLogToLogFile, "The log the timestamp colour is read back from never started.");
+        const QString logFileName = model.mLogFileName;
+
+        appendModelLine(model.buffer, qsl("timestamped-line"));
+        model.toggleLogging(false);
+
+        const QString contents = readFile(logFileName);
+        QVERIFY2(contents.contains(qsl("timestamped-line")), "The logged line never reached the HTML log file.");
+        // The timestamp's background is written in #rrggbb form, the text's in
+        // rgb() form, so this cannot match a span of ordinary text.
+        QVERIFY2(contents.contains(qsl("background: #0c2238;")), "The HTML log's timestamp does not use the console's background colour.");
+        QVERIFY2(!contents.contains(qsl("rgb(22,22,22)")), "The HTML log's timestamp still carries the hardcoded background colour.");
+
+        QFile::remove(logFileName);
+    }
+
     void test_profileLoadFillsTheModelColoursWithNoView()
     {
         pinTheFixtureColoursAreNotTheDefaults();
-        const QString saveFolder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mColourHostname);
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mColourHostname);
         QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
         const QString savePath = qsl("%1profileColours.xml").arg(saveFolder);
         writeProfileColourSave(savePath);
@@ -700,7 +867,7 @@ private slots:
     // a null pointer here.
     void test_spellDictionaryRoundTripsWithNoView()
     {
-        const QString saveFolder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mSpellHostname);
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mSpellHostname);
         QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
         const QString savePath = qsl("%1profileSpellDic.xml").arg(saveFolder);
         writeProfileSave(savePath, qsl("      <mSpellDic>%1</mSpellDic>\n").arg(mProfileSpellDic));
@@ -747,31 +914,67 @@ private slots:
     }
 
     // Saving the name is only half the wire: Host owning it is worth nothing
-    // unless something carries it into the console's Hunspell handle. Both
-    // directions are driven here - the handle a new view builds for itself, and
-    // the reload Host::setSpellDic() has to push into a live one.
-    void test_choosingADictionaryReachesTheConsole()
+    // unless something carries it into a Hunspell handle. Both directions are
+    // driven here - the handle the profile's spell checker builds for itself,
+    // and the reload Host::setSpellDic() has to push into a built one.
+    void test_choosingADictionaryReachesTheSpellChecker()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
 
-        Hunhandle* handle = host->mpConsole->getHunspellHandle_system();
-        QVERIFY2(handle, "The view built no system dictionary handle for the profile's dictionary.");
-
         // Hunspell_create() hands back a usable handle even when neither file
         // exists, so a non-null handle only proves the load ran. Telling a
         // reload apart from a failed load needs a dictionary that knows a word,
-        // which a machine with no en_US installed cannot supply.
-        if (!Hunspell_spell(handle, "the")) {
-            QSKIP("no en_US dictionary is installed here, so a reload cannot be told apart from a failed load");
+        // which a machine without the starting one installed cannot supply -
+        // asked of the files rather than of the handle, so a dictionary that is
+        // there but loads no words is a failure and not a skip.
+        const QString startingDictionary = host->getSpellDic();
+        const QString affixPath = qsl("%1%2.aff").arg(MudletApp::getMudletPath(enums::hunspellDictionaryPath, startingDictionary), startingDictionary);
+        if (!QFileInfo::exists(affixPath)) {
+            QSKIP(qPrintable(qsl("no \"%1\" dictionary is installed here, so a reload cannot be told apart from a failed load").arg(startingDictionary)));
         }
 
+        Hunhandle* handle = host->spellChecker().systemHandle();
+        QVERIFY2(handle, "The spell checker built no system dictionary handle for the profile's dictionary.");
+        QVERIFY2(Hunspell_spell(handle, "the"), qPrintable(qsl("The installed \"%1\" dictionary loaded no words.").arg(startingDictionary)));
+        // Hunspell reports the encoding of what it loaded, so an empty one is a
+        // handle that was never given a dictionary to read:
+        QVERIFY2(!host->spellChecker().systemCodecName().isEmpty(), "The system dictionary was loaded but its encoding was never read off it.");
+
         host->setSpellDic(mProfileSpellDic);
-        Hunhandle* reloaded = host->mpConsole->getHunspellHandle_system();
+        Hunhandle* reloaded = host->spellChecker().systemHandle();
         QVERIFY2(reloaded, "The reload left the profile with no system dictionary handle at all.");
-        QVERIFY2(!Hunspell_spell(reloaded, "the"), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the console.");
+        QVERIFY2(!Hunspell_spell(reloaded, "the"), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the spell checker.");
+    }
+
+    // Nothing reads profile.dic until something asks for the dictionary handle,
+    // and a profile with no view never runs the warm-up that would. Listing the
+    // words has to build it itself, or a script that asks before the profile
+    // has spell-checked anything is told the dictionary is empty.
+    void test_theWordListReadsTheDictionaryFileItself()
+    {
+        const QString dictionaryPath = MudletApp::getMudletPath(enums::profileDataItemPath, mSpellHostname, qsl("profile.dic"));
+        QVERIFY2(QDir().mkpath(QFileInfo(dictionaryPath).absolutePath()), "Could not create the seeded profile's data directory.");
+        // A word twice over and a count that matches neither, so a list that
+        // matches below has to have come from a real scan of the file:
+        QFile seed(dictionaryPath);
+        QVERIFY2(seed.open(QFile::WriteOnly | QFile::Text), qPrintable(qsl("Could not seed \"%1\".").arg(dictionaryPath)));
+        QVERIFY(seed.write("3\nfoo\nfoo\nbar") > 0);
+        seed.close();
+
+        Host* host = mudlet::self()->loadProfile(mSpellHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, which warms the dictionary up and so hides what this tests.");
+
+        runLua(host, qsl("dictionaryList = table.concat(getDictionaryWordList(), ',')\n"));
+        QCOMPARE(luaGlobalString(host, "dictionaryList"), qsl("bar,foo"));
+
+        // Reading the file in is also what rewrites the pair of them, so the
+        // duplicate and the wrong count are gone and hunspell has its affixes:
+        QCOMPARE(readFile(dictionaryPath), qsl("2\nbar\nfoo"));
+        QVERIFY2(QFileInfo::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mSpellHostname, qsl("profile.aff"))), "No affix file was written beside the dictionary.");
     }
 
     void cleanup()
@@ -881,50 +1084,184 @@ noViewReport = table.concat(noViewProblems, '; ')
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
     }
 
-    // The Hunspell handles and the profile's word set are the view's, not the
-    // model's, so every spelling function reached through Host::mpConsole for
-    // them and took the client down with it once the window had been closed.
-    void test_spellingFunctionsReportWithNoView()
+    // A profile with no view owns its Hunspell handles and word set, so every
+    // spelling function answers for real - the headless contract the split is
+    // for.
+    void test_spellingFunctionsWorkWithNoView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
-        // Five of the seven calls answer "no user dictionary enabled" before they ever
-        // reach the view, so without one they would report a refusal here
-        // whether the guard existed or not.
+        // Five of the seven calls answer "no user dictionary enabled" before they
+        // ever reach a dictionary, so without one they would report a refusal here
+        // whatever the spell checker did.
         bool hasUserDictionary = false;
         bool hasSharedDictionary = false;
         host->getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
-        QVERIFY2(hasUserDictionary, "The profile has no user dictionary, so the dictionary functions never reach the view.");
+        QVERIFY2(hasUserDictionary, "The profile has no user dictionary, so the dictionary functions never reach one.");
         destroyTheView(host);
 
         runLua(host, qsl(R"LUA(
 noViewSpellProblems = {}
 
--- nil plus a reason naming the missing window, which is what these answer when
--- the view holding the dictionaries has gone
-local function expectRefusal(name, ...)
+local function expectTrue(name, ...)
     local first, second = ...
-    if first ~= nil then
-        table.insert(noViewSpellProblems, name .. ' returned ' .. tostring(first))
-    elseif type(second) ~= 'string' or not second:find('main window', 1, true) then
-        table.insert(noViewSpellProblems, name .. ' gave the reason ' .. tostring(second))
+    if first ~= true then
+        table.insert(noViewSpellProblems, name .. ' returned ' .. tostring(first) .. ' (' .. tostring(second) .. ')')
     end
 end
 
-expectRefusal('addWordToDictionary', addWordToDictionary('noviewword'))
-expectRefusal('removeWordFromDictionary', removeWordFromDictionary('noviewword'))
-expectRefusal('getDictionaryWordList', getDictionaryWordList())
-expectRefusal('spellCheckWord', spellCheckWord('noviewword'))
-expectRefusal('spellCheckWord user', spellCheckWord('noviewword', true))
-expectRefusal('spellSuggestWord', spellSuggestWord('noviewword'))
-expectRefusal('spellSuggestWord user', spellSuggestWord('noviewword', true))
+-- The system dictionary arms answer for real on a machine that has en_US
+-- installed and refuse by naming the missing dictionaries on one that does not.
+-- Either is a working view-less profile; a refusal about a missing window is not.
+local function expectAnswerOrNoDictionary(name, wanted, ...)
+    local first, second = ...
+    if type(first) == wanted then
+        return
+    end
+    if first == nil and type(second) == 'string' and second:find('no main dictionaries', 1, true) then
+        return
+    end
+    table.insert(noViewSpellProblems, name .. ' returned ' .. tostring(first) .. ' (' .. tostring(second) .. ')')
+end
+
+expectTrue('addWordToDictionary', addWordToDictionary('noviewword'))
+
+local wordList = getDictionaryWordList()
+if type(wordList) ~= 'table' then
+    table.insert(noViewSpellProblems, 'getDictionaryWordList returned ' .. tostring(wordList))
+else
+    local listed = false
+    for _, word in ipairs(wordList) do
+        if word == 'noviewword' then
+            listed = true
+        end
+    end
+    if not listed then
+        table.insert(noViewSpellProblems, 'getDictionaryWordList did not list the word just added')
+    end
+end
+
+expectTrue('spellCheckWord user', spellCheckWord('noviewword', true))
+
+local suggestions = spellSuggestWord('noviewword', true)
+if type(suggestions) ~= 'table' then
+    table.insert(noViewSpellProblems, 'spellSuggestWord user returned ' .. tostring(suggestions))
+end
+
+expectAnswerOrNoDictionary('spellCheckWord', 'boolean', spellCheckWord('noviewword'))
+expectAnswerOrNoDictionary('spellSuggestWord', 'table', spellSuggestWord('noviewword'))
+
+expectTrue('removeWordFromDictionary', removeWordFromDictionary('noviewword'))
 
 noViewSpellReport = table.concat(noViewSpellProblems, '; ')
 )LUA"));
 
         QCOMPARE(luaGlobalString(host, "noViewSpellReport"), QString());
+    }
+
+    // A word added through Lua is only in a Hunspell handle until the profile
+    // goes down: writing it back into profile.dic is the whole of the feature,
+    // and it is the spell checker's destructor - no view involved - that does it.
+    void test_aWordAddedThroughLuaOutlivesTheProfile()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->spellChecker().usingSharedDictionary(), "The profile is on the shared dictionary, so profile.dic is not where its words are saved.");
+
+        runLua(host, qsl("dictionaryAdd = tostring(addWordToDictionary('outlivingword'))\n"));
+        QCOMPARE(luaGlobalString(host, "dictionaryAdd"), qsl("true"));
+
+        const QString dictionaryPath = MudletApp::getMudletPath(enums::profileDataItemPath, mHostname, qsl("profile.dic"));
+        // Tearing the application down destroys the Host, and with it the spell
+        // checker that owes the file its words.
+        delete mudlet::self();
+
+        const QString contents = readFile(dictionaryPath);
+        QVERIFY2(!contents.isEmpty(), qPrintable(qsl("Nothing was written to \"%1\".").arg(dictionaryPath)));
+        QStringList lines = contents.split(QChar::LineFeed, Qt::SkipEmptyParts);
+        QVERIFY2(!lines.isEmpty(), qPrintable(qsl("\"%1\" holds no lines at all.").arg(dictionaryPath)));
+        const QString countLine = lines.takeFirst();
+        QVERIFY2(lines.contains(qsl("outlivingword")), qPrintable(qsl("The saved dictionary does not carry the added word, it holds: %1").arg(lines.join(QChar::Space))));
+        // The count on the first line is what Hunspell reads the file by, so a
+        // word written under a stale one is not really saved.
+        QCOMPARE(countLine.toInt(), lines.count());
+    }
+
+    // The two user dictionary options pick which handle every spelling function
+    // gets, and dlgProfilePreferences drives them through Host alone.
+    void test_theUserDictionaryOptionsPickTheHandle()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        host->setUserDictionaryOptions(true, true);
+        Hunhandle* shared = host->spellChecker().userHandle();
+        QVERIFY2(shared, "Asking for the shared dictionary produced no handle.");
+        QCOMPARE(shared, TSpellChecker::sharedDictionary());
+
+        host->setUserDictionaryOptions(true, false);
+        Hunhandle* ownDictionary = host->spellChecker().userHandle();
+        QVERIFY2(ownDictionary, "Switching back to the profile's own dictionary produced no handle.");
+        QVERIFY2(ownDictionary != shared, "The profile was still handed the shared dictionary after being switched off it.");
+    }
+
+    // The shared dictionary outlives every profile, so nothing but the
+    // application going down writes it - and that write has to carry both what
+    // a profile put into it and what a profile took back out.
+    void test_closingTheSharedDictionarySavesWhatAProfileChangedInIt()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        host->setUserDictionaryOptions(true, true);
+        QVERIFY2(host->spellChecker().userHandle() == TSpellChecker::sharedDictionary(), "The profile is not on the shared dictionary, so this proves nothing about it.");
+
+        runLua(host, qsl(R"LUA(
+sharedDictionaryReport = {}
+if addWordToDictionary('sharedoutlivingword') ~= true then
+    table.insert(sharedDictionaryReport, 'the kept word was not added')
+end
+if addWordToDictionary('sharedremovedword') ~= true then
+    table.insert(sharedDictionaryReport, 'the word to remove was not added')
+end
+if removeWordFromDictionary('sharedremovedword') ~= true then
+    table.insert(sharedDictionaryReport, 'the word was not removed')
+end
+local listed = {}
+for _, word in ipairs(getDictionaryWordList()) do
+    listed[word] = true
+end
+if not listed['sharedoutlivingword'] then
+    table.insert(sharedDictionaryReport, 'the kept word is not listed')
+end
+if listed['sharedremovedword'] then
+    table.insert(sharedDictionaryReport, 'the removed word is still listed')
+end
+sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
+)LUA"));
+        QCOMPARE(luaGlobalString(host, "sharedDictionaryReport"), QString());
+
+        const QString dictionaryPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic"));
+        // Through the application going down rather than by calling the static
+        // here, so this also pins that ~mudlet() is what closes it:
+        delete mudlet::self();
+
+        const QString contents = readFile(dictionaryPath);
+        QVERIFY2(!contents.isEmpty(), qPrintable(qsl("Nothing was written to \"%1\".").arg(dictionaryPath)));
+        QStringList lines = contents.split(QChar::LineFeed, Qt::SkipEmptyParts);
+        QVERIFY2(!lines.isEmpty(), qPrintable(qsl("\"%1\" holds no lines at all.").arg(dictionaryPath)));
+        const QString countLine = lines.takeFirst();
+        QVERIFY2(lines.contains(qsl("sharedoutlivingword")), qPrintable(qsl("The saved shared dictionary does not carry the added word, it holds: %1").arg(lines.join(QChar::Space))));
+        QVERIFY2(!lines.contains(qsl("sharedremovedword")), qPrintable(qsl("The saved shared dictionary still carries the removed word, it holds: %1").arg(lines.join(QChar::Space))));
+        QCOMPARE(countLine.toInt(), lines.count());
     }
 
     // selectCaptureGroup() only reaches the view from inside a trigger that
@@ -2667,7 +3004,7 @@ private:
     // Utility function
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (!dir.exists()) {
             return;

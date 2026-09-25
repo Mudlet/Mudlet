@@ -25,7 +25,10 @@
  */
 
 #include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QIcon>
 #include <QMimeData>
+#include <QPixmap>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
@@ -34,7 +37,7 @@
 #include "AliasUnit.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAlias.h"
@@ -67,7 +70,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -135,6 +138,10 @@ private:
 
         auto* pTimer = new TTimer(qsl("qaMoveTimer"), QTime(0, 0, 30), mpHost);
         QVERIFY(mpHost->getTimerUnit()->registerTimer(pTimer));
+
+        auto* pTimerSubFolder = new TTimer(qsl("qaMoveTimerSubFolder"), QTime(0, 0, 1), mpHost);
+        pTimerSubFolder->setIsFolder(true);
+        QVERIFY(mpHost->getTimerUnit()->registerTimer(pTimerSubFolder));
     }
 
 private slots:
@@ -317,6 +324,85 @@ private slots:
         QVERIFY2(collected.contains(deepItem), "a nested item was missed");
 
         delete folderItem->takeChild(folderItem->indexOfChild(deepItem));
+    }
+
+    // A timer folder dragged into another folder is still a folder, and used to
+    // be repainted with a plain timer's icon on the way there (#8802)
+    void test_droppingATimerFolderKeepsTheFolderIcon()
+    {
+        mpEditor->slot_showTimers();
+        auto* tree = mpEditor->treeWidget_timers;
+        QTreeWidgetItem* folderItem = itemNamed(tree, qsl("qaMoveTimerFolder"));
+        QTreeWidgetItem* movedItem = itemNamed(tree, qsl("qaMoveTimerSubFolder"));
+        QVERIFY2(folderItem && movedItem, "the timers tree is missing the folder or the folder being dropped into it");
+
+        TTimer* pFolder = mpHost->getTimerUnit()->getTimer(folderItem->data(0, Qt::UserRole).toInt());
+        TTimer* pMoved = mpHost->getTimerUnit()->getTimer(movedItem->data(0, Qt::UserRole).toInt());
+        QVERIFY2(pFolder && pMoved, "a row of the timers tree has no timer behind it");
+        QVERIFY2(pMoved->isFolder(), "the timer being dropped is not a folder, so this case cannot tell a folder icon from a timer's");
+        // rowsInserted() paints the plain folder icon only when the moved folder
+        // wants to be active and every ancestor of it is active
+        pFolder->setIsActive(true);
+        pMoved->setShouldBeActive(true);
+        QVERIFY2(pFolder->isActive(), "the folder being dropped into is inactive, so the icon asserted below is not the one that would be painted");
+        QVERIFY2(pMoved->shouldBeActive(), "the folder being dropped is not set to be active, so the icon asserted below is not the one that would be painted");
+
+        // Clear what the tree painted when it built the row, so the comparison
+        // below sees only what the drop itself painted
+        movedItem->setIcon(0, QIcon());
+
+        moveOntoFolder(tree, movedItem, folderItem);
+
+        QCOMPARE(pMoved->getParent(), pFolder);
+        QIcon folderIcon;
+        folderIcon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+        QVERIFY2(!folderIcon.isNull(), "the folder icon this compares against is not in the resources");
+        const QSize iconSize = tree->iconSize();
+        // QIcon::pixmap() answers an invalid size with a null pixmap, and two null images compare equal
+        QVERIFY2(!iconSize.isEmpty(), "the tree has no icon size, so the comparison below would hold against any icon");
+
+        const QImage painted = movedItem->icon(0).pixmap(iconSize).toImage();
+        QIcon plainTimerIcon;
+        plainTimerIcon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        QString whatWasPainted = qsl("some other icon");
+        if (painted.isNull()) {
+            whatWasPainted = qsl("nothing at all");
+        } else if (painted == plainTimerIcon.pixmap(iconSize).toImage()) {
+            whatWasPainted = qsl("a plain timer's icon");
+        }
+        QVERIFY2(painted == folderIcon.pixmap(iconSize).toImage(), qPrintable(qsl("the dropped timer folder was repainted with %1, not a folder icon").arg(whatWasPainted)));
+    }
+
+    // A drop landing on the tree's top row used to be refused only when the drop
+    // indicator sat above or below it; on the row itself it went through and left
+    // the item a level too far to the left (#8010)
+    void test_droppingOnTheTopRowIsRefused()
+    {
+        mpEditor->slot_showTriggers();
+        auto* tree = mpEditor->treeWidget_triggers;
+        QTreeWidgetItem* topItem = tree->topLevelItem(0);
+        QVERIFY2(topItem, "the triggers tree has no top row");
+        QTreeWidgetItem* childItem = itemNamed(tree, qsl("qaMoveTrigger"));
+        QVERIFY2(childItem, "the row the control below drops on is missing from the tree");
+
+        // A QDropEvent starts out ignored, so each drop is accepted first -
+        // otherwise a refusal would be the state it arrived in rather than the guard's doing
+        auto dropAccepted = [tree](QTreeWidgetItem* onItem) {
+            QMimeData mimeData;
+            QDropEvent dropEvent(QPointF(tree->visualItemRect(onItem).center()), Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+            dropEvent.setAccepted(true);
+            tree->dropEvent(&dropEvent);
+            return dropEvent.isAccepted() && dropEvent.dropAction() != Qt::IgnoreAction;
+        };
+
+        QVERIFY2(tree->itemAt(tree->visualItemRect(topItem).center()) == topItem, "the point dropped on is not over the tree's top row");
+        const int childrenBefore = topItem->childCount();
+        QVERIFY2(!dropAccepted(topItem), "a drop on the tree's top row was accepted");
+        QCOMPARE(topItem->childCount(), childrenBefore);
+
+        // a guard that refused every drop would satisfy the case above, so pin
+        // that what it refuses is the top row rather than the tree
+        QVERIFY2(dropAccepted(childItem), "no drop reaches this tree at all, so the refusal above says nothing about the top row");
     }
 };
 

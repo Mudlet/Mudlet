@@ -80,6 +80,8 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+          # We are just reading the logs, so we don't need the files
+          filter: blob:none
 
       # workflow_run always runs this file from the default branch, while the
       # checkout above is the commit that was built - which may predate the release

@@ -77,14 +77,15 @@ public:
     bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
     // The binding wouldMatch() found, for naming it in a clash report
     const TKey* firstMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
-    // An add-on command's menu shortcut and a key binding are matched by
-    // different machinery: the menu gets the key first and the binding never
-    // sees it, leaving the player a binding that does nothing. addCommand()
-    // turns down a key a binding already holds; this is the other direction,
-    // where the binding arrives second. The binding is still accepted - the
-    // player's own item is not the one to refuse - so, as with the buffer
-    // search taking a key a package has, the only thing owed is saying so.
-    void warnIfAddonCommandHoldsKey(const TKey* pKey) const;
+    // Mudlet's own shortcuts and add-on commands' menu shortcuts are matched by
+    // Qt before a key press reaches the command line, where key bindings are
+    // matched, so a binding on one of their keys never fires. The binding is
+    // still accepted - the player's own item is not the one to refuse - so the
+    // only thing owed is saying so, when it is made and when it is selected in
+    // the editor. Empty when the binding will fire.
+    QString takenKeyWarning(const TKey* pKey) const;
+    // For a binding a script made
+    void warnIfKeyIsTaken(const TKey* pKey) const;
     void markCleanup(TKey* pT);
     void doCleanup();
     int processingDepth() const { return mProcessingDepth; }

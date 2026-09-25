@@ -25,7 +25,7 @@
 
 #include "dlgIRC.h"
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
@@ -45,13 +45,13 @@
 
 dlgIRC::dlgIRC(Host* pHost)
 : mpHost(pHost)
-, mRealName(mudlet::self()->scmVersion)
+, mRealName(MudletApp::scmVersion())
 {
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));
 
     bool isIntOk = false;
-    mMessageBufferLimit = mudlet::self()->mpSettings->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
+    mMessageBufferLimit = MudletApp::getQSettings()->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
     if (!isIntOk) {
         mMessageBufferLimit = dlgIRC::DefaultMessageBufferLimit;
     }
@@ -704,8 +704,16 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
     }
 }
 
-void dlgIRC::appendHtml(QTextDocument* document, const QString& html)
+// The document on screen has to be written through the browser, which scrolls
+// and repaints as well as appending; one that is not on screen has no browser to
+// go through and is written directly.
+void dlgIRC::appendToDocument(QTextDocument* document, const QString& html)
 {
+    if (document == ircBrowser->document()) {
+        ircBrowser->append(html);
+        return;
+    }
+
     QTextCursor cursor(document);
     cursor.beginEditBlock();
     cursor.movePosition(QTextCursor::End);
@@ -742,11 +750,22 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
                 }
             }
 
-            // add the HTML formatted copy to the buffer.
-            if (document == ircBrowser->document()) {
-                ircBrowser->append(html);
-            } else {
-                dlgIRC::appendHtml(document, html);
+            appendToDocument(document, html);
+
+            // Being kicked ourselves makes IrcBufferModelPrivate::messageFilter()
+            // destroy the channel's buffer, and with it the document this line has
+            // just gone into, so the server buffer - which is never destroyed -
+            // keeps a copy the player can still read. The nick test is deliberately
+            // the same expression that filter's own destroy test uses, so the copy
+            // is made exactly when the buffer is taken away: keep the two in step.
+            const bool kickedUs = message->type() == IrcMessage::Kick && !static_cast<IrcKickMessage*>(message)->user().compare(connection->nickName(), Qt::CaseInsensitive);
+            // a kick naming us in a channel we have no buffer for arrives on the
+            // server buffer itself, via messageIgnored, and has already been
+            // appended above - copying it again would show it twice
+            if (kickedUs && buffer != serverBuffer) {
+                if (QTextDocument* serverDocument = bufferTexts.value(serverBuffer)) {
+                    appendToDocument(serverDocument, html);
+                }
             }
         }
     }
@@ -903,7 +922,7 @@ QString dlgIRC::readIrcPassword(Host* pH)
 
 QString dlgIRC::readAppDefaultIrcNick()
 {
-    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
+    QFile file(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
@@ -917,7 +936,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
-    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
+    QSaveFile file(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ofs(&file);
@@ -1002,7 +1021,7 @@ QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& chann
 
 void dlgIRC::writeQSettings()
 {
-    if (mudlet::self()) {
-        mudlet::self()->mpSettings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
+    if (auto* settings = MudletApp::getQSettings()) {
+        settings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
     }
 }

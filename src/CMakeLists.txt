@@ -106,8 +106,8 @@ set(mudlet_SRCS
     MMCPClient.cpp
     MMCPServer.cpp
     mudlet.cpp
+    MudletApp.cpp
     MudletInstanceCoordinator.cpp
-    MudletPaths.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -119,6 +119,7 @@ set(mudlet_SRCS
     SecureStringUtils.cpp
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
+    SherpaRecognizer.cpp
     ShortcutsManager.cpp
     SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
@@ -205,12 +206,14 @@ set(mudlet_SRCS
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
+    TriggerMatchPool.cpp
     TriggerUnit.cpp
     TTriggerPrescan.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
     TStringUtils.cpp
@@ -253,6 +256,20 @@ if(APPLE)
   list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
   set_source_files_properties(
     MacMicrophonePermission.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
+
+  # The macOS speech recognition backend. Unlike MacMicrophonePermission its
+  # class declares Q_OBJECT, so AUTOMOC must see the header - but only where
+  # the .mm that defines the class is also built. Leaving it in the
+  # unconditional mudlet_HDRS set moc'd it on every platform and left Linux and
+  # Windows linking against a vtable nothing defined. The header is appended
+  # after that set() instead, since this block runs before it.
+  list(APPEND mudlet_SRCS AppleSpeechRecognizer.mm)
+  set_source_files_properties(
+    AppleSpeechRecognizer.mm
     PROPERTIES
     LANGUAGE OBJCXX
     COMPILE_OPTIONS "-fobjc-arc"
@@ -363,8 +380,8 @@ set(mudlet_HDRS
     MMCPClient.h
     MMCPServer.h
     mudlet.h
+    MudletApp.h
     MudletInstanceCoordinator.h
-    MudletPaths.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -376,6 +393,7 @@ set(mudlet_HDRS
     SecureStringUtils.h
     SelectionRectangleHandler.h
     SentryWrapper.h
+    SherpaRecognizer.h
     ShortcutsManager.h
     SignInStoreReconciler.h
     SingleLineTextEdit.h
@@ -467,12 +485,14 @@ set(mudlet_HDRS
     TrailingWhitespaceMarker.h
     Tree.h
     TriggerHighlighter.h
+    TriggerMatchPool.h
     TriggerUnit.h
     TTriggerPrescan.h
     TRoom.h
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
     TStringUtils.h
@@ -497,6 +517,13 @@ set(mudlet_HDRS
     widgetutils.h
     XMLexport.h
     XMLimport.h)
+
+if(APPLE)
+  # Appended rather than listed above: AUTOMOC generates a moc file for every
+  # Q_OBJECT header it is given, and AppleSpeechRecognizer is only compiled on
+  # Apple.
+  list(APPEND mudlet_HDRS AppleSpeechRecognizer.h)
+endif()
 
 
 if(USE_UPDATER)
@@ -549,6 +576,7 @@ find_package(Qt6 6.8.2 REQUIRED
                MultimediaWidgets
                Network
                OpenGL
+               Svg
                UiTools
                Widgets
                Concurrent)
@@ -565,6 +593,7 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::Multimedia
               Qt6::MultimediaWidgets
               Qt6::OpenGL
+              Qt6::Svg
               Qt6::UiTools
               Qt6::Widgets
               qt6keychain)
@@ -729,12 +758,15 @@ if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
 
+# APP_VERSION is PUBLIC because the functional tests link ${LIB_MUDLET_TARGET}
+# and check the version identity it reports.
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSION}")
+
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
-    APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
     LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
@@ -906,9 +938,14 @@ endif()
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+  # A normal link, not a weak one: Speech.framework has shipped with every
+  # macOS Mudlet supports
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework Speech")
 
-  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
+  # Microphone permission and speech recognition sources are already added via
+  # mudlet_SRCS/mudlet_HDRS
   target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework Speech")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
@@ -1045,4 +1082,42 @@ if(UNIX AND NOT APPLE)
         GROUP_EXECUTE
         WORLD_READ
         WORLD_EXECUTE)
+endif()
+
+# `cmake --build <dir> --target run-mudlet` - build if needed, then launch.
+#
+# On macOS this goes through the bundle rather than the binary inside it. macOS
+# attributes a permission request to the responsible process, which for a binary
+# started from a shell is the application owning the terminal, not Mudlet: the
+# built-in speech backend then asks for speech recognition, the terminal's
+# application is required to carry the usage description, and TCC kills Mudlet
+# when it does not. See AppleSpeechRecognizer::doStartListening().
+#
+# `open` detaches, so qDebug() and qWarning() would go nowhere - hence the two
+# flags, which put both streams in a file beside the build.
+#
+# A sanitizer build is the exception, and runs the binary directly: ASAN_OPTIONS
+# and its siblings are read from the environment of the process, and `open`
+# hands the request to launchd rather than passing this shell's environment on,
+# so a sanitized run launched that way would silently ignore every option set
+# for it - and report to a terminal nothing is reading. That backend declines to
+# ask for permission rather than dying when it finds itself started this way, so
+# the trade is a message instead of a crash.
+if(APPLE AND NOT USE_SANITIZER)
+  add_custom_target(run-mudlet
+    # -n so a rebuild is actually what starts, rather than the running copy
+    # being brought to the front
+    COMMAND open -n "$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>"
+            --stdout "${CMAKE_BINARY_DIR}/mudlet-run.log"
+            --stderr "${CMAKE_BINARY_DIR}/mudlet-run.log"
+    COMMAND ${CMAKE_COMMAND} -E echo "Mudlet started; its output is in ${CMAKE_BINARY_DIR}/mudlet-run.log"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet as an application")
+else()
+  add_custom_target(run-mudlet
+    COMMAND "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet")
 endif()

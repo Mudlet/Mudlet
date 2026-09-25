@@ -60,21 +60,49 @@
 #include <vector>
 
 namespace {
-// The UTF-8 handed to a pattern is the encoding of the same text the QString
-// holds, so the UTF-16 index a byte offset stands at is just the number of code
-// units the bytes before it decode to. Counting those beats decoding the prefix
-// into a QString that is thrown away once its length has been read.
-int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset)
+// The UTF-16 code units the bytes in [from, to) decode to: a continuation byte
+// belongs to the character before it, and anything outside the basic
+// multilingual plane needs a surrogate pair. Counting a byte at a time is exact
+// even when an end lands inside a character, which a start offset stepped after
+// an empty match does.
+int utf16UnitsIn(const char* utf8, const PCRE2_SIZE from, const PCRE2_SIZE to)
 {
     int codeUnits = 0;
-    for (PCRE2_SIZE i = 0; i < byteOffset; ++i) {
+    for (PCRE2_SIZE i = from; i < to; ++i) {
         const auto byte = static_cast<unsigned char>(utf8[i]);
         if ((byte & 0xC0) != 0x80) {
-            // Anything outside the basic multilingual plane needs a surrogate pair
             codeUnits += (byte >= 0xF0) ? 2 : 1;
         }
     }
     return codeUnits;
+}
+
+// The UTF-8 handed to a pattern is the encoding of the same text the QString
+// holds, so the UTF-16 index a byte offset stands at is just the number of code
+// units the bytes before it decode to. Counting those beats decoding the prefix
+// into a QString that is thrown away once its length has been read.
+//
+// Counting them from the start of the line each time costs the offset itself,
+// and a match-all trigger asks for one position per capture at offsets that
+// march along the line - so reporting the positions of a line of n bytes cost
+// n squared. The caller carries the offset and count of the answer before, and
+// each further one walks only the bytes between the two.
+//
+// The walk goes either way, because the offsets do not arrive in order. PCRE2
+// hands back the name table in alphabetical order, so the named-group loop asks
+// for offsets in an order unrelated to their place in the line; a lookbehind or
+// \K capture can also put a later group before an earlier one. The cursor pair
+// must describe this same buffer and start at (0, 0) - one carried over from
+// another line reports nonsense rather than failing.
+int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset, PCRE2_SIZE& cursorByteOffset, int& cursorCodeUnits)
+{
+    if (byteOffset >= cursorByteOffset) {
+        cursorCodeUnits += utf16UnitsIn(utf8, cursorByteOffset, byteOffset);
+    } else {
+        cursorCodeUnits -= utf16UnitsIn(utf8, byteOffset, cursorByteOffset);
+    }
+    cursorByteOffset = byteOffset;
+    return cursorCodeUnits;
 }
 
 // The /g loop's search for the next occurrence. The first search of a line
@@ -196,6 +224,7 @@ TTrigger::TTrigger(TTrigger* parent, Host* pHost)
 , mpHost(pHost)
 , mpLua(mpHost->getLuaInterpreter())
 {
+    ++smStructureGeneration;
 }
 
 TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost)
@@ -212,6 +241,7 @@ TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList
 
 TTrigger::~TTrigger()
 {
+    ++smStructureGeneration;
     mColorPatternList.clear();
     mConditionMap.clear();
 
@@ -265,9 +295,18 @@ static void pcre2_match_data_deleter(pcre2_match_data* pointer)
     pcre2_match_data_free(pointer);
 }
 
+quint64 TTrigger::smStructureGeneration = 0;
+quint64 TTrigger::smRegexSearches = 0;
+quint32 TTrigger::smPrescanPassId = 0;
+quint32 TTrigger::smPrescanPassIdCounter = 0;
+
 //FIXME: lock if code *OR* regex doesn't compile
 bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger)
 {
+    ++smStructureGeneration;
+    // A verdict reached against the old patterns says nothing about the new
+    // ones, and this can happen in the middle of the line it was reached for
+    mPrescanPassId = 0;
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
     mSubstringPatterns.clear();
@@ -460,7 +499,7 @@ void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
     if (mpHost) {
         if (auto* unit = mpHost->getTriggerUnit()) {
             if (nowFiresWithoutMatching) {
-                unit->markRootUnfilterable();
+                unit->markPrescanStaleForLineInFlight(this);
             } else {
                 unit->markPrescanStale(this);
             }
@@ -512,6 +551,11 @@ bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, cons
     }
     pcre2_match_data* match_data = matchData.data();
 
+    // A search the prescan could have run instead; what it does not count is
+    // exactly what the prescan answers without searching
+    if (!mIsMultiline) {
+        ++smRegexSearches;
+    }
     // pcre2_match() finds the JIT code by itself, but only after a preamble of
     // option and argument checks that a matching run repeats for every line
     const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr)
@@ -544,6 +588,10 @@ void TTrigger::processRegexMatch(const char* haystackC,
 
     int i = 0;
     int numberOfCaptureGroups = 0;
+    // One cursor per pattern match, so that the match-all loop's matches walk
+    // the line once between them instead of rescanning it for each
+    PCRE2_SIZE cursorByteOffset = 0;
+    int cursorCodeUnits = 0;
     CaptureLists lists;
     std::list<std::string>& captureList = lists.mCaptures;
     std::list<int>& posList = lists.mPositions;
@@ -557,7 +605,7 @@ void TTrigger::processRegexMatch(const char* haystackC,
             continue;
         }
 
-        const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i]);
+        const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i], cursorByteOffset, cursorCodeUnits);
         // Built where it is kept: a local to copy from would allocate twice
         lists.add(substring_start, static_cast<size_t>(substring_length), utf16_pos + posOffset);
         if (TDebug::wants(TDebug::Category::TriggerDetail)) {
@@ -586,7 +634,7 @@ void TTrigger::processRegexMatch(const char* haystackC,
             }
             auto* substring_start = haystackC + ovector[2 * n];          //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
             auto substring_length = ovector[2 * n + 1] - ovector[2 * n]; //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
-            auto utf16_pos = utf16PositionOf(haystackC, ovector[2 * n]); //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * n], cursorByteOffset, cursorCodeUnits); //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             namePositions.insert(name, qMakePair(utf16_pos + posOffset, static_cast<int>(capture.length())));
@@ -626,7 +674,7 @@ void TTrigger::processRegexMatch(const char* haystackC,
                 lists.addEmpty(-1);
                 continue;
             }
-            const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i]);
+            const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i], cursorByteOffset, cursorCodeUnits);
             lists.add(substring_start, static_cast<size_t>(substring_length), utf16_pos + posOffset);
             if (TDebug::wants(TDebug::Category::TriggerDetail)) {
                 TDebug(Qt::darkCyan, Qt::black, TDebug::Category::TriggerDetail, mName) << "<regex mode: match all> capture group #" << (i + 1) << " = " >> mpHost;
@@ -644,9 +692,6 @@ END: {
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
         const int total = captureList.size();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         mpHost->deselectMainConsole();
         auto its = captureList.begin();
         auto iti = posList.begin();
@@ -749,9 +794,6 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
@@ -890,9 +932,6 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         mpHost->deselectMainConsole();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -1042,9 +1081,6 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         mpHost->deselectMainConsole();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -1190,9 +1226,6 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
@@ -1231,6 +1264,97 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 // haystack: string to match as a QString
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
+
+bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch, int& regexSearches) const
+{
+    // Everything below decides "this trigger cannot possibly do anything on
+    // this line". Anything whose outcome depends on more than the line text -
+    // multiline state, a line counter, a colour scan of the buffer, Lua - is
+    // not decidable here and gets a yes.
+    if (!isActive() || !mpMyChildrenList) {
+        return true;
+    }
+    if (mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
+        return true;
+    }
+    if (haystack.isEmpty()) {
+        // match() bails before running a pattern, so nothing can happen
+        return false;
+    }
+    const int size = mPatternKinds.size();
+    if (!size) {
+        // A folder with no pattern of its own passes every line to its children
+        return true;
+    }
+    for (int patternNumber = 0; patternNumber < size; patternNumber++) {
+        switch (mPatternKinds.at(patternNumber)) {
+        case REGEX_SUBSTRING: {
+            if (patternNumber >= static_cast<int>(mSubstringPatterns.size()) || !mSubstringPatterns[patternNumber].matcher) {
+                return true;
+            }
+            const TSubstringPattern& pattern = mSubstringPatterns[patternNumber];
+            // The same dismissal match_substring() makes, so a pattern the line
+            // cannot hold is never searched for on any thread
+            if (!lineBigrams.couldContainShared(haystack, pattern.bigrams)) {
+                break;
+            }
+            // unique_ptr's operator-> hands out a non-const matcher even from a
+            // const member, so bind a const reference to keep the compiler
+            // checking that this helper-thread path stays read-only.
+            const QStringMatcher& matcher = *pattern.matcher;
+            if (matcher.indexIn(haystack) != -1) {
+                return true;
+            }
+            break;
+        }
+
+        case REGEX_PERL: {
+            if (patternNumber >= static_cast<int>(mRegexes.size())) {
+                return true;
+            }
+            const QSharedPointer<pcre2_code>& re = mRegexes[patternNumber];
+            if (!re) {
+                // A pattern that does not compile never matches, but match_perl()
+                // tells the user so every time it is asked. Ruling the trigger out
+                // here would silence that warning for exactly as long as the text
+                // keeps flooding.
+                return true;
+            }
+            ++regexSearches;
+            const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr)
+                                                            : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr);
+            if (rc >= 0) {
+                return true;
+            }
+            break;
+        }
+
+        case REGEX_BEGIN_OF_LINE_SUBSTRING:
+            if (haystack.startsWith(mPatterns.at(patternNumber))) {
+                return true;
+            }
+            break;
+
+        case REGEX_EXACT_MATCH: {
+            QStringView text(haystack);
+            if (text.endsWith(QChar('\n'))) {
+                text.chop(1);
+            }
+            if (text == mPatterns.at(patternNumber)) {
+                return true;
+            }
+            break;
+        }
+
+        default:
+            // colour, prompt, line spacer and Lua patterns are not decidable
+            // from the line text alone
+            return true;
+        }
+    }
+    return false;
+}
+
 bool TTrigger::match(const char* haystackC, const int haystackCLength, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams)
 {
     // Guard against re-entrancy: cleanup may have deleted this trigger while
@@ -1242,6 +1366,14 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
 
     bool ret = false;
     if (isActive()) {
+        // The prescan ran every pattern this trigger could match the line with
+        // and none did, so there is nothing here for the line to trip. Only ever
+        // reached for a trigger whose patterns are a pure function of the line.
+        // mKeepFiring is re-read rather than taken from the verdict because an
+        // earlier trigger's script can have opened this one since.
+        if (mPrescanPassId == smPrescanPassId && !mPrescanMayFire && mKeepFiring <= 0) {
+            return false;
+        }
         if (mIsLineTrigger) {
             if (--mStartOfLineDelta < 0) {
                 execute();

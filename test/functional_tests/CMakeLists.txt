@@ -41,11 +41,16 @@ set(WINDOW_GROUP_TEST_SOURCES
     CommandLineKeyHandlingTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
+    DockWidgetWithoutProfileTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
+    AboutDialogLicencesTest.cpp
     LabelAnchorInteractionTest.cpp
+    MainWindowTitleTest.cpp
     LabelMovieRefusalTest.cpp
+    TabBarStyleTest.cpp
+    LabelSvgBackgroundTest.cpp
     CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
@@ -53,14 +58,17 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainWindowSizeReportTest.cpp
     CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
+    SpeechAcrossProfilesTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     NotepadTest.cpp
+    MenuShortcutTeardownTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
+    DetachedWindowToolBarVisibilityTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
@@ -68,6 +76,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
+    ReplaySpeedClampTest.cpp
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
@@ -83,11 +92,19 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogInitialSelectionTest.cpp
+    ConnectionDialogKeychainWaitTest.cpp
+    ConnectionDialogNewProfileTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
+    ConnectionDialogOpenProfileTest.cpp
+    CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
+    ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
+    PortableRootNoticeTest.cpp
     ProfileDeletionSafetyTest.cpp
+    ProfileDictionaryTest.cpp
     ProfileFolderNameTest.cpp
     ProfileIniParseErrorTest.cpp
     ProfileLifecycleTest.cpp
@@ -96,11 +113,13 @@ set(PROFILE_GROUP_TEST_SOURCES
     ProfileSaveShutdownRaceTest.cpp
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp
+    SelfTestProfileIconTest.cpp
+    SpellDictionaryFailureTest.cpp
     XMLexportVariablesTest.cpp
 )
 
-# Telnet and the other network protocols Mudlet speaks, and the escape sequences
-# carried over them
+# Telnet and the other network protocols Mudlet speaks, the escape sequences
+# carried over them, and the version identity Mudlet announces over them
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
@@ -109,6 +128,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetAtcpMspTest.cpp
     TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
+    TelnetLatePasswordTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     TelnetChannel102WireTest.cpp
@@ -117,12 +137,17 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
+    TelnetPasswordMaskTimeoutTest.cpp
     TelnetOptionsReportTest.cpp
+    ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
+    MirrorToStdOutTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    MudletAppVersionTest.cpp
+    IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
 )
 
@@ -133,8 +158,10 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
+    PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
+    TriggerMatchPoolTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
@@ -147,10 +174,12 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
     ColorTriggerDialogTest.cpp
+    EditorReshowTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
     MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    EditorAddItemTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
@@ -168,25 +197,35 @@ set(MAP_GROUP_TEST_SOURCES
     MapCoordinateLimitTest.cpp
     MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
+    MapSmallAreaCenteringTest.cpp
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapTextLabelCacheTest.cpp
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
+    MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )
 
+# CameraController is only compiled into the library with the 3D mapper
+if(USE_3DMAPPER)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp)
+endif()
+
 # Packages and modules: installing them, saving them and removing them
 set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
+    ActionToolbarMenuTest.cpp
+    BrokenPackageNoticeTest.cpp
     DefaultPackagesTest.cpp
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
@@ -194,6 +233,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
+    PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
@@ -202,7 +242,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
 )
 
 # Onboarding and in-app guidance: the starter UI, the tutorial invitation,
-# the feature callouts and the experienced-player gate
+# the interface tour, the feature callouts and the experienced-player gate
 set(STARTERUI_GROUP_TEST_SOURCES
     ExperiencedPlayerGateTest.cpp
     FeatureCalloutTest.cpp
@@ -213,6 +253,7 @@ set(STARTERUI_GROUP_TEST_SOURCES
     TutorialInvitationFocusTest.cpp
     TutorialInvitationGateTest.cpp
     TutorialInvitationLayoutTest.cpp
+    UiTourKeyboardTest.cpp
 )
 
 # The settings dialog: its sidebar-and-cards shell, the deep links into it, how
@@ -225,17 +266,20 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
+    SettingsMapControlsTest.cpp
     SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
     SettingsSpellCheckEnableTest.cpp
+    SettingsThemeFetchErrorTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
 set(TEARDOWN_GROUP_TEST_SOURCES
     AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
+    HeadlessVersionTest.cpp
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -243,7 +287,10 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SpeechBridgeLuaTest.cpp
+    SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
+    TMediaAudioOutputTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
@@ -359,11 +406,61 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
-# AppStartupTeardownTest runs the shipped application instead of linking it, so it
-# needs that binary's path and needs it built by the time ctest runs. Naming the
-# target literally is deliberate: EXE_MUDLET_TARGET is a plain variable local to
-# src/CMakeLists.txt, so a rename there fails generation here rather than quietly
-# depending on nothing.
+# A stand-in libvosk, so SpeechRecognizerContractTest and SpeechBridgeLuaTest can
+# reach the code below VoskRecognizer's library guard on a machine with no speech
+# engine - which is every CI runner. Named exactly as the real library is on each platform,
+# because VoskRecognizer looks it up by filename along librarySearchPaths().
+# The test copies it into its own redirected config dir, the first of those
+# paths, so nothing outside the test's temporary directory is touched.
+#
+# Deliberately not linked into anything: it is dlopen()ed by path, which is the
+# whole point, and linking it would put a second set of these symbols in the
+# test binary.
+add_library(vosk_stub SHARED stubs/vosk_stub.cpp)
+set_target_properties(vosk_stub PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "libvosk"
+    # No "lib" prefix from CMake and no version decoration: the name has to be
+    # the one the real release ships, which VoskRecognizer hardcodes.
+    # A subdirectory, NOT beside the test executables. loadVoskLibrary() asks for
+    # the bare name "vosk" before it tries any search path, and the dynamic
+    # loader answers that from the executable's own directory - so a stub built
+    # next to the binaries is found by every test in it, from process start,
+    # whether or not the test installed one - which decides the answer for every
+    # case in that binary before any of them runs.
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
+    # The stub's entry points are plain extern "C" with no __declspec(dllexport),
+    # so without this a Windows build produces a DLL that loads and resolves
+    # nothing - QLibrary::resolve() returns null for every symbol, and a test
+    # would fail for a reason that has nothing to do with what it is checking.
+    WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(APPLE)
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".dylib")
+elseif(WIN32)
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".dll")
+else()
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".so")
+endif()
+# Both groups: SpeechAcrossProfilesTest builds a recognizer with it, and
+# SpeechRecognizerContractTest needs it to get below the library guard at all -
+# without it that binary's one case reaching live model handles skipped on every
+# runner, which is the same as not having it.
+add_dependencies(functional_window_tests vosk_stub)
+add_dependencies(functional_media_tests vosk_stub)
+# Passed rather than reconstructed in the test: the suffix rules above are the
+# only place the platform naming is decided, and a test guessing at it would
+# silently skip instead of failing when they change.
+foreach(stubUser functional_window_tests functional_media_tests)
+    target_compile_definitions(${stubUser} PRIVATE
+        MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
+endforeach()
+
+# AppStartupTeardownTest and HeadlessVersionTest run the shipped application
+# instead of linking it, so they need that binary's path and need it built by the
+# time ctest runs. Naming the target literally is deliberate: EXE_MUDLET_TARGET is
+# a plain variable local to src/CMakeLists.txt, so a rename there fails generation
+# here rather than quietly depending on nothing.
 add_dependencies(functional_teardown_tests mudlet_executable)
 target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
 
@@ -428,6 +525,10 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 # sanitiser build spends seconds on each of those start-ups
 set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 
+# HeadlessVersionTest runs the application once per row of its matrix, for the
+# same reason
+set_tests_properties(HeadlessVersionTest PROPERTIES TIMEOUT 300)
+
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
@@ -454,6 +555,11 @@ set_tests_properties(MsdpMalformedDiagnosticTest PROPERTIES TIMEOUT 300)
 # both of which sanitiser builds stretch well past the default budget.
 set_tests_properties(TelnetLargeBurstTest PROPERTIES TIMEOUT 300)
 
+# TelnetLatePasswordTest boots a Mudlet and a profile for each of its cases and waits out the
+# auto-login timers in real time, which takes half the default budget without sanitisers and
+# more than all of it with them
+set_tests_properties(TelnetLatePasswordTest PROPERTIES TIMEOUT 300)
+
 # TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
 # real time by design - every round trip it times, and every stall it places, has
 # to be waited out - so it needs a longer timeout
@@ -475,10 +581,11 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
-# TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
-# full profile, which is nearly all of their runtime and the part a sanitizer and
-# a loaded runner stretch, so they get the same headroom as their neighbours
-set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
+# TelnetNewEnvironTest, TelnetOptionsReportTest, TelnetAtcpMspTest and
+# TelnetPasswordMaskTimeoutTest each boot a full profile, which is nearly all of
+# their runtime and the part a sanitizer and a loaded runner stretch, so they get
+# the same headroom as their neighbours
+set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest TelnetPasswordMaskTimeoutTest PROPERTIES TIMEOUT 300)
 
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
@@ -489,8 +596,8 @@ set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 # finish, because the assertion message is the whole point of the file. Its
 # nominal budget looks like ~120s of QTRY timeouts, but QTRY waits three times
 # what it is told: once to poll, then twice more to build the "would have passed
-# after N ms" debug message. Measured at 263s with every wire cut, and the five
-# cases added since each stop at their first blocking wait for at most 220s
+# after N ms" debug message. Measured at 263s with every wire cut, and the six
+# cases added since each stop at their first blocking wait for at most 280s
 # more, so anything below that turns a readable failure into a silent ctest
 # kill. Guarded, because without the updater the test does not exist and
 # naming a test that does not exist is a hard CMake error
@@ -540,6 +647,7 @@ set_tests_properties(SettingsAppearanceTest
                      SettingsHostLifecycleTest
                      SettingsInstantApplyTest
                      SettingsLiveSyncTest
+                     SettingsMapControlsTest
                      SettingsRoundTripTest
                      SettingsSearchTest
                      SettingsShellNavigationTest
@@ -561,6 +669,11 @@ set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 600)
+
+# ConnectionDialogOpenProfileTest waits out a real reconnect (15s budget) on top
+# of two profile loads and a full mudlet start under ASan, so the 60s default is
+# too tight for a loaded machine even though the file runs in ~2s
+set_tests_properties(ConnectionDialogOpenProfileTest PROPERTIES TIMEOUT 300)
 
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for
@@ -595,8 +708,8 @@ set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 # reconnecting in others, so it needs a longer timeout
 set_tests_properties(TelnetStringSequenceRecoveryTest PROPERTIES TIMEOUT 300)
 
-# CopyAsImageTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(CopyAsImageTest PROPERTIES TIMEOUT 300)
+# CopyAsImageTest and MainConsoleSelectionTest create a fresh profile per test method, so they need a longer timeout
+set_tests_properties(CopyAsImageTest MainConsoleSelectionTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's

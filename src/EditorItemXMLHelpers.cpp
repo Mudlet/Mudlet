@@ -778,6 +778,7 @@ bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot)
         }
     }
 
+    pT->validateTime();
     pT->compileAll();
 
     return true;

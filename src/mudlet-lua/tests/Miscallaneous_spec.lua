@@ -79,6 +79,25 @@ local fixtureDirectory = specDirectory .. "/fixtures/packages"
 -- developer's interactive run.
 local testMode = os.getenv("MUDLET_TEST_MODE")
 
+-- A save another spec started can still be running, and saveProfile() then
+-- answers nil and a message rather than a path. That is the only refusal
+-- waiting clears, and only test mode can pump the event loop to wait for it;
+-- outside test mode, and for every other refusal, the answer goes straight back
+-- to the caller as it is rather than costing five seconds of pumping first. A
+-- refusal puts its message where the path goes, so callers have to look at the
+-- first value before treating the second as one.
+local function saveWaitingOutAnyOtherSave(folder, name)
+  local saved, pathOrRefusal
+  for _ = 1, 100 do
+    saved, pathOrRefusal = saveProfile(folder, name)
+    if saved or not testMode or not contains(tostring(pathOrRefusal), "a save is already in progress") then
+      break
+    end
+    pumpEvents(50)
+  end
+  return saved, pathOrRefusal
+end
+
 describe("Tests C++ functions in the Miscallaneous category", function()
     describe("Tests the functionality of sendMSDP", function()
       it("should return nil and an error message when MSDP cannot be sent", function()
@@ -714,24 +733,6 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- history is silently never written again, which the user only discovers
       -- on the next launch.
       describe("Tests that an end of session save writes the command line histories", function()
-        -- A save another spec started can still be running, and saveProfile()
-        -- answers nil - without emitting anything - until it finishes.
-        local function saveWaitingOutAnyOtherSave()
-          local saved, message
-          for _ = 1, 100 do
-            saved, message = saveProfile()
-            -- Of the refusals saveProfile() can answer with, an already running
-            -- save is the only one waiting clears, and only test mode can pump
-            -- the event loop to let it. The rest are permanent, so they go back
-            -- as they are rather than costing five seconds of pumping first.
-            if saved or not testMode or not tostring(message):find("a save is already in progress", 1, true) then
-              break
-            end
-            pumpEvents(50)
-          end
-          return saved, message
-        end
-
         it("writes the main command line's history file out again", function()
           -- slot_saveHistory() returns without writing anything unless both of
           -- these are on, so they are what makes a missing file mean the signal
@@ -790,6 +791,117 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
           assert.is_false(fileExists(historyFile), "the history was written out despite saving being turned off for that command line")
         end)
+      end)
+    end)
+
+    -- saveProfile() hands the file it wrote back to the script, so the path it
+    -- reports has to be a tidy one. Two joins can double a separator: the one in
+    -- Host::saveProfile(), where the profile's own save directory already ends
+    -- in a separator, and the Lua binding's "save as" join, which is the one a
+    -- call with a file name as well as a folder takes.
+    describe("Tests the functionality of saveProfile", function()
+      -- The write runs on a pool thread, so the file only turns up some time
+      -- after saveProfile() has answered, and only test mode can pump the event
+      -- loop to wait for it. This is a smoke check that a save happened at all:
+      -- fileExists() asks the OS, which collapses "//", so it cannot tell a
+      -- doubled separator from a single one - the assertions on the string can.
+      local function assertSaveTurnedUp(path)
+        if not testMode then
+          return
+        end
+        for _ = 1, 200 do
+          if fileExists(path) then
+            return
+          end
+          pumpEvents(50)
+        end
+        assert.is_true(fileExists(path), "no profile save turned up at " .. tostring(path))
+      end
+
+      -- A directory of its own for the saves that go outside the profile's own
+      -- save directory, taken away again with whatever landed in it. The saves
+      -- below have all been waited for by the time this runs, so nothing is
+      -- taken out from under a write still on its way.
+      local function scratchFolder(name)
+        local folder = getMudletHomeDir() .. "/" .. name
+        lfs.mkdir(folder)
+        finally(function()
+          for entry in lfs.dir(folder) do
+            if entry ~= "." and entry ~= ".." then
+              os.remove(folder .. "/" .. entry)
+            end
+          end
+          lfs.rmdir(folder)
+        end)
+        return folder
+      end
+
+      it("reports the default save in the profile's own save directory with a single separator", function()
+        local saved, path = saveWaitingOutAnyOtherSave()
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.is_false(contains(path, "//"), "saveProfile() reported " .. tostring(path))
+        assert.equals(getMudletHomeDir() .. "/current", path:match("^(.*)/[^/]+$"))
+        assertSaveTurnedUp(path)
+      end)
+
+      it("reports a single separator for a save into a folder that ends in one", function()
+        local folder = scratchFolder("mudlet-spec-save-folder")
+
+        local saved, path = saveWaitingOutAnyOtherSave(folder .. "/")
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.is_false(contains(path, "//"), "saveProfile() reported " .. tostring(path))
+        assert.equals(folder, path:match("^(.*)/[^/]+$"))
+        assertSaveTurnedUp(path)
+      end)
+
+      it("reports a single separator for a named save into a folder that ends in one", function()
+        local folder = scratchFolder("mudlet-spec-save-as-folder")
+
+        local saved, path = saveWaitingOutAnyOtherSave(folder .. "/", "mudlet-spec-saved")
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.equals(folder .. "/mudlet-spec-saved.xml", path)
+        assertSaveTurnedUp(path)
+      end)
+
+      it("leaves a name that already ends in .xml with the one suffix", function()
+        local folder = scratchFolder("mudlet-spec-suffix-folder")
+
+        local saved, path = saveWaitingOutAnyOtherSave(folder, "mudlet-spec-saved.xml")
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.equals(folder .. "/mudlet-spec-saved.xml", path)
+        assertSaveTurnedUp(path)
+      end)
+
+      -- Where a ".." is resolved is the filesystem's business - a symbolic link
+      -- in front of one makes collapsing it here point somewhere else - so this
+      -- pins only what the fix is about: one separator, and a save really at the
+      -- path that came back. The way back in leaves the file in the scratch
+      -- folder, which is swept up either way.
+      it("reports a single separator for a folder with a .. in it", function()
+        local name = "mudlet-spec-dotdot-folder"
+        local folder = scratchFolder(name)
+
+        local saved, path = saveWaitingOutAnyOtherSave(folder .. "/../" .. name .. "/", "mudlet-spec-dotdot")
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.is_false(contains(path, "//"), "saveProfile() reported " .. tostring(path))
+        assertSaveTurnedUp(path)
+      end)
+
+      -- A file name that names a place of its own wins the join outright: the
+      -- folder is dropped and the save lands at the root of the filesystem. It
+      -- is refused instead, with the nil and the message the binding answers any
+      -- other unusable argument with. Which names count is the platform's rule.
+      it("refuses a file name that is an absolute path instead of saving outside the folder it was given", function()
+        local absoluteName = getOS() == "windows" and "C:/mudlet-spec-absolute" or "/mudlet-spec-absolute"
+        local escapee = absoluteName .. ".xml"
+        finally(function()
+          os.remove(escapee)
+        end)
+
+        local saved, message = saveProfile(getMudletHomeDir(), absoluteName)
+        assert.is_nil(saved, "saveProfile() took the save and reported " .. tostring(message))
+        assert.is_true(contains(tostring(message), "absolute path"), "saveProfile() answered " .. tostring(message))
+        assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
     end)
 
@@ -984,6 +1096,48 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
           assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
         end)
+
+        it("gives text with a transparent background the console's colour (#10592)", function()
+          local logPath, triggerId, selectedAt
+          local htmlLogging = getConfig("logInHTML")
+          local red, green, blue, alpha = getBackgroundColor()
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            setConfig("logInHTML", htmlLogging)
+            setBackgroundColor(red, green, blue, alpha)
+            resetFormat()
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+          setBackgroundColor(12, 34, 56)
+
+          local started, _, path = startLogging(true)
+          assert.is_true(started, "the test did not open a log of its own")
+          logPath = path
+
+          -- the line's markup is rendered the moment the line commits, so only a
+          -- trigger on the line itself can recolour it in time
+          triggerId = tempTrigger("SpecHtmlTransparent", function()
+            selectedAt = selectString("SpecHtmlTransparent", 1)
+            setBgColor(0, 0, 0, 0)
+            deselect()
+          end)
+          feedTriggers("SpecHtmlTransparent\n")
+          -- ordinary text carries the console's background colour anyway, so
+          -- without the recolouring the assertions below prove nothing
+          assert.is_true((selectedAt or -1) >= 0, "the trigger did not select the text it had to make transparent")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+          assert.is_true(contains(contents, "background: rgb(12,34,56)"), "the transparent text did not take the console's background colour in the log")
+          assert.is_false(contains(contents, "background: rgb(0,0,0)"), "the transparent text was logged as black")
+        end)
       end)
 
       -- A received line is held back from the log until the next one commits.
@@ -1092,6 +1246,40 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(log, "Before the gag."), "the line before the gagged one is missing from the log")
           assert.is_false(contains(log, "Top secret plans"), "the gagged line leaked into the log")
           assert.is_true(contains(log, "After the gag."), "the line after the gagged one is missing from the log")
+        end)
+
+        it("keeps the pending line when a trigger deletes an older one (#9429)", function()
+          local logPath, triggerId, deletedLine
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            moveCursorEnd()
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          local started, _, path = startLogging(true)
+          assert.is_true(started, "the test did not open a log of its own")
+          logPath = path
+
+          feedTriggers("First of three.\n")
+          feedTriggers("Second of three.\n")
+          triggerId = tempTrigger("Third of three.", function()
+            moveCursor(0, getLineNumber() - 2)
+            deletedLine = getCurrentLine()
+            deleteLine()
+          end)
+          feedTriggers("Third of three.\n")
+          assert.are.equal("First of three.", deletedLine, "the trigger deleted a line other than the one two above it")
+
+          startLogging(false)
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.equals(1, occurrences(log, "First of three."), "the line that was written before it was deleted is not in the log exactly once")
+          assert.equals(1, occurrences(log, "Second of three."), "deleting an older line dropped the line that was still pending for logging")
+          assert.equals(1, occurrences(log, "Third of three."), "the line the deleting trigger fired on is missing from the log")
         end)
 
         it("does not replay the last line of one session into the next", function()
@@ -1523,6 +1711,26 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
       end)
 
+      it("returns nil+msg for a chunk with a negative length", function()
+        local corrupt = getMudletHomeDir() .. "/mudlet-spec-negative-replay.dat"
+        finally(function() os.remove(corrupt) end)
+        writeFile(corrupt, "\0\0\0\0\255\255\255\255")
+
+        local ok, err = loadReplay(corrupt)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+      end)
+
+      it("returns nil+msg for a file of nothing but zero bytes", function()
+        local corrupt = getMudletHomeDir() .. "/mudlet-spec-zeroed-replay.dat"
+        finally(function() os.remove(corrupt) end)
+        writeFile(corrupt, string.rep("\0", 64))
+
+        local ok, err = loadReplay(corrupt)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+      end)
+
       it("plays the recorded bytes back into the main console", function()
         if not testMode then
           pending("letting the replay timer run needs MUDLET_TEST_MODE")
@@ -1554,6 +1762,85 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "mudlet-spec-wide-replay-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      -- older Mudlets recorded an empty chunk when a compressed read
+      -- inflated to nothing
+      it("plays on past a chunk with no bytes in it", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-empty-chunk-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, chunk(0, "mudlet-spec-before-empty-line\r\n") .. chunk(10, "") .. chunk(10, "mudlet-spec-after-empty-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-after-empty-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      -- a first delay of zero makes the wider shape start with eight zero
+      -- bytes, which the narrower one reads as an empty chunk
+      it("plays back an eight byte delay replay with no first delay and an empty chunk", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-empty-chunk-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(0, "mudlet-spec-wide-before-empty-line\r\n") .. wideChunk(10, "") .. wideChunk(10, "mudlet-spec-wide-after-empty-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-wide-after-empty-line"), "the replay did not reach the console")
+        assert.is_true(contains(textFrom(mark), "mudlet-spec-wide-before-empty-line"), "the line before the empty chunk did not reach the console")
+        pumpEvents(200)
+      end)
+
+      -- read with four byte delays, this file runs out part way through a
+      -- length, which must not pass for a chunk with no bytes in it
+      it("plays back an eight byte delay replay that is too short to read with four byte delays", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-short-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(0, "Zq\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "Zq"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      it("loads a replay after refusing a file too short to be one", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local short = getMudletHomeDir() .. "/mudlet-spec-short-replay.dat"
+        local replay = getMudletHomeDir() .. "/mudlet-spec-after-short-replay.dat"
+        finally(function()
+          os.remove(short)
+          os.remove(replay)
+        end)
+        writeFile(short, "\0\0")
+        writeFile(replay, chunk(0, "mudlet-spec-after-short-line\r\n"))
+
+        local ok, err = loadReplay(short)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+
+        local mark = getLastLineNumber("main")
+        assert.is_true(loadReplay(replay))
+        assert.is_true(playedBack(mark, "mudlet-spec-after-short-line"), "the replay did not reach the console")
         pumpEvents(200)
       end)
 

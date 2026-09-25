@@ -75,6 +75,9 @@ public:
     bool hasRoom(int id) const { return rooms.contains(id); }
     QList<int> getAreaIDList();
     const QMap<int, QString>& getAreaNamesMap() const { return areaNamesMap; }
+    // Whether an area is already using this name, without areaNamesMap.values()'s
+    // full copy of every area name just to scan it once.
+    bool hasAreaName(const QString& name) const;
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
     void updateEntranceMap(int);
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
@@ -83,6 +86,12 @@ public:
 
     void buildAreas();
     void clearMapDB();
+    // Counts how many times the map has been thrown away. Anything that
+    // captured room, area or label ids and outlives a clear - a dialog left
+    // open across a loadMap() - can compare this to tell whether those ids
+    // still mean what they did, since a replacement map hands the same ones
+    // out again.
+    unsigned int mapGeneration() const { return mMapGeneration; }
     void auditRooms(QHash<int, int>&, QHash<int, int>&);
     bool addRoom(int id, TRoom* pR, bool isMapLoading = false);
     int getAreaID(TArea* pA);
@@ -112,12 +121,29 @@ private:
 
     QHash<int, TRoom*> rooms;
     QMultiHash<int, int> entranceMap; // key is exit target, value is exit source
+    // Mirrors entranceMap with key and value swapped (key is exit source, value
+    // is exit target), kept in lockstep at every entranceMap mutation. Lets
+    // deleteValuesFromEntranceMap() find the handful of entries a room
+    // contributed directly, rather than scanning every entry in entranceMap to
+    // find them - though each entranceMap.remove(target, value) still walks
+    // that target's own chain, so the real bound is this room's own exits plus
+    // the entries under each of their targets, not O(1) per exit. Still far
+    // cheaper than the O(exits in the whole map) scan this replaced.
+    QMultiHash<int, int> entranceMapBySource;
     QMap<int, TArea*> areas;
     QMap<int, QString> areaNamesMap;
+    // Where createNewAreaID() resumes searching from, so repeated area
+    // creation does not rescan every already-taken ID from 1 every time. Only
+    // advances while this map is loaded (clearMapDB() resets it to 1), so an
+    // ID freed by removing an area is not reused within that load - see
+    // createNewAreaID()'s definition for why that trade is intentional, and
+    // for the explicit-ID paths that bypass this hint entirely.
+    int mNextAreaIdHint = 1;
     TMap* mpMap;
     QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
     // Flag to prevent expensive individual cleanup during bulk destruction
     bool mBulkDeletionMode = false;
+    unsigned int mMapGeneration = 0;
 
     friend class TRoom;
     friend class TArea;

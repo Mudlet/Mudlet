@@ -28,7 +28,7 @@
 // mudlet-object specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TLuaInterpreter.h"
 
 #include "EAction.h"
@@ -52,6 +52,7 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
+#include "TriggerMatchPool.h"
 #include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
@@ -92,7 +93,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -725,6 +725,20 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_settable(L, -3);
 
     lua_settable(L, -3); // patterns
+
+    // No documentation available in wiki - internal, test-only fields. They
+    // describe the engine rather than the profile, and a burst only reaches the
+    // parallel prescan under conditions a spec has to be able to confirm it met.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushstring(L, "prescanWorkers");
+        lua_pushnumber(L, TriggerMatchPool::instance().workerCount());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "prescans");
+        lua_pushnumber(L, static_cast<double>(TriggerMatchPool::instance().prescanCount()));
+        lua_settable(L, -3);
+    }
+
     lua_settable(L, -3); // triggers
 
     // Aliases
@@ -943,38 +957,6 @@ int TLuaInterpreter::getScript(lua_State* L)
     lua_pushnumber(L, -1);
     lua_pushstring(L, qsl("script \"%1\" at position %2 not found").arg(name, QString::number(pos)).toUtf8().constData());
     return 2;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
-int TLuaInterpreter::invokeFileDialog(lua_State* L)
-{
-    const int n = lua_gettop(L);
-    if (!checkBoolArg(L, __func__, 1, "fileOrFolder") || !checkStringArg(L, __func__, 2, "dialogTitle") || (n > 2 && !checkStringArg(L, __func__, 3, "dialogLocation"))) {
-        return lua_error(L);
-    }
-
-    Host& host = getHostFromLua(L);
-    QString location = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
-    const bool luaDir = lua_toboolean(L, 1);
-    const QString title{lua_tostring(L, 2)};
-
-    if (n > 2) {
-        const QString target{lua_tostring(L, 3)};
-        const QDir dir(target);
-
-        if (dir.exists()) {
-            location = target;
-        }
-    }
-
-    if (!luaDir) {
-        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
-        lua_pushstring(L, fileName.toUtf8().constData());
-        return 1;
-    }
-    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
-    lua_pushstring(L, fileName.toUtf8().constData());
-    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
@@ -3098,7 +3080,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
     auto* hostManager = HostManager::self();
-    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
 
@@ -3106,9 +3088,9 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_pushstring(L, profile.toUtf8().constData());
         lua_newtable(L);
 
-        QString url = MudletPaths::readProfileData(profile, qsl("url"));
-        QString port = MudletPaths::readProfileData(profile, qsl("port"));
-        QString description = MudletPaths::readProfileData(profile, qsl("description"));
+        QString url = MudletApp::readProfileData(profile, qsl("url"));
+        QString port = MudletApp::readProfileData(profile, qsl("port"));
+        QString description = MudletApp::readProfileData(profile, qsl("description"));
 
         // if url/port haven't been written to disk yet (which is what happens
         // when a default profile is opened for the first time), fetch this data from game details
@@ -3181,7 +3163,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
+    const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
@@ -3221,7 +3203,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         requestedName = getVerifiedString(L, __func__, 1, "profile name");
     }
 
-    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
+    const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "closeProfile: profile '%s' does not exist", requestedName.toUtf8().constData());

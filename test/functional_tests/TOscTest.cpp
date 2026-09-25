@@ -35,7 +35,7 @@
 
 #include "LuaLiteral.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
@@ -43,6 +43,7 @@
 #include "TLinkStore.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
+#include "TUiTour.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -213,16 +214,28 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
-    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
              qsl("%1/mudlet").arg(mConfigDir.path()));
+    // A config dir of this test's own reads as a brand new installation, so the
+    // first-run interface tour would open over the profile a second after it
+    // loads and take the window's keyboard with it - the link navigation keys
+    // below would reach the tour rather than the console. Written before
+    // init(), which is what stamps an untouched config as a first launch: a
+    // settings file that already holds something is how mudletUsedBefore()
+    // recognises an existing player, which keeps the rest of the first-run
+    // interface away as well.
+    TUiTour::rememberShown();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
             "MudletInstanceCoordinator"));
     mudlet::self()->init();
     mudlet::self()->setStorePasswordsSecurely(false);
+    QVERIFY2(mudlet::self()->experiencedMudletPlayer(),
+             "the first-run UI would open over these tests and take the "
+             "window's keyboard");
 
     const QString path =
-        MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        MudletApp::getMudletPath(enums::profileHomePath, mHostname);
     QDir(path).removeRecursively();
 
     mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -1680,7 +1693,7 @@ private slots:
     // Null when initTestCase skipped or failed ahead of mudlet::start()
     if (mudlet::self()) {
       const QString path =
-          MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+          MudletApp::getMudletPath(enums::profileHomePath, mHostname);
       QDir(path).removeRecursively();
       delete mudlet::self();
     }

@@ -261,6 +261,27 @@ describe("Alias processing", function()
 
     end)
 
+    describe("expandAlias with nothing in the echo argument", function()
+
+        -- expandAlias used to insist on a boolean whenever a second argument was
+        -- present at all, so a script passing an unset variable through got an
+        -- error instead of its command
+        it("takes a nil where the echo flag goes and still sends the command (#1298)", function()
+            local sends = 0
+            local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                if command == "expand_alias_nil_echo" then
+                    sends = sends + 1
+                end
+            end)
+            finally(function() killAnonymousEventHandler(handler) end)
+
+            local ok, err = pcall(expandAlias, "expand_alias_nil_echo", nil)
+            assert.is_true(ok, tostring(err))
+            assert.are.equal(1, sends, "the command never reached the game")
+        end)
+
+    end)
+
     -- A nested expandAlias() runs a whole alias pass inside the caller's script,
     -- and that pass sets the "command" global and the capture groups for itself.
     -- Whatever ran the outer script has to get its own state back when the

@@ -500,7 +500,7 @@ describe("Tests MSDP subnegotiation handling", function()
   -- rather than one value if a control character arrives unescaped.
   local VAR, VAL = "<01>", "<02>"
   local TABLE_OPEN, TABLE_CLOSE = "<03>", "<04>"
-  local ARRAY_CLOSE = "<06>"
+  local ARRAY_OPEN, ARRAY_CLOSE = "<05>", "<06>"
 
   local function feedMsdp(payload)
     local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSDP>" .. payload .. "<T_IAC><T_SE>")
@@ -597,13 +597,205 @@ describe("Tests MSDP subnegotiation handling", function()
       -- top-level unmarked-list pattern, and used to make the whole variable gain
       -- an array level it never had
       feedMsdp(VAR .. "MSDPSHAPE" .. VAL .. TABLE_OPEN
-               .. VAR .. "L" .. VAL .. "<05>" .. VAL .. "a" .. VAL .. "b" .. "<06>"
+               .. VAR .. "L" .. VAL .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
                .. VAR .. "Z" .. VAL .. "plain"
                .. TABLE_CLOSE)
       assert.is_table(msdp.MSDPSHAPE, "the variable went missing entirely")
       assert.equals("plain", msdp.MSDPSHAPE.Z, "Z is not reachable, so the table gained a spurious array level")
       assert.same({"a", "b"}, msdp.MSDPSHAPE.L)
       assert.is_nil(msdp.MSDPSHAPE[1], "the whole table was wrapped in an array it never had")
+    end)
+
+    -- An array's elements are siblings, and an element may itself be a table or
+    -- an array. Games differ over whether each element carries a value marker of
+    -- its own, so both forms appear below.
+    it("keeps an array of tables, the form games send for a group roster", function()
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPGROUP", function() fired = true end)
+      feedMsdp(VAR .. "MSDPGROUP" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. VAR .. "HEALTH" .. VAL .. "90" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. VAR .. "HEALTH" .. VAL .. "50" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      killAnonymousEventHandler(id)
+      assert.same({{NAME = "Fred", HEALTH = "90"}, {NAME = "Barney", HEALTH = "50"}}, msdp.MSDPGROUP,
+                  "the whole variable went missing, so the array of tables never reached Lua")
+      assert.is_true(fired, "the roster arrived without raising its event, so no script would hear about it")
+    end)
+
+    it("keeps an array of tables whose elements each carry a value marker", function()
+      -- the form the specification spells out, which needed no separator of its
+      -- own and is here so the fix keeps working for it
+      feedMsdp(VAR .. "MSDPGROUPV" .. VAL .. ARRAY_OPEN
+               .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}, {NAME = "Barney"}}, msdp.MSDPGROUPV, "the whole variable went missing")
+    end)
+
+    it("keeps an array holding a single table", function()
+      -- one of the nested shapes that always worked: nothing precedes the table,
+      -- so no separator was ever needed - it guards against the fix overcorrecting
+      feedMsdp(VAR .. "MSDPSOLOT" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}}, msdp.MSDPSOLOT)
+    end)
+
+    it("keeps an array of arrays", function()
+      feedMsdp(VAR .. "MSDPMATRIX" .. VAL .. ARRAY_OPEN
+               .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. ARRAY_OPEN .. VAL .. "c" .. ARRAY_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{"a", "b"}, {"c"}}, msdp.MSDPMATRIX,
+                  "the whole variable went missing, so the nested arrays never reached Lua")
+    end)
+
+    it("keeps an array that mixes a plain value with a table", function()
+      feedMsdp(VAR .. "MSDPMIXED" .. VAL .. ARRAY_OPEN
+               .. VAL .. "solo"
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. VAL .. "tail"
+               .. ARRAY_CLOSE)
+      assert.same({"solo", {NAME = "Fred"}, "tail"}, msdp.MSDPMIXED,
+                  "the values around the nested table lost their place in the array")
+    end)
+
+    -- An array may hold elements of different kinds, and each pairing is its own
+    -- adjacency for the separator: a value before an array, a table before an
+    -- array, an array before a table.
+    it("keeps an array whose element after a plain value is an array", function()
+      feedMsdp(VAR .. "MSDPVALARR" .. VAL .. ARRAY_OPEN
+               .. VAL .. "solo"
+               .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({"solo", {"a", "b"}}, msdp.MSDPVALARR,
+                  "the value ahead of the nested array lost its place in the array")
+    end)
+
+    it("keeps an array whose element after a table is an array", function()
+      feedMsdp(VAR .. "MSDPTABARR" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}, {"a", "b"}}, msdp.MSDPTABARR,
+                  "the array following a table in the same array never reached Lua")
+    end)
+
+    it("keeps an array whose element after an array is a table", function()
+      feedMsdp(VAR .. "MSDPARRTAB" .. VAL .. ARRAY_OPEN
+               .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{"a", "b"}, {NAME = "Fred"}}, msdp.MSDPARRTAB,
+                  "the table following an array in the same array never reached Lua")
+    end)
+
+    it("keeps a table whose values are arrays of tables", function()
+      feedMsdp(VAR .. "MSDPDEEP" .. VAL .. TABLE_OPEN
+               .. VAR .. "MEMBERS" .. VAL .. ARRAY_OPEN
+                 .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+                 .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. TABLE_CLOSE
+               .. ARRAY_CLOSE
+               .. VAR .. "LEADER" .. VAL .. "Fred"
+               .. TABLE_CLOSE)
+      assert.same({MEMBERS = {{NAME = "Fred"}, {NAME = "Barney"}}, LEADER = "Fred"}, msdp.MSDPDEEP,
+                  "the array of tables, or the key after it, did not survive the nesting")
+    end)
+
+    it("keeps a table holding two tables side by side", function()
+      feedMsdp(VAR .. "MSDPROOMS" .. VAL .. TABLE_OPEN
+               .. VAR .. "HERE" .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "The Hall" .. TABLE_CLOSE
+               .. VAR .. "NORTH" .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "The Study" .. TABLE_CLOSE
+               .. TABLE_CLOSE)
+      assert.same({HERE = {NAME = "The Hall"}, NORTH = {NAME = "The Study"}}, msdp.MSDPROOMS,
+                  "the second table in the row did not reach Lua")
+    end)
+
+    it("keeps the characters JSON escapes inside a nested value", function()
+      -- names in a roster carry colour codes and punctuation, so the escaping
+      -- branches and the new separator meet on the very shape games send
+      feedMsdp(VAR .. "MSDPESCGROUP" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fr\"ed" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Bar\\ney<ESC>x" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fr\"ed"}, {NAME = "Bar\\ney" .. string.char(27) .. "x"}}, msdp.MSDPESCGROUP,
+                  "a quote, a backslash or an escape character in a nested value took the variable down with it")
+    end)
+
+    it("replaces a roster that is sent again with fewer members", function()
+      -- a game re-sends the whole list on every change, and the interesting
+      -- direction is shrinking: a member who left must not linger
+      feedMsdp(VAR .. "MSDPPARTY" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Wilma" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}, {NAME = "Barney"}, {NAME = "Wilma"}}, msdp.MSDPPARTY,
+                  "the first roster did not arrive with all three of its members")
+
+      feedMsdp(VAR .. "MSDPPARTY" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Wilma" .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{NAME = "Fred"}, {NAME = "Wilma"}}, msdp.MSDPPARTY,
+                  "the member who left the roster is still in the table")
+    end)
+
+    it("keeps an empty table", function()
+      feedMsdp(VAR .. "MSDPEMPTYT" .. VAL .. TABLE_OPEN .. TABLE_CLOSE)
+      assert.same({}, msdp.MSDPEMPTYT, "an empty table did not arrive as an empty table")
+    end)
+
+    it("keeps an empty array", function()
+      feedMsdp(VAR .. "MSDPEMPTYA" .. VAL .. ARRAY_OPEN .. ARRAY_CLOSE)
+      assert.same({}, msdp.MSDPEMPTYA, "an empty array did not arrive as an empty table")
+    end)
+
+    it("keeps an array of empty tables", function()
+      feedMsdp(VAR .. "MSDPEMPTIES" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. TABLE_CLOSE .. TABLE_OPEN .. TABLE_CLOSE
+               .. ARRAY_CLOSE)
+      assert.same({{}, {}}, msdp.MSDPEMPTIES, "the array did not arrive with both of its empty tables")
+    end)
+
+    -- A server answering REPORT sends the lot at once, so a structure is rarely
+    -- the last thing in a message. One case per shape rather than three feeds in
+    -- one, so a failure of any of them is its own report.
+    it("keeps a table and the variable that follows it in the same message", function()
+      feedMsdp(VAR .. "MSDPPAIRT" .. VAL .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "The Hall" .. TABLE_CLOSE
+               .. VAR .. "MSDPAFTERT" .. VAL .. "after")
+      assert.same({NAME = "The Hall"}, msdp.MSDPPAIRT, "the table went missing because another variable followed it")
+      assert.equals("after", msdp.MSDPAFTERT, "the variable after the table went missing")
+    end)
+
+    it("keeps an array and the variable that follows it in the same message", function()
+      feedMsdp(VAR .. "MSDPPAIRA" .. VAL .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. VAR .. "MSDPAFTERA" .. VAL .. "after")
+      assert.same({"a", "b"}, msdp.MSDPPAIRA, "the array went missing because another variable followed it")
+      assert.equals("after", msdp.MSDPAFTERA, "the variable after the array went missing")
+    end)
+
+    it("keeps an array of tables and the variable that follows it in the same message", function()
+      feedMsdp(VAR .. "MSDPPAIRG" .. VAL .. ARRAY_OPEN
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Fred" .. TABLE_CLOSE
+               .. TABLE_OPEN .. VAR .. "NAME" .. VAL .. "Barney" .. TABLE_CLOSE
+               .. ARRAY_CLOSE
+               .. VAR .. "MSDPAFTERG" .. VAL .. "after")
+      assert.same({{NAME = "Fred"}, {NAME = "Barney"}}, msdp.MSDPPAIRG,
+                  "the array of tables went missing because another variable followed it")
+      assert.equals("after", msdp.MSDPAFTERG, "the variable after the array of tables went missing")
+    end)
+
+    it("keeps an unmarked list that holds an array, and the variable after it", function()
+      -- the list the specification allows for command-like variables, with an
+      -- array as one of its entries: the wrap has to close around the structure,
+      -- not around a value left hanging open
+      feedMsdp(VAR .. "MSDPCMDLIST" .. VAL .. "look"
+               .. VAL .. ARRAY_OPEN .. VAL .. "a" .. VAL .. "b" .. ARRAY_CLOSE
+               .. VAR .. "MSDPAFTERLIST" .. VAL .. "after")
+      assert.same({"look", {"a", "b"}}, msdp.MSDPCMDLIST,
+                  "the unmarked list holding an array never reached Lua")
+      assert.equals("after", msdp.MSDPAFTERLIST, "the variable after the unmarked list went missing")
     end)
 
     it("still turns adjacent top-level values into a list", function()
@@ -681,6 +873,34 @@ describe("Tests MSDP subnegotiation handling", function()
       strayCloseKeepsTheNextVariable(ARRAY_CLOSE, "MSDPSTRAYA")
     end)
 
+    -- A marker that opens a table or an array is not legal inside a name or a
+    -- value, so the two shapes below are malformed MSDP. Both used to arrive as
+    -- something the game never sent - a variable named after an inner key, and a
+    -- value with the markers swallowed into its text - and both now fail to
+    -- decode, which is what the end of a message has always done with them.
+    it("yields no variable and no event when a name runs straight into a table", function()
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPINNER", function() fired = true end)
+      feedMsdp(VAR .. "MSDPKEPTN" .. VAL .. "x"
+               .. VAR .. "MSDPRUNNAME" .. TABLE_OPEN .. VAR .. "MSDPINNER" .. VAL .. "v" .. TABLE_CLOSE)
+      killAnonymousEventHandler(id)
+      assert.equals("x", msdp.MSDPKEPTN, "the well-formed variable ahead of the malformed one has to survive")
+      assert.is_nil(msdp.MSDPINNER, "a key from inside the malformed table was stored as a variable of its own")
+      assert.is_nil(msdp.MSDPRUNNAME)
+      assert.is_false(fired, "a variable the game never sent raised an arrival event")
+    end)
+
+    it("yields no variable and no event when a value runs straight into a table", function()
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPRUNVAL", function() fired = true end)
+      feedMsdp(VAR .. "MSDPRUNVAL" .. VAL .. "a" .. TABLE_OPEN .. TABLE_CLOSE
+               .. VAR .. "MSDPAFTERRUN" .. VAL .. "b")
+      killAnonymousEventHandler(id)
+      assert.is_nil(msdp.MSDPRUNVAL, "the table markers were swallowed into the value as if they were text")
+      assert.is_false(fired, "a value that ran into a table marker raised an arrival event")
+      assert.equals("b", msdp.MSDPAFTERRUN, "the malformed variable took the rest of the message with it")
+    end)
+
     it("keeps the old value and stays silent when a decode fails", function()
       -- balanced markers can still make undecodable JSON (two roots), which slips
       -- past the structural checks and fails at the decoder - the arrival event
@@ -754,6 +974,106 @@ describe("Tests how a GMCP message is split into name and data", function()
 
   it("reads a payload that is a bare number", function()
     pending("json_to_value returns a function rather than a number for a bare JSON number, so gmcp.X ends up holding a function (#10362)")
+  end)
+end)
+
+describe("Tests the Client.GUI package offer", function()
+
+  -- A game may send Client.GUI as JSON, or as the raw telnet form of a version
+  -- and a URL on two lines. Either way the offer only has to reach the
+  -- downloader, so the URL is one nothing answers: the harness's fixture server
+  -- 404s it when it started one, a closed port refuses it when it did not.
+  local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
+
+  local function offerUrl(packageName)
+    local port = (httpPort and httpPort ~= "" and httpPort) or "1"
+    return "http://127.0.0.1:" .. port .. "/not-served/" .. packageName .. ".mpackage"
+  end
+
+  local function displayedSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  -- the console wraps a line wherever it runs out of width, and these URLs are
+  -- long enough to be split, so the whitespace comes out of both sides first
+  local function shownSince(mark, text)
+    return displayedSince(mark):gsub("%s+", ""):find((text:gsub("%s+", "")), 1, true)
+  end
+
+  local function downloadStarted(mark, packageName)
+    return shownSince(mark, "Downloading and installing package '" .. packageName .. "'")
+  end
+
+  local function offerRawTelnetGui(packageName, version)
+    local mark = getLastLineNumber("main")
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>Client.GUI " .. version .. "\n" .. offerUrl(packageName) .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    if downloadStarted(mark, packageName) then
+      -- the download the offer started is this test's to finish: the next offer
+      -- aborts a reply still in flight, and the failure message would otherwise
+      -- land in a later test's window
+      local drained = false
+      for _ = 1, 150 do
+        if shownSince(mark, "Package download failed from '" .. offerUrl(packageName) .. "'") then
+          drained = true
+          break
+        end
+        local pumped, why = pumpEvents(20)
+        assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
+      end
+      assert.is_true(drained, "the download of '" .. packageName .. "' has not finished, so it will land in a later test: " .. displayedSince(mark))
+    end
+    return mark
+  end
+
+  it("acts on a Client.GUI offer sent as raw telnet rather than JSON (#7704)", function()
+    local mark = offerRawTelnetGui("RegressRawGui", "7704")
+    assert.is_truthy(downloadStarted(mark, "RegressRawGui"), "the raw telnet offer never reached the downloader: " .. displayedSince(mark))
+  end)
+
+  it("keeps a raw telnet Client.GUI out of the gmcp table (#7034)", function()
+    -- an earlier spec may have left a gmcp.Client of its own behind, which would
+    -- answer for this one
+    local previousClient = gmcp.Client
+    finally(function() gmcp.Client = previousClient end)
+    gmcp.Client = nil
+    local mark = offerRawTelnetGui("RegressRawGuiTable", "7034")
+    -- the gmcp.Client check below would be just as happy with an offer that was
+    -- ignored outright, so prove first that this one was acted on
+    assert.is_truthy(downloadStarted(mark, "RegressRawGuiTable"), "the offer never reached the downloader")
+    -- gmcp.Client.GUI stays nil either way, because parseJSON creates the parent
+    -- table before it fails on the payload - only the parent tells the two apart
+    assert.is_nil(gmcp.Client, "the raw telnet offer was pushed into the gmcp table")
+  end)
+end)
+
+describe("Tests Discord GMCP routing", function()
+
+  -- getDiscordState() is denied when the bundled discord-rpc library is not on
+  -- the library search path, which the harness arranges, or when the profile has
+  -- Discord switched off. The state text read back is Mudlet's own, so nothing
+  -- has to be listening on Discord.
+  local requireDiscord = os.getenv("MUDLET_TEST_REQUIRE_DISCORD")
+
+  local function discordUnavailable()
+    local state, denial = getDiscordState()
+    if state ~= nil then
+      return false
+    end
+    if requireDiscord then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_DISCORD is set but the Discord API is unavailable: " .. tostring(denial))
+    end
+    pending("the Discord API is unavailable: " .. tostring(denial))
+    return true
+  end
+
+  it("hands a Discord GMCP message to Discord under the message name alone (#2284)", function()
+    if discordUnavailable() then return end
+    local previousState = getDiscordState()
+    finally(function() setDiscordState(previousState) end)
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>External.Discord.Status {\"state\": \"RegressDiscordState\"}<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.equals("RegressDiscordState", getDiscordState(), "is this profile still set to show game details in its Discord settings?")
   end)
 end)
 
@@ -942,6 +1262,19 @@ describe("Tests telnet option negotiation", function()
     assert.is_nil(mssp and mssp.TELNETSPLITVAR, "the subnegotiation was acted on before its IAC SE arrived")
     feed("t2<T_IAC><T_SE>")
     assert.equals("part2", mssp.TELNETSPLITVAR)
+  end)
+
+  -- a variable with no value used to abandon the whole subnegotiation, so every
+  -- variable a game sent behind a malformed one went missing
+  it("keeps reading MSSP variables past one that arrives without a value (#4233)", function()
+    finally(function()
+      mssp.TELNETMSSPNOVALUE = nil
+      mssp.TELNETMSSPAFTERBAD = nil
+    end)
+
+    feed("<T_IAC><T_SB><O_MSSP><01>TELNETMSSPNOVALUE<01>TELNETMSSPAFTERBAD<02>arrived<T_IAC><T_SE>")
+    assert.is_nil(mssp.TELNETMSSPNOVALUE, "a variable with no value should not be recorded")
+    assert.equals("arrived", mssp.TELNETMSSPAFTERBAD)
   end)
 
   it("displays nothing for the commands it answers on the wire", function()

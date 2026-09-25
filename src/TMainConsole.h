@@ -31,8 +31,7 @@
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
-
-#include <hunspell/hunspell.h>
+#include <utility>
 
 #include <list>
 
@@ -118,6 +117,13 @@ public:
     std::optional<QColor> getLabelBackgroundColor(const QString& name) const;
     bool setLabelBackgroundImage(const QString& name, const QString& path);
     bool resetLabelBackgroundImage(const QString& name);
+    bool setLabelSvgTint(const QString& name, const QColor& color);
+    bool resetLabelSvgTint(const QString& name);
+    bool setLabelSvgRotation(const QString& name, double angle);
+    bool resetLabelSvgRotation(const QString& name);
+    bool setLabelSvgShear(const QString& name, double shearX, double shearY);
+    bool resetLabelSvgShear(const QString& name);
+    bool resetLabelSvgTransform(const QString& name);
     std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
     // For callers that need the widget itself. An accessor rather than the open
@@ -148,7 +154,7 @@ public:
     bool moveSubConsole(const QString& name, int x, int y);
     bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
     bool pasteToSubConsole(const QString& name);
-    std::optional<QSize> subConsoleFontSize(const QString& name) const;
+    std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
     bool resetSubConsoleBackgroundImage(const QString& name);
@@ -161,6 +167,10 @@ public:
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
+    void setCommandLinePlaceholderText(const QString& text);
+    void updateCommandLineSpellCheck(bool enabled);
+    void setCommandLineText(const QString& text);
+    TCommandLine* raiseCommandLine();
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // One set of operations for scroll boxes, command lines and text boxes
     // together rather than one per kind: each is the same plain QWidget call
@@ -173,8 +183,6 @@ public:
     std::optional<bool> getPlainWindowVisible(const QString& name) const;
     bool setCommandLineAction(const QString& name, const int func);
     bool resetCommandLineAction(const QString& name);
-    void setSystemSpellDictionary(const QString&);
-    void setProfileSpellDictionary();
     void showStatistics();
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
@@ -187,6 +195,19 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
+    dlgMapper* dockedMapper() const;
+    void showMapWidget();
+    void dockMapWidget(Qt::DockWidgetArea area);
+    std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
+    // The map dock answered as values, so that the core is left holding the
+    // state of the map window rather than the widget showing it. Having made a
+    // dock is not the same as having one on screen, which is what the four
+    // after it answer for.
+    bool mapWidgetCreated() const;
+    bool setMapWidgetTitle(const QString& title);
+    std::optional<QString> mapWidgetTitle() const;
+    std::optional<QRect> mapWidgetGeometry() const;
+    bool hideMapWidget();
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
     void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
@@ -198,22 +219,9 @@ public:
     void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
-    const QByteArray& getHunspellCodecName_system();
-    Hunhandle* getHunspellHandle_system();
-    // Either returns the handle of the per profile or the shared Mudlet one or
-    // nullptr depending on the state of the flags mEnableUserDictionary and
-    // mUseSharedDictionary:
-    Hunhandle* getHunspellHandle_user() const { return mEnableUserDictionary ? (mUseSharedDictionary ? mpHunspell_shared : mpHunspell_profile) : nullptr; }
-    QSet<QString> getWordSet() const;
-    QPair<bool, QString> addWordToSet(const QString&);
-    QPair<bool, QString> removeWordFromSet(const QString&);
-    bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
     void toggleLogging(bool);
     void printOnDisplay(std::string&, bool isFromServer = false);
     void finalize();
-    bool saveMap(const QString&, int saveVersion = 0);
-    bool loadMap(const QString&);
-    bool importMap(const QString&, QString* errMsg = nullptr);
     void refreshSubconsoles();
 
 
@@ -232,8 +240,10 @@ public:
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
     QPointer<QProgressDialog> mpMapProgressDialog;
     // Outlives Host::closeMapWidget(), which only hides it, so this being
-    // non-null says the profile has made a map widget at some point, not that it
-    // has one on screen - see Host::mapWidget() for the latter.
+    // non-null does not say the profile has a map widget on screen - see
+    // mapWidget() for that. Null means the profile never made one, or
+    // createMapper() took a hidden one over so that an embedded mapper could
+    // have the slot; nothing else destroys it before ~TMainConsole().
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
 
@@ -250,7 +260,6 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
-    void slot_warmSystemSpellDictionary();
 
 
 signals:
@@ -262,7 +271,6 @@ signals:
 
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
-    void loadSystemSpellDictionary();
     // Where reparentLabel() and reparentWindow() parent an element named as a
     // setWindow() destination, shared so the two cannot disagree about what
     // "main" means.
@@ -270,6 +278,19 @@ private:
     // Where the three by-name-alone kinds are resolved to a widget, in the one
     // order the core resolves a name that is more than one of them in.
     QWidget* plainWindowWidget(const QString& name) const;
+    // The single answer to "does this profile have a map widget on screen right
+    // now" - null for a profile that never opened one, for one that put it away
+    // again, and for one whose closed widget createMapper() took over, none of
+    // which a script can tell apart or needs to.
+    //
+    // isHidden() rather than a flag of our own, because the dock gets hidden by
+    // paths that would never think to update one: its own title bar close
+    // button, mudlet::slot_showMapperDialog() handing the map over to a main
+    // window dock, and QMainWindow::restoreState() replaying a saved layout. It
+    // is also not !isVisible(), which would additionally answer "no map widget"
+    // whenever the main window itself is hidden, e.g. minimised to the system
+    // tray.
+    QDockWidget* mapWidget() const;
     void registerLabelWidget(const QString& name, TLabel* pLabel);
     void deregisterLabelWidget(TLabel* pLabel);
 
@@ -300,32 +321,6 @@ private:
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
 
-    // Names the dictionary mpHunspell_system is built for. The build is put off
-    // until the load has finished, so the profile load never reads the whole
-    // dictionary. Host's mSpellDic is the profile's setting; this is only ever
-    // what has been requested from it.
-    QString mSystemDictionary;
-
-    // Cloned from Host
-    bool mEnableUserDictionary = true;
-    bool mUseSharedDictionary = false;
-
-    // Three handles, one for the dictionary the user choses from the system
-    // one created by the mudlet class for all profiles and the third for a per
-    // profile one - the last pair are built by the user and/or lua functions:
-    Hunhandle* mpHunspell_system = nullptr;
-    Hunhandle* mpHunspell_shared = nullptr;
-    Hunhandle* mpHunspell_profile = nullptr;
-    // The user dictionary will always use the UTF-8 codec, but the one
-    // selected from the system's ones may not:
-    QByteArray mHunspellCodecName_system;
-    // To update the profile dictionary we actually have to track all the words
-    // in it so we loaded the contents into this on startup and adjust it as we
-    // go. Then, at the end of a session we will put the revised contents
-    // back into the user's ".dic" file and regenerate the needed pair of lines
-    // for the ".aff" file - this member is for the per profile option only as
-    // the shared one is held by the mudlet singleton class:
-    QSet<QString> mWordSet_profile;
     bool mEnableClose = false;
 };
 

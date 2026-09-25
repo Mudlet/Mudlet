@@ -27,6 +27,7 @@
 #include "dlgAboutDialog.h"
 
 #include "mudlet.h"
+#include "MudletApp.h"
 
 #include <QPainter>
 #include <QTextLayout>
@@ -41,13 +42,13 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 {
     setupUi(this);
 
-    QImage splashImage = mudlet::getSplashScreen(mudlet::self()->releaseVersion, mudlet::self()->publicTestVersion);
+    QImage splashImage = mudlet::getSplashScreen(MudletApp::release(), MudletApp::publicTest());
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
 
         unsigned fontSize = 16;
-        QString sourceVersionText = QString("Version: " + qsl(APP_VERSION) + mudlet::self()->mAppBuild);
+        QString sourceVersionText = QString("Version: " + qsl(APP_VERSION) + MudletApp::buildSuffix());
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -1071,6 +1072,19 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER "
                            "DEALINGS IN THE SOFTWARE.</p>"));
 
+    QString ISC_Body(
+            qsl("<h4>The ISC License</h4>"
+                           "<p>Permission to use, copy, modify, and/or distribute this software for any "
+                           "purpose with or without fee is hereby granted, provided that the above "
+                           "copyright notice and this permission notice appear in all copies.</p>"
+                           "<p>THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND THE AUTHOR DISCLAIMS ALL "
+                           "WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF "
+                           "MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY "
+                           "SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER "
+                           "RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, "
+                           "NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE "
+                           "USE OR PERFORMANCE OF THIS SOFTWARE.</p>"));
+
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
     QString UbuntuFontText(
                 qsl("<h3>UBUNTU FONT LICENCE Version 1.0</h3>"
@@ -1310,11 +1324,24 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "All rights reserved.</h3>"));
 #endif
 
-    //: Credits the speech recognition library Mudlet can load. It is not bundled - the user installs it - so this names it rather than reproducing its licence
+    //: Credits the speech recognition libraries Mudlet can load. None are bundled - the user installs them - so this names them rather than reproducing their licences
     QString speechBackendsHeader(tr("<h2><u>Speech recognition backends</u></h2>"
-                                    "<h3>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0).<br>"
-                                    "It does not ship with Mudlet: you install it yourself, and its licence travels "
-                                    "with the files you download.</h3>"));
+                                    "<h3>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0), "
+                                    "<a href=\"https://github.com/k2-fsa/sherpa-onnx\">sherpa-onnx</a> (Apache 2.0), and the "
+                                    "<a href=\"https://onnxruntime.ai\">ONNX Runtime</a> (MIT) it runs on.<br>"
+                                    "None of them ship with Mudlet: you install them yourself, and each one's licence "
+                                    "travels with the files you download.</h3>"));
+
+    //: Credits the Lucide icon set used for the settings dialog's category icons. The copyright line below it is required by the ISC licence, so keep the name and year as they are
+    QString LucideHeader(tr("<h2><u>Lucide - icon toolkit used for the settings dialog's category icons</u><br>"
+                            "<a href=\"https://lucide.dev\">lucide.dev</a></h2>"
+                            "<h3>Copyright © 2026 Lucide Icons and Contributors</h3>"));
+
+    //: Introduces the second licence covering those Lucide icons that Lucide itself inherited from the Feather project
+    QString LucideFeatherSuppliment(tr("<h4>Of the icons used by Mudlet, <tt>monitor</tt>, <tt>search</tt>, "
+                                       "<tt>terminal</tt> and <tt>help-circle</tt> are derived from the Feather "
+                                       "project and are additionally covered by the following licence:</h4>"
+                                       "<h3>Copyright © 2013-present Cole Bemis</h3>"));
 
     QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
                                "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
@@ -1432,6 +1459,12 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     license_3rdParty_texts.append(qsl("<hr>%48")
                                   .arg(speechBackendsHeader));                 // 48 - speech recognition backends - translatable
 
+    license_3rdParty_texts.append(qsl("<hr>%49%50%51%52")
+                                  .arg(LucideHeader,                           // 49 - Lucide header - translatable
+                                       ISC_Body,                               // 50 - Lucide body ISC - not translatable
+                                       LucideFeatherSuppliment,                // 51 - Lucide/Feather supplement - translatable
+                                       MIT_Body));                             // 52 - Lucide/Feather body MIT - not translatable
+
     license_3rdParty_texts.append(qsl("</body></html>"));
 
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));
@@ -1523,7 +1556,7 @@ QString dlgAboutDialog::createBuildInfo() const
                    "</table>")
                 .arg(tr("Technical information:"),  // %1
                      tr("Version"),                 // %2
-                     mudlet::self()->scmVersion,    // %3
+                     MudletApp::scmVersion(),       // %3
                      tr("OS"),                      // %4
                      QSysInfo::prettyProductName(), // %5
                      tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
@@ -1551,7 +1584,7 @@ QString dlgAboutDialog::createBuildInfo() const
                "</table>")
             .arg(tr("Technical information:"),  // %1
                  tr("Version"),                 // %2
-                 mudlet::self()->scmVersion,    // %3
+                 MudletApp::scmVersion(),       // %3
                  tr("OS"),                      // %4
                  QSysInfo::prettyProductName(), // %5
                  tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
@@ -1574,7 +1607,7 @@ QString dlgAboutDialog::createBuildInfo() const
                    "</table>")
                 .arg(tr("Technical information:"),  // %1
                      tr("Version"),                 // %2
-                     mudlet::self()->scmVersion,    // %3
+                     MudletApp::scmVersion(),       // %3
                      tr("OS"),                      // %4
                      QSysInfo::prettyProductName(), // %5
                      //: This is shown for all other OSes than Windows.
@@ -1602,7 +1635,7 @@ the usual case.*/
                "</table>")
             .arg(tr("Technical information:"),  // %1
                  tr("Version"),                 // %2
-                 mudlet::self()->scmVersion,    // %3
+                 MudletApp::scmVersion(),       // %3
                  tr("OS"),                      // %4
                  QSysInfo::prettyProductName(), // %5
                  //: This is shown for all other OSes than Windows.
