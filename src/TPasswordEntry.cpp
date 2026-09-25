@@ -52,7 +52,15 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
     // would stop that event from being delivered at all.
     setContextMenuPolicy(Qt::DefaultContextMenu);
     setFont(pCommandLine->font());
-    setPalette(pCommandLine->mRegularPalette);
+    // The command line's palette sets its text colour after construction, so
+    // its placeholder colour is still derived from the default text colour -
+    // black on a black command line. The placeholder carries the Esc hint, so
+    // it is derived from the text colour that is actually in use.
+    QPalette palette = pCommandLine->mRegularPalette;
+    QColor placeholderColor = palette.color(QPalette::Text);
+    placeholderColor.setAlpha(128);
+    palette.setColor(QPalette::PlaceholderText, placeholderColor);
+    setPalette(palette);
 
     mpRevealAction = addAction(QIcon(qsl(":/icons/password-show-on.png")), QLineEdit::TrailingPosition);
     connect(mpRevealAction, &QAction::triggered, this, [this]() {

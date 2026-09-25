@@ -355,6 +355,11 @@ private slots:
         QCOMPARE(box()->geometry(), commandLine()->geometry());
         QCOMPARE(box()->echoMode(), QLineEdit::Password);
         QCOMPARE(box()->text(), QString());
+        // The placeholder carries the Esc hint, so it has to be drawn in the
+        // command line's text colour and not in the default palette's, which is
+        // invisible on a dark command line
+        QCOMPARE(box()->palette().color(QPalette::PlaceholderText).rgb(), commandLine()->mRegularPalette.color(QPalette::Text).rgb());
+        QVERIFY(box()->palette().color(QPalette::PlaceholderText).alpha() < 255);
         QCOMPARE(commandLine()->toPlainText(), qsl("look"));
         QCOMPARE(commandLine()->textCursor().selectedText(), qsl("look"));
         QCOMPARE(commandLine()->focusProxy(), box());
