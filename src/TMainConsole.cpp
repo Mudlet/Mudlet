@@ -35,6 +35,7 @@
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "TMxpFrameWidgets.h"
 #include "TRoomDB.h"
 #include "TScrollBox.h"
 #include "TTextBox.h"
@@ -88,6 +89,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 , mLogFileName(model().mLogFileName)
 , mLogStream(model().mLogStream)
 , mLogToLogFile(model().mLogToLogFile)
+, mpMxpFrameWidgets(std::make_unique<TMxpFrameWidgets>(this))
 {
     setFont(pH->getAndClearTempDisplayFont());
 
