@@ -1217,8 +1217,10 @@ void GMCPAuthenticator::attemptReconnect()
     // ahead of the advertised methods rather than as one of them, and Char.Login.Token is not scoped to
     // OAuth, so a password-credentials-only game may mint one and honour it. Gating this left that
     // player's saved token unused and downgraded them to typing a password on every connect. A store
-    // holding nothing replayable falls to readStoredSignIn()'s remaining rungs - the provider resume
-    // where the game offers oauth, otherwise the interactive hand-off.
+    // holding nothing replayable falls to readStoredSignIn()'s remaining rungs - the provider resume,
+    // which needs a stored account and provider as well as a game offering oauth, otherwise whatever
+    // selectAuthMethod() settles on, which for an empty store can be the client-driven OAuth flow as
+    // readily as the interactive hand-off.
     readStoredSignIn(true);
 }
 
