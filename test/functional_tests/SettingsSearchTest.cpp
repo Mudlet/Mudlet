@@ -237,6 +237,16 @@ private slots:
         QVERIFY2(mpPreferences->pushButton_chooseProtocols->property("searchMatch").toBool(), "the button carrying the protocol keywords was not highlighted");
     }
 
+    // Players who remember the old "Special options" tab look for it by that name,
+    // and what was on it now lives on two pages
+    void test_theOldSpecialOptionsNameFindsBothOfItsSuccessors()
+    {
+        search(qsl("special"));
+
+        QCOMPARE(mpPreferences->groupBox_specialOptions->parentWidget(), resultsColumn());
+        QCOMPARE(mpPreferences->groupBox_debug->parentWidget(), resultsColumn());
+    }
+
     // A lone Latin letter matches most of the dialog, and answering it means
     // moving most of the cards onto the results page and back on the next
     // keystroke - which is the lag, not the matching. An ideograph is a word,
