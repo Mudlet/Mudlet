@@ -546,22 +546,53 @@ private slots:
         QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
+    void testStringifiedServerVersionIsUnderstood_data()
+    {
+        QTest::addColumn<QString>("versionLiteral");
+        QTest::addColumn<int>("expectedVersion");
+        QTest::addColumn<bool>("expectWarning");
+
+        // The standard asks servers to accept a stringified version from a client, and a client should
+        // cope with the same shape coming the other way: a driver with no JSON number type sends it.
+        // Read as a plain int this yielded the default, so a version 2 server was answered as version 1.
+        QTest::newRow("a number, as most servers send it") << qsl("2") << 2 << false;
+        QTest::newRow("stringified by a driver with no number type") << qsl("\"2\"") << 2 << false;
+        QTest::newRow("stringified with padding") << qsl("\" 2 \"") << 2 << false;
+        QTest::newRow("newer than this client implements") << qsl("\"3\"") << 2 << false;
+        // Out of spec (the version is a positive, non-zero integer) but unambiguous: the clamp answers
+        // it as version 1 without comment, as it always has.
+        QTest::newRow("non-positive") << qsl("\"0\"") << 1 << false;
+        // Unreadable shapes all act as version 1, which changes the hand-off - a version 1 client sends
+        // a bare {} with no token_storage, so a game may conclude it cannot offer "remember me". Saying
+        // so is the difference between a server author finding that in a log and never finding it.
+        QTest::newRow("not a number at all") << qsl("\"abc\"") << 1 << true;
+        QTest::newRow("a decimal string") << qsl("\"2.0\"") << 1 << true;
+        QTest::newRow("v-prefixed") << qsl("\"v2\"") << 1 << true;
+        QTest::newRow("empty string") << qsl("\"\"") << 1 << true;
+        QTest::newRow("a boolean") << qsl("true") << 1 << true;
+        QTest::newRow("a fraction") << qsl("2.5") << 1 << true;
+    }
+
     void testStringifiedServerVersionIsUnderstood()
     {
+        QFETCH(QString, versionLiteral);
+        QFETCH(int, expectedVersion);
+        QFETCH(bool, expectWarning);
+
+        ScopedWarningCounter warnings(qsl("'version' value of type"));
+
         Host* host = connectAndNegotiate();
         QVERIFY(host);
         host->setLogin(qsl("player"));
         host->setPass(qsl("secret"));
 
         mpServer->clearReceived();
-        // The standard asks servers to accept a stringified version from a client, and a client should
-        // cope with the same shape coming the other way: a driver with no JSON number type sends it.
-        // Read as a plain int this yielded the default, so a version 2 server was answered as version 1.
-        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": \"2\", \"type\": [\"password-credentials\"]}"));
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": %1, \"type\": [\"password-credentials\"]}").arg(versionLiteral));
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send Char.Login.Credentials");
-        QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+        QCOMPARE(sent.value(qsl("version")).toInt(), expectedVersion);
+        QCOMPARE(warnings.count(), expectWarning ? 1 : 0);
     }
 
     void testAnAbsentNonceRequiredIsNotReportedAsMalformed()
@@ -1143,6 +1174,30 @@ private slots:
         const QJsonObject stored = readStoredReconnect(host);
         QCOMPARE(stored.value(qsl("account")).toString(), qsl("acct:other"));
         QVERIFY2(stored.value(qsl("provider")).toString().isEmpty(), "a provider the skipped resume never used was filed with the new token");
+    }
+
+    void testAGameThatNeverAnswersAReconnectStillHandsOff()
+    {
+        // The token replay is deliberately ungated, so it now reaches games that never implemented
+        // Char.Login.Reconnect - and a profile's stored entry is not bound to a server, so it can also
+        // reach a game that never issued it. Such a game drops the frame and says nothing. Since
+        // attemptReconnect() cancels the auto-login timers before replaying, nothing else is coming:
+        // without a deadline the player watches a sign-in that never happens and is told nothing.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        host->mpAuth->mReconnectResultTimeout = std::chrono::milliseconds(250);
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"secure_only\": false}"), qsl("ignored-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        QJsonObject replay;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), replay), "the saved token should still be replayed");
+
+        // The game answers nothing at all.
+        QJsonObject handoff;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), handoff), "the sign-in never fell through to the hand-off");
     }
 
     void testReconnectAcceptedAsTheIntegerOneKeepsTheToken_data()

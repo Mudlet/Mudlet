@@ -215,19 +215,38 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     }
     auto jsonObj = jsonDoc.object();
 
-    // The server reports the negotiated Char.Login version here; treat a missing, non-numeric, or
-    // non-positive value as version 1 (per the spec, the version is a positive, non-zero integer). A
-    // value above what this client implements is clamped down by the qBound below, not treated as 1.
+    // The server reports the negotiated Char.Login version here. A missing, unreadable or non-positive
+    // value acts as version 1 (per the spec, the version is a positive, non-zero integer); an unreadable
+    // one is reported, a non-positive one is not. A value above what this client implements is clamped
+    // down by the qBound below, not treated as 1.
     if (jsonObj.contains(qsl("version"))) {
         const QJsonValue declaredVersion = jsonObj[qsl("version")];
         // The string form is read too: a driver with no JSON number type sends "2", and the standard
         // asks servers to accept that shape from a client, so a client answers it symmetrically. Read
         // as a plain int it yielded the default, which answered a version 2 server as version 1 for
-        // the whole session. An unparseable string still falls back to that default.
-        const int reportedVersion = declaredVersion.isString() ? declaredVersion.toString().trimmed().toInt() : declaredVersion.toInt(1);
-        // Clamp to the highest version this client implements: the negotiated version is
-        // min(client, server), so we never act on - or echo back - a version we do not understand.
-        mNegotiatedVersion = qBound(1, reportedVersion, 2);
+        // the whole session.
+        bool readable = false;
+        int reportedVersion = 1;
+        if (declaredVersion.isString()) {
+            reportedVersion = declaredVersion.toString().trimmed().toInt(&readable);
+        } else if (declaredVersion.isDouble()) {
+            const double asNumber = declaredVersion.toDouble();
+            reportedVersion = static_cast<int>(asNumber);
+            // A version is a whole number; 2.5 names no version this client could act on.
+            readable = (static_cast<double>(reportedVersion) == asNumber);
+        }
+        if (readable) {
+            // Clamp to the highest version this client implements: the negotiated version is
+            // min(client, server), so we never act on - or echo back - a version we do not understand.
+            mNegotiatedVersion = qBound(1, reportedVersion, 2);
+        } else {
+            // Acting as version 1 changes the hand-off - it carries a bare {} with no token_storage - so
+            // a server whose version this client could not read may conclude it cannot offer the player
+            // "remember me", with nothing anywhere recording why. The neighbouring fields report their
+            // malformed values; this one did not.
+            qWarning().noquote().nospace() << "GMCP " << packageMessage << " - a 'version' value of type " << declaredVersion.type()
+                                           << " could not be read as a whole number, so this connection is acting as version 1.";
+        }
     }
 
     if (jsonObj.contains(qsl("type"))) {
@@ -942,6 +961,7 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                     mConn.reconnectingWithToken = true;
                     mConn.forgetAtReplay = mForgetGeneration;
                     mConn.awaitingReconnectResult = true;
+                    armReconnectResultDeadline();
                     mConn.reconnectAccount = entry.account;
                     // This attempt is replaying a live token rather than recovering from a dead one, so
                     // release the latch: the next Char.Login.Default is an ordinary sign-in again.
@@ -998,6 +1018,23 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                 safeHost->mTelnet.reconnect();
             }
         });
+    });
+}
+
+void GMCPAuthenticator::armReconnectResultDeadline()
+{
+    const QPointer<Host> safeHost(mpHost);
+    const auto attemptGeneration = mAuthAttemptGeneration;
+    QTimer::singleShot(mReconnectResultTimeout, mpHost, [this, safeHost, attemptGeneration]() {
+        // A result that arrived, a later attempt, or a connection that has gone away all make this
+        // deadline somebody else's business.
+        if (!safeHost || !mConn.awaitingReconnectResult || attemptGeneration != mAuthAttemptGeneration) {
+            return;
+        }
+        mConn.awaitingReconnectResult = false;
+        qWarning().noquote().nospace() << "GMCP Char.Login - the game did not answer the replayed sign-in token within " << mReconnectResultTimeout.count()
+                                       << "ms, so it is being treated as a game that does not support Char.Login.Reconnect; falling through to the sign-in hand-off.";
+        selectAuthMethod();
     });
 }
 
@@ -1323,6 +1360,7 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                 mConn.accountProvider = entry.provider;
                 mConn.forgetAtReplay = mForgetGeneration;
                 mConn.awaitingReconnectResult = true;
+                armReconnectResultDeadline();
                 mConn.reconnectAccount = entry.account;
                 mConn.sentReconnectTokenHash = sentHash;
                 return;
