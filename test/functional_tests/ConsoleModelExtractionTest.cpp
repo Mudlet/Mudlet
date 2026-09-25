@@ -338,8 +338,8 @@ private slots:
         destroyTheView(host);
         host->reenableAllTriggers();
 
-        // One line of each kind, so that neither answer can come from a
-        // no-view fallback rather than from the line itself
+        // One line of each kind, so that a no-view fallback giving the same
+        // answer every time fails one of them
         const int promptLine = appendModelLine(model->buffer, qsl("ViewlessContext prompt>"));
         model->buffer.promptBuffer[promptLine] = true;
         host->runTriggers(promptLine);
