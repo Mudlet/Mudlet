@@ -115,23 +115,14 @@ public:
     mudlet();
     ~mudlet() override;
 
-    static QSettings* getQSettings();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList();
     static mudlet* self();
-    static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
-    QString mAppBuild;
-    // final, official release
-    bool releaseVersion;
-    // unofficial "nightly" build - still a type of a release
-    bool publicTestVersion;
-    // used by developers in everyday coding:
-    bool developmentVersion;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around
@@ -166,7 +157,6 @@ public:
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
-    QString scmVersion;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smFirstLaunch = false;
     inline static QVariantHash smLuaFunctionNames;
@@ -188,6 +178,7 @@ public:
 
     void init();
     void setupConfig();
+    void warnAboutRejectedPortableRoot();
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
@@ -279,7 +270,6 @@ public:
     // converting the QPointer this returns wants the complete type
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
-    const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }
@@ -468,7 +458,6 @@ public:
     // Flag to prevent connection dialog from opening during telnet:// URI processing
     bool mProcessingTelnetUri = false;
     QToolBar* mpMainToolBar = nullptr;
-    QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
     int mReplaySpeed = 1;
@@ -706,6 +695,10 @@ private:
 
     bool mDarkMode = false;
     QString mDefaultStyle;
+    // The portable.txt that named a data directory Mudlet could not use, and the
+    // directory it named, kept from setupConfig() until main() can say so on screen
+    QString mRejectedPortableMarker;
+    QString mRejectedPortableRoot;
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
@@ -713,10 +706,6 @@ private:
     // Points to the common mudlet dictionary handle once a profile has
     // requested it, then gets closed at termination of the application.
     Hunhandle* mpHunspell_sharedDictionary = nullptr;
-    // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
-    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
-    // file for GUI translation
-    QString mInterfaceLanguage;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
@@ -883,8 +872,8 @@ private:
     QString mTimeFormat;
     enums::controlsVisibility mToolbarVisibility = enums::visibleNever;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
-    // An encapsulation of the mInterfaceLanguage in a form that Qt uses to
-    // hold all the details:
+    // An encapsulation of MudletApp::getInterfaceLanguage() in a form
+    // that Qt uses to hold all the details:
     QLocale mUserLocale;
     QMap<Host*, QToolBar*> mUserToolbarMap;
     // The collection of words in what mpHunspell_sharedDictionary points to:
