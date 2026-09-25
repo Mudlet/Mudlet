@@ -174,9 +174,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mpTabBar->setAccessibleDescription(tr("Switch between showing only your own games and all of the games Mudlet knows about."));
     verticalLayout_gamesList->insertWidget(0, mpTabBar);
     setTabOrder(mpTabBar, listWidget_profiles);
-    // that also takes the games list out of the head of the focus chain, so
-    // without this the profile name field opens focused - where typing a game's
-    // name renames a profile instead of picking that game
+    // setTabOrder() drops the games list from the head of the focus chain; without this the name
+    // field opens focused, where typing a game's name renames a profile instead of picking that game
     listWidget_profiles->setFocus();
 
     if (!mudlet::self()->mOnlyShownPredefinedProfiles.isEmpty()) {
@@ -484,8 +483,7 @@ void dlgConnectionProfiles::slot_skipToGamesList()
     if (!items.isEmpty()) {
         listWidget_profiles->setCurrentItem(items.first());
     }
-    // dismissTutorialInvitation() hides whichever widget the invitation left
-    // holding the focus, which hands it on down the chain to the name field
+    // Hiding the invitation passed the focus down the chain to the name field
     listWidget_profiles->setFocus();
 }
 
@@ -696,10 +694,8 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     credManager->storePassword(profile, "character", pass, [credManager, profile, safeThis](bool success, const QString& errorMessage) {
         if (success) {
             qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
-            // Saving it and keeping it to ourselves are two different things, and the store
-            // reports only the first: without this the user is told the password was saved
-            // while it sits there for every account on the machine to read. Asked of the
-            // manager that did this store, so that the answer is about this password.
+            // The store reports success even if other accounts can still read the file, so check separately,
+            // asking the manager that did this store so the answer is about this password.
             const QString unprotectedPath = credManager->unprotectedSecretPath();
 
             if (!unprotectedPath.isEmpty() && safeThis) {
@@ -1417,9 +1413,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     static QString lastProfileClicked;
     static QTime lastClickTime;
 
-    // a selection the dialog makes for itself has to fill the details even when
-    // it repeats the last one: fillout_form() blanks them first, so debouncing
-    // it would leave them empty with a profile highlighted
+    // Never debounce the dialog's own selection: fillout_form() blanks the details first, so skipping
+    // a repeat would leave them empty with a profile highlighted
     if (!mProgrammaticProfileSelection && profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
         return;
     }
@@ -1706,8 +1701,7 @@ void dlgConnectionProfiles::fillout_form()
         if (profileName == scmSelfTestProfile) {
             test_profile_row = i;
         }
-        // the self-test entry is the one name mProfileList can hold without a
-        // folder on disk, and it is excluded from the pick below anyway
+        // The self-test entry can be in mProfileList without a folder on disk
         if (firstOnDiskProfileRow == -1 && profileName != scmSelfTestProfile && mProfileList.contains(profileName, Qt::CaseInsensitive)) {
             firstOnDiskProfileRow = i;
         }
@@ -1751,17 +1745,10 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     if (toselectRow == -1 && firstOnDiskProfileRow != -1) {
-        // Profiles that were made but never connected carry no dated save for
-        // the loop above to pick the most recent of, and the fallbacks above
-        // only cover the tutorial, a lone row or a dedicated build's own game -
-        // so someone whose profiles are all like that gets here with nothing
-        // picked. QAbstractItemView then makes its own first row current, but
-        // not selected, when the games list takes the keyboard focus, and the
-        // connection details fill themselves in from that row - describing a
-        // game nothing in the list shows as picked, with Connect enabled.
-        // Picking the first listed row that has a profile folder keeps the two
-        // in step. The self-test entry is passed over for the same reason the
-        // lone-row fallback passes over it: it is a testing aid, not a game
+        // Profiles never connected have no dated save to pick from, and the fallbacks above cover only
+        // the tutorial, a lone row or a dedicated build's game. With nothing picked, QAbstractItemView makes
+        // its first row current but not selected on focus, and the details fill from it with Connect
+        // enabled while nothing looks picked. So pick the first row with a profile folder (never self-test).
         toselectRow = firstOnDiskProfileRow;
     }
 
@@ -1859,8 +1846,7 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
     listWidget_profiles->addItem(pItem);
 }
 
-// hasCustomIcon() can only tell that the file is there, so one that is empty or
-// not an image still reaches here and would leave the entry with nothing drawn
+// hasCustomIcon() only checks the file exists, so an empty or non-image one still reaches here
 bool dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
 {
     const auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
@@ -1875,16 +1861,14 @@ bool dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidge
     return true;
 }
 
-// The list draws an entry as its icon and nothing else, so an entry whose icon
-// could not be read is given a name plate instead of being left as an
-// invisible, though still selectable, row - and says so where the user is
+// The list draws an entry as its icon alone, so one whose icon failed gets a name plate instead
+// of an invisible row, and its tooltip says why
 void dlgConnectionProfiles::setItemTooltip(QListWidgetItem* pItem, const QString& description, const bool iconLoaded) const
 {
     QStringList lines;
     if (!description.isEmpty()) {
-        // a description is plain text - the profile owner's own words, or the
-        // catalog's - and the tooltip is rich text, so markup left in one would
-        // otherwise be acted on and could swallow the warning line below
+        // Plain text going into a rich-text tooltip: unescaped markup would be acted on and could
+        // swallow the warning line below
         lines << description.toHtmlEscaped();
     }
     if (!iconLoaded) {
@@ -1892,8 +1876,7 @@ void dlgConnectionProfiles::setItemTooltip(QListWidgetItem* pItem, const QString
         lines << tr("This entry's artwork could not be read, so its name is shown instead.");
     }
     if (!lines.isEmpty()) {
-        // the wrapper is what Qt::mightBeRichText() settles the mode on, so this
-        // is read as rich text whatever the description turned out to be
+        // The wrapper makes Qt::mightBeRichText() pick rich text whatever the description holds
         pItem->setToolTip(utils::richText(lines.join(qsl("<br>"))));
     }
 }
@@ -2755,13 +2738,9 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     setItemName(pItem, mudServer);
 
     listWidget_profiles->addItem(pItem);
-    // An entry the catalog names no artwork for keeps a blank row, which is
-    // neither a failure nor worth warning about: the "Mudlet self-test" entry
-    // is the only one, and it is a testing aid that is deliberately left where
-    // players do not run into it (https://github.com/Mudlet/Mudlet/issues/6443).
-    // Artwork that was named but would not load is a fault, so that entry gets
-    // a name plate to be seen by and a warning - nothing else would show that
-    // its icon is broken rather than absent
+    // Only the "Mudlet self-test" entry has no catalog artwork, and it is deliberately kept out of
+    // players' way (https://github.com/Mudlet/Mudlet/issues/6443), so a blank row is fine. Named
+    // artwork that won't load gets a name plate and a warning, as nothing else would show it is broken
     bool iconLoaded = true;
     if (hasCustomIcon(mudServer)) {
         iconLoaded = setCustomIcon(mudServer, pItem);
@@ -3035,10 +3014,8 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
             if (password.isEmpty()) {
                 qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profileName;
             } else {
-                // The password can come from any stage of CredentialManager's lookup -
-                // several keychain formats, or the encrypted file - and this callback is
-                // told only that one of them answered. Each stage logs where it found the
-                // password, so this line names no source.
+                // Any lookup stage (keychain formats or the encrypted file) may have answered, and each logs
+                // where it found the password, so this line names no source.
                 qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profileName;
             }
         } else {

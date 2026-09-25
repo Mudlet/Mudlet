@@ -1021,18 +1021,13 @@ void dlgPackageExporter::slot_exportPackage()
                                 return;
                             }
                         }
-                        // quiet: the failure branch below reports it with context the
-                        // console line cannot carry - that it was exported but not installed
+                        // Quiet: the failure branch below says it was exported but not installed, which the console line can't
                         auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI, true);
                         if (installSuccess) {
                             const QString savedDir = QFileInfo(mPackagePathFileName).absolutePath();
                             const QString savedDirLink = qsl("<a href=\"%1\">%2</a>").arg(QUrl::fromLocalFile(savedDir).toString(QUrl::FullyEncoded).toHtmlEscaped(), savedDir.toHtmlEscaped());
-                            // An item whose Lua does not work is left to the editor, which
-                            // is already showing it against the item itself - the very item
-                            // this export was started from. Nothing here went wrong: the
-                            // module file is written and holds exactly the Lua the profile
-                            // has, so saying it here would report the export as the failure
-                            // and repeat what the editor behind this dialog already says.
+                            // Items with broken Lua are not reported here: the export worked, and the editor behind this
+                            // dialog already shows the errors against the items.
                             // Show embedded success message (better UX than popup)
                             //: %1 is the module name, %2 is a clickable link to the folder the module file was saved in
                             displayResultMessage(tr("Module \"%1\" created and installed successfully! Saved to: %2. You can now close this dialog.").arg(mPackageName.toHtmlEscaped(), savedDirLink),

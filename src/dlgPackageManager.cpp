@@ -47,7 +47,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 , mpHost(pHost)
 {
     setupUi(this);
-    label_packageName->installEventFilter(this); // re-shortens the package name when the label is given a new width
+    label_packageName->installEventFilter(this); // re-elides the package name on resize
     connect(lineEdit_searchBar, &QLineEdit::textChanged, this, &dlgPackageManager::slot_searchTextChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(packageList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_itemChanged);
@@ -84,8 +84,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     mCurrentView = NavigationView::Installed;
     slot_setPackageList();
 
-    // connected last: resetPackageList() dereferences mpNavigationGroup, which
-    // setupNavigationButtons() creates above
+    // Connected last: resetPackageList() dereferences mpNavigationGroup, made by setupNavigationButtons()
     connect(mpHost, &Host::signal_packageListChanged, this, &dlgPackageManager::resetPackageList);
 
     setAttribute(Qt::WA_DeleteOnClose);
@@ -160,9 +159,8 @@ void dlgPackageManager::downloadRepositoryIndex()
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
     QNetworkReply* reply = manager->get(request);
-    // Parented so that closing the dialog before the download has finished takes
-    // it with it: the handler below is the only other thing that deletes it, and
-    // the reply that would call it is a grandchild of this dialog.
+    // Parented so closing the dialog mid-download frees it: otherwise only the handler below would,
+    // and that never runs once the reply, a grandchild of this dialog, is gone.
     QFile* file = new QFile(outputPath, this);
 
     if (!file->open(QIODevice::WriteOnly)) {
@@ -199,18 +197,13 @@ void dlgPackageManager::downloadRepositoryIndex()
     });
 }
 
-// The heading is a name of any length in a big font, so it is shortened to what
-// fits - but the details are first filled in while the dialog is still being put
-// together, before a layout pass has given the label the width it will have. The
-// name is kept so the shortening can be redone once the label has a width to
-// measure against, and every time that width or the font it is measured in
-// changes.
+// The name is elided to fit, but the details are first filled before layout gives the label its
+// width, so the full name is kept and re-elided whenever the label's width or font changes.
 void dlgPackageManager::elidePackageName()
 {
     const int available = label_packageName->contentsRect().width();
     if (available <= 0) {
-        // elidedText() returns nothing at all below the width of an ellipsis,
-        // and a blank heading reads as "no package selected"
+        // elidedText() returns nothing below an ellipsis's width; a blank heading reads as "no package selected"
         return;
     }
 
@@ -408,13 +401,9 @@ void dlgPackageManager::slot_installPackageFromRepository()
     auto cancelled = std::make_shared<bool>(false);
     bool repoError = false;
 
-    // Installs whatever was downloaded and puts the batch away. It tears down the
-    // progress dialog and the network manager, so it has to run exactly once: from
-    // the reply that takes the outstanding count to zero, or from after the loop
-    // when the count is already zero by the time it ends. The guard is what keeps
-    // that true if the refusals below are ever rearranged to count themselves
-    // before their message box rather than after it, since the box runs an event
-    // loop of its own in which a download can finish
+    // Tears down the progress dialog and network manager, so must run exactly once: from the reply
+    // that takes the count to zero, or after the loop if it is already zero. The guard keeps that true
+    // if a refusal below ever counts itself before its message box, whose event loop can finish a download
     auto batchFinished = std::make_shared<bool>(false);
     auto finishBatch = [this, pendingDownloads, manager, progress, batchFinished]() {
         if (*batchFinished) {
@@ -429,18 +418,14 @@ void dlgPackageManager::slot_installPackageFromRepository()
             const QString& filePath = it.value();
 
             if (mpHost) {
-                // Ahead of both calls below, because the previous pass's install
-                // leaves a save in flight: during a save an uninstall is refused
-                // outright, and an install is put off until the save finishes - long
-                // after the archive is deleted below.
+                // Before both calls: the previous pass's install leaves a save in flight, during which an uninstall
+                // is refused and an install waits for the save to finish - long after the archive below is deleted.
                 mpHost->waitForProfileSave();
                 bool readyToInstall = true;
                 if (mpHost->mInstalledPackages.contains(packageName)) {
                     readyToInstall = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (!readyToInstall) {
-                        // installing over a package still listed as installed
-                        // fails as "already installed", so the update would go
-                        // missing without ever being named as a failure
+                        // Installing over a still-listed package fails as "already installed", so the update would vanish unreported
                         failedPackages << packageName;
                         qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not remove the installed" << packageName << "to update it";
                     }
@@ -454,10 +439,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
         }
 
         progress->reset();
-        // QProgressDialog::closeEvent emits canceled(), so this runs the cancel
-        // handler below on the way out of every batch. Harmless only because it
-        // comes after the loop above: by now there is nothing left for that
-        // handler to abort, and the files it removes are already gone
+        // QProgressDialog::closeEvent emits canceled(), running the cancel handler below. Harmless only
+        // because it is after the loop: nothing is left to abort, and its files are already gone
         progress->close();
         progress->deleteLater();
         manager->deleteLater();
@@ -518,11 +501,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
         request.setTransferTimeout(30000);
         QNetworkReply* reply = manager->get(request);
 
-        // Parented, so closing the package manager mid-download takes the file, and
-        // the handle it is holding on the half-written package, with it. Once a
-        // download is under way nothing else would: the reply handler below is the
-        // only other thing that disposes of it, and it has this dialog for its
-        // context object, so it never runs once the dialog is gone
+        // Parented so closing the dialog mid-download frees the file and its handle on the half-written
+        // package: the reply handler below never runs once the dialog, its context object, is gone
         QFile* file = new QFile(outPath, this);
         if (!file->open(QIODevice::WriteOnly)) {
             qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not open" << outPath << "for writing:" << file->errorString();
@@ -534,9 +514,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
             continue;
         }
 
-        // Tracked only once the file it writes into is open. The failure above
-        // deletes the reply, and this list holds raw pointers that a cancel calls
-        // abort() on, so a deleted reply must never reach it
+        // Track only once the file is open: the failure above deletes the reply, and a cancel calls
+        // abort() on these raw pointers
         activeReplies->append(reply);
 
         QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
@@ -571,21 +550,17 @@ void dlgPackageManager::slot_installPackageFromRepository()
                 pendingDownloads->remove(packageName);
             }
 
-            // Every download that gets past the cancel check above has to reach
-            // this exactly once. Zero is the only count that ends the batch, so a
-            // second decrement steps over it and leaves the progress dialog up for
-            // the rest of the session
+            // Exactly once per download past the cancel check: only zero ends the batch, so a second
+            // decrement steps over it and leaves the progress dialog up for the rest of the session
             if (--(*remainingDownloads.get()) == 0) {
                 finishBatch();
             }
         });
     }
 
-    // The count can already be zero here: a selection refused above never had a
-    // download, and a reply can finish inside the modal message box those refusals
-    // put up, before the loop that started it has run out. The reply handler is the
-    // only other place the count is checked, so without this the batch is never
-    // installed and the progress dialog never closes
+    // Can already be zero: refused selections never download, and replies can finish inside a
+    // refusal's modal box before the loop ends. Only the reply handler checks otherwise, so without
+    // this the batch is never installed and the progress dialog never closes
     if (*remainingDownloads.get() == 0) {
         finishBatch();
     }
@@ -738,9 +713,8 @@ void dlgPackageManager::slot_openPackageWebsite()
     mudlet::self()->openWebPage(qsl("https://packages.mudlet.org/packages#pkg-") + currentItem->text());
 }
 
-// Returns what to tell the user about the removals that did not happen, empty
-// when they all did. Separate from the slot so the wording can be tested: the
-// dialog has no Lua entry point and the box below blocks.
+// Returns what to tell the user about refused removals, empty if none. Split from the slot so the
+// wording can be tested: the dialog has no Lua entry point and the box below blocks.
 QString dlgPackageManager::removePackages(const QStringList& packageNames)
 {
     QStringList refusedWhileSaving;
@@ -749,11 +723,8 @@ QString dlgPackageManager::removePackages(const QStringList& packageNames)
         if (mpHost->uninstallPackage(package, enums::PackageModuleType::Package)) {
             continue;
         }
-        // A save in progress is the refusal the user can do something about. The
-        // other one is a package that has gone since the row was drawn - a
-        // sibling in this very selection can take it away from its sysUninstall
-        // handler - and the listing rebuild uninstallPackage() does clears that
-        // up, rather than blaming a save that is not running.
+        // Otherwise the package went after the row was drawn (a sibling in this selection can remove it
+        // from its sysUninstall handler), so do not blame a save that is not running.
         if (mpHost->currentlySavingProfile()) {
             refusedWhileSaving << package;
         } else {
