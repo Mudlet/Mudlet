@@ -1305,9 +1305,6 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
             selectAuthMethod();
             return;
         }
-        if (!entry.provider.isEmpty()) {
-            mConn.accountProvider = entry.provider;
-        }
         if (allowToken && !entry.account.isEmpty() && !entry.token.isEmpty()) {
             // Remember only a hash of what we send: if the reconnect is rejected, comparing it against a
             // fresh read tells a dead token apart from one another running instance (sharing this
@@ -1320,6 +1317,10 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                 // This connection is logging in by replaying a saved token, so a Char.Login.Token that
                 // comes back is a silent rotation rather than a first-time save to announce.
                 mConn.reconnectingWithToken = true;
+                // Carried onto the connection only where it is used: a rotation stores it again, and a
+                // rejection keeps it as the resume hint. Copying it before knowing which rung answers
+                // would file it with a token earned by a sign-in that never involved this provider.
+                mConn.accountProvider = entry.provider;
                 mConn.forgetAtReplay = mForgetGeneration;
                 mConn.awaitingReconnectResult = true;
                 mConn.reconnectAccount = entry.account;
@@ -1340,6 +1341,7 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
         if (!entry.account.isEmpty() && !entry.provider.isEmpty() && mSupportedAuthTypes.contains(qsl("oauth"))) {
             // No usable token, but we remember how this account signs in: ask the game to restart that
             // provider's browser sign-in rather than fall to a provider menu.
+            mConn.accountProvider = entry.provider;
             sendResume(entry.account, entry.provider);
             return;
         }

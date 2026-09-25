@@ -1120,6 +1120,31 @@ private slots:
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
+    void testASkippedResumeLeavesNoProviderOnTheNextToken()
+    {
+        // The stored provider is copied onto the connection so a resume can use it. Where the game
+        // offers no oauth that resume is skipped, the player signs in another way, and a token minted
+        // by that sign-in must not be filed under a provider this connection never used: a later
+        // connection to a game that does offer oauth would then resume a browser sign-in the player
+        // never chose.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off to the game's own sign-in screen");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:other\", \"token\": \"password-earned\"}"));
+        QVERIFY2(waitForStoredToken(host, qsl("password-earned")), "the token from the hand-off sign-in should be persisted");
+        const QJsonObject stored = readStoredReconnect(host);
+        QCOMPARE(stored.value(qsl("account")).toString(), qsl("acct:other"));
+        QVERIFY2(stored.value(qsl("provider")).toString().isEmpty(), "a provider the skipped resume never used was filed with the new token");
+    }
+
     void testReconnectAcceptedAsTheIntegerOneKeepsTheToken_data()
     {
         QTest::addColumn<QString>("successLiteral");
