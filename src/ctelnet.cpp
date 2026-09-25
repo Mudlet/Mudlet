@@ -5352,6 +5352,12 @@ void cTelnet::postData()
 
 void cTelnet::initStreamDecompressor()
 {
+    // The end of a stream, clean or broken, arms a fresh one for the next start
+    // sequence, so a stream can already be allocated here - overwriting it would
+    // leak it (#10410). inflateEnd() leaves one never initialised, or already
+    // ended, alone.
+    inflateEnd(&mZstream);
+
     mZstream.zalloc = Z_NULL;
     mZstream.zfree = Z_NULL;
     mZstream.opaque = Z_NULL;
@@ -5394,7 +5400,6 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
                        "If the display looks garbled, please reconnect to the game.")
                             .arg(QString::fromUtf8(zError(zval))));
         sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
-        inflateEnd(&mZstream);
         mNeedDecompression = false;
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
@@ -5403,14 +5408,12 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     }
 
     if (zval == Z_STREAM_END) {
-        inflateEnd(&mZstream);
         qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
 
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
 
-        // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
         initStreamDecompressor();
         qDebug() << "Listening for new compression sequences";
 
