@@ -2267,6 +2267,88 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QVERIFY2(!dockWidget->property("layoutChanged").toBool(), "commitLayoutUpdates() left the dock's flag raised.");
     }
 
+    // openWindow() shows a user window and docks or floats it where it is told,
+    // refusing names that are something else and areas it does not know.
+    void test_openWindowShowsAndPlacesTheUserWindow()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        QCOMPARE(host->openWindow(QString(), false, true, QString()), std::make_pair(false, qsl("an userwindow cannot have an empty string as its name")));
+
+        const QString miniConsoleName = qsl("openWindowMiniConsole");
+        QVERIFY2(host->createMiniConsole(qsl("main"), miniConsoleName, 0, 0, 50, 50).first, "The miniconsole was not created.");
+        QCOMPARE(host->openWindow(miniConsoleName, false, true, QString()), std::make_pair(false, qsl("userwindow '%1' already exists").arg(miniConsoleName)));
+        QVERIFY2(!host->mpConsole->dockWidget(miniConsoleName), "Refusing a miniconsole's name still made a dock for it.");
+
+        const QString name = qsl("openWindowPlacement");
+        const std::pair<bool, QString> opened{true, QString()};
+        QCOMPARE(host->openWindow(name, false, false, QString()), opened);
+        TDockWidget* dockWidget = host->mpConsole->dockWidget(name);
+        QVERIFY2(dockWidget, "openWindow() made no dock.");
+        QCOMPARE(host->mpConsole->subConsoleWidget(name)->getType(), TConsole::UserWindow);
+        QVERIFY2(!dockWidget->isHidden(), "openWindow() left the new user window hidden.");
+        QCOMPARE(dockWidget->allowedAreas(), Qt::NoDockWidgetArea);
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::RightDockWidgetArea);
+        QVERIFY2(!dockWidget->hasLayoutAlready, "openWindow() marked the layout as loaded when it was told not to load it.");
+
+        // Re-opening shows the same dock again rather than refusing the name
+        QVERIFY2(host->hideWindow(name), "hideWindow() did not find the user window.");
+        QCOMPARE(host->openWindow(name, false, true, QString()), opened);
+        QCOMPARE(host->mpConsole->dockWidget(name), dockWidget);
+        QVERIFY2(!dockWidget->isHidden(), "Re-opening the user window left it hidden.");
+        QCOMPARE(dockWidget->allowedAreas(), Qt::AllDockWidgetAreas);
+
+        // Floating it between each docking tells a dock that stayed put from one
+        // that went where it was sent
+        const QList<std::pair<QString, Qt::DockWidgetArea>> areas{{qsl("l"), Qt::LeftDockWidgetArea},
+                                                                  {qsl("t"), Qt::TopDockWidgetArea},
+                                                                  {qsl("b"), Qt::BottomDockWidgetArea},
+                                                                  {qsl("r"), Qt::RightDockWidgetArea},
+                                                                  {qsl("left"), Qt::LeftDockWidgetArea},
+                                                                  {qsl("top"), Qt::TopDockWidgetArea},
+                                                                  {qsl("bottom"), Qt::BottomDockWidgetArea},
+                                                                  {qsl("right"), Qt::RightDockWidgetArea}};
+        bool floatingWord = false;
+        for (const auto& [area, expected] : areas) {
+            const QString floating = floatingWord ? qsl("floating") : qsl("f");
+            floatingWord = !floatingWord;
+            QCOMPARE(host->openWindow(name, false, true, floating), opened);
+            QVERIFY2(dockWidget->isFloating(), qPrintable(qsl("Area '%1' did not float the user window.").arg(floating)));
+            QCOMPARE(host->openWindow(name, false, true, area), opened);
+            QVERIFY2(!dockWidget->isFloating(), qPrintable(qsl("Area '%1' left the user window floating.").arg(area)));
+            QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), expected);
+        }
+
+        // An unknown area is refused, but only once the window is showing
+        QVERIFY2(host->hideWindow(name), "hideWindow() did not find the user window.");
+        QCOMPARE(host->openWindow(name, false, true, qsl("middle")),
+                 std::make_pair(false, qsl(R"("docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")")));
+        QVERIFY2(!dockWidget->isHidden(), "Refusing an unknown area left the user window hidden.");
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::RightDockWidgetArea);
+        QVERIFY2(!dockWidget->isFloating(), "Refusing an unknown area floated the user window.");
+
+        // The first open that asks for the saved layout restores it; later ones
+        // leave the window where the script has since put it.
+        auto removeLayout = qScopeGuard([]() {
+            QFile::remove(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat")));
+            QFile::remove(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat")));
+        });
+        QCOMPARE(host->openWindow(name, false, true, qsl("l")), opened);
+        runLua(host, qsl("layoutSavedForOpenWindow = tostring(saveWindowLayout())\n"));
+        QCOMPARE(luaGlobalString(host, "layoutSavedForOpenWindow"), qsl("true"));
+        QCOMPARE(host->openWindow(name, false, true, qsl("b")), opened);
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::BottomDockWidgetArea);
+        QCOMPARE(host->openWindow(name, true, true, QString()), opened);
+        QVERIFY2(dockWidget->hasLayoutAlready, "Loading the layout did not mark it as loaded.");
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::LeftDockWidgetArea);
+        QCOMPARE(host->openWindow(name, false, true, qsl("b")), opened);
+        QCOMPARE(host->openWindow(name, true, true, QString()), opened);
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::BottomDockWidgetArea);
+    }
+
     // mudlet::slot_tabMoved() pairs each tab with its console by the console's
     // HostName property, so renaming a profile has to rename that too.
     void test_renamingAProfileRenamesItsConsoleWidget()
