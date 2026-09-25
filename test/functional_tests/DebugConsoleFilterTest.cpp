@@ -19,6 +19,8 @@
 
 #include <QtTest/QtTest>
 
+#include <algorithm>
+
 #include "GroupedTest.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -84,6 +86,25 @@ public:
     void profilesChanged() override { calls.append(qsl("profilesChanged")); }
     void profileRenamed(const QString& newName, const QString& tag) override { calls.append(qsl("profileRenamed %1 %2").arg(newName, tag)); }
     void profileAddedInDebugMode() override { calls.append(qsl("profileAddedInDebugMode")); }
+};
+
+// TDebug only ever uses a Host* as a key, so any address will do. It unregisters
+// itself, so a check that fails part way through cannot leave a phantom profile
+// behind for the methods that run after it.
+class StandInHost
+{
+public:
+    ~StandInHost()
+    {
+        if (!TDebug::getTag(host()).isNull()) {
+            TDebug::removeHost(host(), QString());
+        }
+    }
+
+    Host* host() { return reinterpret_cast<Host*>(&mStorage); }
+
+private:
+    int mStorage = 0;
 };
 } // namespace
 
@@ -695,8 +716,8 @@ private slots:
         auto* previous = TDebug::profileObserver();
         RecordingProfileObserver observer;
         TDebug::setProfileObserver(&observer);
-        int standIn = 0;
-        auto* pOther = reinterpret_cast<Host*>(&standIn);
+        StandInHost standIn;
+        auto* pOther = standIn.host();
 
         TDebug::smDebugMode = false;
         TDebug::addHost(pOther, qsl("Observed profile"));
@@ -729,8 +750,8 @@ private slots:
         QVERIFY(tab > -1);
         tabBar->applyPrefixToDisplayedText(tab, QString());
         QCOMPARE(tabBar->tabText(tab), mHostname);
-        int standIn = 0;
-        auto* pOther = reinterpret_cast<Host*>(&standIn);
+        StandInHost standIn;
+        auto* pOther = standIn.host();
 
         TDebug::addHost(pOther, qsl("Second profile"));
         QVERIFY2(profileMenuLists(qsl("Second profile")), "Adding a profile did not refresh the filter bar's profile menu");
