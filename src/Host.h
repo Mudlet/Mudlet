@@ -290,7 +290,12 @@ public:
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
 
-    void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
+    // fromCommandLine marks text the player typed into a command line and
+    // submitted. Only that text is held back from the alias pass at a masked
+    // password prompt: a script's send(), a trigger or timer command field, a key,
+    // a button, a label callback and expandAlias() all rely on the alias pass and
+    // are not what a prompt is hiding.
+    void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false, bool fromCommandLine = false);
 
     int getHostID() { return mHostID; }
 

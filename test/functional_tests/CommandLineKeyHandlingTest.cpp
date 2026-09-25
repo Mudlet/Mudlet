@@ -501,6 +501,87 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("ordinarycommandbefore"));
     }
 
+    // The alias pass is held back only for what the player typed. A script asking
+    // for an alias to be expanded at a masked prompt is not a password being
+    // hidden - it is the documented way to answer one, and an alias like ^pw$ that
+    // looks a password up in a vault is exactly why people turn to it. Skipping the
+    // pass for every caller that left dontExpandAliases at its default sent the
+    // alias's own NAME to the game as the password, and a failed login can count
+    // toward a lockout with nothing said about why.
+    void test_aScriptsAliasStillExpandsAtAMaskedPrompt()
+    {
+        QVERIFY2(runLua(qsl("permAlias('vaultpw', '', '^pw$', [[send('vaultsecret', false)]])")), "the alias could not be created");
+        mpServer->forgetReceived();
+
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY2(runLua(qsl("expandAlias('pw')")), "expandAlias() failed to run");
+        mpHost->setRemoteEchoingActive(false);
+
+        const bool expanded = waitForServerToReceive("vaultsecret");
+        const QByteArray received = mpServer->received();
+        runLua(qsl("killAlias('vaultpw')"));
+
+        QVERIFY2(expanded, qPrintable(qsl("the alias did not run at the masked prompt - the game got: %1").arg(QString::fromUtf8(received))));
+        // asSent() rather than a literal line feed: on a profile sending CRLF the
+        // wire holds "pw\r\n", which does not contain "pw\n" at all, so the check
+        // meant to catch the alias name going out would quietly never fire.
+        QVERIFY2(!received.contains(asSent({qsl("pw")})), qPrintable(qsl("the alias's own name was sent as the password: %1").arg(QString::fromUtf8(received))));
+    }
+
+    // The masking-off exception, which nothing covered: with the preference set, a
+    // prompt is not treated as a password prompt at all, so typed input goes
+    // through aliases as usual. That is the supported way to keep using an alias -
+    // a vault lookup, or a short alias standing in for a long password - at a
+    // prompt, and removing the early return left the whole Lua suite green.
+    void test_turningMaskingOffLetsTypedInputExpandAliasesAtAPrompt()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY2(runLua(qsl("permAlias('unmaskedpw', '', '^pw$', [[send('unmaskedsecret', false)]])")), "the alias could not be created");
+        const bool savedPreference = mpHost->mDisablePasswordMasking;
+        mpHost->mDisablePasswordMasking = true;
+        mpServer->forgetReceived();
+
+        mpHost->setRemoteEchoingActive(true);
+        sendCommand(pCommandLine, qsl("pw"));
+        mpHost->setRemoteEchoingActive(false);
+
+        const bool expanded = waitForServerToReceive("unmaskedsecret");
+        const QByteArray received = mpServer->received();
+        mpHost->mDisablePasswordMasking = savedPreference;
+        runLua(qsl("killAlias('unmaskedpw')"));
+
+        QVERIFY2(expanded, qPrintable(qsl("the alias did not run with masking turned off - the game got: %1").arg(QString::fromUtf8(received))));
+    }
+
+    // The other half: what the player types at a masked prompt still bypasses the
+    // alias pass, so a password that happens to match an alias pattern cannot reach
+    // Lua as the `command` global - and it still reaches the game, which is the
+    // part no test asserted. A guard that dropped the send entirely would leave
+    // every login broken while both of the specs stayed green.
+    void test_aTypedPasswordSkipsAliasesAndStillReachesTheGame()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY2(runLua(qsl("_aliasSawIt = nil\npermAlias('sawpw', '', '^hunter2secret$', [[_aliasSawIt = command]])")), "the alias could not be created");
+        mpServer->forgetReceived();
+
+        mpHost->setRemoteEchoingActive(true);
+        sendCommand(pCommandLine, qsl("hunter2secret"));
+        mpHost->setRemoteEchoingActive(false);
+
+        const bool reachedTheGame = waitForServerToReceive("hunter2secret");
+        const QByteArray received = mpServer->received();
+        QVERIFY(runLua(qsl("_aliasSawItText = tostring(_aliasSawIt)")));
+        runLua(qsl("killAlias('sawpw')"));
+        QVERIFY2(reachedTheGame, qPrintable(qsl("the password never reached the game - it got: %1").arg(QString::fromUtf8(received))));
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "_aliasSawItText");
+        const QString sawIt = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(sawIt, qsl("nil"));
+    }
+
     // Tab completes the word being typed from what the game has said recently,
     // and pressing it again cycles on to the next match.
     void test_tabCompletesAWordFromTheConsoleBuffer()

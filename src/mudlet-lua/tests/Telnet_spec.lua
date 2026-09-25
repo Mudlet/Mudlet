@@ -1723,19 +1723,22 @@ describe("MXP auto-detection from the mode switch escape", function()
   end)
 end)
 
--- cTelnet already withholds this event for the password it sends itself: the
+-- cTelnet already withheld this event for the password it sends itself: the
 -- auto-login call passes permitDataSendRequestEvent false where the one for the
--- character name does not. What it does not withhold is the password the player
--- types at the game's own prompt, which goes through Host::send() and reaches
--- every handler in cleartext. Masking does not help - it is painted over the
--- widget, not applied to what is sent.
+-- character name does not. What it did not withhold was the password the player
+-- types at the game's own prompt: that goes through Host::send(), and it reached
+-- every handler in cleartext. Masking did not help - it is painted over the
+-- widget, not applied to what is sent. These cases hold that shut.
 describe("Tests what sysDataSendRequest carries at a server password prompt", function()
   -- Password mode cannot be turned on from Lua; the server takes the ECHO option,
   -- so the real parser has to be fed. cTelnet stops answering ECHO after five
-  -- negotiations chained less than five seconds apart, and a prompt costs two -
-  -- but that counter is not a budget shared across the suite: cTelnet::reset()
-  -- zeroes it on every connect and disconnect, and TBufferEncoding_spec.lua does
-  -- both two files before this one, so the prompt below starts from zero.
+  -- negotiations chained less than five seconds apart, and a prompt costs two.
+  -- What keeps that off this block is the five-second window rather than anything
+  -- an earlier file did: a chain only continues while the toggles keep arriving
+  -- inside it, so the count is back to zero by the time these cases run. It is a
+  -- budget within the block, though - the two cases below spend 4 of the 5, so a
+  -- third written the same way would have its WILL ECHO refused and would need to
+  -- reuse a prompt one of these already opened.
   -- The real hazard is TelnetTriggerFuzz_spec.lua, which sorts immediately before
   -- this file and fuzzes IAC WILL/WONT over an option list that includes ECHO. It
   -- is gated on MUDLET_FUZZ so CI never runs it, but under the fuzz campaign it

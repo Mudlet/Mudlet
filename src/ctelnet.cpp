@@ -1681,7 +1681,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 // This uses UTF-16BE encoded data but needs to be converted to the selected
 // Mud Server encoding - it should NOT contain any Telnet protocol byte
 // sequences:
-bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, const bool isGameCommand)
+bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, const bool isGameCommand, const bool fromCommandLine)
 {
     data.remove(QChar::LineFeed);
 
@@ -1689,15 +1689,19 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
     // password, and the event would hand it to every installed handler in cleartext.
     // Masking does not cover this - it is painted over the command line, not applied
     // to what is sent. maskedPasswordPromptActive() rather than echo suppression
-    // alone, so a game that holds ECHO all session, or a player who turned masking
-    // off, keeps this event.
+    // alone, so a player who turned masking off keeps this event - and so does a
+    // game whose session-long ECHO has been recognised as character-at-a-time. Note
+    // that recognition is what grants the exemption, not the holding of ECHO: a game
+    // that keeps server-side echo without ever requesting SGA is never recognised,
+    // and does not get it.
     //
     // The same call already withholds it for the password Mudlet sends itself: the
     // auto-login pass goes out with permitDataSendRequestEvent false where the
-    // character name before it does not. This is the interactive half of that, and
-    // it follows TLuaInterpreter::callCmdLineAction(), which refuses to run a
-    // command line's Lua action for the same reason.
-    if (Q_LIKELY(permitDataSendRequestEvent) && !mpHost->maskedPasswordPromptActive()) {
+    // character name before it does not. This is the interactive half of that. Its
+    // reason is the one TLuaInterpreter::callCmdLineAction() gives for refusing to
+    // run a command line's Lua action, though not its condition: that path asks
+    // isRemoteEchoingActive() alone, with no masking-off or character-mode exemption.
+    if (Q_LIKELY(permitDataSendRequestEvent) && !(fromCommandLine && mpHost->maskedPasswordPromptActive())) {
         TEvent event{};
         event.mArgumentList.append(qsl("sysDataSendRequest"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);

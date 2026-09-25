@@ -1047,7 +1047,10 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         if (mType != MainCommandLine && mActionFunction) {
             mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
-            mpHost->send(command);
+            // fromCommandLine: this is the one path carrying what the player typed
+            // and submitted, which is the only text a masked prompt holds back from
+            // the alias pass (see Host::send).
+            mpHost->send(command, true, false, true);
         }
         // send command to your MiniConsole
         if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
