@@ -28,12 +28,14 @@
 // either: the caret's line and column are private C++ state on TTextEdit with
 // no scripting accessor, so even the outcome is invisible from Lua.
 //
-// Deliberately not covered: the Shift and Ctrl variants of the arrow keys.
-// Those branches read QGuiApplication::keyboardModifiers(), which is live
-// window-system state that QTest's widget-level key events do not set, so
-// sending Shift+Left here would exercise the plain Left branch and quietly
-// claim to have tested selection.
+// The Shift and Ctrl branches read QGuiApplication::keyboardModifiers() rather
+// than the event. Qt sets that application-wide state from each key event as it
+// is delivered, so a modifier asked for here reaches those branches just as a
+// real one does - the synthetic press of the modifier key itself that
+// QTest::keyClick() sends first is not what carries it.
 
+#include <QApplication>
+#include <QClipboard>
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QFontInfo>
@@ -52,6 +54,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
+#include "TUiTour.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -79,6 +82,9 @@ private:
     const QString mLastLine = qsl("delta echo foxtrot golf");
     const QString mLinkLine = qsl("LINKONE LINKTWO");
     const QString mPopupLine = qsl("POPUPLINK");
+    // Shorter than every other marker line, so a column taken from the line a
+    // jump started on lands past this one's end
+    const QString mLatestLine = qsl("tail");
     int mLongLineNumber = -1;
     int mShortLineNumber = -1;
     int mLastLineNumber = -1;
@@ -161,15 +167,19 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
-        mudlet::self()->init();
-        mudlet::self()->setStorePasswordsSecurely(false);
         // A config dir of this test's own reads as a brand new installation, so
         // the first-run interface tour would open over the profile a second
         // after it loads and take the window's keyboard with it - the keys
-        // below would reach the tour rather than the caret
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        // below would reach the tour rather than the caret. Written before
+        // init(), which is what stamps an untouched config as a first launch:
+        // a settings file that already holds something is how mudletUsedBefore()
+        // recognises an existing player, which keeps the rest of the first-run
+        // interface away as well.
+        TUiTour::rememberShown();
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+        QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests and take the window's keyboard");
         QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
@@ -201,6 +211,16 @@ private slots:
                            "echoPopup('POPUPLINK', {[[caretPopupA = 'a']], [[caretPopupB = 'b']]}, {'first choice', 'second choice'})\n"
                            "echo('\\n')")));
         QTest::qWait(100ms);
+        // Last, and only once the profile's own start-up output has stopped
+        // arriving: a line of it landing afterwards would put a second empty
+        // line at the end of the buffer, and Ctrl+End steps over one
+        qsizetype settledLength = -1;
+        for (int attempt = 0; attempt < 50 && settledLength != consoleBuffer().lineBuffer.length(); ++attempt) {
+            settledLength = consoleBuffer().lineBuffer.length();
+            QTest::qWait(200ms);
+        }
+        QVERIFY2(settledLength == consoleBuffer().lineBuffer.length(), "the profile's start-up output never stopped arriving");
+        mpHost->mpConsole->print(qsl("%1\n").arg(mLatestLine));
 
         mLongLineNumber = consoleBuffer().lineBuffer.indexOf(mLongLine);
         mShortLineNumber = consoleBuffer().lineBuffer.indexOf(mShortLine);
@@ -349,6 +369,47 @@ private slots:
         press(pane(), Qt::Key_End);
         QCOMPARE(pane()->mCaretLine, mLongLineNumber);
         QCOMPARE(pane()->mCaretColumn, mLongLine.length() - 1);
+    }
+
+    // #9101: Ctrl+End steps over the empty line the next line of game text will
+    // be written into. Taking the column from the line the caret was on rather
+    // than the one it lands on put it past the end of the shorter line it
+    // arrived at, and the caret vanished.
+    void test_ctrlEndJumpsToTheEndOfTheLastLineWithTextOnIt()
+    {
+        // Read live rather than banked in initTestCase(), which a line of output
+        // arriving in between would leave pointing one line short
+        const int latestLine = static_cast<int>(consoleBuffer().lineBuffer.length()) - 2;
+        QCOMPARE(consoleBuffer().lineBuffer.at(latestLine), mLatestLine);
+
+        pane()->setCaretPosition(mLongLineNumber, 0);
+        press(pane(), Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pane()->mCaretLine, latestLine);
+        QCOMPARE(pane()->mCaretColumn, static_cast<int>(mLatestLine.length()) - 1);
+    }
+
+    // #9393: the first Shift+Arrow anchors the moving end of the selection at
+    // the column the caret moved to. Anchored at the column it came from, the
+    // selection lagged a character behind, so from column 0 a copy straight
+    // afterwards took one character instead of two.
+    void test_theFirstShiftRightSelectsAsFarAsTheCaretMoved()
+    {
+        QApplication::clipboard()->setText(qsl("nothing was copied"));
+        pane()->setCaretPosition(mLongLineNumber, 0);
+
+        press(pane(), Qt::Key_Right, Qt::ShiftModifier);
+        const int columnMovedTo = pane()->mCaretColumn;
+        pane()->slot_copySelectionToClipboard();
+        const QString selected = QApplication::clipboard()->text();
+        // The shift-selection is remembered until a key press without Shift ends
+        // it, and while it is on an unmodified arrow key only clears it rather
+        // than moving the caret - so end it before an assertion can return early
+        // and leave the next case's first arrow key doing nothing.
+        press(pane(), Qt::Key_Right);
+
+        QCOMPARE(columnMovedTo, 1);
+        QCOMPARE(selected, mLongLine.left(2));
     }
 
     void test_pageUpAndPageDownMoveByAScreenful()

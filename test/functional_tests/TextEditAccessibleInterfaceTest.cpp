@@ -534,6 +534,25 @@ private slots:
         QVERIFY2(lineIsOnScreen(line), qPrintable(qsl("line %1 is still not showing - the screen starts at line %2").arg(line).arg(pane()->imageTopLine())));
     }
 
+    // A screen reader measures the text, then asks for it a moment later, and
+    // the buffer can have moved on in between - so an offset past the end is
+    // something that happens rather than a caller's mistake. Before #8752 the
+    // offset resolved to one line past the last line of the buffer and the view
+    // was scrolled there.
+    void test_scrollToSubstringLeavesTheViewAloneForAnOffsetPastTheEnd()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        pane()->scrollTo(lines().length() / 2);
+        const int topLine = pane()->imageTopLine();
+        QVERIFY2(topLine > 0, "the view is at the top of the buffer, where staying put and scrolling to the start look the same");
+        QVERIFY2(!lineIsOnScreen(lines().length() - 1), "the view is already at the end of the buffer, where a scroll to the end would not show");
+
+        ti->scrollToSubstring(ti->characterCount() + 1, ti->characterCount() + 1);
+
+        QCOMPARE(pane()->imageTopLine(), topLine);
+    }
+
     // The state a bridge reads to decide how to present the widget.
     void test_stateReportsSelectableMultiLineText()
     {

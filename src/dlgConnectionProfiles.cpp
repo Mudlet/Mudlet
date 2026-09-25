@@ -93,6 +93,8 @@ const QStringList dlgConnectionProfiles::scmConnectionDetailFiles{qsl("url"), qs
 
 const QString dlgConnectionProfiles::scmSelfTestProfile = qsl("Mudlet self-test");
 
+std::optional<QColor> getCustomColor(const QString& profileName);
+
 // A lone "." is made entirely of permitted characters, yet every path built
 // from it addresses the profiles directory rather than a profile of its own -
 // as does "..", which scmUnusableProfileNameChars already covers:
@@ -442,7 +444,7 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     mPendingPasswordSaveProfile.clear();
 
     // Clear any pending operation flags
-    mKeychainOperationInProgress = false;
+    mKeychainOperationProfile.clear();
     mPendingProfileLoad.clear();
 
     // Check if QCoreApplication is still valid during shutdown
@@ -492,22 +494,14 @@ void dlgConnectionProfiles::slot_skipToGamesList()
 void dlgConnectionProfiles::accept()
 {
     if (validName && validUrl && validPort) {
-        setVisible(false);
-        // This is needed to make the above take effect as fast as possible:
-        qApp->processEvents();
-
-        // Check if keychain authentication is pending - if so, wait for it
+        // Hiding the dialog is left to ensurePasswordLoadedThenConnect(): a load that has to wait
+        // for the keychain keeps it on screen instead
         ensurePasswordLoadedThenConnect(true);
     }
 }
 
 void dlgConnectionProfiles::slot_load()
 {
-    setVisible(false);
-    // This is needed to make the above take effect as fast as possible:
-    qApp->processEvents();
-
-    // Check if keychain authentication is pending - if so, wait for it
     ensurePasswordLoadedThenConnect(false);
 }
 
@@ -525,19 +519,97 @@ void dlgConnectionProfiles::ensurePasswordLoadedThenConnect(bool alsoConnect)
         // Queue the profile loading until keychain completes
         mPendingConnect = alsoConnect;
         mPendingProfileLoad = profile_name;
+        // That read can be sitting behind a system prompt for as long as the user takes to
+        // answer it: a hidden dialog would leave nothing on screen to explain the wait
+        showKeychainWait();
         return; // Will be handled by keychain callback
     }
 
     // No pending keychain operations, proceed immediately
+    setVisible(false);
+    // This is needed to make the above take effect as fast as possible:
+    qApp->processEvents();
+
     loadProfile(alsoConnect);
     QDialog::accept();
 }
 
+void dlgConnectionProfiles::showKeychainWait()
+{
+    mKeychainWaitShown = true;
+    connect_button->setEnabled(false);
+    offline_button->setEnabled(false);
+    // Picking another profile now would be ignored - slot_loadPasswordAsync() returns while a read
+    // is in flight - and would leave the queued load pointing at the profile that was left behind.
+    // A disabled list gets no key events either, so the type-to-search stops with it.
+    listWidget_profiles->setEnabled(false);
+    // An edit would run validateProfile(), which hands Connect and Offline back and clears the
+    // notice below, and what the queued load reads from these fields is what they held at Connect
+    tabWidget_connectionInfo->setEnabled(false);
+    profileAdminArea->setEnabled(false);
+    //: Shown in the connection dialog while the profile's password is being fetched from the system keychain
+    showNotification(tr("Waiting for the keychain..."), notificationAreaIconLabelInformation);
+}
+
+void dlgConnectionProfiles::clearKeychainWait()
+{
+    if (!mKeychainWaitShown) {
+        return;
+    }
+
+    mKeychainWaitShown = false;
+    clearNotificationArea();
+    // the wait only ever took away buttons that a profile passing validation had enabled
+    const bool profileIsUsable = validName && validUrl && validPort;
+    connect_button->setEnabled(profileIsUsable);
+    offline_button->setEnabled(profileIsUsable);
+    listWidget_profiles->setEnabled(true);
+    tabWidget_connectionInfo->setEnabled(true);
+    profileAdminArea->setEnabled(true);
+}
+
+bool dlgConnectionProfiles::completePendingProfileLoad(const QString& profileName)
+{
+    if (mPendingProfileLoad.isEmpty() || mPendingProfileLoad != profileName) {
+        return false;
+    }
+
+    qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profileName;
+
+    const bool shouldConnect = mPendingConnect;
+    // cleared before the load, as the processEvents() below can deliver the answer of another
+    // read, which must not find it still queued and run it a second time
+    mPendingProfileLoad.clear();
+    mPendingConnect = false;
+
+    // the dialog stayed up while the keychain was busy, so this is where the wait ends and the
+    // dialog goes away
+    clearKeychainWait();
+    setVisible(false);
+    // This is needed to make the above take effect as fast as possible - the profile load below
+    // is synchronous, so without this the hidden dialog is still on screen throughout it:
+    qApp->processEvents();
+
+    loadProfile(shouldConnect);
+    QDialog::accept();
+    return true;
+}
+
+// Nothing is queued for the profile whose read answered: drop whatever is, rather than let a
+// later read connect out of nowhere, and hand the dialog its buttons back so Connect can be
+// pressed again
+void dlgConnectionProfiles::abandonPendingProfileLoad()
+{
+    mPendingProfileLoad.clear();
+    mPendingConnect = false;
+    clearKeychainWait();
+}
+
 bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
 {
-    Q_UNUSED(profile_name)
-    // Simply check if we have a keychain operation in progress
-    return mKeychainOperationInProgress;
+    // Only a read of this profile's own password is worth waiting for: queued behind another
+    // profile's, the load would be dropped when that read answers
+    return !profile_name.isEmpty() && mKeychainOperationProfile == profile_name;
 }
 
 void dlgConnectionProfiles::slot_updateDescription()
@@ -1574,7 +1646,6 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     listWidget_profiles->setIconSize(QSize(120, 30));
-    QString description;
     QListWidgetItem* pItem;
 
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
@@ -1607,14 +1678,7 @@ void dlgConnectionProfiles::fillout_form()
             // "My games" is still missing an entry:
             if (findData(*listWidget_profiles, scmSelfTestProfile, csmNameRole).isEmpty()) {
                 pItem = new QListWidgetItem();
-                // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
-                setItemName(pItem, scmSelfTestProfile);
-
-                listWidget_profiles->addItem(pItem);
-                description = getDescription(qsl("mudlet.org"));
-                if (!description.isEmpty()) {
-                    pItem->setToolTip(utils::richText(description));
-                }
+                setupMudProfile(pItem, scmSelfTestProfile, getDescription(qsl("mudlet.org")), QString());
             }
         }
 #endif
@@ -1790,19 +1854,48 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
     auto pItem = new QListWidgetItem();
     setItemName(pItem, profileName);
 
-    setCustomIcon(profileName, pItem);
-    auto description = getDescription(profileName);
-    if (!description.isEmpty()) {
-        pItem->setToolTip(utils::richText(description));
-    }
+    const bool iconLoaded = setCustomIcon(profileName, pItem);
+    setItemTooltip(pItem, getDescription(profileName), iconLoaded);
     listWidget_profiles->addItem(pItem);
 }
 
-void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
+// hasCustomIcon() can only tell that the file is there, so one that is empty or
+// not an image still reaches here and would leave the entry with nothing drawn
+bool dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
 {
-    auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
-    auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    profile->setIcon(icon);
+    const auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
+    const QPixmap pixmap(profileIconPath);
+    if (pixmap.isNull()) {
+        qWarning() << profileName << "has an icon file that could not be read:" << profileIconPath;
+        profile->setIcon(customIcon(profileName, getCustomColor(profileName)));
+        return false;
+    }
+
+    profile->setIcon(QIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy()));
+    return true;
+}
+
+// The list draws an entry as its icon and nothing else, so an entry whose icon
+// could not be read is given a name plate instead of being left as an
+// invisible, though still selectable, row - and says so where the user is
+void dlgConnectionProfiles::setItemTooltip(QListWidgetItem* pItem, const QString& description, const bool iconLoaded) const
+{
+    QStringList lines;
+    if (!description.isEmpty()) {
+        // a description is plain text - the profile owner's own words, or the
+        // catalog's - and the tooltip is rich text, so markup left in one would
+        // otherwise be acted on and could swallow the warning line below
+        lines << description.toHtmlEscaped();
+    }
+    if (!iconLoaded) {
+        //: Tooltip line on an entry in the connection dialog's games list whose icon file is present but cannot be read, so a plate with the entry's name is drawn in its place
+        lines << tr("This entry's artwork could not be read, so its name is shown instead.");
+    }
+    if (!lines.isEmpty()) {
+        // the wrapper is what Qt::mightBeRichText() settles the mode on, so this
+        // is read as rich text whatever the description turned out to be
+        pItem->setToolTip(utils::richText(lines.join(qsl("<br>"))));
+    }
 }
 
 // When a profile is renamed, migrate password storage to the new profile
@@ -1816,29 +1909,6 @@ void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, co
     if (!password.isEmpty()) {
         writeSecurePassword(newProfile, password);
     }
-}
-
-template <typename L>
-void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callback)
-{
-    // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager(this);
-
-    credManager->retrievePassword(profile, "character", [credManager, callback = std::move(callback)](bool success, const QString& password, const QString& errorMessage) {
-        if (success) {
-            callback(password);
-            QString passwordCopy = password; // Make a copy for secure clearing
-            SecureStringUtils::secureStringClear(passwordCopy);
-        } else {
-            if (!errorMessage.isEmpty()) {
-                qDebug() << "dlgConnectionProfiles: Failed to retrieve password:" << errorMessage;
-            }
-            callback(QString()); // Call with empty string on failure
-        }
-
-        // Clean up the credential manager
-        credManager->deleteLater();
-    });
 }
 
 std::optional<QColor> getCustomColor(const QString& profileName)
@@ -2393,6 +2463,13 @@ bool dlgConnectionProfiles::validateProfile()
         return true;
     }
 
+    // The form is locked while the dialog waits for the keychain, so nothing in it has changed
+    // since it was last validated - but a field losing the focus as it is locked still asks, and
+    // an answer would hand Connect and Offline back and clear the notice in the middle of the wait
+    if (mKeychainWaitShown) {
+        return validName && validUrl && validPort;
+    }
+
     validName = true, validPort = true, validUrl = true;
 
     clearNotificationArea();
@@ -2678,23 +2755,28 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     setItemName(pItem, mudServer);
 
     listWidget_profiles->addItem(pItem);
-    if (!hasCustomIcon(mudServer)) {
-        const QPixmap pixmap(iconFileName);
-        if (pixmap.isNull()) {
+    // An entry the catalog names no artwork for keeps a blank row, which is
+    // neither a failure nor worth warning about: the "Mudlet self-test" entry
+    // is the only one, and it is a testing aid that is deliberately left where
+    // players do not run into it (https://github.com/Mudlet/Mudlet/issues/6443).
+    // Artwork that was named but would not load is a fault, so that entry gets
+    // a name plate to be seen by and a warning - nothing else would show that
+    // its icon is broken rather than absent
+    bool iconLoaded = true;
+    if (hasCustomIcon(mudServer)) {
+        iconLoaded = setCustomIcon(mudServer, pItem);
+    } else if (!iconFileName.isEmpty()) {
+        if (const QPixmap pixmap(iconFileName); pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
-            return;
-        }
-        if (pixmap.width() != 120) {
+            iconLoaded = false;
+            pItem->setIcon(customIcon(mudServer, getCustomColor(mudServer)));
+        } else if (pixmap.width() != 120) {
             pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         } else {
             pItem->setIcon(QIcon(iconFileName));
         }
-    } else {
-        setCustomIcon(mudServer, pItem);
     }
-    if (!serverDescription.isEmpty()) {
-        pItem->setToolTip(utils::richText(serverDescription));
-    }
+    setItemTooltip(pItem, serverDescription, iconLoaded);
 }
 
 QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional<QColor>& backgroundColor) const
@@ -2883,7 +2965,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     const QString profile_name = timer->property("profileName").toString();
 
     // Prevent duplicate password loading operations for the same profile
-    if (mKeychainOperationInProgress) {
+    if (!mKeychainOperationProfile.isEmpty()) {
         return;
     }
 
@@ -2908,72 +2990,87 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 
     // If secure storage is enabled, try keychain first, then fallback to QSettings
     if (mudlet::self()->storingPasswordsSecurely()) {
-        mKeychainOperationInProgress = true;
+        mKeychainOperationProfile = profile_name;
         auto* credManager = new CredentialManager(this);
-        credManager->retrievePassword(profile_name, "character", [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
-            // Clear the operation flag first
-            mKeychainOperationInProgress = false;
+        credManager->retrievePassword(
+                profile_name,
+                "character",
+                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, bool) {
+                    passwordRetrieved(profile_name, success, retrievedPassword, errorMessage);
 
-            // Check if profile selection has changed while we were waiting
-            if (listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profile_name) {
-                if (success) {
-                    // Keychain operation succeeded - set the password (even if empty)
-                    // Temporarily block textChanged signal to avoid triggering save on programmatic setText
-                    {
-                        const QSignalBlocker blocker(character_password_entry);
-                        character_password_entry->setText(retrievedPassword);
-                    }
-
-                    if (retrievedPassword.isEmpty()) {
-                        qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
-                    } else {
-                        // The password can come from any stage of CredentialManager's lookup -
-                        // several keychain formats, or the encrypted file - and this callback is
-                        // told only that one of them answered. Each stage logs where it found the
-                        // password, so this line names no source.
-                        qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profile_name;
-                    }
-                } else {
-                    // Fallback to QSettings only if credential retrieval failed
-                    loadPasswordFromSettings(profile_name);
-                    qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profile_name << "-" << errorMessage;
-                }
-            }
-
-            // Check if there's a pending connection waiting for this password load
-            // (do this regardless of profile selection state to avoid hanging)
-            if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
-                qDebug() << "dlgConnectionProfiles: Password load completed, proceeding with pending connection for" << profile_name;
-
-                // Clear pending state
-                QString profileToLoad = mPendingProfileLoad;
-                bool shouldConnect = mPendingConnect;
-                mPendingProfileLoad.clear();
-
-                // Proceed with the connection
-                loadProfile(shouldConnect);
-                QDialog::accept();
-            }
-
-            credManager->deleteLater();
-        });
+                    credManager->deleteLater();
+                },
+                this,
+                [this, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage) {
+                    passwordArrivedLate(profile_name, success, retrievedPassword, errorMessage);
+                });
     } else {
         // Secure storage disabled, use QSettings directly
         loadPasswordFromSettings(profile_name);
 
         // Check if there's a pending connection waiting
-        if (!mPendingProfileLoad.isEmpty() && mPendingProfileLoad == profile_name) {
-            qDebug() << "dlgConnectionProfiles: Password loaded from settings, proceeding with pending connection for" << profile_name;
-
-            // Clear pending state
-            QString profileToLoad = mPendingProfileLoad;
-            bool shouldConnect = mPendingConnect;
-            mPendingProfileLoad.clear();
-
-            // Proceed with the connection
-            loadProfile(shouldConnect);
-            QDialog::accept();
+        if (!completePendingProfileLoad(profile_name)) {
+            abandonPendingProfileLoad();
         }
+    }
+}
+
+void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage)
+{
+    const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
+
+    // Clear the operation flag first
+    mKeychainOperationProfile.clear();
+
+    // Check if profile selection has changed while we were waiting
+    if (profileStillSelected) {
+        if (success) {
+            // Keychain operation succeeded - set the password (even if empty)
+            // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+            {
+                const QSignalBlocker blocker(character_password_entry);
+                character_password_entry->setText(password);
+            }
+
+            if (password.isEmpty()) {
+                qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profileName;
+            } else {
+                // The password can come from any stage of CredentialManager's lookup -
+                // several keychain formats, or the encrypted file - and this callback is
+                // told only that one of them answered. Each stage logs where it found the
+                // password, so this line names no source.
+                qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profileName;
+            }
+        } else {
+            // Fallback to QSettings only if credential retrieval failed, and only into an empty
+            // field: one the keychain answered late for an earlier read has the password already
+            if (character_password_entry->text().isEmpty()) {
+                loadPasswordFromSettings(profileName);
+            }
+            qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profileName << "-" << errorMessage;
+        }
+    }
+
+    // Check if there's a pending connection waiting for this password load
+    // (do this regardless of profile selection state to avoid hanging)
+    if (!completePendingProfileLoad(profileName)) {
+        abandonPendingProfileLoad();
+    }
+}
+
+void dlgConnectionProfiles::passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage)
+{
+    if (!success) {
+        qDebug() << "dlgConnectionProfiles: Credential retrieval that had timed out was answered unsuccessfully for" << profileName << "-" << errorMessage;
+        return;
+    }
+
+    // An empty field has nothing in it to lose, while a password typed in the meantime is the user's
+    const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
+    if (!password.isEmpty() && profileStillSelected && character_password_entry->text().isEmpty()) {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(password);
+        qDebug() << "dlgConnectionProfiles: Credential retrieval that had timed out was answered, filling the empty password field for" << profileName;
     }
 }
 
