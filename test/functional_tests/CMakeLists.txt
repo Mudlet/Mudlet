@@ -155,6 +155,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
+    PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
