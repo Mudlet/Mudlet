@@ -29,14 +29,9 @@
 
 #include <algorithm>
 
-// A claim is one fetch_add on a 64-bit word. If that had to go through a lock
-// the helpers would serialise on it and the whole design would be a mutex with
-// extra steps; every target Mudlet ships to has a lock-free 64-bit RMW.
+// A claim is one 64-bit fetch_add; behind a lock the helpers would serialise on it.
 static_assert(std::atomic<uint64_t>::is_always_lock_free);
-// A parked helper sleeps in std::atomic::wait. Before libc++ 22 that was, on
-// Windows, a loop of sleeps that re-checked the word rather than a kernel wait,
-// which would have every helper waking every 8ms for as long as Mudlet ran;
-// refuse the toolchain rather than ship that.
+// Before libc++ 22, std::atomic::wait on Windows polled with sleeps, waking every parked helper every 8ms.
 #if defined(Q_OS_WIN) && defined(_LIBCPP_VERSION)
 static_assert(_LIBCPP_VERSION >= 220000, "TriggerMatchPool needs libc++ 22 or newer on Windows: older ones poll in std::atomic::wait");
 #endif
@@ -44,10 +39,7 @@ static_assert(_LIBCPP_VERSION >= 220000, "TriggerMatchPool needs libc++ 22 or ne
 TriggerMatchPool* TriggerMatchPool::smpInstance = nullptr;
 
 namespace {
-// Tells the core this is a spin-wait, so it can slow the loop down and hand
-// resources to a sibling hyperthread: PAUSE on x86, YIELD on AArch64. Every
-// compiler Mudlet ships with takes GNU inline assembly. Anything else spins
-// bare, which is only slower.
+// Spin-wait hint, freeing resources for a sibling hyperthread. Other architectures spin bare, only slower.
 inline void cpuRelax()
 {
 #if defined(__x86_64__) || defined(__i386__)
@@ -62,15 +54,13 @@ constexpr uint64_t kEpochShift = 32;
 constexpr uint64_t kCountShift = 16;
 constexpr uint64_t kFieldMask = 0xFFFF;
 constexpr int kChunkSize = 8;
-// Half the index field. Every participant can overshoot the count by one claim
-// per batch, and the index has to keep those from spilling into the count.
+// Half the index field: each participant can overshoot the count by one claim per batch, and those
+// must not spill into the count field.
 constexpr int kMaxChunks = 32768;
-// Both spin loops read the clock once per this many pauses: often enough that
-// a budget is honoured to within a few microseconds, seldom enough that on x86
-// the clock read is not what the spin spends its time on.
+// Spin loops read the clock once per this many pauses: often enough to honour a budget to within a few
+// microseconds, seldom enough that the clock read does not dominate the spin on x86.
 constexpr int kPausesPerClockCheck = 64;
-// How long the caller pauses for a claimed chunk before it starts yielding the
-// core instead, in case the helper holding the chunk was descheduled.
+// How long the caller pauses for a claimed chunk before yielding instead, in case its helper was descheduled
 constexpr std::chrono::microseconds kYieldAfter{50};
 
 uint64_t packCursor(const uint32_t epoch, const int chunkCount)
@@ -94,7 +84,6 @@ int chunkIndexOf(const uint64_t cursor)
     return static_cast<int>(cursor & kFieldMask);
 }
 
-// mDone is chunks finished:32 | regex searches:32.
 constexpr uint64_t kDoneShift = 32;
 
 uint64_t packDone(const int searches)
@@ -112,12 +101,8 @@ int searchesOf(const uint64_t done)
     return static_cast<int>(done & 0xFFFFFFFF);
 }
 
-// A knob comes from the environment first, then from Mudlet.ini, then from the
-// default: the file is where a player sets one and keeps it, the environment
-// is how a test or a benchmark pins one for a single run without touching the
-// file. A value that is set but does not parse, or is below the floor, is
-// refused out loud: a typo that quietly measured the default is the worst
-// outcome for a tuning knob.
+// The environment beats Mudlet.ini so a test or benchmark can pin a knob for one run. An invalid value
+// is refused out loud: a typo that quietly measured the default is the worst outcome for a tuning knob.
 int knobOr(const char* envName, const QString& iniKey, const int fallback, const int minimum)
 {
     if (qEnvironmentVariableIsSet(envName)) {
@@ -129,8 +114,7 @@ int knobOr(const char* envName, const QString& iniKey, const int fallback, const
         }
         return value;
     }
-    // The settings exist once mudlet has been set up; a pool created before
-    // that, or in a harness with no mudlet at all, runs on the defaults.
+    // A pool created before mudlet exists, or in a harness without it, runs on the defaults
     QSettings* settings = mudlet::self() ? mudlet::getQSettings() : nullptr;
     if (settings && settings->contains(iniKey)) {
         bool parsed = false;
@@ -163,18 +147,14 @@ TriggerMatchPool::TriggerMatchPool()
 {
     smpInstance = this;
     const int cores = std::max(1, QThread::idealThreadCount());
-    // Half the machine, capped: past four the tail of the fork-join grows
-    // faster than the share of work each extra thread takes away. Zero is how
-    // the pool is turned off.
+    // Past four threads the fork-join tail grows faster than each thread's share of work shrinks.
+    // Zero turns the pool off.
     const int wanted = std::min(knobOr("MUDLET_MATCH_THREADS", qsl("triggerMatchThreads"), std::min(4, cores / 2), 0), cores);
-    // Where a two-thread pool breaks even on a Release build, in regex
-    // searches per line: below this the fork-join costs the main thread as
-    // much as the work it hands away, while the helper burns a core spinning
-    // between lines for nothing.
+    // Two-thread break-even on a Release build, in regex searches per line: below it the fork-join costs
+    // the main thread as much as it hands away, while the helper spins a core for nothing.
     mThreshold = knobOr("MUDLET_MATCH_THRESHOLD", qsl("triggerMatchThreshold"), 128, 1);
     mFloodChunkLines = knobOr("MUDLET_MATCH_FLOOD_LINES", qsl("triggerMatchFloodLines"), 8, 1);
-    // Zero parks a helper as soon as a batch is exhausted, which puts the
-    // wake-up path under every line of a burst.
+    // Zero parks a helper as soon as a batch is exhausted, putting a wake-up under every line of a burst
     mSpinBudget = std::chrono::microseconds(knobOr("MUDLET_MATCH_SPIN_US", qsl("triggerMatchSpinMicroseconds"), 100, 0));
     if (wanted < 2) {
         return;
@@ -182,14 +162,12 @@ TriggerMatchPool::TriggerMatchPool()
 
     mScratch.resize(wanted, nullptr);
     for (int i = 0; i < wanted; ++i) {
-        // One ovector pair is all a yes/no answer needs, and a single one of
-        // these then serves every pattern the slot ever matches: PCRE2 reports
-        // a match it had no room to record as 0 rather than as a failure.
+        // One ovector pair serves every pattern for a yes/no answer: PCRE2 returns 0, not failure,
+        // for a match it had no room to record.
         mScratch[i] = pcre2_match_data_create(1, nullptr);
         if (!mScratch[i]) {
-            // Without scratch a slot cannot answer for regex triggers, and a
-            // pool that declines every batch is the same client as before,
-            // just slower - so that is the fallback, not a slot that lies.
+            // A slot without scratch cannot answer for regex triggers; declining every batch is only
+            // slower, while a slot that lies is wrong.
             qWarning() << "TriggerMatchPool: could not allocate match data; parallel prescan is off";
             for (auto* scratch : mScratch) {
                 pcre2_match_data_free(scratch);
@@ -200,9 +178,8 @@ TriggerMatchPool::TriggerMatchPool()
     }
     mThreads.reserve(wanted - 1);
     for (int slot = 1; slot < wanted; ++slot) {
-        // A QThread rather than a std::thread for the name alone: it reaches
-        // the OS on all three platforms (Windows since Qt 6.8, which is the
-        // floor), so a profiler or a crash report shows which thread this is.
+        // QThread, not std::thread, for the name: it reaches the OS on all platforms (Windows since
+        // Qt 6.8, our floor), so profilers and crash reports show it.
         std::unique_ptr<QThread> thread(QThread::create([this, slot] {
             workerLoop(slot);
             mHelpersReturned.fetch_add(1, std::memory_order_release);
@@ -210,9 +187,8 @@ TriggerMatchPool::TriggerMatchPool()
         thread->setObjectName(qsl("TriggerMatch-%1").arg(slot));
         thread->start();
         if (!thread->isRunning()) {
-            // Qt has already warned. The pool works with however many helpers
-            // did start, as the caller claims every chunk nobody else does;
-            // what must not happen is a dead slot counting as a worker.
+            // Qt has already warned. The caller claims whatever chunks nobody else does, so the pool
+            // works with fewer helpers, but a dead slot must not count as a worker.
             break;
         }
         mThreads.push_back(std::move(thread));
@@ -235,11 +211,8 @@ void TriggerMatchPool::stopHelpers()
         return;
     }
     mStop.store(true, std::memory_order_relaxed);
-    // An empty batch is what wakes a parked helper; it has nothing to claim.
-    // The flag can be relaxed because every helper reads the cursor with
-    // acquire on its way round the loop - in wait(), at the top of the spin
-    // or in a claim - and that pairs with the store in publish(), so the flag
-    // is in view by the time the loop checks it.
+    // An empty batch wakes parked helpers. mStop can be relaxed: each helper acquire-reads the cursor
+    // on every loop (in wait(), the spin or a claim), which pairs with publish()'s store.
     publish(0);
     for (const auto& thread : mThreads) {
         thread->wait();
@@ -249,20 +222,17 @@ void TriggerMatchPool::stopHelpers()
     mThreads.clear();
 }
 
-// With nobody asleep the notify is a waiter-count check, no syscall. The store
-// is seq_cst rather than release so that it cannot pass the library's read of
-// that count: a helper that has just registered as a waiter and is about to
-// sleep on the old word must be woken, and release plus a later load is the
-// one ordering x86 does not keep. One xchg per batch buys that on every
-// library path rather than only the proxy one a 64-bit word takes today.
+// With nobody asleep the notify is a waiter-count check, no syscall. The store is seq_cst, not release,
+// so it cannot pass the library's read of that count: a helper about to sleep on the old word must be
+// woken, and x86 reorders a release store with a later load. One xchg per batch covers every library
+// path, not only the proxy one a 64-bit word takes today.
 void TriggerMatchPool::publish(const int chunkCount)
 {
     mCursor.store(packCursor(++mEpoch, chunkCount));
     mCursor.notify_all();
 }
 
-// Claims chunks until the batch runs out, and returns the epoch its last claim
-// landed on, which is the batch this thread has now seen.
+// Returns the epoch of the last claim: the batch this thread has now seen.
 uint32_t TriggerMatchPool::runChunks(const int slot)
 {
     pcre2_match_data* scratch = mScratch[slot];
@@ -308,10 +278,8 @@ void TriggerMatchPool::workerLoop(const int slot)
         if (std::chrono::steady_clock::now() - idleSince < mSpinBudget) {
             continue;
         }
-        // Sleeps until a publish changes the word from the one just read. A
-        // claim that moved it in between - each participant makes at most one
-        // on a batch that is already over - returns at once instead; the loop
-        // then reads the same epoch and comes back here.
+        // Sleeps until a publish changes the word. If a late claim (at most one per participant on a
+        // finished batch) moved it first, this returns at once and the loop comes back here.
         mCursor.wait(cursor, std::memory_order_acquire);
     }
 }
@@ -341,8 +309,7 @@ bool TriggerMatchPool::prescan(
 
     runChunks(0);
 
-    // Only chunks a helper has actually claimed are outstanding here; a helper
-    // still waking up holds none, so it is never waited for.
+    // Only claimed chunks are outstanding; a helper still waking holds none, so it is never waited for.
     int pauses = 0;
     std::chrono::steady_clock::time_point yieldAt{};
     while (doneChunksOf(mDone.load(std::memory_order_acquire)) != chunkCount) {
