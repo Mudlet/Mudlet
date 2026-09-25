@@ -18,7 +18,7 @@
  ***************************************************************************/
 
 #include <CredentialManager.h>
-#include <MudletPaths.h>
+#include <MudletApp.h>
 #include <SecureStringUtils.h>
 #include <utils.h>
 
@@ -497,7 +497,7 @@ void CredentialManagerTest::testTheTruncatedPathKeepsItsCopyForAnOlderMudlet()
     QVERIFY2(QFile::exists(legacyPath), "reading the credential once took away the only copy an older Mudlet can find");
     QCOMPARE(plantedCredential(legacyPath, profile), QString("saved_by_the_older_mudlet"));
 
-    QVERIFY(QFile::exists(credentialPath(MudletPaths::sanitizeForPath(profile), key)));
+    QVERIFY(QFile::exists(credentialPath(MudletApp::sanitizeForPath(profile), key)));
 
     CredentialManager::removeCredential(profile, key);
 }
@@ -509,7 +509,7 @@ void CredentialManagerTest::testTheNewerOfTheTwoCopiesIsTheOneHandedBack()
     const QString profile = scmNewerCopyProfile;
     const QString key = "character";
     const QString legacyPath = credentialPath(scmNewerCopyPrefix, key);
-    const QString currentPath = credentialPath(MudletPaths::sanitizeForPath(profile), key);
+    const QString currentPath = credentialPath(MudletApp::sanitizeForPath(profile), key);
 
     QVERIFY(CredentialManager::storeCredential(profile, key, "the_password_this_mudlet_knows"));
     QVERIFY(QFile::exists(currentPath));
@@ -535,7 +535,7 @@ void CredentialManagerTest::testAPasswordSavedHereReachesTheTruncatedPathToo()
     const QString profile = scmWrittenThroughProfile;
     const QString key = "character";
     const QString legacyPath = credentialPath(scmWrittenThroughPrefix, key);
-    const QString currentPath = credentialPath(MudletPaths::sanitizeForPath(profile), key);
+    const QString currentPath = credentialPath(MudletApp::sanitizeForPath(profile), key);
 
     QVERIFY(plantCredential(legacyPath, profile, "the_password_both_started_with"));
     QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_both_started_with"));
@@ -636,7 +636,7 @@ void CredentialManagerTest::testAStoreThatFailsLeavesTheTruncatedPathAlone()
     const QString profile = scmFailedStoreProfile;
     const QString key = "character";
     const QString legacyPath = credentialPath(scmFailedStorePrefix, key);
-    const QString currentPath = credentialPath(MudletPaths::sanitizeForPath(profile), key);
+    const QString currentPath = credentialPath(MudletApp::sanitizeForPath(profile), key);
 
     QVERIFY(plantCredential(legacyPath, profile, "the_password_both_started_with"));
     QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_both_started_with"));

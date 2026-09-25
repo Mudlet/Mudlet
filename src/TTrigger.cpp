@@ -834,7 +834,7 @@ void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
     if (mpHost) {
         if (auto* unit = mpHost->getTriggerUnit()) {
             if (nowFiresWithoutMatching) {
-                unit->markRootUnfilterable();
+                unit->markPrescanStaleForLineInFlight(this);
             } else {
                 unit->markPrescanStale(this);
             }

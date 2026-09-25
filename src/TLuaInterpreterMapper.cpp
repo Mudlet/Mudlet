@@ -1269,7 +1269,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         if (name.isEmpty()) {
             return warnArgumentValue(L, __func__, "an empty string is not a valid area name");
         }
-        if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(name)) {
+        if (!host.mpMap->mpRoomDB->hasAreaName(name)) {
             return warnArgumentValue(L, __func__, qsl("string '%1' is not a valid area name").arg(name));
         }
         if (name == host.mpMap->getDefaultAreaName()) {
@@ -2731,7 +2731,7 @@ int TLuaInterpreter::loadJsonMap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadMap
 int TLuaInterpreter::loadMap(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
 
     QString location;
     if (lua_gettop(L)) {
@@ -2741,7 +2741,7 @@ int TLuaInterpreter::loadMap(lua_State* L)
     bool isOk = false;
     if (!location.isEmpty() && location.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
         QString errMsg;
-        isOk = host.mpConsole->importMap(location, &errMsg);
+        isOk = host.importMapFile(location, &errMsg);
         if (!isOk) {
             // A false was returned which indicates an error, convert it to a nil
             lua_pushnil(L);
@@ -2754,7 +2754,7 @@ int TLuaInterpreter::loadMap(lua_State* L)
             return 1;
         }
     } else {
-        isOk = host.mpConsole->loadMap(location);
+        isOk = host.loadMapFile(location);
     }
     lua_pushboolean(L, isOk);
     return 1;
@@ -3150,8 +3150,8 @@ int TLuaInterpreter::saveMap(lua_State* L)
         location = lua_tostring(L, 1);
     }
 
-    const Host& host = getHostFromLua(L);
-    const bool error = host.mpConsole->saveMap(location, saveVersion);
+    Host& host = getHostFromLua(L);
+    const bool error = host.saveMapFile(location, saveVersion);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -3474,7 +3474,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         if (existingName.isEmpty()) {
             return warnArgumentValue(L, __func__, "area name cannot be empty");
         }
-        if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(existingName)) {
+        if (!host.mpMap->mpRoomDB->hasAreaName(existingName)) {
             return warnArgumentValue(L, __func__, csmInvalidAreaName.arg(existingName));
         }
         if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {

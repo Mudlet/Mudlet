@@ -35,6 +35,7 @@
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
+#include "TSpellChecker.h"
 #include "TWindowRegistry.h"
 #include "TriggerUnit.h"
 #include "ctelnet.h"
@@ -72,6 +73,7 @@ class LuaInterface;
 class XMLexport;
 class TMedia;
 class GMCPAuthenticator;
+class CredentialManager;
 class TRoom;
 class TConsole;
 class TMainConsole;
@@ -174,6 +176,8 @@ class Host : public QObject
     friend class TDiscordModeTest;
     // Allows the functional test to call closeChildren() on its own:
     friend class HostWidgetDecouplingTest;
+    // Allows the functional test to answer the keychain lookup in place of a keychain:
+    friend class TelnetLatePasswordTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -212,7 +216,10 @@ public:
     void setLogin(const QString& login) { mLogin = login; }
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
-    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
+    // A password still being fetched from the keychain counts: the auto-login is timer based, so
+    // the password step has to be armed before the read that answers it comes back, or there is
+    // no prompt left for a late answer to be typed at.
+    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || mSecuredPasswordPending); }
     // True once the user has sent any command to the game on the current connection. It gates whether
     // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
     // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
@@ -246,6 +253,7 @@ public:
     void setEnableSpellCheck(const bool enable);
     bool getEnableSpellCheck() const { return mEnableSpellCheck; }
     QString getSpellDic() const;
+    TSpellChecker& spellChecker() { return mSpellChecker; }
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
     {
@@ -393,6 +401,13 @@ public:
 
     void updateDisplayDimensions();
 
+    // When the bool is false the string is why the install was refused. When it
+    // is true the install was either carried out or - if a profile save was
+    // running - queued to be carried out later, and the string names each item
+    // of the package whose Lua did not work, as "<item name>: <error>". An empty
+    // string alongside true therefore means "nothing to add about its Lua", not
+    // "all well": a queued install, a config.lua that could not be read and an
+    // XML that stopped part-way report themselves on the console instead.
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
@@ -608,6 +623,9 @@ public:
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
     void loadMap();
+    bool saveMapFile(const QString& location, int saveVersion = 0);
+    bool loadMapFile(const QString& location);
+    bool importMapFile(const QString& location, QString* errMsg = nullptr);
     std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
     void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
@@ -990,8 +1008,6 @@ public:
 
     std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
 
-    bool mTutorialForCompactLineAlreadyShown = false;
-
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
@@ -1074,6 +1090,11 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void loadSecuredPassword();
+    // The lookup loadSecuredPassword() starts, on a manager of its own that this deletes once the
+    // lookup has answered. Apart so that a test can hand in a manager that stands in for the keychain.
+    void lookUpSecuredPassword(CredentialManager* credManager);
+    // What that lookup answers, first and, after a timeout, late
+    void securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut);
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
     void thankForUsingPTB();
@@ -1180,6 +1201,10 @@ private:
 
     int mHostID;
     QString mHostName;
+    // Declared after mHostName because ~TSpellChecker() saves the profile's own
+    // dictionary to a path built from getName(), and members are destroyed in
+    // reverse declaration order.
+    TSpellChecker mSpellChecker{this};
     QString mDiscordGameName; // Discord self-reported game name
 
     QString mLine;
@@ -1192,6 +1217,7 @@ private:
     QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
+    bool mSecuredPasswordPending = false;
 
     int mPort;
 
@@ -1265,11 +1291,11 @@ private:
     // Empty until a dictionary is chosen: getSpellDic() substitutes the
     // platform's starting one, so reading this member directly under-reports
     // what the profile is using. Private so that setSpellDic() can push the
-    // change into a live console:
+    // change into the profile's spell checker:
     QString mSpellDic;
-    // These are hidden to prevent them being changed directly, they are also
-    // mirrored/cached in the main TConsole's instance so they do not need to be
-    // looked up directly by that class:
+    // Hidden to prevent them being changed directly - setEnableSpellCheck() and
+    // setUserDictionaryOptions() are what push a change into the profile's
+    // spell checker:
     bool mEnableSpellCheck = true;
     bool mEnableUserDictionary = true;
     bool mUseSharedDictionary = false;

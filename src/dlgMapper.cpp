@@ -25,7 +25,7 @@
 #include "dlgMapper.h"
 
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -347,8 +347,8 @@ void dlgMapper::loadMapFromFile()
     auto* dialog = new QFileDialog(this);
     //: Title of the file dialog used to pick a map file to load.
     dialog->setWindowTitle(tr("Load Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
-    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
@@ -363,7 +363,7 @@ void dlgMapper::loadMapFromFile()
         }
         bool success = false;
         if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-            success = pHost->mpConsole->importMap(fileName);
+            success = pHost->importMapFile(fileName);
         } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
             auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
             success = ok;
@@ -371,12 +371,12 @@ void dlgMapper::loadMapFromFile()
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
             }
         } else {
-            success = pHost->mpConsole->loadMap(fileName);
+            success = pHost->loadMapFile(fileName);
         }
         if (success) {
             pHost->mpMap->audit();
             mEmptyStateDismissed = true;
-            mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+            MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
         updateEmptyStateOverlay();
     });
@@ -1003,10 +1003,8 @@ void dlgMapper::slot_showSaveWarningMenu()
 
     auto* retryAction = new QAction(tr("Retry save"), this);
     connect(retryAction, &QAction::triggered, this, [this]() {
-        if (mpHost && mpHost->mpConsole) {
-            if (mpHost->mpConsole->saveMap(QString())) {
-                mpMap->setSaveError(false);
-            }
+        if (mpHost && mpHost->saveMapFile(QString())) {
+            mpMap->setSaveError(false);
         }
     });
     menu->addAction(retryAction);

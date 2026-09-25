@@ -44,7 +44,7 @@ cmake_language(DEFER CALL restore_windows_test_output)
 # directory outlives the run, where a test's own QTemporaryDir does not - so a test
 # still has to redirect for itself to get a config root that is empty at the start
 # of every run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet
-# only when that directory holds profiles/ (see MudletPaths::xdgConfigDir()), which this does
+# only when that directory holds profiles/ (see MudletApp::xdgConfigDir()), which this does
 # not create - deliberately, since seeding the opt-in here would give a test that
 # forgets a config root that accumulates profiles between runs, which is the
 # collision #9999 was about.
@@ -59,6 +59,12 @@ function(sandbox_test_config_dirs)
             # CoreFoundation is handed a home directory rather than a config root,
             # and one that has to exist - Qt creates a config root on the way to
             # writing into it, and no one creates a home
+            #
+            # The Security framework reads this home too, so a test run has no login
+            # keychain to reach: reads answer "not found", but a write asks the person
+            # who ran the suite whether to reset their keychain to defaults. A test that
+            # writes to the store has to leave that alone on macOS - see
+            # CredentialManagerKeychainTest::initTestCase().
             file(MAKE_DIRECTORY "${testConfigDir}")
             set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "CFFIXED_USER_HOME=${testConfigDir}")
         endif()
@@ -133,6 +139,17 @@ endif()
 # so a skipped traversal case there is a regression and not an environment. Only
 # somebody running the binary by hand on a bare X server is allowed the skip.
 set_property(TEST TKeySequenceEditTest APPEND PROPERTY ENVIRONMENT "MUDLET_REQUIRE_WINDOW_ACTIVATION=1")
+
+# The two macOS usage strings, read back out of the bundle that was built rather
+# than out of the template they come from. A build-system change that dropped
+# either would be found by a player, whose Mudlet is killed by macOS the moment
+# speech asks for the microphone - see test/check-macos-usage-strings.cmake.
+if(APPLE)
+    add_test(NAME MacOSUsageStringsTest
+        COMMAND ${CMAKE_COMMAND}
+            "-DBUNDLE_PLIST=$<TARGET_BUNDLE_DIR:mudlet_executable>/Contents/Info.plist"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/check-macos-usage-strings.cmake")
+endif()
 
 # Which releases' notes the update offer shows. Built from the updater sources
 # rather than linked against the Mudlet library, because the library only
@@ -318,6 +335,18 @@ if(NOT WIN32)
     add_test(NAME MilestoneResolutionTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/milestone-resolution-test.sh
     )
+endif()
+
+# The key check in CI/linux-packages/publish is the only automated thing between
+# a wrong mudlet.asc and the package trust store of every Mudlet user on Linux,
+# and the publishing workflow runs it only when it publishes a release - so
+# without this nothing covers it before merge. Linux only, as publish needs a
+# newer bash than macOS ships. A skip is reported as one, not as a pass.
+if(UNIX AND NOT APPLE)
+    add_test(NAME LinuxPackagesKeyTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/linux-packages-key-test.sh
+    )
+    set_tests_properties(LinuxPackagesKeyTest PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 add_subdirectory(functional_tests)

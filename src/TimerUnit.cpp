@@ -204,6 +204,9 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
         addTimerRootNode(pChild, parentPosition, childPosition);
     }
 
+    // enableTimer() skips a timer that is switched off, and whether a zero time
+    // is allowed depends on the parent
+    pChild->validateTime();
     pChild->enableTimer(childID);
 }
 

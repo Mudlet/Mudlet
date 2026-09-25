@@ -40,7 +40,9 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 
+    friend class ConnectionDialogKeychainWaitTest;
     friend class ConnectionDialogOfflineProfileTest;
+    friend class SelfTestProfileIconTest;
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
@@ -132,11 +134,9 @@ private:
     void setProfileIcon() const;
     void loadCustomProfile(const QString&) const;
     void generateCustomProfile(const QString&) const;
-    void setCustomIcon(const QString&, QListWidgetItem*) const;
+    bool setCustomIcon(const QString&, QListWidgetItem*) const;
     void setIconOfListedProfile(const QString& profileName, const QIcon& icon) const;
     QString selectedProfileName() const;
-    template <typename L>
-    void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
     void writeSecurePassword(const QString& profile, const QString& pass);
     void deleteSecurePassword(const QString& profile);
@@ -150,10 +150,25 @@ private:
     void fitWelcomeMessageToContents();
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
+    void setItemTooltip(QListWidgetItem*, const QString& description, const bool iconLoaded) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
+    // While a keychain read is outstanding the dialog stays up and says so, rather than hiding
+    // itself for however long the system prompt behind it goes unanswered
+    void showKeychainWait();
+    void clearKeychainWait();
+    // Runs the load that Connect or Offline queued while the keychain was busy, and reports
+    // whether there was one - the dialog is on its way out when there was
+    bool completePendingProfileLoad(const QString& profileName);
+    // Drops a queued load that nothing is going to complete, and gives the dialog its buttons back
+    void abandonPendingProfileLoad();
+    // What a keychain read answers with
+    void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
+    // What a read that had timed out answers with afterwards, while the dialog is still open - a
+    // load that ran closed it - so all it may do is fill a password field left empty.
+    void passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
     void revealConnectionDetails();
     bool showingOnlyMyProfiles() const;
 
@@ -198,9 +213,10 @@ private:
 
     // Async connection and password handling
     QString mPendingPasswordSaveProfile;
-    QString mPendingProfileLoad;               // Profile name waiting for password load
-    bool mPendingConnect = false;              // Whether to connect (true) or just load (false)
-    bool mKeychainOperationInProgress = false; // Track if keychain op is active
+    QString mPendingProfileLoad;       // Profile name waiting for password load
+    bool mPendingConnect = false;      // Whether to connect (true) or just load (false)
+    QString mKeychainOperationProfile; // Whose password a keychain read is fetching, if any
+    bool mKeychainWaitShown = false;   // Whether the dialog is showing the keychain wait
 
 
 private slots:

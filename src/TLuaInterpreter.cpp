@@ -31,7 +31,7 @@
 
 #include "EAction.h"
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TAlias.h"
 #include "TBuffer.h"
 #include "TConsole.h"
@@ -58,6 +58,8 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
+
+#include <hunspell/hunspell.h>
 
 #include <math.h>
 
@@ -89,13 +91,6 @@ extern "C" {
 int luaopen_yajl(lua_State*);
 }
 
-
-// A Host outlives its main console: closing a profile's window destroys the view
-// while triggers, the buffer, logging and Lua all keep running. The live
-// Hunspell handles and the user dictionary's word set belong to that view, so
-// the spelling functions have to report this rather than dereference what is
-// gone.
-static const char* no_main_window_value = "the profile has no main window";
 
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
 const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
@@ -1650,7 +1645,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString nativeHomeDirectory = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
+    const QString nativeHomeDirectory = MudletApp::getMudletPath(enums::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
@@ -2571,7 +2566,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
     // report back instead of raising - see checkStringArg()
     const int results = [&L, functionName = __func__]() -> int {
         QByteArray version = QByteArray(APP_VERSION).trimmed();
-        const QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
+        const QByteArray build = MudletApp::buildSuffix().trimmed().toLocal8Bit();
 
         QList<QByteArray> const versionData = version.split('.');
         if (versionData.size() != 3) {
@@ -2654,7 +2649,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             lua_pushinteger(L, revision);
             lua_settable(L, -3);
             lua_pushstring(L, "build");
-            lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
+            lua_pushstring(L, MudletApp::buildSuffix().trimmed().toUtf8().constData());
             lua_settable(L, -3);
         } else { // NOLINT(readability-else-after-return)
             lua_pushstring(L,
@@ -2732,16 +2727,32 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 }
 
 
+// An install that went through, with or without something to own up to: the
+// install did succeed, so the answer stays true rather than nil plus a message,
+// and a part of the package whose Lua did not work rides along as a second
+// value only when there is one - the way setConfig()'s successWithWarning()
+// reports a setting that was made with a consequence a script has no other way
+// of learning about.
+static int pushInstallSucceeded(lua_State* L, const QString& warning)
+{
+    lua_pushboolean(L, true);
+    if (warning.isEmpty()) {
+        return 1;
+    }
+    lua_pushstring(L, warning.toUtf8().constData());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
 int TLuaInterpreter::installPackage(lua_State* L)
 {
     const QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true); !success) {
+    auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true);
+    if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
-    lua_pushboolean(L, true);
-    return 1;
+    return pushInstallSucceeded(L, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallPackage
@@ -2765,15 +2776,15 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     const QString module = QDir::fromNativeSeparators(modName);
 
-    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true); !success) {
+    auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true);
+    if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
     if (moduleManager && moduleManager->moduleTable->isVisible()) {
         moduleManager->layoutModules();
     }
-    lua_pushboolean(L, true);
-    return 1;
+    return pushInstallSucceeded(L, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallModule
@@ -5935,7 +5946,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
     applyHttpHeaders(L, pos + 3, request);
 
     QByteArray fileToUpload;
@@ -6978,6 +6989,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "start");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttStop);
     lua_setfield(pGlobalLua, -2, "stop");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttCancel);
+    lua_setfield(pGlobalLua, -2, "cancel");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttToggle);
     lua_setfield(pGlobalLua, -2, "toggle");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsListening);
@@ -7025,7 +7038,7 @@ void TLuaInterpreter::initLuaGlobals()
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
     const auto appPath{QCoreApplication::applicationDirPath()};
-    const auto profilePath{MudletPaths::getMudletPath(enums::profileHomePath, hostName)};
+    const auto profilePath{MudletApp::getMudletPath(enums::profileHomePath, hostName)};
 
     // Allow for modules or libraries placed in the profile root directory:
     additionalLuaPaths << qsl("%1/?.lua").arg(profilePath);
@@ -7212,9 +7225,9 @@ void TLuaInterpreter::setupLanguageData()
     lua_setfield(L, -2, "d");
 
     // finalize language-specific directions table
-    lua_setfield(L, -2, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
+    lua_setfield(L, -2, MudletApp::getInterfaceLanguage().toUtf8().constData());
 
-    lua_pushstring(L, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
+    lua_pushstring(L, MudletApp::getInterfaceLanguage().toUtf8().constData());
     lua_setfield(L, -2, "interfacelanguage");
 
     lua_setfield(L, -2, "translations");
@@ -7708,7 +7721,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
     pT->setName(name);
-    mpHost->getKeyUnit()->warnIfAddonCommandHoldsKey(pT);
+    mpHost->getKeyUnit()->warnIfKeyIsTaken(pT);
     updateEditor();
     return {pT->getID(), QString()};
 }
@@ -7729,7 +7742,7 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
     }
     const int id = pT->getID();
     pT->setName(QString::number(id));
-    mpHost->getKeyUnit()->warnIfAddonCommandHoldsKey(pT);
+    mpHost->getKeyUnit()->warnIfKeyIsTaken(pT);
     return id;
 }
 
@@ -8075,10 +8088,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    QPair<bool, QString> const result = host.mpConsole->addWordToSet(text);
+    QPair<bool, QString> const result = host.spellChecker().addWord(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -8098,10 +8108,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    QPair<bool, QString> const result = host.mpConsole->removeWordFromSet(text);
+    QPair<bool, QString> const result = host.spellChecker().removeWord(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -8130,23 +8137,24 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
-        handle = host.mpConsole->getHunspellHandle_user();
+        handle = host.spellChecker().userHandle();
+        if (!handle) {
+            return warnArgumentValue(
+                    L, __func__, qsl("the %1 dictionary could not be opened so is unable to check your word").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
+        }
+
         encodedText = text.toUtf8();
     } else {
-        handle = host.mpConsole->getHunspellHandle_system();
+        handle = host.spellChecker().systemHandle();
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
-        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
+        encodedText = TEncodingHelper::encode(text, host.spellChecker().systemCodecName());
     }
-    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     lua_pushboolean(L, Hunspell_spell(handle, encodedText.constData()));
     return 1;
 }
@@ -8172,34 +8180,37 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     char** wordList;
     size_t wordCount = 0;
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
-        handle = host.mpConsole->getHunspellHandle_user();
+        handle = host.spellChecker().userHandle();
+        if (!handle) {
+            return warnArgumentValue(
+                    L,
+                    __func__,
+                    qsl("the %1 dictionary could not be opened so is unable to make suggestions for your word").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
+        }
+
         encodedText = text.toUtf8();
     } else {
-        handle = host.mpConsole->getHunspellHandle_system();
+        handle = host.spellChecker().systemHandle();
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
-        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
+        encodedText = TEncodingHelper::encode(text, host.spellChecker().systemCodecName());
     }
-    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     wordCount = Hunspell_suggest(handle, &wordList, encodedText.constData());
     lua_newtable(L);
     for (size_t i = 0; i < wordCount; ++i) {
         lua_pushnumber(L, i + 1);
         QString suggestion;
-        if (hasUserDictionary) {
+        if (useUserDictionary) {
             suggestion = QString::fromUtf8(wordList[i]);
         } else {
-            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.mpConsole->getHunspellCodecName_system());
+            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.spellChecker().systemCodecName());
         }
         lua_pushstring(L, suggestion.toUtf8().constData());
         lua_settable(L, -3);
@@ -8219,16 +8230,16 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
+    if (!host.spellChecker().userHandle()) {
+        return warnArgumentValue(
+                L, __func__, qsl("the %1 dictionary could not be opened so is unable to list its words").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
     }
-    // This may stall if this is accessing the shared user dictionary and that
-    // is being updated by another profile, but it should eventually return...
+
     // We must keep a local reference/copy of the value returned because the
     // returned item is a deep-copy in the case of a shared dictionary and two
-    // calls to TConsole::getWordSet() can return two different instances which
-    // is fatally dangerous if used in a range based initialiser:
-    QSet<QString> wordSet{host.mpConsole->getWordSet()};
+    // calls to TSpellChecker::wordSet() can return two different instances which
+    // is fatally dangerous if used in a range based initializer:
+    QSet<QString> wordSet{host.spellChecker().wordSet()};
     QStringList wordList{wordSet.begin(), wordSet.end()};
     const int wordCount = wordList.size();
     if (wordCount > 1) {
@@ -8282,13 +8293,13 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
             lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
             return 2;
         }
-        const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
+        const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
         if (profileName.isEmpty()) {
             lua_pushnil(L);
             lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", requestedName.toUtf8().constData());
             return 2;
         }
-        info = MudletPaths::readProfileData(profileName, qsl("description"));
+        info = MudletApp::readProfileData(profileName, qsl("description"));
         break;
     }
     }
@@ -8299,15 +8310,15 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 
 // No documentation available in wiki - internal function
 // The folder a profile name resolves to, or an empty string if there is no such
-// profile. For writers, and so stricter than MudletPaths::getCanonicalProfileName(),
+// profile. For writers, and so stricter than MudletApp::getCanonicalProfileName(),
 // which also resolves a game Mudlet ships with that has never been opened:
 // writeProfileData() creates whatever folder it is handed, so writing under such
 // a name would turn that game into a profile of its own. Readers want the looser
 // call.
 static QString canonicalProfileFolder(const QString& profileName)
 {
-    const QString folder = MudletPaths::getCanonicalProfileName(profileName);
-    if (folder.isEmpty() || !QDir(MudletPaths::getMudletPath(enums::profileHomePath, folder)).exists()) {
+    const QString folder = MudletApp::getCanonicalProfileName(profileName);
+    if (folder.isEmpty() || !QDir(MudletApp::getMudletPath(enums::profileHomePath, folder)).exists()) {
         return QString();
     }
     return folder;
@@ -8339,7 +8350,7 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
         text = lua_tostring(L, 2);
     }
 
-    const QPair<bool, QString> result = MudletPaths::writeProfileData(profileName, qsl("description"), text);
+    const QPair<bool, QString> result = MudletApp::writeProfileData(profileName, qsl("description"), text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -8373,7 +8384,7 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         }
     }
 
-    const QPair<bool, QString> result = MudletPaths::writeProfileData(profileName, qsl("description"), desc);
+    const QPair<bool, QString> result = MudletApp::writeProfileData(profileName, qsl("description"), desc);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -9531,7 +9542,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
                  const auto logDir = host.mLogDir;
 
                  if (logDir == nullptr || logDir.isEmpty()) {
-                     lua_pushstring(L, MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
+                     lua_pushstring(L, MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
                  } else {
                      lua_pushstring(L, host.mLogDir.toUtf8().constData());
                  }

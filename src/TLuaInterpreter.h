@@ -262,6 +262,7 @@ public:
     static int sttInit(lua_State*);
     static int sttStart(lua_State*);
     static int sttStop(lua_State*);
+    static int sttCancel(lua_State*);
     static int sttToggle(lua_State*);
     static int sttIsListening(lua_State*);
     static int sttIsAvailable(lua_State*);
