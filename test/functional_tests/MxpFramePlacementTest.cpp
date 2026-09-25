@@ -33,6 +33,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TMxpFrameManager.h"
+#include "TMxpFrameWidgets.h"
 #include "TPrintSink.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
@@ -68,23 +69,9 @@ private:
     // literal or against another widget's geometry instead.
     QRect area() const { return QRect(QPoint(0, 0), mpHost->mpConsole->getMainWindowSize()).marginsRemoved(mpHost->userBorders()); }
 
-    QWidget* frameWidget(const QString& name) const
-    {
-        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(name);
-        return frame ? frame->widget.data() : nullptr;
-    }
-
-    TConsole* frameConsole(const QString& name) const
-    {
-        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(name);
-        return frame ? frame->console.data() : nullptr;
-    }
-
-    QTabWidget* frameTabs(const QString& name) const
-    {
-        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(name);
-        return frame ? frame->tabWidget.data() : nullptr;
-    }
+    QWidget* frameWidget(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameWidget(name); }
+    TConsole* frameConsole(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameConsole(name); }
+    QTabWidget* frameTabs(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameTabs(name); }
 
     QRect frameGeometry(const QString& name) const
     {
