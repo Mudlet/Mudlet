@@ -184,6 +184,27 @@ QPair<bool, QString> removeMetadataFromProfile(const QString& profileName)
     return qMakePair(false, file.errorString());
 }
 
+// Clears a record the credential store still holds from before it moved into the profile. A free
+// function rather than a member, so the read callback that calls it captures no authenticator:
+// GMCPAuthenticator is not a QObject, nothing can track its lifetime, and a read outstanding while
+// a Host is torn down would otherwise answer into a destroyed one - Host's QPointer only clears in
+// ~QObject, after the authenticator it owns has gone.
+//
+// Unwaited here: this is the tidying half of a move, and the caller has the record either way. The
+// forget path does wait for it, because there the whole point is that it is gone.
+void forgetMetadataTheStoreStillHolds(const QString& profileName)
+{
+    QPointer<CredentialManager> remover = new CredentialManager();
+    remover->removePassword(profileName, metadataKey(), [remover, profileName](bool removed, const QString& error) {
+        if (remover) {
+            remover->deleteLater();
+        }
+        if (!removed) {
+            qWarning().noquote() << "GMCP Char.Login - the saved sign-in's older credential-store entry for profile" << profileName << "was not removed, so the next read finds it again:" << error;
+        }
+    });
+}
+
 // Holds the raw token and nothing else, so the *stored* token never passes through a QJsonDocument -
 // whose parsed copy lives in heap storage Qt does not expose and cannot be zeroed. A token arriving on
 // the wire still does (handleAuthToken), as does a pre-split entry's inline token on the read path.
@@ -1271,19 +1292,6 @@ void GMCPAuthenticator::attemptReconnect()
     return metadataPathInProfile(profileName);
 }
 
-void GMCPAuthenticator::forgetAnyStoredMetadata(const QString& profileName)
-{
-    QPointer<CredentialManager> remover = new CredentialManager();
-    remover->removePassword(profileName, metadataKey(), [remover, profileName](bool removed, const QString& error) {
-        if (remover) {
-            remover->deleteLater();
-        }
-        if (!removed) {
-            qDebug().noquote() << "GMCP Char.Login - the saved sign-in's old credential-store entry for profile" << profileName << "was not removed:" << error;
-        }
-    });
-}
-
 void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
 {
     if (key == metadataKey()) {
@@ -1299,7 +1307,7 @@ void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
         // store's prompt for that one read rather than for every sign-in from here on.
         QPointer<CredentialManager> reader = new CredentialManager();
         QPointer<Host> safeHost = mpHost;
-        reader->retrievePassword(profileName, key, [this, reader, safeHost, profileName, done = std::move(done)](bool success, QString value, const QString& errorMessage) mutable {
+        reader->retrievePassword(profileName, key, [reader, safeHost, profileName, done = std::move(done)](bool success, QString value, const QString& errorMessage) mutable {
             if (reader) {
                 reader->deleteLater();
             }
@@ -1323,7 +1331,7 @@ void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
                     const auto written = writeMetadataToProfile(profileName, value);
                     if (written.first) {
                         qDebug().noquote() << "GMCP Char.Login - moved the saved sign-in for profile" << profileName << "out of the credential store and into the profile";
-                        forgetAnyStoredMetadata(profileName);
+                        forgetMetadataTheStoreStillHolds(profileName);
                     } else {
                         // Said out loud: the alternative is the store being read, and prompted for,
                         // on every connect from here on with nothing to say why

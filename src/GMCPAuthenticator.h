@@ -108,8 +108,6 @@ private:
     using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
     // Reads one credential key; what mStoreReader does unless a test replaces it.
     void readStoreKey(const QString& key, StoreReadDone done);
-    // Clears a metadata entry the credential store still holds from before it moved into the profile
-    void forgetAnyStoredMetadata(const QString& profileName);
 
 public:
     // Where a profile's saved sign-in record is filed, for the preferences deciding whether there is
