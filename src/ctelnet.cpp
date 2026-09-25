@@ -5368,6 +5368,9 @@ void cTelnet::initStreamDecompressor()
 
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 {
+    char* const inputStart = in_buffer;
+    const int inputLength = length;
+
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef*)in_buffer;
 
@@ -5401,6 +5404,14 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         // Refuse the version the broken stream was using - with both negotiated,
         // refusing the other one leaves the game compressing - and stop taking
         // its start sequence as one until the game offers it again.
+        // A stream that breaks before producing any output, on bytes that all
+        // arrived in this read, was most likely never compressed at all (a game
+        // announcing compression and then not using it), so hand back the bytes
+        // inflate() took for its header too rather than cutting them off the text.
+        if (mZstream.total_out == 0 && mZstream.total_in == static_cast<uLong>(inputLength - length)) {
+            in_buffer = inputStart;
+            length = inputLength;
+        }
         sendTelnetOption(TN_DONT, mCompressionOption);
         hisOptionState.reset(static_cast<size_t>(mCompressionOption));
         if (mCompressionOption == OPT_COMPRESS) {
