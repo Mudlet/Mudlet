@@ -343,9 +343,15 @@ private slots:
     // reaches Lua while the load is still running. A handler that loads a model
     // of its own from there is told it succeeded - and it did - so the load it
     // interrupted must not free that model and install its own behind it, with
-    // both calls answering true. The sysSTTStateChanged path already refuses the
-    // outer call in exactly this position; reached through sysSTTError it did
-    // not, and said nothing.
+    // both calls answering true.
+    //
+    // Both reports reach a handler at this same point, and neither refused the
+    // outer call before this guard: endSessionForModelLoad() settles the state to
+    // Ready before emitting the error, and mudlet.cpp raises
+    // sysSTTStateChanged("ready") synchronously, so a state-change handler
+    // re-enters here exactly as a sysSTTError one does. The refusal that already
+    // existed is a different case - a handler on the post-commit "ready" from
+    // settleAfterModelLoad(), which STT_spec.lua covers.
     void aModelLoadedFromTheLostSessionReportSurvives()
     {
         requireStub();
@@ -378,6 +384,52 @@ private slots:
         QVERIFY2(!luaTrue(qsl("_outerOk")), qPrintable(qsl("both loads answered true - the model in place is '%1'").arg(luaString(qsl("stt.getInfo().modelPath")))));
         QVERIFY2(luaString(qsl("_outerErr")).contains(qsl("replaced it with another")),
                  qPrintable(qsl("the outer load did not say a handler had replaced its model: \"%1\"").arg(luaString(qsl("_outerErr")))));
+    }
+
+    // A handler that only changes a setting has replaced nothing, so the load it
+    // interrupted must carry on. This is how the shipped sherpa backend applies
+    // stt.setSensitivity() and stt.setVocabulary(): both rebuild the model
+    // already in place, through the same load path that commits a replacement.
+    // Counting that rebuild made the outer stt.init() stand down for a
+    // replacement that never happened, leaving the old model loaded and the
+    // caller told a handler had swapped it. Reproduced here as a handler
+    // re-loading the model already in place, which is the same commit through
+    // the same counter - the stand-in library is Vosk's, and the sherpa rebuild
+    // has no in-tree stub.
+    void aHandlerReloadingTheSameModelDoesNotStopTheLoadItInterrupted()
+    {
+        requireStub();
+        const QString model = stubModelDirectory();
+        const QString outerModel = otherStubModelDirectory();
+
+        QVERIFY(runLua(qsl("_ok, _err = stt.init([[%1]])").arg(model)).isNull());
+        QVERIFY2(luaTrue(qsl("_ok")), qPrintable(qsl("the stand-in model did not load: %1").arg(luaString(qsl("_err")))));
+        QVERIFY(runLua(qsl("_started = stt.start()")).isNull());
+        if (!luaTrue(qsl("_started"))) {
+            QSKIP("no session could be started here, so no load can interrupt one");
+        }
+
+        // The handler asks for the model that is already loaded, which is what a
+        // setting change amounts to underneath.
+        QVERIFY(runLua(qsl("_handlerRan = false\n"
+                           "_handlerOk = nil\n"
+                           "_handlers = _handlers or {}\n"
+                           "table.insert(_handlers, registerAnonymousEventHandler('sysSTTError', function(_, message)\n"
+                           "  if not _handlerRan and message:find('stopped the listening session') then\n"
+                           "    _handlerRan = true\n"
+                           "    _handlerOk = stt.init([[%1]])\n"
+                           "  end\n"
+                           "end))\n"
+                           "_outerOk, _outerErr = stt.init([[%2]])")
+                               .arg(model, outerModel))
+                        .isNull());
+
+        QVERIFY2(luaTrue(qsl("_handlerRan")), "the handler never ran, so nothing here was re-entered");
+        QVERIFY2(luaTrue(qsl("_handlerOk")), "the handler's own load was refused, so this case is not about the load that interrupted it");
+        QVERIFY2(luaTrue(qsl("_outerOk")),
+                 qPrintable(qsl("the load stood down for a rebuild that replaced nothing: \"%1\", and the model in place is '%2'")
+                                    .arg(luaString(qsl("_outerErr")), luaString(qsl("stt.getInfo().modelPath")))));
+        QCOMPARE(luaString(qsl("stt.getInfo().modelPath")), outerModel);
     }
 
     // The other half of the case above. A handler whose own load fails has

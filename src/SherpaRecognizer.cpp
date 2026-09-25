@@ -465,6 +465,13 @@ QStringList SherpaRecognizer::usableHotwords(const QStringList& words, QStringLi
 bool SherpaRecognizer::loadModel(const QString& modelPath)
 {
     const unsigned int loadGeneration = modelLoadGeneration();
+    // Read before mModelPath below is overwritten. setSensitivity() and
+    // setVocabulary() apply themselves by rebuilding the model already in place
+    // through this function, and such a rebuild replaces nothing - see
+    // noteModelLoaded(). mRecognizer rather than mModelPath alone, because
+    // mModelPath is set before the load can still fail, so it can name a model
+    // that is not in place.
+    const bool rebuildingTheModelInPlace = (mRecognizer != nullptr) && (mModelPath == modelPath);
     if (!loadSherpaLibrary()) {
         setState(State::Error);
         //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
@@ -539,7 +546,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // this call's own in its place, leaving both callers told they had won. So
     // this load stands down and leaves the handler's model standing; sttInit()
     // sees a model other than the one it asked for and refuses with the same
-    // words the sysSTTStateChanged path already uses.
+    // words sttInit() uses for the same standing-down anywhere else.
     if (modelLoadGeneration() != loadGeneration) {
         return true;
     }
@@ -695,7 +702,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     }
     // The commit: mModelPath is set earlier, but the load can still fail until
     // the recognizer exists, and a load that fails has installed nothing.
-    noteModelLoaded();
+    noteModelLoaded(!rebuildingTheModelInPlace);
 
     // Try to determine language from model path (convention: sherpa-onnx-nemotron-speech-streaming-en-0.6b-...)
     const QString dirName = modelDir.dirName();

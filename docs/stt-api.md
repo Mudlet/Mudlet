@@ -100,10 +100,12 @@ for speech-recognition permission, and macOS attributes that request to the
 *responsible process* - which, for anything started from a shell, is the
 application that owns the terminal, not Mudlet. Launched from a terminal
 embedded in an editor, the editor is asked for a usage description it has no
-reason to carry, and the process is killed outright: `Namespace TCC`, with a
-message naming `NSSpeechRecognitionUsageDescription` as missing from
+reason to carry, and macOS used to kill the process outright: `Namespace TCC`,
+with a message naming `NSSpeechRecognitionUsageDescription` as missing from
 `Info.plist` even though Mudlet's own has carried it since the backend was
-added.
+added. Mudlet now notices that it is not its own responsible process and
+refuses the request instead, saying how to relaunch itself as an application,
+so a development build says why rather than disappearing.
 
 Launch the bundle rather than the binary, so Mudlet is its own responsible
 process:
@@ -114,11 +116,16 @@ open build/src/mudlet.app
 
 Double-clicking it in Finder does the same. Running
 `build/src/mudlet.app/Contents/MacOS/mudlet` directly from a shell is what
-provokes the crash - which is also why it is worth knowing before reaching for
+provokes it - which is also why it is worth knowing before reaching for
 `codesign`, since the bundle's signature is not what decides this.
 
-The other two engines never reach any of it: they capture audio themselves
-rather than going through Apple's recognizer.
+The other two engines avoid the *speech-recognition* request specifically: they
+do their own decoding, so nothing asks macOS for
+`NSSpeechRecognitionUsageDescription`. They are not free of the responsible
+process entirely - every engine here records through `SpeechAudioCapture`, and
+microphone access is its own TCC request, attributed to the terminal's owner
+the same way. What differs is only the `SFSpeechRecognizer` authorization call
+the built-in backend makes on top of it.
 
 ## `stt.getInfo()`
 

@@ -355,6 +355,11 @@ bool VoskRecognizer::initialize(const QString& modelPath)
 {
     ++mLoadGeneration;
     const unsigned int loadGeneration = modelLoadGeneration();
+    // Read at the top, because mModelPath is cleared further down before the
+    // native model is built. A load that puts back the model already in place
+    // replaces nothing, and counting it would make a load it interrupted stand
+    // down for a replacement that never happened - see noteModelLoaded().
+    const bool reloadingTheModelInPlace = (mVoskModel != nullptr) && (mModelPath == modelPath);
     // Its own guard, ahead of the availability check and not folded into it:
     // loading a model is a write, and going through loadVoskLibrary() mapped
     // the library back in regardless of the latch stt.unloadLibrary() set - so
@@ -389,7 +394,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // this call's own in its place, leaving both callers told they had won. So
     // this load stands down and leaves the handler's model standing; sttInit()
     // sees a model other than the one it asked for and refuses with the same
-    // words the sysSTTStateChanged path already uses.
+    // words sttInit() uses for the same standing-down anywhere else.
     if (modelLoadGeneration() != loadGeneration) {
         return true;
     }
@@ -433,7 +438,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // Only now is there a model loaded for modelPath() to name; the failure
     // paths above leave it empty, which is what getInfo() promises
     mModelPath = modelPath;
-    noteModelLoaded();
+    noteModelLoaded(!reloadingTheModelInPlace);
 
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
