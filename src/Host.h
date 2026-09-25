@@ -178,6 +178,8 @@ class Host : public QObject
     friend class HostWidgetDecouplingTest;
     // Allows the functional test to answer the keychain lookup in place of a keychain:
     friend class TelnetLatePasswordTest;
+    // Allows the functional test to read and reset the hidden-input flags:
+    friend class PasswordEntryPolicyTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -696,7 +698,6 @@ public:
     QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
-    bool mDisablePasswordMasking = false;
     int commandLineMinimumHeight = 30;
     bool mAlertOnNewData = true;
     bool mAllowToSendCommand = true;
@@ -792,8 +793,46 @@ public:
     void setPrintCommand(bool print) { mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; }
 
 public:
+    // On false: clears every per-hold hidden-input flag, whether or not the
+    // value changes, so that nothing outlives an ECHO hold or a connection.
     void setRemoteEchoingActive(bool active);
     bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
+
+    // Whether the game's request for hidden input (IAC WILL ECHO) should be
+    // answered with a hidden-input box. The inputs are combined in
+    // recomputePasswordEntryWanted() and nowhere else; everything else reads
+    // this and signal_passwordEntryWantedChanged(). Answers with no view, so a
+    // front-end that is not Qt Widgets renders its own box against these calls.
+    bool passwordEntryWanted() const { return mPasswordEntryWanted; }
+    void recomputePasswordEntryWanted();
+    // The profile's "hide nothing" preference, the only write path to it.
+    void setDisablePasswordMasking(const bool disable);
+    bool disablePasswordMasking() const { return mDisablePasswordMasking; }
+    // Esc on an empty box. The first time within one ECHO hold hides the box
+    // until the player's next line goes to the game; the second time hides it
+    // until the game releases ECHO.
+    void dismissPasswordEntry();
+    // A line the player submitted from a command line went to the game, or the
+    // auto-login sent the name. Not a script's, trigger's or timer's send. The
+    // recompute is deferred one event-loop turn so that a re-opened box never
+    // appears from inside the key press that sent the line.
+    void clearPasswordEntryDismissal();
+    // Whether a box opening now follows a dismissal in this hold, for the
+    // wording that tells the player Esc a second time lasts until the game
+    // releases ECHO.
+    bool passwordEntryReopened() const { return mPasswordEntryDismissedOnce; }
+    // cTelnet's one call for the auto-login sending the stored password: no box
+    // until the game releases the ECHO that masked the send, and the auto-login
+    // no longer intends to send one.
+    void autoLoginPasswordSent();
+    // The player started answering in the box, or text they had typed ahead was
+    // moved into it, so no auto-login timer or late keychain password may answer
+    // for them.
+    void passwordEntryEdited();
+    // The only way text leaves the box: straight to cTelnet::sendData() with the
+    // sysDataSendRequest event withheld - no alias pass, no command-separator
+    // split, no local echo, no history. Empty sends an empty line.
+    bool sendPasswordEntry(QString line);
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
@@ -1054,6 +1093,8 @@ signals:
     void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
     void signal_remoteEchoChanged(bool enabled);
+    // Emitted only when passwordEntryWanted() changes.
+    void signal_passwordEntryWantedChanged(bool wanted);
     void signal_forceMXPProcessorOnChanged(bool enabled);
     // The frontend (TMainConsole) owns the dialogs these drive; the strings are
     // built here so they stay in Host's translation context.
@@ -1350,6 +1391,17 @@ private:
     // Tracks which command line was last used for this profile so that we can
     // return to it when switching between profiles:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    bool mDisablePasswordMasking = false;
+    // The last value passwordEntryWanted() answered and the signal carried.
+    bool mPasswordEntryWanted = false;
+    // Per ECHO hold, cleared by setRemoteEchoingActive(false): no box until the
+    // game releases ECHO (a second Esc, or the auto-login answered under the
+    // mask); no box until the player's next line goes to the game (a first Esc);
+    // and whether a first Esc has happened in this hold.
+    bool mPasswordEntrySuppressed = false;
+    bool mPasswordEntryDismissed = false;
+    bool mPasswordEntryDismissedOnce = false;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple

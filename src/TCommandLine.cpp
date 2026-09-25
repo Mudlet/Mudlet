@@ -1059,7 +1059,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
     // Save to history if not empty, unless we're in password mode (remote echo suppression)
     // Exception: when password masking is disabled, history should work normally
-    if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->mDisablePasswordMasking)) {
+    if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
@@ -1721,7 +1721,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
     }
 
     // If password masking is disabled by user preference, don't activate it
-    if (suppress && mpHost->mDisablePasswordMasking) {
+    if (suppress && mpHost->disablePasswordMasking()) {
         return;
     }
 

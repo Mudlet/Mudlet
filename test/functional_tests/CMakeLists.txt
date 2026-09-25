@@ -138,6 +138,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
+    PasswordEntryPolicyTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp

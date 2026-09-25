@@ -280,6 +280,14 @@ public:
     // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
+    // Whether the auto-login still intends to send the stored password: from the
+    // connection being made until the password step has run, been cancelled or
+    // reset. An explicit flag rather than a timer query, so that every one of its
+    // transitions is a call that tells the Host to recompute its hidden-input
+    // policy - unless the caller is about to do that itself.
+    bool autoLoginPending() const { return mAutoLoginPending; }
+    void setAutoLoginPending(const bool pending, const bool recompute = true);
+    bool autoLoginTimersRunning() const;
     // Called when a password turns up after the auto-login already reached the password step -
     // a keychain read the user only answered by then. Sends it only while the game is provably
     // still waiting at that prompt, see the definition.
@@ -377,6 +385,8 @@ private:
     // character-at-a-time detection timer and flags, which have no public face,
     // and fires those timers early rather than waiting them out.
     friend class TelnetPasswordMaskTimeoutTest;
+    // Allows the functional test to drive the auto-login and ECHO state directly:
+    friend class PasswordEntryPolicyTest;
 
     // Calls reset() from its constructor. It has to be the Host that does that,
     // and not cTelnet itself, because reset() clears Host members declared after
@@ -585,6 +595,7 @@ private:
 
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    bool mAutoLoginPending = false;
     // Set when the auto-login reached the password step with no password in hand, which is where
     // an unanswered keychain prompt leaves it. It is the record of the game sitting at its
     // password prompt that sendOutstandingAutoLoginPassword() needs to decide whether a password

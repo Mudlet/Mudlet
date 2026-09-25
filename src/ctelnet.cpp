@@ -263,6 +263,9 @@ void cTelnet::reset()
     }
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
+    // After the ECHO state has gone, not before: a disconnect during the
+    // auto-login would otherwise open a hidden-input box on a dead connection.
+    setAutoLoginPending(false);
     mGA_Driver = false;
     // An outstanding measurement belongs to the connection being reset, so the
     // next connection's first packet must not be taken for its reply
@@ -428,6 +431,20 @@ void cTelnet::cancelLoginTimers()
     // prompt left to answer and a password arriving later must not be typed into that session
     mAutoLoginPasswordOutstanding = false;
     mAutoLoginPasswordOutstandingSince.invalidate();
+    setAutoLoginPending(false);
+}
+
+void cTelnet::setAutoLoginPending(const bool pending, const bool recompute)
+{
+    mAutoLoginPending = pending;
+    if (recompute && mpHost) {
+        mpHost->recomputePasswordEntryWanted();
+    }
+}
+
+bool cTelnet::autoLoginTimersRunning() const
+{
+    return (mTimerLogin && mTimerLogin->isActive()) || (mTimerPass && mTimerPass->isActive());
 }
 
 // This configures the encoding for all outgoing data and incoming OutOfBand data
@@ -903,14 +920,19 @@ void cTelnet::slot_send_login()
 {
     if (!mpHost->getLogin().isEmpty()) {
         sendData(mpHost->getLogin());
+        // The name answered a prompt the player may have stepped past with Esc,
+        // so the password prompt that follows gets its hidden-input box.
+        mpHost->clearPasswordEntryDismissal();
     }
-    if (mpHost->hasAutoLoginCredentials()) {
+    const bool passwordStepArmed = mpHost->hasAutoLoginCredentials();
+    if (passwordStepArmed) {
         QSettings& settings = *MudletApp::getQSettings();
         bool passwordDelayOk = false;
         const int passwordDelayRaw = settings.value(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS).toInt(&passwordDelayOk);
         const auto passwordDelay = qBound(0, passwordDelayOk ? passwordDelayRaw : AUTO_LOGIN_PASSWORD_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
         mTimerPass->start(std::chrono::milliseconds(passwordDelay));
     }
+    setAutoLoginPending(passwordStepArmed);
 }
 
 void cTelnet::slot_send_pass()
@@ -924,6 +946,9 @@ void cTelnet::slot_send_pass()
         // without doing anything.
         if (sendData(mpHost->getPass(), false)) {
             restartPasswordMaskTimeout();
+            mpHost->autoLoginPasswordSent();
+        } else {
+            setAutoLoginPending(false);
         }
         return;
     }
@@ -933,6 +958,10 @@ void cTelnet::slot_send_pass()
     mAutoLoginPasswordOutstanding = true;
     mAutoLoginPasswordMaskWithdrawn = false;
     mAutoLoginPasswordOutstandingSince.start();
+    // Nothing is going to be typed for the player unless a password arrives
+    // inside the window, so the box may open for them to type it themselves; the
+    // first character they type cancels the late send.
+    setAutoLoginPending(false);
     qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
 }
 
@@ -985,6 +1014,7 @@ void cTelnet::sendOutstandingAutoLoginPassword()
     // slot_send_pass() does, against a game that never releases the mask after it
     if (sendData(mpHost->getPass(), false)) {
         restartPasswordMaskTimeout();
+        mpHost->autoLoginPasswordSent();
     }
 }
 
@@ -1077,6 +1107,7 @@ void cTelnet::slot_socketConnected()
     const int usernameDelayRaw = settings.value(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS).toInt(&usernameDelayOk);
     const auto usernameDelay = qBound(0, usernameDelayOk ? usernameDelayRaw : AUTO_LOGIN_USERNAME_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
     mTimerLogin->start(std::chrono::milliseconds(usernameDelay));
+    setAutoLoginPending(mpHost->hasAutoLoginCredentials());
 
     emit signal_connected(mpHost);
 
@@ -1696,12 +1727,19 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
-        auto errorMsgTemplate = "[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.";
+        // The event is withheld only for the auto-login password and the
+        // hidden-input box, so a line it was withheld for is never quoted.
+        const auto encodingWarning = [&]() {
+            if (permitDataSendRequestEvent) {
+                return tr("[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.", "%1 is the command that was sent to the game.").arg(data);
+            }
+            //: Shown instead of quoting the text when the line the game is unlikely to understand was hidden input - a password - so that it never appears on screen
+            return tr("[ WARN ]  - Tried to send hidden input to the game, but it is unlikely to understand it.");
+        };
         if (!mEncoding.isEmpty()) {
             if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 if ((!mEncodingWarningIssued) && (!TEncodingHelper::canEncode(data, mEncoding))) {
-                    QString errorMsg = tr(errorMsgTemplate, "%1 is the command that was sent to the game.").arg(data);
-                    postMessage(errorMsg);
+                    postMessage(encodingWarning());
                     mEncodingWarningIssued = true;
                 }
                 // Even if there are bad characters - try to send it anyway...
@@ -1725,8 +1763,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
             // Plain, raw ASCII, we hope!
             for (const auto c : std::as_const(data)) {
                 if ((!mEncodingWarningIssued) && (c.row() || c.cell() > 127)) {
-                    QString errorMsg = tr(errorMsgTemplate, "%1 is the command that was sent to the game.").arg(data);
-                    postMessage(errorMsg);
+                    postMessage(encodingWarning());
                     mEncodingWarningIssued = true;
                     break;
                 }
@@ -6486,7 +6523,7 @@ void cTelnet::restartPasswordMaskTimeout()
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
     }
-    if (!mpHost || mpHost->mDisablePasswordMasking || mCharacterModeDetected) {
+    if (!mpHost || mpHost->disablePasswordMasking() || mCharacterModeDetected) {
         return;
     }
     if (!mConnectionTimer.isValid() || mConnectionTimer.durationElapsed() >= PASSWORD_MASK_LOGIN_PHASE) {
