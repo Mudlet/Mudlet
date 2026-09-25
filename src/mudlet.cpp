@@ -32,6 +32,7 @@
 #include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
 #include "DarkTheme.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "TBuffer.h"
 #include "TDebug.h"
@@ -3912,6 +3913,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_showMapperScriptReminder, pConsole, &TMainConsole::showMapperScriptReminder, Qt::UniqueConnection);
     connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
     connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
+    HostDialogs::connectTeardown(pH);
 
     // Wire the map engine's progress signals to the console that owns the dialog.
     // Must be connected before the profile's map is loaded (further down in

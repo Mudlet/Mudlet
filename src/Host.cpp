@@ -27,10 +27,7 @@
 
 #include "discord.h"
 #include "MudletApp.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
-#include "dlgNotepad.h"
-#include "dlgTriggerEditor.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "HostManager.h"
@@ -491,30 +488,7 @@ Host::~Host()
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
 
-    // The editor is a parentless top-level window, so delete it here while the
-    // units it references are still alive. Null the QPointer first: it only
-    // clears itself once ~QObject is reached, so anything looking at
-    // mpEditorDialog mid-teardown would find a half-destroyed widget:
-    if (auto* pEditor = mpEditorDialog.data()) {
-        mpEditorDialog = nullptr;
-        disconnect(this, nullptr, pEditor, nullptr);
-        delete pEditor;
-    }
-
-    if (auto* pNotePad = mpNotePad.data()) {
-        if (mudlet::self()) {
-            pNotePad->save();
-            pNotePad->close();
-        }
-        mpNotePad = nullptr;
-        disconnect(this, nullptr, pNotePad, nullptr);
-        delete pNotePad;
-    }
-
-    if (auto* pDlgIRC = mpDlgIRC.data()) {
-        mpDlgIRC = nullptr;
-        delete pDlgIRC;
-    }
+    emit signal_destroyProfileDialogs();
 
     for (const auto& pToolBar : mActionUnit.getToolBarList()) {
         delete pToolBar.data();
@@ -599,15 +573,7 @@ void Host::closeChildren()
 
     stopAllTriggers();
 
-    if (mpEditorDialog) {
-        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-        mpEditorDialog->close();
-        // close() only posts the deletion, so the dialog outlives this release.
-        // Cutting the signals with the pointer is what keeps an emit from
-        // reaching an editor the Host has already let go of:
-        disconnect(this, nullptr, mpEditorDialog, nullptr);
-        mpEditorDialog = nullptr;
-    }
+    emit signal_closeProfileDialogs();
 
     // A snapshot of the names rather than a live walk: closing one takes its own
     // entry - and, for a user window, its dock's - out of the registry.
@@ -615,26 +581,11 @@ void Host::closeChildren()
         mpConsole->closeSubConsole(consoleName);
     }
 
-    if (mpNotePad) {
-        mpNotePad->save();
-        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-        mpNotePad->close();
-        disconnect(this, nullptr, mpNotePad, nullptr);
-        mpNotePad = nullptr;
-    }
-
     for (TToolBar* pTB : hostToolBarMap) {
         if (pTB) {
             pTB->setAttribute(Qt::WA_DeleteOnClose);
             pTB->deleteLater();
         }
-    }
-
-    // close IRC client window if it is open.
-    if (mpDlgIRC) {
-        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        mpDlgIRC->deleteLater();
-        mpDlgIRC = nullptr;
     }
 }
 
