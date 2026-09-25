@@ -2218,11 +2218,11 @@ void TRoom::readJsonDoor(const QJsonObject& obj, const QString& dir)
         doors.insert(dir, 3);
         return;
     }
-    if (Q_UNLIKELY(doorString == QLatin1String("none"))) {
-        return;
+    if (doorString != QLatin1String("none")) {
+        // The file may have been edited by hand or written by another tool,
+        // so an unknown type is dropped rather than trusted to never occur:
+        qWarning().nospace().noquote() << "TRoom::readJsonDoor(...) WARNING - the door type: \"" << doorString << "\" on the exit: \"" << dir << "\" is not understood, ignoring it.";
     }
-    qCritical().nospace().noquote() << "TRoom::readJsonDoor(...) CRITICAL - a type of door: \"" << dir << "\" is not understood!";
-    Q_UNREACHABLE(); // No other string expected
 }
 
 // This tacks on extra details onto the calling exitObj if there IS a custom line:
