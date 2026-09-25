@@ -17,11 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QCursor>
 #include <QFile>
+#include <QFontDatabase>
 #include <QImage>
 #include <QMovie>
 #include <QPointer>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -2519,6 +2522,93 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         // back out of it is what says the map now holds a live replacement.
         runLua(host, qsl("setTextEditText('%1', 'the replacement is reachable')\nroundTrippedText = tostring(getTextEditText('%1'))\n").arg(textBoxName));
         QCOMPARE(luaGlobalString(host, "roundTrippedText"), qsl("the replacement is reachable"));
+    }
+
+    // Most of the text edit setters go to the view by name and cannot be read
+    // back by a script, so this checks that each reaches the widget.
+    void test_textEditSettersReachTheirWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString textBoxName = qsl("byNameTextBox");
+        runLua(host, qsl("createTextEdit('main', '%1', 0, 0, 100, 50)\n").arg(textBoxName));
+        TTextBox* textBox = host->mpConsole->textBoxWidget(textBoxName);
+        QVERIFY2(textBox, "createTextEdit() made no widget.");
+
+        runLua(host,
+               qsl("setTextEditReadOnly('%1', true)\n"
+                   "setTextEditTabMovesFocus('%1', true)\n"
+                   "setTextEditPlaceholder('%1', 'type here')\n"
+                   "setTextEditStyleSheet('%1', 'QPlainTextEdit { color: red; }')\n"
+                   "setTextEditFontSize('%1', 17)\n"
+                   "setTextEditFont('%1', 'Ubuntu Mono')\n")
+                       .arg(textBoxName));
+        QVERIFY(textBox->isReadOnly());
+        QVERIFY(textBox->tabChangesFocus());
+        QCOMPARE(textBox->placeholderText(), qsl("type here"));
+        QCOMPARE(textBox->styleSheet(), qsl("QPlainTextEdit { color: red; }"));
+        QCOMPARE(textBox->font().family(), qsl("Ubuntu Mono"));
+        QCOMPARE(textBox->font().pointSize(), 17);
+
+        runLua(host, qsl("setTextEditReadOnly('%1', false)\nsetTextEditTabMovesFocus('%1', false)\nsetTextEditFontSize('%1', 11)\n").arg(textBoxName));
+        QVERIFY(!textBox->isReadOnly());
+        QVERIFY(!textBox->tabChangesFocus());
+        QCOMPARE(textBox->font().family(), qsl("Ubuntu Mono"));
+        QCOMPARE(textBox->font().pointSize(), 11);
+    }
+
+    // setFont() gives a label a new family and weight but keeps its size, which
+    // getFont() does not report.
+    void test_setFontKeepsALabelsPointSize()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("byNameLabel");
+        runLua(host, qsl("createLabel('%1', 0, 0, 100, 20, 1)\n").arg(labelName));
+        TLabel* label = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(label, "createLabel() made no widget.");
+        QFont sizedFont = label->font();
+        sizedFont.setPointSize(19);
+        label->setFont(sizedFont);
+        QVERIFY2(host->getDisplayFont().pointSize() != 19, "The label's size is the display font's, so this cannot tell the two apart.");
+
+        // A test binary never copies the bundled fonts out of the resources the
+        // way a real start does, and setFont() refuses a family it cannot find
+        const int fontId = QFontDatabase::addApplicationFont(qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf"));
+        QVERIFY2(fontId != -1, "Could not register the bundled Ubuntu Mono font.");
+        const auto unregisterFont = qScopeGuard([fontId]() {
+            QFontDatabase::removeApplicationFont(fontId);
+        });
+
+        runLua(host, qsl("labelFontSet, labelFontError = setFont('%1', 'Ubuntu Mono Bold')\nlabelFontSet = tostring(labelFontSet)\nlabelFontError = tostring(labelFontError)\n").arg(labelName));
+        QVERIFY2(luaGlobalString(host, "labelFontSet") == qsl("true"), qPrintable(qsl("setFont() refused the label: %1").arg(luaGlobalString(host, "labelFontError"))));
+        QCOMPARE(label->font().family(), qsl("Ubuntu Mono"));
+        QCOMPARE(label->font().weight(), QFont::Bold);
+        QCOMPARE(label->font().pointSize(), 19);
+    }
+
+    void test_getMousePositionIsRelativeToTheMainConsole()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QPoint local(13, 7);
+        const QPoint global = host->mpConsole->mapToGlobal(local);
+        QVERIFY2(global != local, "The main console sits at the screen origin, so this cannot tell its coordinates from the screen's.");
+        QCursor::setPos(global);
+        QCOMPARE(QCursor::pos(), global);
+
+        runLua(host, qsl("mouseX, mouseY = getMousePosition()\n"));
+        QCOMPARE(luaGlobalNumber(host, "mouseX"), local.x());
+        QCOMPARE(luaGlobalNumber(host, "mouseY"), local.y());
     }
 
     // A scroll box inside a scroll box is one of this console's own recursive
