@@ -2782,19 +2782,12 @@ int TLuaInterpreter::selectCmdLineText(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (isMain(name)) {
-        auto pConsole = getHostFromLua(L).mpConsole;
-        if (!pConsole) {
-            lua_pushnil(L);
-            lua_pushfstring(L, bad_cmdline_value, name.toUtf8().constData());
-            return 2;
-        }
-        pConsole->selectCommandLineText();
-        lua_pushboolean(L, true);
-        return 1;
-    }
     auto commandline = COMMANDLINE(L, name);
-    commandline->selectAll();
+    if (isMain(name)) {
+        getHostFromLua(L).mpConsole->selectCommandLineText();
+    } else {
+        commandline->selectAll();
+    }
     lua_pushboolean(L, true);
     return 1;
 }

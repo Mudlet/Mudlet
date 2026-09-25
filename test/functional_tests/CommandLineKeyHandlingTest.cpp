@@ -482,6 +482,25 @@ private slots:
         QCOMPARE(selection(pCommandLine), qsl("lo world"));
     }
 
+    // A password typed at a game's login prompt arrives with remote echo on -
+    // past the hidden-input box, after an Esc - and must not be left in a
+    // history the next player at the keyboard can page through.
+    void test_aPasswordIsNotKeptInTheHistory()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("ordinarycommandbefore"));
+
+        mpHost->setRemoteEchoingActive(true);
+        sendCommand(pCommandLine, qsl("hunter2secret"));
+        mpHost->setRemoteEchoingActive(false);
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QVERIFY2(pCommandLine->toPlainText() != qsl("hunter2secret"), "the password typed at the game's prompt was kept in the command history");
+        QCOMPARE(pCommandLine->toPlainText(), qsl("ordinarycommandbefore"));
+    }
+
     // Tab completes the word being typed from what the game has said recently,
     // and pressing it again cycles on to the next match.
     void test_tabCompletesAWordFromTheConsoleBuffer()

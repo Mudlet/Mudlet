@@ -1211,16 +1211,14 @@ void TMainConsole::printToCommandLine(const QString& text)
 void TMainConsole::appendToCommandLine(const QString& text)
 {
     if (mpPasswordEntry) {
+        // A script's write is not the player's first edit, which insert() would
+        // otherwise report through textEdited and cancel the auto-login with
+        const QSignalBlocker blocker(mpPasswordEntry);
         mpPasswordEntry->end(false);
         mpPasswordEntry->insert(text);
         return;
     }
-    mpCommandLine->setPlainText(mpCommandLine->toPlainText() + text);
-    QTextCursor cursor = mpCommandLine->textCursor();
-    cursor.clearSelection();
-    cursor.movePosition(QTextCursor::EndOfLine);
-    mpCommandLine->setTextCursor(cursor);
-    mpCommandLine->adjustHeight();
+    printToCommandLine(mpCommandLine->toPlainText() + text);
 }
 
 void TMainConsole::clearCommandLine()
@@ -1240,11 +1238,6 @@ void TMainConsole::selectCommandLineText()
         return;
     }
     mpCommandLine->selectAll();
-}
-
-QString TMainConsole::commandLineText() const
-{
-    return mpCommandLine->toPlainText();
 }
 
 TPasswordEntry* TMainConsole::passwordEntry() const
@@ -1286,9 +1279,17 @@ void TMainConsole::openPasswordEntry()
         QString typedAhead = mpCommandLine->toPlainText();
         typedAhead.remove(QChar::CarriageReturn);
         typedAhead.remove(QChar::LineFeed);
-        mpPasswordEntry->setText(typedAhead);
-        mpCommandLine->clear();
-        mpHost->passwordEntryEdited();
+        if (!typedAhead.isEmpty()) {
+            mpPasswordEntry->setText(typedAhead);
+            mpCommandLine->clear();
+            mpHost->passwordEntryEdited();
+        }
+    }
+
+    // Before the box takes focus, so that a screen reader's focus announcement
+    // reads the wording of a box that follows an Esc
+    if (mpHost->passwordEntryReopened()) {
+        mpPasswordEntry->setReopened();
     }
 
     // The window's focus child, which is valid while Mudlet is not the active
@@ -1314,10 +1315,6 @@ void TMainConsole::openPasswordEntry()
     }
 
     connect(mpPasswordEntry, &TPasswordEntry::dismissed, mpHost, &Host::dismissPasswordEntry);
-
-    if (mpHost->passwordEntryReopened()) {
-        mpPasswordEntry->setReopened();
-    }
 
     if (mpHost->readProfileData(qsl("passwordEntryIntroduced")).isEmpty()) {
         mpHost->writeProfileData(qsl("passwordEntryIntroduced"), qsl("1"));

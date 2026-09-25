@@ -284,9 +284,8 @@ public:
     // connection being made until the password step has run, been cancelled or
     // reset. An explicit flag rather than a timer query, so that every one of its
     // transitions is a call that tells the Host to recompute its hidden-input
-    // policy - unless the caller is about to do that itself.
+    // policy - which is why only this class and the Host may write it.
     bool autoLoginPending() const { return mAutoLoginPending; }
-    void setAutoLoginPending(const bool pending, const bool recompute = true);
     bool autoLoginTimersRunning() const;
     // Called when a password turns up after the auto-login already reached the password step -
     // a keychain read the user only answered by then. Sends it only while the game is provably
@@ -597,6 +596,7 @@ private:
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
     bool mAutoLoginPending = false;
+    void setAutoLoginPending(const bool pending);
     // Set when the auto-login reached the password step with no password in hand, which is where
     // an unanswered keychain prompt leaves it. It is the record of the game sitting at its
     // password prompt that sendOutstandingAutoLoginPassword() needs to decide whether a password

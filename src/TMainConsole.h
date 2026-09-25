@@ -50,6 +50,11 @@ class TMainConsole : public TConsole
 {
     Q_OBJECT
 
+    // The only way to the hidden-input box widget: its tests, so that nothing
+    // else in the tree can read what is typed into it
+    friend class PasswordEntryTest;
+    friend class HostChildTeardownTest;
+
 public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
     ~TMainConsole();
@@ -179,11 +184,7 @@ public:
     void appendToCommandLine(const QString& text);
     void clearCommandLine();
     void selectCommandLineText();
-    QString commandLineText() const;
     TCommandLine* raiseCommandLine();
-    // The box the game's request for hidden input is answered with, while one
-    // is up - for tests; nothing else needs the widget.
-    TPasswordEntry* passwordEntry() const;
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // One set of operations for scroll boxes, command lines and text boxes
     // together rather than one per kind: each is the same plain QWidget call
@@ -287,6 +288,9 @@ private:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void openPasswordEntry();
     void closePasswordEntry();
+    // The box the game's request for hidden input is answered with, while one
+    // is up.
+    TPasswordEntry* passwordEntry() const;
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     // Where reparentLabel() and reparentWindow() parent an element named as a
     // setWindow() destination, shared so the two cannot disagree about what

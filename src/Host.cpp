@@ -6382,12 +6382,13 @@ void Host::sendCmdLine(const QString& cmd)
 void Host::setRemoteEchoingActive(bool active)
 {
     if (!active) {
-        // Before the change guard: cTelnet::reset() makes this call while ECHO
-        // is already off, and that must still end a hold's dismissal or
-        // suppression, or it would outlive the connection.
+        // Whether or not the value changes: cTelnet::reset() makes this call
+        // while ECHO is already off, and that must still end a hold's dismissal
+        // or suppression, or it would outlive the connection.
         mPasswordEntrySuppressed = false;
         mPasswordEntryDismissed = false;
         mPasswordEntryDismissedOnce = false;
+        mPasswordEntryDismissalEnding = false;
     }
     mIsRemoteEchoingActive = active;
     recomputePasswordEntryWanted();
@@ -6417,18 +6418,29 @@ void Host::dismissPasswordEntry()
         mPasswordEntryDismissed = true;
         mPasswordEntryDismissedOnce = true;
     }
+    mPasswordEntryDismissalEnding = false;
     recomputePasswordEntryWanted();
 }
 
-void Host::clearPasswordEntryDismissal()
+void Host::playerSentLineFromCommandLine()
 {
-    if (!mPasswordEntryDismissed) {
+    if (mPasswordEntryDismissed) {
+        mPasswordEntryDismissalEnding = true;
+    }
+}
+
+void Host::gameDataArrived()
+{
+    // Ended by the game's answer rather than by the line itself: a box that
+    // came back the moment Enter was pressed would flicker up and be closed
+    // again by the WONT that follows an accepted password a round trip later,
+    // and would eat whatever was typed meanwhile.
+    if (!mPasswordEntryDismissalEnding) {
         return;
     }
+    mPasswordEntryDismissalEnding = false;
     mPasswordEntryDismissed = false;
-    QTimer::singleShot(0ms, this, [this]() {
-        recomputePasswordEntryWanted();
-    });
+    recomputePasswordEntryWanted();
 }
 
 void Host::autoLoginPasswordSent()
@@ -6438,12 +6450,11 @@ void Host::autoLoginPasswordSent()
     if (mIsRemoteEchoingActive) {
         mPasswordEntrySuppressed = true;
     }
-    // Both inputs written, then one recompute - written one at a time, the
-    // pending flag falling first would open a box for an instant, move text the
-    // player had typed ahead into it and destroy that text when the suppression
-    // closed it again.
-    mTelnet.setAutoLoginPending(false, false);
-    recomputePasswordEntryWanted();
+    // The suppression is written before the pending flag falls, as that
+    // recomputes: the other way round would open a box for an instant, move
+    // text the player had typed ahead into it and destroy that text when the
+    // suppression closed it again.
+    mTelnet.setAutoLoginPending(false);
 }
 
 void Host::passwordEntryEdited()
@@ -6451,7 +6462,7 @@ void Host::passwordEntryEdited()
     mTelnet.cancelLoginTimers();
 }
 
-bool Host::sendPasswordEntry(QString line)
+bool Host::sendPasswordEntry(QString&& line)
 {
     // As send() does, for the GMCP sign-in path:
     mUserSentInputThisConnection = true;
@@ -6466,8 +6477,9 @@ bool Host::sendPasswordEntry(QString line)
     const bool sent = mTelnet.sendData(line, false, true);
     // The player answered; no timer or late keychain password may answer too.
     mTelnet.cancelLoginTimers();
-    // The box has already dropped its copy, so this is the last owner of the
-    // text. Best effort only: the encoder and the socket have made their own.
+    // The box has already dropped its copy and the caller moved its own in, so
+    // this is the last owner of the buffer the keystrokes went into. Best effort
+    // only: the encoder and the socket have made their own copies.
     line.fill(QChar());
     return sent;
 }

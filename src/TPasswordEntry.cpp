@@ -29,6 +29,7 @@
 #include "mudlet.h"
 
 #include <QAction>
+#include <QClipboard>
 #include <QContextMenuEvent>
 #include <QKeyEvent>
 #include <QMenu>
@@ -42,15 +43,6 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
 , mpCommandLine(pCommandLine)
 {
     setObjectName(qsl("passwordEntry_%1").arg(pHost->getName()));
-    setEchoMode(QLineEdit::Password);
-    applyInputMethodHints();
-    setClearButtonEnabled(false);
-    setFrame(true);
-    setDragEnabled(false);
-    setFocusPolicy(Qt::StrongFocus);
-    // The context menu is built in contextMenuEvent(); Qt::PreventContextMenu
-    // would stop that event from being delivered at all.
-    setContextMenuPolicy(Qt::DefaultContextMenu);
     setFont(pCommandLine->font());
     // The command line's palette sets its text colour after construction, so
     // its placeholder colour is still derived from the default text colour -
@@ -73,26 +65,38 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
 
     // So that a keychain password arriving late cannot be typed over a player
     // who has started answering
-    connect(this, &QLineEdit::textEdited, this, [this]() {
-        if (mpHost) {
-            mpHost->passwordEntryEdited();
-        }
-    });
+    connect(this, &QLineEdit::textEdited, pHost, &Host::passwordEntryEdited);
+
+    // A revealed password is still not for the selection clipboard: QLineEdit
+    // copies a Normal-mode selection there on every mouse release and keyboard
+    // selection, and a middle click would then paste it into a command line
+    if (QClipboard* pClipboard = QGuiApplication::clipboard(); pClipboard->supportsSelection()) {
+        connect(pClipboard, &QClipboard::selectionChanged, this, &TPasswordEntry::slot_selectionClipboardChanged);
+    }
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TPasswordEntry::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
 }
 
-void TPasswordEntry::applyInputMethodHints()
+void TPasswordEntry::slot_selectionClipboardChanged()
 {
-    // setEchoMode(Normal) clears these, so they are put back after every change
-    setInputMethodHints(inputMethodHints() | Qt::ImhHiddenText | Qt::ImhSensitiveData | Qt::ImhNoPredictiveText | Qt::ImhNoAutoUppercase);
+    QClipboard* pClipboard = QGuiApplication::clipboard();
+    if (echoMode() != QLineEdit::Normal || !pClipboard->ownsSelection()) {
+        return;
+    }
+    // Only what came from this box: a selection made in an output pane
+    // meanwhile is left alone. Cleared before any other application can ask
+    // for it, since requests are served by this event loop.
+    if (pClipboard->text(QClipboard::Selection) == selectedText()) {
+        pClipboard->clear(QClipboard::Selection);
+    }
 }
 
 void TPasswordEntry::setRevealed(const bool revealed)
 {
     setEchoMode(revealed ? QLineEdit::Normal : QLineEdit::Password);
-    applyInputMethodHints();
+    // setEchoMode(Normal) clears these, so they are put back after every change
+    setInputMethodHints(inputMethodHints() | Qt::ImhHiddenText | Qt::ImhSensitiveData | Qt::ImhNoPredictiveText | Qt::ImhNoAutoUppercase);
     if (revealed) {
         mpRevealAction->setIcon(QIcon(qsl(":/icons/password-show-off.png")));
         //: Name and tooltip of the button that hides the text typed into the hidden-input box again
@@ -137,7 +141,7 @@ void TPasswordEntry::slot_adjustAccessibleNames()
 
 void TPasswordEntry::submit()
 {
-    // The one place the text is read
+    // The one place the text leaves the box
     QString line = text();
     // A pasted line break must never make a second line: sendData() strips only
     // the line feed
@@ -146,12 +150,38 @@ void TPasswordEntry::submit()
     // Hidden again before the text goes, so that VoiceOver does not read the
     // removed text aloud and a later destruction zero-fills the buffer
     setRevealed(false);
-    // Also clears the undo history
+    // Also clears the undo history, and leaves `line` the last holder of the
+    // buffer the keystrokes went into, for the send path to zero
     setText(QString());
-    mpHost->sendPasswordEntry(line);
-    //: Placeholder text of the hidden-input box after Enter, while the game still hides input
-    setPlaceholderText(tr("Sent - waiting for the game"));
+    if (mpHost->sendPasswordEntry(std::move(line))) {
+        //: Placeholder text of the hidden-input box after Enter, while the game still hides input
+        setPlaceholderText(tr("Sent - waiting for the game"));
+    } else {
+        // Nothing to write to - the connection is gone, or this is a replay -
+        // and the text is already dropped, so say so rather than claim a send
+        //: Placeholder text of the hidden-input box after Enter when the line could not be sent because Mudlet is not connected to the game
+        setPlaceholderText(tr("Not sent - not connected to the game"));
+        //: Shown in the game window when Enter in the hidden-input box could not send the line because Mudlet is not connected to the game
+        mpHost->postMessage(tr("[ WARN ]  - The line typed into the hidden-input box was not sent: Mudlet is not connected to the game."));
+    }
     emit submitted();
+}
+
+// What Ctrl+C means from the command line when an output pane holds a
+// selection: that selection, never the command line's own text.
+bool TPasswordEntry::copyConsoleSelection()
+{
+    TConsole* pConsole = mpCommandLine->console();
+    if (!pConsole) {
+        return false;
+    }
+    for (TTextEdit* pPane : {pConsole->mUpperPane, pConsole->mLowerPane}) {
+        if (pPane && !pPane->mSelectedRegion.isEmpty()) {
+            pPane->slot_copySelectionToClipboard();
+            return true;
+        }
+    }
+    return false;
 }
 
 bool TPasswordEntry::event(QEvent* event)
@@ -187,10 +217,9 @@ bool TPasswordEntry::event(QEvent* event)
 
 void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
 {
-    constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     // macOS delivers the arrow keys with the keypad modifier, so it does not
     // count as one - as TCommandLine treats them
-    const Qt::KeyboardModifiers modifiers = ke->modifiers() & (allModifiers & ~Qt::KeypadModifier);
+    const Qt::KeyboardModifiers modifiers = ke->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::GroupSwitchModifier);
 
     // A screen-reader user must be able to leave for the output pane to re-read
     // the prompt without losing the box
@@ -235,9 +264,14 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
         break;
     }
 
-    // In both echo modes: a revealed password is still not for the clipboard,
-    // and undo after a submit would bring the text back
-    if (ke->matches(QKeySequence::Copy) || ke->matches(QKeySequence::Cut) || ke->matches(QKeySequence::Undo) || ke->matches(QKeySequence::Redo)) {
+    if (ke->matches(QKeySequence::Copy)) {
+        copyConsoleSelection();
+        return;
+    }
+    // In both echo modes: a revealed password is still not for the clipboard.
+    // setText() after a submit or an Esc already clears the undo history, so
+    // the undo swallow is defence in depth.
+    if (ke->matches(QKeySequence::Cut) || ke->matches(QKeySequence::Undo) || ke->matches(QKeySequence::Redo)) {
         return;
     }
 

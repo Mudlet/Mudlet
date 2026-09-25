@@ -732,10 +732,9 @@ void TLabel::slot_linkActivated(const QString& link)
             // prompt: scheme - put text in command line and wait for user to press enter
             if (mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
                 QPointer<TCommandLine> commandLine = mpHost->mpConsole->mpCommandLine;
-                commandLine->setPlainText(payload);
-                QTextCursor cursor = commandLine->textCursor();
-                cursor.movePosition(QTextCursor::End);
-                commandLine->setTextCursor(cursor);
+                // Through the console, so that the text lands where Enter is
+                // while the hidden-input box stands over the command line
+                mpHost->mpConsole->printToCommandLine(payload);
                 // Defer the focus operation to avoid issues with QPointer manipulation
                 // during the signal handler execution
                 QTimer::singleShot(0ms, commandLine.data(), [commandLine]() {

@@ -26,7 +26,7 @@ auto-login (below).
 
 | Piece | Where |
 | --- | --- |
-| Policy: `passwordEntryWanted()`, its inputs and mutators, `sendPasswordEntry()`, the one signal | `Host` (core side of the libmudlet split; answers with no view) |
+| Policy: `passwordEntryWanted()`, its inputs and mutators, `sendPasswordEntry()`, the one signal | `Host` (core side of the core/front-end split, #9011; answers with no view) |
 | The auto-login-pending input and the encoding warning that never quotes hidden input | `cTelnet` |
 | The box itself: key surface, placeholder wording, reveal toggle, Paste-only menu | `TPasswordEntry` (front-end) |
 | Open, close, focus, geometry, the one-time info line, Lua writes to "main" | `TMainConsole` |
@@ -38,24 +38,29 @@ auto-login (below).
 `Host::passwordEntryWanted()` is
 `echo && !preference && !suppressed && !dismissed && !autoLoginPending`, computed in
 `recomputePasswordEntryWanted()` and nowhere else. `suppressed`, `dismissed` and the Esc
-count are per ECHO hold and cleared by every `setRemoteEchoingActive(false)`, before its
-change guard, so nothing outlives a hold or a connection. A transition that changes two
-inputs goes through one Host method that recomputes once, because a Lua spec must see the
-result the moment `feedTelnet` returns.
+count are per ECHO hold and cleared by every `setRemoteEchoingActive(false)`, whether or
+not the value changes, so nothing outlives a hold or a connection. A transition that
+changes two inputs goes through one Host method that recomputes once, because a Lua spec
+must see the result the moment `feedTelnet` returns; nothing is deferred.
 
 ## Rules the code keeps
 
 1. No code path writes text out of the box into the command line, its history, its
    document or its selection. Text may move *into* the box from the command line when it
    opens (below).
-2. The box's text is read in exactly one place, `TPasswordEntry::submit()`. There is no
-   accessor and no text-carrying signal; no close path reads it.
+2. The box's text is sent from exactly one place, `TPasswordEntry::submit()`, and nothing
+   else in Mudlet reads it beyond asking whether it is empty; no close path reads it. That
+   is a convention `QLineEdit`'s public `text()` cannot enforce, so `TMainConsole` hands the
+   widget to nothing but its tests.
 3. Everything that means "focus the main command line" lands on the box while it is up:
    `mpCommandLine->setFocusProxy(box)` plus one redirect for synthetic key presses in
    `TCommandLine::event()`.
 4. A fresh widget per prompt: created on open, deleted on close, in password echo mode so
    Qt zero-fills what it still holds.
-5. Everything else about the command line behaves exactly as with no prompt open.
+5. Everything else about the command line behaves exactly as with no prompt open, with one
+   exception: while the game hides input and the preference is off, a line typed into the
+   command line - past the box, after an Esc or under the auto-login's suppression - stays
+   out of the history, which is written to disk.
 
 ## What the player sees
 
@@ -66,13 +71,15 @@ result the moment `feedTelnet` returns.
 | Enter | sent by the one path; the box empties, says "Sent - waiting for the game" and stays up until the game releases ECHO, so a rejected password is retried inside it |
 | WONT ECHO | the box closes, text in it discarded, focus back on the command line if the box had it |
 | Esc with text | the box empties (start over) |
-| Esc on an empty box, first time in the hold | the box closes until the player's next line goes to the game from a command line (a trigger's or timer's send does not count); if ECHO is still held then, it comes back saying "Still hidden - Esc again..." |
+| Esc on an empty box, first time in the hold | the box closes; after the player's next Enter on a command line (a trigger's or timer's send does not count) the game's next data ends the dismissal: a WONT ends the hold, anything else means the game has answered and still hides input, so the box comes back saying "Still hidden - Esc again..." |
 | Esc on an empty box, second time in the hold | no box until the game releases ECHO |
 | A game that hides everything | two Escs per hold, or the profile preference "Do not open a hidden-input box when the game asks for hidden input" |
 | GoMud (its #633 and later) | a box per password step, closed by its WONT; a rejected password re-prompts under the held ECHO and is retried inside the box |
-| Auto-login with stored credentials | no box while the auto-login still intends to send the password (a command typed ahead stays in the command line); once it has sent under the game's mask, no box until the game releases ECHO; a late keychain password sent under ECHO suppresses the same way. Cost: a wrong stored password on a game that holds ECHO is retried in the clear |
+| Auto-login with stored credentials | no box while the auto-login still intends to send the password (a command typed ahead stays in the command line); once it has sent under the game's mask, no box until the game releases ECHO; a late keychain password sent under ECHO suppresses the same way. Costs: a wrong stored password on a game that holds ECHO is retried in the clear; and on a link slow enough that the password goes out before the game's WILL ECHO arrives, that late WILL opens a box, text typed ahead moves into it and the WONT that follows drops it (raise the auto-login password delay for such a game) |
 | Keychain prompt unanswered or refused | a box opens; its first edit cancels the auto-login |
 | A script, trigger or key binding sends the password | goes through `Host::send()` as before, aliases and all |
+| Enter in the box while not connected (or during a replay) | the text is dropped, the box says "Not sent" and a warning line says why |
+| The login-phase timeout fires (a game that forgot its WONT) | the box closes and drops its text, and a warning line says so |
 | F-key or Ctrl+letter binding pressed in the box | offered to the key bindings; a plain printable key is typed, never offered |
 | `printCmdLine("main", ...)`, `sendCmdLine()`, an MXP `prompt:` link during a prompt | the text goes into the box; `getCmdLine("main")` still reads the command line |
 | Sub command line during a prompt | untouched, and its Lua action runs |

@@ -138,8 +138,9 @@ void TCommandLine::slot_contentsChange()
         return;
     }
     mLastPlainText = text;
-    if (!mUserEditInProgress) {
-        // A script's setPlainText(), a clear(), a history recall, Tab completion
+    if (!mUserEditInProgress || text.isEmpty()) {
+        // A script's setPlainText(), a clear(), a history recall, Tab completion;
+        // and an emptied line is nobody's typing
         mPlayerTypedLine = false;
     } else if (mEditStartedOnBlankLine) {
         mPlayerTypedLine = true;
@@ -232,9 +233,8 @@ bool TCommandLine::event(QEvent* event)
     // key presses to the proxy. Synthetic ones - the caret-mode forwarder in
     // TTextEdit::keyPressEvent() sends straight to this widget - must go the
     // same way, or the first character of a password typed from the output
-    // pane lands here in the clear. (For a synthetic key Qt sends the
-    // ShortcutOverride to this widget too; both widgets claim the same keys, so
-    // that is harmless.) The proxy is set only while the hidden-input box is up.
+    // pane lands here in the clear. The proxy is set only while the
+    // hidden-input box is up.
     if (QWidget* proxy = focusProxy(); proxy && event->type() == QEvent::KeyPress) {
         return QApplication::sendEvent(proxy, event);
     }
@@ -1090,10 +1090,9 @@ void TCommandLine::enterCommand(QKeyEvent* event)
             mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
             mpHost->send(command);
-            // The player's line went to the game, which is what ends a
-            // hidden-input box's one-line dismissal; a line handed to a Lua
-            // action did not go to the game
-            mpHost->clearPasswordEntryDismissal();
+            // A hidden-input box's one-line dismissal ends with the game's
+            // answer to this; a line handed to a Lua action is not the game's
+            mpHost->playerSentLineFromCommandLine();
         }
         // send command to your MiniConsole
         if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
@@ -1102,7 +1101,10 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    if (!toPlainText().isEmpty()) {
+    // While the game hides input and the profile wants that respected, a line
+    // typed here - past the hidden-input box, by Esc or by the auto-login's
+    // suppression - stays out of the history, which is written to disk
+    if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {

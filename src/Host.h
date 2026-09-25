@@ -795,7 +795,8 @@ public:
 
 public:
     // On false: clears every per-hold hidden-input flag, whether or not the
-    // value changes, so that nothing outlives an ECHO hold or a connection.
+    // value changes - cTelnet::reset() releases ECHO while it is already off -
+    // so that nothing outlives an ECHO hold or a connection.
     void setRemoteEchoingActive(bool active);
     bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
@@ -810,14 +811,17 @@ public:
     void setDisablePasswordMasking(const bool disable);
     bool disablePasswordMasking() const { return mDisablePasswordMasking; }
     // Esc on an empty box. The first time within one ECHO hold hides the box
-    // until the player's next line goes to the game; the second time hides it
-    // until the game releases ECHO.
+    // until the game next says something after the player's next line; the
+    // second time hides it until the game releases ECHO.
     void dismissPasswordEntry();
-    // A line the player submitted from a command line went to the game, or the
-    // auto-login sent the name. Not a script's, trigger's or timer's send. The
-    // recompute is deferred one event-loop turn so that a re-opened box never
-    // appears from inside the key press that sent the line.
-    void clearPasswordEntryDismissal();
+    // The player pressed Enter on a command line with no Lua action (whether or
+    // not an alias swallowed the line), or the auto-login sent the name. Not a
+    // script's, trigger's or timer's send. A dismissal then ends with the
+    // game's next data: a WONT ends the hold, and anything else means the game
+    // has answered and still hides input, so the box comes back.
+    void playerSentLineFromCommandLine();
+    // cTelnet's report that data arrived from the game.
+    void gameDataArrived();
     // Whether a box opening now follows a dismissal in this hold, for the
     // wording that tells the player Esc a second time lasts until the game
     // releases ECHO.
@@ -832,8 +836,9 @@ public:
     void passwordEntryEdited();
     // The only way text leaves the box: straight to cTelnet::sendData() with the
     // sysDataSendRequest event withheld - no alias pass, no command-separator
-    // split, no local echo, no history. Empty sends an empty line.
-    bool sendPasswordEntry(QString line);
+    // split, no local echo, no history. Empty sends an empty line. Taken by
+    // rvalue so that the caller's copy is the one zeroed afterwards.
+    bool sendPasswordEntry(QString&& line);
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
@@ -1402,6 +1407,9 @@ private:
     bool mPasswordEntrySuppressed = false;
     bool mPasswordEntryDismissed = false;
     bool mPasswordEntryDismissedOnce = false;
+    // The player has sent a line since the dismissal, so the game's next data
+    // ends it.
+    bool mPasswordEntryDismissalEnding = false;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple

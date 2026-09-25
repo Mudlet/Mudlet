@@ -34,11 +34,13 @@ class TCommandLine;
 // script to read. Enter hands its text to Host::sendPasswordEntry(), the one
 // path to the wire; Esc empties it, and Esc on an empty box steps past it.
 //
-// The text is read in exactly one place, submit(); there is no accessor and no
-// signal carries it. TMainConsole creates one when Host::passwordEntryWanted()
-// turns true and deletes it when that turns false, so nothing carries over from
-// one prompt to the next, and Qt zero-fills the text a password-mode line edit
-// still holds when it is destroyed.
+// The text is sent from exactly one place, submit(), and nothing else in Mudlet
+// reads it for any purpose beyond asking whether it is empty. That is a
+// convention QLineEdit's public text() cannot enforce, so TMainConsole hands
+// the widget to nothing but its tests. TMainConsole creates one when
+// Host::passwordEntryWanted() turns true and deletes it when that turns false,
+// so nothing carries over from one prompt to the next, and Qt zero-fills the
+// text a password-mode line edit still holds when it is destroyed.
 class TPasswordEntry : public QLineEdit
 {
     Q_OBJECT
@@ -61,6 +63,9 @@ signals:
 public slots:
     void slot_adjustAccessibleNames();
 
+private slots:
+    void slot_selectionClipboardChanged();
+
 private:
     bool event(QEvent*) override;
     void focusInEvent(QFocusEvent*) override;
@@ -70,8 +75,8 @@ private:
     void handleKeyPress(QKeyEvent*);
     void submit();
     void setRevealed(const bool revealed);
-    void applyInputMethodHints();
     void scrollConsole(const bool up);
+    bool copyConsoleSelection();
 
     QPointer<Host> mpHost;
     QPointer<TCommandLine> mpCommandLine;

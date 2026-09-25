@@ -72,6 +72,32 @@ describe("Tests the functionality of the main command line while the server asks
   end)
 end)
 
+-- The writers of the main command line take a route of their own so that they
+-- can follow the keyboard into the hidden-input box while one is up; with no
+-- prompt open they still reach the command line.
+describe("Tests the functionality of the main command line writers with no prompt open", function()
+  after_each(function()
+    clearCmdLine("main")
+  end)
+
+  it("printCmdLine, appendCmdLine, selectCmdLineText and clearCmdLine reach the main command line", function()
+    printCmdLine("main", "specWritten")
+    assert.are.equal("specWritten", getCmdLine("main"))
+    appendCmdLine("main", "Twice")
+    assert.are.equal("specWrittenTwice", getCmdLine("main"))
+    assert.is_true(selectCmdLineText("main"))
+    clearCmdLine("main")
+    assert.are.equal("", getCmdLine("main"))
+  end)
+
+  it("treats a lone argument as the text for the main command line", function()
+    printCmdLine("specLoneArgument")
+    assert.are.equal("specLoneArgument", getCmdLine())
+    appendCmdLine("!")
+    assert.are.equal("specLoneArgument!", getCmdLine())
+  end)
+end)
+
 -- Neither the suggestion list nor the tab completion blacklist can be read back
 -- from Lua, and only a Tab keypress consumes them, so what these pin is which
 -- argument the command line name is taken from: one argument is the word for

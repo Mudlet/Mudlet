@@ -31,9 +31,10 @@
 // ECHO that cTelnet acts on, and 5 toggles inside a 5 second window latch an
 // anomaly that makes the process refuse ECHO for good. init() clears that
 // window before every case, and each case may make at most 4 toggles of its
-// own, counting the WONT cleanup() sends for a case that left ECHO up. A
-// repeated WILL while ECHO is up, and a WONT while it is down, are not acted on
-// and so not counted.
+// own; the WONT cleanup() sends comes after init() has cleared the window
+// again, so it is free. A repeated WILL while ECHO is up is not acted on and so
+// not counted; a WONT while it is down is counted once any WILL has been seen
+// on the connection.
 
 #include <QClipboard>
 #include <QContextMenuEvent>
@@ -403,6 +404,20 @@ private slots:
         QCOMPARE(commandLine()->toPlainText(), qsl("north"));
     }
 
+    // A paste is the player's typing too. Red without
+    // TCommandLine::insertFromMimeData().
+    void test_textPastedBeforeThePromptArrivesMovesIntoTheBox()
+    {
+        QGuiApplication::clipboard()->setText(qsl("pasted2"));
+        press(commandLine(), Qt::Key_V, Qt::ControlModifier);
+        QCOMPARE(commandLine()->toPlainText(), qsl("pasted2"));
+        QVERIFY(commandLine()->playerTypedLine());
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QCOMPARE(box()->text(), qsl("pasted2"));
+        QCOMPARE(commandLine()->toPlainText(), QString());
+    }
+
     // Belt and brace: no single line, since the box's path skips every hook by
     // never running the code the hooks live in.
     void test_returnSendsStraightToTheWireAndNothingElseSeesIt()
@@ -509,18 +524,21 @@ private slots:
         QVERIFY(!mpHost->passwordEntryWanted());
         QTRY_COMPARE(focusWidget(), commandLine());
 
-        // A script's send is not the player's line
+        // A script's send is not the player's line, whatever the game says back
         QVERIFY(runLua(qsl("send('fromscript')")));
         QVERIFY(waitForServerToReceive(asSent({qsl("fromscript")})));
-        QTest::qWait(50);
-        QVERIFY2(!box(), "a script's send() brought the box back");
+        serverSends(QByteArrayLiteral("Huh?\r\n"));
+        QVERIFY2(!box(), "a script's send() and the game's reply brought the box back");
 
         // The player's line goes the ordinary way - the alias expands although
-        // ECHO is held - and brings the box back, saying it is still hidden
+        // ECHO is held - and once the game answers while still hiding input the
+        // box comes back, saying it is still hidden
         typeIntoWindow(qsl("pw"));
         pressInWindow(Qt::Key_Return);
         QVERIFY(waitForServerToReceive(asSent({qsl("frombox")})));
-        QTRY_VERIFY2(box(), "the player's line did not bring the box back");
+        QVERIFY2(!box(), "the box came back before the game had answered the player's line");
+        serverSends(QByteArrayLiteral("Invalid password.\r\nPassword: "));
+        QVERIFY2(box(), "the game's answer did not bring the box back");
         QPointer<TPasswordEntry> pSecond = box();
         QVERIFY(pSecond != pFirst);
         QVERIFY2(pSecond->placeholderText().contains(qsl("Esc again")), "the box that came back does not say a second Esc lasts until the game says otherwise");
@@ -532,8 +550,8 @@ private slots:
         typeIntoWindow(qsl("pw"));
         pressInWindow(Qt::Key_Return);
         QVERIFY(waitForServerToReceive(asSent({qsl("frombox"), qsl("frombox")})));
-        QTest::qWait(50);
-        QVERIFY2(!box(), "after the second Esc a line brought the box back before the game released ECHO");
+        serverSends(QByteArrayLiteral("Password: "));
+        QVERIFY2(!box(), "after the second Esc the game's answer brought the box back before it released ECHO");
 
         serverSaysEcho(TN_WONT);
         serverSaysEcho(TN_WILL);
@@ -634,7 +652,8 @@ private slots:
         typeIntoWindow(qsl("look"));
         pressInWindow(Qt::Key_Return);
         QVERIFY(waitForServerToReceive(asSent({qsl("x"), qsl("look")})));
-        QTRY_VERIFY(box());
+        serverSends(QByteArrayLiteral("You look around.\r\n"));
+        QVERIFY(box());
         QPointer<TPasswordEntry> pSecond = box();
         QVERIFY(pSecond->placeholderText().contains(qsl("Esc again")));
         QTRY_COMPARE(focusWidget(), pSecond.data());
@@ -645,7 +664,7 @@ private slots:
         typeIntoWindow(qsl("look"));
         pressInWindow(Qt::Key_Return);
         QVERIFY(waitForServerToReceive(asSent({qsl("x"), qsl("look"), qsl("look")})));
-        QTest::qWait(50);
+        serverSends(QByteArrayLiteral("You look around.\r\n"));
         QVERIFY2(!box(), "the box came back after the second Esc");
 
         serverSaysEcho(TN_WONT);
@@ -712,8 +731,49 @@ private slots:
 
         mpHost->mTelnet.slot_send_login();
         QVERIFY(waitForServerToReceive(asSent({qsl("morquin")})));
-        QTRY_VERIFY2(box(), "the auto-login's name did not bring the box back for the password prompt");
+        serverSends(QByteArrayLiteral("Password: "));
+        QVERIFY2(box(), "the auto-login's name did not bring the box back for the password prompt");
         QVERIFY(box()->placeholderText().contains(qsl("Esc again")));
+    }
+
+    // Red without the textEdited connection in TPasswordEntry's constructor, or
+    // with the typed-ahead move not counting as the player's first edit.
+    void test_theFirstEditInTheBoxCancelsTheAutoLogin()
+    {
+        mpHost->setLogin(qsl("morquin"));
+        mpHost->mTelnet.mTimerLogin->start(60000ms);
+        mpHost->mTelnet.mAutoLoginPasswordOutstanding = true;
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        QVERIFY(mpHost->mTelnet.mTimerLogin->isActive());
+
+        typeIntoWindow(qsl("a"));
+        QVERIFY2(!mpHost->mTelnet.mTimerLogin->isActive(), "the first key typed into the box did not cancel the auto-login's name step");
+        QVERIFY2(!mpHost->mTelnet.mAutoLoginPasswordOutstanding, "the first key typed into the box left a late keychain password free to be typed over it");
+    }
+
+    // Text the player typed ahead of the prompt is their first edit too - but an
+    // emptied line is nobody's typing and cancels nothing. Red with the
+    // typed-ahead move calling Host::passwordEntryEdited() for an empty line, or
+    // not at all.
+    void test_textMovedIntoTheBoxCountsAsItsFirstEditUnlessEmpty()
+    {
+        mpHost->setLogin(qsl("morquin"));
+        mpHost->mTelnet.mTimerLogin->start(60000ms);
+        typeIntoWindow(qsl("b"));
+        pressInWindow(Qt::Key_Backspace);
+        QCOMPARE(commandLine()->toPlainText(), QString());
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QVERIFY2(mpHost->mTelnet.mTimerLogin->isActive(), "an empty command line was taken for the player's typing and cancelled the auto-login");
+        serverSaysEcho(TN_WONT);
+        QTRY_VERIFY(!box());
+        typeIntoWindow(qsl("hun"));
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QCOMPARE(box()->text(), qsl("hun"));
+        QVERIFY2(!mpHost->mTelnet.mTimerLogin->isActive(), "text moved into the box from the command line did not count as the player's first edit");
     }
 
     // Red with the box offering every key to the bindings, or none.
@@ -763,6 +823,22 @@ private slots:
         box()->selectAll();
         pressInWindow(Qt::Key_C, Qt::ControlModifier);
         QCOMPARE(QGuiApplication::clipboard()->text(), qsl("before"));
+
+        // A keyboard or mouse selection in a Normal-mode QLineEdit goes to the
+        // selection clipboard on platforms that have one (red without
+        // slot_selectionClipboardChanged()); the offscreen platform has none,
+        // so there this half proves nothing
+        if (QGuiApplication::clipboard()->supportsSelection()) {
+            QGuiApplication::clipboard()->setText(qsl("primaryBefore"), QClipboard::Selection);
+            box()->deselect();
+            pressInWindow(Qt::Key_Home, Qt::ShiftModifier);
+            QCOMPARE(box()->selectedText(), qsl("secret"));
+            QVERIFY2(QGuiApplication::clipboard()->text(QClipboard::Selection) != qsl("secret"), "a keyboard selection of the revealed password went to the selection clipboard");
+            QTest::mousePress(box(), Qt::LeftButton, Qt::NoModifier, QPoint(3, box()->height() / 2));
+            QTest::mouseMove(box(), QPoint(box()->width() - 30, box()->height() / 2));
+            QTest::mouseRelease(box(), Qt::LeftButton, Qt::NoModifier, QPoint(box()->width() - 30, box()->height() / 2));
+            QVERIFY2(QGuiApplication::clipboard()->text(QClipboard::Selection) != qsl("secret"), "a mouse selection of the revealed password went to the selection clipboard");
+        }
         pReveal->trigger();
         QCOMPARE(box()->echoMode(), QLineEdit::Password);
 
@@ -797,6 +873,9 @@ private slots:
         typeIntoWindow(qsl("c"));
         QTRY_COMPARE(box()->text(), qsl("abc"));
         QCOMPARE(commandLine()->toPlainText(), QString());
+        // The forwarder's Host::setFocusOnHostActiveCommandLine() leaves 10 ms
+        // and 50 ms focus retries behind, which must not fire inside a later case
+        QTest::qWait(60);
     }
 
     // Red without TCommandLine::event()'s redirect to its proxy.
@@ -810,8 +889,11 @@ private slots:
         QCOMPARE(commandLine()->toPlainText(), QString());
     }
 
-    // Red without the focus proxy, or without TPasswordEntry::focusInEvent()
-    // recording the command line as the active one.
+    // Red without the focus proxy (the setFocus() half), or without
+    // TPasswordEntry::focusInEvent() recording the command line as the active
+    // one (the setFocusOnHostActiveCommandLine() half: the sub line was the last
+    // command line focused before the box, so without that record the focus
+    // would go back to it).
     void test_focusMeantForTheCommandLineLandsOnTheBox()
     {
         TCommandLine* pSubLine = freshSubCommandLine();
@@ -828,10 +910,52 @@ private slots:
         commandLine()->setFocus();
         QTRY_COMPARE(focusWidget(), box());
 
-        pSubLine->setFocus();
-        QTRY_COMPARE(focusWidget(), pSubLine);
+        // Somewhere that is no command line, so that nothing but the record
+        // decides where "the active command line" is
+        QLineEdit elsewhere(mudlet::self());
+        elsewhere.show();
+        elsewhere.setFocus();
+        QTRY_COMPARE(focusWidget(), &elsewhere);
         mpHost->setFocusOnHostActiveCommandLine();
         QTRY_COMPARE(focusWidget(), box());
+        QTest::qWait(60);
+    }
+
+    // Red with openPasswordEntry() taking focus from any widget.
+    void test_theBoxDoesNotStealFocusFromOutsideTheCommandLines()
+    {
+        QLineEdit editor(mudlet::self());
+        editor.show();
+        editor.setFocus();
+        QTRY_COMPARE(focusWidget(), &editor);
+
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QCOMPARE(focusWidget(), &editor);
+        QTest::qWait(60);
+        QCOMPARE(focusWidget(), &editor);
+
+        // Focus meant for the command line still lands on the box
+        commandLine()->setFocus();
+        QTRY_COMPARE(focusWidget(), box());
+    }
+
+    // Red with closePasswordEntry() focusing the command line unconditionally.
+    void test_closingABoxThatDoesNotHaveFocusLeavesFocusAlone()
+    {
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        TCommandLine* pSubLine = freshSubCommandLine();
+        QVERIFY(pSubLine);
+        pSubLine->setFocus();
+        QTRY_COMPARE(focusWidget(), pSubLine);
+
+        serverSaysEcho(TN_WONT);
+        QTRY_VERIFY(!box());
+        QCOMPARE(focusWidget(), pSubLine);
+        QTest::qWait(60);
+        QCOMPARE(focusWidget(), pSubLine);
     }
 
     // Red without the event filter in openPasswordEntry().
@@ -841,8 +965,9 @@ private slots:
         QVERIFY(box());
         QCOMPARE(box()->geometry(), commandLine()->geometry());
         const QSize before = mudlet::self()->size();
+        const QRect commandLineBefore = commandLine()->geometry();
         mudlet::self()->resize(before + QSize(120, 60));
-        QTRY_VERIFY(commandLine()->geometry() != box()->geometry() || commandLine()->width() != before.width());
+        QTRY_VERIFY2(commandLine()->geometry() != commandLineBefore, "resizing the window did not move the command line, so nothing below is tested");
         QTRY_COMPARE(box()->geometry(), commandLine()->geometry());
         mudlet::self()->resize(before);
         QTRY_COMPARE(box()->geometry(), commandLine()->geometry());
@@ -895,6 +1020,8 @@ private slots:
         QTRY_VERIFY(!box());
         QVERIFY(runLua(qsl("printCmdLine('main', 'after')")));
         QCOMPARE(commandLine()->toPlainText(), qsl("after"));
+        QVERIFY(runLua(qsl("appendCmdLine('main', '!')")));
+        QCOMPARE(commandLine()->toPlainText(), qsl("after!"));
     }
 
     // Red without submit() stripping the carriage return (sendData() strips the

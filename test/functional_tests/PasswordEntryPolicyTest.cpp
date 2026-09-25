@@ -30,8 +30,10 @@
 // Budget: cTelnet::checkEchoAnomalyPattern() counts every WILL and every WONT
 // ECHO that cTelnet acts on, and 5 toggles inside a 5 second window latch an
 // anomaly that makes the process refuse ECHO for good. init() clears that window
-// before every case, and each case may make at most 4 toggles of its own,
-// counting the WONT cleanup() sends for a case that left ECHO up.
+// before every case, and each case may make at most 4 toggles of its own; the
+// WONT cleanup() sends comes after init() has cleared the window again, so it is
+// free. A repeated WILL while ECHO is up is not acted on and so not counted; a
+// WONT while it is down is counted once any WILL has been seen on the connection.
 
 #include <QTemporaryDir>
 #include <QTimer>
@@ -77,6 +79,12 @@ private:
     }
 
     void serverSaysEcho(const char command) { serverSaysOption(command, OPT_ECHO); }
+
+    void serverSays(const QByteArray& text)
+    {
+        QByteArray data = text;
+        mpHost->mTelnet.loopbackTest(data);
+    }
 
     bool echoNegotiatedByServer() const { return mpHost->mTelnet.hisOptionState.test(static_cast<size_t>(OPT_ECHO)); }
 
@@ -221,7 +229,7 @@ private slots:
         QCOMPARE(wanted.last().first().toBool(), false);
     }
 
-    // Toggles spent: 2.
+    // Toggles spent: 3.
     void test_thePreferenceTurnsTheBoxOffAndOnMidPrompt()
     {
         QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
@@ -245,9 +253,11 @@ private slots:
         QCOMPARE(wanted.count(), 4);
     }
 
-    // The first Esc on an empty box hides it until the player's next line goes
-    // to the game; the second within the same hold hides it until the game
-    // releases ECHO. A script's send() is not the player's line. Toggles spent: 4.
+    // The first Esc on an empty box hides it until the game next answers a line
+    // the player sent; the second within the same hold hides it until the game
+    // releases ECHO. A script's send() is not the player's line, and the game
+    // saying something before the player has sent one ends nothing.
+    // Toggles spent: 3.
     void test_escStepsPastOneLineThenLastsUntilTheGameReleasesEcho()
     {
         QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
@@ -260,25 +270,27 @@ private slots:
         QVERIFY2(mpHost->passwordEntryReopened(), "the first Esc was not remembered for the box that follows it");
         QCOMPARE(wanted.count(), 2);
 
-        // Not the player's line: a script sending at 10 Hz must not keep bringing the box back
+        // Not the player's line: a script sending at 10 Hz must not keep bringing
+        // the box back, however much the game says in between
         QVERIFY(runLua(qsl("send('look')")));
         QVERIFY(waitForServerToReceive(asSent(qsl("look"))));
-        QTest::qWait(50);
-        QVERIFY2(!mpHost->passwordEntryWanted(), "a script's send() ended the dismissal");
+        serverSays(QByteArrayLiteral("You look around.\r\n"));
+        QVERIFY2(!mpHost->passwordEntryWanted(), "a script's send() and the game's reply ended the dismissal");
         QCOMPARE(wanted.count(), 2);
 
-        mpHost->clearPasswordEntryDismissal();
-        QVERIFY2(!mpHost->passwordEntryWanted(), "the re-open happened inside the call that reported the player's line rather than one event-loop turn later");
-        QTRY_VERIFY2(mpHost->passwordEntryWanted(), "the player's line did not bring the box back");
+        mpHost->playerSentLineFromCommandLine();
+        QVERIFY2(!mpHost->passwordEntryWanted(), "the box came back the moment the player's line went out, before the game could answer it with a WONT");
+        serverSays(QByteArrayLiteral("Invalid password.\r\nPassword: "));
+        QVERIFY2(mpHost->passwordEntryWanted(), "the game answering the player's line while still hiding input did not bring the box back");
         QVERIFY2(mpHost->passwordEntryReopened(), "the box that came back does not know it follows an Esc");
         QCOMPARE(wanted.count(), 3);
 
         mpHost->dismissPasswordEntry();
         QVERIFY2(!mpHost->passwordEntryWanted(), "the second Esc did not hide the box");
         QCOMPARE(wanted.count(), 4);
-        mpHost->clearPasswordEntryDismissal();
-        QTest::qWait(50);
-        QVERIFY2(!mpHost->passwordEntryWanted(), "after the second Esc a line brought the box back before the game released ECHO");
+        mpHost->playerSentLineFromCommandLine();
+        serverSays(QByteArrayLiteral("Password: "));
+        QVERIFY2(!mpHost->passwordEntryWanted(), "after the second Esc the game's answer brought the box back before it released ECHO");
         QCOMPARE(wanted.count(), 4);
 
         serverSaysEcho(TN_WONT);
@@ -337,7 +349,7 @@ private slots:
     // While the auto-login still intends to send the stored password no box
     // opens, so a command typed ahead stays in the command line; once it has sent
     // it under the game's mask, none opens until the game releases ECHO.
-    // Toggles spent: 3.
+    // Toggles spent: 3, plus the cleanup WONT.
     void test_autoLoginHoldsTheBoxBackAndItsSendSuppressesTheHold()
     {
         QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
@@ -404,6 +416,25 @@ private slots:
         QVERIFY2(mpHost->passwordEntryWanted(), "a refused keychain went on holding the box back");
     }
 
+    // A keychain password that arrives after the password step has passed is
+    // typed for the player only while the game provably still masks input, and
+    // once it has gone out under that mask no box may open until the game
+    // releases ECHO. Toggles spent: 2.
+    void test_aLateKeychainPasswordSentUnderTheMaskSuppressesTheHold()
+    {
+        mpHost->setLogin(qsl("morquin"));
+        mpHost->mTelnet.mAutoLoginPasswordOutstanding = true;
+        mpHost->mTelnet.mAutoLoginPasswordMaskWithdrawn = false;
+        mpHost->mTelnet.mAutoLoginPasswordOutstandingSince.start();
+        serverSaysEcho(TN_WILL);
+        QVERIFY2(mpHost->passwordEntryWanted(), "with nothing pending a box did not open for the player to type the password themselves");
+
+        mpHost->securedPasswordAnswered(true, qsl("secret"), QString(), false);
+        QVERIFY(waitForServerToReceive(asSent(qsl("secret"))));
+        QVERIFY2(mpHost->mPasswordEntrySuppressed, "the late password sent under the mask did not suppress the box");
+        QVERIFY2(!mpHost->passwordEntryWanted(), "a box stayed open after the late password answered the prompt under the mask");
+    }
+
     // The auto-login's name answers a prompt the player may have stepped past, so
     // it ends a dismissal; and having a password to send is what arms the
     // pending window. Toggles spent: 2.
@@ -417,7 +448,8 @@ private slots:
         mpHost->mTelnet.slot_send_login();
         QVERIFY(waitForServerToReceive(asSent(qsl("morquin"))));
         QVERIFY2(!mpHost->mTelnet.autoLoginPending(), "with no password to send, the login step armed the password step anyway");
-        QTRY_VERIFY2(mpHost->passwordEntryWanted(), "the auto-login's name did not end the dismissal");
+        serverSays(QByteArrayLiteral("Password: "));
+        QVERIFY2(mpHost->passwordEntryWanted(), "the auto-login's name did not end the dismissal");
 
         mpHost->setPass(qsl("hunter2"));
         mpHost->mTelnet.slot_send_login();
@@ -491,7 +523,28 @@ private slots:
         // were withheld rather than never made
         mpHost->mTelnet.mEncodingWarningIssued = false;
         mpHost->send(qsl("ünsafe"));
-        QTRY_VERIFY2(consoleText().contains(qsl("ünsafe")), "the warning for an ordinary line no longer quotes it");
+        QTRY_VERIFY2(consoleText().contains(qsl("Tried to send 'ünsafe'")), "the warning for an ordinary line no longer quotes it");
+    }
+
+    // cTelnet::reset() on a disconnect must release ECHO before it drops the
+    // auto-login's pending flag: the other way round opens a box for an instant
+    // on the dead connection, which would take text typed ahead with it. Next to
+    // last, because reset() forgets every negotiation the connection has made.
+    // Toggles spent: 1.
+    void test_resetReleasesEchoBeforeItDropsThePendingFlag()
+    {
+        mpHost->setLogin(qsl("morquin"));
+        mpHost->setPass(qsl("hunter2"));
+        mpHost->mTelnet.setAutoLoginPending(true);
+        serverSaysEcho(TN_WILL);
+        QVERIFY(!mpHost->passwordEntryWanted());
+        QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
+
+        mpHost->mTelnet.reset();
+
+        QVERIFY(!mpHost->isRemoteEchoingActive());
+        QVERIFY(!mpHost->mTelnet.autoLoginPending());
+        QCOMPARE(wanted.count(), 0);
     }
 
     // The policy is the core's contract for hidden input: it has to answer, and
@@ -513,8 +566,9 @@ private slots:
 
         mpHost->dismissPasswordEntry();
         QVERIFY(!mpHost->passwordEntryWanted());
-        mpHost->clearPasswordEntryDismissal();
-        QTRY_VERIFY2(mpHost->passwordEntryWanted(), "the deferred recompute did not run into no receiver");
+        mpHost->playerSentLineFromCommandLine();
+        mpHost->gameDataArrived();
+        QVERIFY2(mpHost->passwordEntryWanted(), "the game's answer did not end the dismissal with no view");
         QCOMPARE(wanted.count(), 3);
 
         // Nothing to write to, so false - but never a crash

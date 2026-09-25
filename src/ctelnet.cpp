@@ -434,10 +434,10 @@ void cTelnet::cancelLoginTimers()
     setAutoLoginPending(false);
 }
 
-void cTelnet::setAutoLoginPending(const bool pending, const bool recompute)
+void cTelnet::setAutoLoginPending(const bool pending)
 {
     mAutoLoginPending = pending;
-    if (recompute && mpHost) {
+    if (mpHost) {
         mpHost->recomputePasswordEntryWanted();
     }
 }
@@ -922,7 +922,7 @@ void cTelnet::slot_send_login()
         sendData(mpHost->getLogin());
         // The name answered a prompt the player may have stepped past with Esc,
         // so the password prompt that follows gets its hidden-input box.
-        mpHost->clearPasswordEntryDismissal();
+        mpHost->playerSentLineFromCommandLine();
     }
     const bool passwordStepArmed = mpHost->hasAutoLoginCredentials();
     if (passwordStepArmed) {
@@ -1731,7 +1731,8 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // hidden-input box, so a line it was withheld for is never quoted.
         const auto encodingWarning = [&]() {
             if (permitDataSendRequestEvent) {
-                return tr("[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.", "%1 is the command that was sent to the game.").arg(data);
+                //: Shown when a line typed or sent by a script cannot be encoded for the game; %1 is that line
+                return tr("[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.").arg(data);
             }
             //: Shown instead of quoting the text when the line the game is unlikely to understand was hidden input - a password - so that it never appears on screen
             return tr("[ WARN ]  - Tried to send hidden input to the game, but it is unlikely to understand it.");
@@ -5829,6 +5830,13 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (amount <= 0) {
         return;
     }
+    // Whatever this read turns out to hold, it is the game speaking, which is
+    // what ends a hidden-input box's one-line dismissal
+    const auto dataArrivedGuard = qScopeGuard([this] {
+        if (mpHost) {
+            mpHost->gameDataArrived();
+        }
+    });
     // Restates the input contract for decompressBuffer() below, which may swap
     // `buffer` over to out_buffer before the terminator is written again.
     in_buffer[amount] = '\0';
@@ -6543,6 +6551,10 @@ void cTelnet::slot_passwordMaskTimeout()
         return;
     }
     qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
+    // The release below closes the hidden-input box and drops what was in it,
+    // which must not happen without a word
+    //: Shown when the game has hidden input for a minute after the last line without saying it had stopped, so Mudlet stops hiding input itself
+    postMessage(tr("[ WARN ]  - The game did not say it had stopped hiding input, so Mudlet stopped hiding it. Anything left in the hidden-input box was dropped."));
     // Told to the game as well, so that its next WILL ECHO is a fresh request
     // and not a repeat of one Mudlet still has on the books:
     sendTelnetOption(TN_DONT, OPT_ECHO);
