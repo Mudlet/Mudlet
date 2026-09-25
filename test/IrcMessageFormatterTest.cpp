@@ -414,6 +414,33 @@ private slots:
         QVERIFY2(text.contains(QStringLiteral("[WHOWAS] bob was ident@example.org (Bob Smith)")), qPrintable(text));
     }
 
+    // Each thing a WHOIS or WHOWAS reply says is a line of its own, not run
+    // on into the one before it
+    void whois_putsEveryLineOnItsOwn()
+    {
+        auto* message = new IrcWhoisMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        message->setParameters({QStringLiteral("Bob Smith"), QStringLiteral("irc.example.org"), QStringLiteral("Example Network"), QStringLiteral("bobaccount")});
+        const QStringList lines = IrcMessageFormatter::formatMessage(message, true).split(QLatin1Char('\n'));
+        QCOMPARE(lines.size(), 4);
+        for (const QString& line : lines) {
+            QVERIFY2(line.startsWith(QStringLiteral("[WHOIS] bob ")) && line.count(QStringLiteral("[WHOIS]")) == 1, qPrintable(line));
+        }
+        const QString html = IrcMessageFormatter::formatMessage(message, false);
+        QVERIFY2(html.contains(QStringLiteral("(Bob Smith)<br />\n[WHOIS] bob is connected via")), qPrintable(html));
+    }
+
+    void whowas_putsEveryLineOnItsOwn()
+    {
+        auto* message = new IrcWhowasMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        message->setParameters({QStringLiteral("Bob Smith"), QStringLiteral("irc.example.org"), QStringLiteral("Example Network"), QStringLiteral("bobaccount")});
+        QCOMPARE(IrcMessageFormatter::formatMessage(message, true),
+                 QStringLiteral("[WHOWAS] bob was ident@example.org (Bob Smith)\n[WHOWAS] bob was connected via irc.example.org (Example Network)\n[WHOWAS] bob was logged in as bobaccount"));
+        const QString html = IrcMessageFormatter::formatMessage(message, false);
+        QVERIFY2(html.contains(QStringLiteral("(Bob Smith)<br />\n[WHOWAS] bob was connected via")), qPrintable(html));
+    }
+
     void whoReply_marksAnAwayUser()
     {
         auto* message = new IrcWhoReplyMessage(&mConnection);
