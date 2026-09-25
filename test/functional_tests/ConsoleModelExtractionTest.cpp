@@ -320,9 +320,7 @@ private slots:
         QVERIFY2(!model->mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
     }
 
-    // What a trigger script asks about the line it matched is model state, so
-    // it answers with no view: isPrompt() used to dereference the missing view,
-    // and getLines() on the main window refused outright.
+    // isPrompt() and getLines() read only the model, so they answer with no view.
     void test_triggerContextQueriesAnswerWithNoView()
     {
         startProfile();
@@ -338,8 +336,7 @@ private slots:
         destroyTheView(host);
         host->reenableAllTriggers();
 
-        // One line of each kind, so that a no-view fallback giving the same
-        // answer every time fails one of them
+        // Both answers, so that a fallback always giving one of them fails
         const int promptLine = appendModelLine(model->buffer, qsl("ViewlessContext prompt>"));
         model->buffer.promptBuffer[promptLine] = true;
         host->runTriggers(promptLine);
