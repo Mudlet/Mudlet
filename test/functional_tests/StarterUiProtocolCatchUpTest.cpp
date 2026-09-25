@@ -33,6 +33,7 @@
 // of this waits on a clock.
 
 #include <QTemporaryDir>
+#include <QThreadPool>
 #include <tuple>
 #include <QtTest/QtTest>
 
@@ -56,7 +57,8 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
-    const QString mHostname = qsl("Test-StarterUiProtocolCatchUp");
+    QString mHostname;
+    int mProfilesMade = 0;
     const QString mLocalhost = qsl("localhost");
     quint16 mPort = 0;
 
@@ -77,6 +79,9 @@ private slots:
 
     void init()
     {
+        // A folder left by an earlier test function under the same name makes the
+        // connection dialog refuse the new profile as one that already exists
+        mHostname = qsl("Test-StarterUiProtocolCatchUp-%1").arg(++mProfilesMade);
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0);
         mPort = mpServer->serverPort();
@@ -86,15 +91,20 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        deleteProfileDirectory(mHostname);
     }
 
     void cleanup()
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
+        // The profile has to close before its folder can go: closing it writes
+        // profile.ini back into the folder, and Windows cannot delete a file that
+        // is still open - the error log until the profile closes, or the save the
+        // package install queued on a pool thread closing the profile does not
+        // wait for.
         delete mudlet::self();
+        QThreadPool::globalInstance()->waitForDone();
+        deleteProfileDirectory(mHostname);
     }
 
     void test_installingOnAGameThatAlreadySentVitalsBuildsTheDockAtOnce()
@@ -212,8 +222,8 @@ private:
     void deleteProfileDirectory(const QString& profileName)
     {
         QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
+        if (dir.exists() && !dir.removeRecursively()) {
+            qWarning() << "could not remove the profile folder" << dir.path();
         }
     }
 };
