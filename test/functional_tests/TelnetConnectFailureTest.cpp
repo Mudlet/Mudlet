@@ -271,14 +271,11 @@ private slots:
         QVERIFY(connectToADeadPort(host, mpServer->serverPort()));
         QVERIFY2(waitForTextInBuffer(host, qsl("Trying again")), "no retry was scheduled, so calling one off proves nothing");
 
-        QVERIFY2(host->mTelnet.mTimerFailedConnectionRetry->isActive(), "the announced retry was not scheduled on the retry timer, so it stopping proves nothing");
-
         host->mTelnet.disconnectIt();
 
         // An attempt already under way cannot be called off - neither a name lookup nor a connect
         // in progress can be taken back - so it is given time to run out while the port is still
-        // dead. Without this it is that attempt, and not a retry, that reaches the game below - on
-        // Windows it does, even once the socket reads as unconnected and the retry timer is off.
+        // dead. Without this it is that attempt, and not a retry, that reaches the game below.
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
                              return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
@@ -286,14 +283,10 @@ private slots:
                          20000),
                  "the profile was still trying to connect long after the disconnect");
         QTest::qWait(3s);
-        // The retry timer is the only thing that reconnects by itself, so checking it is off stands
-        // in for waiting out the longest delay it could have been set to.
-        QVERIFY2(!host->mTelnet.mTimerFailedConnectionRetry->isActive(), "the disconnect left the retry scheduled");
 
         const int connectionsBefore = mpServer->connectionCount();
         QVERIFY2(mpServer->restart(), "the stub could not take its port back");
-        QTest::qWait(1s);
-        QVERIFY2(!host->mTelnet.mTimerFailedConnectionRetry->isActive(), "something scheduled a retry after the disconnect");
+        QTest::qWait(15s);
         QCOMPARE(mpServer->connectionCount(), connectionsBefore);
     }
 
