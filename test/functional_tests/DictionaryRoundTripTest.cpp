@@ -23,10 +23,10 @@
  * the word list a script reads and the dictionary the spell checker actually
  * uses part company from the next start of the profile onwards.
  *
- * The pair that has to agree - mudlet::saveDictionary() and
- * mudlet::prepareProfileDictionary() - is only reachable from C++: the file is
- * written when the console is destroyed, and no Lua function triggers that. So
- * the Lua specs can only pin what TMainConsole::addWordToSet() refuses, and
+ * The pair that has to agree - TSpellChecker::saveDictionary() and
+ * TSpellChecker::prepareProfileDictionary() - is only reachable from C++: the
+ * file is written when the profile closes, and no Lua function triggers that. So
+ * the Lua specs can only pin what TSpellChecker::addWord() refuses, and
  * this pins that the refusals are exactly the words the file cannot give back.
  *
  * Run with: ctest -R DictionaryRoundTripTest -V
@@ -41,9 +41,11 @@
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
-#include "TMainConsole.h"
+#include "TSpellChecker.h"
 #include "TelnetServerStub.h"
 #include "mudlet.h"
+
+#include <hunspell/hunspell.h>
 
 #include "GroupedTest.h"
 
@@ -72,11 +74,11 @@ private:
     QSet<QString> roundTrip(QSet<QString> wordSet, Hunhandle** handle) const
     {
         *handle = nullptr;
-        if (!mudlet::self()->saveDictionary(dictionaryBase(mFileOnlyProfile), wordSet)) {
+        if (!TSpellChecker::saveDictionary(dictionaryBase(mFileOnlyProfile), wordSet)) {
             return {};
         }
         QSet<QString> reloaded;
-        *handle = mudlet::self()->prepareProfileDictionary(mFileOnlyProfile, reloaded);
+        *handle = TSpellChecker::prepareProfileDictionary(mFileOnlyProfile, reloaded);
         return reloaded;
     }
 
@@ -105,13 +107,12 @@ private slots:
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after profile creation");
-        QVERIFY(mpHost->mpConsole);
 
         // saveDictionary() reads the existing word count before writing, so the
         // file-only profile needs the pair of files a first load would make:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, mFileOnlyProfile, QString())));
         QSet<QString> empty;
-        Hunhandle* seed = mudlet::self()->prepareProfileDictionary(mFileOnlyProfile, empty);
+        Hunhandle* seed = TSpellChecker::prepareProfileDictionary(mFileOnlyProfile, empty);
         QVERIFY2(seed, "could not prepare the dictionary of the file-only profile");
         Hunspell_destroy(seed);
     }
@@ -136,10 +137,10 @@ private slots:
 
         QSet<QString> wordSet;
         for (const auto& word : words) {
-            const QPair<bool, QString> result = mpHost->mpConsole->addWordToSet(word);
-            QVERIFY2(result.first, qPrintable(qsl("addWordToSet() refused \"%1\": %2").arg(word, result.second)));
+            const QPair<bool, QString> result = mpHost->spellChecker().addWord(word);
+            QVERIFY2(result.first, qPrintable(qsl("addWord() refused \"%1\": %2").arg(word, result.second)));
             wordSet.insert(word);
-            mpHost->mpConsole->removeWordFromSet(word);
+            mpHost->spellChecker().removeWord(word);
         }
 
         Hunhandle* handle = nullptr;
@@ -164,8 +165,8 @@ private slots:
 
         const QStringList refused = unstorable + notWords;
         for (const auto& word : refused) {
-            const QPair<bool, QString> result = mpHost->mpConsole->addWordToSet(word);
-            QVERIFY2(!result.first, qPrintable(qsl("addWordToSet() took \"%1\"").arg(word)));
+            const QPair<bool, QString> result = mpHost->spellChecker().addWord(word);
+            QVERIFY2(!result.first, qPrintable(qsl("addWord() took \"%1\"").arg(word)));
             QVERIFY(result.second.contains(QLatin1String("cannot be stored in the user dictionary")));
         }
 
@@ -180,7 +181,7 @@ private slots:
         }
     }
 
-    // removeWordFromSet() says why an unstorable word can never be in the
+    // removeWord() says why an unstorable word can never be in the
     // dictionary, but must still try the removal: a word stored by a build
     // without this validation is in the word list, and refusing outright would
     // leave no way of taking it out. The shared dictionary has no validation of
@@ -190,14 +191,14 @@ private slots:
         const QString whitespaceWord = qsl("   ");
 
         mpHost->setUserDictionaryOptions(true, true);
-        QVERIFY2(mudlet::self()->prepareSharedDictionary(), "the shared dictionary would not load");
-        mudlet::self()->addWordToSet(whitespaceWord);
-        QVERIFY(mpHost->mpConsole->getWordSet().contains(whitespaceWord));
+        QVERIFY2(TSpellChecker::sharedDictionary(), "the shared dictionary would not load");
+        TSpellChecker::addWordToShared(whitespaceWord);
+        QVERIFY(mpHost->spellChecker().wordSet().contains(whitespaceWord));
 
-        QVERIFY2(!mpHost->mpConsole->addWordToSet(whitespaceWord).first, "addWordToSet() took a word of nothing but spaces");
-        const QPair<bool, QString> removal = mpHost->mpConsole->removeWordFromSet(whitespaceWord);
+        QVERIFY2(!mpHost->spellChecker().addWord(whitespaceWord).first, "addWord() took a word of nothing but spaces");
+        const QPair<bool, QString> removal = mpHost->spellChecker().removeWord(whitespaceWord);
         QVERIFY2(removal.first, qPrintable(qsl("a word stored before the validation existed could not be removed: %1").arg(removal.second)));
-        QVERIFY(!mpHost->mpConsole->getWordSet().contains(whitespaceWord));
+        QVERIFY(!mpHost->spellChecker().wordSet().contains(whitespaceWord));
 
         mpHost->setUserDictionaryOptions(true, false);
     }

@@ -4403,9 +4403,7 @@ void Host::setSpellDic(const QString& newDict)
         return;
     }
     mSpellDic = newDict;
-    if (mpConsole) {
-        mpConsole->setSystemSpellDictionary(newDict);
-    }
+    mSpellChecker.setSystemDictionary(newDict);
 }
 
 void Host::setEnableSpellCheck(const bool enable)
@@ -4417,8 +4415,8 @@ void Host::setEnableSpellCheck(const bool enable)
     // The load-end warm skips a profile with spell check off, so this is when
     // the dictionary first becomes wanted. During a profile load there is
     // nothing to do: the handle is warmed once at the end, after the profile's
-    // own settings have been read - which is what setSystemSpellDictionary()
-    // next door defends against too.
+    // own settings have been read - which is what
+    // TSpellChecker::setSystemDictionary() defends against too.
     if (enable && !mIsProfileLoadingSequence) {
         emit signal_spellCheckEnabled();
     }
@@ -4444,15 +4442,12 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
         dictionaryChanged = true;
     }
 
-    if (!mpConsole) {
-        return;
+    if (dictionaryChanged) {
+        mSpellChecker.applyUserDictionaryOptions();
     }
 
-    if (dictionaryChanged) {
-        // This will propagate the changes in the two flags to the main
-        // TConsole's copies of them - although setProfileSpellDictionary() is
-        // also called in the main TConsole constructor:
-        mpConsole->setProfileSpellDictionary();
+    if (!mpConsole) {
+        return;
     }
 
     // This also needs to handle the spell checking against the system/mudlet
