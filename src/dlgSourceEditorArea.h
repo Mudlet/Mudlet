@@ -47,6 +47,7 @@ private:
     QListWidget* mpAutoCompleteList = nullptr;
     QWidget* mpAutoCompleteMenu = nullptr;
     QWidget* mpEditorComponent = nullptr;
+    bool mRoutingAutoCompleteKey = false;
 };
 
 #endif // MUDLET_DLGSOURCEEDITORAREA_H

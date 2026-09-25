@@ -144,6 +144,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
 set(EDITOR_GROUP_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EdbeeReinitTest.cpp
+    EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
     ColorTriggerDialogTest.cpp

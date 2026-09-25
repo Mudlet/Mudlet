@@ -37,6 +37,7 @@
 #include <QApplication>
 #include <QKeyEvent>
 #include <QListWidget>
+#include <QScopedValueRollback>
 
 dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pParentWidget)
 : QWidget(pParentWidget)
@@ -162,6 +163,18 @@ bool dlgSourceEditorArea::eventFilter(QObject* pWatched, QEvent* pEvent)
         switch (pEvent->type()) {
         case QEvent::KeyPress:
             if (mpAutoCompleteMenu->isVisible()) {
+                // A navigation key the list cannot act on - Up on the first
+                // suggestion, Down on the last, any arrow on a single-item list
+                // - is left unhandled by QAbstractItemView, and
+                // QApplication::notify() then passes an ignored event on to the
+                // next widget up the parent chain, which for edbee's list is
+                // this menu. Such an event arrives here a second time, already
+                // routed once, so drop it: sending it to the list again would
+                // repeat until the stack ran out.
+                if (mRoutingAutoCompleteKey) {
+                    return true;
+                }
+                QScopedValueRollback<bool> guard(mRoutingAutoCompleteKey, true);
                 routeAutoCompleteKeyPress(static_cast<QKeyEvent*>(pEvent));
                 return true;
             }
