@@ -1334,6 +1334,21 @@ describe("Tests Other.lua functions", function()
       restore("commandLineHistorySaveSize")
     end)
 
+    -- A script saving the settings it changes and putting them back afterwards
+    -- hands getConfig()'s answer straight back to setConfig(), so both have to
+    -- speak the same unit - otherwise the rooms shrink every time it does.
+    it("round-trips mapRoomSize in the unit setConfig takes", function()
+      openMapWidget()
+      snapshot("mapRoomSize")
+      local target = getConfig("mapRoomSize") == 7 and 8 or 7
+      assert.is_true(setConfig("mapRoomSize", target))
+      assert.equals(target, getConfig("mapRoomSize"))
+
+      assert.is_true(setConfig("mapRoomSize", getConfig("mapRoomSize")))
+      assert.equals(target, getConfig("mapRoomSize"), "handing getConfig's answer back to setConfig changed the room size")
+      restore("mapRoomSize")
+    end)
+
     it("validates the undoServerWrapWidth range when the option exists", function()
       if getConfig("undoServerWrapWidth") == nil then
         -- option not present in this build; setting it is rejected as unknown

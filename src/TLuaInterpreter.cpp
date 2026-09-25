@@ -8663,7 +8663,9 @@ int TLuaInterpreter::getConfig(lua_State* L)
     const std::unordered_map<QString, std::function<void()>> configMap = {
             {qsl("mapRoomSize"),
              [&]() {
-                 lua_pushnumber(L, host.mRoomSize);
+                 // stored as a fraction of a grid square, but set - by setConfig() and
+                 // the preferences alike - in tenths of one:
+                 lua_pushnumber(L, qRound(host.mRoomSize * 10));
              }},
             {qsl("mapExitSize"),
              [&]() {
