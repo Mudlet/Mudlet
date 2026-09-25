@@ -2193,6 +2193,68 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(enableTrigger(parentGroup))
         assert.is_true(isAncestorsActive(childId, "trigger"))
       end)
+
+      -- The profile these run in is saved on exit and reused by the next run,
+      -- and Lua cannot delete a permanent item, so what an earlier run made is
+      -- reused rather than stacked up again under the same name.
+      local function nestedIn(groupName, groupKind, childName, childKind, makeChild)
+        local id = findItems(childName, childKind)[1]
+        if not id then
+          assert.is_true(permGroup(groupName, groupKind), "could not create the " .. groupKind .. " group")
+          id = makeChild()
+        end
+        assert.is_true(type(id) == "number" and id > 0, "could not nest a " .. childKind .. " in " .. groupName)
+        return id
+      end
+
+      it("follows the state of a nested alias's parent group", function()
+        local group = "mudletSpecIsActiveAliasGroup"
+        local childId = nestedIn(group, "alias", "mudletSpecIsActiveAliasChild", "alias", function()
+          return permAlias("mudletSpecIsActiveAliasChild", group, "^mudletSpecIsActiveNeverTyped$", "")
+        end)
+        finally(function() enableAlias(group) end)
+
+        assert.is_true(enableAlias(group))
+        assert.is_true(isAncestorsActive(childId, "alias"))
+        assert.is_true(disableAlias(group))
+        assert.is_false(isAncestorsActive(childId, "alias"))
+      end)
+
+      it("follows the state of a nested script's parent group", function()
+        local group = "mudletSpecIsActiveScriptGroup"
+        local childId = nestedIn(group, "script", "mudletSpecIsActiveScriptChild", "script", function()
+          return permScript("mudletSpecIsActiveScriptChild", group, "")
+        end)
+        -- unlike the other item types, a script group is made switched off
+        finally(function() disableScript(group) end)
+
+        assert.is_true(enableScript(group))
+        assert.is_true(isAncestorsActive(childId, "script"))
+        assert.is_true(disableScript(group))
+        assert.is_false(isAncestorsActive(childId, "script"))
+      end)
+
+      it("answers for a button on a toolbar", function()
+        local toolbar = "mudletSpecIsActiveToolbar"
+        -- see "names the toolbar a button sits on" below for why it is hidden
+        finally(function() hideToolBar(toolbar) end)
+        if exists(toolbar, "button") == 0 then
+          assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
+        end
+        local buttonId = findItems("mudletSpecIsActiveButton", "button")[1]
+            or tempButton(toolbar, "mudletSpecIsActiveButton", 0)
+        assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+
+        assert.is_true(isAncestorsActive(buttonId, "button"))
+      end)
+
+      it("returns nil+msg for an item of any type that does not exist", function()
+        for _, itemType in ipairs({"button", "keybind", "script", "timer", "trigger"}) do
+          local ok, err = isAncestorsActive(9999999, itemType)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, itemType .. " item ID 9999999 does not exist"), tostring(err))
+        end
+      end)
     end)
 
     describe("Tests the functionality of ancestors", function()
@@ -2345,6 +2407,35 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
 
         assertNamesTheGroup(ancestors(buttonId, "button"), toolbar)
+      end)
+
+      -- A timer whose parent is another timer rather than a group is an offset
+      -- timer: it runs relative to its parent, and the parent is an item in
+      -- its own right, which is what the node says
+      it("calls an offset timer's parent an item, not a group", function()
+        local parentName = "mudletSpecAncestorOffsetParent"
+        local childName = "mudletSpecAncestorOffsetChild"
+        local childId = findItems(childName, "timer")[1]
+        if not childId then
+          assert.is_number(permTimer(parentName, "", 60, [[ ]]))
+          childId = permTimer(childName, parentName, 30, [[ ]])
+        end
+        assert.is_true(type(childId) == "number" and childId > 0, "could not make an offset timer under " .. parentName)
+
+        local list = ancestors(childId, "timer")
+        assert.is_table(list)
+        assert.equals(1, #list)
+        assert.equals(parentName, list[1].name)
+        assert.equals("item", list[1].node)
+        assert.is_boolean(list[1].isActive)
+      end)
+
+      it("returns nil+msg for an item of any other type that does not exist", function()
+        for _, itemType in ipairs({"timer", "alias", "keybind", "script", "button"}) do
+          local ok, err = ancestors(9999999, itemType)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, itemType .. " item ID 9999999 does not exist"), tostring(err))
+        end
       end)
 
       it("is case insensitive about the item type", function()

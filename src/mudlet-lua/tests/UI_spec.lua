@@ -6628,6 +6628,17 @@ describe("Toolbar buttons", function()
       assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), setErr)
     end)
 
+    it("both refuse a button that is not a push-down one when it is given by ID", function()
+      local id = findItems(plainButton, "button")[1]
+      assert.is_number(id, "the package did not install " .. plainButton)
+      local getOk, getErr = getButtonState(id)
+      assert.is_nil(getOk)
+      assert.are.equal(("item ID with %d is not a push-down button"):format(id), getErr)
+      local setOk, setErr = setButtonState(id, true)
+      assert.is_nil(setOk)
+      assert.are.equal(("item ID with %d is not a push-down button"):format(id), setErr)
+    end)
+
     it("both refuse a name that is no button at all", function()
       local unknown = "buttonSpecNoSuchButton" .. suffix
       local getOk, getErr = getButtonState(unknown)

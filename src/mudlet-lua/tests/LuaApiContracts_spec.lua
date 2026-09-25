@@ -302,6 +302,16 @@ describe("Tests what feedTriggers will and will not carry", function()
     assert.is_true(contains(textFrom(mark), "FeedEncRaw \195\169"), "the pre-encoded byte did not arrive as the character it stands for")
   end)
 
+  -- the game's encoding is UTF-8 for most games today, and then the text is
+  -- already in the form it needs - it has to arrive exactly as it was given
+  it("passes UTF-8 straight through when that is the game's encoding", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedEncUtf8 \195\169 \226\130\172\n"))
+    assert.is_true(contains(textFrom(mark), "FeedEncUtf8 \195\169 \226\130\172"), "the UTF-8 text did not arrive unchanged")
+  end)
+
   it("raises on arguments it cannot make sense of", function()
     assertArgError(function() return feedTriggers({}) end, "bad argument #1 type")
     assertArgError(function() return feedTriggers("FeedEncNever\n", "yes") end, "bad argument #2 type")
@@ -388,5 +398,132 @@ describe("Tests the functionality of alert", function()
 
   it("raises when the duration is not a number", function()
     assertArgError(function() return alert("soon") end, "alert duration in seconds as number expected")
+  end)
+end)
+
+-- feedTelnet() reads <NAME> markers as the telnet bytes they name, so a script
+-- that wants a literal angle bracket doubles it. The empty string is not data
+-- at all: it asks which version of the marker table this Mudlet has.
+describe("Tests feedTelnet's marker escapes", function()
+
+  local function textFrom(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+  end
+
+  it("answers the marker table version for an empty string, and feeds nothing", function()
+    local mark = getLastLineNumber("main")
+    local ok, version = feedTelnet("")
+    assert.is_true(ok)
+    assert.is_truthy(tostring(version):match("^feedTelnet: using table version %d+$"), tostring(version))
+    assert.equals(mark, getLastLineNumber("main"), "asking for the version put something on screen")
+  end)
+
+  it("reads doubled angle brackets as literal ones rather than as a marker", function()
+    local mark = getLastLineNumber("main")
+    local ok, msg = feedTelnet("FeedTelnetEscaped <<T_IAC>> and <<b>>\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.is_true(contains(textFrom(mark), "FeedTelnetEscaped <T_IAC> and <b>"), textFrom(mark))
+  end)
+end)
+
+-- The perm*Trigger family all take the name of a parent to create the trigger
+-- in. A parent that is not there is refused outright rather than silently
+-- creating the trigger at the top level, where it would fire unguarded by
+-- whatever group it was meant to sit in.
+describe("Tests the parent argument of the perm*Trigger family", function()
+
+  local missingParent = "mudletSpecNoSuchTriggerParent"
+  local creators = {
+    permRegexTrigger = function(name, parent) return permRegexTrigger(name, parent, {"^mudletSpecNeverSent$"}, "") end,
+    permBeginOfLineStringTrigger = function(name, parent) return permBeginOfLineStringTrigger(name, parent, {"mudletSpecNeverSent"}, "") end,
+    permExactMatchTrigger = function(name, parent) return permExactMatchTrigger(name, parent, {"mudletSpecNeverSent"}, "") end,
+    permPromptTrigger = function(name, parent) return permPromptTrigger(name, parent, "") end,
+  }
+
+  for functionName, create in pairs(creators) do
+    it(functionName .. " refuses a parent that does not exist and creates nothing", function()
+      local name = "mudletSpecOrphan" .. functionName
+      assertArgError(function() return create(name, missingParent) end,
+        functionName .. ": cannot create trigger (parent '" .. missingParent .. "' not found)")
+      assert.same({}, findItems(name, "trigger"), "the refused trigger was created anyway")
+    end)
+  end
+
+  -- The profile these run in is saved on exit and reused by the next run, and
+  -- a permanent trigger cannot be deleted from Lua, so a child an earlier run
+  -- made is reused rather than stacked up again under the same name.
+  for functionName, create in pairs(creators) do
+    it(functionName .. " creates the trigger inside the parent it names", function()
+      local group = "mudletSpecParentGroup" .. functionName
+      local name = "mudletSpecChild" .. functionName
+      local id = findItems(name, "trigger")[1]
+      if not id then
+        assert.is_true(permGroup(group, "trigger"))
+        id = create(name, group)
+      end
+      assert.is_number(id)
+
+      local list = ancestors(id, "trigger")
+      assert.equals(1, #list, "expected exactly the one group the trigger was created in")
+      assert.equals(group, list[1].name)
+    end)
+  end
+end)
+
+describe("Tests the stopwatch lookup by name", function()
+
+  -- a stopwatch can be given by ID or by name, so a name that matches none has
+  -- to be refused by name rather than read as some other stopwatch
+  it("names the stopwatch it could not find", function()
+    local name = "mudletSpecNoSuchStopWatch"
+    for _, functionName in ipairs({"getStopWatchTime", "startStopWatch", "stopStopWatch", "resetStopWatch", "deleteStopWatch"}) do
+      local ok, err = _G[functionName](name)
+      assert.is_nil(ok, functionName .. " accepted a stopwatch that does not exist")
+      assert.equals("stopwatch with name '" .. name .. "' not found", err, functionName)
+    end
+  end)
+end)
+
+describe("Tests createLabel's flag arguments", function()
+
+  local label = "mudletSpecLabelFlags"
+
+  teardown(function()
+    deleteLabel(label)
+  end)
+
+  it("raises when fillBackground is neither a boolean nor a number", function()
+    assertArgError(function() return createLabel(label, 0, 0, 10, 10, "yes") end,
+      "createLabel: bad argument #6 type (label fillBackground as boolean/number (0/1) expected, got string!)")
+  end)
+
+  it("raises when clickthrough is neither a boolean nor a number", function()
+    assertArgError(function() return createLabel(label, 0, 0, 10, 10, 1, "yes") end,
+      "createLabel: bad argument #7 type (label clickthrough as boolean/number (0/1) expected, got string!)")
+  end)
+
+  it("takes clickthrough as either a boolean or a number", function()
+    assert.is_true(createLabel(label, 0, 0, 10, 10, 1, true))
+    deleteLabel(label)
+    assert.is_true(createLabel(label, 0, 0, 10, 10, 1, 1))
+  end)
+end)
+
+describe("Tests the raised errors for a wrongly typed first argument", function()
+
+  it("raises for a module name that is not a string", function()
+    assertArgError(function() return setModulePriority({}, 1) end, "setModulePriority: bad argument #1 type")
+  end)
+
+  it("raises for text to expand that is not a string", function()
+    assertArgError(function() return expandAlias({}) end, "expandAlias: bad argument #1 type (text to parse as string expected, got table!)")
+  end)
+
+  it("raises for an encoding that is not a string", function()
+    assertArgError(function() return setServerEncoding({}) end, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got table!)")
+  end)
+
+  it("raises for a saveProfile file name that is not a string", function()
+    assertArgError(function() return saveProfile(nil, {}) end, "saveProfile: bad argument #2 type")
   end)
 end)
