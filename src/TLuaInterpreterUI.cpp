@@ -49,7 +49,6 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
-#include "TTextBox.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
@@ -777,12 +776,12 @@ int TLuaInterpreter::getTextEditText(lua_State* L)
     const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    const auto text = host.mpConsole ? host.mpConsole->getTextBoxText(textEditName) : std::nullopt;
+    if (!text) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    lua_pushstring(L, pT->toPlainText().toUtf8().constData());
+    lua_pushstring(L, text->toUtf8().constData());
     return 1;
 }
 
@@ -796,12 +795,10 @@ int TLuaInterpreter::setTextEditText(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    if (!host.mpConsole || !host.mpConsole->setTextBoxText(textEditName, text)) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    pT->setPlainText(text);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -812,12 +809,10 @@ int TLuaInterpreter::clearTextEdit(lua_State* L)
     const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    if (!host.mpConsole || !host.mpConsole->clearTextBox(textEditName)) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    pT->clear();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -832,12 +827,10 @@ int TLuaInterpreter::setTextEditReadOnly(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    if (!host.mpConsole || !host.mpConsole->setTextBoxReadOnly(textEditName, readOnly)) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    pT->setReadOnly(readOnly);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -852,12 +845,10 @@ int TLuaInterpreter::setTextEditPlaceholder(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    if (!host.mpConsole || !host.mpConsole->setTextBoxPlaceholder(textEditName, placeholder)) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    pT->setPlaceholderText(placeholder);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -872,12 +863,10 @@ int TLuaInterpreter::setTextEditStyleSheet(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    if (!host.mpConsole || !host.mpConsole->setTextBoxStyleSheet(textEditName, css)) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    pT->setStyleSheet(css);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -892,21 +881,20 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    auto font = host.mpConsole ? host.mpConsole->getTextBoxFont(textEditName) : std::nullopt;
+    if (!font) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    QFont font = pT->font();
     // An unlisted name comes back from the resolution as it was given, and goes
     // through: the font database leaves out families the platform still resolves,
     // such as the fontconfig alias "Helvetica". The weight comes from the
     // resolution either way, so the bold of an earlier "Family Style" name is not
     // left behind on the next family.
     const auto resolved = host.resolveFontFamily(fontName);
-    font.setFamily(resolved.family);
-    font.setWeight(resolved.weight);
-    pT->setFont(font);
+    font->setFamily(resolved.family);
+    font->setWeight(resolved.weight);
+    host.mpConsole->setTextBoxFont(textEditName, *font);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -921,14 +909,13 @@ int TLuaInterpreter::setTextEditFontSize(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    auto font = host.mpConsole ? host.mpConsole->getTextBoxFont(textEditName) : std::nullopt;
+    if (!font) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    QFont font = pT->font();
-    font.setPointSize(size);
-    pT->setFont(font);
+    font->setPointSize(size);
+    host.mpConsole->setTextBoxFont(textEditName, *font);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -943,12 +930,10 @@ int TLuaInterpreter::setTextEditTabMovesFocus(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
-    if (!pT) {
+    if (!host.mpConsole || !host.mpConsole->setTextBoxTabMovesFocus(textEditName, tabMovesFocus)) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
 
-    pT->setTabChangesFocus(tabMovesFocus);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1561,8 +1546,8 @@ int TLuaInterpreter::getFont(lua_State* L)
     auto console = CONSOLE_NIL(L, windowName);
     if (!console) {
         if (host.mpConsole) {
-            if (TLabel* pLabel = host.mpConsole->labelWidget(windowName)) {
-                lua_pushstring(L, actualFontFamily(pLabel->font()).toUtf8().constData());
+            if (const auto labelFont = host.mpConsole->getLabelFont(windowName)) {
+                lua_pushstring(L, actualFontFamily(*labelFont).toUtf8().constData());
                 return 1;
             }
         }
@@ -1762,7 +1747,7 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
 
-    const QPoint pos = host.mpConsole->mapFromGlobal(QCursor::pos());
+    const QPoint pos = host.mpConsole->mousePosition();
 
     lua_pushnumber(L, pos.x());
     lua_pushnumber(L, pos.y());
@@ -2089,7 +2074,7 @@ int TLuaInterpreter::getWindowWrap(lua_State* L)
 int TLuaInterpreter::hasFocus(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.mpConsole && host.mpConsole->hasFocus()); //FIXME
+    lua_pushboolean(L, host.mpConsole && host.mpConsole->hasKeyboardFocus()); //FIXME
     return 1;
 }
 
@@ -3379,12 +3364,12 @@ int TLuaInterpreter::setFont(lua_State* L)
     auto console = CONSOLE_NIL(L, targetName);
     if (!console) {
         if (host.mpConsole) {
-            if (TLabel* pLabel = host.mpConsole->labelWidget(targetName)) {
-                QFont labelFont = host.createFontWithSettings(effectiveFontName, pLabel->font().pointSize());
+            if (const auto currentLabelFont = host.mpConsole->getLabelFont(targetName)) {
+                QFont labelFont = host.createFontWithSettings(effectiveFontName, currentLabelFont->pointSize());
                 if (fontWeight != QFont::Normal) {
                     labelFont.setWeight(fontWeight);
                 }
-                pLabel->setFont(labelFont);
+                host.mpConsole->setLabelFont(targetName, labelFont);
                 lua_pushboolean(L, true);
                 return 1;
             }

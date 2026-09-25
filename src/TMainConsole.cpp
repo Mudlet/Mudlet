@@ -44,6 +44,7 @@
 #include "mudlet.h"
 #include "GifTracker.h"
 
+#include <QCursor>
 #include <QDataStream>
 #include <QDialog>
 #include <QDockWidget>
@@ -1211,6 +1212,104 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
     return {false, QLatin1String("couldn't create text edit")};
 }
 
+std::optional<QString> TMainConsole::getTextBoxText(const QString& name) const
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return {};
+    }
+    return {pT->toPlainText()};
+}
+
+bool TMainConsole::setTextBoxText(const QString& name, const QString& text)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setPlainText(text);
+    return true;
+}
+
+bool TMainConsole::clearTextBox(const QString& name)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->clear();
+    return true;
+}
+
+bool TMainConsole::setTextBoxReadOnly(const QString& name, bool readOnly)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setReadOnly(readOnly);
+    return true;
+}
+
+bool TMainConsole::setTextBoxPlaceholder(const QString& name, const QString& text)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setPlaceholderText(text);
+    return true;
+}
+
+bool TMainConsole::setTextBoxStyleSheet(const QString& name, const QString& styleSheet)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setStyleSheet(styleSheet);
+    return true;
+}
+
+std::optional<QFont> TMainConsole::getTextBoxFont(const QString& name) const
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return {};
+    }
+    return {pT->font()};
+}
+
+bool TMainConsole::setTextBoxFont(const QString& name, const QFont& font)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setFont(font);
+    return true;
+}
+
+bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setTabChangesFocus(tabMovesFocus);
+    return true;
+}
+
+QPoint TMainConsole::mousePosition() const
+{
+    return mapFromGlobal(QCursor::pos());
+}
+
+bool TMainConsole::hasKeyboardFocus() const
+{
+    return hasFocus();
+}
+
 bool TMainConsole::setLabelClickThrough(const QString& name, bool clickThrough)
 {
     auto pL = mLabelMap.value(name);
@@ -1488,6 +1587,25 @@ std::optional<bool> TMainConsole::getLabelVisible(const QString& name) const
         return {};
     }
     return {pL->isVisibleTo(this)};
+}
+
+std::optional<QFont> TMainConsole::getLabelFont(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    return {pL->font()};
+}
+
+bool TMainConsole::setLabelFont(const QString& name, const QFont& font)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setFont(font);
+    return true;
 }
 
 void TMainConsole::closeSubConsole(const QString& name)
