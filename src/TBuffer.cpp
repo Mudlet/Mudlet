@@ -3853,13 +3853,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (isValid) {
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
-                        // changed by this method. With no console, this buffer's own
-                        // palette, which stamps the text, must still be refreshed:
-                        if (pHost->mpConsole) {
-                            pHost->mpConsole->changeColors();
-                        } else {
-                            pHost->refreshMainConsoleColors();
-                        }
+                        // changed by this method:
+                        pHost->applyMainConsoleColors();
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
                     }
@@ -3960,13 +3955,13 @@ void TBuffer::decodeOSC(const QString& sequence)
                 qDebug() << "[OSC] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
 #endif
 
-                if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole) {
+                if (!presetName.isEmpty() && !configParam.isEmpty() && mpModel) {
                     // Parse the JSON configuration
                     QJsonParseError parseError;
                     QJsonDocument doc = QJsonDocument::fromJson(configParam.toUtf8(), &parseError);
 
                     if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
-                        mpConsole->getHyperlinkCompactManager().registerPreset(presetName, doc.object());
+                        mpModel->mHyperlinkCompactManager.registerPreset(presetName, doc.object());
 #if defined(DEBUG_OSC_PROCESSING)
                         qDebug() << "[OSC] Successfully registered preset:" << presetName;
 #endif
@@ -3978,8 +3973,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     }
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() << "configParam empty:" << configParam.isEmpty()
-                             << "mpConsole:" << (mpConsole != nullptr) << "mpHyperlinkCompactManager:" << (mpConsole != nullptr);
+                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() << "configParam empty:" << configParam.isEmpty() << "mpModel:" << (mpModel != nullptr);
 #endif
                 }
                 // Preset definitions don't create visible hyperlinks
@@ -4172,15 +4166,15 @@ void TBuffer::decodeOSC(const QString& sequence)
             mLinkOriginalBackgrounds[mCurrentHyperlinkLinkId] = mBackGroundColor;
 
             // Initialize selection state if this link has selection settings
-            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpConsole) {
+            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpModel) {
                 const QString& group = mCurrentHyperlinkStyling.selection.group;
                 const QString& value = mCurrentHyperlinkStyling.selection.value;
 
                 // Configure group exclusivity mode
-                mpConsole->getHyperlinkSelectionManager().setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
+                mpModel->mHyperlinkSelectionManager.setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
 
                 // Register the link with the selection manager
-                mpConsole->getHyperlinkSelectionManager().setSelected(group, value, mCurrentHyperlinkStyling.selection.selected);
+                mpModel->mHyperlinkSelectionManager.setSelected(group, value, mCurrentHyperlinkStyling.selection.selected);
 
                 // Update link selection state (visual styling will be applied when link closes)
                 setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
@@ -4303,8 +4297,8 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     if (!presetName.isEmpty() || !configJson.isEmpty()) {
         QJsonObject baseConfig;
 
-        if (!presetName.isEmpty() && mpConsole) {
-            baseConfig = mpConsole->getHyperlinkCompactManager().getPreset(presetName);
+        if (!presetName.isEmpty() && mpModel) {
+            baseConfig = mpModel->mHyperlinkCompactManager.getPreset(presetName);
 #if defined(DEBUG_OSC_PROCESSING)
             if (!baseConfig.isEmpty()) {
                 qDebug() << "[OSC] Resolved preset" << presetName;
@@ -4315,7 +4309,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
         } else {
 #if defined(DEBUG_OSC_PROCESSING)
             if (!presetName.isEmpty()) {
-                qDebug() << "[OSC] Cannot resolve preset - missing console or manager";
+                qDebug() << "[OSC] Cannot resolve preset - no console model";
             }
 #endif
         }
@@ -4328,9 +4322,9 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
             if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
                 QJsonObject overrideConfig = overrideDoc.object();
 
-                if (!baseConfig.isEmpty() && mpConsole) {
+                if (!baseConfig.isEmpty() && mpModel) {
                     // Deep merge: override takes precedence
-                    baseConfig = mpConsole->getHyperlinkCompactManager().mergeConfigs(baseConfig, overrideConfig);
+                    baseConfig = mpModel->mHyperlinkCompactManager.mergeConfigs(baseConfig, overrideConfig);
 #if defined(DEBUG_OSC_PROCESSING)
                     qDebug() << "[OSC] Merged preset with override config";
 #endif
@@ -4357,7 +4351,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
 
 QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
 {
-    if (!mpConsole) {
+    if (!mpModel) {
         return obj; // No manager available, return unchanged
     }
 
@@ -4369,7 +4363,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
 
         QMap<QString, QString> singleKeyMap;
         singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
-        QMap<QString, QString> expandedMap = mpConsole->getHyperlinkCompactManager().expandShorthand(singleKeyMap);
+        QMap<QString, QString> expandedMap = mpModel->mHyperlinkCompactManager.expandShorthand(singleKeyMap);
 
         // Guard against empty or multi-key expanded maps to prevent assertion/UB
         QString resultKey;
@@ -4397,7 +4391,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
             QJsonObject toAdd = resultValue.toObject();
 
             // When both shorthand and full names exist, shorthand takes precedence
-            result[resultKey] = mpConsole->getHyperlinkCompactManager().mergeConfigs(toAdd, existing);
+            result[resultKey] = mpModel->mHyperlinkCompactManager.mergeConfigs(toAdd, existing);
         } else {
             result[resultKey] = resultValue;
         }
@@ -5171,13 +5165,8 @@ void TBuffer::resetColors()
 
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
-    // decodeOSC(...) method. With no console, this buffer's own palette,
-    // which stamps the text, must still be refreshed:
-    if (pHost->mpConsole) {
-        pHost->mpConsole->changeColors();
-    } else {
-        pHost->refreshMainConsoleColors();
-    }
+    // decodeOSC(...) method:
+    pHost->applyMainConsoleColors();
 
     // Also need to update the Lua sub-system's "color_table"
     pHost->updateAnsi16ColorsInTable();
@@ -5429,7 +5418,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
             return false;
         }
         if (x >= static_cast<int>(buffer.at(y).size())) {
-            TChar c(mpConsole);
+            TChar c = currentFormat();
             expandLine(y, x - buffer.at(y).size(), c);
         }
         // Insert the whole run in one operation. Inserting one character at a
@@ -5474,7 +5463,7 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
 {
     TBuffer slice = copy(P1, P2);
-    TChar format(mpConsole);
+    TChar format = currentFormat();
     replaceInLine(P1, P2, QString(), format);
     return slice;
 }
@@ -5720,8 +5709,7 @@ void TBuffer::log(int fromLine, int toLine)
 {
     // The log file, its stream and the on/off flag are core model state, so
     // this needs a Host but no view - which is what lets a profile with no main
-    // console widget write a log at all. The one thing that still notices a
-    // missing view is the HTML timestamp background in bufferToHtml().
+    // console widget write a log at all.
     // See TBuffer::clear() on why the model is reached through the
     // null-tolerant accessor.
     TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
@@ -6162,7 +6150,7 @@ void TBuffer::finaliseActiveHyperlink()
 // if it should start concealed.
 void TBuffer::registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling)
 {
-    if (!mpConsole) {
+    if (!mpModel) {
         return;
     }
     if (length <= 0) {
@@ -6177,7 +6165,7 @@ void TBuffer::registerLinkVisibility(const int linkId, const int column, const i
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] Registering hyperlink" << linkId << "line:" << line << "col:" << column << "length:" << length << "text:" << linkText;
 #endif
-    const bool shouldStartConcealed = mpConsole->getHyperlinkVisibilityManager().registerHyperlink(linkId, line, column, length, linkText, styling);
+    const bool shouldStartConcealed = mpModel->mHyperlinkVisibilityManager.registerHyperlink(linkId, line, column, length, linkText, styling);
 
     // If link should start concealed, replace its text with spaces in mMudLine
     // Skip if spoiler already did this to avoid double-replacement
@@ -6216,22 +6204,25 @@ void TBuffer::maskSpoilerText(const int linkId, QString& line, const int column,
     line.replace(column, length, QString(length, QChar::Space));
 }
 
-// Both branches check that this buffer is the one the manager tracks: a
-// scratch buffer can carry a console back-pointer, and every model builds its
-// buffer before a view attaches, so reaching a manager on the strength of the
-// pointer alone would let one buffer drop another's links.
+// Off the model rather than the view: a scratch buffer can carry a console
+// back-pointer, and reaching a manager on the strength of that alone would let
+// one buffer drop another's links.
 THyperlinkVisibilityManager* TBuffer::hyperlinkVisibilityManagerOrNull()
 {
-    if (mpConsole) {
-        return (this == &mpConsole->buffer) ? &mpConsole->getHyperlinkVisibilityManager() : nullptr;
+    return mpModel ? &mpModel->mHyperlinkVisibilityManager : nullptr;
+}
+
+// What pads a short line and fills a cut: the model's current format without
+// its link, or the built-in default for a buffer that is nobody's model's.
+TChar TBuffer::currentFormat() const
+{
+    TChar format;
+    if (mpModel) {
+        format.mFgColor = mpModel->mFormatCurrent.mFgColor;
+        format.mBgColor = mpModel->mFormatCurrent.mBgColor;
+        format.mFlags = mpModel->mFormatCurrent.allDisplayAttributes();
     }
-    // The main console's model outlives the view built on it and keeps taking
-    // lines meanwhile, so stopping at mpConsole would give up maintaining its
-    // links too early. mainConsoleModelOrNull() rather than mainConsoleModel()
-    // because this also runs from the TBuffer constructor, before Host holds
-    // the model.
-    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
-    return (pModel && this == &pModel->buffer) ? &pModel->mHyperlinkVisibilityManager : nullptr;
+    return format;
 }
 
 void TBuffer::clear()
@@ -6427,8 +6418,8 @@ void TBuffer::shrinkBuffer()
     // Tracked OSC 8 hyperlinks are addressed by line number, so they shift with
     // everything else - any whose line just went away are dropped
     QSet<int> trackedLinkIds;
-    if (mpConsole) {
-        auto& hyperlinkManager = mpConsole->getHyperlinkVisibilityManager();
+    if (mpModel) {
+        auto& hyperlinkManager = mpModel->mHyperlinkVisibilityManager;
         hyperlinkManager.adjustLineNumbers(0, mBatchDeleteSize);
         trackedLinkIds = hyperlinkManager.trackedLinkIds();
     }
@@ -6748,7 +6739,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // Use the console's background so the timestamp blends in with the
         // rest of the text, as done in TTextEdit::layoutLine(...).
-        const QColor timeStampBgColor{mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)};
+        const QColor timeStampBgColor{mpModel ? mpModel->mBgColor : QColor(Qt::black)};
         s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(TBuffer::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
@@ -6790,7 +6781,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                 // A transparent cell (e.g. a system message) has no colour of its
                 // own on screen - it shows the console's background through it -
                 // so fall back to that rather than exporting alpha-0 as black.
-                currentBgColor = (mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)).rgba();
+                currentBgColor = (mpModel ? mpModel->mBgColor : QColor(Qt::black)).rgba();
             }
             currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
             currentLinkIndex = charLinkIndex;
@@ -8496,8 +8487,8 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
 
         auto styling = mLinkStore.getStyling(linkIndex);
         if (styling.selection.hasSelectionSettings && styling.selection.group == group && styling.selection.value != exceptValue) {
-            if (mpConsole) {
-                mpConsole->getHyperlinkSelectionManager().setSelected(styling.selection.group, styling.selection.value, false);
+            if (mpModel) {
+                mpModel->mHyperlinkSelectionManager.setSelected(styling.selection.group, styling.selection.value, false);
             }
 
             setLinkSelected(linkIndex, false);
