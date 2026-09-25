@@ -616,12 +616,6 @@ void dlgMapper::slot_roomSize(int size)
     mp2dMap->update();
 }
 
-void dlgMapper::slot_exitSize(int size)
-{
-    mp2dMap->setExitSize(size);
-    mp2dMap->update();
-}
-
 
 void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
 {

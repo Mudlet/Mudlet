@@ -1348,6 +1348,20 @@ describe("Tests Other.lua functions", function()
       restore("undoServerWrapWidth")
     end)
 
+    -- The preferences store the exit size as 50 divided by the spin box value,
+    -- 12.5 for a 4, and getConfig() answers that - so setConfig() has to take it
+    -- back as it is for a script restoring the settings it changed.
+    it("round-trips a mapExitSize that is not a whole number", function()
+      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      snapshot("mapExitSize")
+      assert.is_true(setConfig("mapExitSize", 12.5))
+      assert.equals(12.5, getConfig("mapExitSize"))
+
+      assert.is_true(setConfig("mapExitSize", getConfig("mapExitSize")))
+      assert.equals(12.5, getConfig("mapExitSize"), "handing getConfig's answer back to setConfig changed the exit size")
+      restore("mapExitSize")
+    end)
+
     it("returns nil and a message for an unknown key", function()
       local value, message = getConfig("totallyBogusConfigKey")
       assert.is_nil(value)

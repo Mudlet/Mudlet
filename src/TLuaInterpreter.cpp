@@ -8101,7 +8101,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
         if (key == qsl("mapExitSize")) {
-            host.mpMap->mpMapper->slot_exitSize(getVerifiedInt(L, __func__, 2, "value"));
+            // not truncated to a whole number: the preferences store sizes such as
+            // 12.5, which getConfig() answers and a script may hand back
+            host.mpMap->mpMapper->mp2dMap->setExitSize(getVerifiedDouble(L, __func__, 2, "value"));
             return success();
         }
         if (key == qsl("mapRoundRooms")) {
