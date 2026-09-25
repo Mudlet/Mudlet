@@ -1412,6 +1412,24 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpHost, &Host::signal_editorSearchOptionsChanged, this, &dlgTriggerEditor::setSearchOptions);
     connect(mpHost, &Host::signal_editorShowBidiChanged, this, &dlgTriggerEditor::setEditorShowBidi);
     connect(mpHost, &Host::signal_showIdsInEditorChanged, this, &dlgTriggerEditor::showIDLabels);
+    connect(mpHost, &Host::signal_triggerToggled, this, &dlgTriggerEditor::refreshTriggerIcon);
+    connect(mpHost, &Host::signal_aliasToggled, this, &dlgTriggerEditor::refreshAliasIcon);
+    connect(mpHost, &Host::signal_timerToggled, this, &dlgTriggerEditor::refreshTimerIcon);
+    connect(mpHost, &Host::signal_keyToggled, this, &dlgTriggerEditor::refreshKeyIcon);
+    connect(mpHost, &Host::signal_scriptToggled, this, &dlgTriggerEditor::refreshScriptIcon);
+    connect(mpHost, &Host::signal_scriptCodeChanged, this, &dlgTriggerEditor::writeScript);
+    connect(mpHost, &Host::signal_itemsChangedByScript, this, [this]() {
+        mNeedUpdateData = true;
+    });
+    connect(mpHost, &Host::signal_keyTakenWarning, this, [this](const QString& warning) {
+        // Read out only when it can also be seen: a closed editor replaces it
+        // when it opens, and a script making its bindings on connect would have
+        // it read out at every connect. Selecting the binding shows it again.
+        showWarning(warning, isVisible());
+    });
+    connect(mpHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& fgColor, const QColor& bgColor) {
+        mpErrorConsole->print(text, fgColor, bgColor);
+    });
     // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
     mpHost->editorThemeChanged();
 

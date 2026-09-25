@@ -27,7 +27,6 @@
 #include "Host.h"
 #include "TKey.h"
 #include "Tree.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #include "utils.h"
 
@@ -212,14 +211,11 @@ void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
     // bindings at profile load would repeat this at every startup, and a line
     // the player learns to ignore is worse than no line. The editor is where
     // the binding is, and where it gets changed.
-    if (mpHost.isNull() || !mpHost->mpEditorDialog) {
+    if (mpHost.isNull()) {
         return;
     }
     if (const QString warning = takenKeyWarning(pKey); !warning.isEmpty()) {
-        // Read out only when it can also be seen: a closed editor replaces it
-        // when it opens, and a script making its bindings on connect would have
-        // it read out at every connect. Selecting the binding shows it again.
-        mpHost->mpEditorDialog->showWarning(warning, mpHost->mpEditorDialog->isVisible());
+        emit mpHost->signal_keyTakenWarning(warning);
     }
 }
 
@@ -297,9 +293,7 @@ bool KeyUnit::enableKey(const QString& name)
         // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshKeyIcon(pT->getID());
-        }
+        emit mpHost->signal_keyToggled(pT->getID());
     }
     return found;
 }
@@ -315,9 +309,7 @@ bool KeyUnit::disableKey(const QString& name)
         // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshKeyIcon(pT->getID());
-        }
+        emit mpHost->signal_keyToggled(pT->getID());
     }
     return found;
 }

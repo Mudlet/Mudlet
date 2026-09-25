@@ -611,6 +611,7 @@ private slots:
         QCOMPARE(editor->styleSheet(), heldStyleSheet);
         QCOMPARE(notepad->styleSheet(), heldStyleSheet);
         QVERIFY2(!editor->mCleanResetQueued, "SETUP: the editor already has a clean reset queued, so the assertion below cannot fail.");
+        editor->mNeedUpdateData = false;
 
         host->closeChildren();
         QVERIFY2(!host->mpEditorDialog, "closeChildren() did not release the editor.");
@@ -625,10 +626,15 @@ private slots:
         const QString releasedStyleSheet = qsl("QWidget { color: #654321; }");
         QVERIFY(host->setProfileStyleSheet(releasedStyleSheet));
         QVERIFY(QMetaObject::invokeMethod(host, "signal_editorCleanResetRequested"));
+        emit host->signal_itemsChangedByScript();
+        emit host->signal_errorConsolePrint(qsl("released editor probe"), QColor(Qt::red), QColor(Qt::black));
 
         QCOMPARE(editor->styleSheet(), heldStyleSheet);
         QCOMPARE(notepad->styleSheet(), heldStyleSheet);
         QVERIFY2(!editor->mCleanResetQueued, "A released editor was still asked to rebuild its trees.");
+        QVERIFY2(!editor->mNeedUpdateData, "A released editor was still told scripts changed its items.");
+        QVERIFY2(!editor->mpErrorConsole->model().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("released editor probe")),
+                 "A released editor still printed to its error console.");
     }
 
     void cleanup()

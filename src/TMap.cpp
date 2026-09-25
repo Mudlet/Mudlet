@@ -34,7 +34,6 @@
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
@@ -230,11 +229,9 @@ void TMap::mapClear()
 // The supplied message should contain a localised message and no "WARNING:" or other prefixes:
 void TMap::logError(const QString& msg)
 {
-    if (mpHost->mpEditorDialog) {
-        /*: Used to print a map error in the Errors console in the Editor, %1 is the
+    /*: Used to print a map error in the Errors console in the Editor, %1 is the
  message text and a line-feed is also appended.*/
-        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
-    }
+    emit mpHost->signal_errorConsolePrint(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
 }
 
 // Not used:
