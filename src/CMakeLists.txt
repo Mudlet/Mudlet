@@ -1083,3 +1083,41 @@ if(UNIX AND NOT APPLE)
         WORLD_READ
         WORLD_EXECUTE)
 endif()
+
+# `cmake --build <dir> --target run-mudlet` - build if needed, then launch.
+#
+# On macOS this goes through the bundle rather than the binary inside it. macOS
+# attributes a permission request to the responsible process, which for a binary
+# started from a shell is the application owning the terminal, not Mudlet: the
+# built-in speech backend then asks for speech recognition, the terminal's
+# application is required to carry the usage description, and TCC kills Mudlet
+# when it does not. See AppleSpeechRecognizer::doStartListening().
+#
+# `open` detaches, so qDebug() and qWarning() would go nowhere - hence the two
+# flags, which put both streams in a file beside the build.
+#
+# A sanitizer build is the exception, and runs the binary directly: ASAN_OPTIONS
+# and its siblings are read from the environment of the process, and `open`
+# hands the request to launchd rather than passing this shell's environment on,
+# so a sanitized run launched that way would silently ignore every option set
+# for it - and report to a terminal nothing is reading. That backend declines to
+# ask for permission rather than dying when it finds itself started this way, so
+# the trade is a message instead of a crash.
+if(APPLE AND NOT USE_SANITIZER)
+  add_custom_target(run-mudlet
+    # -n so a rebuild is actually what starts, rather than the running copy
+    # being brought to the front
+    COMMAND open -n "$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>"
+            --stdout "${CMAKE_BINARY_DIR}/mudlet-run.log"
+            --stderr "${CMAKE_BINARY_DIR}/mudlet-run.log"
+    COMMAND ${CMAKE_COMMAND} -E echo "Mudlet started; its output is in ${CMAKE_BINARY_DIR}/mudlet-run.log"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet as an application")
+else()
+  add_custom_target(run-mudlet
+    COMMAND "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet")
+endif()

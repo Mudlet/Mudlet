@@ -21,6 +21,8 @@
 #include <QAction>
 #include <QClipboard>
 #include <QFileInfo>
+#include <QMenu>
+#include <QPointer>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <algorithm>
@@ -671,6 +673,96 @@ private slots:
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(overTheLink.x(), blankRowY));
 
         QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
+    }
+
+    // #3031: the timestamp sits in a gutter to the left of the line's own text,
+    // so a click there is taken to mean the line as a whole and selects all of
+    // it the way a Ctrl+click does. Without that, the click lands on the line's
+    // first character and a press and release in one place select nothing.
+    void test_clickingOnATimestampSelectsTheWholeLine()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->slot_toggleTimeStamps(true);
+        QVERIFY2(console->showTimeStamps(), "the timestamp gutter never came on, so the click has nothing to land in");
+
+        // The gutter is as wide as the timestamp format, so the first column of
+        // the row is inside it
+        const QPointF gutter = cellInMiddleRow(pane, 0);
+        const QString line = lineUnder(pane, gutter);
+        QVERIFY2(line.endsWith(qsl("eleven")), qPrintable(qsl("the row clicked on holds \"%1\" rather than one of the prose lines").arg(line)));
+
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, gutter);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, gutter);
+
+        QCOMPARE(highlightedText(), line);
+        QCOMPARE(copiedText(pane), line);
+    }
+
+    // #6476: a right-click builds a menu of its own every time, so the one the
+    // click before put up has to be gone - otherwise each right-click of the
+    // session leaves another menu parented on the pane.
+    void test_theRightClickMenuIsDestroyedWhenItCloses()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        const QPointF pos = cellInMiddleRow(pane, 5);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+        QVERIFY2(menu->findChild<QAction*>(qsl("consoleCopy")), "the menu is not the console's own");
+
+        menu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
+    }
+
+    // #6351: the console actions are keyed on the unique name while the menu
+    // entry is labelled with the display name. An entry that handed its label
+    // back missed the map, indexed the empty list that left behind and took the
+    // client down with it, so it has to carry the unique name through instead.
+    // A regression here therefore aborts the run rather than failing this case.
+    void test_aMouseEventEntryRaisesItsEventUnderTheUniqueName()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("mouseEventRanFor = ''\n"
+                                                                        "function mouseEventTestHandler(_, uniqueName) mouseEventRanFor = uniqueName end\n"
+                                                                        "registerAnonymousEventHandler('testMouseEventName', 'mouseEventTestHandler')\n"
+                                                                        "addMouseEvent('testMouseUniqueName', 'testMouseEventName', 'A display name of its own', 'tooltip')\n")),
+                 "the addMouseEvent() call failed");
+
+        const QPointF pos = cellInMiddleRow(pane, 5);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+
+        QAction* entry = nullptr;
+        for (QAction* pAction : menu->actions()) {
+            if (pAction->text() == qsl("A display name of its own")) {
+                entry = pAction;
+                break;
+            }
+        }
+        QVERIFY2(entry, "the mouse event got no entry in the console's right-click menu");
+        entry->trigger();
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "mouseEventRanFor");
+        const QString ranFor = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 1);
+        QCOMPARE(ranFor, qsl("testMouseUniqueName"));
+
+        menu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
     // TConsole::selectSection() refuses a length that would put a selection's

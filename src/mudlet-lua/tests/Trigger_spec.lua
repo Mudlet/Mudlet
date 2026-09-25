@@ -1382,9 +1382,25 @@ describe("Trigger processing", function()
                 local line = string.rep("word ", repeats)
                 local best
                 for _ = 1, 3 do
+                    -- os.clock() resolves to about a millisecond on Windows,
+                    -- which is the whole cost of the shorter line there, so a
+                    -- single feed can measure exactly 0 and leave the ratio
+                    -- below nothing to divide by. Feeding until the run is
+                    -- clear of that floor and dividing by the number of feeds
+                    -- keeps both measurements per-feed and comparable.
+                    local feeds, taken = 0, 0
                     local started = os.clock()
-                    feedTriggers("\n" .. line .. "\n")
-                    local taken = os.clock() - started
+                    repeat
+                        feedTriggers("\n" .. line .. "\n")
+                        feeds = feeds + 1
+                        taken = os.clock() - started
+                    -- a clock that never advanced would spin here forever and
+                    -- hang CI with no diagnostic, which is worse than the
+                    -- failure this loop replaced. 100 feeds is far more than
+                    -- any platform needs, so giving up past it leaves the
+                    -- short > 0 assertion below to report the dead clock.
+                    until taken >= 0.02 or feeds >= 100
+                    taken = taken / feeds
                     if not best or taken < best then
                         best = taken
                     end
@@ -2641,6 +2657,27 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- Only a perl regex contributes named captures, but every matched pattern
+        -- owns a row of multimatches - so the rows that have none still have to
+        -- take an empty slot, or a later pattern's named capture surfaces on an
+        -- earlier pattern's row (#8748).
+        it("keeps a named capture with its own pattern past patterns that have none", function()
+            withTrigger("named chain", function()
+                feedTriggers("tknamed alpha\n")
+                feedTriggers("chain gap\n")
+                feedTriggers("tkmiddle here\n")
+                feedTriggers("tknamed end omega\n")
+
+                local seen = _G.TriggerKindsSpec.namedChain
+                assert.is_table(seen, "the multiline trigger never completed, so nothing was read")
+                assert.are.equal(4, seen.rows, "a pattern of the chain took no multimatches row of its own")
+                assert.are.equal("alpha", seen.first, "the first pattern's named capture left row 1")
+                assert.are.equal("omega", seen.last, "the last pattern's named capture was not in its own row")
+                assert.is_nil(seen.spacerName, "the line spacer's row should carry no named capture")
+                assert.is_nil(seen.middleName, "the substring pattern's row should carry no named capture")
+            end)
+        end)
+
         it("sends the command a trigger carries", function()
             withTrigger("command", function(cleanup)
                 local aliasId = tempAlias("^tkcommand sent$", [==[_G.TriggerKindsSpec.commandSeen = true]==])
@@ -3602,6 +3639,105 @@ describe("Trigger processing", function()
             track(tempTrigger("ordersecond_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "second" end))
             feedTriggers("\nordersecond_pattern then orderfirst_pattern\n")
             assert.are.same({"first", "second"}, _G.TrigSpec.seen, "a gap left by a killed trigger reordered the ones around it")
+        end)
+
+        -- A stay-open window makes a trigger fire on lines it never matches, so
+        -- it has to keep reaching the trigger while the window is open and hand
+        -- it back to the index once it shuts. Each target below carries a
+        -- pattern its lines never contain, so every fire it records can only
+        -- have come from the window, and a setTriggerStayOpen() that quietly
+        -- did nothing at all could not pass.
+        describe("stay-open windows set from a script", function()
+            it("keeps firing a trigger a script holds open on every line", function()
+                local lines = 20
+                trackPerm("SpecStayOpenSteady",
+                    permSubstringTrigger("SpecStayOpenSteady", "", {"qqneverinalineqq"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                -- The same count every line, which is the shape a script that
+                -- re-holds a trigger open produces, and the one where the
+                -- engine has nothing to change: the window is reopened at 3
+                -- before it can ever count down to 0, so the trigger is open on
+                -- every line fed below. Each feed carries the empty line ahead
+                -- of the text as well, and an open window fires on both.
+                track(tempTrigger("steady_probe_line", function()
+                    setTriggerStayOpen("SpecStayOpenSteady", 3)
+                end))
+
+                -- One feed first, so the window is already open when the
+                -- counting starts: on the feed that opens it the trigger fires
+                -- on the text line only, having missed the blank line ahead of
+                -- it, and would count differently from every later one.
+                feedTriggers("\nsteady_probe_line warmup\n")
+                _G.TrigSpec.count = 0
+
+                for i = 1, lines do
+                    feedTriggers("\nsteady_probe_line " .. i .. "\n")
+                end
+
+                assert.are.equal(2 * lines, _G.TrigSpec.count,
+                    "a trigger held open by a repeated setTriggerStayOpen() stopped firing")
+            end)
+
+            it("files a trigger back into the index once its window closes", function()
+                trackPerm("SpecStayOpenClosed",
+                    permSubstringTrigger("SpecStayOpenClosed", "", {"closedstayopen_pattern"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                setTriggerStayOpen("SpecStayOpenClosed", 5)
+                feedTriggers("\nwhile the window is open\n")
+                assert.is_true(_G.TrigSpec.count > 0, "an opened stay-open window did not fire")
+
+                setTriggerStayOpen("SpecStayOpenClosed", 0)
+                _G.TrigSpec.count = 0
+                feedTriggers("\nafter the window was closed\n")
+                assert.are.equal(0, _G.TrigSpec.count, "a closed stay-open window went on firing")
+
+                -- Closing it hands the trigger back to the index, and a filing
+                -- that went wrong there leaves it unreachable by its own line
+                -- rather than merely firing at the wrong time.
+                feedTriggers("\nthis line has closedstayopen_pattern in it\n")
+                assert.are.equal(1, _G.TrigSpec.count,
+                    "a trigger whose stay-open window closed was not filed back into the index, so its own line never reached it")
+            end)
+
+            -- A regex or color trigger has nothing in the index to change when
+            -- its window opens, but it still has to stop being dismissed by its
+            -- pattern. These lines are fed without a leading blank line, which
+            -- an open window fires on too and which has no one color to rule a
+            -- color trigger out by, so it would hide a miss.
+            it("keeps firing a regex trigger opened between lines", function()
+                trackPerm("SpecStayOpenRegex",
+                    permRegexTrigger("SpecStayOpenRegex", "", {"^regexstayopen (\\w+) marker$"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                -- filed while closed, so opening it has a copy to go stale
+                feedTriggers("before the window opens\n")
+                setTriggerStayOpen("SpecStayOpenRegex", 3)
+                for i = 1, 3 do
+                    feedTriggers("unrelated window line " .. i .. "\n")
+                end
+                assert.are.equal(3, _G.TrigSpec.count, "a regex trigger opened between lines did not fire on the lines after")
+            end)
+
+            it("fires a regex trigger opened by an earlier trigger on the same line", function()
+                track(tempTrigger("samelineopener_probe", function()
+                    setTriggerStayOpen("SpecStayOpenRegexSameLine", 1)
+                end))
+                trackPerm("SpecStayOpenRegexSameLine",
+                    permRegexTrigger("SpecStayOpenRegexSameLine", "", {"^regexsameline (\\w+) marker$"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                feedTriggers("samelineopener_probe on this line\n")
+                assert.are.equal(1, _G.TrigSpec.count, "a regex trigger opened earlier on the line did not fire on it")
+            end)
+
+            it("keeps firing a color trigger opened between lines", function()
+                -- 4, 2 remaps to red on black
+                local id = track(tempColorTrigger(4, 2, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+                feedTriggers("\27[32;40mbefore the window opens\27[0m\n")
+                setTriggerStayOpen(tostring(id), 3)
+                for i = 1, 3 do
+                    feedTriggers("\27[32;40mgreen window line " .. i .. "\27[0m\n")
+                end
+                assert.are.equal(3, _G.TrigSpec.count, "a color trigger opened between lines did not fire on lines of another color")
+            end)
         end)
     end)
 end)

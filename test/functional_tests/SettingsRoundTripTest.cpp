@@ -847,6 +847,38 @@ private slots:
         QVERIFY2(settingChangedCount("enableClosedCaption") == 1, "the apply raised enableClosedCaption again for a value the live slot had already stored");
         QVERIFY2(settingChangedCount("advertiseScreenReader") == 1, "the apply raised advertiseScreenReader again for a value the live slot had already stored");
     }
+
+    // The box is tri-state, and what the apply has to write is the box's own
+    // state rather than the profile's. While the setting was reachable only
+    // from setConfig() the apply read the profile and wrote it straight back,
+    // so a box put back on the dialog over that apply would be inert (#8148).
+    void test_theAmbiguousEastAsianWidthBoxReachesTheProfile()
+    {
+        const Qt::CheckState prior = mpHost->getWideAmbiguousEAsianGlyphsControlState();
+        restoreLater([this, prior]() {
+            mpHost->setWideAmbiguousEAsianGlyphs(prior);
+        });
+
+        openPreferences();
+        QCheckBox* pBox = mpPreferences->checkBox_useWideAmbiguousEastAsianGlyphs;
+        QCOMPARE(pBox->checkState(), prior);
+        const Qt::CheckState wanted = (prior == Qt::Checked) ? Qt::Unchecked : Qt::Checked;
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pBox->setCheckState(wanted);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+
+        QCOMPARE(mpHost->getWideAmbiguousEAsianGlyphsControlState(), wanted);
+        QCOMPARE(mpHost->wideAmbiguousEAsianGlyphs(), wanted == Qt::Checked);
+
+        // The third state is the one the box is tri-state for - it says "decide
+        // from the encoding" rather than yes or no - and it has to reach the
+        // profile as itself rather than as whichever of the two it looks like.
+        QSignalSpy backSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pBox->setCheckState(Qt::PartiallyChecked);
+        QVERIFY2(applyAndWait(backSpy), "the debounce never wrote the settings back");
+        QCOMPARE(mpHost->getWideAmbiguousEAsianGlyphsControlState(), Qt::PartiallyChecked);
+    }
 };
 
 #include "SettingsRoundTripTest.moc"

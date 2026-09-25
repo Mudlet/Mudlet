@@ -73,6 +73,7 @@ class LuaInterface;
 class XMLexport;
 class TMedia;
 class GMCPAuthenticator;
+class CredentialManager;
 class TRoom;
 class TConsole;
 class TMainConsole;
@@ -175,6 +176,8 @@ class Host : public QObject
     friend class TDiscordModeTest;
     // Allows the functional test to call closeChildren() on its own:
     friend class HostWidgetDecouplingTest;
+    // Allows the functional test to answer the keychain lookup in place of a keychain:
+    friend class TelnetLatePasswordTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -213,7 +216,10 @@ public:
     void setLogin(const QString& login) { mLogin = login; }
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
-    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
+    // A password still being fetched from the keychain counts: the auto-login is timer based, so
+    // the password step has to be armed before the read that answers it comes back, or there is
+    // no prompt left for a late answer to be typed at.
+    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || mSecuredPasswordPending); }
     // True once the user has sent any command to the game on the current connection. It gates whether
     // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
     // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
@@ -1002,8 +1008,6 @@ public:
 
     std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
 
-    bool mTutorialForCompactLineAlreadyShown = false;
-
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
@@ -1086,6 +1090,11 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void loadSecuredPassword();
+    // The lookup loadSecuredPassword() starts, on a manager of its own that this deletes once the
+    // lookup has answered. Apart so that a test can hand in a manager that stands in for the keychain.
+    void lookUpSecuredPassword(CredentialManager* credManager);
+    // What that lookup answers, first and, after a timeout, late
+    void securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut);
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
     void thankForUsingPTB();
@@ -1208,6 +1217,7 @@ private:
     QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
+    bool mSecuredPasswordPending = false;
 
     int mPort;
 
