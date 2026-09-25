@@ -75,6 +75,11 @@ using namespace std::chrono_literals;
 constexpr int AUTO_LOGIN_USERNAME_DELAY_MS = 2000;
 constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
+// The longest a password step reached with no password stays open to a password that turns up
+// afterwards, whatever else the connection looks like. An upper bound only: the password also
+// needs the game's mask still up, which the game can take down sooner, and so can the safety
+// timeout a line sent under the mask starts - see cTelnet::restartPasswordMaskTimeout():
+constexpr std::chrono::milliseconds AUTO_LOGIN_LATE_PASSWORD_WINDOW = 5min;
 
 // How long ECHO+SGA must survive a submitted input line before it counts as
 // character-at-a-time rather than a password mask - see
@@ -238,6 +243,11 @@ void cTelnet::reset()
     insb = false;
     mDiscardingOversizedSubnegotiation = false;
     mDeferredReconnect = false;
+    // Where the auto-login got to belongs to the connection being reset - a password arriving
+    // after this one ended has no prompt of this connection's left to answer:
+    mAutoLoginPasswordOutstanding = false;
+    mAutoLoginPasswordMaskWithdrawn = false;
+    mAutoLoginPasswordOutstandingSince.invalidate();
     // Stop any pending password mode timeout
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
@@ -413,6 +423,11 @@ void cTelnet::cancelLoginTimers()
     if (mTimerPass) {
         mTimerPass->stop();
     }
+
+    // Something else has taken the login over - GMCP Char.Login does - so the auto-login has no
+    // prompt left to answer and a password arriving later must not be typed into that session
+    mAutoLoginPasswordOutstanding = false;
+    mAutoLoginPasswordOutstandingSince.invalidate();
 }
 
 // This configures the encoding for all outgoing data and incoming OutOfBand data
@@ -900,8 +915,7 @@ void cTelnet::slot_send_login()
 
 void cTelnet::slot_send_pass()
 {
-    // Auto-login: Send password if credentials are configured
-    if (mpHost->hasAutoLoginCredentials()) {
+    if (!mpHost->getPass().isEmpty()) {
         qDebug() << "Auto-login: Sending password (timer-based, independent of ECHO mode)";
         // Not a game command, so sendData() does not arm the timeout for this
         // line, and on a slow connection it goes out ahead of the prompt that
@@ -911,6 +925,66 @@ void cTelnet::slot_send_pass()
         if (sendData(mpHost->getPass(), false)) {
             restartPasswordMaskTimeout();
         }
+        return;
+    }
+
+    // The login step armed this one because a password was still on its way then (see
+    // Host::hasAutoLoginCredentials()), and none has arrived since
+    mAutoLoginPasswordOutstanding = true;
+    mAutoLoginPasswordMaskWithdrawn = false;
+    mAutoLoginPasswordOutstandingSince.start();
+    qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
+}
+
+// A password that turned up after the auto-login had already passed the password step, which is
+// what an unanswered keychain prompt produces. Typing it for the player is only safe while the
+// game is provably still waiting for it: sent a moment too late it is echoed on screen in clear
+// text and handed to the game as a command, so anything short of proof leaves it to the player.
+void cTelnet::sendOutstandingAutoLoginPassword()
+{
+    if (!mAutoLoginPasswordOutstanding) {
+        return;
+    }
+    // Spent either way: a password that is not safe to send now cannot become safe later, and one
+    // that goes out must not go out a second time.
+    mAutoLoginPasswordOutstanding = false;
+
+    if (!mpHost || getConnectionState() != QAbstractSocket::ConnectedState) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - the connection is gone, so the late password is not sent";
+        return;
+    }
+
+    if (mpHost->getPass().isEmpty()) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - called without a password, nothing to send";
+        return;
+    }
+
+    const bool withinWindow = mAutoLoginPasswordOutstandingSince.isValid() && mAutoLoginPasswordOutstandingSince.elapsed() < AUTO_LOGIN_LATE_PASSWORD_WINDOW.count();
+    // A server that masks input (its WILL ECHO not withdrawn) is the client's own record of a
+    // password prompt still being open, and the only proof there is. A server that never
+    // negotiates ECHO offers none: "it has printed nothing since" cannot tell a password prompt
+    // from any other question it asked before the mark, so those games get the notice instead.
+    // Nor does a mask the server has put up again: a WONT ECHO since the password step closed
+    // the prompt that was open then, and whatever it is masking now is a different question.
+    // A server already recognised as character-at-a-time keeps ECHO on for the whole session
+    // and echoes what it is sent, so its mask is no prompt either. One merely suspected is not
+    // held against the prompt: a line-mode game that masks its login prompt as well as its
+    // password prompt looks exactly like one until a game command has gone out, and refusing
+    // it would leave the player at a prompt the game is still holding open.
+    const bool stillAtPrompt = mpHost->isRemoteEchoingActive() && !mAutoLoginPasswordMaskWithdrawn && !mCharacterModeDetected;
+    if (!withinWindow || !stillAtPrompt) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - not sending the late password. Within the window:" << withinWindow << "masking:" << mpHost->isRemoteEchoingActive()
+                 << "mask withdrawn since the password step:" << mAutoLoginPasswordMaskWithdrawn << "character-at-a-time detected:" << mCharacterModeDetected;
+        //: Shown in the game window when a password fetched from the system keychain arrived after the automatic login had reached its password step, and Mudlet could not be sure the game was still asking for it
+        postMessage(tr("[ INFO ]  - The saved password arrived too late for the automatic login, so it was not sent. Please type it in yourself."));
+        return;
+    }
+
+    qDebug() << "Auto-login: sending the password that arrived after the password step";
+    // Late or not, it is the auto-login password, so it starts the safety timeout as
+    // slot_send_pass() does, against a game that never releases the mask after it
+    if (sendData(mpHost->getPass(), false)) {
+        restartPasswordMaskTimeout();
     }
 }
 
@@ -1670,6 +1744,14 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // we need to cook any byte values from the encoding process that are
         // 0xff (assuming that there are no Telnet protocol sequences in here):
         outData = escapeIac(outData);
+
+        if (isGameCommand) {
+            // Only here, where the command really goes to the game: one a package turned down with
+            // denyCurrentSend() never reached the prompt, so it did not take it over. One that did
+            // means whatever the game is now waiting for is the player's input and not a password
+            // Mudlet still owes it.
+            mAutoLoginPasswordOutstanding = false;
+        }
 
         // Character-at-a-time detection: a genuine character-at-a-time server keeps
         // ECHO (with SGA) active across every submitted line, whereas a server that
@@ -3541,6 +3623,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState.reset(idxOption);
 
                 if (option == OPT_ECHO) {
+                    // Whatever prompt the auto-login's password step found masked is over with
+                    // this, whether or not the release is honoured below - see
+                    // sendOutstandingAutoLoginPassword()
+                    mAutoLoginPasswordMaskWithdrawn = true;
                     if (mEchoAnomalyDetected) {
                         qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
                     } else {

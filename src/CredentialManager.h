@@ -34,6 +34,7 @@ class QTimer;
 
 namespace QKeychain {
 class Job;
+class ReadPasswordJob;
 }
 
 /**
@@ -64,6 +65,8 @@ class CredentialManager : public QObject
 {
     Q_OBJECT
     friend class CredentialManagerKeychainTest;
+    // Stalls the keychain behind a profile's own password lookup
+    friend class TelnetLatePasswordTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);
@@ -72,12 +75,20 @@ public:
     // Callback types for asynchronous operations
     using CredentialCallback = std::function<void(bool success, const QString& errorMessage)>;
     using CredentialRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage)>;
+    // timedOut: it was the lookup's deadline that answered, not the keychain
+    using TimedRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage, bool timedOut)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
     // Hybrid password management methods (preferred public API)
     // These methods intelligently choose between keychain and SecureStringUtils based on availability and portable mode
     void storePassword(const QString& profileName, const QString& key, const QString& password, CredentialCallback callback);
     void retrievePassword(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
+    // For a caller that can still use a password the keychain hands over after the lookup gave up
+    // on it, as it does when the user answers an access or unlock prompt late. callback is answered
+    // exactly once, as above. When that answer is the deadline's, lateCallback is answered once
+    // more with what the read the lookup was left waiting on finds, as long as lateContext still
+    // exists by then. That read only: the places the lookup had not reached yet stay unread.
+    void retrievePassword(const QString& profileName, const QString& key, TimedRetrievalCallback callback, QObject* lateContext, CredentialRetrievalCallback lateCallback);
     void removePassword(const QString& profileName, const QString& key, CredentialCallback callback);
     // Existence check that never hands the stored secret to the caller. QtKeychain has no metadata-only
     // lookup, so this reads the credential internally but forwards only whether one exists (scrubbing the
@@ -156,10 +167,14 @@ private:
     {
         QString profileName;
         QString key;
-        CredentialRetrievalCallback callback;
+        TimedRetrievalCallback callback;
+        CredentialRetrievalCallback lateCallback;
+        QPointer<QObject> lateContext;
         std::vector<LookupStage> stages;
         // Parent of the lookup's deadline and of every read it starts, deleted once it has answered.
         QPointer<QObject> scope;
+        // The read of the current stage, until it answers
+        QPointer<QKeychain::ReadPasswordJob> currentRead;
         bool answered = false;
         std::size_t currentStage = 0;
         // The first read that failed for a reason other than there being no such entry, reported in
@@ -182,7 +197,7 @@ private:
     };
     using LookupPtr = std::shared_ptr<Lookup>;
 
-    void finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage);
+    void finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage, bool timedOut = false);
     void runLookupStage(const LookupPtr& lookup, std::size_t index);
     // When the store last refused a profile's reads before answering any of them. Kept per profile
     // and across managers, because a caller asking about two keys - the profile preferences ask
@@ -213,6 +228,9 @@ private:
     // behind it may still hold the password, so the second read is what tells a locked or dismissed
     // store apart from an entry that is simply not readable.
     static constexpr int scmRefusalsBeforeGivingUpOnTheStore = 2;
+    // Hands the answer of the read the deadline cut short to the lookup's lateCallback, whenever
+    // the keychain gets round to giving it
+    static void awaitLateAnswer(const LookupPtr& lookup);
 
     // Each re-files a password a lookup recovered from an older format. Started just before the lookup
     // answers and independent of it, so a write that stalls cannot hold back the recovered password,
