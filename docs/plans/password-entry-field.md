@@ -2,8 +2,9 @@
 
 Issue: https://github.com/Mudlet/Mudlet/issues/11024
 Branch: `claude/password-masking-architecture-78y96u`
-Status: v3.1, after three red-team rounds (five reviewers, then two, then one confirmation pass).
-§9 records what changed and why.
+Status: v3.2, after three red-team rounds (five reviewers, then two, then one confirmation pass)
+and a pass to place every piece on the right side of the libmudlet split (§3.5). §9 records what
+changed and why.
 
 This is an execution plan for coding agents. Read it end to end before touching code. Every
 line reference is an orientation aid, not a fact: verify against the tree you are on.
@@ -197,6 +198,31 @@ What it also does not fix, stated up front so nobody claims otherwise in the PR:
 - Open PRs this supersedes or changes: #10965, #10972, #10978 (superseded); #10968 (its
   "scripts keep their aliases at a prompt" tests stay valid; its withholding guards are unnecessary);
   #10964 (touches the auto-login lines near ~974; keep the cTelnet diff here small).
+- **The libmudlet split, which this change must not set back.** #9011 and #8681: Mudlet is being
+  separated into a core library that may use Qt Core and Qt GUI value types but not Qt Widgets,
+  and a Qt Widgets front-end, so that a mobile front-end can reuse the core. Today everything
+  still builds into one `mudlet_core` target; the split proceeds in slices, and what the tree
+  already has is the contract to follow:
+  - `cmake/audit-core-widgets.sh` counts the files in `mudlet_core` that depend on Qt Widgets (a
+    QtWidgets include or class symbol); `cmake/core-widgets-baseline.txt` holds the count (138 at
+    the time of writing) and `--enforce` fails when the count exceeds it. Not yet a CI gate, but
+    run it before and after: a new widget file raises it, which is expected; a core file gaining
+    a widget symbol is a regression.
+  - Step 5, "core files stop reaching into console widgets", is merged: #10569 gave `TMainConsole`
+    named methods (`setCommandLinePlaceholderText()`, `updateCommandLineSpellCheck()`,
+    `setCommandLineText()`, `raiseCommandLine()`) so `Host` never touches `mpCommandLine`
+    (`grep mpCommandLine src/Host.cpp` finds nothing, and must keep finding nothing); #10570 and
+    #10571 did the same for the rest of `Host`, `TBuffer` and `TLuaInterpreter`'s console reaches;
+    #10550, #10553, #10558 moved spell-checking, map/MXP routing and text selection onto the
+    profile. `TConsoleModel` (`src/TConsoleModel.h`) is the widget-free per-console model,
+    co-owned by `Host`, that lets the telnet → trigger pipeline run with no view; #11048 (open)
+    moves trigger-context state onto it and makes `isPrompt()`/`getLines()` answer with no view.
+    Front-end-only actions are driven by `Host` signals carrying already translated strings
+    (`signal_showMapperScriptReminder`, `signal_showUnpackingProgress`, `signal_loggingAnnouncement`).
+  - Still pending, and relevant here: the `TLuaInterpreter*` files still reach into `TCommandLine`
+    through the `COMMANDLINE` macro (#10569 calls them "separate slices"); `Host` still keeps
+    widget pointers in `recordActiveCommandLine()` / `activeCommandLine()` /
+    `setFocusOnHostActiveCommandLine()`; `Host.h` still includes `TCommandLine.h`.
 
 ## 3. Design
 
@@ -290,6 +316,9 @@ signals:
     void signal_passwordEntryHoldMarked();
 ```
 
+- This block is the core's contract for hidden input (§3.5): nothing in it names a widget, all of
+  it answers with no view, and a front-end that is not Qt Widgets renders its own box against
+  exactly these calls and signals.
 - Recompute is synchronous (a Lua spec must see the field the moment `feedTelnet` returns), and
   the discipline that makes that safe: **a transition that changes two inputs goes through one
   Host method that writes both and recomputes once.** `autoLoginPasswordSent()` is that method for
@@ -404,8 +433,10 @@ A `QLineEdit` subclass. Keep it small; the red team estimates ~200 lines with he
    arriving late cannot be typed over a player who has started answering.
 8. `focusInEvent()` with a reason other than `ActiveWindowFocusReason` →
    `mpHost->recordActiveCommandLine(mpCommandLine)`, so `setFocusOnHostActiveCommandLine()` and
-   the caret forwarder keep landing here through the proxy. `mousePressEvent`/`mouseReleaseEvent`
-   call `mudlet::self()->activateProfile(mpHost)` as the command line does.
+   the caret forwarder keep landing here through the proxy. (That bookkeeping still lives on
+   `Host` with widget pointers; a later libmudlet slice will move it, and this call moves with it,
+   §3.5 rule 6.) `mousePressEvent`/`mouseReleaseEvent` call `mudlet::self()->activateProfile(mpHost)`
+   as the command line does.
 9. `setHoldMarked()` and `setReopened()` switch the placeholder and the accessible description.
    Signals: `submitted()`, `dismissed()`. No text anywhere in the API.
 10. Destructor: nothing. Do not `clear()` before destruction: Qt zero-fills the buffer it still
@@ -416,8 +447,9 @@ A `QLineEdit` subclass. Keep it small; the red team estimates ~200 lines with he
 #### C. `TMainConsole`: open, close, focus, geometry (`src/TMainConsole.h`, `src/TMainConsole.cpp`)
 
 Owns the field because it owns the layout the field sits in and the focus proxies that point at
-the command line. Members: `QPointer<TPasswordEntry> mpPasswordEntry`; accessor
-`TPasswordEntry* passwordEntry() const` for tests.
+the command line, and because it is the front-end (§3.5): `TPasswordEntry.h` is included here and
+in tests, nowhere else. Members: `QPointer<TPasswordEntry> mpPasswordEntry`; accessor
+`TPasswordEntry* passwordEntry() const` for tests; the five command-line methods of §3.5 rule 4.
 
 - ctor: `connect(pH, &Host::signal_passwordEntryWantedChanged, this, &TMainConsole::slot_passwordEntryWanted)`,
   `connect(pH, &Host::signal_passwordEntryHoldMarked, ...)` → `mpPasswordEntry->setHoldMarked()` if
@@ -481,7 +513,9 @@ the command line. Members: `QPointer<TPasswordEntry> mpPasswordEntry`; accessor
    history guard in `enterCommand()`, the tracking line in `processNormalKey()`, the masked branch
    of `mousePressEvent()`, and now-unused includes (`QToolButton`, `QResizeEvent`, `QPainter` -
    verify each; `Host.h` includes this header, and `TConsole.cpp` ~852/~1058 construct a
-   `QResizeEvent` without a direct include, so add direct includes where the removal exposes them).
+   `QResizeEvent` without a direct include, so add direct includes where the removal exposes them
+   - in the widget files, never in `Host.h`, whose include of this header is itself a pending
+   libmudlet slice).
 2. Add, at the top of `event()` for `KeyPress` only:
    ```cpp
    // A widget with a focus proxy is not the keyboard target; Qt routes real key presses to the
@@ -525,15 +559,21 @@ the command line. Members: `QPointer<TPasswordEntry> mpPasswordEntry`; accessor
 - `TLuaInterpreter::callCmdLineAction()`: delete the `isRemoteEchoingActive()` refusal. Sub
   command lines never hold the password; refusing their actions during a prompt was collateral, and
   it left the text sitting visibly in the sub line.
-- Lua writes to `"main"` while the field is open go into the field: after the `COMMANDLINE` macro
-  resolves the widget, `if (auto* pField = qobject_cast<TPasswordEntry*>(pN->focusProxy()))` -
-  no accessor and no duplicate lookup. `printCmdLine` → `setText`, `appendCmdLine` → `insert` at
-  the end, `clearCmdLine` → `setText(QString())`, `selectCmdLineText` → `selectAll`, and
-  `TMainConsole::setCommandLineText()` (`Host::sendCmdLine()`, MXP `prompt:` links) → `setText` +
-  `selectAll`. `getCmdLine("main")` keeps reading the command line: reads never see the field.
-  Rationale in §4.6. Both `TLuaInterpreterMudletObjects.cpp` and `TLuaInterpreterUI.cpp` change.
-  `TLabel`'s own `prompt:` scheme writes to the command line directly and is left alone; a label
-  link pre-filling a password is not a thing, and the text waits behind the field.
+- Lua writes to `"main"` while the field is open go into the field, through the seam #10569
+  started (§3.5 rule 4). `TMainConsole` gains, beside `setCommandLineText()`:
+  `printToCommandLine(const QString&)` (field: `setText`; else `setPlainText`),
+  `appendToCommandLine(const QString&)` (field: `insert` at the end; else the current append),
+  `clearCommandLine()` (field: `setText(QString())`; else `clear()`),
+  `selectCommandLineText()` (field: `selectAll`; else `selectAll`), and `commandLineText()`
+  (always the command line: reads never see the field). `setCommandLineText()` itself (used by
+  `Host::sendCmdLine()`, so by MXP `prompt:` links) becomes `setText` + `selectAll` on the field
+  when open. The Lua functions `printCmdLine`, `appendCmdLine`, `clearCmdLine` and `getCmdLine`
+  (`TLuaInterpreterMudletObjects.cpp`) and `selectCmdLineText` (`TLuaInterpreterUI.cpp`) call
+  these on `host.mpConsole` when `isMain(name)`, with the null check `Host::sendCmdLine()` uses,
+  and keep the `COMMANDLINE` macro for sub command lines. No `TPasswordEntry` include in any Lua
+  file. Rationale in §4.6. `TLabel`'s own `prompt:` scheme writes to the command line directly and
+  is left alone; a label link pre-filling a password is not a thing, and the text waits behind
+  the field.
 - `cTelnet` (keep every change here mechanical and small; #10964 and friends are open nearby):
   1. In `sendData()`'s two encoding warnings, quote the data only when the event was permitted.
      The only callers that withhold it are the two auto-login password sends and, now, the field;
@@ -625,6 +665,55 @@ rather than password protection, and are the complete list:
 The anomaly latch, character-mode recognition, the login-phase timeout and the late-password logic
 are unchanged. Anyone tempted to improve them in this PR: do not.
 
+### 3.5 Which side of the libmudlet seam each piece is on
+
+The policy is core; the box is front-end. That is not a coincidence of where the code was
+convenient to put: §3.2 A is the contract a non-Qt-Widgets front-end would implement a hidden-input
+box against, and the semantics that make every front-end behave the same (what a dismissal is,
+when it ends, what the auto-login does) live behind it, not in the widget.
+
+| Piece | Side | Rule it follows |
+| --- | --- | --- |
+| `Host::passwordEntryWanted()`, the five inputs, the per-hold flags, both signals, `sendPasswordEntry()`, `dismissPasswordEntry()`, `clearPasswordEntryDismissal()`, `passwordEntryEdited()`, `markPasswordEntryHold()`, `autoLoginPasswordSent()` | core (`Host`) | bools, `QString` and signals only; no widget type in `Host.h`; works with `mpConsole` null |
+| `cTelnet` hooks (E) | core | core calls core |
+| `TLuaInterpreter::callCmdLineAction()` guard removal | core | removes a read, adds nothing |
+| Lua writes to "main" during a prompt (E) | core calls the seam | through `TMainConsole` methods beside `setCommandLineText()`, never a widget type in the Lua files |
+| `TPasswordEntry` | front-end | a Qt Widgets file; included only by `TMainConsole.cpp` and tests |
+| `TMainConsole` open/close/focus/geometry, the info line, the placeholder states | front-end | reads Host outputs, calls Host mutators, never the reverse |
+| `TCommandLine` redirect, `playerTypedLine()`, the `enterCommand()` notification | front-end | widget tells core about an input event |
+| `TConsole::setProxyForFocus()` accessibility fix, `TTextEdit` caret path | front-end | unchanged ownership |
+
+Rules for whoever writes the code:
+
+1. No new Qt Widgets include or symbol in `Host.h`, `Host.cpp`, `ctelnet.*`, `TConsoleModel.*` or
+   any `TLuaInterpreter*.cpp`. `Host` never names `TPasswordEntry`; it does not need to.
+2. `Host` never calls into the field or the console for this feature. It emits
+   `signal_passwordEntryWantedChanged` and `signal_passwordEntryHoldMarked`; the front-end
+   connects. (The one existing `Host` → `TMainConsole` call this touches, `Host::sendCmdLine()` →
+   `setCommandLineText()`, is the #10569 seam and keeps its null check.)
+3. Everything in `Host` must answer with no view, the way #11048 makes `isPrompt()` answer:
+   `passwordEntryWanted()` is computed and emitted whether or not anything renders it,
+   `sendPasswordEntry()` sends, `Host::send()`'s dismissal clear and its deferred recompute run
+   into no receiver. Commit 1's test covers it.
+4. The Lua redirect goes through `TMainConsole`, not around it: add `printToCommandLine()`,
+   `appendToCommandLine()`, `clearCommandLine()`, `selectCommandLineText()` and
+   `commandLineText()` beside `setCommandLineText()`, each answering for the field when it is
+   open and the command line otherwise; the five Lua functions call them for `isMain(name)` and
+   keep the `COMMANDLINE` macro for sub command lines only. That removes five widget reaches from
+   the Lua files for the main line, in the direction the pending slice is going, and it means a
+   future front-end gets the same "writes follow the keyboard" behaviour by implementing the same
+   five methods.
+5. `TPasswordEntry.{h,cpp}` join `mudlet_core` because there is no separate front-end target yet.
+   `cmake/audit-core-widgets.sh --count` goes up by the files that include `QLineEdit`; record
+   the before and after numbers in the PR body and refresh `cmake/core-widgets-baseline.txt` in
+   the same commit so `--enforce` stays honest. Trimming `QToolButton`/`QPainter` out of
+   `TCommandLine` does not lower the count; it stays a widget file.
+6. Where the plan leans on `Host`'s widget-pointer bookkeeping (`recordActiveCommandLine()` in
+   B.8, `setFocusOnHostActiveCommandLine()` in C.5 and the tests), it leans on code a later slice
+   will move to the front-end. Call it where it is now; add no new widget-typed member to `Host`.
+7. Rebase over #11048 and whatever libmudlet slice has merged by the time this lands; both sides
+   touch `Host` and `TMainConsole`, in different places.
+
 ## 4. Decisions and rejected alternatives
 
 1. **Field stays open until the game releases ECHO, not closed on Enter.** Closing on Enter would
@@ -708,6 +797,13 @@ are unchanged. Anyone tempted to improve them in this PR: do not.
     found the bug this prevents: pending cleared first opened a field for an instant, moved the
     typed-ahead `look` into it, and destroyed it when the suppression closed it.
 
+16. **Policy on `Host`, rendering on `TMainConsole`, Lua through the `TMainConsole` seam** -
+    because of the libmudlet split (§3.5), not only for tidiness. The alternative of putting the
+    state on `TConsoleModel` was rejected: the inputs are the profile's (its telnet negotiation,
+    its auto-login, its preference), `Host` already owns `mTelnet` and co-owns the main console
+    model, and a per-console model has no business knowing about the auto-login. The alternative
+    of `qobject_cast<TPasswordEntry*>(focusProxy())` inside the Lua files (v3) was rejected because
+    it would add a Qt Widgets symbol to core files that #10571 just cleaned.
 ## 5. Work breakdown
 
 One PR, in commits that each build and pass `ctest` on their own. Read
@@ -743,16 +839,21 @@ named after the class; `friend class PasswordEntryPolicyTest` in both `ctelnet.h
   even after a stray `denyCurrentSend()`. The encoding warning: set `ASCII` through the path that
   runs `encodingChanged()` (or reset `mEncodingWarningIssued` through friend access), send an
   unencodable auto-login password, read `mpConsole->buffer.lineBuffer` as `CaretNavigationTest`
-  does, assert the warning *appears* and does *not* contain the password.
+  does, assert the warning *appears* and does *not* contain the password. No-view case, on the
+  `ConsoleModelExtractionTest` pattern: destroy the view, drive WILL/WONT through `loopbackTest()`,
+  assert `passwordEntryWanted()` answers and the signal fires, `sendPasswordEntry("x")` still
+  reaches the server, and `Host::send("y")` neither crashes nor leaks (§3.5 rule 3).
 
 ### Commit 2 - The field, and the masking goes
 
 Files: new `src/TPasswordEntry.{h,cpp}` (add to both `mudlet_SRCS` ~43 and `mudlet_HDRS` ~311 in
 `src/CMakeLists.txt`; nothing else lists sources, lupdate scans `src/`), `src/TMainConsole.{h,cpp}`,
 `src/TConsole.cpp` (`setProxyForFocus`, and any direct include the header trim exposes),
-`src/TCommandLine.{h,cpp}`, `src/TLuaInterpreter.cpp`, `src/TLuaInterpreterMudletObjects.cpp`,
-`src/TLuaInterpreterUI.cpp`, `src/Host.{h,cpp}` (`send()` clearing the dismissal, drop
-`signal_remoteEchoChanged`), `src/ui/profile_preferences.ui`, `src/dlgProfilePreferences.cpp`,
+`src/TCommandLine.{h,cpp}`, `src/TLuaInterpreter.cpp`, `src/TLuaInterpreterMudletObjects.cpp`
+and `src/TLuaInterpreterUI.cpp` (the main-line writers swap widget calls for the `TMainConsole`
+methods; no new include), `src/Host.{h,cpp}` (`send()` clearing the dismissal, drop
+`signal_remoteEchoChanged`), `cmake/core-widgets-baseline.txt` (refreshed, §3.5 rule 5),
+`src/ui/profile_preferences.ui`, `src/dlgProfilePreferences.cpp`,
 `test/functional_tests/CommandLineKeyHandlingTest.cpp` (delete
 `test_aPasswordIsNotKeptInTheHistory`; it pins the guard this commit removes),
 `src/mudlet-lua/tests/CommandLine_spec.lua`.
@@ -884,7 +985,9 @@ Existing tests that must still pass: `TelnetLatePasswordTest`, `TelnetPasswordMa
 - PR: read `.agents/skills/open-pr/SKILL.md`. Title `Improve: Passwords are typed into a dedicated
   field instead of a masked command line`. Body per the template, with `**Test case:**` steps, the
   `Assisted-by` trailer in the body (a squash merge drops commit trailers), the greps from
-  invariant 3, an NVDA/VoiceOver check in the manual test steps, and a demo video per
+  invariant 3, the `cmake/audit-core-widgets.sh --count` figures before and after with the
+  sentence "no core file gains a Qt Widgets symbol", an NVDA/VoiceOver check in the manual test
+  steps, and a demo video per
   `docs/demo-videos.md` if feasible. List #10965, #10972, #10978 as superseded and #10968 as
   reduced to its "scripts keep aliases" tests, and say why. Open as draft until the human has
   tested it.
@@ -924,6 +1027,9 @@ Existing tests that must still pass: `TelnetLatePasswordTest`, `TelnetPasswordMa
    and macOS that `@`, `€` and accented characters type into the field.
 8. Mudlet Web shares the specs; nothing in the tests directory references it, and the rewritten
    cases use `feedTelnet` exactly as the current ones do.
+9. The libmudlet slices land weekly and touch `Host` and `TMainConsole`. Expect to rebase at least
+   once; the conflicts will be mechanical. If the slice that moves `Host`'s command-line focus
+   bookkeeping to the front-end lands first, B.8 and C.5 call its new home.
 
 ## 8. Size, honestly
 
@@ -935,7 +1041,8 @@ redirect and the typed-ahead fact ~40, Lua redirects ~30. Net product code rough
 and the per-feature guards; what is added is a widget with a defined key surface, a policy function
 with five named inputs, and one fact about the command line. Five inputs is not "one state", and
 the plan does not claim it; the claim is that the five are combined in one function and read
-nowhere else, and that nothing Mudlet infers can ever remove protection.
+nowhere else, and that nothing Mudlet infers can ever remove protection. For the libmudlet audit:
+two new widget files, five fewer widget reaches in the Lua files, no core file changed side.
 
 ## 9. Red-team log
 
@@ -997,3 +1104,14 @@ sequence; "twice per session" being per hold; §2 line numbers and the timeout's
 Rejected: a deferred, coalesced recompute (§4.15: specs cannot yield); ending a dismissal from
 `cTelnet::sendData` (the auto-login name is not a game command there, and lines an alias swallows
 were still the player's answer).
+
+### v3.1 → v3.2: the libmudlet split
+
+Read #9011, #8681, the merged step-5 slices (#10569, #10570, #10571, #10550, #10553, #10558), the
+open #11048, `TConsoleModel.h`, `cmake/audit-core-widgets.sh` and its baseline. Added §3.5 with the
+side-of-the-seam table and seven rules; moved the Lua redirect from a `qobject_cast` in the Lua
+files to five `TMainConsole` methods beside the #10569 seam (E, §4.16); declared §3.2 A the
+core's front-end contract and required it to answer with no view (commit 1 test); required no new
+widget symbol in core files, the audit count before and after in the PR body and the baseline
+refreshed (§3.5 rule 5, commit 2, commit 4); noted which `Host` bookkeeping the plan leans on that
+a later slice will move (B.8, §3.5 rule 6); added the rebase risk (§7.9).
