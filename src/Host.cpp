@@ -5015,14 +5015,8 @@ QPointer<TConsole> Host::findConsole(QString name)
 
 QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
 {
-    if (!mpConsole) {
-        QStringList failMessage;
-        failMessage << qsl("internal error: no main TConsole - please report").arg(windowName);
-        return qMakePair(false, failMessage);
-    }
-
     if (windowName.isEmpty() || windowName == QLatin1String("main")) {
-        return qMakePair(true, mpConsole->getLines(lineFrom, lineTo));
+        return qMakePair(true, mainConsoleModel().lines(lineFrom, lineTo));
     }
 
     auto pModel = mWindowRegistry.subConsoleModel(windowName);

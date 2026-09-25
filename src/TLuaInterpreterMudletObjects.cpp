@@ -1085,13 +1085,13 @@ int TLuaInterpreter::isActive(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isPrompt
 int TLuaInterpreter::isPrompt(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
-    const int userCursorY = host.mpConsole->getLineNumber();
-    if (userCursorY < host.mpConsole->buffer.promptBuffer.size() && userCursorY >= 0) {
-        lua_pushboolean(L, host.mpConsole->buffer.promptBuffer.at(userCursorY));
+    const TConsoleModel& model = getHostFromLua(L).mainConsoleModel();
+    const int userCursorY = model.mUserCursor.y();
+    if (userCursorY < model.buffer.promptBuffer.size() && userCursorY >= 0) {
+        lua_pushboolean(L, model.buffer.promptBuffer.at(userCursorY));
         return 1;
     }
-    if (host.mpConsole->mTriggerEngineMode && host.mpConsole->mIsPromptLine) {
+    if (model.mTriggerEngineMode && model.mIsPromptLine) {
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
