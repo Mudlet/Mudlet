@@ -388,6 +388,12 @@ jobs:
         ccache --recompress 19
         ccache --show-compression
 
+    - name: note the cutoff for evicting unused ccache entries
+      if: >-
+        github.ref_name == 'development'
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+      run: echo "CCACHE_CUTOFF=$(date +%s)" >> "$GITHUB_ENV"
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
       with:
@@ -404,6 +410,15 @@ jobs:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+    - name: evict ccache entries this build did not use
+      if: >-
+        success() && github.ref_name == 'development'
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+      run: |
+        ccache --evict-older-than "$(( $(date +%s) - ${CCACHE_CUTOFF:-0} ))s"
+        ccache --show-stats -v
+        ccache --show-compression
 
     - name: Save ccache
       if: >-
