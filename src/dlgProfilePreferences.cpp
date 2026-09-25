@@ -823,7 +823,7 @@ void dlgProfilePreferences::buildShell()
 
     auto* pCard_dataEncoding = createCard(qsl("card_dataEncoding"));
     addCardRow(pCard_dataEncoding, label_encoding, comboBox_encoding);
-    moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX});
+    moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, checkBox_expectCSpaceIdInColonLessMColorCode});
     reflowCompatibilityCard();
     auto* pCard_network = createCard(qsl("card_network"));
     addCardRow(pCard_network, label_networkPacketTimeout, doubleSpinBox_networkPacketTimeout);
@@ -1289,6 +1289,10 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
     synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for workarounds needed by some games, which used to be on a tab called "Special options".
+    synonyms.append({groupBox_specialOptions, tr("special options, workaround, old game, compatibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for script debugging options, which used to be on a tab called "Special options".
+    synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -1633,7 +1637,7 @@ void dlgProfilePreferences::setCardDescriptions()
     setCardDescription(findChild<QGroupBox*>(qsl("card_crashReports")),
                        tr("If Mudlet stops unexpectedly it can tell the developers what went wrong. A report says where Mudlet was in its own code - never what you typed or what the game sent."));
     //: Description line under the "Developer" card title on the Advanced settings page
-    setCardDescription(groupBox_debug, tr("Diagnostics for people writing packages and scripts. Leave these off for ordinary play."));
+    setCardDescription(groupBox_debug, tr("How much Mudlet's debugging tools report while you work on scripts."));
 }
 
 void dlgProfilePreferences::buildProtocolsSubpage()
@@ -2004,9 +2008,6 @@ void dlgProfilePreferences::reflowWideCards()
     }
     gridLayout_groupBox_iconsAndToolbars->setColumnStretch(2, 1);
 
-    // Alone on its row now, and adrift on the right unless it spans both columns
-    gridLayout_groupBox_debug->removeWidget(checkBox_expectCSpaceIdInColonLessMColorCode);
-    gridLayout_groupBox_debug->addWidget(checkBox_expectCSpaceIdInColonLessMColorCode, 0, 0, 1, 2);
     // The time edit had the row's stretch, which put a four-field clock control
     // across the whole card
     horizontalLayout_timerDebugOutputMinimumInterval->setStretch(1, 0);
@@ -2044,14 +2045,16 @@ void dlgProfilePreferences::reflowDisplayOptionsCard()
     gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 3, 1);
 }
 
-// The reconnect notice closes this card in the .ui, but the workaround moved
-// onto this page lands after it, which strands the notice between two
-// checkboxes now that it stays on screen long enough to be read.
+// The reconnect notice closes this card in the .ui, but the workarounds moved
+// onto this page land after it, which strands the notice between checkboxes
+// now that it stays on screen long enough to be read.
 void dlgProfilePreferences::reflowCompatibilityCard()
 {
-    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, need_reconnect_for_specialoption});
+    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, checkBox_expectCSpaceIdInColonLessMColorCode, need_reconnect_for_specialoption});
     gridLayout_groupBox_specialOptions->addWidget(checkBox_USE_IRE_DRIVER_BUGFIX, 2, 1);
-    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 3, 0, 1, 2);
+    // Its label is too long to share a row
+    gridLayout_groupBox_specialOptions->addWidget(checkBox_expectCSpaceIdInColonLessMColorCode, 3, 0, 1, 2);
+    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 4, 0, 1, 2);
 }
 
 void dlgProfilePreferences::updateColumnWidthCaps()
@@ -3647,12 +3650,11 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_purgeMediaCache->setEnabled(false);
     // ----- groupBox_specialOptions -----
     need_reconnect_for_specialoption->hide();
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
 
     groupbox_searchEngineSelection->setEnabled(false);
-    // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
-    // This acts on a label within this groupBox:
     slot_hidePasswordMigrationLabel();
+    // ----- groupBox_debug -----
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
@@ -3765,9 +3767,10 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
     groupBox_purgeMediaCache->setEnabled(true);
+    // ----- groupBox_specialOptions -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     groupbox_searchEngineSelection->setEnabled(true);
     // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
