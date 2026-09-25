@@ -4515,29 +4515,39 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mSignInTokenCheckedFor = pHost->getName();
         pushButton_forgetSavedSignIn->setVisible(false);
         QPointer<dlgProfilePreferences> safeDialog = this;
-        QPointer<CredentialManager> credentialManager = new CredentialManager();
         const QString profileName = pHost->getName();
-        credentialManager->credentialExists(profileName, qsl("reconnect"), [safeDialog, credentialManager, profileName](bool exists) {
-            if (credentialManager) {
-                credentialManager->deleteLater();
-            }
-            if (!safeDialog) {
-                return;
-            }
-            if (exists) {
-                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
-                return;
-            }
-            QPointer<CredentialManager> tokenChecker = new CredentialManager();
-            tokenChecker->credentialExists(profileName, qsl("reconnect-token"), [safeDialog, tokenChecker](bool tokenExists) {
-                if (tokenChecker) {
-                    tokenChecker->deleteLater();
+
+        // The saved sign-in's own record lives in the profile rather than the credential store, so
+        // asking whether there is one to forget costs nothing - no keychain job, and on macOS no
+        // prompt for an entry whose access list does not name this build. Anything still in the
+        // store predates that move, and the read below is what finds those.
+        const bool signInRecordedInProfile = !MudletPaths::readProfileData(profileName, qsl("reconnect")).isEmpty();
+        pushButton_forgetSavedSignIn->setVisible(signInRecordedInProfile);
+
+        QPointer<CredentialManager> credentialManager = signInRecordedInProfile ? nullptr : new CredentialManager();
+        if (credentialManager) {
+            credentialManager->credentialExists(profileName, qsl("reconnect"), [safeDialog, credentialManager, profileName](bool exists) {
+                if (credentialManager) {
+                    credentialManager->deleteLater();
                 }
-                if (safeDialog && tokenExists) {
+                if (!safeDialog) {
+                    return;
+                }
+                if (exists) {
                     safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                    return;
                 }
+                QPointer<CredentialManager> tokenChecker = new CredentialManager();
+                tokenChecker->credentialExists(profileName, qsl("reconnect-token"), [safeDialog, tokenChecker](bool tokenExists) {
+                    if (tokenChecker) {
+                        tokenChecker->deleteLater();
+                    }
+                    if (safeDialog && tokenExists) {
+                        safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                    }
+                });
             });
-        });
+        }
     }
 
     groupBox_proxy->setEnabled(true);

@@ -444,6 +444,9 @@ private slots:
         // temporary config directory, and removeCredential below cannot delete a directory.
         removeBlockingCredentialDirectory();
         CredentialManager::removeCredential(mHostname, qsl("reconnect"));
+        // Where the record lives now, as well as the store a sign-in saved before it moved
+        MudletPaths::writeProfileData(mHostname, qsl("reconnect"), QString());
+        QFile::remove(MudletPaths::getMudletPath(enums::profileDataItemPath, mHostname, qsl("reconnect")));
         CredentialManager::removeCredential(mHostname, qsl("reconnect-token"));
         deleteProfileDirectory(mHostname);
     }
@@ -765,11 +768,13 @@ private slots:
         // Seeding a real credential first proves the computed path is the one
         // actually in use, so a change to the storage scheme fails this test rather than quietly
         // blocking nothing and letting it pass for the wrong reason.
-        const QString credentialPath = reconnectCredentialPath(host->getName(), qsl("reconnect"));
-        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("seed")));
-        QVERIFY2(QFileInfo::exists(credentialPath), qPrintable(qsl("the credential store no longer files entries at %1").arg(credentialPath)));
-        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect")));
-        QVERIFY(QDir().mkpath(credentialPath));
+        // The record is the profile's own data now, so that is the write to block; the token it
+        // describes still goes to the credential store, and the save fails before reaching it.
+        const QString recordPath = MudletPaths::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("reconnect"));
+        QVERIFY(MudletPaths::writeProfileData(host->getName(), qsl("reconnect"), qsl("seed")).first);
+        QVERIFY2(QFileInfo::exists(recordPath), qPrintable(qsl("the profile no longer files its saved sign-in at %1").arg(recordPath)));
+        QVERIFY(QFile::remove(recordPath));
+        QVERIFY(QDir().mkpath(recordPath));
 
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
 
@@ -1222,7 +1227,7 @@ private slots:
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(removed, "forgetting a saved sign-in should report success");
         QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty(), "the token key should be gone");
-        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the metadata key should be gone");
+        QVERIFY2(MudletPaths::readProfileData(host->getName(), qsl("reconnect")).isEmpty(), "the metadata key should be gone");
     }
 
     void testForgettingBeatsARotationOfTheReplayedToken()
@@ -1256,7 +1261,7 @@ private slots:
         // the sign-in straight back under a fresh value, with nothing on screen to say so.
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"rotated-after-forget\"}"));
         QVERIFY2(!waitForStoredToken(host, qsl("rotated-after-forget"), 1000), "a rotation of a forgotten token must not be stored");
-        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the forgotten metadata must not come back with the rotation");
+        QVERIFY2(MudletPaths::readProfileData(host->getName(), qsl("reconnect")).isEmpty(), "the forgotten metadata must not come back with the rotation");
     }
 
     void testForgettingBeatsARejectedTokensResumeHint()
@@ -1368,7 +1373,7 @@ private slots:
                          4000),
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(!removed, "a failed token removal must not be reported as a success");
-        QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(),
+        QVERIFY2(!MudletPaths::readProfileData(host->getName(), qsl("reconnect")).isEmpty(),
                  "the metadata must survive a failed token removal, or preferences can never offer to remove the token again");
     }
 
@@ -1437,7 +1442,7 @@ private slots:
         // The client must notice the store changed and replay the fresh token instead of destroying it.
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the rotated token");
         QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
-        const QJsonObject stored = readStoredReconnect(host);
+        const QJsonObject stored = readStoredReconnectFromStore(host);
         QCOMPARE(stored.value(qsl("token")).toString(), qsl("token-B"));
         QCOMPARE(stored.value(qsl("provider")).toString(), qsl("discord"));
         QCOMPARE(stored.value(qsl("account")).toString(), qsl("acct:char"));
@@ -1539,7 +1544,7 @@ private slots:
 
         QVERIFY2(waitForConsoleContains(host, qsl("not encrypted")), "the user should be told why the rotated token was not used");
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
-        QCOMPARE(readStoredReconnect(host).value(qsl("token")).toString(), qsl("token-B"));
+        QCOMPARE(readStoredReconnectFromStore(host).value(qsl("token")).toString(), qsl("token-B"));
     }
 
     void testRotationReplayClearsTheRejectionLatch()
@@ -2496,6 +2501,12 @@ private:
                 blockedCredential.removeRecursively();
             }
         }
+        // The saved sign-in's own record is blocked in the profile rather than in the store, so a
+        // case that blocked it leaves a directory there instead
+        QDir blockedRecord(MudletPaths::getMudletPath(enums::profileDataItemPath, mHostname, qsl("reconnect")));
+        if (blockedRecord.exists()) {
+            blockedRecord.removeRecursively();
+        }
     }
 
     // Where the file-backed credential store files this profile's entry under the given key. Blocking
@@ -2512,7 +2523,7 @@ private:
     // Mudlet from before the split wrote, and the read path still has to understand them.
     static bool seedSplitSignIn(const QString& profileName, const QString& metadataJson, const QString& token)
     {
-        return CredentialManager::storeCredential(profileName, qsl("reconnect"), metadataJson) && CredentialManager::storeCredential(profileName, qsl("reconnect-token"), token);
+        return MudletPaths::writeProfileData(profileName, qsl("reconnect"), metadataJson).first && CredentialManager::storeCredential(profileName, qsl("reconnect-token"), token);
     }
 
     static QString describe(const QJsonObject& obj) { return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact)); }
@@ -2527,7 +2538,20 @@ private:
 
     // Parse the stored reconnect entry as JSON so tests can assert its exact shape rather than
     // matching loose substrings (a rewritten or malformed entry could otherwise pass).
+    // The saved sign-in's own record - an account name, the provider, and whether the token may
+    // only travel over a secure transport - is the profile's data rather than a credential, so it
+    // is read from the profile. The token it describes is still in the credential store, which
+    // waitForStoredToken() below reads.
     static QJsonObject readStoredReconnect(Host* host)
+    {
+        const QString stored = MudletPaths::readProfileData(host->getName(), qsl("reconnect"));
+        return QJsonDocument::fromJson(stored.toUtf8()).object();
+    }
+
+    // The entry as the credential store holds it: what a Mudlet from before the record moved into
+    // the profile wrote, and what another instance sharing this profile's store writes today. Read
+    // apart from readStoredReconnect() because the two are now different places.
+    static QJsonObject readStoredReconnectFromStore(Host* host)
     {
         const QString stored = CredentialManager::retrieveCredential(host->getName(), qsl("reconnect"));
         return QJsonDocument::fromJson(stored.toUtf8()).object();
@@ -2569,7 +2593,7 @@ private:
         }
         return QTest::qWaitFor(
                 [&]() {
-                    return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty();
+                    return MudletPaths::readProfileData(host->getName(), qsl("reconnect")).isEmpty();
                 },
                 timeoutMs);
     }

@@ -108,6 +108,8 @@ private:
     using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
     // Reads one credential key; what mStoreReader does unless a test replaces it.
     void readStoreKey(const QString& key, StoreReadDone done);
+    // Clears a metadata entry the credential store still holds from before it moved into the profile
+    void forgetAnyStoredMetadata(const QString& profileName);
     // Reads the stored sign-in - the {account, provider?, secure_only} metadata plus the token from
     // wherever it lives, its own key or inline in a pre-split entry - and acts on it: replay the token
     // (when allowToken), else send the resume form for a remembered provider, else fall through to
