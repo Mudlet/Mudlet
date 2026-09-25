@@ -378,6 +378,10 @@ private:
     // and fires those timers early rather than waiting them out.
     friend class TelnetPasswordMaskTimeoutTest;
 
+    // Checks that a disconnect stops the failed-connection retry timer, rather
+    // than waiting out the longest delay that timer could have been set to.
+    friend class TelnetConnectFailureTest;
+
     // Calls reset() from its constructor. It has to be the Host that does that,
     // and not cTelnet itself, because reset() clears Host members declared after
     // cTelnet, which do not exist yet while cTelnet is being constructed.
