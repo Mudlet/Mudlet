@@ -1437,15 +1437,23 @@ describe("Tests Other.lua functions", function()
       local original = getConfig("showSentText", true)
       originalValues.showSentText = original
 
+      -- the refusal is the only place a script can read which modes there are
       local ok, err = setConfig("showSentText", "sometimes")
       assert.is_nil(ok)
-      assert.is_string(err)
+      assert.equals('showSentText must be "never", "always" or "script", got "sometimes"', err)
       assert.equals(original, getConfig("showSentText", true), "a rejected mode was applied anyway")
 
+      -- a number is read as the string it would print as, so it is refused as
+      -- a mode it does not have rather than as the wrong type
+      local okNumber, errNumber = setConfig("showSentText", 42)
+      assert.is_nil(okNumber)
+      assert.equals('showSentText must be "never", "always" or "script", got "42"', errNumber)
+      assert.equals(original, getConfig("showSentText", true))
+
       -- neither a boolean nor a string is not a mode at all
-      local okType, errType = setConfig("showSentText", 42)
+      local okType, errType = setConfig("showSentText", {})
       assert.is_nil(okType)
-      assert.is_string(errType)
+      assert.equals("showSentText must be a boolean or a string, got table", errType)
       assert.equals(original, getConfig("showSentText", true))
       originalValues.showSentText = nil
     end)

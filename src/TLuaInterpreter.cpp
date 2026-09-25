@@ -8313,12 +8313,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
             } else if (value == "script") {
                 host.mCommandEchoMode = Host::CommandEchoMode::ScriptControl;
             } else {
-                lua_pushfstring(L, "setConfig: bad argument #2 value (expected 'never', 'always', or 'script', got '%s')", value.toUtf8().constData());
-                return warnArgumentValue(L, __func__, value);
+                return warnArgumentValue(L, __func__, qsl("showSentText must be \"never\", \"always\" or \"script\", got \"%1\"").arg(value));
             }
         } else {
-            lua_pushfstring(L, "setConfig: bad argument #2 type (expected boolean or string for 'showSentText', got %s)", luaL_typename(L, 2));
-            return warnArgumentValue(L, __func__, qsl("showSentText"));
+            return warnArgumentValue(L, __func__, qsl("showSentText must be a boolean or a string, got %1").arg(luaL_typename(L, 2)));
         }
         return success();
     }
