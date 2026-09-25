@@ -2464,12 +2464,12 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     for (const int roomId : viewportRooms) {
         resolvedRooms.push_back(mpMap->mpRoomDB->getRoom(roomId));
     }
-    constexpr qsizetype scmPrefetchDistance = 16;
+    constexpr qsizetype prefetchDistance = 16;
     const qsizetype candidateCount = viewportRooms.size();
 
     for (qsizetype index = 0; index < candidateCount; ++index) {
-        if (index + scmPrefetchDistance < candidateCount) {
-            __builtin_prefetch(resolvedRooms[index + scmPrefetchDistance]);
+        if (index + prefetchDistance < candidateCount) {
+            __builtin_prefetch(resolvedRooms[index + prefetchDistance]);
         }
         TRoom* room = resolvedRooms[index];
         if (!room) {
