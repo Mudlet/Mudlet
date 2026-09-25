@@ -411,13 +411,16 @@ describe("Tests feedTelnet's marker escapes", function()
   end
 
   it("answers the marker table version for an empty string, and feeds nothing", function()
+    -- end whatever line an earlier spec left open, so that the next line fed
+    -- starts with whatever the version call itself fed
+    assert.is_true(feedTelnet("\n"))
     local ok, version = feedTelnet("")
     assert.is_true(ok)
     assert.is_truthy(tostring(version):match("^feedTelnet: using table version %d+$"), tostring(version))
 
     -- anything the version call had fed would have no line ending of its own,
-    -- so it would only show up at the start of the next line fed
-    assert.is_true(feedTelnet("\nFeedTelnetAfterVersion\n"))
+    -- so it would show up at the start of this line
+    assert.is_true(feedTelnet("FeedTelnetAfterVersion\n"))
     local last = getLastLineNumber("main")
     local line = getLines("main", last - 1, last)[1]
     assert.equals("FeedTelnetAfterVersion", line, "asking for the version fed something to the screen")
@@ -501,7 +504,7 @@ describe("Tests the stopwatch lookup by name", function()
   -- to be refused by name rather than read as some other stopwatch
   it("names the stopwatch it could not find", function()
     local name = "mudletSpecNoSuchStopWatch"
-    for _, functionName in ipairs({"getStopWatchTime", "startStopWatch", "stopStopWatch", "resetStopWatch", "deleteStopWatch", "adjustStopWatch"}) do
+    for _, functionName in ipairs({"getStopWatchTime", "startStopWatch", "stopStopWatch", "resetStopWatch", "deleteStopWatch", "adjustStopWatch", "getStopWatchBrokenDownTime"}) do
       -- the second argument is only read by adjustStopWatch, as its adjustment
       local ok, err = _G[functionName](name, 1)
       assert.is_nil(ok, functionName .. " accepted a stopwatch that does not exist")
@@ -513,11 +516,11 @@ describe("Tests the stopwatch lookup by name", function()
     local id = createStopWatch()
     assert.is_number(id)
     finally(function() deleteStopWatch(id) end)
-    assert.is_number(getStopWatchTime(id), "the stopwatch just made cannot be read by its ID")
 
-    local ok, err = getStopWatchTime(tostring(id))
+    local ok, err = deleteStopWatch(tostring(id))
     assert.is_nil(ok, "a string of digits was read as the ID of a stopwatch")
     assert.equals("stopwatch with name '" .. id .. "' not found", err)
+    assert.is_number(getStopWatchTime(id), "the stopwatch with that ID was deleted")
   end)
 end)
 
