@@ -8095,6 +8095,17 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
+    // a refusal of a value outside a key's fixed set is the only place a script
+    // can read what the key does accept, so it lists them:
+    auto refuseChoice = [&](const char* keyName, const QStringList& accepted, const QString& value) {
+        QStringList quoted;
+        for (const auto& choice : accepted) {
+            quoted << qsl("\"%1\"").arg(choice);
+        }
+        const QString lastChoice = quoted.takeLast();
+        return warnArgumentValue(L, "setConfig", qsl("%1 must be %2 or %3, got \"%4\"").arg(QLatin1String(keyName), quoted.join(qsl(", ")), lastChoice, value));
+    };
+
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
             host.mpMap->mpMapper->slot_roomSize(getVerifiedInt(L, __func__, 2, "value"));
@@ -8313,7 +8324,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             } else if (value == "script") {
                 host.mCommandEchoMode = Host::CommandEchoMode::ScriptControl;
             } else {
-                return warnArgumentValue(L, __func__, qsl("showSentText must be \"never\", \"always\" or \"script\", got \"%1\"").arg(value));
+                return refuseChoice("showSentText", {qsl("never"), qsl("always"), qsl("script")}, value);
             }
         } else {
             return warnArgumentValue(L, __func__, qsl("showSentText must be a boolean or a string, got %1").arg(luaL_typename(L, 2)));
@@ -8453,9 +8464,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), behaviours.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return refuseChoice("blankLinesBehaviour", behaviours, behaviour);
         }
 
         if (behaviour == qsl("show")) {
@@ -8472,9 +8481,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return refuseChoice("caretShortcut", values, value);
         }
 
         if (value == qsl("tab")) {
@@ -8498,9 +8505,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid commandLineHistorySaveSize string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return refuseChoice("controlCharacterHandling", values, value);
         }
 
         if (value == qsl("oem")) {
@@ -8530,9 +8535,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid ambiguousEAsianWidthCharacters string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return refuseChoice("ambiguousEAsianWidthCharacters", values, value);
         }
 
         if (value == qsl("narrow")) {

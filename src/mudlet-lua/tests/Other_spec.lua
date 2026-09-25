@@ -1459,32 +1459,26 @@ describe("Tests Other.lua functions", function()
     end)
 
     -- Each of these keys refuses a value outside its own set. The refusal has to
-    -- carry the set, because that list is the only place a script author can
-    -- read what the key accepts.
-    it("lists what it accepts when refusing a string enum, and changes nothing", function()
-      local enums = {
-        blankLinesBehaviour = {"replacewithspace", "sideways"},
-        controlCharacterHandling = {"picture", "sideways"},
-        ambiguousEAsianWidthCharacters = {"narrow", "sideways"},
-      }
-      for key, pair in pairs(enums) do
-        local expectedInMessage, rejected = pair[1], pair[2]
+    -- name the key and carry the set, because that list is the only place a
+    -- script author can read what the key accepts - blankLinesBehaviour and
+    -- controlCharacterHandling used to name other keys (#10391).
+    local enumRefusals = {
+      blankLinesBehaviour = 'blankLinesBehaviour must be "show", "hide" or "replacewithspace", got "sideways"',
+      controlCharacterHandling = 'controlCharacterHandling must be "asis", "oem" or "picture", got "sideways"',
+      ambiguousEAsianWidthCharacters = 'ambiguousEAsianWidthCharacters must be "narrow", "wide" or "auto", got "sideways"',
+      caretShortcut = 'caretShortcut must be "none", "tab", "ctrltab" or "f6", got "sideways"',
+    }
+    for key, expected in pairs(enumRefusals) do
+      it("names " .. key .. " and what it accepts when refusing a value, and changes nothing", function()
         snapshot(key)
         local before = getConfig(key)
-        local ok, err = setConfig(key, rejected)
-        assert.is_nil(ok, key .. " accepted '" .. rejected .. "'")
-        assert.is_string(err)
-        assert.is_truthy(err:find(expectedInMessage, 1, true),
-          key .. " did not say it accepts '" .. expectedInMessage .. "', got: " .. tostring(err))
+        local ok, err = setConfig(key, "sideways")
+        assert.is_nil(ok, key .. " accepted 'sideways'")
+        assert.equals(expected, err)
         assert.equals(before, getConfig(key), key .. " was changed by a rejected value")
         restore(key)
-      end
-    end)
-
-    -- the refusals for blankLinesBehaviour and controlCharacterHandling name
-    -- caretShortcut and commandLineHistorySaveSize instead of the key that was
-    -- actually rejected (#10391)
-    pending("names the key it rejected in every string enum refusal")
+      end)
+    end
 
     -- A setting that changed raises sysSettingChanged with its getConfig key
     -- and the new value. Writing the value a setting already holds raises
