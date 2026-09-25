@@ -41,11 +41,15 @@ set(WINDOW_GROUP_TEST_SOURCES
     CommandLineKeyHandlingTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
+    DockWidgetWithoutProfileTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
+    AboutDialogLicencesTest.cpp
     LabelAnchorInteractionTest.cpp
+    MainWindowTitleTest.cpp
     LabelMovieRefusalTest.cpp
+    TabBarStyleTest.cpp
     LabelSvgBackgroundTest.cpp
     CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
@@ -61,6 +65,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     NotepadTest.cpp
+    MenuShortcutTeardownTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
@@ -71,6 +76,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
+    ReplaySpeedClampTest.cpp
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
@@ -87,10 +93,14 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
+    ConnectionDialogKeychainWaitTest.cpp
+    ConnectionDialogNewProfileTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
+    ConnectionDialogOpenProfileTest.cpp
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
+    ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
     PortableRootNoticeTest.cpp
     ProfileDeletionSafetyTest.cpp
@@ -117,6 +127,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetAtcpMspTest.cpp
     TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
+    TelnetLatePasswordTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     TelnetChannel102WireTest.cpp
@@ -125,6 +136,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
+    TelnetPasswordMaskTimeoutTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp
@@ -145,6 +157,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
+    PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
@@ -160,10 +173,12 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
     ColorTriggerDialogTest.cpp
+    EditorReshowTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
     MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    EditorAddItemTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
@@ -181,21 +196,29 @@ set(MAP_GROUP_TEST_SOURCES
     MapCoordinateLimitTest.cpp
     MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
+    MapSmallAreaCenteringTest.cpp
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapTextLabelCacheTest.cpp
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
+    MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )
+
+# CameraController is only compiled into the library with the 3D mapper
+if(USE_3DMAPPER)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp)
+endif()
 
 # Packages and modules: installing them, saving them and removing them
 set(PACKAGE_GROUP_TEST_SOURCES
@@ -242,6 +265,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
+    SettingsMapControlsTest.cpp
     SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
@@ -265,6 +289,7 @@ set(MEDIA_GROUP_TEST_SOURCES
     SpeechBridgeLuaTest.cpp
     SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
+    TMediaAudioOutputTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
@@ -529,6 +554,11 @@ set_tests_properties(MsdpMalformedDiagnosticTest PROPERTIES TIMEOUT 300)
 # both of which sanitiser builds stretch well past the default budget.
 set_tests_properties(TelnetLargeBurstTest PROPERTIES TIMEOUT 300)
 
+# TelnetLatePasswordTest boots a Mudlet and a profile for each of its cases and waits out the
+# auto-login timers in real time, which takes half the default budget without sanitisers and
+# more than all of it with them
+set_tests_properties(TelnetLatePasswordTest PROPERTIES TIMEOUT 300)
+
 # TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
 # real time by design - every round trip it times, and every stall it places, has
 # to be waited out - so it needs a longer timeout
@@ -550,10 +580,11 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
-# TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
-# full profile, which is nearly all of their runtime and the part a sanitizer and
-# a loaded runner stretch, so they get the same headroom as their neighbours
-set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
+# TelnetNewEnvironTest, TelnetOptionsReportTest, TelnetAtcpMspTest and
+# TelnetPasswordMaskTimeoutTest each boot a full profile, which is nearly all of
+# their runtime and the part a sanitizer and a loaded runner stretch, so they get
+# the same headroom as their neighbours
+set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest TelnetPasswordMaskTimeoutTest PROPERTIES TIMEOUT 300)
 
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
@@ -564,8 +595,8 @@ set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 # finish, because the assertion message is the whole point of the file. Its
 # nominal budget looks like ~120s of QTRY timeouts, but QTRY waits three times
 # what it is told: once to poll, then twice more to build the "would have passed
-# after N ms" debug message. Measured at 263s with every wire cut, and the five
-# cases added since each stop at their first blocking wait for at most 220s
+# after N ms" debug message. Measured at 263s with every wire cut, and the six
+# cases added since each stop at their first blocking wait for at most 280s
 # more, so anything below that turns a readable failure into a silent ctest
 # kill. Guarded, because without the updater the test does not exist and
 # naming a test that does not exist is a hard CMake error
@@ -615,6 +646,7 @@ set_tests_properties(SettingsAppearanceTest
                      SettingsHostLifecycleTest
                      SettingsInstantApplyTest
                      SettingsLiveSyncTest
+                     SettingsMapControlsTest
                      SettingsRoundTripTest
                      SettingsSearchTest
                      SettingsShellNavigationTest
@@ -636,6 +668,11 @@ set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 600)
+
+# ConnectionDialogOpenProfileTest waits out a real reconnect (15s budget) on top
+# of two profile loads and a full mudlet start under ASan, so the 60s default is
+# too tight for a loaded machine even though the file runs in ~2s
+set_tests_properties(ConnectionDialogOpenProfileTest PROPERTIES TIMEOUT 300)
 
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for

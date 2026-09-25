@@ -59,6 +59,12 @@ function(sandbox_test_config_dirs)
             # CoreFoundation is handed a home directory rather than a config root,
             # and one that has to exist - Qt creates a config root on the way to
             # writing into it, and no one creates a home
+            #
+            # The Security framework reads this home too, so a test run has no login
+            # keychain to reach: reads answer "not found", but a write asks the person
+            # who ran the suite whether to reset their keychain to defaults. A test that
+            # writes to the store has to leave that alone on macOS - see
+            # CredentialManagerKeychainTest::initTestCase().
             file(MAKE_DIRECTORY "${testConfigDir}")
             set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "CFFIXED_USER_HOME=${testConfigDir}")
         endif()
@@ -329,6 +335,18 @@ if(NOT WIN32)
     add_test(NAME MilestoneResolutionTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/milestone-resolution-test.sh
     )
+endif()
+
+# The key check in CI/linux-packages/publish is the only automated thing between
+# a wrong mudlet.asc and the package trust store of every Mudlet user on Linux,
+# and the publishing workflow runs it only when it publishes a release - so
+# without this nothing covers it before merge. Linux only, as publish needs a
+# newer bash than macOS ships. A skip is reported as one, not as a pass.
+if(UNIX AND NOT APPLE)
+    add_test(NAME LinuxPackagesKeyTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/linux-packages-key-test.sh
+    )
+    set_tests_properties(LinuxPackagesKeyTest PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 add_subdirectory(functional_tests)

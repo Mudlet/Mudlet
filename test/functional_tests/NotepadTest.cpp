@@ -18,8 +18,12 @@
  ***************************************************************************/
 
 #include <QDir>
+#include <QAction>
+#include <QIcon>
 #include <QLineEdit>
+#include <QPalette>
 #include <QPlainTextEdit>
+#include <QScopeGuard>
 #include <QTabWidget>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -69,6 +73,19 @@ private:
     static QLineEdit* findBox(dlgNotepad* notepad) { return notepad->findChild<QLineEdit*>(qsl("notepadFindBox")); }
 
     static QToolButton* findBarButton(dlgNotepad* notepad, const QString& name) { return notepad->findChild<QToolButton*>(name); }
+
+    // A QIcon holds no record of which file it was built from, so the only way
+    // to name the arrow on screen is to render it and compare the pixels. The
+    // ratio is pinned to 1 because the resource it is compared against is not
+    // scaled, and a pixmap asked for without one comes back at the display's.
+    static bool iconIs(const QIcon& icon, const QString& resourcePath, const QIcon::State state = QIcon::Off)
+    {
+        const QPixmap expected(resourcePath);
+        if (expected.isNull()) {
+            return false;
+        }
+        return icon.pixmap(expected.size(), 1.0, QIcon::Normal, state).toImage() == expected.toImage();
+    }
 
     bool waitForServerToReceive(const QByteArray& text) const
     {
@@ -414,6 +431,40 @@ private slots:
 
         findBox(notepad.data())->setText(QString());
         QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 0);
+    }
+
+    // The send controls hide behind one small arrow, and the grey arrow the .ui
+    // file carries is invisible on a dark background, so the icon has to be
+    // picked from the palette - both as the notepad opens and again if the
+    // appearance is switched while it is up (#9488).
+    void test_theSendControlsArrowIsPickedForTheBackgroundItSitsOn()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+
+        const QPalette savedPalette = QApplication::palette();
+        const auto restorePalette = qScopeGuard([savedPalette]() {
+            QApplication::setPalette(savedPalette);
+        });
+
+        // Dark first, because the .ui file's own icon is the grey one: an arrow
+        // asserted to be grey says nothing about whether anything picked it.
+        QPalette darkPalette(savedPalette);
+        darkPalette.setColor(QPalette::Window, QColor(30, 30, 30));
+        QApplication::setPalette(darkPalette);
+        QApplication::processEvents();
+
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        QAction* pToggle = notepad->action_toggleSendControls;
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-right-16x.png")), "the notepad came up with the arrow that disappears into a dark background");
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-down-16x.png"), QIcon::On), "the notepad came up with an arrow that disappears into a dark background once the controls are open");
+
+        QPalette lightPalette(savedPalette);
+        lightPalette.setColor(QPalette::Window, QColor(240, 240, 240));
+        QApplication::setPalette(lightPalette);
+        QApplication::processEvents();
+
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-right_grey-16x.png")), "switching to a light appearance left the arrow the one meant for a dark one");
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-down_grey-16x.png"), QIcon::On), "switching to a light appearance left the opened-controls arrow the one meant for a dark one");
     }
 };
 

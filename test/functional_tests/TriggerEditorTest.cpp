@@ -196,6 +196,21 @@ private slots:
     QCOMPARE(clipboard->text(), qsl("^pattern$"));
   }
 
+  // A pattern is one line, and the editor has no way to show a second one, so a
+  // multi-line paste has to be cut down to its first line rather than hiding the
+  // rest of what was pasted (#7633)
+  void test_pastingSeveralLinesIntoAPatternKeepsOnlyTheFirst() {
+    SingleLineTextEdit edit;
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("^first pattern$\n^second pattern$"));
+
+    QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(edit.toPlainText(), qsl("^first pattern$"));
+  }
+
   // The deselect on focus-out exists so a pattern line does not keep showing a
   // stale selection once another line is being edited, so it has to survive
   // only the reasons that give focus straight back

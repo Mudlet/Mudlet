@@ -110,6 +110,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     // Allow QTest-based test classes to access private members
     friend class AddonControlsTest;
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
     friend class EditorSearchTest;
@@ -459,6 +460,7 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
+    void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
 
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -903,6 +905,7 @@ private:
     QString descNewFolder;
     QString descNewItem;
     QString descPackageItem;
+    QString descKeyTaken;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

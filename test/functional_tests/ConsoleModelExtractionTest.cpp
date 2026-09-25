@@ -638,6 +638,40 @@ private slots:
         QFile::remove(logFileName);
     }
 
+    // rgb(22,22,22) is the colour the console's own background replaced (#9419)
+    void test_htmlLogTimestampTakesTheConsoleBackground()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QColor background{12, 34, 56};
+        QVERIFY2(background != QColorConstants::Black, "The colour under test is the default background, which cannot tell a hardcoded colour apart.");
+        host->mBgColor = background;
+        host->refreshMainConsoleColors();
+        QCOMPARE(host->mpConsole->getConsoleBgColor(), background);
+        host->mIsNextLogFileInHtmlFormat = true;
+        host->mIsLoggingTimestamps = true;
+
+        auto& model = host->mainConsoleModel();
+        model.toggleLogging(false);
+        QVERIFY2(model.mLogToLogFile, "The log the timestamp colour is read back from never started.");
+        const QString logFileName = model.mLogFileName;
+
+        appendModelLine(model.buffer, qsl("timestamped-line"));
+        model.toggleLogging(false);
+
+        const QString contents = readFile(logFileName);
+        QVERIFY2(contents.contains(qsl("timestamped-line")), "The logged line never reached the HTML log file.");
+        // The timestamp's background is written in #rrggbb form, the text's in
+        // rgb() form, so this cannot match a span of ordinary text.
+        QVERIFY2(contents.contains(qsl("background: #0c2238;")), "The HTML log's timestamp does not use the console's background colour.");
+        QVERIFY2(!contents.contains(qsl("rgb(22,22,22)")), "The HTML log's timestamp still carries the hardcoded background colour.");
+
+        QFile::remove(logFileName);
+    }
+
     void test_profileLoadFillsTheModelColoursWithNoView()
     {
         pinTheFixtureColoursAreNotTheDefaults();

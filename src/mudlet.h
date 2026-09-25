@@ -182,6 +182,7 @@ public:
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
+    bool profileSwitchShortcutMatches(const Qt::Key, const Qt::KeyboardModifiers) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
@@ -377,6 +378,9 @@ public:
     // that is the other package's business and nothing this profile can act
     // on, the same rule addonShortcutUsable() follows.
     QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    // What Mudlet's own shortcut on this key is called, empty when Mudlet has
+    // nothing on it or a key binding there would still win
+    QString ownShortcutUsingKey(const Qt::Key, const Qt::KeyboardModifiers) const;
     // Every other profile whose key binding a newly pinned command took, told about it.
     // The clash is only refused within the profile that is asking; see the
     // definition for why the others are told rather than turned down.
@@ -400,6 +404,8 @@ public:
     bool profileExists(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
+    bool showCompactInputLineTutorial();
+    void showedCompactInputLineTutorial();
     bool showMuteAllMediaTutorial();
     void showedMuteAllMediaTutorial();
     bool showCharacterModeWarning();
@@ -975,14 +981,16 @@ private:
     int mNextAddonCommandId = 1;
 
     // amount of times the shortcut has been shown help educate new users
-    int mScrollbackTutorialsShown = 0;   // Cancel split screen
-    int mMuteAllMediaTutorialsShown = 0; // Mute all media
-    int mCharacterModeWarningsShown = 0; // Character-at-a-time mode detection
+    int mScrollbackTutorialsShown = 0;       // Cancel split screen
+    int mMuteAllMediaTutorialsShown = 0;     // Mute all media
+    int mCharacterModeWarningsShown = 0;     // Character-at-a-time mode detection
+    int mCompactInputLineTutorialsShown = 0; // Compact input line
 
     // show the tutorial maximum 3 times on a new Mudlet
-    static constexpr int mScrollbackTutorialsMax = 3;   // Split screen
-    static constexpr int mMuteAllMediaTutorialsMax = 3; // Mute all media
-    static constexpr int mCharacterModeWarningsMax = 3; // Character mode
+    static constexpr int mScrollbackTutorialsMax = 3;       // Split screen
+    static constexpr int mMuteAllMediaTutorialsMax = 3;     // Mute all media
+    static constexpr int mCharacterModeWarningsMax = 3;     // Character mode
+    static constexpr int mCompactInputLineTutorialsMax = 3; // Compact input line
 
     // Telnet URI handling structures and methods
     struct TelnetUriData
