@@ -212,4 +212,111 @@ describe("trigger matching under a flood", function()
         assert.is_true((fired.stayOpenChild or 0) > 0,
                        "a stay-open trigger should keep offering later lines to its children during a burst")
     end)
+
+    -- Only a trigger with a regex among its patterns is prescanned, so the
+    -- prescan judges the other kinds only when they share a trigger with one.
+    -- No Lua API mixes pattern kinds in one trigger, hence the fixture.
+    describe("triggers that mix a regex with other pattern kinds", function()
+
+        local packageName = "mudlet-spec-floodmixed"
+        local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+        assert(specDirectory, "TriggerFlood_spec.lua has to be run from a file so that it can find its fixtures")
+        local fixture = specDirectory .. "/fixtures/packages/sources/" .. packageName .. "/" .. packageName .. ".xml"
+
+        -- the same retries as Trigger_spec.lua's fixtures, which says why
+        local function packageInstalled()
+            return table.contains(getPackages(), packageName)
+        end
+
+        local function waitForProfileSaveToPass()
+            for _ = 1, 100 do
+                if installPackage("") == nil then
+                    return
+                end
+                pumpEvents(50)
+            end
+        end
+
+        local function removePackage()
+            local reason
+            for _ = 1, 3 do
+                if not packageInstalled() then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = uninstallPackage(packageName)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            return not packageInstalled(), reason
+        end
+
+        setup(function()
+            -- itFlood() reports pending without test mode, and installing needs
+            -- pumpEvents(), which does nothing without it
+            if not os.getenv("MUDLET_TEST_MODE") then
+                return
+            end
+            removePackage()
+            local reason
+            for _ = 1, 3 do
+                if packageInstalled() then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = installPackage(fixture)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_true(packageInstalled(), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+        end)
+
+        teardown(function()
+            if packageInstalled() then
+                local gone, reason = removePackage()
+                assert.is_true(gone, "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            end
+        end)
+
+        itFlood("fires the same way whether the lines trickle in or arrive at once", function()
+            -- saved disabled, so that nothing in the fixture fires outside this spec
+            enableTrigger(packageName .. " text kinds")
+            enableTrigger(packageName .. " lua kind")
+            finally(function()
+                disableTrigger(packageName .. " text kinds")
+                disableTrigger(packageName .. " lua kind")
+            end)
+
+            -- every kind gets a line it matches and a near miss next to it
+            local corpus = filler(12, {
+                [2] = "there is flood mixed bait on this line",
+                [3] = "bait mixed flood, the words but not the phrase",
+                [4] = "flood_mixed_prefix starts this line",
+                [5] = "this line ends with flood_mixed_prefix",
+                [6] = "flood_mixed_exact",
+                [7] = "flood_mixed_exact and then some",
+                [9] = "flood_mixed_lua",
+                [10] = "not quite flood_mixed_lua",
+            })
+            local kinds = {"flood mixed bait", "flood_mixed_prefix", "flood_mixed_exact", "lua"}
+
+            for _, line in ipairs(corpus) do
+                feedTriggers(line .. "\n")
+            end
+            for _, key in ipairs(kinds) do
+                assert.are.equal(1, fired[key], key .. " should fire once when the lines are fed one at a time")
+            end
+
+            feedAsBurst(corpus)
+
+            -- every kind that went astray is named at once, rather than just the first
+            local astray = {}
+            for _, key in ipairs(kinds) do
+                if fired[key] ~= 2 then
+                    astray[#astray + 1] = key .. " fired " .. tostring(fired[key]) .. " times over both runs"
+                end
+            end
+            assert.are.same({}, astray, "each kind fired once when the same lines arrived one at a time")
+        end)
+    end)
 end)
