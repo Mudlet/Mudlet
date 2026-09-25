@@ -385,8 +385,9 @@ private:
     // character-at-a-time detection timer and flags, which have no public face,
     // and fires those timers early rather than waiting them out.
     friend class TelnetPasswordMaskTimeoutTest;
-    // Allows the functional test to drive the auto-login and ECHO state directly:
+    // Allow the functional tests to drive the auto-login and ECHO state directly:
     friend class PasswordEntryPolicyTest;
+    friend class PasswordEntryTest;
 
     // Calls reset() from its constructor. It has to be the Host that does that,
     // and not cTelnet itself, because reset() clears Host members declared after

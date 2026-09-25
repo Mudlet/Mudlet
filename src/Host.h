@@ -178,8 +178,9 @@ class Host : public QObject
     friend class HostWidgetDecouplingTest;
     // Allows the functional test to answer the keychain lookup in place of a keychain:
     friend class TelnetLatePasswordTest;
-    // Allows the functional test to read and reset the hidden-input flags:
+    // Allow the functional tests to read and reset the hidden-input flags:
     friend class PasswordEntryPolicyTest;
+    friend class PasswordEntryTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
