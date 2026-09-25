@@ -124,6 +124,8 @@ public:
     bool resetLabelSvgTransform(const QString& name);
     std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
+    std::optional<QFont> getLabelFont(const QString& name) const;
+    bool setLabelFont(const QString& name, const QFont& font);
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
     // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
@@ -163,6 +165,21 @@ public:
     void setCommandLineText(const QString& text);
     TCommandLine* raiseCommandLine();
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
+    // The text box operations the core forwards to this view by name, never by
+    // widget; each reports failure for a name that is not a text box's.
+    std::optional<QString> getTextBoxText(const QString& name) const;
+    bool setTextBoxText(const QString& name, const QString& text);
+    bool clearTextBox(const QString& name);
+    bool setTextBoxReadOnly(const QString& name, bool readOnly);
+    bool setTextBoxPlaceholder(const QString& name, const QString& text);
+    bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet);
+    std::optional<QFont> getTextBoxFont(const QString& name) const;
+    bool setTextBoxFont(const QString& name, const QFont& font);
+    bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus);
+    // QWidget state the core asks about, answered here so that it need not
+    // reach this view's QWidget base.
+    QPoint mousePosition() const;
+    bool hasKeyboardFocus() const;
     // Shared by scroll boxes, command lines and text boxes: each is the same plain QWidget call.
     bool showPlainWindow(const QString& name);
     bool hidePlainWindow(const QString& name);
