@@ -6628,6 +6628,15 @@ describe("Toolbar buttons", function()
       assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), setErr)
     end)
 
+    it("round-trips a button state by ID", function()
+      local id = findItems(pushDownButton, "button")[1]
+      assert.is_number(id, "the package did not install " .. pushDownButton)
+      assert.is_false(getButtonState(id))
+      assert.is_true(setButtonState(id, true))
+      assert.is_true(getButtonState(id))
+      assert.is_true(getButtonState(pushDownButton), "the ID and the name should be the same button")
+    end)
+
     it("both refuse a button that is not a push-down one when it is given by ID", function()
       local id = findItems(plainButton, "button")[1]
       assert.is_number(id, "the package did not install " .. plainButton)

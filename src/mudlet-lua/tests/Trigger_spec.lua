@@ -1236,6 +1236,8 @@ describe("Trigger processing", function()
                 for _ = 1, times do
                     assert.is_true(feedTriggers("\n" .. line .. "\n"))
                 end
+                -- without this a script that just returned would count the same
+                assert.is_nil(_G.TrigSpecExpire.pastError, "the script ran on past the error it raised")
                 return _G.TrigSpecExpire.count
             end
 
@@ -1250,6 +1252,7 @@ describe("Trigger processing", function()
                 local id = tempTrigger("expire_raises_script", [[
                     _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
                     error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
                 ]], 2)
                 local watcher = watchLine("expire_raises_script")
                 finally(function() killTrigger(id); killTrigger(watcher) end)
@@ -1263,6 +1266,7 @@ describe("Trigger processing", function()
                 local id = tempTrigger("expire_raises_fn", function()
                     _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
                     error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
                 end, 2)
                 local watcher = watchLine("expire_raises_fn")
                 finally(function() killTrigger(id); killTrigger(watcher) end)
@@ -1276,6 +1280,7 @@ describe("Trigger processing", function()
                 local id = expiringMultiline("SpecExpireMultiRaises", [[^expire_raises_multi$]], [[
                     _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
                     error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
                 ]], 2)
                 assert.is_number(id)
                 local watcher = watchLine("expire_raises_multi")
@@ -1290,6 +1295,7 @@ describe("Trigger processing", function()
                 local id = tempComplexRegexTrigger("SpecMultiRaises", [[^multi_raises$]], [[
                     _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
                     error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
                 ]], 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
                 assert.is_number(id)
                 local watcher = watchLine("multi_raises")

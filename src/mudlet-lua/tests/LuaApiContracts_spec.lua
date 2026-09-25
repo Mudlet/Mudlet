@@ -411,11 +411,16 @@ describe("Tests feedTelnet's marker escapes", function()
   end
 
   it("answers the marker table version for an empty string, and feeds nothing", function()
-    local mark = getLastLineNumber("main")
     local ok, version = feedTelnet("")
     assert.is_true(ok)
     assert.is_truthy(tostring(version):match("^feedTelnet: using table version %d+$"), tostring(version))
-    assert.equals(mark, getLastLineNumber("main"), "asking for the version put something on screen")
+
+    -- anything the version call had fed would have no line ending of its own,
+    -- so it would only show up at the start of the next line fed
+    assert.is_true(feedTelnet("\nFeedTelnetAfterVersion\n"))
+    local last = getLastLineNumber("main")
+    local line = getLines("main", last - 1, last)[1]
+    assert.equals("FeedTelnetAfterVersion", line, "asking for the version fed something to the screen")
   end)
 
   it("reads doubled angle brackets as literal ones rather than as a marker", function()
@@ -438,6 +443,7 @@ describe("Tests the parent argument of the perm*Trigger family", function()
     permBeginOfLineStringTrigger = function(name, parent) return permBeginOfLineStringTrigger(name, parent, {"mudletSpecNeverSent"}, "") end,
     permExactMatchTrigger = function(name, parent) return permExactMatchTrigger(name, parent, {"mudletSpecNeverSent"}, "") end,
     permPromptTrigger = function(name, parent) return permPromptTrigger(name, parent, "") end,
+    permSubstringTrigger = function(name, parent) return permSubstringTrigger(name, parent, {"mudletSpecNeverSent"}, "") end,
   }
 
   for functionName, create in pairs(creators) do
@@ -456,6 +462,9 @@ describe("Tests the parent argument of the perm*Trigger family", function()
     it(functionName .. " creates the trigger inside the parent it names", function()
       local group = "mudletSpecParentGroup" .. functionName
       local name = "mudletSpecChild" .. functionName
+      -- a prompt trigger has no pattern and fires on every prompt, so the
+      -- group is switched off again rather than left to fire for the whole run
+      finally(function() disableTrigger(group) end)
       local id = findItems(name, "trigger")[1]
       if not id then
         assert.is_true(permGroup(group, "trigger"))
@@ -468,6 +477,22 @@ describe("Tests the parent argument of the perm*Trigger family", function()
       assert.equals(group, list[1].name)
     end)
   end
+
+  -- the other perm* functions that take a parent refuse a missing one the same way
+  local otherCreators = {
+    {functionName = "permAlias", kind = "alias", noun = "alias", create = function(name) return permAlias(name, missingParent, "^mudletSpecNeverSent$", "") end},
+    {functionName = "permTimer", kind = "timer", noun = "timer", create = function(name) return permTimer(name, missingParent, 5, "") end},
+    {functionName = "permScript", kind = "script", noun = "script", create = function(name) return permScript(name, missingParent, "") end},
+    {functionName = "permKey", kind = "keybind", noun = "key", create = function(name) return permKey(name, missingParent, mudlet.key.F12, "") end},
+  }
+  for _, creator in ipairs(otherCreators) do
+    it(creator.functionName .. " refuses a parent that does not exist and creates nothing", function()
+      local name = "mudletSpecOrphan" .. creator.functionName
+      assertArgError(function() return creator.create(name) end,
+        creator.functionName .. ": cannot create " .. creator.noun .. " (parent '" .. missingParent .. "' not found)")
+      assert.same({}, findItems(name, creator.kind), "the refused " .. creator.noun .. " was created anyway")
+    end)
+  end
 end)
 
 describe("Tests the stopwatch lookup by name", function()
@@ -476,11 +501,23 @@ describe("Tests the stopwatch lookup by name", function()
   -- to be refused by name rather than read as some other stopwatch
   it("names the stopwatch it could not find", function()
     local name = "mudletSpecNoSuchStopWatch"
-    for _, functionName in ipairs({"getStopWatchTime", "startStopWatch", "stopStopWatch", "resetStopWatch", "deleteStopWatch"}) do
-      local ok, err = _G[functionName](name)
+    for _, functionName in ipairs({"getStopWatchTime", "startStopWatch", "stopStopWatch", "resetStopWatch", "deleteStopWatch", "adjustStopWatch"}) do
+      -- the second argument is only read by adjustStopWatch, as its adjustment
+      local ok, err = _G[functionName](name, 1)
       assert.is_nil(ok, functionName .. " accepted a stopwatch that does not exist")
       assert.equals("stopwatch with name '" .. name .. "' not found", err, functionName)
     end
+  end)
+
+  it("reads a number given as a string as a name, not as an ID", function()
+    local id = createStopWatch()
+    assert.is_number(id)
+    finally(function() deleteStopWatch(id) end)
+    assert.is_number(getStopWatchTime(id), "the stopwatch just made cannot be read by its ID")
+
+    local ok, err = getStopWatchTime(tostring(id))
+    assert.is_nil(ok, "a string of digits was read as the ID of a stopwatch")
+    assert.equals("stopwatch with name '" .. id .. "' not found", err)
   end)
 end)
 
@@ -509,7 +546,7 @@ describe("Tests createLabel's flag arguments", function()
   end)
 end)
 
-describe("Tests the raised errors for a wrongly typed first argument", function()
+describe("Tests the raised errors for a wrongly typed argument", function()
 
   it("raises for a module name that is not a string", function()
     assertArgError(function() return setModulePriority({}, 1) end, "setModulePriority: bad argument #1 type")

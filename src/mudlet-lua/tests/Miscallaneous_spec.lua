@@ -2225,7 +2225,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local childId = nestedIn(group, "script", "mudletSpecIsActiveScriptChild", "script", function()
           return permScript("mudletSpecIsActiveScriptChild", group, "")
         end)
-        -- unlike the other item types, a script group is made switched off
+        -- script and timer groups are made switched off, unlike the others
         finally(function() disableScript(group) end)
 
         assert.is_true(enableScript(group))
@@ -2234,9 +2234,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(isAncestorsActive(childId, "script"))
       end)
 
-      it("answers for a button on a toolbar", function()
+      it("follows whether the toolbar a button sits on is shown", function()
         local toolbar = "mudletSpecIsActiveToolbar"
-        -- see "names the toolbar a button sits on" below for why it is hidden
+        -- see "names the toolbar a button sits on" below for why it is hidden;
+        -- hiding it switches it off, and that is saved with the profile, so a
+        -- reused profile brings it back hidden and it has to be shown first
         finally(function() hideToolBar(toolbar) end)
         if exists(toolbar, "button") == 0 then
           assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
@@ -2245,7 +2247,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
             or tempButton(toolbar, "mudletSpecIsActiveButton", 0)
         assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
 
+        showToolBar(toolbar)
         assert.is_true(isAncestorsActive(buttonId, "button"))
+        hideToolBar(toolbar)
+        assert.is_false(isAncestorsActive(buttonId, "button"))
       end)
 
       it("returns nil+msg for an item of any type that does not exist", function()
@@ -2422,12 +2427,21 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end
         assert.is_true(type(childId) == "number" and childId > 0, "could not make an offset timer under " .. parentName)
 
+        -- a permanent timer is made switched off, and is left that way
+        finally(function() disableTimer(parentName) end)
+        assert.is_true(disableTimer(parentName))
+
         local list = ancestors(childId, "timer")
         assert.is_table(list)
         assert.equals(1, #list)
         assert.equals(parentName, list[1].name)
         assert.equals("item", list[1].node)
-        assert.is_boolean(list[1].isActive)
+        assert.is_false(list[1].isActive)
+        assert.is_false(isAncestorsActive(childId, "timer"))
+
+        assert.is_true(enableTimer(parentName))
+        assert.is_true(ancestors(childId, "timer")[1].isActive)
+        assert.is_true(isAncestorsActive(childId, "timer"))
       end)
 
       it("returns nil+msg for an item of any other type that does not exist", function()
