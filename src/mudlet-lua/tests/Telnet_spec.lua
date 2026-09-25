@@ -1353,24 +1353,74 @@ describe("Tests MCCP compressed streams", function()
   -- zlib.compress("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK\r\n"),
   -- as the bytes a server would put on the wire after the start sequence
   local COMPRESSED = "\120\218\243\117\118\14\112\113\117\246\247\13\8\114\13\14\118\117\241\247\86\240\37\70\136\151\11\0\228\236\16\9"
+  -- zlib.compress("MCCPSECONDSTREAMOK MCCPSECONDSTREAMOK\r\n")
+  local COMPRESSED_SECOND = "\120\156\243\117\118\14\8\118\117\246\247\115\9\14\9\114\117\244\245\247\86\240\197\16\226\229\2\0\223\154\10\194"
+  -- zlib.compress("MCCPVERSIONONEOK MCCPVERSIONONEOK\r\n")
+  local COMPRESSED_V1 = "\120\156\243\117\118\14\8\115\13\10\246\244\247\243\247\115\245\247\86\240\69\19\224\229\2\0\183\122\9\194"
 
   -- neither the end of a stream nor a broken one clears the WILL, so without this
   -- every later spec's IAC SB is still a candidate MCCP start sequence
   after_each(function()
     feed("<T_IAC><T_WONT><O_MCCP2>")
+    feed("<T_IAC><T_WONT><O_MCCP>")
   end)
 
-  -- Both of these end their stream, and ending one leaks the zlib inflate state
-  -- for good (#10410), which turns the leak detection half of the Linux CI job
-  -- red. The fixture above and the helpers are kept so that un-parking them is
-  -- a one line change once that is fixed.
-
   it("shows the text a server sends once it switches to MCCP v2", function()
-    pending("running a compressed stream to its end leaks the inflate state (#10410)")
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED) .. "MCCPPLAINAFTEREND\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), shown)
+    -- the stream ended inside that read, so what follows it is plain text again
+    assert.is_truthy(shown:find("MCCPPLAINAFTEREND", 1, true), shown)
   end)
 
   it("warns and falls back to plain text when the compressed stream is broken", function()
-    pending("a failed inflate leaks the inflate state the same way (#10410)")
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>MCCPNOTCOMPRESSED\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    feed("MCCPPLAINAFTERBROKEN\r\n")
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERBROKEN", 1, true), shown)
+  end)
+
+  -- the end of a stream arms a fresh inflate state for the next one, and a
+  -- second start sequence used to allocate over it, leaking it (#10410) - only
+  -- the leak detection half of the Linux CI job can see that
+  it("decompresses a second stream once the first has ended", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+
+    -- this time the stream arrives in a read of its own after the start sequence
+    feed("MCCPSECONDSTART\r\n<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>")
+    feed(escaped(COMPRESSED_SECOND))
+    local shown = linesSince(mark)
+    local first = shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true)
+    local between = shown:find("MCCPSECONDSTART", 1, true)
+    local second = shown:find("MCCPSECONDSTREAMOK MCCPSECONDSTREAMOK", 1, true)
+    assert.is_truthy(first and between and second and first < between and between < second, shown)
+  end)
+
+  it("warns when a stream that started in an earlier read turns out to be broken", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>")
+    feed("MCCPLATERBROKEN\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+  end)
+
+  it("shows the text a server sends once it switches to MCCP v1", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP>")
+    -- v1's start sequence is IAC SB COMPRESS WILL SE, not terminated by an IAC
+    feed("<T_IAC><T_SB><O_MCCP><T_WILL><T_SE>" .. escaped(COMPRESSED_V1) .. "MCCPV1PLAINAFTER\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPVERSIONONEOK MCCPVERSIONONEOK", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPV1PLAINAFTER", 1, true), shown)
   end)
 end)
 

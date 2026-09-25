@@ -347,9 +347,9 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
-    // Unconditional: the end of a compressed stream re-initialises the stream
-    // for the next one while switching decompression off, so the state to free
-    // exists whether or not compression is active
+    // Unconditional: a stream is live from its start sequence until it ends,
+    // whether or not decompression is still switched on, and freeing one that
+    // never started or has already ended does nothing
     inflateEnd(&mZstream);
 
     // Aggressively disconnect the sockets to prevent signals during destruction
@@ -5352,6 +5352,11 @@ void cTelnet::postData()
 
 void cTelnet::initStreamDecompressor()
 {
+    // A stream can still be allocated here - overwriting it would leak it
+    // (#10410). inflateEnd() leaves one never initialised (mZstream starts out
+    // zeroed) or already ended alone.
+    inflateEnd(&mZstream);
+
     mZstream.zalloc = Z_NULL;
     mZstream.zfree = Z_NULL;
     mZstream.opaque = Z_NULL;
@@ -5388,30 +5393,28 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         // handled, so a failed inflate() silently ate all further input and the
         // connection looked dead. Warn, drop compression, and let the caller
         // reprocess the unconsumed input as plain data.
-        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << "- disabling compression";
+        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << (mZstream.msg ? mZstream.msg : "") << "- disabling compression";
         //: %1 is the decompression error description. Shown when the server sends a corrupt MCCP (compressed) data stream.
         postMessage(tr("[ WARN  ]  - MCCP decompression error (%1), compression disabled.\n"
                        "If the display looks garbled, please reconnect to the game.")
                             .arg(QString::fromUtf8(zError(zval))));
         sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
-        inflateEnd(&mZstream);
         mNeedDecompression = false;
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
-        initStreamDecompressor();
+        // the next start sequence initialises a stream of its own
+        inflateEnd(&mZstream);
         return outSize;
     }
 
     if (zval == Z_STREAM_END) {
-        inflateEnd(&mZstream);
         qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
 
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
 
-        // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
-        initStreamDecompressor();
+        inflateEnd(&mZstream);
         qDebug() << "Listening for new compression sequences";
 
         // We shouldn't return -1 or an error here, as that prevents any text
