@@ -176,18 +176,25 @@ describe("Tests undoing the game's own line wrapping", function()
 
   it("runs the flushed line's triggers in trigger context, and only them", function()
     -- the flush timer commits the held line itself, so it has to put the
-    -- console in trigger context for the triggers that line fires - an echo
-    -- from one belongs on the line it matched - and take it out again after
-    local id = tempTrigger(segment1, function()
-      echo(" [tagged]")
+    -- console in trigger context for the triggers that line fires, and take it
+    -- out again after. In trigger context insertText() moves the capture groups
+    -- along with the text it inserts, which is what shows the context was set:
+    local selected
+    local id = tempRegexTrigger("^(x+) (alpha)$", function()
+      insertText("<<")
+      selectCaptureGroup(3)
+      selected = getSelection()
+      deselect()
     end)
     feed(segment1 .. "\r\n")
     settle()
     killTrigger(id)
-    assert.is_true(bufferHasLine(segment1 .. " [tagged]"), "a trigger's echo on the flushed line did not land on that line")
+    assert.are.equal("alpha", selected, "insertText() in a trigger on the flushed line did not move the capture groups along")
 
-    echo("after the flush\n")
-    assert.is_true(bufferHasLine("after the flush"), "an echo outside any trigger was still written into the flushed line")
+    -- and outside it an echo's newline starts a line, rather than staying
+    -- inside the one a trigger would be writing into
+    echo("after\nthe flush\n")
+    assert.is_true(bufferHasLine("the flush"), "an echo outside any trigger was still written as if into a trigger's line")
   end)
 
   it("ends a paragraph at a blank line", function()
