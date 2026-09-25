@@ -1264,11 +1264,9 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QCOMPARE(countLine.toInt(), lines.count());
     }
 
-    // selectCaptureGroup() only reaches the view from inside a trigger that
-    // captured something, and a selection needs a widget to live in - so with no
-    // window it has to answer the -1 it already answers for a group that is not
-    // there.
-    void test_selectCaptureGroupAnswersMinusOneWithNoView()
+    // The selection lives in the model, so a trigger with no window can still
+    // select what it captured, and gets back the success a view would give it.
+    void test_selectCaptureGroupSelectsInTheModelWithNoView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
@@ -1276,15 +1274,49 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QVERIFY2(host->mpConsole, "The active host has no main console.");
         runLua(host,
                qsl("captureGroupResult = 'the trigger did not run'\n"
-                   "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(1))]], 10)\n"));
+                   "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(2))]], 10)\n"));
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         host->reenableAllTriggers();
+        host->deselectMainConsole();
 
-        host->runTriggers(appendModelLine(model->buffer, qsl("NoViewCapture alpha")));
+        const int fedLine = appendModelLine(model->buffer, qsl("NoViewCapture alpha"));
+        host->runTriggers(fedLine);
 
-        QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("-1"));
+        QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("1"));
+        QCOMPARE(model->P_begin, QPoint(14, fedLine));
+        QCOMPARE(model->P_end, QPoint(19, fedLine));
+    }
+
+    // What a view-less selectCaptureGroup() selects is what the model's
+    // selection-based calls then act on: painting after it colours exactly the
+    // captured word.
+    void test_selectCaptureGroupSelectionIsPaintedWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        runLua(host, qsl("tempRegexTrigger([[^NoViewPaint (\\w+) after]], [[selectCaptureGroup(2)]], 10)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->reenableAllTriggers();
+        host->deselectMainConsole();
+
+        const int fedLine = appendModelLine(model->buffer, qsl("NoViewPaint beta after"));
+        host->runTriggers(fedLine);
+
+        const QColor paint(13, 57, 91);
+        host->setMainConsoleFgColor(paint);
+
+        const auto& chars = model->buffer.buffer.at(fedLine);
+        QVERIFY2(chars.size() == static_cast<std::size_t>(qsl("NoViewPaint beta after").size()), "The fed line did not reach the view-less buffer whole.");
+        for (int i = 0; i < static_cast<int>(chars.size()); ++i) {
+            const bool captured = i >= 12 && i < 16;
+            QVERIFY2((chars.at(i).foreground() == paint) == captured, qPrintable(qsl("Character %1 of \"NoViewPaint beta after\" is %2 painted.").arg(i).arg(captured ? qsl("not") : qsl("wrongly"))));
+        }
     }
 
     // The main console's background is the model's, so a script can still read
