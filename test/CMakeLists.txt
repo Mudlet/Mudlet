@@ -331,6 +331,18 @@ if(NOT WIN32)
     )
 endif()
 
+# The key check in CI/linux-packages/publish is the only automated thing between
+# a wrong mudlet.asc and the package trust store of every Mudlet user on Linux,
+# and the publishing workflow runs it only when it publishes a release - so
+# without this nothing covers it before merge. Linux only, as publish needs a
+# newer bash than macOS ships. A skip is reported as one, not as a pass.
+if(UNIX AND NOT APPLE)
+    add_test(NAME LinuxPackagesKeyTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/linux-packages-key-test.sh
+    )
+    set_tests_properties(LinuxPackagesKeyTest PROPERTIES SKIP_RETURN_CODE 77)
+endif()
+
 add_subdirectory(functional_tests)
 
 # CI runners are elevated, so nothing there catches a test executable Windows
