@@ -1,7 +1,7 @@
 -- The audit that runs when a binary map file is loaded, and repairs what it
 -- finds wrong with it. Nothing the Lua API offers can build a map that is
--- damaged in these ways, so each test saves a sound map, alters bytes of the
--- file it wrote in one planted place, and loads the result back. The planting
+-- damaged in most of these ways, so those tests save a sound map, alter bytes
+-- of the file it wrote in one planted place, and load the result back. The planting
 -- helpers count what they replaced, so a change to the file format that moves
 -- or renames what they look for fails loudly rather than loading an undamaged
 -- map that the assertions would then be checking for nothing.
