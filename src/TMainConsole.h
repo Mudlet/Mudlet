@@ -126,6 +126,16 @@ public:
     std::optional<bool> getLabelVisible(const QString& name) const;
     std::optional<QFont> getLabelFont(const QString& name) const;
     bool setLabelFont(const QString& name, const QFont& font);
+    std::optional<QString> getLabelText(const QString& name) const;
+    // No value for a name that is not a label's, false for a label that is not
+    // showing a movie; the movie operations below report failure for either.
+    std::optional<bool> labelShowsMovie(const QString& name) const;
+    bool startLabelMovie(const QString& name);
+    bool pauseLabelMovie(const QString& name);
+    // Also false when the movie has no such frame.
+    bool setLabelMovieFrame(const QString& name, int frame);
+    bool setLabelMovieSpeed(const QString& name, int percent);
+    bool scaleLabelMovie(const QString& name, bool followLabelSize);
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
     // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
