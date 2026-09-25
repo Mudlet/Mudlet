@@ -1068,6 +1068,10 @@ describe("Tests the Client.GUI package offer", function()
     offerGui("5", "RegressRawNoUrlGui")
     offerGui("\n" .. offerUrl("RegressRawNoVersionGui"), "RegressRawNoVersionGui")
     assert.is_falsy(shownSince(mark, "Downloading and installing package"), "an incomplete offer was acted on: " .. displayedSince(mark))
+
+    -- the same offer made complete, so the silence above is about what was missing
+    mark = offerGui('{"version": "5", "url": "' .. offerUrl("RegressCompleteGui") .. '"}', "RegressCompleteGui")
+    assert.is_truthy(downloadStarted(mark, "RegressCompleteGui"), "a complete offer was not acted on either: " .. displayedSince(mark))
   end)
 
   -- a game with an interface of its own can decline the built-in starter UI,
@@ -1077,20 +1081,23 @@ describe("Tests the Client.GUI package offer", function()
     -- the starter UI stands aside on that event and saves it in its settings,
     -- which are not this spec's to change
     local standAside = BaseUI and BaseUI.standAside
-    if standAside then
-      BaseUI.standAside = function() end
-    end
     local seen = {}
-    local handler = registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
-      -- the gmcp table is already up to date by the time the event is raised
-      seen[#seen + 1] = {packageName, gmcp.Client and gmcp.Client.GUI and gmcp.Client.GUI.baseui}
-    end)
+    local handler
     finally(function()
-      killAnonymousEventHandler(handler)
+      if handler then
+        killAnonymousEventHandler(handler)
+      end
       gmcp.Client = previousClient
       if standAside then
         BaseUI.standAside = standAside
       end
+    end)
+    if standAside then
+      BaseUI.standAside = function() end
+    end
+    handler = registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
+      -- the gmcp table is already up to date by the time the event is raised
+      seen[#seen + 1] = {packageName, gmcp.Client and gmcp.Client.GUI and gmcp.Client.GUI.baseui}
     end)
 
     for _, keep in ipairs({'{"baseui": true}', '{"baseui": "no"}', '{"other": false}'}) do
@@ -1391,18 +1398,18 @@ describe("Tests telnet option negotiation", function()
   it("drops each protocol again when the server withdraws it with WONT", function()
     for _, option in ipairs(options) do
       local token, protocol = option[1], option[2]
-      assert.same({"sysProtocolEnabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_DO>" .. token))
+      assert.same({"sysProtocolEnabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_WILL>" .. token))
       assert.same({"sysProtocolDisabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_WONT>" .. token))
     end
   end)
 
   it("stops acting on MSP and channel 102 once the server withdraws them with WONT", function()
-    feed("<T_IAC><T_DO><O_MSP>")
+    feed("<T_IAC><T_WILL><O_MSP>")
     assert.is_true(receiveMSP("!!SOUND(Off)"), "MSP messages were refused while the server had MSP enabled")
     feed("<T_IAC><T_WONT><O_MSP>")
     assert.is_nil(receiveMSP("!!SOUND(Off)"), "MSP messages were still accepted after the server's WONT")
 
-    feed("<T_IAC><T_DO><O_AARDWULF>")
+    feed("<T_IAC><T_WILL><O_AARDWULF>")
     assert.is_true(sendTelnetChannel102("ab"), "the channel stayed shut while the server had it enabled")
     feed("<T_IAC><T_WONT><O_AARDWULF>")
     assert.is_nil(sendTelnetChannel102("ab"), "the channel stayed open after the server's WONT")
