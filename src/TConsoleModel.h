@@ -121,9 +121,10 @@ struct TConsoleModel
     // insertText(), insertLink() and replace() shift the capture groups by what
     // they insert, so a later selectCaptureGroup() still finds its text, and
     // echo() keeps its newlines inside the last line instead of starting new
-    // ones. The branches on it in TConsole are the full list. isPrompt() also
-    // reads it. Only TMainConsole::printOnDisplay() and the server-wrap flush
-    // timer raise it, so it is only ever set on the main console's model.
+    // ones. The rest are the branches on it in TConsole and in
+    // TBuffer::addLink(), which echoLink() hands it to. isPrompt() also reads
+    // it. Only TMainConsole::printOnDisplay() and the server-wrap flush timer
+    // raise it, so it is only ever set on the main console's model.
     bool mTriggerEngineMode = false;
     // 1 = up, 2 = down, 0 is not valid: the state of the toolbar button pressed
     // most recently (a plain button sets it back to 1), read back by
