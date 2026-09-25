@@ -329,6 +329,7 @@ private slots:
         const bool priorEchoLuaErrors = mpHost->mEchoLuaErrors;
         const bool priorForceLf = mpHost->mUSE_FORCE_LF_AFTER_PROMPT;
         const bool priorIreBugfix = mpHost->mUSE_IRE_DRIVER_BUGFIX;
+        const bool priorColorSpaceId = mpHost->getHaveColorSpaceId();
         const bool priorAutoClear = mpHost->mAutoClearCommandLineAfterSend;
         const bool priorPasswordMasking = mpHost->mDisablePasswordMasking;
         const bool priorRunAllKeys = mpHost->getKeyUnit()->mRunAllKeyMatches;
@@ -350,6 +351,7 @@ private slots:
             mpHost->mEchoLuaErrors = priorEchoLuaErrors;
             mpHost->mUSE_FORCE_LF_AFTER_PROMPT = priorForceLf;
             mpHost->set_USE_IRE_DRIVER_BUGFIX(priorIreBugfix);
+            mpHost->setHaveColorSpaceId(priorColorSpaceId);
             mpHost->mAutoClearCommandLineAfterSend = priorAutoClear;
             mpHost->mDisablePasswordMasking = priorPasswordMasking;
             mpHost->getKeyUnit()->mRunAllKeyMatches = priorRunAllKeys;
@@ -387,6 +389,7 @@ private slots:
         mpPreferences->checkBox_echoLuaErrors->setChecked(!priorEchoLuaErrors);
         mpPreferences->checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(!priorForceLf);
         mpPreferences->checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(!priorIreBugfix);
+        mpPreferences->checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(!priorColorSpaceId);
         mpPreferences->auto_clear_input_line_checkbox->setChecked(!priorAutoClear);
         mpPreferences->disable_password_masking_checkbox->setChecked(!priorPasswordMasking);
         mpPreferences->checkBox_runAllKeyBindings->setChecked(!priorRunAllKeys);
@@ -415,6 +418,7 @@ private slots:
         QCOMPARE(mpHost->mEchoLuaErrors, !priorEchoLuaErrors);
         QCOMPARE(mpHost->mUSE_FORCE_LF_AFTER_PROMPT, !priorForceLf);
         QCOMPARE(mpHost->mUSE_IRE_DRIVER_BUGFIX, !priorIreBugfix);
+        QCOMPARE(mpHost->getHaveColorSpaceId(), !priorColorSpaceId);
         QCOMPARE(mpHost->mAutoClearCommandLineAfterSend, !priorAutoClear);
         QCOMPARE(mpHost->mDisablePasswordMasking, !priorPasswordMasking);
         QCOMPARE(mpHost->getKeyUnit()->mRunAllKeyMatches, !priorRunAllKeys);

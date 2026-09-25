@@ -3650,12 +3650,11 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_purgeMediaCache->setEnabled(false);
     // ----- groupBox_specialOptions -----
     need_reconnect_for_specialoption->hide();
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
 
     groupbox_searchEngineSelection->setEnabled(false);
-    // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
-    // This acts on a label within this groupBox:
     slot_hidePasswordMigrationLabel();
+    // ----- groupBox_debug -----
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
@@ -3768,9 +3767,10 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
     groupBox_purgeMediaCache->setEnabled(true);
+    // ----- groupBox_specialOptions -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     groupbox_searchEngineSelection->setEnabled(true);
     // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
@@ -4475,7 +4475,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
