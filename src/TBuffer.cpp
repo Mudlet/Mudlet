@@ -6796,6 +6796,21 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             utf8SequenceLength = 6;
         }
 
+        // A byte that is not a continuation byte cannot be part of this
+        // sequence, so the sequence ends malformed just before it - and that
+        // byte, which may be a line ending or the ESC opening a control
+        // sequence, is left for the caller to handle rather than taken with it:
+        const size_t available = std::min(utf8SequenceLength, len - pos);
+        for (size_t i = 1; i < available; ++i) {
+            if ((bufferData.at(pos + i) & 0xC0) != 0x80) {
+                mMudLine.append(QChar::ReplacementCharacter);
+                // As there is already a unit increment at the bottom of loop
+                // add one less than the bytes taken:
+                pos += i - 1;
+                return true;
+            }
+        }
+
         if ((pos + utf8SequenceLength) > len) {
             // Not enough bytes left in bufferData to complete the utf-8
             // sequence - need to save and prepend onto incoming data next
@@ -6820,14 +6835,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
         switch (utf8SequenceLength) {
         case 4:
-            // Check the 4th byte is a valid continuation byte (2 MS-Bits are 10)
-            if ((bufferData.at(pos + 3) & 0xC0) != 0x80) {
-#if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) 4th byte in UTF-8 sequence is invalid!";
-#endif
-                isValid = false;
-                isToUseReplacementMark = true;
-            } else if (((bufferData.at(pos) & 0x07) > 0x04) || (((bufferData.at(pos) & 0x07) == 0x04) && ((bufferData.at(pos + 1) & 0x3F) > 0x0F))) {
+            if (((bufferData.at(pos) & 0x07) > 0x04) || (((bufferData.at(pos) & 0x07) == 0x04) && ((bufferData.at(pos + 1) & 0x3F) > 0x0F))) {
                 // For 4 byte values the bits are distributed:
                 //  Byte 1    Byte 2    Byte 3    Byte 4
                 // 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
@@ -6852,14 +6860,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // Fall-through
             [[fallthrough]];
         case 3:
-            // Check the 3rd byte is a valid continuation byte (2 MS-Bits are 10)
-            if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
-#if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) 3rd byte in UTF-8 sequence is invalid!";
-#endif
-                isValid = false;
-                isToUseReplacementMark = true;
-            } else if ((bufferData.at(pos) & 0x0F) == 0x0D && (bufferData.at(pos + 1) & 0x20) == 0x20) {
+            if ((bufferData.at(pos) & 0x0F) == 0x0D && (bufferData.at(pos + 1) & 0x20) == 0x20) {
 // For 3 byte values the bits are distributed:
 //  Byte 1    Byte 2    Byte 3
 // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
@@ -6914,15 +6915,6 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // Fall-through
             [[fallthrough]];
         case 2: {
-            // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
-            if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
-#if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) 2nd byte in UTF-8 sequence is invalid!";
-#endif
-                isValid = false;
-                isToUseReplacementMark = true;
-            }
-
             // Also test for (and reject) overlong sequences - don't need to check
             // 5 or 6 byte ones as those are already rejected above
             const auto firstByte = static_cast<quint8>(bufferData.at(pos));

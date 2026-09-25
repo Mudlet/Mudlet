@@ -280,6 +280,51 @@ describe("Tests EUC-KR decoding", function()
   end)
 end)
 
+describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", function()
+
+  -- Only a byte from 0x80 to 0xBF can continue a sequence, so any other byte
+  -- ends a sequence it arrives in: the bytes before it earn a replacement mark
+  -- and it is then read in its own right. Taken as part of the sequence it
+  -- would be lost, and with it whatever it meant.
+
+  it("keeps the ASCII byte that cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals(replacement .. "AZ", decoded(bytes(0xC3) .. "AZ"), "after the lead of a two byte sequence")
+    assert.equals(replacement .. "AZ", decoded(bytes(0xE2, 0x82) .. "AZ"), "after two bytes of a three byte sequence")
+    assert.equals(replacement .. "AZ", decoded(bytes(0xF0, 0x9F, 0x98) .. "AZ"), "after three bytes of a four byte sequence")
+    assert.equals(replacement .. "ABCDZ", decoded(bytes(0xF8) .. "ABCDZ"), "after the lead of a five byte form")
+  end)
+
+  it("decodes a character whose lead byte cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals(replacement .. "日Z", decoded(bytes(0xE2, 0xE6, 0x97, 0xA5) .. "Z"))
+  end)
+
+  it("keeps a line ending that cuts a sequence short", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet("cut:one" .. bytes(0xE2) .. "\r\ncut:two\r\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^cut:") then
+        shown[#shown + 1] = line
+      end
+    end
+    assert.same({"cut:one" .. replacement, "cut:two"}, shown)
+  end)
+
+  it("still acts on an escape sequence that cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals("A" .. replacement .. "REDZ", decoded("A" .. bytes(0xE2) .. "\27[31mRED\27[0mZ"))
+  end)
+end)
+
 describe("Tests a character whose bytes are split by the posting timeout", function()
 
   -- cTelnet holds on to a line the game has not finished sending, and flushes
@@ -672,20 +717,23 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     using("UTF-8")
 
     -- Only cTelnet makes the marker, so a carriage return handed to
-    -- feedTriggers() is the caller's own byte and the decoder has to see it: the
-    -- truncated lead byte ahead of it is rejected together with it, in the one
-    -- replacement mark, and does not end the line.
+    -- feedTriggers() is the caller's own byte and the decoder has to see it: it
+    -- cuts the truncated lead byte ahead of it short, which earns that byte a
+    -- replacement mark, and then ends the line as a carriage return does. Held
+    -- back as a marker, it would instead leave the lead byte waiting for the
+    -- rest of its sequence, and the line would end with no mark at all.
     local mark = getLastLineNumber("main")
     feedTriggers("local:" .. bytes(0xC3, 0x0D))
     feedTriggers("tail\n")
 
-    local seen
-    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+    local seen = {}
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    for index, line in ipairs(lines) do
       if line:find("^local:") then
-        seen = line
+        seen = {line, lines[index + 1]}
       end
     end
-    assert.equals("local:" .. replacement .. "tail", seen)
+    assert.same({"local:" .. replacement, "tail"}, seen)
   end)
 end)
 
