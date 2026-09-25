@@ -133,7 +133,7 @@ if (mpCache) {
 QCoreApplication::postEvent(mpConsole, event);
 ```
 
-Leave translator comments (`//:`), tool directives (`NOLINT`, `clang-format off`) and Lua `---` LDoc blocks alone.
+Translator comments (`//:`), tool directives (`NOLINT`, `clang-format off`) and Lua `---` LDoc blocks are not clutter: never remove them to trim comments, but do update them when the string, line or API they describe changes.
 
 ## Tests
 
