@@ -27,7 +27,6 @@
 #include "TAlias.h"
 #include "TLuaInterpreter.h"
 #include "Tree.h"
-#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -392,9 +391,7 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshAliasIcon(pT->getID());
-        }
+        emit mpHost->signal_aliasToggled(pT->getID());
     }
     return found;
 }
@@ -408,9 +405,7 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshAliasIcon(it.value()->getID());
-        }
+        emit mpHost->signal_aliasToggled(it.value()->getID());
     }
     return found;
 }
