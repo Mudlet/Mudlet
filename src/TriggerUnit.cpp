@@ -831,16 +831,19 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         TTrigger* pT = it.value();
-        const bool wasUnfilterable = pT->prescanGrams().empty();
+        const bool wasOpen = pT->mKeepFiring > 0;
         pT->mKeepFiring = lines;
-        const bool nowUnfilterable = pT->prescanGrams().empty();
-        if (wasUnfilterable == nowUnfilterable) {
+        const bool nowOpen = pT->mKeepFiring > 0;
+        if (wasOpen == nowOpen) {
             // A script that sets the same count every line is the common shape,
-            // and the index files on nothing that just changed - refiling anyway
-            // would spend a mutation per call and buy a rebuild with them.
+            // and a window that stays open or stays shut changes nothing the
+            // trigger is filed or filtered by - refiling anyway would spend a
+            // mutation per call and buy a rebuild with them. The grams are no
+            // guide: a regex or color trigger has none either way, yet can be
+            // ruled out of a line while it is shut.
             continue;
         }
-        if (nowUnfilterable) {
+        if (nowOpen) {
             // it now fires without matching, so it can no longer be filtered out
             // of a line - including the one being processed right now
             markPrescanStaleForLineInFlight(pT);

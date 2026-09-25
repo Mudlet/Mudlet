@@ -3661,6 +3661,46 @@ describe("Trigger processing", function()
                 assert.are.equal(1, _G.TrigSpec.count,
                     "a trigger whose stay-open window closed was not filed back into the index, so its own line never reached it")
             end)
+
+            -- A regex or color trigger has nothing in the index to change when
+            -- its window opens, but it still has to stop being dismissed by its
+            -- pattern. These lines are fed without a leading blank line, which
+            -- an open window fires on too and which has no one color to rule a
+            -- color trigger out by, so it would hide a miss.
+            it("keeps firing a regex trigger opened between lines", function()
+                trackPerm("SpecStayOpenRegex",
+                    permRegexTrigger("SpecStayOpenRegex", "", {"^regexstayopen (\\w+) marker$"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                -- filed while closed, so opening it has a copy to go stale
+                feedTriggers("before the window opens\n")
+                setTriggerStayOpen("SpecStayOpenRegex", 3)
+                for i = 1, 3 do
+                    feedTriggers("unrelated window line " .. i .. "\n")
+                end
+                assert.are.equal(3, _G.TrigSpec.count, "a regex trigger opened between lines did not fire on the lines after")
+            end)
+
+            it("fires a regex trigger opened by an earlier trigger on the same line", function()
+                track(tempTrigger("samelineopener_probe", function()
+                    setTriggerStayOpen("SpecStayOpenRegexSameLine", 1)
+                end))
+                trackPerm("SpecStayOpenRegexSameLine",
+                    permRegexTrigger("SpecStayOpenRegexSameLine", "", {"^regexsameline (\\w+) marker$"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                feedTriggers("samelineopener_probe on this line\n")
+                assert.are.equal(1, _G.TrigSpec.count, "a regex trigger opened earlier on the line did not fire on it")
+            end)
+
+            it("keeps firing a color trigger opened between lines", function()
+                -- 4, 2 remaps to red on black
+                local id = track(tempColorTrigger(4, 2, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+                feedTriggers("\27[32;40mbefore the window opens\27[0m\n")
+                setTriggerStayOpen(tostring(id), 3)
+                for i = 1, 3 do
+                    feedTriggers("\27[32;40mgreen window line " .. i .. "\27[0m\n")
+                end
+                assert.are.equal(3, _G.TrigSpec.count, "a color trigger opened between lines did not fire on lines of another color")
+            end)
         end)
     end)
 end)
