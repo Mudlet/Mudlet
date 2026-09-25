@@ -1057,6 +1057,10 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
       WORLD_READ)
   install(
+    FILES "../org.mudlet.mudlet.metainfo.xml"
+    DESTINATION "share/metainfo" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+  install(
     FILES "../mudlet.svg"
     DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
     WORLD_READ)
