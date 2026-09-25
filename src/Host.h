@@ -1140,8 +1140,8 @@ private:
 
     QStringList mModulesToSync;
 
-    // Packages and modules whose XML is still being read in. Their scripts run during that read and may
-    // ask to remove or reinstall the package, which must wait until the importer releases its items.
+    // Packages and modules whose XML is still being read in. Their scripts may ask to remove or reinstall
+    // them during that read: removal is deferred until import finishes, while reinstallation is refused.
     // A stack because installs nest and a self-reloading module is on it twice, so what comes off has to be
     // what this call put on rather than whatever carries the name.
     QStack<QString> mPackagesBeingInstalled;
