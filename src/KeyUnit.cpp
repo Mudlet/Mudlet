@@ -172,33 +172,54 @@ const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers m
     return nullptr;
 }
 
-void KeyUnit::warnIfAddonCommandHoldsKey(const TKey* pKey) const
+QString KeyUnit::takenKeyWarning(const TKey* pKey) const
 {
     auto* pMudlet = mudlet::self();
     if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
-        return;
+        return {};
     }
     // A keypad or group-switch binding cannot be written as a key sequence, so
-    // no command's shortcut can be the one holding it
+    // no shortcut can be the one holding it
     constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
     if (pKey->getKeyModifiers() & ~sequenceModifiers) {
-        return;
+        return {};
     }
 
     const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
-    const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost);
-    if (holders.isEmpty()) {
-        return;
+    const QString keyText = sequence.toString(QKeySequence::NativeText);
+    // Both can hold the key: addCommand() turns down a key Mudlet holds, but the
+    // preferences will move one of Mudlet's shortcuts onto a command's key
+    QStringList warnings;
+    if (const QString action = pMudlet->ownShortcutUsingKey(pKey->getKeyCode(), pKey->getKeyModifiers()); !action.isEmpty()) {
+        // "while that is available": a greyed-out menu item is not offered the
+        // key, so the binding does fire then
+        //: Warning shown in the editor when a key binding is given a key one of Mudlet's own shortcuts already uses. %1 is a key such as "Alt+M", %2 the name of the Mudlet action holding it, as the Shortcuts tab of the preferences shows it.
+        warnings.append(tr("%1 is already used by Mudlet for \"%2\", which will get the key first, so this key binding will not fire while that is available. "
+                           "Mudlet's own shortcuts can be changed in the preferences, under Shortcuts.")
+                                .arg(keyText, action));
     }
+    if (const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost); !holders.isEmpty()) {
+        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
+        warnings.append(tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
+    }
+    return warnings.join(QChar::Space);
+}
+
+void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
+{
     // Shown in the editor rather than on the main screen, for the reason
     // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
     // bindings at profile load would repeat this at every startup, and a line
     // the player learns to ignore is worse than no line. The editor is where
     // the binding is, and where it gets changed.
-    if (mpHost->mpEditorDialog) {
-        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
-        mpHost->mpEditorDialog->showWarning(
-                tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(sequence.toString(QKeySequence::NativeText), holders.join(qsl(", "))));
+    if (mpHost.isNull() || !mpHost->mpEditorDialog) {
+        return;
+    }
+    if (const QString warning = takenKeyWarning(pKey); !warning.isEmpty()) {
+        // Read out only when it can also be seen: a closed editor replaces it
+        // when it opens, and a script making its bindings on connect would have
+        // it read out at every connect. Selecting the binding shows it again.
+        mpHost->mpEditorDialog->showWarning(warning, mpHost->mpEditorDialog->isVisible());
     }
 }
 

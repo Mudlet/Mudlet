@@ -284,7 +284,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPAddChatMessageNewline(true)
 , mMMCPAutoAcceptCalls(true)
 , mMMCPShowSnoopInMainConsole(true)
-, mTutorialForCompactLineAlreadyShown(false)
 , mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
@@ -4540,20 +4539,47 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 void Host::loadSecuredPassword()
 {
     // Use async API for QtKeychain integration with file fallback
-    auto* credManager = new CredentialManager(this);
+    lookUpSecuredPassword(new CredentialManager(this));
+}
 
-    credManager->retrievePassword(getName(), "character", [this, credManager](bool success, const QString& password, const QString& errorMessage) {
-        if (success && !password.isEmpty()) {
-            setPass(password);
-            QString passwordCopy = password; // Make a copy for secure clearing
-            SecureStringUtils::secureStringClear(passwordCopy);
-        } else if (!success && !errorMessage.isEmpty()) {
-            qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
-        }
+void Host::lookUpSecuredPassword(CredentialManager* credManager)
+{
+    // From here until the lookup answers there is a password on its way, which is what keeps the
+    // auto-login arming its password step for it
+    mSecuredPasswordPending = true;
 
-        // Clean up the credential manager
-        credManager->deleteLater();
-    });
+    credManager->retrievePassword(
+            getName(),
+            "character",
+            [this, credManager](bool success, const QString& password, const QString& errorMessage, bool timedOut) {
+                securedPasswordAnswered(success, password, errorMessage, timedOut);
+
+                // Clean up the credential manager
+                credManager->deleteLater();
+            },
+            this,
+            [this](bool success, const QString& password, const QString& errorMessage) {
+                securedPasswordAnswered(success, password, errorMessage, false);
+            });
+}
+
+void Host::securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut)
+{
+    // A lookup that gave up waiting on the keychain is the one failure that is not final: the
+    // user can still answer the prompt it was waiting behind, so the password step stays armed
+    mSecuredPasswordPending = !success && timedOut;
+
+    if (success && !password.isEmpty()) {
+        setPass(password);
+        // The auto-login is timer based, so a password this slow (the user answering the
+        // keychain prompt after the game had reached its password prompt) has already missed
+        // its turn. The telnet side knows whether the game is still waiting for it:
+        mTelnet.sendOutstandingAutoLoginPassword();
+        QString passwordCopy = password; // Make a copy for secure clearing
+        SecureStringUtils::secureStringClear(passwordCopy);
+    } else if (!success && !errorMessage.isEmpty()) {
+        qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
+    }
 }
 
 // Only needed for places outside of this class:
@@ -5989,6 +6015,12 @@ void Host::setFocusOnHostActiveCommandLine()
 
     // Lambda to set focus on command line
     auto setCommandLineFocus = [this]() {
+        // The view can be gone by the time this runs while the Host lives on
+        if (!mpConsole) {
+            mFocusTimerRunning = false;
+            return;
+        }
+
         auto pCommandLine = activeCommandLine();
         TCommandLine* targetCommandLine = nullptr;
 
@@ -6006,16 +6038,20 @@ void Host::setFocusOnHostActiveCommandLine()
             targetCommandLine->setFocus(Qt::OtherFocusReason);
 
             // For Steam Deck and other environments where focus might be unreliable,
-            // add additional focus attempts with slight delays
-            QTimer::singleShot(10ms, this, [targetCommandLine]() {
-                if (targetCommandLine && !targetCommandLine->hasFocus()) {
-                    targetCommandLine->setFocus(Qt::OtherFocusReason);
+            // add additional focus attempts with slight delays. The command line
+            // can be destroyed before they fire - a user window closing, or the
+            // view going down while the Host stays - and a raw pointer would then
+            // be read off freed memory, so they hold it by QPointer
+            const QPointer<TCommandLine> pTarget(targetCommandLine);
+            QTimer::singleShot(10ms, this, [pTarget]() {
+                if (pTarget && !pTarget->hasFocus()) {
+                    pTarget->setFocus(Qt::OtherFocusReason);
                 }
             });
 
-            QTimer::singleShot(50ms, this, [targetCommandLine]() {
-                if (targetCommandLine && !targetCommandLine->hasFocus()) {
-                    targetCommandLine->setFocus(Qt::OtherFocusReason);
+            QTimer::singleShot(50ms, this, [pTarget]() {
+                if (pTarget && !pTarget->hasFocus()) {
+                    pTarget->setFocus(Qt::OtherFocusReason);
                 }
             });
         }

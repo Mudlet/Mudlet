@@ -191,10 +191,10 @@ private slots:
     {
         QTest::addColumn<float>("panOffset");
 
-        // mRX and mRY are qRound()ed from a NaN, and int(NaN) is not the same
-        // everywhere: x86-64 lands on INT_MIN and ARM64 on 0.
-        QTest::newRow("the pan offset an x86-64 build produces") << static_cast<float>(INT_MIN);
-        QTest::newRow("the pan offset an ARM64 build produces") << 0.0f;
+        // paintEvent() clamps its pan offset, so a NaN one reaches here as
+        // INT_MIN on every platform.
+        QTest::newRow("the pan offset a clamped NaN produces") << static_cast<float>(INT_MIN);
+        QTest::newRow("no pan") << 0.0f;
         QTest::newRow("panned past the widget") << 1000.0f;
     }
 
@@ -255,6 +255,26 @@ private slots:
         // Reached at all is the point: a paint whose scan never returns never
         // gets here.
         QCOMPARE(p2dMap->mAreaID, pFarRoom->getArea());
+    }
+
+    // The Y axis, not the X one: an unchecked conversion lands on INT_MIN at
+    // either end, and only Y overflows upward for a room at the limit, so only
+    // Y tells a clamped paint from an unclamped one where Qt's assertions are
+    // compiled out.
+    void test_theViewOriginIsClampedForARoomAtTheCoordinateLimit()
+    {
+        TMap* pMap = map();
+        pMap->mapClear();
+        const int areaId = pMap->mpRoomDB->addArea(qsl("Y Coordinate Limit Area"));
+        QVERIFY2(areaId > 0, "the area under test could not be built");
+        QVERIFY2(addRoomAt(kFarRoomId, areaId, 0, INT_MAX), "the room at the coordinate limit could not be added");
+        pMap->mRoomIdHash[pMap->mProfileName] = kFarRoomId;
+
+        T2DMap* p2dMap = preparedWidget();
+        QVERIFY2(p2dMap, "the profile's mapper could not be created");
+        renderFrame(p2dMap);
+
+        QCOMPARE(p2dMap->mRY, INT_MAX);
     }
 };
 

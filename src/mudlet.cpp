@@ -1306,14 +1306,15 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // on every profile load, so this clash is found again at every startup
         // for as long as it lasts - on the main screen that is a line the
         // player is told to ignore, which is worse than not saying it. The
-        // editor is where a key binding is looked at and where it is changed,
-        // so the notice waits there for whoever goes to fix it, and says
-        // nothing to anyone who does not.
+        // editor is where a key binding is looked at and where it is changed.
+        // Opening it replaces this notice, so it is read out only if the editor
+        // is open; selecting the binding says it again.
         if (pOtherHost->mpEditorDialog) {
             //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
             pOtherHost->mpEditorDialog->showWarning(
                     tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
-                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()));
+                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()),
+                    pOtherHost->mpEditorDialog->isVisible());
         }
     }
 }
@@ -1508,6 +1509,37 @@ QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, con
         holders.append(tr("a command from another profile"));
     }
     return holders;
+}
+
+// No QAction scan as in addonShortcutUsable(): it would only add add-on
+// commands, which are addonCommandsUsingShortcut()'s to report. Covers the
+// shortcuts the preferences list, not the buffer search's opt-in F3 keys.
+QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    if (!mpShortcutsManager || key == Qt::Key_unknown) {
+        return {};
+    }
+    // The profile switching keys are the exception: TCommandLine claims the
+    // ShortcutOverride for a key press a binding would match, so the press
+    // arrives after all and the binding is the one that fires.
+    if (profileSwitchShortcutMatches(key, modifiers)) {
+        return {};
+    }
+
+    // The registry rather than the widgets: hiding the menu bar moves every menu
+    // key onto a QShortcut and clears the action it came from
+    const QKeySequence sequence(QKeyCombination(modifiers, key));
+    QStringListIterator keys = mpShortcutsManager->iterator();
+    while (keys.hasNext()) {
+        const QString name = keys.next();
+        const QKeySequence* pMudletSequence = mpShortcutsManager->getSequence(name);
+        // A shortcut cleared in the preferences holds an empty sequence, which
+        // is nobody's key - the same reading profileSwitchShortcutMatches() takes
+        if (pMudletSequence && !pMudletSequence->isEmpty() && *pMudletSequence == sequence) {
+            return mpShortcutsManager->getLabel(name);
+        }
+    }
+    return {};
 }
 
 void mudlet::removeAddonCommandsForHost(Host* pHost)
@@ -3747,9 +3779,11 @@ bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
         return false;
     }
 
-    const auto key = static_cast<Qt::Key>(ke->key());
-    const Qt::KeyboardModifiers modifiers = ke->modifiers();
+    return profileSwitchShortcutMatches(static_cast<Qt::Key>(ke->key()), ke->modifiers());
+}
 
+bool mudlet::profileSwitchShortcutMatches(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
     // QShortcutMap retries with the modifiers the platform consumed producing
     // the character stripped off, so Ctrl and a numpad digit activates Ctrl+1,
     // and so does Ctrl+Shift+1 on layouts needing Shift for a top-row digit
@@ -4790,6 +4824,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     mScrollbackTutorialsShown = qBound(0, settings.value("scrollbackTutorialsShown", QVariant(0)).toInt(), mScrollbackTutorialsMax);
     mCharacterModeWarningsShown = qBound(0, settings.value("characterModeWarningsShown", QVariant(0)).toInt(), mCharacterModeWarningsMax);
+    mCompactInputLineTutorialsShown = qBound(0, settings.value("compactInputLineTutorialsShown", QVariant(0)).toInt(), mCompactInputLineTutorialsMax);
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
@@ -5038,6 +5073,7 @@ void mudlet::writeSettings()
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
     settings.setValue("characterModeWarningsShown", mCharacterModeWarningsShown);
+    settings.setValue("compactInputLineTutorialsShown", mCompactInputLineTutorialsShown);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
     settings.setValue("showMenuBar", mMenuBarVisibility != enums::visibleNever);
@@ -5093,6 +5129,12 @@ void mudlet::slot_showConnectionDialog()
     }
 
     if (mpConnectionDialog) {
+        // The dialog can be alive but hidden - anything that hid it without closing it leaves it
+        // that way - and raising a hidden window puts nothing on screen, which is what left the
+        // Connect button doing nothing for the rest of a session
+        if (!mpConnectionDialog->isVisible()) {
+            mpConnectionDialog->show();
+        }
         // If dialog already exists, bring it to the front of the main window
         mpConnectionDialog->raise();
         mpConnectionDialog->activateWindow();
@@ -6991,11 +7033,11 @@ void mudlet::slot_compactInputLine(const bool state)
     if (pHost) {
         pHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && !pHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && showCompactInputLineTutorial() && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
             pHost->postMessage(infoMsg);
-            pHost->mTutorialForCompactLineAlreadyShown = true;
+            showedCompactInputLineTutorial();
         }
     }
     // Ensure the menu item reflects the actual state - a handler of the event
@@ -8616,6 +8658,16 @@ bool mudlet::showSplitscreenTutorial()
 void mudlet::showedSplitscreenTutorial()
 {
     mScrollbackTutorialsShown++;
+}
+
+bool mudlet::showCompactInputLineTutorial()
+{
+    return !experiencedMudletPlayer() && mCompactInputLineTutorialsShown < mCompactInputLineTutorialsMax;
+}
+
+void mudlet::showedCompactInputLineTutorial()
+{
+    mCompactInputLineTutorialsShown++;
 }
 
 bool mudlet::showMuteAllMediaTutorial()

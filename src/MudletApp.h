@@ -192,6 +192,8 @@ private:
     // Resolving the root once is the point, so the only way to test it is to be
     // able to forget the answer - which setConfigPath(QString()) does
     friend class ConfigDirOverrideTest;
+    // Points the root at a scratch directory to seed the updater's version marker
+    friend class FeedChecksumRaceTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
     // store to the Updater. portable says whether the root came from a
