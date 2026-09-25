@@ -173,10 +173,8 @@ public:
     inline static QPointer<TConsole> smpDebugConsole;
     inline static QPointer<QMainWindow> smpDebugArea;
     inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
-    // --mirror: copy console output to standard output, one line per line
-    // shown. Covers the main console's game text, copied as each line arrives
-    // and so before a trigger can gag or rewrite it, and print()/echo() output
-    // from any console. Helpful for CI environments
+    // --mirror: copy each shown console line to stdout, for CI. Main console game text is copied on
+    // arrival, before a trigger can gag or rewrite it; print()/echo() output from any console too.
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
@@ -861,10 +859,8 @@ private:
     QPointer<QShortcut> mpShortcutPreviousProfile;
     std::array<QPointer<QShortcut>, 9> mpShortcutsSwitchToProfile;
     QPointer<QTimer> mpTimerReplay;
-    // The profile playing the replay the toolbar is showing. Only one replay
-    // runs at a time, but it need not belong to the profile in front - so the
-    // toolbar's buttons have to reach the profile that started it rather than
-    // whichever one is active when they are pressed.
+    // The profile playing the replay, which need not be the one in front, so the toolbar's buttons
+    // reach it rather than whichever is active.
     QPointer<Host> mpReplayingHost;
     QPointer<QTimer> mpBlinkTimer;
     QElapsedTimer mBlinkElapsedTimer;
