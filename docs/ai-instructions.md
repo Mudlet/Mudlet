@@ -109,7 +109,31 @@ Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on th
 
 ## Comments
 
-Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
+Comments drift from the code they describe, and a stale one misleads worse than none; every comment also costs the reader's time and an agent's context window. Write one only when the code cannot say it, and keep it to a line or two.
+
+Write a comment for a *why* the code can't carry: a Qt/OS/compiler quirk, a workaround, an ordering or thread-safety constraint, a file-format constraint, or why the obvious alternative is wrong.
+
+Don't write comments that:
+
+- restate what the code or a name already says (`// Save the profile` above `saveProfile()`)
+- narrate the change: "previously…", "now…", "no longer…", "fixes #1234 where…", "moved from X". That history belongs in the commit message and PR description
+- label code with banners or section dividers
+- document a function whose signature already says everything
+
+```cpp
+// Bad: restates the code, and narrates a change nobody reading this file needs
+// Previously we cleared the cache here, but that crashed when the profile closed,
+// so now we check the pointer first and only clear it if it is still valid
+if (mpCache) {
+    mpCache->clear();
+}
+
+// Good: the one fact the code can't show
+// Posted, not sent: the console may be mid-paint when this runs
+QCoreApplication::postEvent(mpConsole, event);
+```
+
+Leave translator comments (`//:`), tool directives (`NOLINT`, `clang-format off`) and Lua `---` LDoc blocks alone.
 
 ## Tests
 
