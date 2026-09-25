@@ -962,6 +962,39 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPausedMusic())
   end)
 
+  it("playing music that is already playing restarts it only when continue is false (#6264)", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-continue"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started)
+
+    -- continue defaults to true, so asking for the track that is already
+    -- playing leaves it alone. A silent restart reuses the same player and
+    -- raises no sysMediaFinished, so wait out the start that must not arrive.
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-continue"}))
+    waitForEvent("sysMediaStarted", 1000)
+    assert.equals(1, #started)
+    assert.equals(1, #getPlayingMusic())
+    assert.equals(0, #finished)
+
+    -- the restart stops the track inside the call, so its ending is reported
+    -- before there is anything to wait for
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-continue", continue = false}))
+    assert.equals(1, #finished)
+    assert.equals(longSoundFile, finished[1].file)
+
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started)
+    assert.equals(1, #getPlayingMusic())
+  end)
+
   it("playSoundFile starts nothing for a file the media directory does not have", function()
     if mediaPlaybackUnavailable() then
       return

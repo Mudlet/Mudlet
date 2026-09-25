@@ -25,7 +25,6 @@
 
 #include <QDir>
 #include <QFileInfo>
-#include <QSettings>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -42,7 +41,8 @@
 #include <QUrlQuery>
 #include <functional>
 
-#include "MudletPaths.h"
+#include "AutoLoginDelaysTestHelper.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "CredentialManager.h"
@@ -321,34 +321,6 @@ private:
     int mConnectionCount = 0;
 };
 
-// The auto-login delays live in a QSettings file shared by every case in this binary, so they have to
-// go back however a QVERIFY leaves the test body.
-class ScopedAutoLoginDelays
-{
-public:
-    ScopedAutoLoginDelays(int usernameMs, int passwordMs)
-    : mpSettings(mudlet::getQSettings())
-    , mSavedUsername(mpSettings->value(qsl("autoLoginUsernameDelay")))
-    , mSavedPassword(mpSettings->value(qsl("autoLoginPasswordDelay")))
-    {
-        mpSettings->setValue(qsl("autoLoginUsernameDelay"), usernameMs);
-        mpSettings->setValue(qsl("autoLoginPasswordDelay"), passwordMs);
-    }
-
-    ~ScopedAutoLoginDelays()
-    {
-        restore(qsl("autoLoginUsernameDelay"), mSavedUsername);
-        restore(qsl("autoLoginPasswordDelay"), mSavedPassword);
-    }
-
-private:
-    void restore(const QString& key, const QVariant& saved) { saved.isValid() ? mpSettings->setValue(key, saved) : mpSettings->remove(key); }
-
-    QSettings* mpSettings;
-    QVariant mSavedUsername;
-    QVariant mSavedPassword;
-};
-
 // Serves a static OpenID Connect discovery document over loopback http, which
 // OAuthClientFlow::acceptableEndpointUrl() permits, so no second certificate is needed.
 class DiscoveryServerStub : public QObject
@@ -459,7 +431,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -2531,8 +2503,7 @@ private:
     // testATornSaveLeavesAResumeHintAndNoPromise.
     static QString reconnectCredentialPath(const QString& profileName, const QString& key)
     {
-        return qsl("%1/profiles/%2/passwords/%3")
-                .arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), MudletPaths::sanitizeForPath(profileName), MudletPaths::sanitizeForPath(key));
+        return qsl("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), MudletApp::sanitizeForPath(profileName), MudletApp::sanitizeForPath(key));
     }
 
     // Seeds the split storage format: metadata under "reconnect", the token under its own key. The
@@ -2604,7 +2575,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();

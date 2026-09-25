@@ -180,7 +180,7 @@ private:
 // stale the moment the trigger changes, so whatever changes one of the things
 // rootFilter() reads has to go through TTrigger::invalidatePrescan(), and
 // whatever makes a trigger fire without matching through
-// TriggerUnit::markRootUnfilterable(), which bumps mRootFilterEpoch.
+// TriggerUnit::markPrescanStaleForLineInFlight(), which bumps mRootFilterEpoch.
 struct TRootTriggerFilter
 {
     enum class Kind : quint8 {

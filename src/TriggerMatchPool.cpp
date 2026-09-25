@@ -19,8 +19,8 @@
 
 #include "TriggerMatchPool.h"
 
+#include "MudletApp.h"
 #include "TTrigger.h"
-#include "mudlet.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -129,9 +129,10 @@ int knobOr(const char* envName, const QString& iniKey, const int fallback, const
         }
         return value;
     }
-    // The settings exist once mudlet has been set up; a pool created before
-    // that, or in a harness with no mudlet at all, runs on the defaults.
-    QSettings* settings = mudlet::self() ? mudlet::getQSettings() : nullptr;
+    // The settings store stays null until mudlet::setupConfig() has settled the
+    // config root, so a pool created before that, or in a harness with no
+    // mudlet at all, runs on the defaults.
+    QSettings* settings = MudletApp::getQSettings();
     if (settings && settings->contains(iniKey)) {
         bool parsed = false;
         const int value = settings->value(iniKey).toInt(&parsed);

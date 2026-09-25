@@ -85,20 +85,27 @@ public:
     // Called by anything that changes whether one trigger can be ruled out of a
     // line by its text alone.
     void markPrescanStale(TTrigger* pT);
-    // As above, but for the changes that make a trigger fire without matching
-    // text. Those have to reach the line already being processed, whose
-    // candidate list was settled before the change - see processDataStream().
-    void markRootUnfilterable()
+    // As above, for a change a script makes part-way through a line. The line
+    // being processed settled its candidate list before the change, so the
+    // epoch sends the rest of it down the unfiltered path; the index itself
+    // only has to carry the one trigger over, the same way match() does it when
+    // a stay-open window opens or closes under its own steam.
+    void markPrescanStaleForLineInFlight(TTrigger* pT)
     {
         ++mUnfilterableEpoch;
         ++mRootFilterEpoch;
-        markRootNodeListReordered();
+        markPrescanStale(pT);
     }
     // How many times a change has been announced to the passes that pinned a
     // copy of the root triggers' filters. Only moves for a change one of those
     // copies could be of, so a spec can tell an announcement that had to be
     // made from one that cost a line its filters for nothing.
     quint32 rootFilterEpoch() const { return mRootFilterEpoch; }
+    // How often the whole prescan index has been thrown away and built again.
+    // The incremental path exists to keep this flat while a profile runs, and
+    // nothing else tells the two apart - both arrive at the same index, by very
+    // different amounts of work - so this is what a test can watch.
+    quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -220,6 +227,7 @@ private:
     std::vector<int> mRootNodesRefiled;
     std::vector<int> mCandidateScratch;
     std::vector<int> mCandidates;
+    quint64 mPrescanRebuilds = 0;
     quint32 mUnfilterableEpoch = 0;
     // Moves whenever a trigger changes in a way its TRootTriggerFilter copies,
     // which a pass that has pinned those copies has no other way to hear of

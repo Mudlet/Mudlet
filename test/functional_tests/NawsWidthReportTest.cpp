@@ -28,11 +28,12 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTabBar.h"
+#include "TUiTour.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -105,8 +106,8 @@ private:
         if (mpSecondHost) {
             return true;
         }
-        if (!QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletPaths::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
-            || !MudletPaths::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
+        if (!QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletApp::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
+            || !MudletApp::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
             return false;
         }
         // the second argument is offline, so this profile never opens a
@@ -136,11 +137,16 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        // A config dir of this test's own reads as a brand new installation, so
+        // the first-run interface would open over the profile a second after it
+        // loads. Written before init(), which is what stamps an untouched config
+        // as a first launch: a settings file that already holds something is how
+        // mudletUsedBefore() recognises an existing player.
+        TUiTour::rememberShown();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests");
         mudlet::self()->resize(1200, 800);
 
         QTimer::singleShot(0ms, qApp, [this]() {
