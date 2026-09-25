@@ -6248,6 +6248,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "start");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttStop);
     lua_setfield(pGlobalLua, -2, "stop");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttCancel);
+    lua_setfield(pGlobalLua, -2, "cancel");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttToggle);
     lua_setfield(pGlobalLua, -2, "toggle");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsListening);

@@ -450,8 +450,7 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
         // raiseSpeechEvent() goes to the microphone's owner rather than over
         // the retiring engine's connections. An engine swap reached from
         // stt.init() while a phrase is in flight takes that phrase with it,
-        // and rule 1 allows recognised speech to be dropped only by a path
-        // that reports.
+        // and rule 1 requires a drop the script did not ask for to report.
         if (pRetiring->listening() || pRetiring->state() == SpeechRecognizer::State::Processing) {
             raiseSpeechEvent(qsl("sysSTTError"), qsl("changing the speech engine stopped the listening session that was under way - anything said during it is lost"));
         }
