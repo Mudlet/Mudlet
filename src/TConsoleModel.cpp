@@ -37,6 +37,9 @@ TConsoleModel::TConsoleModel(Host* pHost)
 , mpHost(pHost)
 , mHyperlinkVisibilityManager(*this)
 {
+    // Not in the buffer's constructor: the buffer is built before the managers
+    // it would then be pointed at, and reaches for them while it is.
+    buffer.mpModel = this;
 }
 
 QStringList TConsoleModel::lines(int from, int to)

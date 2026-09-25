@@ -324,6 +324,9 @@ public:
     TWindowRegistry& windowRegistry() { return mWindowRegistry; }
     const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();
+    // The whole restyle when the main console has a view, which refreshes the
+    // model on the way; only the model's copy of the colours when it has none.
+    void applyMainConsoleColors();
     void runTriggers(int line);
     // The log lifecycle lives in the core console model, which is a plain
     // struct and cannot emit, so it raises the two view-only halves of a
