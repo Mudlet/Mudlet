@@ -18,34 +18,38 @@
  ***************************************************************************/
 
 /*
- * The key routing dlgSourceEditorArea installs on edbee's autocomplete popup,
- * driven through the popup's own QWindow so the keys travel the way Qt
- * delivers them to a user.
+ * EditorAutoCompleteFocusHandler, and through it the two editors that show a
+ * completion list: the script editor's own widget and the preview in the
+ * preferences dialog.
  *
- * While a Qt::Popup is open, QWidgetWindow::handleKeyEvent() hands every key
- * to that popup, and QApplication::notify() then passes an *ignored* key on
- * to the ignored widget's parent - which for edbee's suggestion list is the
- * popup QMenu itself, because edbee parents the list to the menu. So a
- * navigation key the list cannot act on comes back up to the menu the routing
- * filter is installed on, and routing it to the list again is a loop.
+ * The navigation keys are delivered through the popup's own QWindow, which is
+ * the only way to exercise the real path. While a Qt::Popup is open,
+ * QWidgetWindow::handleKeyEvent() hands every key to that popup, and
+ * QApplication::notify() then passes an *ignored* key on to the ignored
+ * widget's parent - which for edbee's suggestion list is the popup QMenu
+ * itself, because edbee parents the list to the menu. So a navigation key the
+ * list cannot act on comes back up to the menu the routing filter is installed
+ * on, and routing it to the list again is a loop.
  *
- * Reaching the end of a test is most of what the cases below assert: the loop
- * ends the process with a stack overflow rather than a failed comparison.
+ * Reaching the end of a test is most of what the navigation cases assert: the
+ * loop ends the process with a stack overflow rather than a failed comparison.
  *
- * QTest::keyClick() on the popup's windowHandle() is what exercises the path.
+ * QTest::keyClick() on the popup's windowHandle() is what exercises that path.
  * QApplication::sendEvent() straight to a widget skips popup routing
  * altogether, so a test built on it passes whether or not the bug is there.
  *
  * Run with: ctest -R EditorAutoCompleteFocusTest -V
  */
 
+#include <QFocusEvent>
 #include <QListWidget>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "EditorAutoCompleteFocusHandler.h"
 #include "PortableModeTestHelper.h"
+#include "dlgProfilePreferences.h"
 #include "dlgSourceEditorArea.h"
 #include "mudlet.h"
 
@@ -66,6 +70,27 @@ class EditorAutoCompleteFocusTest : public QObject
     Q_OBJECT
 
 private:
+    // Counts the FocusOut events that got through to the editor, i.e. the ones
+    // the handler did not consume. Qt runs event filters in reverse order of
+    // installation, so a probe installed before the handler sees only what the
+    // handler passed on - which is exactly what the handler's FocusOut
+    // narrowing has to be judged on.
+    class FocusOutProbe : public QObject
+    {
+    public:
+        int count = 0;
+
+    protected:
+        bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+        {
+            Q_UNUSED(pWatched)
+            if (pEvent->type() == QEvent::FocusOut) {
+                ++count;
+            }
+            return false;
+        }
+    };
+
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
 
@@ -74,6 +99,16 @@ private:
     edbee::TextEditorComponent* mpEditorComponent = nullptr;
     QListWidget* mpList = nullptr;
     QWidget* mpMenu = nullptr;
+
+    // A second editor, with the probe installed before the handler, for the
+    // cases that need to see which FocusOuts the handler consumes
+    edbee::TextEditorWidget* mpProbeEditor = nullptr;
+    edbee::TextEditorComponent* mpProbeComponent = nullptr;
+    FocusOutProbe mProbe;
+    EditorAutoCompleteFocusHandler* mpProbeHandler = nullptr;
+
+    dlgProfilePreferences* mpPreferences = nullptr;
+    edbee::TextEditorWidget* mpPreviewEditor = nullptr;
 
     // A prefix no Lua function can collide with, so the popup's rows are
     // exactly the ones planted below. Three of the words match it, one does.
@@ -103,22 +138,34 @@ private:
     // menu up. Reports rather than QVERIFYing, so the calling test can say
     // what state it got instead of leaving the rest of the case to measure
     // nothing.
-    bool openPopupFor(const QString& prefix, int expectedRows)
+    bool openPopupOn(edbee::TextEditorWidget* pEditor, edbee::TextEditorComponent* pComponent, const QString& prefix, int expectedRows)
     {
         closePopup();
-        mpEditor->textDocument()->setText(QString());
+        // The preferences dialog and the probe editor each have a window of
+        // their own and either can hold the activation, but the keyboard can
+        // only be given in the active one - and every case below is about
+        // where the focus goes, so each takes its own window back first.
+        if (auto* window = pEditor->window()) {
+            window->activateWindow();
+            window->raise();
+        }
+        pEditor->textDocument()->setText(QString());
         QTest::qWait(10ms);
-        mpEditorComponent->setFocus();
-        QTest::keyClicks(mpEditorComponent, prefix);
+        pComponent->setFocus();
+        QTest::qWait(10ms);
+        QTest::keyClicks(pComponent, prefix);
 
         if (!QTest::qWaitFor(&popupIsOpen, 2s)) {
             return false;
         }
-        if (QApplication::activePopupWidget() != mpMenu) {
+        auto* list = pEditor->autoCompleteComponent()->listWidget();
+        if (QApplication::activePopupWidget() != list->parentWidget()) {
             return false;
         }
-        return mpList->count() == expectedRows;
+        return list->count() == expectedRows;
     }
+
+    bool openPopupFor(const QString& prefix, int expectedRows) { return openPopupOn(mpEditor, mpEditorComponent, prefix, expectedRows); }
 
     // The popup's own window, so Qt's popup routing is what delivers the key.
     // Reports rather than QVERIFYing: a popup that is not there would leave
@@ -126,7 +173,7 @@ private:
     bool pressInPopup(Qt::Key key)
     {
         auto* popup = QApplication::activePopupWidget();
-        if (!popup || popup != mpMenu || !popup->isVisible()) {
+        if (!popup || !popup->isVisible()) {
             return false;
         }
         auto* window = popup->windowHandle();
@@ -147,6 +194,16 @@ private:
     // the current row unmoved, the popup still up, the editor still holding
     // the keyboard.
     bool endsWhereItStarted(int expectedRow) const { return mpList->currentRow() == expectedRow && mpMenu->isVisible() && focusStayedWithEditor(); }
+
+    static edbee::TextEditorWidget* makeEditor()
+    {
+        auto* editor = new edbee::TextEditorWidget();
+        editor->config()->setAutocompleteAutoShow(true);
+        editor->config()->setAutocompleteMinimalCharacters(3);
+        editor->resize(640, 400);
+        editor->show();
+        return editor;
+    }
 
 private slots:
     void initTestCase()
@@ -185,11 +242,32 @@ private slots:
         mpArea->show();
         QTRY_VERIFY(mpArea->isVisible());
         QTest::qWait(100ms);
+
+        // The probe goes on before the handler, so it only ever sees the
+        // FocusOuts the handler let through
+        mpProbeEditor = makeEditor();
+        QVERIFY(mpProbeEditor);
+        mpProbeComponent = mpProbeEditor->textEditorComponent();
+        QVERIFY(mpProbeComponent);
+        mpProbeComponent->installEventFilter(&mProbe);
+        mpProbeHandler = new EditorAutoCompleteFocusHandler(mpProbeEditor, mpProbeEditor);
+        QVERIFY(mpProbeHandler);
+        QTest::qWait(100ms);
+
+        // No profile: the constructor only stores the Host, so the preview
+        // editor is there to be inspected without one.
+        mpPreferences = new dlgProfilePreferences(nullptr, nullptr);
+        QVERIFY(mpPreferences);
+        mpPreviewEditor = mpPreferences->findChild<edbee::TextEditorWidget*>(qsl("edbeePreviewWidget"));
+        QVERIFY2(mpPreviewEditor, "the preferences dialog has no edbeePreviewWidget");
+        QTest::qWait(100ms);
     }
 
     void cleanupTestCase()
     {
         closePopup();
+        delete mpPreferences;
+        mpPreferences = nullptr;
         delete mpArea;
         mpArea = nullptr;
         if (mudlet::self()) {
@@ -280,6 +358,68 @@ private slots:
         QCOMPARE(mpEditor->textDocument()->text(), qsl("%1t").arg(manyWordPrefix()));
         QVERIFY2(QApplication::activePopupWidget() == mpMenu, "typing a letter closed the popup instead of narrowing it");
         QVERIFY2(focusStayedWithEditor(), "typing a letter moved the keyboard focus off the editor");
+    }
+
+    // The attribute that keeps the popup window from taking the window
+    // activation is only consulted for a top-level window, so it belongs on
+    // the menu. It is also left off the list, where it would look like it
+    // helped but could never do anything.
+    void test_onlyThePopupWindowIsMarkedAsNotActivating()
+    {
+        QVERIFY2(mpMenu->isWindow(), "the autocomplete popup is not a window, so Qt would not consult its attributes at all");
+        QVERIFY2(mpMenu->testAttribute(Qt::WA_ShowWithoutActivating), "the popup window is not marked as not activating");
+        QVERIFY2(!mpList->isWindow(), "edbee no longer parents the list to the menu, so the test above no longer covers the loop");
+        QVERIFY2(!mpList->testAttribute(Qt::WA_ShowWithoutActivating), "the attribute is set on a widget that is not a window, where it has no effect");
+    }
+
+    // Opening the popup makes Qt send a FocusOut with Qt::PopupFocusReason to
+    // whatever has the keyboard, and edbee's focusOutEvent() answers that by
+    // resetting the undo coalescing ids - which would split a word being typed
+    // into one undo step per popup refresh. Only that one may be swallowed: any
+    // other reason is a real focus change, and hiding it from the editor would
+    // leave it believing it still has the focus.
+    void test_onlyThePopupFocusOutIsSwallowed()
+    {
+        auto* component = mpProbeComponent;
+        auto* editor = mpProbeEditor;
+
+        // with no popup open nothing is swallowed, whatever the reason
+        const int beforeNothingOpen = mProbe.count;
+        QFocusEvent popupReasonWhileClosed(QEvent::FocusOut, Qt::PopupFocusReason);
+        QCoreApplication::sendEvent(component, &popupReasonWhileClosed);
+        QCOMPARE(mProbe.count, beforeNothingOpen + 1);
+
+        QVERIFY2(openPopupOn(editor, component, manyWordPrefix(), 3), "the autocomplete popup never came up on the probe editor");
+        // the popup's own synthetic FocusOut on the way up was swallowed, so
+        // the count is only ever moved by what this test sends itself
+        const int before = mProbe.count;
+
+        QFocusEvent popupOut(QEvent::FocusOut, Qt::PopupFocusReason);
+        QCoreApplication::sendEvent(component, &popupOut);
+        QCOMPARE(mProbe.count, before);
+
+        QFocusEvent otherOut(QEvent::FocusOut, Qt::OtherFocusReason);
+        QCoreApplication::sendEvent(component, &otherOut);
+        QCOMPARE(mProbe.count, before + 1);
+
+        QFocusEvent mouseOut(QEvent::FocusOut, Qt::MouseFocusReason);
+        QCoreApplication::sendEvent(component, &mouseOut);
+        QCOMPARE(mProbe.count, before + 2);
+    }
+
+    // The preferences dialog's preview has autocomplete switched on too, so it
+    // gets the same treatment as the script editor. Without the handler edbee
+    // hands the keyboard to its suggestion list as soon as the popup opens.
+    void test_thePreferencesPreviewEditorIsHandledToo()
+    {
+        auto* previewComponent = mpPreviewEditor->textEditorComponent();
+        QVERIFY(previewComponent);
+        auto* previewList = mpPreviewEditor->autoCompleteComponent()->listWidget();
+        QVERIFY(previewList);
+
+        QVERIFY2(previewList->focusProxy() == previewComponent, "the preview editor's suggestion list would still take the keyboard focus");
+        QCOMPARE(previewList->focusPolicy(), Qt::NoFocus);
+        QVERIFY2(previewList->parentWidget()->testAttribute(Qt::WA_ShowWithoutActivating), "the preview editor's popup window is not marked as not activating");
     }
 };
 

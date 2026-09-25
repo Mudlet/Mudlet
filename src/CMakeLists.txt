@@ -85,6 +85,7 @@ set(mudlet_SRCS
     EditorItemXMLHelpers.cpp
     EditorModifyPropertyCommand.cpp
     EditorMoveItemCommand.cpp
+    EditorAutoCompleteFocusHandler.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
     EventLoopPump.cpp
@@ -340,6 +341,7 @@ set(mudlet_HDRS
     EditorItemXMLHelpers.h
     EditorModifyPropertyCommand.h
     EditorMoveItemCommand.h
+    EditorAutoCompleteFocusHandler.h
     EditorToggleActiveCommand.h
     EditorUndoStack.h
     enums.h

@@ -26,9 +26,6 @@
 
 #include "ui_source_editor_area.h"
 
-class QListWidget;
-class QKeyEvent;
-
 class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 {
     Q_OBJECT
@@ -36,18 +33,6 @@ class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 public:
     Q_DISABLE_COPY(dlgSourceEditorArea)
     explicit dlgSourceEditorArea(QWidget*);
-
-protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
-
-private:
-    void configureAutoCompleteFocus();
-    void routeAutoCompleteKeyPress(QKeyEvent*);
-
-    QListWidget* mpAutoCompleteList = nullptr;
-    QWidget* mpAutoCompleteMenu = nullptr;
-    QWidget* mpEditorComponent = nullptr;
-    bool mRoutingAutoCompleteKey = false;
 };
 
 #endif // MUDLET_DLGSOURCEEDITORAREA_H
