@@ -672,14 +672,19 @@ int TLuaInterpreter::sttCancel(lua_State* L)
     }
 
     // Refused in an error state and from a profile not holding the
-    // microphone, as stt.stop() is and for the same reasons
+    // microphone, as stt.stop() is and for the same reasons.
+    // Both refusals are reported to the caller rather than through
+    // raiseSpeechEvent(): after a fault the claim is gone with the session, so
+    // routing by the owner would fall through to whichever profile is in front -
+    // raising sysSTTError in a game that asked for nothing, while the profile
+    // that did ask got only the nil return.
+    Host& host = getHostFromLua(L);
     if (pRecognizer->state() == SpeechRecognizer::State::Error) {
         const QString message = qsl("nothing was cancelled - speech recognition is in an error state; the sysSTTError event carries the reason");
-        reportSpeechRefusal(message);
+        reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
     }
 
-    Host& host = getHostFromLua(L);
     if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
         const QString message = qsl("another profile is listening, and only the profile that started a session can cancel it");
         reportSpeechRefusalTo(host, message);

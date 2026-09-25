@@ -122,6 +122,15 @@ public:
     // Parked where a backend sits while it finishes decoding the last phrase
     void beginProcessing() { setState(State::Processing); }
 
+    // Where a backend lands when its engine faults: the claim is gone with the
+    // session, so a refusal here has no owner to fall back on
+    void faultTheEngine() { setState(State::Error); }
+
+    // A start that something outside the process has to answer first - macOS
+    // asking the player for the microphone is the usual reason - so the session
+    // sits in Starting with a claim already held and nothing listening yet
+    void parksInStartingUntilPermitted() { mParksInStarting = true; }
+
     // What a stop looks like on a backend that finalises the last phrase:
     // Processing while the decoder finishes, the phrase, then idle. The
     // handlers run inside the delivery, which is the whole point of it.
@@ -137,13 +146,26 @@ public:
     void hearSoFar(const QString& text) { mHeardSoFar = text; }
 
 protected:
-    void doStartListening() override { setState(State::Listening); }
+    void doStartListening() override { setState(mParksInStarting ? State::Starting : State::Listening); }
     void doStopListening() override
     {
         const QString heard = std::exchange(mHeardSoFar, QString());
         if (!heard.isEmpty()) {
             setState(State::Processing);
+            // Both re-checks are here because a handler runs inside this frame:
+            // the state change is raised synchronously, and so is the phrase. A
+            // handler that cancels has asked for this phrase to be abandoned, so
+            // it must not be delivered afterwards; and whatever state the cancel -
+            // or a start it made after it - left behind is that session's, not
+            // this stop's to overwrite. Without either check the stop drives a
+            // session that has already been replaced.
+            if (state() != State::Processing) {
+                return;
+            }
             emit finalResult(heard);
+            if (state() != State::Processing) {
+                return;
+            }
         }
         setState(State::Ready);
     }
@@ -155,6 +177,7 @@ protected:
 
 private:
     QString mHeardSoFar;
+    bool mParksInStarting = false;
 };
 
 class SpeechAcrossProfilesTest : public QObject
@@ -1230,6 +1253,141 @@ private slots:
         QCOMPARE(pOwner, mpSecondHost);
         QCOMPARE(errorsToCaller, qsl("1"));
         QCOMPARE(errorsToListener, qsl("0"));
+    }
+
+    // A handler can cancel from inside the stop's own frame: sysSTTStateChanged
+    // ("processing") is raised synchronously by the stop, and "the phrase landed,
+    // drop the rest" is an ordinary thing for a script to do there. The phrase it
+    // asked to abandon must not be delivered afterwards, and the state the cancel
+    // left behind is not the stop's to overwrite - otherwise the session is left
+    // looking alive with nothing behind it.
+    void test_cancellingFromTheProcessingHandlerDeliversNoPhrase()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+
+        listenFor(mpFirstHost, qsl("sysSTTResult"), qsl("_heardAfterCancel"));
+        QVERIFY(runLua(mpFirstHost,
+                       qsl("_cancelledFromHandler = false\n"
+                           "_processingHandler = registerAnonymousEventHandler('sysSTTStateChanged', function(_, state)\n"
+                           "  if state == 'processing' and not _cancelledFromHandler then\n"
+                           "    _cancelledFromHandler = true\n"
+                           "    stt.cancel()\n"
+                           "  end\n"
+                           "end)"))
+                        .isNull());
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttReentrantStart = stt.start()")).isNull());
+        QVERIFY2(luaGlobalBoolean(mpFirstHost, qsl("_sttReentrantStart")), "the profile could not start a session");
+        pEngine->hearSoFar(qsl("kill hound"));
+
+        QVERIFY(runLua(mpFirstHost, qsl("stt.stop()")).isNull());
+
+        const QString heard = luaGlobalString(mpFirstHost, qsl("_heardAfterCancel"));
+        const bool handlerRan = luaGlobalBoolean(mpFirstHost, qsl("_cancelledFromHandler"));
+        const auto stateAfter = pEngine->state();
+        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+        runLua(mpFirstHost, qsl("killAnonymousEventHandler(_processingHandler)"));
+        retireStandInEngine();
+
+        QVERIFY2(handlerRan, "the processing handler never ran, so this case is not testing a re-entrant cancel");
+        QVERIFY2(heard.isEmpty(), qPrintable(qsl("the phrase a handler cancelled was delivered anyway: \"%1\"").arg(heard)));
+        QVERIFY2(stateAfter != SpeechRecognizer::State::Processing, "the session was left parked in Processing after its phrase was abandoned");
+        QVERIFY2(pOwnerAfter == nullptr, "the microphone was still held after the session was cancelled from the handler");
+    }
+
+    // A session waiting on permission holds the claim and is not listening yet.
+    // Cancelling has to withdraw it: an idle shortcut that answers "nothing to
+    // cancel" whenever the engine is not listening leaves that session standing,
+    // with the microphone held by a profile that has given up on it.
+    void test_cancellingWithdrawsASessionStillWaitingOnPermission()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->parksInStartingUntilPermitted();
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttPendingStart = stt.start()")).isNull());
+        const bool startPending = pEngine->state() == SpeechRecognizer::State::Starting;
+        const Host* pOwnerWhilePending = mudlet::self()->microphoneOwner();
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttPendingCancelOk, _sttPendingCancelWhy = stt.cancel()")).isNull());
+        const bool cancelSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttPendingCancelOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttPendingCancelWhy"));
+        const auto stateAfter = pEngine->state();
+        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+        retireStandInEngine();
+
+        QVERIFY2(startPending, "the stand-in did not park the session in Starting");
+        QCOMPARE(pOwnerWhilePending, mpFirstHost);
+        QVERIFY2(cancelSucceeded, qPrintable(qsl("cancelling a session waiting on permission was refused: \"%1\"").arg(why)));
+        QVERIFY2(stateAfter != SpeechRecognizer::State::Starting, "the session was left waiting on permission after it was cancelled");
+        QVERIFY2(pOwnerAfter == nullptr, "the microphone was still held after the pending session was cancelled");
+    }
+
+    // Nobody is listening, but an engine exists - the ordinary state of a
+    // profile that has used speech earlier in the session. Cancelling is a
+    // no-op that succeeds; the guard that refuses a cancel from a profile which
+    // does not own the microphone must not fire when nobody owns it at all.
+    void test_anIdleCancelSucceedsOnceAnEngineExists()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+
+        const Host* pOwnerBefore = mudlet::self()->microphoneOwner();
+        QVERIFY(runLua(mpFirstHost, qsl("_sttIdleCancelOk, _sttIdleCancelWhy = stt.cancel()")).isNull());
+        const bool cancelSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttIdleCancelOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttIdleCancelWhy"));
+        retireStandInEngine();
+
+        QVERIFY2(pOwnerBefore == nullptr, "the microphone was already held, so this case is not testing an idle cancel");
+        QVERIFY2(cancelSucceeded, qPrintable(qsl("an idle cancel was refused although nobody held the microphone: \"%1\"").arg(why)));
+    }
+
+    // The refusal an error state gives is the caller's news too, and after a
+    // fault there is no claim left to route it by: reportSpeechRefusal() would
+    // fall through to the profile in front, so a background profile's refused
+    // cancel would raise sysSTTError in whatever game the player is looking at,
+    // while the caller got only the nil return. docs/stt-api.md says a refusal
+    // goes to the profile whose call was refused, and this PR adds stt.cancel()
+    // to that list.
+    void test_aCancelRefusedInAnErrorStateIsReportedToTheCaller()
+    {
+        // The profile in front is NOT the one that calls, which is what makes a
+        // misrouted refusal visible.
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->faultTheEngine();
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            QVERIFY(runLua(pHost,
+                           qsl("_sttFaultErrorsHeard = '0'\n_sttFaultErrorHandler = registerAnonymousEventHandler('sysSTTError', function() _sttFaultErrorsHeard = "
+                               "tostring(tonumber(_sttFaultErrorsHeard) + 1) end)"))
+                            .isNull());
+        }
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttFaultCancelOk, _sttFaultCancelWhy = stt.cancel()")).isNull());
+        const bool cancelSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttFaultCancelOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttFaultCancelWhy"));
+        const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttFaultErrorsHeard"));
+        const QString errorsToProfileInFront = luaGlobalString(mpSecondHost, qsl("_sttFaultErrorsHeard"));
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            runLua(pHost, qsl("killAnonymousEventHandler(_sttFaultErrorHandler)"));
+        }
+        retireStandInEngine();
+
+        QVERIFY2(!cancelSucceeded, "a cancel in an error state reported success");
+        QVERIFY2(why.contains(qsl("error state")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
+        QCOMPARE(errorsToCaller, qsl("1"));
+        QCOMPARE(errorsToProfileInFront, qsl("0"));
     }
 
     // The microphone cannot change hands while the last phrase is still being

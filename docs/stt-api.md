@@ -259,17 +259,22 @@ capability.
 
 ## Semantics implementations must preserve
 
-1. **Stop finalises; only a cancel, errors and engine artifacts discard.**
+1. **Stop finalises; a cancel, a close, errors and engine artifacts discard.**
    `stt.stop()` and the silence timeout both deliver the pending utterance via
-   `sysSTTResult`. No path drops recognised speech except three:
-   `stt.cancel()`, or `stt.close()` mid-session, which a script on the owning
-   profile asked for; a fault, which reports via `sysSTTError`; and what the
-   engine produced from silence rather than from a person. Desktop Mudlet's Vosk backend discards a
-   lone filler word the decoder itself scored below 0.8 confidence, or that it
-   returned no confidence for at all, and a leading word whose timings show it
-   spanned a pause rather than being spoken. Neither reports, because neither
-   was said. A lone filler word the decoder is confident about is delivered,
-   however the utterance finished - "i" is a command, not an artifact.
+   `sysSTTResult`. Four paths drop recognised speech, and only the first of them
+   is silent: `stt.cancel()`, which a script on the owning profile asked for and
+   is answered without further comment; `stt.close()` mid-session, which that
+   script also asked for, but which is reported through `sysSTTError` when it
+   takes a phrase already being transcribed with it; a fault, which reports the
+   same way; and what the engine produced from silence rather than from a person.
+   Closing the owning profile cancels a phrase still being decoded as well, and
+   reports nothing, there being no script left on that profile to tell. Desktop
+   Mudlet's Vosk backend discards a lone filler word the decoder itself scored
+   below 0.8 confidence, or that it returned no confidence for at all, and a
+   leading word whose timings show it spanned a pause rather than being spoken.
+   Neither reports, because neither was said. A lone filler word the decoder is
+   confident about is delivered, however the utterance finished - "i" is a
+   command, not an artifact.
 2. **Refusals the engine caused speak.** A call the engine could not satisfy
    says why through `sysSTTError` as well as in its return value. This holds
    when there is no engine at all: an implementation with nothing installed
