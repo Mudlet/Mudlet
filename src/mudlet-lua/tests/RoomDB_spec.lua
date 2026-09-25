@@ -408,6 +408,47 @@ describe("Tests the room and area database behind the map", function()
       assert.is_true(addSpecialExit(from, to, "two"))
       assert.is_false(hasSpecialExitLock(from, to, "two"))
     end)
+
+    it("clearSpecialExits takes every command's weight with it", function()
+      local from = makeRoom(areaHome, 22, 1, 0)
+      local to = makeRoom(areaHome, 23, 1, 0)
+      finally(function() deleteRoom(from); deleteRoom(to) end)
+
+      assert.is_true(addSpecialExit(from, to, "heave"))
+      assert.is_true(setExitWeight(from, "heave", 8))
+      assert.are.equal(8, getExitWeights(from)["heave"])
+
+      clearSpecialExits(from)
+
+      assert.is_nil(getExitWeights(from)["heave"])
+      -- a new exit that reuses the command starts out unweighted
+      assert.is_true(addSpecialExit(from, to, "heave"))
+      assert.is_nil(getExitWeights(from)["heave"])
+    end)
+
+    it("deleting the room a special exit leads to takes the exit's weight with it", function()
+      local from = makeRoom(areaHome, 24, 1, 0)
+      local gone = makeRoom(areaHome, 25, 1, 0)
+      local other = makeRoom(areaHome, 26, 1, 0)
+      finally(function()
+        deleteRoom(from); deleteRoom(other)
+        if roomExists(gone) then deleteRoom(gone) end
+      end)
+
+      assert.is_true(addSpecialExit(from, gone, "heave"))
+      assert.is_true(setExitWeight(from, "heave", 8))
+      -- the control: a weighted special exit to a room that stays
+      assert.is_true(addSpecialExit(from, other, "shove"))
+      assert.is_true(setExitWeight(from, "shove", 5))
+
+      assert.is_true(deleteRoom(gone))
+
+      assert.is_nil(getSpecialExitsSwap(from)["heave"])
+      assert.is_nil(getExitWeights(from)["heave"])
+      assert.are.equal(5, getExitWeights(from)["shove"])
+      assert.is_true(addSpecialExit(from, other, "heave"))
+      assert.is_nil(getExitWeights(from)["heave"])
+    end)
   end)
 
   describe("Tests a neighbour's other exits while a room it also has a special exit to is deleted", function()

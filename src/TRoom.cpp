@@ -754,6 +754,7 @@ void TRoom::clearSpecialExits()
         // Clean up related elements first:
         mSpecialExitLocks.remove(itSpecialExit.key());
         doors.remove(itSpecialExit.key());
+        exitWeights.remove(itSpecialExit.key());
         customLines.remove(itSpecialExit.key());
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
@@ -780,6 +781,7 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         // Clean up related elements first:
         mSpecialExitLocks.remove(itSpecialExit.key());
         doors.remove(itSpecialExit.key());
+        exitWeights.remove(itSpecialExit.key());
         customLines.remove(itSpecialExit.key());
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
