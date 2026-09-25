@@ -43,7 +43,6 @@ endif()
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
-    AltFocusMenuBarDisable.cpp
     CredentialManager.cpp
     ctelnet.cpp
     CustomLineDrawContextMenuHandler.cpp
@@ -108,6 +107,7 @@ set(mudlet_SRCS
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MudletPaths.cpp
+    MudletProxyStyle.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -313,7 +313,6 @@ set(mudlet_HDRS
     ../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
     ActionUnit.h
     AliasUnit.h
-    AltFocusMenuBarDisable.h
     CredentialManager.h
     ctelnet.h
     CustomLineDrawContextMenuHandler.h
@@ -381,6 +380,7 @@ set(mudlet_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MudletPaths.h
+    MudletProxyStyle.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -599,6 +599,12 @@ set(QT_LIBS Qt6::Concurrent
 if(Qt6TextToSpeech_FOUND)
   list(APPEND QT_LIBS Qt6::TextToSpeech)
   message(STATUS "Using TextToSpeech module")
+endif()
+
+# MudletProxyStyle reads the AT-SPI screen reader status over D-Bus
+if(UNIX AND NOT APPLE)
+  find_package(Qt6 COMPONENTS DBus REQUIRED)
+  list(APPEND QT_LIBS Qt6::DBus)
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")

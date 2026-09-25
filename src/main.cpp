@@ -64,7 +64,6 @@
 #include <QStringList>
 #include <QThreadPool>
 #include <QTranslator>
-#include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"

@@ -1,0 +1,58 @@
+/***************************************************************************
+ *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#ifndef MUDLET_MUDLETPROXYSTYLE_H
+#define MUDLET_MUDLETPROXYSTYLE_H
+
+#include <QAbstractNativeEventFilter>
+#include <QProxyStyle>
+
+// Applies Mudlet's application-wide style hint adjustments on top of whichever
+// base style is in use.
+//
+// Alt-to-menu-bar navigation follows the operating system's own screen reader
+// flag: SPI_GETSCREENREADER on Windows, and org.a11y.Status.ScreenReaderEnabled
+// on Linux and the BSDs. QAccessible::isActive() is not used because any
+// accessibility client turns it on, such as an IME or password manager on
+// Windows, or the AT-SPI bus that most X11 sessions start without a screen
+// reader. macOS has a native menu bar, so the hint stays off there.
+class MudletProxyStyle : public QProxyStyle, public QAbstractNativeEventFilter
+{
+    Q_OBJECT
+
+public:
+    MudletProxyStyle();
+    explicit MudletProxyStyle(const QString& style);
+    int styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const override;
+    bool nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result) override;
+
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+private slots:
+    void slot_a11yStatusChanged(const QString& interfaceName, const QVariantMap& changedProperties, const QStringList& invalidatedProperties);
+#endif
+
+private:
+    void watchScreenReaderStatus();
+
+    // QMenuBar asks for SH_MenuBar_AltKeyNavigation on every event its window
+    // receives, so the operating system is asked once and then told of changes
+    bool mScreenReaderRunning = false;
+};
+
+#endif

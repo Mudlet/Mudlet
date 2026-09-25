@@ -119,7 +119,7 @@ bool consoleScrollBarStyleWanted()
         return false;
     }
 
-    // Mudlet's application style is a proxy - AltFocusMenuBarDisable, or DarkTheme -
+    // Mudlet's application style is a proxy - MudletProxyStyle, or DarkTheme -
     // and those carry no object name of their own, so it comes from the style wrapped.
     QString styleName = pStyle->objectName();
     if (styleName.isEmpty()) {

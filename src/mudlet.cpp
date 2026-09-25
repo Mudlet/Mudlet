@@ -28,7 +28,6 @@
 
 #include "mudlet.h"
 
-#include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
 #include "DarkTheme.h"
 #include "LuaInterface.h"
@@ -37,6 +36,7 @@
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletPaths.h"
+#include "MudletProxyStyle.h"
 #include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
@@ -8061,11 +8061,11 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             qApp->setStyle(new DarkTheme);
         } else {
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-            qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+            qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
         }
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+        qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
     }
 
     refreshTabBarsAfterStyleChange();
