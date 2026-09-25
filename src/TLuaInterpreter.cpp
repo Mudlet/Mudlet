@@ -4695,6 +4695,37 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     return ((!error) && (ret > 0));
 }
 
+// Shared by callMulti() and callMultiReturnBool() so the two cannot drift apart
+// again - the latter once built this without the named captures (issue #10403)
+static void setMultimatches(lua_State* L, const std::list<std::list<std::string>>& captureGroups, const QVector<QVector<QPair<QString, QString>>>& nameGroups)
+{
+    if (captureGroups.empty()) {
+        return;
+    }
+
+    int k = 1; // Lua indexes start with 1 as a general convention
+    lua_newtable(L);
+    for (const auto& captures : captureGroups) {
+        // multimatches{ trigger_idx{ table_matches{ ... } } }
+        lua_pushnumber(L, k);
+        lua_newtable(L);
+        int i = 1;
+        for (const auto& capture : captures) {
+            lua_pushnumber(L, i++);
+            lua_pushstring(L, capture.c_str());
+            lua_settable(L, -3);
+        }
+        for (const auto& [name, capture] : nameGroups.value(k - 1)) {
+            lua_pushstring(L, name.toUtf8().constData());
+            lua_pushstring(L, capture.toUtf8().constData());
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+        ++k;
+    }
+    lua_setglobal(L, "multimatches");
+}
+
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
@@ -4707,28 +4738,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    if (!mMultiCaptureGroupList.empty()) {
-        int k = 1;       // Lua indexes start with 1 as a general convention
-        lua_newtable(L); //multimatches
-        for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
-            // multimatches{ trigger_idx{ table_matches{ ... } } }
-            lua_pushnumber(L, k);
-            lua_newtable(L); //regex-value => table matches
-            int i = 1;       // Lua indexes start with 1 as a general convention
-            for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
-                lua_pushnumber(L, i);
-                lua_pushstring(L, (*it).c_str());
-                lua_settable(L, -3); //match in matches
-            }
-            for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
-                lua_pushstring(L, name.toUtf8().constData());
-                lua_pushstring(L, capture.toUtf8().constData());
-                lua_settable(L, -3);
-            }
-            lua_settable(L, -3); //matches in regex
-        }
-        lua_setglobal(L, "multimatches");
-    }
+    setMultimatches(L, mMultiCaptureGroupList, mMultiCaptureNameGroups);
 
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
@@ -4768,23 +4778,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 
     bool returnValue = false;
 
-    if (!mMultiCaptureGroupList.empty()) {
-        int k = 1;       // Lua indexes start with 1 as a general convention
-        lua_newtable(L); //multimatches
-        for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
-            // multimatches{ trigger_idx{ table_matches{ ... } } }
-            lua_pushnumber(L, k);
-            lua_newtable(L); //regex-value => table matches
-            int i = 1;       // Lua indexes start with 1 as a general convention
-            for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
-                lua_pushnumber(L, i);
-                lua_pushstring(L, (*it).c_str());
-                lua_settable(L, -3); //match in matches
-            }
-            lua_settable(L, -3); //matches in regex
-        }
-        lua_setglobal(L, "multimatches");
-    }
+    setMultimatches(L, mMultiCaptureGroupList, mMultiCaptureNameGroups);
 
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);

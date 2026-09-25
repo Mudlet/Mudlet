@@ -2369,8 +2369,30 @@ describe("Trigger processing", function()
             assert.is_nil(named.absent, "each line only carries the names its own pattern defined")
         end)
 
+        -- Mudlet issue #10403: an expiring trigger runs its script through a different
+        -- call path (so a true return can extend the expiry), and that path used to
+        -- build multimatches without the named captures
         it("carries named captures into multimatches when the trigger has an expiry count", function()
-            pending("a multiline trigger given an expiry count loses its named captures, Mudlet issue #10403: TLuaInterpreter::callMultiReturnBool() does not fill multimatches[k][name]")
+            _G.MLNamedExpiry = {}
+            local code = [==[
+                _G.MLNamedExpiry.positional = multimatches[1][2]
+                _G.MLNamedExpiry.first = multimatches[1]["alpha"]
+                _G.MLNamedExpiry.second = multimatches[2]["beta"]
+                _G.MLNamedExpiry.absent = multimatches[1]["beta"]
+            ]==]
+            tempComplexRegexTrigger("SpecMLNamedExpiry", [[^expiring one (?<alpha>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 5)
+            tempComplexRegexTrigger("SpecMLNamedExpiry", [[^expiring two (?<beta>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 5)
+
+            feedTriggers("expiring one aaa\n")
+            feedTriggers("expiring two bbb\n")
+
+            local named = _G.MLNamedExpiry
+            killTrigger("SpecMLNamedExpiry")
+            _G.MLNamedExpiry = nil
+            assert.are.equal("aaa", named.positional, "the state should have completed at all")
+            assert.are.equal("aaa", named.first, "a name from the first line should reach that line's multimatches entry")
+            assert.are.equal("bbb", named.second, "a name from the second line should reach that line's multimatches entry")
+            assert.is_nil(named.absent, "each line only carries the names its own pattern defined")
         end)
 
     end)
