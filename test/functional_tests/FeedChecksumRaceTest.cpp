@@ -17,6 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "MudletPaths.h"
+#include "updater.h"
 #include "updater/Feed.h"
 #include "updater/Release.h"
 #include "updater/UpdateDialog.h"
@@ -24,7 +26,9 @@
 
 #include <QtTest/QtTest>
 
+#include <QApplication>
 #include <QCryptographicHash>
+#include <QDataStream>
 #include <QFile>
 #include <QHash>
 #include <QHostAddress>
@@ -514,6 +518,7 @@ private slots:
     void aCheckThatFoundNothingStillHearsTheNext();
     void theChangelogDialogFillsInItsOwnLabels();
     void aSupersededDownloadIsFetchedAgain();
+    void theChangelogAfterAnUpdateListsWhatTheUpdateBrought();
 
 private:
     // What the dialog told the user, for the failure messages: a bare
@@ -904,6 +909,85 @@ void FeedChecksumRaceTest::aSupersededDownloadIsFetchedAgain()
                               qPrintable(qsl("the superseded download still counts as done, so the release the dialog offers was never fetched - it holds \"%1\". The dialog reported: %2")
                                                  .arg(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), whatTheDialogWasTold())),
                               waitMs);
+}
+
+// Regression test for #1607: with no version range the dialog lists the releases between the
+// version running and the one it would offer, and right after an update those are the same release,
+// so the changelog came up blank. The version updated from is what makes the range non-empty.
+void FeedChecksumRaceTest::theChangelogAfterAnUpdateListsWhatTheUpdateBrought()
+{
+    const auto installedNotes = qsl("what this update brought");
+    const auto earlierNotes = qsl("what the user already had");
+
+    QTemporaryDir configRoot;
+    QVERIFY2(configRoot.isValid(), qPrintable(configRoot.errorString()));
+    MudletPaths::setConfigPath(configRoot.path());
+    // Back to unresolved, which is where this binary starts: nothing else in it asks for a path
+    const auto restoreConfigPath = qScopeGuard([]() {
+        MudletPaths::setConfigPath(QString());
+    });
+
+    // Stands in for Updater::recordUpdatedVersion(), which writes this marker when an update is
+    // applied but needs a mudlet instance to find the path. Only the reader is exercised here, so
+    // the stream version has to stay in step with the writer by hand.
+    const QString markerPath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from"));
+    QFile marker(markerPath);
+    QVERIFY2(marker.open(QIODevice::WriteOnly), qPrintable(marker.errorString()));
+    QDataStream markerStream(&marker);
+    markerStream.setVersion(QDataStream::Qt_5_12);
+    markerStream << qsl("0.9.0");
+    QVERIFY2(markerStream.status() == QDataStream::Ok && marker.flush(), qPrintable(marker.errorString()));
+    marker.close();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    // Nothing in the feed is newer than the version running - the state Mudlet starts up in after
+    // an update
+    harness.server().setFeedBody(QJsonDocument(QJsonArray({stubReleaseInfo(qsl("1.0.0"), qsl("2026-08-31T07:00:00Z"), installedNotes, harness.assetBaseUrl(), 1024),
+                                                           stubReleaseInfo(qsl("0.9.0"), qsl("2026-08-01T00:00:00Z"), earlierNotes, harness.assetBaseUrl(), 1024)}))
+                                         .toJson(QJsonDocument::Compact));
+
+    // Addresses are what the two lists below are compared by, so nothing awaiting deletion may be
+    // left to hand one on
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    const QWidgetList widgetsBeforeUpdater = QApplication::topLevelWidgets();
+    QList<QPointer<QWidget>> updaterWidgets;
+    // Runs after ~Updater: the "Update" button the constructor makes is unparented, and only
+    // checkUpdatesOnStart() reaches the addInstallButton() that would give it an owner
+    const auto destroyUpdaterWidgets = qScopeGuard([&updaterWidgets]() {
+        for (const auto& widget : updaterWidgets) {
+            delete widget.data();
+        }
+    });
+
+    Updater updater(nullptr, &harness.settings());
+    updater.showChangelog();
+    for (auto* widget : QApplication::topLevelWidgets()) {
+        if (!widgetsBeforeUpdater.contains(widget)) {
+            updaterWidgets.append(widget);
+        }
+    }
+
+    dblsqd::UpdateDialog* changelogDialog = nullptr;
+    for (const auto& widget : updaterWidgets) {
+        if (auto* dialog = qobject_cast<dblsqd::UpdateDialog*>(widget.data())) {
+            changelogDialog = dialog;
+            break;
+        }
+    }
+    QVERIFY2(changelogDialog, "showChangelog() opened no update dialog");
+    // Runs before ~Updater, which takes the Feed the dialog listens to with it
+    const auto destroyChangelogDialog = qScopeGuard([&changelogDialog]() {
+        delete changelogDialog;
+    });
+
+    QVERIFY2(!QFile::exists(markerPath), "the changelog was built without reading the updated-from marker");
+
+    auto* changelog = changelogDialog->findChild<QTextBrowser*>(qsl("labelChangelog"));
+    QVERIFY2(changelog, "the dialog has no child named labelChangelog - update_dialog.ui renamed it");
+    QTRY_VERIFY2_WITH_TIMEOUT(
+            changelog->toPlainText().contains(installedNotes), qPrintable(qsl("the changelog left out the release the user updated to, it holds \"%1\"").arg(changelog->toPlainText())), waitMs);
+    QVERIFY2(!changelog->toPlainText().contains(earlierNotes), qPrintable(qsl("the changelog reached back past the version updated from, it holds \"%1\"").arg(changelog->toPlainText())));
 }
 
 QTEST_MAIN(FeedChecksumRaceTest)

@@ -34,6 +34,7 @@
 #include <QDebug>
 #include <QMap>
 #include <QMultiMap>
+#include <QObject>
 #include <QScopeGuard>
 #include <QSet>
 #include <QTimer>
@@ -109,8 +110,31 @@ void TTimer::setTime(QTime time)
     mpQTimer->setInterval(time.msecsSinceStartOfDay());
 }
 
+void TTimer::validateTime()
+{
+    // A repeating QTimer with a zero interval fires on every pass of the event
+    // loop. A one-shot tempTimer(0, ...) is how scripts defer work to the next
+    // pass and an offset timer stops itself as it fires, so those keep a zero time
+    if (!isFolder() && !isTemporary() && !isOffsetTimer() && mTime.msecsSinceStartOfDay() == 0) {
+        mOK_init = false;
+        //: Error shown in the editor when a timer's time is left at zero
+        setError(QObject::tr("No time set - a timer needs a time greater than zero to run"));
+    } else {
+        mOK_init = true;
+    }
+}
+
+bool TTimer::activate()
+{
+    validateTime();
+    return Tree<TTimer>::activate();
+}
+
 bool TTimer::setIsActive(bool b)
 {
+    if (b) {
+        validateTime();
+    }
     const bool condition1 = Tree<TTimer>::setIsActive(b);
     const bool condition2 = canBeUnlocked();
     if (condition1 && condition2) {

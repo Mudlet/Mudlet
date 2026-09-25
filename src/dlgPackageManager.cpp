@@ -47,6 +47,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 , mpHost(pHost)
 {
     setupUi(this);
+    label_packageName->installEventFilter(this); // re-shortens the package name when the label is given a new width
     connect(lineEdit_searchBar, &QLineEdit::textChanged, this, &dlgPackageManager::slot_searchTextChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(packageList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_itemChanged);
@@ -116,7 +117,9 @@ void dlgPackageManager::clearPackageDetails()
 {
     label_icon->clear();
     packageDescription->clear();
+    mPackageName.clear();
     label_packageName->clear();
+    label_packageName->setToolTip(QString());
     label_title->clear();
     label_author->clear();
     label_version->clear();
@@ -196,11 +199,39 @@ void dlgPackageManager::downloadRepositoryIndex()
     });
 }
 
+// The heading is a name of any length in a big font, so it is shortened to what
+// fits - but the details are first filled in while the dialog is still being put
+// together, before a layout pass has given the label the width it will have. The
+// name is kept so the shortening can be redone once the label has a width to
+// measure against, and every time that width or the font it is measured in
+// changes.
+void dlgPackageManager::elidePackageName()
+{
+    const int available = label_packageName->contentsRect().width();
+    if (available <= 0) {
+        // elidedText() returns nothing at all below the width of an ellipsis,
+        // and a blank heading reads as "no package selected"
+        return;
+    }
+
+    const QFontMetrics metrics(label_packageName->font());
+    const QString elidedName = metrics.elidedText(mPackageName, Qt::ElideRight, available);
+    label_packageName->setText(elidedName);
+    label_packageName->setToolTip(elidedName == mPackageName ? QString() : mPackageName);
+}
+
+bool dlgPackageManager::eventFilter(QObject* pWatched, QEvent* pEvent)
+{
+    if (pWatched == label_packageName && (pEvent->type() == QEvent::Resize || pEvent->type() == QEvent::FontChange)) {
+        elidePackageName();
+    }
+    return QDialog::eventFilter(pWatched, pEvent);
+}
+
 void dlgPackageManager::fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version)
 {
-    const QFontMetrics metrics(label_packageName->font());
-    const QString elidedText = metrics.elidedText(name, Qt::ElideRight, label_packageName->width());
-    label_packageName->setText(elidedText);
+    mPackageName = name;
+    elidePackageName();
     label_title->setText(title);
     label_author->setText(author);
     //: Package manager - label showing package version

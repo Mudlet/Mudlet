@@ -1308,14 +1308,15 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // on every profile load, so this clash is found again at every startup
         // for as long as it lasts - on the main screen that is a line the
         // player is told to ignore, which is worse than not saying it. The
-        // editor is where a key binding is looked at and where it is changed,
-        // so the notice waits there for whoever goes to fix it, and says
-        // nothing to anyone who does not.
+        // editor is where a key binding is looked at and where it is changed.
+        // Opening it replaces this notice, so it is read out only if the editor
+        // is open; selecting the binding says it again.
         if (pOtherHost->mpEditorDialog) {
             //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
             pOtherHost->mpEditorDialog->showWarning(
                     tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
-                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()));
+                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()),
+                    pOtherHost->mpEditorDialog->isVisible());
         }
     }
 }
@@ -1510,6 +1511,37 @@ QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, con
         holders.append(tr("a command from another profile"));
     }
     return holders;
+}
+
+// No QAction scan as in addonShortcutUsable(): it would only add add-on
+// commands, which are addonCommandsUsingShortcut()'s to report. Covers the
+// shortcuts the preferences list, not the buffer search's opt-in F3 keys.
+QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    if (!mpShortcutsManager || key == Qt::Key_unknown) {
+        return {};
+    }
+    // The profile switching keys are the exception: TCommandLine claims the
+    // ShortcutOverride for a key press a binding would match, so the press
+    // arrives after all and the binding is the one that fires.
+    if (profileSwitchShortcutMatches(key, modifiers)) {
+        return {};
+    }
+
+    // The registry rather than the widgets: hiding the menu bar moves every menu
+    // key onto a QShortcut and clears the action it came from
+    const QKeySequence sequence(QKeyCombination(modifiers, key));
+    QStringListIterator keys = mpShortcutsManager->iterator();
+    while (keys.hasNext()) {
+        const QString name = keys.next();
+        const QKeySequence* pMudletSequence = mpShortcutsManager->getSequence(name);
+        // A shortcut cleared in the preferences holds an empty sequence, which
+        // is nobody's key - the same reading profileSwitchShortcutMatches() takes
+        if (pMudletSequence && !pMudletSequence->isEmpty() && *pMudletSequence == sequence) {
+            return mpShortcutsManager->getLabel(name);
+        }
+    }
+    return {};
 }
 
 void mudlet::removeAddonCommandsForHost(Host* pHost)
@@ -3728,9 +3760,11 @@ bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
         return false;
     }
 
-    const auto key = static_cast<Qt::Key>(ke->key());
-    const Qt::KeyboardModifiers modifiers = ke->modifiers();
+    return profileSwitchShortcutMatches(static_cast<Qt::Key>(ke->key()), ke->modifiers());
+}
 
+bool mudlet::profileSwitchShortcutMatches(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
     // QShortcutMap retries with the modifiers the platform consumed producing
     // the character stripped off, so Ctrl and a numpad digit activates Ctrl+1,
     // and so does Ctrl+Shift+1 on layouts needing Shift for a top-row digit
@@ -4770,6 +4804,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     mScrollbackTutorialsShown = qBound(0, settings.value("scrollbackTutorialsShown", QVariant(0)).toInt(), mScrollbackTutorialsMax);
     mCharacterModeWarningsShown = qBound(0, settings.value("characterModeWarningsShown", QVariant(0)).toInt(), mCharacterModeWarningsMax);
+    mCompactInputLineTutorialsShown = qBound(0, settings.value("compactInputLineTutorialsShown", QVariant(0)).toInt(), mCompactInputLineTutorialsMax);
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
@@ -5018,6 +5053,7 @@ void mudlet::writeSettings()
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
     settings.setValue("characterModeWarningsShown", mCharacterModeWarningsShown);
+    settings.setValue("compactInputLineTutorialsShown", mCompactInputLineTutorialsShown);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
     settings.setValue("showMenuBar", mMenuBarVisibility != enums::visibleNever);
@@ -5073,6 +5109,12 @@ void mudlet::slot_showConnectionDialog()
     }
 
     if (mpConnectionDialog) {
+        // The dialog can be alive but hidden - anything that hid it without closing it leaves it
+        // that way - and raising a hidden window puts nothing on screen, which is what left the
+        // Connect button doing nothing for the rest of a session
+        if (!mpConnectionDialog->isVisible()) {
+            mpConnectionDialog->show();
+        }
         // If dialog already exists, bring it to the front of the main window
         mpConnectionDialog->raise();
         mpConnectionDialog->activateWindow();
@@ -6971,11 +7013,11 @@ void mudlet::slot_compactInputLine(const bool state)
     if (pHost) {
         pHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && !pHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && showCompactInputLineTutorial() && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
             pHost->postMessage(infoMsg);
-            pHost->mTutorialForCompactLineAlreadyShown = true;
+            showedCompactInputLineTutorial();
         }
     }
     // Ensure the menu item reflects the actual state - a handler of the event
@@ -8162,6 +8204,13 @@ bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash
 
     dict.close();
 
+    // An empty dictionary declares one word so that hunspell will load it - see
+    // overwriteDictionaryFile(...) - so do not report that padding as a word the
+    // user has since removed:
+    if (wl.isEmpty() && oldWC == 1) {
+        oldWC = 0;
+    }
+
     qDebug().nospace().noquote() << "Loaded custom dictionary \"" << dict.fileName() << "\" with " << wl.count() << " words.";
     if (oldWC != wl.count()) {
         qDebug().nospace().noquote() << "Previously, there were " << oldWC << " words recorded instead.";
@@ -8194,7 +8243,18 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
     }
 
     QTextStream ds(&dict);
-    ds << qMax(0, wl.count());
+    // hunspell refuses to load a dictionary that declares no words: its hash
+    // manager has rejected a zero count with "missing or bad word count" since
+    // 1.3.4, so this is not a new failure and not confined to one release.
+    // What 1.7.3 changed is that the message became audible - it was emitted
+    // through HUNSPELL_WARNING, an empty inline function unless
+    // HUNSPELL_WARNING_ON is defined, which distribution builds do not - so the
+    // load had been failing silently for a decade. Hunspell_create() hands back
+    // a non-null handle either way, so a caller cannot tell it got an unusable
+    // dictionary. The count on this first line only sizes hunspell's hash table
+    // and it reads words until EOF regardless, so claiming one word when the
+    // personal dictionary is empty costs nothing:
+    ds << qMax(1, wl.count());
     if (!wl.isEmpty()) {
         ds << QChar(QChar::LineFeed);
         ds << wl.join(QChar::LineFeed).toUtf8();
@@ -8220,16 +8280,25 @@ int mudlet::getDictionaryWordCount(const QString& dictionaryPath)
 
     QTextStream ds(&dict);
     QString dictionaryLine;
-    // Read the header line containing the word count:
+    // The header line is not the count to report: an empty dictionary declares
+    // one word so that hunspell will load it - see overwriteDictionaryFile(...).
+    // It is still read, as an unparsable one means a file we should not touch:
     ds.readLineInto(&dictionaryLine);
     bool isOk = false;
-    const int oldWordCount = dictionaryLine.toInt(&isOk);
-    dict.close();
-    if (isOk) {
-        return oldWordCount;
+    dictionaryLine.toInt(&isOk);
+    if (!isOk) {
+        return -1;
     }
 
-    return -1;
+    int wordCount = 0;
+    while (ds.readLineInto(&dictionaryLine)) {
+        if (!dictionaryLine.isEmpty()) {
+            ++wordCount;
+        }
+    }
+    dict.close();
+
+    return wordCount;
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
@@ -8245,18 +8314,25 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
         }
     }
 
-    // Generate TRY line:
-    QString tryLine = qsl("TRY ");
+    // Generate the graphemes for the TRY line, most frequent first:
+    QString graphemes;
     QMultiMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
     itGrapheme.toBack();
     while (itGrapheme.hasPrevious()) {
         itGrapheme.previous();
-        tryLine.append(itGrapheme.value());
+        graphemes.append(itGrapheme.value());
     }
 
     QStringList affixLines;
     affixLines << qsl("SET UTF-8");
-    affixLines << tryLine;
+    // An empty personal dictionary has no graphemes, and hunspell rejects the
+    // whole affix file - "Failure loading aff file", because parse_string()
+    // wants two fields and a bare "TRY " gives it one - rather than ignoring
+    // the empty directive. TRY is optional and only seeds completion
+    // suggestions, so omit it until the dictionary has its first word:
+    if (!graphemes.isEmpty()) {
+        affixLines << qsl("TRY %1").arg(graphemes);
+    }
 
     QSaveFile aff(affixPath);
     // Finally, having got the needed content, write it out:
@@ -9050,6 +9126,16 @@ bool mudlet::showSplitscreenTutorial()
 void mudlet::showedSplitscreenTutorial()
 {
     mScrollbackTutorialsShown++;
+}
+
+bool mudlet::showCompactInputLineTutorial()
+{
+    return !experiencedMudletPlayer() && mCompactInputLineTutorialsShown < mCompactInputLineTutorialsMax;
+}
+
+void mudlet::showedCompactInputLineTutorial()
+{
+    mCompactInputLineTutorialsShown++;
 }
 
 bool mudlet::showMuteAllMediaTutorial()

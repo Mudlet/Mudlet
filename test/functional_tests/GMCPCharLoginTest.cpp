@@ -25,7 +25,6 @@
 
 #include <QDir>
 #include <QFileInfo>
-#include <QSettings>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -42,6 +41,7 @@
 #include <QUrlQuery>
 #include <functional>
 
+#include "AutoLoginDelaysTestHelper.h"
 #include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -319,34 +319,6 @@ private:
     QByteArray mReceivedText;
     bool mGmcpEnabled = false;
     int mConnectionCount = 0;
-};
-
-// The auto-login delays live in a QSettings file shared by every case in this binary, so they have to
-// go back however a QVERIFY leaves the test body.
-class ScopedAutoLoginDelays
-{
-public:
-    ScopedAutoLoginDelays(int usernameMs, int passwordMs)
-    : mpSettings(mudlet::getQSettings())
-    , mSavedUsername(mpSettings->value(qsl("autoLoginUsernameDelay")))
-    , mSavedPassword(mpSettings->value(qsl("autoLoginPasswordDelay")))
-    {
-        mpSettings->setValue(qsl("autoLoginUsernameDelay"), usernameMs);
-        mpSettings->setValue(qsl("autoLoginPasswordDelay"), passwordMs);
-    }
-
-    ~ScopedAutoLoginDelays()
-    {
-        restore(qsl("autoLoginUsernameDelay"), mSavedUsername);
-        restore(qsl("autoLoginPasswordDelay"), mSavedPassword);
-    }
-
-private:
-    void restore(const QString& key, const QVariant& saved) { saved.isValid() ? mpSettings->setValue(key, saved) : mpSettings->remove(key); }
-
-    QSettings* mpSettings;
-    QVariant mSavedUsername;
-    QVariant mSavedPassword;
 };
 
 // Counts warnings whose text contains a substring for as long as it is in scope, forwarding every
