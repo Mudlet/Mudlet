@@ -532,7 +532,9 @@ private slots:
             QVERIFY2(line.startsWith(QStringLiteral("[WHOIS] bob ")) && line.count(QStringLiteral("[WHOIS]")) == 1, qPrintable(line));
         }
         const QString html = IrcMessageFormatter::formatMessage(message, false);
-        QVERIFY2(html.contains(QStringLiteral("(Bob Smith)<br />\n[WHOIS] bob is connected via")), qPrintable(html));
+        QVERIFY2(html.count(QStringLiteral("<br />\n")) == 3 && html.count(QStringLiteral("[WHOIS]")) == 4, qPrintable(html));
+        QVERIFY2(html.contains(QStringLiteral("(Bob Smith)<br />\n[WHOIS] bob is connected via irc.example.org (Example Network)<br />\n[WHOIS] bob is connected since ")), qPrintable(html));
+        QVERIFY2(html.endsWith(QStringLiteral(")<br />\n[WHOIS] bob is logged in as bobaccount</font>")), qPrintable(html));
     }
 
     void whowas_putsEveryLineOnItsOwn()
@@ -543,7 +545,9 @@ private slots:
         QCOMPARE(IrcMessageFormatter::formatMessage(message, true),
                  QStringLiteral("[WHOWAS] bob was ident@example.org (Bob Smith)\n[WHOWAS] bob was connected via irc.example.org (Example Network)\n[WHOWAS] bob was logged in as bobaccount"));
         const QString html = IrcMessageFormatter::formatMessage(message, false);
-        QVERIFY2(html.contains(QStringLiteral("(Bob Smith)<br />\n[WHOWAS] bob was connected via")), qPrintable(html));
+        QVERIFY2(html.endsWith(QStringLiteral("] [WHOWAS] bob was ident@example.org (Bob Smith)<br />\n[WHOWAS] bob was connected via irc.example.org (Example Network)<br />\n[WHOWAS] bob was logged "
+                                              "in as bobaccount</font>")),
+                 qPrintable(html));
     }
 
     void whoReply_marksAnAwayUser()
