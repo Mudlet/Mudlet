@@ -79,7 +79,7 @@ describe("Tests how MXP reads the tags a game sends", function()
 
   describe("Tests the elements a game defines", function()
     it("forgets an element that is defined again with DELETE", function()
-      feed([[<!ELEMENT mxpParseGone '<B>'>]])
+      feed([[<!ELEMENT mxpParseGone "<B>">]])
       assert.are.equal("mxpParseGoneBefore", shown("<mxpParseGone>mxpParseGoneBefore</mxpParseGone>"))
 
       feed([[<!ELEMENT mxpParseGone DELETE>]])
