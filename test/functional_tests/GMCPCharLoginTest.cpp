@@ -37,6 +37,7 @@
 #include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMutex>
 #include <QRegularExpression>
 #include <QUrlQuery>
 #include <algorithm>
@@ -371,7 +372,10 @@ class MessageRecorder
 public:
     MessageRecorder()
     {
-        smMessages.clear();
+        {
+            const QMutexLocker locker(&smMutex);
+            smMessages.clear();
+        }
         smPrevious = qInstallMessageHandler(record);
     }
     ~MessageRecorder() { qInstallMessageHandler(smPrevious); }
@@ -380,6 +384,7 @@ public:
 
     int count(const QRegularExpression& pattern) const
     {
+        const QMutexLocker locker(&smMutex);
         return static_cast<int>(std::count_if(smMessages.cbegin(), smMessages.cend(), [&pattern](const QString& message) {
             return pattern.match(message).hasMatch();
         }));
@@ -394,6 +399,7 @@ public:
     }
     bool anyContains(const QString& text) const
     {
+        const QMutexLocker locker(&smMutex);
         return std::any_of(smMessages.cbegin(), smMessages.cend(), [&text](const QString& message) {
             return message.contains(text);
         });
@@ -402,12 +408,17 @@ public:
 private:
     static void record(QtMsgType type, const QMessageLogContext& context, const QString& message)
     {
-        smMessages.append(message);
+        {
+            const QMutexLocker locker(&smMutex);
+            smMessages.append(message);
+        }
         if (smPrevious) {
             smPrevious(type, context, message);
         }
     }
 
+    // Qt's network threads may log while the test thread reads.
+    static inline QMutex smMutex;
     static inline QStringList smMessages;
     static inline QtMessageHandler smPrevious = nullptr;
 };
@@ -1965,13 +1976,31 @@ private slots:
         mpServer->sendGmcp(frame);
 
         QVERIFY2(recorder.waitFor(QRegularExpression(diagnostic)), qPrintable(qsl("no diagnostic matching \"%1\" was logged").arg(diagnostic)));
-        QVERIFY2(!recorder.anyContains(qsl("leaky-token")), "a diagnostic quoted the token from a malformed Char.Login.Token");
-        QVERIFY(!consoleContains(host, qsl("sign in")));
-        QVERIFY(!consoleContains(host, qsl("sign-in")));
-        QVERIFY(!consoleContains(host, qsl("Could not log in")));
-        QCOMPARE(mpServer->countReceived(qsl("Char.Login")), 0);
-        QVERIFY(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty());
-        QVERIFY(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty());
+        // Waited on rather than checked once, as elsewhere in this file, so that a trace left by
+        // deferred work - a throttled sign-in attempt, a queued store - still fails the test.
+        const auto trace = [&]() -> QString {
+            for (const auto& text : {qsl("sign in"), qsl("sign-in"), qsl("Could not log in")}) {
+                if (consoleContains(host, text)) {
+                    return qsl("the console shows \"%1\"").arg(text);
+                }
+            }
+            if (mpServer->countReceived(qsl("Char.Login")) > 0) {
+                return qsl("the client answered with a Char.Login message");
+            }
+            for (const auto& key : {qsl("reconnect"), qsl("reconnect-token")}) {
+                if (!CredentialManager::retrieveCredential(host->getName(), key).isEmpty()) {
+                    return qsl("a credential was stored under \"%1\"").arg(key);
+                }
+            }
+            return QString();
+        };
+        QVERIFY2(!QTest::qWaitFor(
+                         [&]() {
+                             return !trace().isEmpty();
+                         },
+                         500),
+                 qPrintable(trace()));
+        QVERIFY2(!recorder.anyContains(qsl("leaky-token")), "a logged message quoted the token from a malformed Char.Login.Token");
     }
 
     void testAnUnlistedProviderIsNamedWithAnInitialCapital()

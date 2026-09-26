@@ -31,6 +31,48 @@ local function assertArgError(fn, needle)
   assert.is_true(contains(err, needle), tostring(err))
 end
 
+-- connectToServer's save flag writes the profile's url and port files. Returns a
+-- function for finally() that puts both back as they were, or removes them.
+-- Each file is restored on its own, so one that cannot be written back neither
+-- stops the other nor goes unreported.
+local function preserveProfileAddress()
+  local directory = getMudletHomeDir()
+  local saved = {}
+  for _, name in ipairs({"url", "port"}) do
+    local handle = io.open(directory .. "/" .. name, "rb")
+    if handle then
+      saved[name] = handle:read("*a")
+      handle:close()
+    else
+      saved[name] = false
+    end
+  end
+  return function()
+    local failures = {}
+    for name, contents in pairs(saved) do
+      local path = directory .. "/" .. name
+      local ok, err = pcall(function()
+        if contents then
+          local handle = assert(io.open(path, "wb"))
+          handle:write(contents)
+          handle:close()
+        else
+          os.remove(path)
+        end
+      end)
+      if not ok then
+        failures[#failures + 1] = tostring(err)
+      end
+    end
+    assert(#failures == 0, "could not restore the profile's address: " .. table.concat(failures, "; "))
+  end
+end
+
+local function storedProfileAddress()
+  local entry = getProfiles()[getProfileName()]
+  return entry.host, entry.port
+end
+
 describe("Networking send functions honour their disconnected/offline contracts", function()
   -- Force a non-connected telnet state so the connection guards fire
   -- deterministically regardless of what the self-test profile's socket is
@@ -128,9 +170,14 @@ describe("connectToServer validates its arguments without connecting", function(
   end)
 
   -- Checked before anything is written to the profile or a connection is tried.
-  it("raises a Lua error when the save flag is not a boolean", function()
+  it("raises a Lua error when the save flag is not a boolean, and saves nothing", function()
+    finally(preserveProfileAddress())
+    local hostBefore, portBefore = storedProfileAddress()
     assertArgError(function() connectToServer("example.invalid", 23, "yes") end,
                    "connectToServer: bad argument #3 type")
+    local hostAfter, portAfter = storedProfileAddress()
+    assert.equals(hostBefore, hostAfter)
+    assert.equals(portBefore, portAfter)
   end)
 end)
 
@@ -2385,46 +2432,44 @@ describe("sending protocol data to a game server that has not negotiated", funct
     assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
   end)
 
+  -- The profile is written before the connection is started, so it can be read
+  -- back straight away. after_each closes the connection.
+  local function assertNotFixtureAddress(port)
+    local host, storedPort = storedProfileAddress()
+    assert.is_false(host == "127.0.0.1" and storedPort == tostring(port),
+                    "the profile already holds the fixture's address, so this proves nothing")
+  end
+
   it("saves the host and port to the profile when asked to", function()
     if serverUnavailable() then return end
     local port = serverPort()
-    local profileDir = getMudletHomeDir()
-    local function snapshot(name)
-      local handle = io.open(profileDir .. "/" .. name, "rb")
-      if not handle then
-        return nil
-      end
-      local contents = handle:read("*a")
-      handle:close()
-      return contents
-    end
-    local savedUrl, savedPort = snapshot("url"), snapshot("port")
-    finally(function()
-      for name, contents in pairs({url = savedUrl or false, port = savedPort or false}) do
-        if contents then
-          local handle = io.open(profileDir .. "/" .. name, "wb")
-          handle:write(contents)
-          handle:close()
-        else
-          os.remove(profileDir .. "/" .. name)
-        end
-      end
-    end)
+    finally(preserveProfileAddress())
+    assertNotFixtureAddress(port)
 
-    local function stored()
-      local entry = getProfiles()[getProfileName()]
-      return entry.host, entry.port
-    end
-    local hostBefore, portBefore = stored()
-    assert.is_false(hostBefore == "127.0.0.1" and portBefore == tostring(port),
-                    "the profile already holds the fixture's address, so this proves nothing")
+    assert.is_true(connectToServer("127.0.0.1", port, true))
+    local host, storedPort = storedProfileAddress()
+    assert.equals("127.0.0.1", host)
+    assert.equals(tostring(port), storedPort)
+  end)
 
-    local ok = connectToServer("127.0.0.1", port, true)
-    assert.is_true(ok)
-    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
-    local hostAfter, portAfter = stored()
-    assert.equals("127.0.0.1", hostAfter)
-    assert.equals(tostring(port), portAfter)
+  it("leaves the profile alone when the save flag is false or left out", function()
+    if serverUnavailable() then return end
+    local port = serverPort()
+    finally(preserveProfileAddress())
+    assertNotFixtureAddress(port)
+    local hostBefore, portBefore = storedProfileAddress()
+
+    assert.is_true(connectToServer("127.0.0.1", port, false))
+    local host, storedPort = storedProfileAddress()
+    assert.equals(hostBefore, host)
+    assert.equals(portBefore, storedPort)
+
+    disconnect()
+    assert.is_true(waitUntil(function() return not connected() end, 2000))
+    assert.is_true(connectToServer("127.0.0.1", port))
+    host, storedPort = storedProfileAddress()
+    assert.equals(hostBefore, host)
+    assert.equals(portBefore, storedPort)
   end)
 
   it("accepts a string second argument to sendGMCP and sendATCP before the enabled check", function()
