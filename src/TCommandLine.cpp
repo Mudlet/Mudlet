@@ -132,11 +132,18 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
         connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
             this->setEchoSuppression(isRemoteEcho);
         });
+        connect(mpHost, &Host::signal_serverTextSent, this, [this]() {
+            mLineAtLastServerOutput = toPlainText();
+        });
     }
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
 {
+    // A key that edits nothing - a bare modifier, a cursor move - is not the
+    // player answering the prompt, and treating it as one would discard the
+    // command the prompt set aside. The document's revision counts edits only.
+    const int revisionBeforeKey = document()->revision();
     QPlainTextEdit::event(event);
     adjustHeight();
 
@@ -148,9 +155,9 @@ void TCommandLine::processNormalKey(QEvent* event)
         mUserKeptOnTyping = false;
     }
 
-    // Track if user types during echo suppression for content preservation logic
-    if (mIsEchoSuppressed && mType == MainCommandLine) {
-        mUserTypedDuringEchoSuppression = true;
+
+    if (mIsEchoSuppressed && mType == MainCommandLine && document()->revision() != revisionBeforeKey) {
+        mTypedDuringPrompt = true;
     }
 
     spellCheck();
@@ -1690,20 +1697,16 @@ void TCommandLine::slot_saveHistory()
 /*
  * setEchoSuppression - Handle password input mode for the main command line
  *
- * This function manages the transition between normal command input and secure password entry.
- * When a MUD server requests password input, it signals echo suppression which hides user typing.
- *
- * Key challenges handled:
- * - Preserving user's command text during password prompts for restoration afterward
- * - Distinguishing between commands and partial password input when suppression activates
- * - Maintaining correct selection state (important for auto-clear OFF workflow)
- * - Supporting users who type password characters before echo suppression kicks in
- *
- * Common workflows:
- * 1. Auto-clear ON: user types command -> sends -> password prompt -> restore command
- * 2. Auto-clear OFF: user types command -> sends -> command selected -> password prompt -> restore selected command
- * 3. Rapid login: user types 'password' -> server enables echo suppression mid-typing -> continue hidden
- * 4. Empty command line: straightforward password entry with no restoration needed
+ * When the game takes ECHO for a password prompt, whatever is on the line is
+ * set aside and the masked line starts empty, so nothing already typed can be
+ * sent as part of the password. When the prompt ends, the part of the line that
+ * was already there the last time the game sent text is given back - selected
+ * again if it was selected - because the player could not have been answering
+ * a prompt they had not yet seen. The part typed after that could have been
+ * the start of the password, and the line cannot tell: it is given back only if
+ * nothing was typed at the prompt, which is a script logging in, or if it is a
+ * command the player has sent before, which the history already holds in the
+ * clear. Otherwise it is dropped.
  *
  * @param suppress true to start password mode (hide input), false to end it (restore normal input)
  */
@@ -1736,61 +1739,30 @@ void TCommandLine::setEchoSuppression(bool suppress)
         // 4. Command line is empty - simple case, just start password mode
 
         const QString currentText = toPlainText();
-        QString textToRestoreAfterPassword; // Command text to restore after password entry
-        QString partialPasswordToKeep;      // Password chars user typed before suppression activated
-
-        // Analyze what the user currently has in the command line
-        if (!currentText.isEmpty()) {
-            QTextCursor cursor = textCursor();
-
-            if (cursor.hasSelection()) {
-                // SCENARIO 1: Auto-clear is OFF, previous command is selected
-                // User workflow: sent command -> server shows password prompt -> command gets selected
-                // Action: Save selected text for restoration after password, remember it was selected
-                textToRestoreAfterPassword = cursor.selectedText();
-                mRestoredTextShouldBeSelected = true;
-            } else {
-                // SCENARIO 2 & 3: Text exists but isn't selected - determine what it is
-                mRestoredTextShouldBeSelected = false;
-
-                // Check if current text matches recent command history to distinguish between:
-                // - A command that was just sent (preserve it)
-                // - Password characters already being typed (continue with them)
-                bool isExistingCommand = false;
-                const int maxHistoryEntriesToCheck = qMin(500, mHistoryList.size());
-
-                for (int i = 0; i < maxHistoryEntriesToCheck; ++i) {
-                    const QString& historyEntry = mHistoryList[i];
-
-                    if (!historyEntry.isEmpty()) {
-                        if (currentText == historyEntry) {
-                            isExistingCommand = true;
-                        }
-                        break;
-                    }
-                }
-
-                if (!isExistingCommand && !mHistoryList.isEmpty()) {
-                    // SCENARIO 3: Text doesn't match history - likely password chars already typed
-                    // User workflow: types 'password' -> server enables echo suppression mid-typing
-                    // Action: Continue with these characters as hidden password input
-                    partialPasswordToKeep = currentText;
-                } else {
-                    // SCENARIO 2: Text matches history - it's a recently sent command
-                    // User workflow: types command -> sends it -> server prompts for password
-                    // Action: Preserve command for restoration after password entry
-                    textToRestoreAfterPassword = currentText;
-                }
-            }
-        } else {
-            // SCENARIO 4: Command line is empty - straightforward password entry
-            mRestoredTextShouldBeSelected = false;
+        // What was already on the line when the game last sent text cannot have
+        // been an answer to a prompt the player had not yet seen: it is a command
+        // typed ahead, and it is given back when the prompt ends. What was typed
+        // after that is either a reply to a prompt the player did see, or a command
+        // typed into a silence the game then broke with WILL ECHO - the same order
+        // of events, which nothing on the line can tell apart. So it is set aside
+        // too, but kept out of the password and shown again only if nothing is
+        // typed at the prompt. An edit inside the older text shortens the shared
+        // prefix and moves those characters to the uncertain half.
+        int sharedLength = 0;
+        const int limit = qMin(currentText.size(), mLineAtLastServerOutput.size());
+        while (sharedLength < limit && currentText.at(sharedLength) == mLineAtLastServerOutput.at(sharedLength)) {
+            ++sharedLength;
         }
+        const QString textToRestoreAfterPassword = currentText.left(sharedLength);
+        mUncertainTextToRestore = currentText.mid(sharedLength);
+        mTypedDuringPrompt = false;
+        // A command still selected from being sent - auto-clear off - goes back
+        // selected, as it was found.
+        mRestoredTextShouldBeSelected = textCursor().hasSelection() && mUncertainTextToRestore.isEmpty();
 
         // Store the command text for later restoration (empty if none to restore)
         mTextToRestoreAfterEchoSuppression = textToRestoreAfterPassword;
-        mUserTypedDuringEchoSuppression = false; // Reset typing tracking
-        clear();                                 // Clear command line for password input
+        clear(); // Clear command line for password input
 
         // Show password toggle button and reset visibility state
         if (mpPasswordToggleButton) {
@@ -1800,13 +1772,6 @@ void TCommandLine::setEchoSuppression(bool suppress)
             positionPasswordToggleButton();
         }
 
-        // If user was already typing password characters, restore them and continue
-        if (!partialPasswordToKeep.isEmpty()) {
-            setPlainText(partialPasswordToKeep);
-            QTextCursor cursor = textCursor();
-            cursor.movePosition(QTextCursor::End); // Position cursor for continued typing
-            setTextCursor(cursor);
-        }
     } else {
         // === ENDING PASSWORD INPUT MODE ===
         // Password entry is complete, restore the command line to its previous state
@@ -1819,10 +1784,23 @@ void TCommandLine::setEchoSuppression(bool suppress)
             mpPasswordToggleButton->setVisible(false);
         }
 
-        // Restore any command text that was preserved when password mode started
-        // Only restore if user didn't type anything during echo suppression
-        if (!mTextToRestoreAfterEchoSuppression.isEmpty() && !mUserTypedDuringEchoSuppression) {
-            setPlainText(mTextToRestoreAfterEchoSuppression);
+        // Give back what the prompt set aside. The part that predated the game's
+        // last output always: it is a command whatever was typed at the prompt.
+        // The part typed after it only if it cannot have been the start of the
+        // password - nothing was typed at the prompt, or see below. The game
+        // releasing ECHO is the game acting, so the line is remembered as it stands
+        // now - a prompt that comes straight back, for a rejected password, must
+        // find this text already there rather than take it for something typed in
+        // reply.
+        // The uncertain part also comes back if it is a command the player has sent
+        // before: it is then already in the history, in the clear, on disk, so
+        // showing it again can disclose nothing the history does not hold.
+        const bool uncertainTextIsSafeToShow = !mTypedDuringPrompt || mHistoryList.contains(mUncertainTextToRestore);
+        const QString textToRestore = mTextToRestoreAfterEchoSuppression + (uncertainTextIsSafeToShow ? mUncertainTextToRestore : QString());
+        mUncertainTextToRestore.clear();
+        if (!textToRestore.isEmpty()) {
+            setPlainText(textToRestore);
+            mLineAtLastServerOutput = textToRestore;
 
             // Restore the original selection state to maintain user workflow consistency
             QTextCursor cursor = textCursor();
@@ -1843,7 +1821,6 @@ void TCommandLine::setEchoSuppression(bool suppress)
         // Clear saved state - restoration is complete
         mTextToRestoreAfterEchoSuppression.clear();
         mRestoredTextShouldBeSelected = false;
-        mUserTypedDuringEchoSuppression = false;
     }
 
     viewport()->update(); // Force repaint to apply/remove password masking visual effect

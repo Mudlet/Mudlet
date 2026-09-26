@@ -154,6 +154,20 @@ private:
 
     // Track echo suppression state
     bool mIsEchoSuppressed = false;
+    // What the line held the last time the game sent any text. A password prompt
+    // splits the line here: what was already there when the game last spoke is a
+    // command the player typed ahead, what follows it was typed in reply to the
+    // prompt and is the password. Refreshed by signal_serverTextPrinted, and by
+    // the prompt ending, which is the game acting too.
+    QString mLineAtLastServerOutput;
+    // What the line held past that point when the prompt opened: typed after the
+    // game last spoke, so either a reply to a prompt the player had seen or a
+    // command typed into a silence the game then broke - the same order of
+    // events, which nothing on the line can tell apart. Given back only when
+    // nothing was typed at the prompt, which is a script logging in, or when it
+    // is a command the history already holds.
+    QString mUncertainTextToRestore;
+    bool mTypedDuringPrompt = false;
     // Track password visibility state when echo is suppressed
     bool mPasswordVisible = false;
     // Button to toggle password visibility
@@ -163,8 +177,6 @@ private:
     QString mTextToRestoreAfterEchoSuppression;
     // Track whether the preserved text was originally selected (for auto-clear OFF)
     bool mRestoredTextShouldBeSelected = false;
-    // Track whether user typed anything during echo suppression mode
-    bool mUserTypedDuringEchoSuppression = false;
 
 private slots:
     void slot_togglePasswordVisibility();
