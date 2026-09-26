@@ -357,8 +357,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "- it's encouraged. Killing enemies earns warpoints, experience, and their "
                  "gear. Climb the ranks. Make the topten list. Build your reputation through "
                  "conquest. If you want the risk of PvP combined with challenging "
-                 "environment combat, you've found your home."),
-             GameDetail::OwnUi::ClientGui},
+                 "environment combat, you've found your home.")},
 
             {qsl("ZombieMUD"),
              qsl("zombiemud.org"),
@@ -801,7 +800,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Infinity LPMud provides willing adventurers and questseekers with a "
                  "venue of original ideas, mind boggling quests, and bloodcurdling "
                  "beasts, spinning into realms of power, magic, and technology, "
-                 "and many players with which to share your adventures.")},
+                 "and many players with which to share your adventures."),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Medievia"),
              qsl("medievia.com"),
