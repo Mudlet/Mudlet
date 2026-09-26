@@ -1148,6 +1148,183 @@ TCommandLine* TMainConsole::raiseCommandLine()
     return mpCommandLine;
 }
 
+TCommandLine* TMainConsole::commandLineNamed(const QString& name) const
+{
+    if (name.isEmpty() || !name.compare(qsl("main"))) {
+        return mpCommandLine;
+    }
+    return mSubCommandLineMap.value(name);
+}
+
+std::optional<QString> TMainConsole::getCommandLineText(const QString& name) const
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return {};
+    }
+    return {pN->toPlainText()};
+}
+
+// The caret goes to the end of the first line, with nothing selected.
+static void putTextOnCommandLine(TCommandLine* pN, const QString& text)
+{
+    pN->setPlainText(text);
+    QTextCursor cur = pN->textCursor();
+    cur.clearSelection();
+    cur.movePosition(QTextCursor::EndOfLine);
+    pN->setTextCursor(cur);
+    pN->adjustHeight();
+}
+
+bool TMainConsole::replaceCommandLineText(const QString& name, const QString& text)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    putTextOnCommandLine(pN, text);
+    return true;
+}
+
+bool TMainConsole::appendCommandLineText(const QString& name, const QString& text)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    putTextOnCommandLine(pN, pN->toPlainText() + text);
+    return true;
+}
+
+bool TMainConsole::clearCommandLine(const QString& name)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->clear();
+    pN->adjustHeight();
+    return true;
+}
+
+bool TMainConsole::selectCommandLineText(const QString& name)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->selectAll();
+    return true;
+}
+
+bool TMainConsole::addCommandLineSuggestion(const QString& name, const QString& word)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->addSuggestion(word);
+    return true;
+}
+
+bool TMainConsole::removeCommandLineSuggestion(const QString& name, const QString& word)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->removeSuggestion(word);
+    return true;
+}
+
+bool TMainConsole::clearCommandLineSuggestions(const QString& name)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->clearSuggestions();
+    return true;
+}
+
+bool TMainConsole::addCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->addBlacklist(word);
+    return true;
+}
+
+bool TMainConsole::removeCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->removeBlacklist(word);
+    return true;
+}
+
+bool TMainConsole::clearCommandLineBlacklist(const QString& name)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->clearBlacklist();
+    return true;
+}
+
+bool TMainConsole::addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->contextMenuItems.insert(label, eventName);
+    return true;
+}
+
+std::optional<bool> TMainConsole::removeCommandLineMenuItem(const QString& name, const QString& label)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return {};
+    }
+    return {pN->contextMenuItems.remove(label) != 0};
+}
+
+std::optional<bool> TMainConsole::getCommandLineSavesHistory(const QString& name) const
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return {};
+    }
+    return {pN->mSaveCommands};
+}
+
+bool TMainConsole::setCommandLineSavesHistory(const QString& name, bool savesHistory)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->mSaveCommands = savesHistory;
+    return true;
+}
+
+bool TMainConsole::setCommandLineVisible(const QString& name, bool visible)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->setVisible(visible);
+    return true;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
