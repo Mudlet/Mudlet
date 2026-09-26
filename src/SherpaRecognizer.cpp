@@ -19,7 +19,7 @@
 
 #include "SherpaRecognizer.h"
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "SpeechAudioCapture.h"
 
 #include <QCoreApplication>
@@ -357,7 +357,7 @@ bool SherpaRecognizer::resetLibraryLoadState()
 
 QString SherpaRecognizer::userLibraryPath()
 {
-    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("sherpa-onnx-lib"));
+    return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("sherpa-onnx-lib"));
 }
 
 QStringList SherpaRecognizer::librarySearchPaths()
@@ -1227,7 +1227,7 @@ QString SherpaRecognizer::findModelPathForLanguage(const QString& languageCode) 
 
 QString SherpaRecognizer::modelsDirectoryPath()
 {
-    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("sherpa-models"));
+    return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("sherpa-models"));
 }
 
 QStringList SherpaRecognizer::getInstalledModels()

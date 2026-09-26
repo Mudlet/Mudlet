@@ -31,7 +31,7 @@
 
 #include "EAction.h"
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TAlias.h"
 #include "TBuffer.h"
 #include "TConsole.h"
@@ -58,6 +58,8 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
+
+#include <hunspell/hunspell.h>
 
 #include <math.h>
 
@@ -89,10 +91,6 @@ extern "C" {
 int luaopen_yajl(lua_State*);
 }
 
-
-// Closing a profile's window destroys the view, with its Hunspell handles and user dictionary, while
-// the Host and Lua keep running, so spelling functions must report this rather than dereference them.
-static const char* no_main_window_value = "the profile has no main window";
 
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
 const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
@@ -1343,8 +1341,12 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     QString saveAsFile;
     if (!lua_isnoneornil(L, 2)) {
         saveAsFile = lua_tostring(L, 2);
-        // The join below returns an absolute name as-is, escaping the folder; without a folder,
-        // an absolute name is the only way to say where the save goes.
+        // The join below hands an absolute file name back as it is, dropping the
+        // folder that was asked for and putting the save outside it, so such a
+        // name is refused instead. Without a folder there is nothing to drop, and
+        // an absolute name is then the only way to say where the save goes. What
+        // counts as absolute is the platform's own rule: a leading separator on
+        // Unix, a drive or a UNC share on Windows.
         if (!saveToDir.isEmpty() && QDir::isAbsolutePath(saveAsFile)) {
             return warnArgumentValue(L, __func__, qsl("file name '%1' cannot be an absolute path when a folder is given as well").arg(saveAsFile));
         }
@@ -1353,8 +1355,11 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         }
     }
 
-    // QDir joins with exactly one separator even if the folder ends in one. An empty folder still
-    // means the filesystem root, which QDir would make the working directory.
+    // A folder from a script can already end in a separator, and this string is
+    // the file saveProfileAs() writes as well as the one handed back, so QDir
+    // does the join: exactly one separator, and nothing else about the path
+    // touched. An empty folder keeps naming the filesystem root, as it always
+    // has - QDir would make that the working directory instead.
     const QString saveAsPathFileName = saveToDir.isEmpty() ? qsl("/%1").arg(saveAsFile) : QDir(saveToDir).filePath(saveAsFile);
     auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
@@ -1640,7 +1645,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString nativeHomeDirectory = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
+    const QString nativeHomeDirectory = MudletApp::getMudletPath(enums::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
@@ -2561,7 +2566,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
     // report back instead of raising - see checkStringArg()
     const int results = [&L, functionName = __func__]() -> int {
         QByteArray version = QByteArray(APP_VERSION).trimmed();
-        const QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
+        const QByteArray build = MudletApp::buildSuffix().trimmed().toLocal8Bit();
 
         QList<QByteArray> const versionData = version.split('.');
         if (versionData.size() != 3) {
@@ -2644,7 +2649,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             lua_pushinteger(L, revision);
             lua_settable(L, -3);
             lua_pushstring(L, "build");
-            lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
+            lua_pushstring(L, MudletApp::buildSuffix().trimmed().toUtf8().constData());
             lua_settable(L, -3);
         } else { // NOLINT(readability-else-after-return)
             lua_pushstring(L,
@@ -2722,8 +2727,12 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 }
 
 
-// The install succeeded, so true rather than nil plus a message; a warning (e.g. part of the package's
-// Lua failed) rides along as a second value, as with setConfig()'s successWithWarning().
+// An install that went through, with or without something to own up to: the
+// install did succeed, so the answer stays true rather than nil plus a message,
+// and a part of the package whose Lua did not work rides along as a second
+// value only when there is one - the way setConfig()'s successWithWarning()
+// reports a setting that was made with a consequence a script has no other way
+// of learning about.
 static int pushInstallSucceeded(lua_State* L, const QString& warning)
 {
     lua_pushboolean(L, true);
@@ -3039,8 +3048,11 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     }
     const QString payload{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
-    // The nested alias pass sets "command" and captures for its own scripts; park the caller's so it
-    // doesn't resume with the nested command and an emptied matches table:
+    // This runs a whole alias pass inside whatever script called it, and that
+    // pass sets "command" and the capture groups for its own scripts. Park what
+    // the caller was given so it is still there when the pass returns - an alias
+    // or trigger script would otherwise resume holding the nested command and an
+    // emptied matches table:
     TLuaInterpreter* pL = host.getLuaInterpreter();
     const int dispatchDepth = pL->pushNestedDispatchState();
     // Host::send will encode the UTF encoded data here in the wanted Server
@@ -3476,7 +3488,9 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
-    // Reclaim the parked storage, unless a nested pass holds it, to reuse its string buffers
+    // Take back the storage clearCaptureGroups() parked, unless a nested pass is
+    // still holding it - assigning over the recycled std::strings reuses their
+    // buffers, which is worth having on a path that runs per trigger fire
     if (mCaptureGroupList.empty()) {
         mCaptureGroupList.swap(mSpareCaptureGroupList);
         mCaptureGroupPosList.swap(mSpareCaptureGroupPosList);
@@ -3498,8 +3512,10 @@ void TLuaInterpreter::clearCaptureGroups()
     if (mSpareCaptureGroupList.empty()) {
         mSpareCaptureGroupList.swap(mCaptureGroupList);
         mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
-        // A match-all trigger parks a capture per match on the line, so cap it; past the cap we only
-        // lose the allocation saving.
+        // A match-all trigger's /g loop accumulates every match on the line into
+        // one capture list, so what it parks scales with matches per line rather
+        // than with the pattern's group count. Past the cap the cost is the
+        // allocation this parking exists to save, never unbounded memory.
         if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
             mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
             mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
@@ -3536,11 +3552,15 @@ void TLuaInterpreter::clearCaptureGroups()
 }
 
 // No documentation available in wiki - internal function
-// Returns the depth to pass to the matching popNestedDispatchState().
+// Returns the depth of the entry it parked, for the matching
+// popNestedDispatchState() to unwind to.
 int TLuaInterpreter::pushNestedDispatchState()
 {
-    // Lua reads are raw, as a package's __index on the globals table could raise past the paired pop,
-    // and made before the push, so a raise can't leave the entry for the wrong caller to pop.
+    // Every Lua call is made before the entry goes onto the stack, and each one
+    // is raw. A package is free to put __index on the globals table, and running
+    // one here could raise past the pop this pairs with - raw reads cannot, and
+    // an entry that is not on the stack yet cannot be handed to the wrong caller
+    // by a pop that some later raise skips.
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
     lua_pushliteral(L, "matches");
@@ -3558,8 +3578,10 @@ int TLuaInterpreter::pushNestedDispatchState()
     saved.matchesRef = matchesRef;
     saved.multimatchesRef = multimatchesRef;
     saved.commandRef = commandRef;
-    // Copied, not moved: scripts run before any pattern matches (e.g. sysDataSendRequest handlers) still
-    // read these via selectCaptureGroup(), and setCaptureGroups() reuses the buffers left here
+    // Copies rather than moves: a script the dispatch runs before any pattern has
+    // matched - a sysDataSendRequest handler, say - still reads these through
+    // selectCaptureGroup(), and setCaptureGroups() assigns over the vector left
+    // here, reusing its buffers exactly as it would have without the parking
     saved.captureGroupList = mCaptureGroupList;
     saved.captureGroupPosList = mCaptureGroupPosList;
     saved.multiCaptureGroupList = mMultiCaptureGroupList;
@@ -3591,7 +3613,9 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
         return;
     }
 
-    // Entries above this one are stale, left by dispatches a Lua error unwound past their restore.
+    // Anything above this entry belongs to a dispatch that a Lua error raised
+    // straight past its own restore. Those are stale, and handing one back here
+    // would give this caller some other script's captures and command.
     const std::size_t wanted = static_cast<std::size_t>(depth) + 1;
     if (mNestedDispatchStates.size() > wanted) {
         qWarning().nospace() << "TLuaInterpreter::popNestedDispatchState(" << depth << ") WARNING - discarding " << (mNestedDispatchStates.size() - wanted)
@@ -3602,7 +3626,8 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
         }
     }
 
-    // Moved out before any Lua runs: a re-entrant push could reallocate the vector
+    // Off the stack before any Lua runs, so nothing holds a reference into a
+    // vector that a re-entrant push could reallocate
     NestedDispatchState saved = std::move(mNestedDispatchStates.back());
     mNestedDispatchStates.pop_back();
 
@@ -3614,7 +3639,8 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     mCapturedNameGroupsPosList = std::move(saved.capturedNameGroupsPosList);
     mMultiCaptureNameGroups = std::move(saved.multiCaptureNameGroups);
 
-    // Raw, as in pushNestedDispatchState(); a reference to a nil global reads back as nil, as it must
+    // Raw again, and for the same reason: a reference to a global that was nil
+    // reads back as nil, which is what it has to be put back as
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
     lua_pushliteral(L, "matches");
@@ -3667,12 +3693,18 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
-// A GMCP frame can be tens of KB and bury the debug console; the rest is left to display():
+// A single GMCP frame can run to tens of kilobytes, which would bury everything
+// around it in the debug console - past this much of one the remainder is left
+// to display():
 static constexpr qsizetype csmMaxInlinedProtocolPayload = 1000;
 
+// One debug console line for a protocol event: the event name first, then the
+// data that came with it so that reading it does not need a second command.
 static QString protocolEventLine(const QString& protocol, const QString& token, const QString& payload)
 {
-    // One line: several would look like several events, and only the first gets the profile mark:
+    // Collapsed to a single line: an event spread over several lines cannot be
+    // told apart from several events, and only the first would be marked with
+    // the profile it came from:
     const QString oneLine = payload.simplified();
     if (oneLine.isEmpty()) {
         return qsl("%1 event <%2>\n").arg(protocol, token);
@@ -3684,7 +3716,8 @@ static QString protocolEventLine(const QString& protocol, const QString& token, 
             .arg(protocol, token, oneLine.left(csmMaxInlinedProtocolPayload), QString::number(oneLine.size() - csmMaxInlinedProtocolPayload));
 }
 
-// Mirrors the mxp table signalMXPEvent() builds.
+// What signalMXPEvent() puts in the mxp table, in the same terms: the tag's
+// attributes, the actions it carried and its text.
 static QString mxpPayload(const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption)
 {
     QStringList parts;
@@ -3944,7 +3977,9 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         event.mArgumentList.append(key);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         if (TDebug::wants(TDebug::Category::Protocol)) {
-            // One event per key level (gmcp.Char, gmcp.Char.Vitals) carries the same frame; print it once:
+            // One event is raised per level of the key - gmcp.Char, then
+            // gmcp.Char.Vitals - all carrying the same frame, so only the event
+            // the data actually arrived for prints it:
             const bool isDeepestToken = (k == total - 1);
             TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(protocol, token, isDeepestToken ? string_data : QString()) >> &host;
         }
@@ -4081,16 +4116,20 @@ static QByteArray jsonEscapedControlByte(const char byte)
     }
 }
 
-// The caller writes the '{' or '['; this closes a string still open (only a text value or, if
-// malformed, a variable name leaves one) and separates an already-closed sibling.
+// Punctuation for the table or array opening at this marker: the caller writes
+// the '{' or '[' itself, this only ends what stood in front of it. A string still
+// open ends here - the value marker of a structure opens none, so only a text
+// value or, on malformed input, a variable name leaves one - and a sibling that
+// already closed is separated from this one.
 static void closeBeforeNestedStructure(QByteArray& script, const quint8 last, const int nest, const bool valueQuoted)
 {
     const bool endsString = (last == MSDP_VAL && valueQuoted) || last == MSDP_VAR;
     if (endsString) {
         script.append('\"');
     }
-    // Only inside a structure: at top level a variable's value stands alone and a comma before it
-    // is invalid JSON (only malformed input reaches here at top level).
+    // Siblings exist only inside a structure: a variable's own value stands alone,
+    // and a comma in front of it would make JSON no decoder accepts. Only
+    // malformed input reaches this line at the top level.
     if (nest && (endsString || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE)) {
         script.append(',');
     }
@@ -4119,8 +4158,9 @@ void TLuaInterpreter::msdp2Lua(const char* src)
     // strip: a name holding a byte JSON has to escape is longer in script than
     // the raw name is, and the strip then leaves part of the prefix behind.
     int topLevelPrefixLength = 0;
-    // whether the current value opened a quote (only text does); read while last is still
-    // MSDP_VAL, which is why the text cases below leave last alone
+    // whether the value being written opened a quote, which only a text value
+    // does - read while last is still MSDP_VAL, which is why the text cases below
+    // leave last alone
     bool valueQuoted = false;
     for (int i = 0; i < textLength; ++i) {
         switch (transcodedSrc.at(i)) {
@@ -4161,8 +4201,9 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             last = MSDP_ARRAY_CLOSE;
             break;
         case MSDP_VAR:
-            // ends a string still open: a value, or a name that never got one. Tables and arrays
-            // close their own, as the end-of-message check also assumes
+            // the name starting here ends the string in front of it - a value, or
+            // the name of a variable that never got one; a table or an array
+            // closed its own, as the check at the end of the message assumes too
             if (last == MSDP_VAL || last == MSDP_VAR) {
                 script.append('\"');
             }
@@ -4199,6 +4240,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                 // flag lands on whichever variable does flush next.
                 malformed = false;
             }
+            // opens the name starting now
             script.append('\"');
             last = MSDP_VAR;
             lastVar.clear();
@@ -4316,6 +4358,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
         return;
     }
 
+    // presized, so filling it in does not rehash the table on the way up
     lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
 
     // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
@@ -5217,7 +5260,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
     applyHttpHeaders(L, pos + 3, request);
 
     QByteArray fileToUpload;
@@ -5326,8 +5369,9 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    // Runs per incoming line: the name's UTF-8 is cached and the value encoded into a kept buffer,
-    // avoiding toUtf8()'s allocation each time.
+    // This runs once per incoming line, and both toUtf8() calls it replaces
+    // allocated a QByteArray every time. The name is nearly always the same one,
+    // and the value is encoded into a buffer that is kept between calls.
     if (mLastGlobalName != varName) {
         mLastGlobalName = varName;
         mLastGlobalNameUtf8 = varName.toUtf8();
@@ -5336,15 +5380,22 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     mUtf8Scratch.resize(encoder.requiredSpace(varValue.size()));
     const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), varValue);
     if (Q_UNLIKELY(encoder.hasError())) {
-        // The encoder writes U+FFFD for an unpaired surrogate but toUtf8() drops it; keep toUtf8()'s bytes.
+        // The encoder writes a replacement character where an unpaired
+        // surrogate was, while toUtf8() drops it. That path can afford the
+        // copy and stay byte for byte what a script used to be given.
         mUtf8Scratch = varValue.toUtf8();
     } else {
         mUtf8Scratch.resize(end - mUtf8Scratch.constData());
     }
 
-    // Raw: the whole dispatch is on the C++ stack below, and a package's __newindex on the globals table
-    // could raise and longjmp past its destructors (see CI/check-lua-error-strands.lua). Nothing useful
-    // is lost: the name is absent only until the first dispatch writes it.
+    // Raw, because this is how Mudlet hands a dispatch its own "command" and
+    // "line", and it runs with the whole dispatch on the C++ stack below it. The
+    // globals table can carry a metatable, and a __newindex a package put there
+    // runs on the first write of a name that is absent - a raise from one
+    // longjmps to the nearest pcall, skipping every C++ destructor between,
+    // which is the class CI/check-lua-error-strands.lua exists for. Setting
+    // these was never something a package could usefully intercept anyway: the
+    // name is absent only until the first dispatch writes it.
     lua_pushstring(L, mLastGlobalNameUtf8.constData());
     lua_pushstring(L, mUtf8Scratch.constData());
     lua_rawset(L, LUA_GLOBALSINDEX);
@@ -5504,8 +5555,10 @@ void TLuaInterpreter::abortAllDownloads()
 void TLuaInterpreter::initLuaGlobals()
 {
     if (pGlobalLua) {
-        // Parked references belong to the closing state; reused on the new one they would corrupt fresh
-        // registry indices (as Host::resetProfile_phase2() drains DeferredDelete to prevent for labels).
+        // Every reference a parked nested dispatch holds belongs to the state
+        // about to go. Reusing one against the state that replaces it would
+        // corrupt a freshly-issued registry index, which is what
+        // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
         lua_close(pGlobalLua);
     }
@@ -6190,6 +6243,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "start");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttStop);
     lua_setfield(pGlobalLua, -2, "stop");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttCancel);
+    lua_setfield(pGlobalLua, -2, "cancel");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttToggle);
     lua_setfield(pGlobalLua, -2, "toggle");
     lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsListening);
@@ -6237,7 +6292,7 @@ void TLuaInterpreter::initLuaGlobals()
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
     const auto appPath{QCoreApplication::applicationDirPath()};
-    const auto profilePath{MudletPaths::getMudletPath(enums::profileHomePath, hostName)};
+    const auto profilePath{MudletApp::getMudletPath(enums::profileHomePath, hostName)};
 
     // Allow for modules or libraries placed in the profile root directory:
     additionalLuaPaths << qsl("%1/?.lua").arg(profilePath);
@@ -6424,9 +6479,9 @@ void TLuaInterpreter::setupLanguageData()
     lua_setfield(L, -2, "d");
 
     // finalize language-specific directions table
-    lua_setfield(L, -2, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
+    lua_setfield(L, -2, MudletApp::getInterfaceLanguage().toUtf8().constData());
 
-    lua_pushstring(L, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
+    lua_pushstring(L, MudletApp::getInterfaceLanguage().toUtf8().constData());
     lua_setfield(L, -2, "interfacelanguage");
 
     lua_setfield(L, -2, "translations");
@@ -6908,7 +6963,9 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(keycode == -1);
-    // An inactive folder silences every key inside it, so groups start active like alias and trigger ones:
+    // A folder has no key code of its own to fire, but leaving it inactive
+    // silences every key placed inside it, so groups start active here just as
+    // the alias and trigger ones do:
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerKey();
@@ -7276,10 +7333,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    QPair<bool, QString> const result = host.mpConsole->addWordToSet(text);
+    QPair<bool, QString> const result = host.spellChecker().addWord(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -7299,10 +7353,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    QPair<bool, QString> const result = host.mpConsole->removeWordFromSet(text);
+    QPair<bool, QString> const result = host.spellChecker().removeWord(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -7331,23 +7382,24 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
-        handle = host.mpConsole->getHunspellHandle_user();
+        handle = host.spellChecker().userHandle();
+        if (!handle) {
+            return warnArgumentValue(
+                    L, __func__, qsl("the %1 dictionary could not be opened so is unable to check your word").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
+        }
+
         encodedText = text.toUtf8();
     } else {
-        handle = host.mpConsole->getHunspellHandle_system();
+        handle = host.spellChecker().systemHandle();
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
-        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
+        encodedText = TEncodingHelper::encode(text, host.spellChecker().systemCodecName());
     }
-    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     lua_pushboolean(L, Hunspell_spell(handle, encodedText.constData()));
     return 1;
 }
@@ -7373,34 +7425,37 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     char** wordList;
     size_t wordCount = 0;
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
-        handle = host.mpConsole->getHunspellHandle_user();
+        handle = host.spellChecker().userHandle();
+        if (!handle) {
+            return warnArgumentValue(
+                    L,
+                    __func__,
+                    qsl("the %1 dictionary could not be opened so is unable to make suggestions for your word").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
+        }
+
         encodedText = text.toUtf8();
     } else {
-        handle = host.mpConsole->getHunspellHandle_system();
+        handle = host.spellChecker().systemHandle();
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
-        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
+        encodedText = TEncodingHelper::encode(text, host.spellChecker().systemCodecName());
     }
-    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     wordCount = Hunspell_suggest(handle, &wordList, encodedText.constData());
     lua_newtable(L);
     for (size_t i = 0; i < wordCount; ++i) {
         lua_pushnumber(L, i + 1);
         QString suggestion;
-        if (hasUserDictionary) {
+        if (useUserDictionary) {
             suggestion = QString::fromUtf8(wordList[i]);
         } else {
-            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.mpConsole->getHunspellCodecName_system());
+            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.spellChecker().systemCodecName());
         }
         lua_pushstring(L, suggestion.toUtf8().constData());
         lua_settable(L, -3);
@@ -7420,16 +7475,16 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
+    if (!host.spellChecker().userHandle()) {
+        return warnArgumentValue(
+                L, __func__, qsl("the %1 dictionary could not be opened so is unable to list its words").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
     }
-    // This may stall if this is accessing the shared user dictionary and that
-    // is being updated by another profile, but it should eventually return...
+
     // We must keep a local reference/copy of the value returned because the
     // returned item is a deep-copy in the case of a shared dictionary and two
-    // calls to TConsole::getWordSet() can return two different instances which
-    // is fatally dangerous if used in a range based initialiser:
-    QSet<QString> wordSet{host.mpConsole->getWordSet()};
+    // calls to TSpellChecker::wordSet() can return two different instances which
+    // is fatally dangerous if used in a range based initializer:
+    QSet<QString> wordSet{host.spellChecker().wordSet()};
     QStringList wordList{wordSet.begin(), wordSet.end()};
     const int wordCount = wordList.size();
     if (wordCount > 1) {
@@ -7483,13 +7538,13 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
             lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
             return 2;
         }
-        const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
+        const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
         if (profileName.isEmpty()) {
             lua_pushnil(L);
             lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", requestedName.toUtf8().constData());
             return 2;
         }
-        info = MudletPaths::readProfileData(profileName, qsl("description"));
+        info = MudletApp::readProfileData(profileName, qsl("description"));
         break;
     }
     }
@@ -7500,15 +7555,15 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 
 // No documentation available in wiki - internal function
 // The folder a profile name resolves to, or an empty string if there is no such
-// profile. For writers, and so stricter than MudletPaths::getCanonicalProfileName(),
+// profile. For writers, and so stricter than MudletApp::getCanonicalProfileName(),
 // which also resolves a game Mudlet ships with that has never been opened:
 // writeProfileData() creates whatever folder it is handed, so writing under such
 // a name would turn that game into a profile of its own. Readers want the looser
 // call.
 static QString canonicalProfileFolder(const QString& profileName)
 {
-    const QString folder = MudletPaths::getCanonicalProfileName(profileName);
-    if (folder.isEmpty() || !QDir(MudletPaths::getMudletPath(enums::profileHomePath, folder)).exists()) {
+    const QString folder = MudletApp::getCanonicalProfileName(profileName);
+    if (folder.isEmpty() || !QDir(MudletApp::getMudletPath(enums::profileHomePath, folder)).exists()) {
         return QString();
     }
     return folder;
@@ -7540,7 +7595,7 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
         text = lua_tostring(L, 2);
     }
 
-    const QPair<bool, QString> result = MudletPaths::writeProfileData(profileName, qsl("description"), text);
+    const QPair<bool, QString> result = MudletApp::writeProfileData(profileName, qsl("description"), text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -7574,7 +7629,7 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         }
     }
 
-    const QPair<bool, QString> result = MudletPaths::writeProfileData(profileName, qsl("description"), desc);
+    const QPair<bool, QString> result = MudletApp::writeProfileData(profileName, qsl("description"), desc);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -8732,7 +8787,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
                  const auto logDir = host.mLogDir;
 
                  if (logDir == nullptr || logDir.isEmpty()) {
-                     lua_pushstring(L, MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
+                     lua_pushstring(L, MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
                  } else {
                      lua_pushstring(L, host.mLogDir.toUtf8().constData());
                  }

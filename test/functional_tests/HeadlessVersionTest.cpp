@@ -78,7 +78,7 @@ private:
     };
 
     // A portable.txt beside the shipped binary, or in $HOME/.config/mudlet,
-    // outranks XDG_CONFIG_HOME (MudletPaths::resolveConfigRoot()), so the child
+    // outranks XDG_CONFIG_HOME (MudletApp::resolveConfigRoot()), so the child
     // would read the real install's Mudlet.ini for its interface language
     // instead of the sandbox's and answer in a language the rows below do not
     // expect. Note the directory checked is the application's, not this test
@@ -134,7 +134,7 @@ private:
             return outcome;
         }
         // Creating mudlet/profiles is what makes XDG_CONFIG_HOME outrank the
-        // legacy ~/.config/mudlet, see MudletPaths::xdgConfigDir()
+        // legacy ~/.config/mudlet, see MudletApp::xdgConfigDir()
         if (!QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path()))) {
             outcome.processFailure = qsl("could not make a config root under %1").arg(sandbox.path());
             return outcome;

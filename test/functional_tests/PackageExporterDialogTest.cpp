@@ -41,8 +41,8 @@
 #include "AliasUnit.h"
 #include "Host.h"
 #include "KeyUnit.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ScriptUnit.h"
@@ -96,7 +96,7 @@ private:
     bool mAnsweredPicker = false;
     QStringList mStagedPackageNames;
 
-    QString profileHome() const { return MudletPaths::getMudletPath(enums::profileHomePath, mProfileName); }
+    QString profileHome() const { return MudletApp::getMudletPath(enums::profileHomePath, mProfileName); }
 
     QString packagePath(const QString& packageName) const { return qsl("%1/%2.mpackage").arg(mExportDir, packageName); }
 
@@ -407,7 +407,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -428,7 +428,7 @@ private slots:
         mAnsweredMessageBoxes = 0;
         mExportDir = qsl("%1/%2").arg(mExportRoot.path(), QString::fromUtf8(QTest::currentTestFunction()));
         QVERIFY(QDir().mkpath(mExportDir));
-        mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir);
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir);
     }
 
     void cleanup()
@@ -778,7 +778,7 @@ private slots:
         QVERIFY2(!info.value(qsl("created")).isEmpty(), "the package was not stamped with when it was made");
 
         // the author is the one field offered back the next time round
-        QCOMPARE(mudlet::getQSettings()->value(qsl("packageAuthor")).toString(), qsl("A Test Author"));
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("packageAuthor")).toString(), qsl("A Test Author"));
     }
 
     // A help URL that already names a scheme is left exactly as it is, so the
@@ -1145,7 +1145,7 @@ private slots:
         openExporter();
         QVERIFY2(chooseSaveLocation(chosenDir), "the save location picker was never answered");
 
-        QCOMPARE(mudlet::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), chosenDir);
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), chosenDir);
     }
 
     // An asset that is there but cannot be read used to be skipped without a
