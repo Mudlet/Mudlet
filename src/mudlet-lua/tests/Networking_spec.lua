@@ -783,6 +783,65 @@ describe("MMCP chat commands report the absence of a session", function()
   end)
 end)
 
+describe("The mmcp functions validate their arguments before doing anything", function()
+  -- Each case names the argument position that is wrong, so a function that
+  -- stopped checking one argument (and fell through to a no-session reply
+  -- instead) would fail here rather than pass on the other argument's error.
+  local cases = {
+    {"chatTo", "#1", function() mmcp.chatTo({}, "hi") end},
+    {"chatTo", "#2", function() mmcp.chatTo("someone", {}) end},
+    {"chatAll", "#1", function() mmcp.chatAll({}) end},
+    {"emoteAll", "#1", function() mmcp.emoteAll() end},
+    {"chatGroup", "#1", function() mmcp.chatGroup({}, "hi") end},
+    {"chatGroup", "#2", function() mmcp.chatGroup("friends", {}) end},
+    {"setGroup", "#1", function() mmcp.setGroup({}, "friends") end},
+    {"setGroup", "#2", function() mmcp.setGroup("someone", {}) end},
+    {"sendSideChannel", "#1", function() mmcp.sendSideChannel({}, "msg") end},
+    {"sendSideChannel", "#2", function() mmcp.sendSideChannel("Chan", {}) end},
+    {"ignore", "#1", function() mmcp.ignore({}) end},
+    {"ping", "#1", function() mmcp.ping({}) end},
+    {"setPrivate", "#1", function() mmcp.setPrivate({}) end},
+    {"serve", "#1", function() mmcp.serve({}) end},
+    {"snoop", "#1", function() mmcp.snoop({}) end},
+    {"allowSnoop", "#1", function() mmcp.allowSnoop({}) end},
+    {"disconnect", "#1", function() mmcp.disconnect({}) end},
+    {"getClientFlags", "#1", function() mmcp.getClientFlags({}) end},
+    {"chatName", "#1", function() mmcp.chatName({}) end},
+    {"call", "#1", function() mmcp.call({}) end},
+    {"call", "#2", function() mmcp.call("127.0.0.1", "not a port") end},
+  }
+
+  for _, case in ipairs(cases) do
+    local name, position, fn = case[1], case[2], case[3]
+    it("mmcp." .. name .. " rejects a bad argument " .. position, function()
+      assertArgError(fn, "mmcp." .. name .. ": bad argument " .. position)
+    end)
+  end
+
+  it("mmcp.call rejects a port of zero", function()
+    local ok, err = mmcp.call("127.0.0.1", 0)
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "invalid port number 0"), tostring(err))
+  end)
+
+  it("mmcp.displayClientList prints an empty table when there are no peers", function()
+    -- unlike the other commands it has nothing to refuse: the table and its
+    -- legend are printed whether or not anybody is in it
+    assert.is_nil(mmcp.getClientList())
+    local printed = {}
+    local handlerId = registerAnonymousEventHandler("sysMMCPChatMessage", function(_, from, message)
+      printed[#printed + 1] = {from, message}
+    end)
+    local ok = mmcp.displayClientList()
+    killAnonymousEventHandler(handlerId)
+    assert.is_true(ok)
+    assert.equals(1, #printed)
+    assert.equals("System", printed[1][1])
+    assert.is_true(contains(printed[1][2], "ChatClient"), printed[1][2])
+    assert.is_true(contains(printed[1][2], "Being Snooped"), printed[1][2])
+  end)
+end)
+
 -- The MMCP specs above check the no-peer contracts. These drive the real
 -- protocol against the scripted peer in CI/mmcp-peer.py: it accepts the call
 -- mmcp.call() places, records the bytes Mudlet sends and sends chat traffic
@@ -990,13 +1049,14 @@ describe("MMCP effects against a scripted chat peer", function()
 
   -- Runs action with a handler armed for eventName and returns the argument
   -- lists it saw. Events Mudlet raises inside an mmcp.* call are raised before
-  -- that call returns, so they have to be watched for, not waited on.
+  -- that call returns, so they have to be watched for, not waited on. action
+  -- is handed the list as it fills, so it can wait on it too.
   local function collectEvents(eventName, action)
     local seen = {}
     local handlerId = registerAnonymousEventHandler(eventName, function(_, ...)
       seen[#seen + 1] = {...}
     end)
-    local ok, err = pcall(action)
+    local ok, err = pcall(action, seen)
     killAnonymousEventHandler(handlerId)
     if not ok then
       error(err, 0)
@@ -1704,6 +1764,223 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
   end)
 
+  describe("addressing a peer", function()
+    it("finds a peer by its id as well as by its name", function()
+      if peerUnavailable() then return end
+      local client = ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatTo(client.id, "by number"))
+      local sent = waitForCommand("TextPersonal", mark)
+      assert.is_table(sent)
+      assert.is_true(contains(sent.text, "'by number'"), sent.text)
+      assert.equals(mmcp.getClientFlags(PEER_NAME), mmcp.getClientFlags(client.id))
+    end)
+
+    it("matches a peer's name whatever its case", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatTo(PEER_NAME:lower(), "any case"))
+      assert.is_table(waitForCommand("TextPersonal", mark))
+    end)
+
+    it("finds nobody under an id that no peer has", function()
+      if peerUnavailable() then return end
+      local client = ensurePeer()
+      local mark = captureSeq()
+      local ok, err = mmcp.chatTo(client.id + 1, "to nobody")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "no client by that name or id"), tostring(err))
+      assert.is_nil(waitForCommand("TextPersonal", mark, 300))
+    end)
+
+    it("getClientFlags names the peer it could not find", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local ok, err = mmcp.getClientFlags("NotConnectedPeer")
+      assert.is_nil(ok)
+      assert.equals("invalid client name or id: NotConnectedPeer", err)
+    end)
+  end)
+
+  describe("what a peer says reaches the console", function()
+    local function displayedSince(mark)
+      return (table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n"):gsub("%s+", " "))
+    end
+
+    local function waitForText(mark, needle, timeoutMs)
+      waitUntil(function() return contains(displayedSince(mark), needle) end, timeoutMs or 2000)
+      return displayedSince(mark)
+    end
+
+    it("reports how long a ping took once the answer is back", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      assert.is_true(mmcp.ping(PEER_NAME))
+      local shown = waitForText(mark, "Ping returned from")
+      assert.is_not_nil(shown:match("Ping returned from " .. PEER_NAME .. ": %d+ ms"), shown)
+    end)
+
+    it("says so when a ping answer is not a timestamp", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(27, "not a timestamp")
+      local shown = waitForText(mark, "Bad Ping response")
+      assert.is_true(contains(shown, "Bad Ping response from " .. PEER_NAME .. ": not a timestamp"), shown)
+    end)
+
+    it("skips a connection list entry with a bad port and dials the rest", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      local seq = captureSeq()
+      peerSends(3, "127.0.0.1,notaport,127.0.0.1," .. capture().dial_port)
+      local shown = waitForText(mark, "Error parsing host value")
+      assert.is_true(contains(shown, "Error parsing host value from connection: notaport"), shown)
+      -- one bad entry does not throw the list away
+      assert.is_table(waitForPeerEvent(seq, function(event)
+        return event.type == "dialled"
+      end, 2000))
+      pump(300)
+      assert.equals(1, #mmcp.getClientList())
+    end)
+
+    it("reports a host name that does not resolve and keeps no client for it", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      -- Not a valid host name at all, so Qt fails the lookup before asking a
+      -- resolver, which could take its full timeout to give up on a real
+      -- name. The reserved .invalid (RFC 2606) is a second line of defence.
+      assert.is_true(mmcp.call("bad_host!.invalid", 4050))
+      local shown = waitForText(mark, "The peer was not found")
+      assert.is_true(contains(shown, "The peer was not found"), shown)
+      assert.equals(1, #mmcp.getClientList())
+      assert.is_table(peerClient())
+    end)
+  end)
+
+  describe("snoop data", function()
+    -- What arrives from the peer, and what is sent to a peer snooping us. The
+    -- colour a peer's snoop feed was last in carries across frames, since a
+    -- MudMaster-style sender does not repeat it at the start of each line.
+    -- Waits for the frame's event rather than a fixed time: one that arrived
+    -- late would be missed here and counted against the next frame instead.
+    -- The settle after it is what would catch a second event.
+    local function snoopFrame(text)
+      local seen = collectEvents("sysMMCPIncomingSnoopMessage", function(events)
+        peerSendsRaw(string.char(31) .. text .. string.char(255))
+        waitUntil(function() return #events > 0 end, 5000)
+        pump(100)
+      end)
+      assert.equals(1, #seen, "expected exactly one snoop event for " .. string.format("%q", text))
+      return seen[1][2]
+    end
+
+    -- Lets the peer snoop us for the length of action, then stops it again.
+    -- The permission is withdrawn even when the snoop never started, since a
+    -- grant left behind would turn the next spec's snoop toggle on, not off.
+    local function whileSnoopedBy(action)
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      local ok, err = pcall(function()
+        peerSends(30, "")
+        assert.is_true(waitUntil(function()
+          return mmcp.getClientFlags(PEER_NAME) == "      N "
+        end, 2000), tostring(mmcp.getClientFlags(PEER_NAME)))
+        action()
+      end)
+      if mmcp.getClientFlags(PEER_NAME) == "      N " then
+        peerSends(30, "")
+        waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+      end
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      if not ok then
+        error(err, 0)
+      end
+    end
+
+    local function peerVersion(version)
+      peerSends(19, version)
+      assert.is_true(waitUntil(function()
+        local client = peerClient()
+        return client ~= nil and client.version == version
+      end, 2000))
+    end
+
+    it("carries the last colour across frames until it is changed", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      snoopFrame("\27[0m")
+      assert.is_true(contains(snoopFrame("\27[1;34mblue and bold\n"), "blue and bold"))
+      -- a frame of its own, with no colour of its own, still reads as blue
+      assert.equals("\27[1;34mcarried over", snoopFrame("carried over"))
+      -- 22 turns bold off and leaves the colour alone; the carriage return
+      -- MudMaster ends its lines with is dropped
+      snoopFrame("\27[22mno longer bold")
+      assert.equals("\27[34mstill blue", snoopFrame("still blue\r"))
+      -- and a reset forgets the colour altogether
+      snoopFrame("\27[0mreset")
+      local after = snoopFrame("plain again")
+      assert.is_true(contains(after, "plain again"), after)
+      assert.is_false(contains(after, "34"), after)
+    end)
+
+    it("does not show a trailing newline as a line of its own", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      snoopFrame("\27[0m")
+      local text = snoopFrame("a finished line\n")
+      assert.is_true(contains(text, "a finished line"), text)
+      assert.not_equals("\n", text:sub(-1))
+    end)
+
+    it("strips the colour code a MudMaster peer puts in front of its snoop data", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      finally(function() peerVersion(PEER_VERSION) end)
+      peerVersion("MudMaster 2k6")
+      local text = snoopFrame("1500a mudmaster line")
+      assert.is_true(contains(text, "a mudmaster line"), text)
+      assert.is_false(contains(text, "1500"), text)
+    end)
+
+    it("sends what the game shows to a peer that is snooping us", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark
+      whileSnoopedBy(function()
+        mark = captureSeq()
+        feedTelnet("a line for the snooper\r\n")
+        local sent = waitForCommand("SnoopData", mark)
+        assert.is_table(sent)
+        -- a Mudlet peer gets the line as it is, with no colour code in front
+        assert.equals("a line for the snooper", sent.text)
+      end)
+      -- and nothing once it has stopped
+      mark = captureSeq()
+      feedTelnet("a line nobody snoops\r\n")
+      assert.is_nil(waitForCommand("SnoopData", mark, 500))
+    end)
+
+    it("puts a colour code in front of what it sends a MudMaster snooper", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      finally(function() peerVersion(PEER_VERSION) end)
+      peerVersion("MudMaster 2k6")
+      whileSnoopedBy(function()
+        local mark = captureSeq()
+        feedTelnet("a line for mudmaster\r\n")
+        local sent = waitForCommand("SnoopData", mark)
+        assert.is_table(sent)
+        -- two digits of foreground, two of background: white on black
+        assert.equals("1500", sent.text:sub(1, 4))
+        assert.is_true(contains(sent.text, "a line for mudmaster"), sent.text)
+      end)
+    end)
+  end)
+
   describe("mmcp.accept and mmcp.deny", function()
     -- No peer needed: this is about what the mmcp table contains.
     it("are not reachable from Lua, so incoming calls cannot be covered", function()
@@ -1711,7 +1988,8 @@ describe("MMCP effects against a scripted chat peer", function()
       -- mmcp.deny(id), but neither is in the mmcp table: their registration in
       -- TLuaInterpreter.cpp is commented out, along with setDoNotDisturb,
       -- startServer, stopServer, request and peek. Without startServer Mudlet
-      -- cannot listen either, so no incoming call can be staged here at all.
+      -- cannot listen either, so no incoming call can be staged here at all;
+      -- test/functional_tests/MMCPIncomingCallTest.cpp covers them from C++.
       -- Left pending rather than asserted so the gap is not locked in place -
       -- but registering them has to be noticed, hence the failure below.
       if mmcp.accept ~= nil or mmcp.deny ~= nil then
