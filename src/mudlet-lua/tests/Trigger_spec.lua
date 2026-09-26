@@ -2380,6 +2380,11 @@ describe("Trigger processing", function()
                 _G.MLNamedExpiry.second = multimatches[2]["beta"]
                 _G.MLNamedExpiry.absent = multimatches[1]["beta"]
             ]==]
+            -- an expiry of 5 would otherwise outlive a feedTriggers() that raises
+            finally(function()
+                killTrigger("SpecMLNamedExpiry")
+                _G.MLNamedExpiry = nil
+            end)
             tempComplexRegexTrigger("SpecMLNamedExpiry", [[^expiring one (?<alpha>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 5)
             tempComplexRegexTrigger("SpecMLNamedExpiry", [[^expiring two (?<beta>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 5)
 
