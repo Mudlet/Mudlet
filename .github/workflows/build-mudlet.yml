@@ -55,7 +55,7 @@ jobs:
             gcc_compiler_version: 12
             qt: '6.11.1'
             ccache_id: ubuntu-gcc
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             buildname: 'ubuntu / clang'
             compiler: clang_64
             gcc_compiler_version: 14
