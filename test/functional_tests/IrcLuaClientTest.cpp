@@ -217,8 +217,8 @@ private:
         return false;
     }
 
-    // As openRegisteredClient(), and in the channel, with the events that took
-    // to get there forgotten
+    // As openRegisteredClient(), and joined to the channel, with the events
+    // raised on the way there forgotten
     bool openJoinedClient()
     {
         if (!openRegisteredClient() || !mpIrcServer->sendLine(qsl(":%1!u@h JOIN %2").arg(mNick, mChannel).toUtf8())) {

@@ -112,7 +112,7 @@ signals:
     void signal_restarted();
     // The server does not echo our own messages back.
     void signal_messageSent(IrcMessage* message);
-    // A line has reached one of the buffers, after sysIrcMessage was raised for it.
+    // A line has reached one of the buffers, after any sysIrcMessage for it was raised.
     void signal_messageReceived(IrcBuffer* buffer, IrcMessage* message);
 
 private slots:
