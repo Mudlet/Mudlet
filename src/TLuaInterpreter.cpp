@@ -3674,6 +3674,31 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
     }
 }
 
+// The capture that was exactly the replaced text keeps its start and takes on the
+// replacement's length; adjustCaptureGroups() would move its start instead, as
+// though the text had been inserted in front of it
+void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement)
+{
+    const int delta = replacement.size() - replacedLength;
+    const std::size_t count = std::min(mCaptureGroupPosList.size(), mCaptureGroupList.size());
+    for (std::size_t i = 0; i < count; ++i) {
+        int& pos = mCaptureGroupPosList[i];
+        if (pos == x && QString::fromStdString(mCaptureGroupList[i]).size() == replacedLength) {
+            mCaptureGroupList[i] = replacement.toStdString();
+        } else if (pos > x) {
+            pos += delta;
+        }
+    }
+
+    for (auto& [pos, length] : mCapturedNameGroupsPosList) {
+        if (pos == x && length == replacedLength) {
+            length = replacement.size();
+        } else if (pos > x) {
+            pos += delta;
+        }
+    }
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {

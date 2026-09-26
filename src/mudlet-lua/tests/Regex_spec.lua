@@ -384,6 +384,91 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- replace() swaps the selected capture for text of another length. That
+    -- capture still starts where it did and now spans the replacement, so
+    -- selecting it again must give the replacement, not a window shifted back
+    -- by the change in length and as wide as the text that went
+    describe("selectCaptureGroup after replace() changed that group's length", function()
+        local function reselect(pattern, line, group, replacement)
+            local result = {}
+            local id = tempRegexTrigger(pattern, function()
+                selectCaptureGroup(group)
+                replace(replacement)
+                result.selected = selectCaptureGroup(group)
+                result.selection = getSelection()
+                deselect()
+                result.line = getCurrentLine()
+            end, 1)
+            finally(function() killTrigger(id) end)
+            feedTriggers("\n" .. line .. "\n")
+            return result
+        end
+
+        it("selects the shorter replacement of a numbered group", function()
+            local result = reselect("^cgReplace (\\w+) (\\w+)$", "cgReplace alpha beta", 2, "x")
+            assert.are.equal("cgReplace x beta", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("x", result.selection)
+        end)
+
+        it("selects the longer replacement of a numbered group", function()
+            local result = reselect("^cgReplace (\\w+) (\\w+)$", "cgReplace alpha beta", 2, "alphabetical")
+            assert.are.equal("cgReplace alphabetical beta", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("alphabetical", result.selection)
+        end)
+
+        it("selects the replacement of a named group", function()
+            local result = reselect("^cgReplace (?<a>\\w+) (?<b>\\w+)$", "cgReplace alpha beta", "a", "x")
+            assert.are.equal("cgReplace x beta", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("x", result.selection)
+        end)
+
+        -- capture positions and lengths count UTF-16 units, not UTF-8 bytes
+        it("selects the replacement of a group holding multi-byte text", function()
+            local result = reselect("^cgReplace (\\S+) (\\S+)$", "cgReplace αβγ δεζ", 2, "x")
+            assert.are.equal("cgReplace x δεζ", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("x", result.selection)
+        end)
+
+        -- a group enclosing the replaced one and starting where it does keeps
+        -- that start; its width is not updated, so only the start is pinned,
+        -- and the replacement is longer so the stale width still fits the line
+        it("leaves the start of an enclosing group that shares its start", function()
+            local result = {}
+            local id = tempRegexTrigger("^cgReplace ((\\w+) (\\w+))$", function()
+                selectCaptureGroup(3)
+                replace("alphabet")
+                result.selected = selectCaptureGroup(2)
+                result.selection = getSelection()
+                deselect()
+                result.line = getCurrentLine()
+            end, 1)
+            finally(function() killTrigger(id) end)
+            feedTriggers("\ncgReplace alpha beta\n")
+            assert.are.equal("cgReplace alphabet beta", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("alphabet", result.selection:sub(1, 8))
+        end)
+
+        it("still selects a later group", function()
+            local result = {}
+            local id = tempRegexTrigger("^cgReplace (\\w+) (\\w+)$", function()
+                selectCaptureGroup(2)
+                replace("x")
+                result.selected = selectCaptureGroup(3)
+                result.selection = getSelection()
+                deselect()
+            end, 1)
+            finally(function() killTrigger(id) end)
+            feedTriggers("\ncgReplace alpha beta\n")
+            assert.are.equal(1, result.selected)
+            assert.are.equal("beta", result.selection)
+        end)
+    end)
+
     -- selecting a later group must leave the stored full match untouched
     it("selectCaptureGroup by number leaves the other captures alone", function()
         local later, full
