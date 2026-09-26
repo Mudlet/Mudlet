@@ -42,8 +42,7 @@ jobs:
           - format: rpm
             base: fedora:43
     steps:
-      # The packaging scripts come from this workflow's commit, so a tag that
-      # predates them can still be packaged
+      # Packaging scripts come from this workflow's commit, so tags predating them can still be packaged
       - uses: actions/checkout@v7
         with:
           path: packaging
@@ -106,6 +105,16 @@ jobs:
         run: |
           if [[ ! "${TAG}" =~ ^Mudlet-[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Only a Mudlet-X.Y.Z release tag can be published, not '${TAG}'"
+            exit 1
+          fi
+
+      # Signing trusts the checkout's mudlet.asc, so another branch could publish any key it carries
+      - name: Check the workflow runs from the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "${GITHUB_REF}" != "refs/heads/${DEFAULT_BRANCH}" ]]; then
+            echo "::error::Packages can only be published from ${DEFAULT_BRANCH}, not ${GITHUB_REF} - its CI/linux-packages/mudlet.asc is the key they are checked against"
             exit 1
           fi
 
@@ -198,9 +207,8 @@ jobs:
           printf '%s\n' "${SIGNING_KEY}" | gpg --batch --import
           echo "GNUPGHOME=${GNUPGHOME}" >> "${GITHUB_ENV}"
 
-      # The repositories are rebuilt from the releases each time, so the bucket
-      # holds no state of its own and keeps a few versions to downgrade to. A gh
-      # failure must fail the step, as upload replaces the bucket with incoming/.
+      # The repos are rebuilt from releases, keeping a few versions for downgrades. A gh failure
+      # must fail the step, as upload replaces the bucket with incoming/.
       - name: Gather packages from the latest releases
         run: |
           mkdir -p incoming/
@@ -229,6 +237,16 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.LINUX_PACKAGES_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.LINUX_PACKAGES_R2_SECRET_ACCESS_KEY }}
         run: CI/linux-packages/publish upload site
+
+      # publish already checked its signing key against git; this confirms the bucket serves those
+      # same bytes, which pinning the committed copy relies on. Retried: a read-back right after upload can be flaky.
+      - name: Check the served key against the one committed in git
+        run: |
+          curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors "${BASE_URL}/mudlet.asc" -o served.asc
+          if ! cmp -s served.asc CI/linux-packages/mudlet.asc; then
+            echo "::error::${BASE_URL}/mudlet.asc is not the key committed as CI/linux-packages/mudlet.asc, and is being served now - re-run this workflow once that is fixed"
+            exit 1
+          fi
 
       - name: Install Mudlet from the live repositories
         run: |
