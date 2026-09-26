@@ -1607,6 +1607,19 @@ describe("MMCP effects against a scripted chat peer", function()
       local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
       assert.is_true(contains(message, "\27[1;32ma green snooped line"), tostring(message))
     end)
+
+    it("keeps all of a snooped frame longer than 64 KiB", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- A frame's length was once carried in 16 bits, so one 10 bytes past
+      -- 65536 was shown as just its last 10.
+      local length = 65536 + 10
+      peerSendsRaw(string.char(31) .. string.rep("x", length) .. string.char(255))
+      local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 5000)
+      assert.is_string(message)
+      local _, count = message:gsub("x", "")
+      assert.equals(length, count)
+    end)
   end)
 
   describe("mmcp.ping", function()

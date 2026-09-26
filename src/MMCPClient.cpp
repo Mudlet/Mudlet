@@ -1000,7 +1000,7 @@ void MMCPClient::updateSgrState(const std::string &ansiSeq)
  * client version in handleIncomingClientVersion
  *
  */
-void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
+void MMCPClient::handleIncomingSnoopData(const char* sData, qsizetype len)
 {
     const char* inScan = sData;
     const char* inEnd = inScan + len;
