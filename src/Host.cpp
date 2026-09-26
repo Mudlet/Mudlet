@@ -4902,7 +4902,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
         return {true, QString()};
     }
-    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+    return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
 }
 
 // Must refuse up front: TMainConsole::createMiniConsole(), createScrollBox() and createLabel() put an

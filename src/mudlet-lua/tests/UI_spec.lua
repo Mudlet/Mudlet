@@ -7610,3 +7610,17 @@ describe("calcFontSize on the main window", function()
     assert.are_not.equal(mainWidth, miniWidth)
   end)
 end)
+
+describe("openUserWindow docking areas", function()
+  local windowName = ("uiSpecDockNowhere%d%d"):format(os.time(), math.random(100000))
+
+  teardown(function()
+    hideWindow(windowName)
+  end)
+
+  it("refuses an area it does not know, naming the ones it does", function()
+    local ok, message = openUserWindow(windowName, false, true, "middle")
+    assert.is_nil(ok)
+    assert.are.equal([[docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating]], message)
+  end)
+end)
