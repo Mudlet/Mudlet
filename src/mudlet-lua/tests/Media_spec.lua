@@ -925,7 +925,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    onCleanup(function() stopSounds() stopMusic() end)
+    onCleanup(function() stopSounds() stopMusic() stopVideos() end)
 
     -- such a path has no bare file name to trim to, and an empty name would
     -- match every playback there is
@@ -934,6 +934,11 @@ describe("Media playback effects with a generated sound file", function()
       {play = playSoundFile, pause = pauseSounds, playing = getPlayingSounds, paused = getPausedSounds, key = "busted-directory-query-sound"},
       {play = playMusicFile, pause = pauseMusic, playing = getPlayingMusic, paused = getPausedMusic, key = "busted-directory-query-music"},
     }
+    -- see videoWidgetUnavailable(): the video leg is left out, not the whole spec
+    if not leakChecked then
+      withVideoLabel()
+      cases[#cases + 1] = {play = playVideoFile, pause = pauseVideos, playing = getPlayingVideos, paused = getPausedVideos, key = videoLabel}
+    end
     for _, case in ipairs(cases) do
       assert.is_true(case.play({name = longSoundFile, key = case.key}))
       assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
