@@ -5366,6 +5366,20 @@ void cTelnet::initStreamDecompressor()
     inflateInit(&mZstream);
 }
 
+void cTelnet::refuseCompressedStream()
+{
+    sendTelnetOption(TN_DONT, mCompressionOption);
+    hisOptionState.reset(static_cast<size_t>(mCompressionOption));
+    if (mCompressionOption == OPT_COMPRESS) {
+        mMCCP_version_1 = false;
+    } else {
+        mMCCP_version_2 = false;
+    }
+    mNeedDecompression = false;
+    // the next start sequence initialises a stream of its own
+    inflateEnd(&mZstream);
+}
+
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 {
     char* const inputStart = in_buffer;
@@ -5412,16 +5426,7 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
             in_buffer = inputStart;
             length = inputLength;
         }
-        sendTelnetOption(TN_DONT, mCompressionOption);
-        hisOptionState.reset(static_cast<size_t>(mCompressionOption));
-        if (mCompressionOption == OPT_COMPRESS) {
-            mMCCP_version_1 = false;
-        } else {
-            mMCCP_version_2 = false;
-        }
-        mNeedDecompression = false;
-        // the next start sequence initialises a stream of its own
-        inflateEnd(&mZstream);
+        refuseCompressedStream();
         return outSize;
     }
 
@@ -5795,6 +5800,17 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
     if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
+        if (mNeedDecompression) {
+            // What is dropped here is the rest of the compressed stream, and
+            // zlib cannot pick a stream up again past a gap, so whatever the
+            // game compresses next would come out as garbage or not at all.
+            // Refuse the stream so the game falls back to plain text instead.
+            //: Shown when one read from the game inflates to more than can be processed safely (e.g. a decompression bomb) while MCCP compression is on.
+            postMessage(tr("[ WARN  ]  - Too much compressed data to process at once, some was lost - compression disabled.\n"
+                           "If the display looks garbled, please reconnect to the game."));
+            refuseCompressedStream();
+            return;
+        }
         //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
         return;

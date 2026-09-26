@@ -396,6 +396,9 @@ private:
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    // Sends DONT for the running MCCP stream and stops decompressing it, for a
+    // stream that can no longer be followed.
+    void refuseCompressedStream();
     void reset();
     void handleFailedConnection();
     void sendLoginAndPass();
