@@ -161,9 +161,15 @@ private slots:
     // A CTCP PING carries the time it was sent, and the reply echoes it back
     void notice_ctcpPingReplyIsReportedAsTheRoundTrip()
     {
-        const QByteArray sent = QByteArray::number(QDateTime::currentSecsSinceEpoch() - 5);
-        const QString text = forLua(":bob!u@h NOTICE me :\001PING " + sent + "\001");
-        QVERIFY2(text == QStringLiteral("! bob replied in 5s") || text == QStringLiteral("! bob replied in 6s"), qPrintable(text));
+        // however long a slow machine takes over it, the round trip lies between
+        // the five seconds ago it was sent and the time it was formatted by
+        const qint64 sent = QDateTime::currentSecsSinceEpoch() - 5;
+        const QString text = forLua(":bob!u@h NOTICE me :\001PING " + QByteArray::number(sent) + "\001");
+        const qint64 latest = QDateTime::currentSecsSinceEpoch() - sent;
+        const QRegularExpressionMatch match = QRegularExpression(QStringLiteral("^! bob replied in (\\d+)s$")).match(text);
+        QVERIFY2(match.hasMatch(), qPrintable(text));
+        const qint64 seconds = match.captured(1).toLongLong();
+        QVERIFY2(seconds >= 5 && seconds <= latest, qPrintable(text));
     }
 
     void notice_toThisConnectionNamesTheSenderInTheWindow()
