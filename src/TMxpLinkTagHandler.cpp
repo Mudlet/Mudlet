@@ -34,23 +34,26 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         expireName = tag->getAttributeValue(qsl("expire"));
     }
 
-    QString href = getHref(tag);
+    // An A that is not handled leaves the one it is nested in untouched
+    const QString href = getHref(tag);
     if (href.isEmpty()) {
         return MXP_TAG_NOT_HANDLED;
     }
+    mCurrentTagContent.clear();
+    mHref = href;
+    mIsHrefInContent = mHref.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive);
 
     // Server-supplied, and lands in the same tooltip as an OSC 8 hint. An
     // explicit hint is prose written to be read; falling back to the href makes
     // this a link target the user is being asked to trust.
-    const QString hint = tag->hasAttribute(qsl("hint")) ? UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint"))) : UntrustedText::forTarget(href);
-
-    href = qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
+    const QString hint = tag->hasAttribute(qsl("hint")) ? UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint"))) : UntrustedText::forTarget(mHref);
+    const QString action = actionFor(mHref);
 
     // Use the version of setLink that supports expire names
     if (!expireName.isEmpty()) {
-        mLinkId = client.setLink(QStringList(href), QStringList(hint), expireName);
+        mLinkId = client.setLink(QStringList(action), QStringList(hint), expireName);
     } else {
-        mLinkId = client.setLink(QStringList(href), QStringList(hint));
+        mLinkId = client.setLink(QStringList(action), QStringList(hint));
     }
 
     client.setLinkMode(true);
@@ -66,19 +69,29 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
         return MXP_TAG_NOT_HANDLED;
     }
 
-    if (links != nullptr) {
-        links->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
+    // The wrapped text goes into the address before it is quoted, so text
+    // written to close the Lua string stays inside it
+    if (links != nullptr && mIsHrefInContent && !links->isEmpty()) {
+        const QString href = QString(mHref).replace(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
+        links->first() = actionFor(href);
     }
 
+    mIsHrefInContent = false;
+    mCurrentTagContent.clear();
     client.setLinkMode(false);
     return MXP_TAG_HANDLED;
 }
+
+QString TMxpLinkTagHandler::actionFor(const QString& href)
+{
+    return qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
+}
+
 QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)
 {
     if (tag->getAttributesCount() == 0) {
         // <A>http://someurl.com/<A>
-        mIsHrefInContent = true;
-        return "&text;";
+        return TAG_CONTENT_PLACEHOLDER;
     }
     if (tag->hasAttribute("href")) {
         return tag->getAttributeValue("href");
