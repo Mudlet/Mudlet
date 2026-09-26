@@ -220,18 +220,19 @@ TTrigger::~TTrigger()
     mColorPatternList.clear();
     mConditionMap.clear();
 
-    if (!mpHost) {
-        return;
-    }
-    mpHost->getTriggerUnit()->unregisterTrigger(this);
+    if (mpHost) {
+        mpHost->getTriggerUnit()->unregisterTrigger(this);
 
-    if (isTemporary()) {
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
-        } else {
-            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(this);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
         }
     }
+
+    deleteChildren();
 }
 
 void TTrigger::setName(const QString& name)

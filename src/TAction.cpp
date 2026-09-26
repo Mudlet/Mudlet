@@ -67,6 +67,9 @@ TAction::~TAction()
         }
     }
 
+    // Ahead of hiding the bars, as each child unregistering itself regenerates the toolbars
+    deleteChildren();
+
     if (mpToolBar) {
         mpToolBar->hide();
     }

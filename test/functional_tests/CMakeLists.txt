@@ -162,6 +162,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
+    TreeChildTeardownTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
