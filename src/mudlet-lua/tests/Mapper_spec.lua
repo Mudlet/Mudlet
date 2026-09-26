@@ -4124,6 +4124,23 @@ describe("Tests saveJsonMap and loadJsonMap", function()
                        getRoomUserData(roomA, "audit.removed_valid_but_missing_special_exit.squeeze through"))
     end)
 
+    it("does not leave the lock of a special exit it removes behind", function()
+      buildMap()
+      addSpecialExit(roomA, roomB, "crawl under")
+      assert.is_true(lockSpecialExit(roomA, roomB, "squeeze through", true))
+      -- the control: a locked special exit that stays
+      assert.is_true(lockSpecialExit(roomA, roomB, "crawl under", true))
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "squeeze through").exitId = missingRoomId
+      end)
+
+      assert.is_nil(getSpecialExitsSwap(roomA)["squeeze through"])
+      assert.is_true(hasSpecialExitLock(roomA, roomB, "crawl under"))
+      -- a new exit that reuses the command starts out unlocked
+      assert.is_true(addSpecialExit(roomA, roomB, "squeeze through"))
+      assert.is_false(hasSpecialExitLock(roomA, roomB, "squeeze through"))
+    end)
+
     it("rebuilds an area whose name is empty in the file around the rooms that claim it", function()
       -- driving this path leaks the rejected TArea, which turns the leak
       -- detection half of the Linux CI job red (#10396)

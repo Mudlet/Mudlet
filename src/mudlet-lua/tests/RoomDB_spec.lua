@@ -426,6 +426,22 @@ describe("Tests the room and area database behind the map", function()
       assert.is_nil(getExitWeights(from)["heave"])
     end)
 
+    it("clearSpecialExits takes the room off its area's list of exits", function()
+      local from = makeRoom(areaHome, 27, 1, 0)
+      local stayer = makeRoom(areaHome, 28, 1, 0)
+      finally(function() deleteRoom(from); deleteRoom(stayer) end)
+
+      assert.is_true(addSpecialExit(from, rAway1, "heave"))
+      -- the control: a room whose special exit out of the area is left alone
+      assert.is_true(addSpecialExit(stayer, rAway1, "heave"))
+      assert.is_true(listHas(getAreaExits(areaHome), from))
+
+      clearSpecialExits(from)
+
+      assert.is_false(listHas(getAreaExits(areaHome), from))
+      assert.is_true(listHas(getAreaExits(areaHome), stayer))
+    end)
+
     it("deleting the room a special exit leads to takes the exit's weight with it", function()
       local from = makeRoom(areaHome, 24, 1, 0)
       local gone = makeRoom(areaHome, 25, 1, 0)
