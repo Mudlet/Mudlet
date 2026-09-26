@@ -97,8 +97,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // The bars moved into a panel of their own to be draggable as a group, so
@@ -379,10 +379,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

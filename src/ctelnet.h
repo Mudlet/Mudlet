@@ -388,9 +388,8 @@ private:
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
 
-    // Calls reset() from its constructor. It has to be the Host that does that,
-    // and not cTelnet itself, because reset() clears Host members declared after
-    // cTelnet, which do not exist yet while cTelnet is being constructed.
+    // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
+    // cTelnet, which don't exist yet while cTelnet is constructed.
     friend class Host;
 
 #if defined(QT_NO_SSL)
@@ -636,21 +635,14 @@ private:
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
     bool loadingReplay = false;
-    // Playback is held. No chunk is handed to the parser and no chunk timer
-    // runs until resumeReplay() or stopReplay() clears this.
+    // While set, no chunk is parsed and no chunk timer runs.
     bool mReplayPaused = false;
-    // A chunk has been read into the global chunk buffer in ctelnet.cpp and has
-    // not been handed to the parser yet. Defensive: it guards the re-arm in
-    // resumeReplay() against the one window where no chunk is waiting, which
-    // needs a pause AND a resume to land inside one chunk's processing by way
-    // of a nested event loop.
+    // A chunk is in ctelnet.cpp's global buffer but not yet parsed. Defensive: stops resumeReplay()
+    // re-arming when a pause AND resume land inside one chunk's processing via a nested event loop.
     bool mReplayChunkPending = false;
-    // What the pending chunk's timer is started with: the full gap scaled by
-    // the replay speed when the chunk was read, cut down to whatever was left
-    // of that wait if the replay is paused part-way through it.
+    // The gap scaled by replay speed, or what was left of it when paused mid-wait.
     int mReplayChunkDelay = 0;
-    // A member rather than a QTimer::singleShot so that pausing can stop it and
-    // take back the time still left on it.
+    // Not QTimer::singleShot, so pausing can stop it and keep the remaining time.
     QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;

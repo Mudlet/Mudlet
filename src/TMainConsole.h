@@ -105,9 +105,7 @@ public:
     std::optional<QString> getLabelToolTip(const QString& name) const;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
-    // The label operations Host forwards to this view by name, never by widget;
-    // each resolves the name against the view's own map and reports failure for a
-    // name that is not a label's.
+    // Host forwards these by name, never by widget; each fails for a name that is not a label's.
     bool setLabelClickThrough(const QString& name, bool clickThrough);
     bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
     bool resetLabelLinkStyle(const QString& name);
@@ -132,26 +130,19 @@ public:
     bool resetLabelSvgTransform(const QString& name);
     std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
-    // For callers that need the widget itself. An accessor rather than the open
-    // map, so that inserting and removing entries stays in this class, which is
-    // what keeps the window registry in step with it.
+    // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
-    // The view's half of the sub-console and user-window-dock bookkeeping. Every
-    // insertion into and removal from the two maps goes through these four, so
-    // that the Host's window registry cannot fall out of step with them.
+    // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
     void registerSubConsole(const QString& name, TConsole* pConsole);
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
     TDockWidget* createUserWindow(const QString& name);
-    // For callers that need the widgets themselves.
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
     QStringList dockWidgetNames() const { return QStringList(mDockWidgetMap.keys()); }
-    // The sub-console operations Host forwards to this view by name, never by
-    // widget. Each folds in whatever the name's dock needs, so that the core is
-    // left with one branch per operation rather than a console-or-dock pair.
+    // Host forwards these by name; each also handles the name's dock, so the core needs one branch each.
     void closeSubConsole(const QString& name);
     void changeSubConsoleColors(const QString& name);
     bool showSubConsole(const QString& name);
@@ -186,9 +177,7 @@ public:
     void selectCommandLineText();
     TCommandLine* raiseCommandLine();
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
-    // One set of operations for scroll boxes, command lines and text boxes
-    // together rather than one per kind: each is the same plain QWidget call
-    // whichever of the three the name turns out to be.
+    // Shared by scroll boxes, command lines and text boxes: each is the same plain QWidget call.
     bool showPlainWindow(const QString& name);
     bool hidePlainWindow(const QString& name);
     bool resizePlainWindow(const QString& name, int width, int height);
@@ -213,10 +202,8 @@ public:
     void showMapWidget();
     void dockMapWidget(Qt::DockWidgetArea area);
     std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
-    // The map dock answered as values, so that the core is left holding the
-    // state of the map window rather than the widget showing it. Having made a
-    // dock is not the same as having one on screen, which is what the four
-    // after it answer for.
+    // The map dock's state as values, so the core never holds the widget. mapWidgetCreated() does not
+    // mean on screen, which is what the four after it go by.
     bool mapWidgetCreated() const;
     bool setMapWidgetTitle(const QString& title);
     std::optional<QString> mapWidgetTitle() const;
@@ -254,10 +241,9 @@ public:
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
     QPointer<QProgressDialog> mpMapProgressDialog;
     // Outlives Host::closeMapWidget(), which only hides it, so this being
-    // non-null does not say the profile has a map widget on screen - see
-    // mapWidget() for that. Null means the profile never made one, or
-    // createMapper() took a hidden one over so that an embedded mapper could
-    // have the slot; nothing else destroys it before ~TMainConsole().
+    // non-null does not mean a map widget is on screen (see mapWidget()). Null means
+    // none was made, or createMapper() took a hidden one over for an embedded mapper;
+    // nothing else destroys it before ~TMainConsole().
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
 
@@ -292,50 +278,32 @@ private:
     // is up.
     TPasswordEntry* passwordEntry() const;
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
-    // Where reparentLabel() and reparentWindow() parent an element named as a
-    // setWindow() destination, shared so the two cannot disagree about what
-    // "main" means.
+    // Shared by reparentLabel() and reparentWindow() so they agree on what "main" means.
     QWidget* parentWidgetFor(const QString& windowname) const;
-    // Where the three by-name-alone kinds are resolved to a widget, in the one
-    // order the core resolves a name that is more than one of them in.
+    // Resolves the three name-only kinds in the same order as the core.
     QWidget* plainWindowWidget(const QString& name) const;
     // The single answer to "does this profile have a map widget on screen right
-    // now" - null for a profile that never opened one, for one that put it away
-    // again, and for one whose closed widget createMapper() took over, none of
-    // which a script can tell apart or needs to.
+    // now" - null if it never opened one, put it away, or createMapper() took it over.
     //
     // isHidden() rather than a flag of our own, because the dock gets hidden by
-    // paths that would never think to update one: its own title bar close
-    // button, mudlet::slot_showMapperDialog() handing the map over to a main
-    // window dock, and QMainWindow::restoreState() replaying a saved layout. It
-    // is also not !isVisible(), which would additionally answer "no map widget"
-    // whenever the main window itself is hidden, e.g. minimised to the system
-    // tray.
+    // paths that would not update one: its title bar close button,
+    // mudlet::slot_showMapperDialog() and QMainWindow::restoreState(). Not !isVisible(),
+    // which would also say "no map widget" while the main window is hidden (e.g. in the tray).
     QDockWidget* mapWidget() const;
     void registerLabelWidget(const QString& name, TLabel* pLabel);
     void deregisterLabelWidget(TLabel* pLabel);
 
-    // The view's half of the scroll box and text box bookkeeping, paired with
-    // registerSubCommandLine()/deregisterSubCommandLine(). Every insertion into
-    // and removal from the three maps goes through these, so that the Host's
-    // window registry cannot fall out of step with them.
+    // With registerSubCommandLine()/deregisterSubCommandLine(), all scroll box, text box and command line
+    // map changes go through these, keeping Host's window registry in step.
     void registerScrollBox(const QString& name, TScrollBox* pScrollBox);
     void deregisterScrollBox(TScrollBox* pScrollBox);
     void registerTextBox(const QString& name, TTextBox* pTextBox);
     void deregisterTextBox(TTextBox* pTextBox);
 
-    // The view's half of the named-window bookkeeping; the core's half is the
-    // Host's window registry, which this class registers into and deregisters
-    // from wherever it adds to or takes from these maps. Private so that pairing
-    // cannot be broken from outside - reach a widget through labelWidget(),
-    // subConsoleWidget(), dockWidget(), subCommandLineWidget() or
-    // textBoxWidget().
+    // Private so Host's window registry stays in step with them; use the *Widget() accessors.
     QMap<QString, TLabel*> mLabelMap;
-    // QPointer values because a sub-console can die as a Qt child without this
-    // class hearing about it: a miniconsole created into a user window belongs
-    // to that window's dock, and deleting the window takes it along. The entry
-    // then reads back as null instead of as freed memory, which turns every
-    // lookup on the dead name into a miss and lets the name be used again.
+    // QPointer: a miniconsole in a user window dies with that dock unannounced, and a null entry
+    // makes the dead name a lookup miss that can be reused.
     QMap<QString, QPointer<TConsole>> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
