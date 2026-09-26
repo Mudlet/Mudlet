@@ -425,6 +425,34 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             assert.are.equal("x", result.selection)
         end)
 
+        -- capture positions and lengths count UTF-16 units, not UTF-8 bytes
+        it("selects the replacement of a group holding multi-byte text", function()
+            local result = reselect("^cgReplace (\\S+) (\\S+)$", "cgReplace αβγ δεζ", 2, "x")
+            assert.are.equal("cgReplace x δεζ", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("x", result.selection)
+        end)
+
+        -- a group enclosing the replaced one and starting where it does keeps
+        -- that start; its width is not updated, so only the start is pinned,
+        -- and the replacement is longer so the stale width still fits the line
+        it("leaves the start of an enclosing group that shares its start", function()
+            local result = {}
+            local id = tempRegexTrigger("^cgReplace ((\\w+) (\\w+))$", function()
+                selectCaptureGroup(3)
+                replace("alphabet")
+                result.selected = selectCaptureGroup(2)
+                result.selection = getSelection()
+                deselect()
+                result.line = getCurrentLine()
+            end, 1)
+            finally(function() killTrigger(id) end)
+            feedTriggers("\ncgReplace alpha beta\n")
+            assert.are.equal("cgReplace alphabet beta", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("alphabet", result.selection:sub(1, 8))
+        end)
+
         it("still selects a later group", function()
             local result = {}
             local id = tempRegexTrigger("^cgReplace (\\w+) (\\w+)$", function()
