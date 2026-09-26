@@ -241,12 +241,9 @@ int TRoom::stringToDirCode(const QString& string) const
     return DIR_OTHER;
 }
 
-// Any change to a 2D-plane exit or stub can change what the renderer's
-// reduced-detail tier has to draw for this room, which its area caches - see
-// TAreaLodExitIndex. Only this room's entry moves: no other room's exits are
-// measured against where this one's lead. Paths that write the exit members
-// directly rather than through the setters - XMLimport, restore(), the map
-// auditor - invalidate the whole area's index instead.
+// A 2D exit or stub change can alter what the area's cached low-detail tier (TAreaLodExitIndex)
+// draws for this room, and only for this room. Code writing the exit members directly
+// (XMLimport, restore(), the auditor) invalidates the whole area's index instead.
 void TRoom::refreshLodExitIndex()
 {
     if (!mpRoomDB) {
@@ -258,8 +255,6 @@ void TRoom::refreshLodExitIndex()
     }
 }
 
-// The 2D-plane exit setters all route through here so that no caller of one
-// has to remember the index needs telling.
 void TRoom::setPlanarExit(int& exit, const int id)
 {
     exit = id;
@@ -810,9 +805,7 @@ void TRoom::indexCustomLines()
     }
 }
 
-// A custom exit line's points are map coordinates rather than offsets from
-// the room, so a room that moves has to take them along or its line is left
-// behind.
+// Custom line points are map coordinates, not offsets from the room, so they must move with it.
 void TRoom::offset(const int deltaX, const int deltaY, const int deltaZ)
 {
     mX += deltaX;
@@ -834,9 +827,7 @@ void TRoom::calcRoomDimensions()
     max_y = mY;
 
     if (customLines.empty()) {
-        // The room may have just lost its last line: left in the index it
-        // would cost every later frame a lookup and a cull test for lines that
-        // are no longer there.
+        // It may have just lost its last line; a stale index entry costs every frame a lookup and cull.
         if (mpRoomDB) {
             TArea* pA = mpRoomDB->getArea(area);
             if (pA) {

@@ -25,8 +25,8 @@
 
 #include "Host.h"
 
-#include "MudletPaths.h"
 #include "discord.h"
+#include "MudletApp.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgNotepad.h"
@@ -310,16 +310,16 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // plain text or HTML is immediately resumed on profile loading. Do not
     // confuse it with the "autologin" item, which controls whether the profile
     // is automatically started when the Mudlet application is run!
-    mLogStatus = QFile::exists(MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
+    mLogStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
     // "autotimestamp" determines if profile loads with timestamps enabled
-    mTimeStampStatus = QFile::exists(MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
+    mTimeStampStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
     mLuaInterpreter.updateAnsi16ColorsInTable();
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
-    const QString directoryLogFile = MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("log"));
+    const QString directoryLogFile = MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("log"));
     const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
     const QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
@@ -405,7 +405,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::self()->publicTestVersion) {
+    if (MudletApp::publicTest()) {
         thankForUsingPTB();
     }
 
@@ -467,7 +467,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         profileShortcuts[entry] = std::make_unique<QKeySequence>(*mudlet::self()->mpShortcutsManager->getSequence(entry));
     }
 
-    auto settings = mudlet::self()->getQSettings();
+    auto settings = MudletApp::getQSettings();
     const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
 
@@ -652,6 +652,193 @@ void Host::loadMap()
     }
 }
 
+// The three methods below might be better off on TMap, which is what they all
+// end up talking to.
+bool Host::saveMapFile(const QString& location, int saveVersion)
+{
+    QString filename_map = location;
+    if (filename_map.isEmpty()) {
+        filename_map = MudletApp::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mHostName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+    } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
+        // Resolve the name relative to the profile home directory the way
+        // Host::importMapFile does, rather than against whatever directory
+        // Mudlet happens to have been started in:
+        filename_map = QDir::cleanPath(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, fileInfo.filePath()));
+    }
+
+    const QDir dir_map(MudletApp::getMudletPath(enums::profileMapsPath, mHostName));
+    if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
+        qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
+        return false;
+    }
+
+    QSaveFile file_map(filename_map);
+    if (!file_map.open(QIODevice::WriteOnly)) {
+        // Naming the file matters more than usual: a relative location is not
+        // the path the caller typed
+        qDebug().noquote() << "Error saving map to" << filename_map << ":" << file_map.errorString();
+        return false;
+    }
+
+    QDataStream out(&file_map);
+    out.setVersion(QDataStream::Qt_5_12);
+
+    bool saved = mpMap->serialize(out, saveVersion);
+    if (saved && !file_map.commit()) {
+        qDebug() << "Error saving map: " << (file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString());
+        saved = false;
+    }
+
+    if (saved) {
+        mpMap->resetUnsaved();
+        mpMap->setSaveError(false);
+    } else {
+        mpMap->setSaveError(true);
+    }
+
+    return saved;
+}
+
+bool Host::loadMapFile(const QString& location)
+{
+    if (!mpMap || !mpMap->mpMapper) {
+        // No map or map currently loaded - so try and created mapper
+        // but don't load a map here by default, we do that below and it may not
+        // be the default map anyhow
+        showHideOrCreateMapper(false);
+    }
+
+    if (!mpMap || !mpMap->mpMapper) {
+        // And that failed so give up
+        return false;
+    }
+
+    mpMap->mapClear();
+
+    // The same resolution saveMapFile and importMapFile use, so that a map
+    // written under a bare name is looked for where it was written:
+    QString filePathName = location;
+    if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
+        filePathName = QDir::cleanPath(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, fileInfo.filePath()));
+    }
+
+    qDebug() << "Host::loadMapFile() - restore map case 1.";
+    mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
+    const QDateTime now(QDateTime::currentDateTime());
+
+    bool result = false;
+    if (mpMap->restore(filePathName)) {
+        mpMap->audit();
+        mpMap->mpMapper->mp2dMap->init();
+        mpMap->mpMapper->updateAreaComboBox();
+        mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        mpMap->mpMapper->show();
+        result = true;
+    } else {
+        mpMap->mpMapper->mp2dMap->init();
+        mpMap->mpMapper->updateAreaComboBox();
+        mpMap->mpMapper->show();
+    }
+
+    if (filePathName.isEmpty()) {
+        mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
+    } else {
+        mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(filePathName, now.toString(Qt::ISODate)), true);
+    }
+
+    mpMap->updateArea(-1);
+
+    return result;
+}
+
+// Used by TLuaInterpreter::loadMap() and dlgProfilePreferences for import/load
+// of files ending in ".xml"
+// The TLuaInterpreter::loadMap() supplies a pointer to an error Message which
+// it requires in the event of an error (it should be written in a structure
+// to match "loadMap: XXXXX." format) - the presence of a non-null pointer here
+// should be used to suppress the writing of error messages direct to the
+// console - if possible!
+bool Host::importMapFile(const QString& location, QString* errMsg)
+{
+    if (!mpMap || !mpMap->mpMapper) {
+        // No map or mapper currently loaded/present - so try and create mapper
+        showHideOrCreateMapper(false);
+    }
+
+    if (!mpMap || !mpMap->mpMapper) {
+        // And that failed so give up
+        if (errMsg) {
+            *errMsg = qsl("loadMap: unable to initialise mapper {in Host::importMapFile(...)} - something is wrong!");
+        }
+        return false;
+    }
+
+    // Dump any outstanding map errors from past activities that had not yet
+    // been logged...
+    qDebug() << "Host::importMapFile() - importing map case 1.";
+    mpMap->pushErrorMessagesToFile(tr("Pre-Map importing(1) report"), true);
+    const QDateTime now(QDateTime::currentDateTime());
+
+    bool result = false;
+
+    const QFileInfo fileInfo(location);
+    QString filePathNameString;
+    if (!fileInfo.filePath().isEmpty()) {
+        if (fileInfo.isRelative()) {
+            // Resolve the name relative to the profile home directory:
+            filePathNameString = QDir::cleanPath(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, fileInfo.filePath()));
+        } else {
+            if (fileInfo.exists()) {
+                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
+            } else {
+                filePathNameString = fileInfo.absoluteFilePath();
+            }
+        }
+    }
+
+    QFile file(filePathNameString);
+    if (!file.exists()) {
+        if (!errMsg) {
+            const QString infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
+                                       "%1.")
+                                            .arg(filePathNameString);
+            postMessage(infoMsg);
+        } else {
+            // error message for lua loadMap()
+            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
+                         "\"%1\" was not found).")
+                              .arg(filePathNameString);
+        }
+        return false;
+    }
+
+    if (file.open(QFile::ReadOnly | QFile::Text)) {
+        if (!errMsg) {
+            const QString infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
+            postMessage(infoMsg);
+        }
+
+        result = mpMap->importMap(file, errMsg);
+
+        file.close();
+        mpMap->pushErrorMessagesToFile(tr(R"(Importing map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)));
+    } else {
+        if (!errMsg) {
+            const QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
+            postMessage(infoMsg);
+        } else {
+            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
+                         "\"%1\" could not be opened for reading).")
+                              .arg(filePathNameString);
+        }
+        return false;
+    }
+
+    mpMap->updateArea(-1);
+
+    return result;
+}
+
 void Host::startMapAutosave(const int interval)
 {
     if (interval > 0) {
@@ -676,7 +863,7 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            if (!mpConsole->saveMap(MudletPaths::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+            if (!saveMapFile(MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
                 mpMap->setSaveError(true);
             } else {
                 mpMap->setSaveError(false);
@@ -692,7 +879,7 @@ void Host::autoSaveMap()
 void Host::loadPackageInfo()
 {
     for (const auto& package : std::as_const(mInstalledPackages)) {
-        const QDir dir(MudletPaths::getMudletPath(enums::profilePackagePath, getName(), package));
+        const QDir dir(MudletApp::getMudletPath(enums::profilePackagePath, getName(), package));
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
         }
@@ -732,7 +919,7 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
     // state nor the Host, which may well be destroyed before the task even starts.
     QList<ModuleWriteJob> jobs;
     mModulesToSync.clear();
-    const QString backupPath = backup ? MudletPaths::getMudletPath(enums::moduleBackupsPath) : QString();
+    const QString backupPath = backup ? MudletApp::getMudletPath(enums::moduleBackupsPath) : QString();
     QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
         it.next();
@@ -746,12 +933,12 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
 
         QString xmlFilename = filename;
         if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
-            xmlFilename = MudletPaths::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
+            xmlFilename = MudletApp::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
             // The write below goes into this folder, so it has to exist before the
             // write and not - as it used to - after it: a module whose unpacked folder
             // the user has removed would otherwise fail to write, and then have its
             // now-stale XML dropped from its archive without a replacement going in.
-            const QString packagePath = MudletPaths::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
+            const QString packagePath = MudletApp::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
             if (auto packageDir = QDir(packagePath); !packageDir.exists()) {
                 packageDir.mkpath(packagePath);
             }
@@ -906,7 +1093,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
         if (moduleName == syncModuleName) {
             if (!syncingFromHost.isEmpty() && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
                 uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
-                fileName = MudletPaths::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
+                fileName = MudletApp::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
                 installPackage(fileName, enums::PackageModuleType::ModuleSync);
                 QStringList moduleEntry;
                 moduleEntry << moduleLocation;
@@ -1083,12 +1270,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 {
     QString directory_xml;
     if (saveFolder.isEmpty()) {
-        directory_xml = MudletPaths::getMudletPath(enums::profileXmlFilesPath, getName());
+        directory_xml = MudletApp::getMudletPath(enums::profileXmlFilesPath, getName());
     } else {
         directory_xml = saveFolder;
     }
 
-    // profileXmlFilesPath already ends in a separator (MudletPaths.cpp), so
+    // profileXmlFilesPath already ends in a separator (MudletApp.cpp), so
     // appending a file name with another one named ".../current//x.xml". QDir
     // joins with exactly one separator and changes nothing else about the path,
     // which matters because this string is the file XMLexport writes as well as
@@ -2777,14 +2964,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
     if (packageUnpacksAFolder(fileName)) {
-        const QString _home = MudletPaths::getMudletPath(enums::profileHomePath, getName());
+        const QString _home = MudletApp::getMudletPath(enums::profileHomePath, getName());
         // Unpacking into a folder the other half of this name owns would write over
         // its files, and the rename below would then carry that folder off under
         // whatever the manifest asked for. An archive whose name is already spoken
         // for is unpacked beside it instead, and moved into place only once its
         // manifest has been read and the name it really wants turns out to be free.
-        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName)
-                                                                      : MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
+        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName)
+                                                                      : MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -3474,7 +3661,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     getActionUnit()->updateAllToolbars();
 
-    const QString dest = MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    const QString dest = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
     // The fonts this package brought went out with it, so a display font that
@@ -3747,7 +3934,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
 QSettings& Host::profileIni()
 {
     if (!mpProfileIni) {
-        mpProfileIni = new QSettings(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        mpProfileIni = new QSettings(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
         // Constructing it only splits the file into sections, and each section is
         // parsed by the first lookup that needs it, so status() cannot see damage
         // inside one until allKeys() has parsed them all
@@ -3848,7 +4035,7 @@ void Host::setCmdLineSettings(const TCommandLine::CommandLineType type, const bo
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QSaveFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), item));
+    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs.setVersion(QDataStream::Qt_5_12);
@@ -3867,7 +4054,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 // Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), item));
+    QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
@@ -3884,7 +4071,7 @@ QString Host::readProfileData(const QString& item)
 // does not install font system-wide
 void Host::installPackageFonts(const QString& packageName)
 {
-    auto packagePath = MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    auto packagePath = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
@@ -4403,9 +4590,7 @@ void Host::setSpellDic(const QString& newDict)
         return;
     }
     mSpellDic = newDict;
-    if (mpConsole) {
-        mpConsole->setSystemSpellDictionary(newDict);
-    }
+    mSpellChecker.setSystemDictionary(newDict);
 }
 
 void Host::setEnableSpellCheck(const bool enable)
@@ -4417,8 +4602,8 @@ void Host::setEnableSpellCheck(const bool enable)
     // The load-end warm skips a profile with spell check off, so this is when
     // the dictionary first becomes wanted. During a profile load there is
     // nothing to do: the handle is warmed once at the end, after the profile's
-    // own settings have been read - which is what setSystemSpellDictionary()
-    // next door defends against too.
+    // own settings have been read - which is what
+    // TSpellChecker::setSystemDictionary() defends against too.
     if (enable && !mIsProfileLoadingSequence) {
         emit signal_spellCheckEnabled();
     }
@@ -4444,15 +4629,12 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
         dictionaryChanged = true;
     }
 
-    if (!mpConsole) {
-        return;
+    if (dictionaryChanged) {
+        mSpellChecker.applyUserDictionaryOptions();
     }
 
-    if (dictionaryChanged) {
-        // This will propagate the changes in the two flags to the main
-        // TConsole's copies of them - although setProfileSpellDictionary() is
-        // also called in the main TConsole constructor:
-        mpConsole->setProfileSpellDictionary();
+    if (!mpConsole) {
+        return;
     }
 
     // This also needs to handle the spell checking against the system/mudlet
@@ -5680,7 +5862,7 @@ bool Host::interceptMapperButton()
 
 // Needed to extract into a separate method from mudlet::slot_mapper() so that
 // we can use it WITHOUT loading a file - at least for the
-// TConsole::importMap(...) case that may need to create a map widget before it
+// Host::importMapFile(...) case that may need to create a map widget before it
 // loads/imports a non-default (last saved map in profile's map directory).
 void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 {

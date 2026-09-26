@@ -32,7 +32,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
@@ -152,22 +152,22 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         // a settings file that already holds something is how a returning
         // player is recognised, which keeps the first-run invitation - it hides
         // the games list - out of this test. It has to be written before
         // init(), which stamps this config dir with a first-launch date of its
         // own that would read as a brand new install
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run invitation would hide the games list these cases pick from");
 
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName)));
-        QVERIFY(MudletPaths::writeProfileData(mProfileName, qsl("url"), mLocalhost).first);
-        QVERIFY(MudletPaths::writeProfileData(mProfileName, qsl("port"), QString::number(mpServer->serverPort())).first);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mProfileName)));
+        QVERIFY(MudletApp::writeProfileData(mProfileName, qsl("url"), mLocalhost).first);
+        QVERIFY(MudletApp::writeProfileData(mProfileName, qsl("port"), QString::number(mpServer->serverPort())).first);
 
         mudlet::self()->startAutoLogin({});
         QVERIFY(QTest::qWaitFor(

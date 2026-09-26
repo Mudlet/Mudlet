@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #include "CredentialManager.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "SecureStringUtils.h"
 #include "utils.h"
 
@@ -72,11 +72,11 @@ QString credentialFilePath(const QString& profileComponent, const QString& keyCo
 }
 
 // The length the old scheme cut a path component to. Its own constant rather than
-// the limit MudletPaths::sanitizeForPath() applies: that one is free to change, while
+// the limit MudletApp::sanitizeForPath() applies: that one is free to change, while
 // this records what is already written on disk and so can never change.
 constexpr int scmLegacyMaxPathComponentLength = 50;
 
-// How MudletPaths::sanitizeForPath() built a path component before it started keeping
+// How MudletApp::sanitizeForPath() built a path component before it started keeping
 // shortened names distinct, kept so that credentials filed under the old name can
 // still be found. Same role as generateLegacyServiceName() plays for the keychain.
 QString legacyPathComponent(const QString& input)
@@ -314,9 +314,11 @@ bool CredentialManager::isOperationValid() const
 
 bool CredentialManager::isPortableModeActive() const
 {
-    // Two stats: this runs on every credential operation, and resolving the
-    // whole root would read the marker and walk the config dirs to answer it
-    return !MudletPaths::portableMarkerPath(MudletPaths::executableDir()).isEmpty();
+    // The settled answer rather than a marker stat: a portable.txt naming a root
+    // Mudlet had to refuse leaves the marker in place while the config root is the
+    // ordinary one, and treating that as portable mode would quietly move the
+    // user's credentials out of the keychain on an install running non-portably.
+    return MudletApp::portableRootInUse();
 }
 
 bool CredentialManager::shouldUseKeychain(const QString& profileName) const
@@ -795,14 +797,9 @@ void CredentialManager::migrateCollidingEntry(const QString& profileName, const 
         const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
 
         // Dev/test/PTB builds represent the "next release", so bump version for comparison
-        QFile buildFile(qsl(":/app-build.txt"));
-
-        if (buildFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            const QString buildSuffix = QString::fromUtf8(buildFile.readAll()).trimmed();
-
-            if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
-                appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
-            }
+        const QString buildSuffix = MudletApp::buildSuffix();
+        if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
+            appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
         }
 
         if (appVersion <= collidingFormatVersion) {
@@ -1530,7 +1527,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         return QString();
     }
 
-    return credentialFilePath(MudletPaths::sanitizeForPath(profileName), MudletPaths::sanitizeForPath(key));
+    return credentialFilePath(MudletApp::sanitizeForPath(profileName), MudletApp::sanitizeForPath(key));
 }
 
 // Where a credential was filed while both path components were simply truncated to 50
