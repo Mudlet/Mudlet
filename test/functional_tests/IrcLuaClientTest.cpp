@@ -20,9 +20,10 @@
 /*
  * What the Lua IRC functions see and do while a profile's IRC client is
  * running: the getters read the live session rather than the stored settings,
- * restartIrc() reconnects with the stored ones, and the session ends with the
- * client's window. The Lua specs cannot reach any of it, because opening a
- * client is the one thing the Lua API has no way to undo.
+ * restartIrc() reconnects with the stored ones, what arrives from the server
+ * reaches both the sysIrcMessage event and the window, and the session ends
+ * with the client's window. The Lua specs cannot reach any of it, because
+ * opening a client is the one thing the Lua API has no way to undo.
  *
  * Run with: ctest -R IrcLuaClientTest -V
  */
@@ -216,6 +217,58 @@ private:
         return false;
     }
 
+    // As openRegisteredClient(), and in the channel, with the events that took
+    // to get there forgotten
+    bool openJoinedClient()
+    {
+        if (!openRegisteredClient() || !mpIrcServer->sendLine(qsl(":%1!u@h JOIN %2").arg(mNick, mChannel).toUtf8())) {
+            return false;
+        }
+        if (!QTest::qWaitFor(
+                    [this]() {
+                        return bufferTitles().contains(mChannel);
+                    },
+                    5000)) {
+            return false;
+        }
+        return runLua(qsl("ircEvents = {}"));
+    }
+
+    QStringList bufferTitles() const
+    {
+        QStringList titles;
+        if (!mpHost->mpDlgIRC) {
+            return titles;
+        }
+        QAbstractItemModel* model = mpHost->mpDlgIRC->bufferList->model();
+        for (int row = 0; model && row < model->rowCount(); ++row) {
+            if (auto* buffer = model->index(row, 0).data(Irc::BufferRole).value<IrcBuffer*>()) {
+                titles << buffer->title();
+            }
+        }
+        return titles;
+    }
+
+    // Every sysIrcMessage since the events were last forgotten, one
+    // "from>to:text" per line
+    QString events() { return luaValues(qsl("table.concat(ircEvents, '\\n')")); }
+
+    bool waitForEvents(const QString& expected)
+    {
+        return QTest::qWaitFor(
+                [this, expected]() {
+                    return events() == expected;
+                },
+                5000);
+    }
+
+    // What typing a line into the window does
+    bool typeLine(const QString& line)
+    {
+        mpHost->mpDlgIRC->lineEdit->setText(line);
+        return QMetaObject::invokeMethod(mpHost->mpDlgIRC, "slot_onTextEntered");
+    }
+
     QString shownText() const { return mpHost->mpDlgIRC ? mpHost->mpDlgIRC->ircBrowser->toPlainText() : QString(); }
 
     QString windowTitle() const { return mpHost->mpDlgIRC ? mpHost->mpDlgIRC->windowTitle() : QString(); }
@@ -260,7 +313,8 @@ private slots:
             QTest::qWait(100);
         }
         if (mpHost) {
-            runLua(qsl("ircEvents = {}"));
+            runLua(qsl("ircEvents = {}\n"
+                       "if ircReplyHandler then killAnonymousEventHandler(ircReplyHandler) ircReplyHandler = nil end"));
         }
     }
 
@@ -342,8 +396,10 @@ private slots:
         const int connection = mpIrcServer->connectionCount() - 1;
         QCOMPARE(luaValues(qsl("sendIrc('%1', 'now then')").arg(mChannel)), qsl("true"));
         QVERIFY(waitForLine(connection, qsl("PRIVMSG %1 :now then").arg(mChannel).toUtf8()));
-        // the server does not echo it, so the client shows it itself
+        // the server does not echo it, so the client shows it itself, but it is
+        // not news to Lua
         QVERIFY2(shownText().contains(qsl("now then")), qPrintable(shownText()));
+        QVERIFY2(!events().contains(qsl("now then")), qPrintable(events()));
 
         QVERIFY(mpIrcServer->sendLine(qsl(":%1!u@h PART #extra").arg(mNick).toUtf8()));
         QVERIFY2(waitForLua(qsl("table.concat(getIrcChannels(), ',')"), mChannel), qPrintable(luaValues(qsl("table.concat(getIrcChannels(), ',')"))));
@@ -422,6 +478,152 @@ private slots:
         QVERIFY2(mpHost->mpDlgIRC, "sendIrc() did not open the IRC window");
         QVERIFY(mpHost->mpDlgIRC->isVisible());
         QVERIFY2(waitForConnection(connectionsBefore + 1), "the client never reached the stub server");
+    }
+
+    void test_channelAndQueryMessagesReachLuaAndTheirBuffers()
+    {
+        QVERIFY(openJoinedClient());
+
+        QVERIFY(mpIrcServer->sendLine(qsl(":alice!u@h PRIVMSG %1 :hello there").arg(mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":alice!u@h NOTICE %1 :heads up").arg(mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":bob!u@h JOIN %1").arg(mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":alice!u@h PRIVMSG %1 :psst").arg(mNick).toUtf8()));
+
+        // a private message is addressed to us, not to the query buffer it opens
+        const QString expected = qsl("alice>%1:hello there\n"
+                                     "alice>%1:heads up\n"
+                                     "bob>%1:! bob has joined %1\n"
+                                     "alice>%2:psst")
+                                         .arg(mChannel, mNick);
+        QVERIFY2(waitForEvents(expected), qPrintable(events()));
+        QCOMPARE(bufferTitles(), QStringList({mServerHost, mChannel, qsl("alice")}));
+
+        QVERIFY(showBuffer(mChannel));
+        QVERIFY2(shownText().contains(qsl("<alice> hello there")), qPrintable(shownText()));
+        QVERIFY2(shownText().contains(qsl("<alice> [%1] heads up").arg(mChannel)), qPrintable(shownText()));
+        QVERIFY2(shownText().contains(qsl("! bob has joined %1").arg(mChannel)), qPrintable(shownText()));
+        QVERIFY2(!shownText().contains(qsl("psst")), qPrintable(shownText()));
+        QVERIFY(showBuffer(qsl("alice")));
+        QVERIFY2(shownText().contains(qsl("<alice> psst")), qPrintable(shownText()));
+    }
+
+    // Each channel the quitter shared with us reports it
+    void test_aQuitIsReportedOncePerSharedChannel()
+    {
+        QVERIFY(openJoinedClient());
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1!u@h JOIN #extra").arg(mNick).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":bob!u@h JOIN %1").arg(mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(":bob!u@h JOIN #extra"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return events().contains(qsl("bob>#extra:"));
+                         },
+                         5000),
+                 qPrintable(events()));
+        QVERIFY(runLua(qsl("ircEvents = {}")));
+
+        QVERIFY(mpIrcServer->sendLine(":bob!u@h QUIT :gone"));
+        QVERIFY2(waitForEvents(qsl("bob>%1:! bob has quit (gone)\nbob>#extra:! bob has quit (gone)").arg(mChannel)), qPrintable(events()));
+    }
+
+    // The window copies the line to the server buffer when the channel's goes,
+    // but Lua hears of it once
+    void test_beingKickedIsReportedOnce()
+    {
+        QVERIFY(openJoinedClient());
+
+        QVERIFY(mpIrcServer->sendLine(qsl(":op!u@h KICK %1 %2 :bye").arg(mChannel, mNick).toUtf8()));
+        QVERIFY2(waitForEvents(qsl("op>%1:! op kicked %2 from %1 (bye)").arg(mChannel, mNick)), qPrintable(events()));
+        QTest::qWait(100);
+        QCOMPARE(events(), qsl("op>%1:! op kicked %2 from %1 (bye)").arg(mChannel, mNick));
+        QCOMPARE(bufferTitles(), QStringList({mServerHost}));
+    }
+
+    // The event is raised before the line is shown, so an answer a script sends
+    // from its handler is on screen first
+    void test_aScriptsReplyIsShownBeforeTheLineItAnswers()
+    {
+        QVERIFY(openJoinedClient());
+        const int connection = mpIrcServer->connectionCount() - 1;
+        QVERIFY(runLua(qsl("ircReplyHandler = registerAnonymousEventHandler('sysIrcMessage', function(_, from, to, text)\n"
+                           "  if text == 'ping-me' then sendIrc('%1', 'pong-you') end\n"
+                           "end)")
+                               .arg(mChannel)));
+
+        QVERIFY(mpIrcServer->sendLine(qsl(":alice!u@h PRIVMSG %1 :ping-me").arg(mChannel).toUtf8()));
+        QVERIFY2(waitForLine(connection, qsl("PRIVMSG %1 :pong-you").arg(mChannel).toUtf8()), "the script's reply was not sent");
+
+        QVERIFY(showBuffer(mChannel));
+        const QString shown = shownText();
+        const qsizetype reply = shown.indexOf(qsl("<%1> pong-you").arg(mNick));
+        const qsizetype line = shown.indexOf(qsl("<alice> ping-me"));
+        QVERIFY2(reply != -1 && line != -1, qPrintable(shown));
+        QVERIFY2(reply < line, qPrintable(shown));
+    }
+
+    // Lines no buffer takes go to the server buffer, which is named for the
+    // server once it says who it is, and for the configured host again after a
+    // restart
+    void test_serverMessagesAreNamedForTheServerBuffer()
+    {
+        QVERIFY(openRegisteredClient());
+        QVERIFY(runLua(qsl("ircEvents = {}")));
+
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 003 %2 :Created today").arg(mServerName, mNick).toUtf8()));
+        // the 002 is reported before the client has read the name out of it
+        const QString expected = qsl("%1>%2:[INFO] Your host is %1\n"
+                                     "%1>%1:[INFO] Created today")
+                                         .arg(mServerName, mServerHost);
+        QVERIFY2(waitForEvents(expected), qPrintable(events()));
+        QCOMPARE(bufferTitles(), QStringList({mServerName}));
+        QVERIFY(showBuffer(mServerName));
+        QVERIFY2(shownText().contains(qsl("[INFO] Created today")), qPrintable(shownText()));
+
+        QCOMPARE(luaValues(qsl("restartIrc()")), qsl("true"));
+        QCOMPARE(bufferTitles(), QStringList({mServerHost}));
+    }
+
+    // The reply is timed from when the ping was typed, not from when it arrived
+    void test_aTypedPingIsTimedFromWhenItWasSent()
+    {
+        QVERIFY(openRegisteredClient());
+        const int connection = mpIrcServer->connectionCount() - 1;
+        QVERIFY(runLua(qsl("ircEvents = {}")));
+
+        QVERIFY(typeLine(qsl("/ping %1").arg(mServerName)));
+        QVERIFY(waitForLine(connection, qsl("PING %1").arg(mServerName).toUtf8()));
+        QTest::qWait(300);
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 PONG %1 :%1").arg(mServerName).toUtf8()));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return events().contains(qsl("replied in"));
+                         },
+                         5000),
+                 qPrintable(events()));
+        const QRegularExpression pong(qsl("^%1>%2:! %1 replied in (\\d+\\.\\d+) seconds$").arg(QRegularExpression::escape(mServerName), QRegularExpression::escape(mServerHost)));
+        const QRegularExpressionMatch match = pong.match(events());
+        QVERIFY2(match.hasMatch(), qPrintable(events()));
+        QVERIFY2(match.captured(1).toDouble() >= 0.25, qPrintable(events()));
+        QVERIFY2(shownText().contains(qsl("! %1 replied in ").arg(mServerName)), qPrintable(shownText()));
+    }
+
+    // Only a window starts a session, so one without a window never connects
+    void test_aSessionWithoutAWindowDoesNotConnect()
+    {
+        QVERIFY(storeSettings(mNick, mChannel));
+        const int connectionsBefore = mpIrcServer->connectionCount();
+
+        QPointer<TIrcClient> client = mpHost->getOrCreateIrcClient();
+        QTest::qWait(300);
+        QCOMPARE(mpIrcServer->connectionCount(), connectionsBefore);
+        QVERIFY(!mpHost->mpDlgIRC);
+        QCOMPARE(luaValues(qsl("getIrcConnectedHost()")), qsl("false|not yet connected"));
+        QCOMPARE(events(), QString());
+
+        delete client.data();
+        QCOMPARE(luaValues(qsl("getIrcConnectedHost()")), qsl("false|no client active"));
     }
 
     // The session belongs to the window: once that is gone, Lua sees no client
