@@ -314,11 +314,72 @@ private slots:
         QVERIFY2(unmarked(pCommandLine, qsl("qzxthird")), "turning spell check off left a word marked");
     }
 
+    void test_switchingSpellCheckOnChecksWordsNextToPunctuationAndSpaces_data()
+    {
+        QTest::addColumn<QString>("text");
+        QTest::newRow("comma after the first word") << qsl("qzxfirst, qzxsecond qzxthird");
+        QTest::newRow("comma and full stop") << qsl("qzxfirst qzxsecond, qzxthird.");
+        QTest::newRow("leading and doubled spaces") << qsl(" qzxfirst  qzxsecond qzxthird");
+        QTest::newRow("parentheses and a hyphen") << qsl("(qzxfirst) qzxsecond-qzxthird");
+        QTest::newRow("runs of dots and exclamation marks") << qsl("qzxfirst... qzxsecond qzxthird!!!");
+    }
+
+    void test_switchingSpellCheckOnChecksWordsNextToPunctuationAndSpaces()
+    {
+        QFETCH(QString, text);
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        QVERIFY(pCommandLine);
+        const auto clearTheLine = qScopeGuard([pCommandLine]() {
+            pCommandLine->clear();
+        });
+        mpHost->setEnableSpellCheck(false);
+        mpHost->setUserDictionaryOptions(true, false);
+        pCommandLine->setPlainText(text);
+        QVERIFY(unmarked(pCommandLine, qsl("qzxfirst")));
+
+        mpHost->setEnableSpellCheck(true);
+        mpHost->setUserDictionaryOptions(true, false);
+
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfirst")), "the first word was not checked");
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxsecond")), "the second word was not checked");
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxthird")), "the third word was not checked");
+    }
+
+    void test_typingIntoAWordRechecksItEvenBeforePunctuation_data()
+    {
+        QTest::addColumn<QString>("text");
+        QTest::newRow("a space after it") << qsl("qzxgood bar");
+        QTest::newRow("a comma after it") << qsl("qzxgood, bar");
+        QTest::newRow("a full stop after it") << qsl("qzxgood.");
+        QTest::newRow("in parentheses") << qsl("(qzxgood) bar");
+    }
+
+    // Typing onto the end of a word from the user dictionary makes it a word
+    // in neither, whatever follows it
+    void test_typingIntoAWordRechecksItEvenBeforePunctuation()
+    {
+        QFETCH(QString, text);
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        addToUserDictionary(qsl("qzxgood"));
+        pCommandLine->setPlainText(text);
+        QVERIFY(unmarked(pCommandLine, qsl("qzxgood")));
+        QTextCursor caret(pCommandLine->document());
+        caret.setPosition(text.indexOf(qsl("qzxgood")) + qsl("qzxgood").size());
+        pCommandLine->setTextCursor(caret);
+
+        QTest::keyClick(pCommandLine, Qt::Key_X);
+
+        QVERIFY2(pCommandLine->toPlainText().contains(qsl("qzxgoodx")), qPrintable(pCommandLine->toPlainText()));
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxgoodx")), "the word being typed was not checked");
+    }
+
     void test_rightClickingAMisspeltWordOffersToAddIt()
     {
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
-        enterText(pCommandLine, qsl("qzxnewword"));
+        // the caret ends up on the last word, not the one right-clicked
+        enterText(pCommandLine, qsl("qzxnewword look"));
         QVERIFY(!mpHost->spellChecker().wordSet().contains(qsl("qzxnewword")));
 
         QMenu* pMenu = rightClick(pCommandLine, qsl("qzxnewword"));
@@ -337,6 +398,7 @@ private slots:
 
         QVERIFY2(mpHost->spellChecker().wordSet().contains(qsl("qzxnewword")), "choosing to add the word did not put it in the user dictionary");
         QVERIFY2(markedAsTheUsersOwn(pCommandLine, qsl("qzxnewword")), "the added word was not rechecked");
+        QVERIFY(markedMisspelt(pCommandLine, qsl("look")));
     }
 
     void test_rightClickingAUserDictionaryWordOffersToRemoveIt()
@@ -345,6 +407,9 @@ private slots:
         QVERIFY(pCommandLine);
         addToUserDictionary(qsl("qzxoldword"));
         enterText(pCommandLine, qsl("qzxoldword"));
+        QVERIFY(markedAsTheUsersOwn(pCommandLine, qsl("qzxoldword")));
+        // move the caret off the word that will be right-clicked
+        QTest::keyClicks(pCommandLine, qsl(" look"));
         QVERIFY(markedAsTheUsersOwn(pCommandLine, qsl("qzxoldword")));
 
         QMenu* pMenu = rightClick(pCommandLine, qsl("qzxoldword"));
@@ -382,6 +447,9 @@ private slots:
         closeMenu(pMenu);
 
         QCOMPARE(pCommandLine->toPlainText(), qsl("say qzxforb now"));
+        QVERIFY2(markedAsTheUsersOwn(pCommandLine, qsl("qzxforb")), "the chosen spelling was not rechecked");
+        QCOMPARE(pCommandLine->textCursor().position(), pCommandLine->toPlainText().size());
+        QVERIFY(!pCommandLine->textCursor().hasSelection());
     }
 
     // Short words are not checked, so neither are they offered anything
