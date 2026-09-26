@@ -105,8 +105,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     void test_captureLayersArmAHandfulOfTriggersNotOnePerShape()
@@ -865,10 +865,7 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

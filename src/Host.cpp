@@ -93,12 +93,9 @@
 #error Mudlet requires a version of libzip of at least 1.0
 #endif
 
-// Both handlers that defer an operation until the profile has finished saving
-// start a save of their own, and profileSaveFinished is emitted synchronously,
-// so a directly connected one is re-entered from inside its own body - once per
-// operation still waiting, and a caller that polls during a save leaves one
-// waiting per poll. Queued keeps each at the bottom of the stack; single-shot
-// stops a second announcement re-running an operation already carried out.
+// Both deferring handlers start a save of their own and profileSaveFinished is emitted synchronously,
+// so a direct connection re-enters them once per waiting operation (or per poll during a save).
+// Queued keeps each at the bottom of the stack; single-shot stops a later emit re-running a done one.
 static constexpr auto deferredSaveHandlerConnection = static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection);
 
 using namespace std::chrono;
@@ -150,7 +147,7 @@ bool stopWatch::stop()
         return false;
     }
 
-    // Is running - so stop and note time, while it still counts as running:
+    // Note the time while it still counts as running:
     mElapsedTime = getElapsedMilliSeconds();
     mIsRunning = false;
     return true;
@@ -199,11 +196,9 @@ void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 
     // Is running so adjust effective start time - to increase the effective
     // elapsed time we must subtract the adjustment from the effective start
-    // time. Going via the total elapsed time is what puts the clamp at the end
-    // of the range: shifting the existing start time by the adjustment would
-    // carry it past instead. Both the time this reads and the adjustment are
-    // themselves bounded by the range, so their sum cannot overflow before it
-    // is clamped:
+    // time. Going via the total elapsed time puts the clamp at the end of the
+    // range, where shifting the start time would overshoot it. Both inputs are
+    // bounded, so their sum can't overflow before it is clamped:
     const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
     const qint64 elapsed = clampToRange(clampToRange(nowMSecs - mEffectiveStartDateTime.toMSecsSinceEpoch()) + adjustment);
     mEffectiveStartDateTime.setMSecsSinceEpoch(nowMSecs - elapsed);
@@ -221,8 +216,7 @@ qint64 stopWatch::getElapsedMilliSeconds() const
         return mElapsedTime;
     }
 
-    // Is running so calculate elapsed time - clamped, as a stopwatch adjusted
-    // close to the end of the range runs out of it as time passes:
+    // Clamped: a stopwatch adjusted near the end of the range runs past it as time passes:
     return clampToRange(mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc()));
 }
 
@@ -296,9 +290,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPass(pass)
 , mPort(port)
 {
-    // cTelnet is declared ahead of the members reset() clears (mMxpProcessor,
-    // mMSSPTlsPort, mIsRemoteEchoingActive and friends), so it cannot do this from
-    // its own constructor - at that point those members do not exist yet.
+    // mTelnet is declared ahead of the members reset() clears (mMxpProcessor and friends),
+    // so its own constructor can't do this.
     mTelnet.reset();
 
     TDebug::addHost(this, mHostName);
@@ -600,15 +593,12 @@ void Host::closeChildren()
     if (mpEditorDialog) {
         mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpEditorDialog->close();
-        // close() only posts the deletion, so the dialog outlives this release.
-        // Cutting the signals with the pointer is what keeps an emit from
-        // reaching an editor the Host has already let go of:
+        // close() only posts the deletion; disconnect so no emit reaches the released editor:
         disconnect(this, nullptr, mpEditorDialog, nullptr);
         mpEditorDialog = nullptr;
     }
 
-    // A snapshot of the names rather than a live walk: closing one takes its own
-    // entry - and, for a user window, its dock's - out of the registry.
+    // A snapshot: closing one removes it (and a user window's dock) from the registry.
     for (const QString& consoleName : mWindowRegistry.subConsoleNames()) {
         mpConsole->closeSubConsole(consoleName);
     }
@@ -1037,8 +1027,7 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
-        // Not a TDebug: this runs on a worker thread, which must not touch a
-        // profile's console.
+        // Not TDebug: this runs on a worker thread, which must not touch a profile's console.
         qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open xml file \"" << filename_xml
                                        << "\" inside the module to update it, error: \"" << zip_strerror(zipFile) << "\"";
     }
@@ -1253,11 +1242,8 @@ void Host::resetProfile_phase2()
 }
 
 // Saves profile to disk - does not save items dirty in the editor, however.
-// Takes a directory to save in (empty for the profile's own save directory), a
-// file name without its ".xml" suffix (empty for a timestamped one) and whether
-// to sync the modules.
-// Returns {ok, pathFileName, error}: a failure fills the pathFileName in as
-// well, except when another save is already running.
+// Empty saveFolder/saveName mean the profile's save directory and a timestamped name (given without
+// ".xml"). Returns {ok, pathFileName, error}; a failure fills pathFileName too, unless another save is running.
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
     QString directory_xml;
@@ -1267,12 +1253,8 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         directory_xml = saveFolder;
     }
 
-    // profileXmlFilesPath already ends in a separator (MudletApp.cpp), so
-    // appending a file name with another one named ".../current//x.xml". QDir
-    // joins with exactly one separator and changes nothing else about the path,
-    // which matters because this string is the file XMLexport writes as well as
-    // the one handed back: any normalising of "." or ".." here would resolve
-    // them before the kernel does and could move the save somewhere else.
+    // profileXmlFilesPath already ends in a separator, so appending would double it. QDir joins with one
+    // and, unlike normalising, leaves "." and ".." for the kernel to resolve, so XMLexport writes where asked.
     const QDir dir_xml(directory_xml);
     const QString saveBaseName = saveName.isEmpty() ? QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")) : saveName;
     const QString filename_xml = dir_xml.filePath(saveBaseName + qsl(".xml"));
@@ -1286,8 +1268,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
-    // the same directory the file above is going into, rather than the raw
-    // argument, so that the one made is the one written to
+    // dir_xml, not the raw argument, so the directory made is the one written to
     if (!dir_xml.exists()) {
         QDir().mkpath(dir_xml.path());
     }
@@ -1302,8 +1283,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
-    // The event loop flushes profile.ini, so a write there only shows up as
-    // having failed later - by the time the profile is next saved:
+    // The event loop flushes profile.ini, so a failed write there only shows up at the next save:
     if (mpProfileIni && mpProfileIni->status() == QSettings::AccessError) {
         qWarning().nospace().noquote()
                 << "Host::saveProfile(...) ERROR - the profile's \"profile.ini\" file could not be written, the command lines' history settings and the notepad's window state may be lost.";
@@ -1698,29 +1678,20 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
-// Whether the platform makes a font of the name itself. The font database lists
-// the families that are installed, not the names a platform resolves on top of
-// them: fontconfig turns "Helvetica", "Times" or "monospace" into a real family
-// without any of those being an installed family, and Windows has a substitution
-// table of its own. Qt answers with one fixed stand-in for a name that means
-// nothing anywhere, so a name that lands anywhere else is one the platform
-// recognised - and an alias that resolves to that very stand-in ("sans-serif" on
-// most GNU/Linux systems) cannot be told from an unknown name, so it counts as
-// missing.
+// Whether the platform makes a font of the name itself: the font database lists only installed families,
+// but fontconfig resolves "Helvetica", "Times" or "monospace" and Windows has a substitution table. Qt
+// answers a meaningless name with one fixed stand-in, so landing elsewhere means recognised; an alias
+// resolving to that stand-in ("sans-serif" on most GNU/Linux) can't be told apart and counts as missing.
 static bool platformResolvesFontFamily(const QString& requested)
 {
     if (requested.isEmpty()) {
         return false;
     }
 
-    // A UUID rather than a fixed name, so that no machine can have a font by that
-    // name and make every unknown family look resolved
+    // A UUID so that no machine can have a font by that name and make every unknown family look resolved
     static const QString unrecognisedName = QUuid::createUuid().toString();
     static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
 
-    // A platform that hands an unrecognised name back unchanged tells an alias and an
-    // unknown name apart for nobody, so nothing the font database does not list can be
-    // taken on it - said once, because it silently turns this whole check off
     static const bool nameResolutionIsReadable = []() {
         if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
             qWarning().nospace().noquote() << "Host: this platform hands an unrecognised font family name back unchanged instead of naming the family it drew "
@@ -1739,8 +1710,7 @@ static bool platformResolvesFontFamily(const QString& requested)
     return QFontInfo(QFont(requested)).family() != unrecognisedFamily;
 }
 
-// The family as the font database spells it, not as it was typed: that spelling is what
-// getFont() reports back and what the Geyser wrappers remember
+// The font database's spelling, not the typed one: getFont() reports it and the Geyser wrappers remember it
 static QString installedFamily(const QStringList& availableFonts, const QString& name)
 {
     for (const QString& family : availableFonts) {
@@ -1769,9 +1739,8 @@ Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) con
         }
     }
 
-    // Go on using the name that was asked for rather than the family it resolves to:
-    // the name is what gets saved, so pinning this machine's idea of "Helvetica" into
-    // the profile would carry it to every other machine the profile is opened on
+    // Keep the requested name, not what it resolves to: the name is saved, and pinning this machine's
+    // idea of "Helvetica" would carry it to every machine the profile is opened on
     if (platformResolvesFontFamily(requested)) {
         return {requested, QFont::Normal, true};
     }
@@ -2319,8 +2288,6 @@ bool Host::selectMainConsoleSection(int from, int length)
     return mpMainConsoleModel->selectSection(from, length);
 }
 
-// The colour goes onto the model whether or not a view exists; only the repaint
-// of the lines it landed on needs one.
 void Host::setMainConsoleFgColor(const QColor& color)
 {
     if (mpMainConsoleModel->setSelectionFgColor(color) && mpConsole) {
@@ -2426,12 +2393,9 @@ void Host::runTriggers(int line)
     consoleModel.mCurrentLine = consoleModel.buffer.line(line);
     getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
     // The matchers take the haystack by reference all the way down, so it must be
-    // a local: a nested pass reassigns mCurrentLine under them. Its storage is
-    // borrowed from the Host, so the capacity outlives the line and only a line
-    // longer than any before it allocates. Moving the buffer out rather than
-    // writing into the member is what makes that safe under nesting: a pass a
-    // trigger script starts finds the member empty and grows its own, so it
-    // cannot resize the one an outer pass is matching on.
+    // a local: a nested pass reassigns mCurrentLine under them. The buffer is moved out of
+    // the Host to reuse its capacity; a nested pass finds the member empty and grows its
+    // own, rather than resizing the one an outer pass is matching on.
     QString haystack = std::move(mTriggerHaystack);
     const auto haystackGuard = qScopeGuard([this, &haystack] {
         if (haystack.capacity() > scmMaxRetainedHaystack) {
@@ -2446,8 +2410,7 @@ void Host::runTriggers(int line)
 
     if (TDebug::wants(TDebug::Category::GameLine)) {
         TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
-        // haystack already ends in a newline - adding another leaves a
-        // blank row under every single game line:
+        // haystack already ends in a newline:
         TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << haystack >> this;
     }
     incomingStreamProcessor(haystack, line);
@@ -2675,7 +2638,6 @@ bool Host::killTrigger(const QString& name)
     return mTriggerUnit.killTrigger(name);
 }
 
-// The only inputs installPackage() unpacks a folder into the profile for
 static bool packageUnpacksAFolder(const QString& fileName)
 {
     return fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive);
@@ -2712,15 +2674,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     }
 
     // Every failure below returns a reason, and most callers drop it: the package
-    // manager logs it without showing it, the repository install names which
-    // packages failed but not why, and the default-package and module-sync
-    // installs ignore it altogether. Say it once here instead. Script
+    // manager logs it silently, the repository install names only which packages failed,
+    // and default-package and module-sync installs ignore it. Say it once here instead. Script
     // installs pass quiet and get the reason back as a return value, so they are
     // left to report it themselves rather than having it appear unbidden.
-    // A module sync is the exception, for the reason the manifest warning further
-    // down gives: it reinstalls the same archive on every save and on every
-    // reloadModule(), so a sync that cannot read its source would say the same
-    // sentence again forever.
+    // Not for a module sync: it reinstalls the same archive on every save and reloadModule(),
+    // so an unreadable source would repeat the message forever.
     auto fail = [this, &fileName, quiet, thing](const QString& reason) -> std::pair<bool, QString> {
         qWarning() << "Host::installPackage() failed for" << fileName << ":" << reason;
         if (!quiet && thing != enums::PackageModuleType::ModuleSync) {
@@ -2770,14 +2729,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return fail(qsl("could not open file '%1'").arg(actualFileName));
     }
 
-    // Whether an uninstall of this name would take anything away, asked of the
-    // six units an uninstall clears rather than of anything standing in for them.
-    // Neither thing a listing can be checked against answers it: a module whose
-    // file sits on a share that is away is still running every one of its items,
-    // and one whose XML stopped part-way through never reaches mModulesLoadedOk
-    // while the items it did import are live. Both would be unlisted, and the
-    // items left behind belong to the name the next install takes - so
-    // uninstalling that takes the module's items with it.
+    // Asks the six units an uninstall clears, not a listing: a module whose file is on an absent share
+    // still runs its items, and one whose XML stopped part-way never reaches mModulesLoadedOk yet has live
+    // items. Both are unlisted, so the next install under the name would inherit, and uninstall, those items.
     auto anythingIsInstalledUnder = [this](const QString& packageName) -> bool {
         for (auto* item : mTriggerUnit.getTriggerRootNodeList()) {
             if (item->mPackageName == packageName) {
@@ -2812,24 +2766,16 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return false;
     };
 
-    // A listing can outlive the module: installModulesList() files the entry back
-    // whether the load worked or not, so a profile whose module file has gone
-    // keeps the name with nothing behind it. That holds no items for anything to
-    // collide with, so it is cleared rather than held against whoever asks for
-    // the name next - a package included, which is why this does not live inside
-    // the module-only refusal below. The items are filed under the bare name, so
-    // this cannot tell a package's from a module's: every caller settles whether
-    // a package holds the name before asking.
+    // installModulesList() re-lists a module whether its load worked or not, so one whose file is gone
+    // keeps a name with no items behind it. That is cleared rather than held against the next asker - a
+    // package too, hence not inside the module-only refusal below. Items are filed under the bare name, so
+    // this can't tell a package's from a module's: callers settle whether a package holds the name first.
     auto aModuleIsUsingTheName = [this, &anythingIsInstalledUnder](const QString& packageName) -> bool {
         if (!mInstalledModules.contains(packageName) && !mActiveModules.contains(packageName)) {
             return false;
         }
-        // A module that finished loading holds its name whether or not any of the
-        // six units ended up with something in it. One of nothing but variables,
-        // fonts, images or a map installs completely and leaves every one of them
-        // empty - XMLimport deletes the master folder of each unit its file did
-        // not mention - so asking the units alone answers that the name is free
-        // and deregisters a module that is installed and running.
+        // A loaded module holds its name even with all six units empty: one of only variables, fonts,
+        // images or a map leaves them so, as XMLimport deletes the master folder of each unmentioned unit.
         if (mModulesLoadedOk.contains(packageName) || anythingIsInstalledUnder(packageName)) {
             return true;
         }
@@ -2839,10 +2785,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return false;
     };
 
-    // The name an install lands under is not settled until config.lua has been
-    // read, so this question gets asked twice - once of the archive's own file
-    // name, then again of whatever the manifest renamed it to. An empty answer
-    // means carry on.
+    // Asked twice, as config.lua can rename the install: of the archive's file name, then of the
+    // manifest's name. Empty means carry on.
     auto refusalFromAModuleUsingTheName = [this, thing, &aModuleIsUsingTheName](const QString& packageName) -> QString {
         // during profile loading the modules are expected to be listed already
         if ((thing == enums::PackageModuleType::ModuleFromUI) && !mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
@@ -2850,20 +2794,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName);
         }
         if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
-            return qsl("module %1 is already installed").arg(packageName); //we're already installed
+            return qsl("module %1 is already installed").arg(packageName);
         }
         return QString();
     };
 
-    // A package's own scripts run while its install is still reading it in, and
-    // one of them can ask for that same package to be installed again - a module
-    // whose script reloads itself does, by way of the sync's reinstall. Importing
-    // the file on top of the copy being read in gives the profile a second set of
-    // every item in it, and nothing would stop the round after that. Asked twice
-    // like the question above, and for a sharper reason: reloadModule() reinstalls
-    // a module from the file it came in, which keeps its own name whatever
-    // config.lua renamed the module to, so a module that renamed itself is asking
-    // to be read in again under a name the archive's file name never mentions.
+    // A package's scripts run while it is being read in and can ask to install it again (a self-reloading
+    // module does, via the sync's reinstall); importing on top would duplicate every item, round after
+    // round. Asked twice like the question above, and must be: reloadModule() reinstalls from the original
+    // file, so a self-renamed module is re-read under a name its file name never mentions.
     auto refusalFromAnInstallStillReadingTheName = [this](const QString& packageName) -> QString {
         if (mPackagesBeingInstalled.contains(packageName)) {
             //: %1 is the name of the package or module that is already part-way through being installed
@@ -2872,22 +2811,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return QString();
     };
 
-    // sanitizePackageName() takes off the parts of a file name that are not the
-    // package's own - the folders it sits in, the extension - by removing them
-    // wherever they appear rather than only at the end, so a name made of nothing
-    // else comes back as "." or "..". Both name a folder outside the one packages
-    // are unpacked into, and the archive is unpacked straight into whatever this
-    // settles on: "...mpackage" leaves "..", which is the folder holding every
-    // profile.
+    // sanitizePackageName() strips folders and extensions wherever they appear, so a name of nothing else
+    // comes back as "." or ".." ("...mpackage" gives ".."), and the archive is unpacked straight into
+    // whatever this settles on - ".." being the folder holding every profile.
     auto nameIsAStepOutOfTheProfile = [](const QString& name) {
         return name.isEmpty() || name == QLatin1String(".") || name == QLatin1String("..") || name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\'));
     };
-    // The profile's own folders sit beside the folders its packages install into,
-    // so a manifest can ask to be installed under one of their names. Three of
-    // them are made when the profile is, which turns that install away by itself.
-    // The media folder is not: it is made the first time something is downloaded
-    // into it, which can be long after a module took the name, and from then on
-    // the module and the profile share a folder.
+    // A manifest can ask for a profile folder's name, as they sit beside package folders. map, log and
+    // current exist from profile creation, which turns that away; media is only made on first download,
+    // possibly after a module took the name, and then the two share a folder.
     auto theProfileKeepsItsOwnDataIn = [](const QString& name) {
         return name == QLatin1String("map") || name == QLatin1String("log") || name == QLatin1String("current") || name == QLatin1String("media");
     };
@@ -2900,21 +2832,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (const QString refusal = refusalFromAnInstallStillReadingTheName(packageName); !refusal.isEmpty()) {
         return fail(refusal);
     }
-    // Nothing settles the name an install lands under until config.lua has been
-    // read, and that can rename the archive to anything at all - so a name the
-    // other half is using is not necessarily a name this ever installs under.
-    // An archive that unpacks a folder is therefore asked again once its manifest
-    // has spoken, and is unpacked beside the folder holding the name rather than
-    // into it in the meantime. A bare XML file carries no manifest and gets no
-    // second chance, so its answer is final here.
+    // config.lua can rename the archive to anything, so a clash on its file name may not be real. An
+    // archive that unpacks a folder is asked again once its manifest is read, and meanwhile unpacks beside
+    // the clashing folder; a bare XML file has no manifest, so its answer here is final.
     const bool aManifestCouldStillRenameThis = packageUnpacksAFolder(fileName);
     QString crossKindRefusalOnTheFileName;
     if (thing != enums::PackageModuleType::Package) {
-        // An uninstall takes items away by name alone, so one name installed both
-        // ways loses both halves' items whichever half is removed. A profile saved
-        // before this was refused can still hold the combination and has to go on
-        // loading, so only a fresh install is turned away. Asked before the module
-        // question below, which reads the same items and cannot tell whose they are.
+        // Uninstall removes items by name alone, so a name installed both ways loses both halves' items.
+        // Only fresh installs are refused, as older saved profiles may hold the combination and must load.
+        // Asked before the module question below, which reads the same items and can't tell whose they are.
         if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
             //: %1 is the name of the package that is already installed
             const QString refusal = tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName);
@@ -2946,17 +2872,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         emit signal_editorCleanResetRequested();
     }
     QFile file2;
-    // Declared out here because the archive branch below reads one of these per
-    // XML file in the package; reported once both branches are done.
+    // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
     if (packageUnpacksAFolder(fileName)) {
         const QString _home = MudletApp::getMudletPath(enums::profileHomePath, getName());
-        // Unpacking into a folder the other half of this name owns would write over
-        // its files, and the rename below would then carry that folder off under
-        // whatever the manifest asked for. An archive whose name is already spoken
-        // for is unpacked beside it instead, and moved into place only once its
-        // manifest has been read and the name it really wants turns out to be free.
+        // Unpacking into a folder the other kind owns would overwrite its files, and the rename below would
+        // carry it off. A clashing archive unpacks beside it, moving in once its manifest's name proves free.
         const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName)
                                                                       : MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
         // home directory for the PROFILE
@@ -2968,9 +2890,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // a folder of the profile's that was already here ("map", "log",
         // "current") - see the refusal further down.
         if (!crossKindRefusalOnTheFileName.isEmpty() && QDir(_dest).exists() && QDir(_dest).absolutePath().startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
-            // nothing else ever makes a folder with that ending, and every way out
-            // of here takes it away again, so one still sitting there is the
-            // leavings of an install that did not get to finish
+            // Only this makes a ".mudlet-installing" folder and every exit removes it, so one here is left from an unfinished install
             removeDir(_dest, _dest);
         }
         const bool destinationAlreadyExisted = QDir(_dest).exists();
@@ -2979,12 +2899,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return fail(qsl("could not create destination folder"));
         }
         QString folderThisInstallMade = destinationAlreadyExisted ? QString() : QDir(_dest).absolutePath();
-        // Only ever remove the folder this install made: the name comes from the
-        // archive's own file name, so one named after a folder the profile
-        // already has ("map", "log") unpacks straight into it, and removeDir()
-        // takes everything below what it is given. The path check is a backstop
-        // for a name that ever escapes the profile - sanitizePackageName() keeps
-        // it to one path section today, so nothing reaches it yet.
+        // Only ever remove the folder this install made: an archive named after a profile folder ("map",
+        // "log") unpacks straight into it, and removeDir() takes everything below. The path check is a
+        // backstop; sanitizePackageName() keeps the name to one path section today.
         auto discardTheFolderThisInstallMade = [this, &folderThisInstallMade, &_home]() {
             const QString profileHome = QDir(_home).absolutePath();
             if (folderThisInstallMade.isEmpty() || !folderThisInstallMade.startsWith(profileHome + QLatin1Char('/'))) {
@@ -3022,12 +2939,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // - the xml file must be located in the root directory of the zip package. example: myPack.zip contains: the folder images and the file myPack.xml
 
         QDir _dir(_dest);
-        // readPackageConfig() files the archive's own details under the name it
-        // reads out of it, and an install that is turned away after that has to put
-        // back what it overwrote: otherwise a refused install leaves the package
-        // that refused it describing the one it turned down, and an archive nothing
-        // could be read out of leaves a name that was never installed answering
-        // getPackageInfo() and offering itself in the package manager for good.
+        // readPackageConfig() files the archive's details under the name it reads, so a refused install must
+        // restore them: otherwise the refusing package describes the rejected one, and an unreadable archive
+        // leaves a never-installed name answering getPackageInfo() and listed in the package manager.
         const QMap<QString, QMap<QString, QString>> packageInfoBeforeConfig = mPackageInfo;
         const QMap<QString, QMap<QString, QString>> moduleInfoBeforeConfig = mModuleInfo;
         auto takeBackWhatTheManifestOverwrote = [&, this]() {
@@ -3046,19 +2960,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             QString whyTheManifestWasNotRead;
             readPackageConfig(_dir.absoluteFilePath(qsl("config.lua")), packageName, thing != enums::PackageModuleType::Package, &whyTheManifestWasNotRead);
             if (!whyTheManifestWasNotRead.isEmpty()) {
-                // Carrying on is right - what is in the archive still works - but
-                // it lands under the name of the file it came in with no author,
-                // version or description, so a name-based uninstall, an update
-                // from the repository and anything depending on it all stop
-                // matching it. Nothing else says a word about that.
+                // Carry on - the contents still work - but it lands under its file name with no author, version
+                // or description, so name-based uninstall, repository updates and dependants stop matching it.
                 qWarning() << "Host::installPackage() could not read the manifest of" << fileName << ":" << whyTheManifestWasNotRead;
-                // Said even to a quiet caller, for the same reason the deferred
-                // install above says its failure: the install goes on to succeed,
-                // so there is no return value left to carry this. A module sync is
-                // the exception - it reinstalls the same archive on every save and
-                // on every reloadModule(), so saying it there is the same sentence
-                // again forever for a manifest the user has already been told about
-                // once, on the install they asked for.
+                // Said even to a quiet caller, as the install succeeds and no return value carries it. Not for a
+                // module sync, which reinstalls on every save and reloadModule() and would repeat it forever.
                 if (thing != enums::PackageModuleType::ModuleSync) {
                     //: %1 is the name the package is being installed under, %2 is the error its config.lua gave
                     postMessage(tr("[ WARN ]  - The config.lua of \"%1\" could not be read, so it is being installed under that name with no details: %2").arg(packageName, whyTheManifestWasNotRead));
@@ -3069,14 +2975,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             //: %1 is the name the package's config.lua asked to be installed under
             return refuseTheRenamedInstall(tr("The config.lua of this package asks to be installed as \"%1\", which is not a name a package can have.").arg(packageName));
         }
-        // The name this installs under is settled now, so this is where a name
-        // that is spoken for is answered: everything above only ever saw the
-        // archive's own file name, and config.lua has just renamed this to
-        // anything it likes. An archive with no manifest passes through here
-        // unchanged and gets the same answer it would have got up there.
-        // Asked before the kind-by-kind questions below, and before anything of
-        // this package is made: a name still being read in has an importer
-        // holding its items, which the sync below would take apart by name.
+        // The name is settled now and config.lua may have changed it, so clashes are answered here (an
+        // archive with no manifest gets the same answer as above). Before the per-kind checks and before
+        // anything is made: a name still being read in has an importer holding items the sync below removes.
         if (const QString refusal = refusalFromAnInstallStillReadingTheName(packageName); !refusal.isEmpty()) {
             return refuseTheRenamedInstall(refusal);
         }
@@ -3085,10 +2986,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 //: %1 is the name of the package that is already installed
                 return refuseTheRenamedInstall(tr("A package called \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
             }
-            // Asked before the sync below, not after: that takes the module
-            // already using the name apart by name alone, so refusing
-            // afterwards would hand back the module that did the refusing
-            // with nothing left in it.
+            // Before the sync below, which removes the module using the name by name alone, so refusing
+            // afterwards would leave that module empty.
             if (const QString refusal = refusalFromAModuleUsingTheName(packageName); !refusal.isEmpty()) {
                 return refuseTheRenamedInstall(refusal);
             }
@@ -3107,23 +3006,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         // continuing, so update the folder name on disk
         const QString newpath(qsl("%1/%2").arg(_home, packageName));
-        // An archive whose manifest names it what its file is already called
-        // has nothing to move, and asking to rename a folder onto itself is
-        // refused by the very check below
+        // Nothing to move, and renaming a folder onto itself fails and would trip the check below
         if (QDir(newpath).absolutePath() != _dir.absolutePath()) {
             bool movedIntoPlace = _dir.rename(_dir.absolutePath(), newpath);
             if (!movedIntoPlace && thing == enums::PackageModuleType::ModuleSync && moduleInfoBeforeConfig.contains(packageName)) {
-                // A sync's uninstall leaves the module's folder alone on purpose,
-                // for the reinstall to write over - which is what happens when the
-                // archive's file name is the module's name. One that renames itself
-                // unpacks under its file name instead, so the folder it has to go
-                // back into is in the way of its own rename: last time's folder
-                // would be imported, the files just unpacked would be left in the
-                // profile for good under the archive's file name, and the module
-                // would never take up an update. Asked of mModuleInfo as it was
-                // before config.lua spoke, so this only ever replaces a folder the
-                // profile already knew as this module's - a name the manifest has
-                // only just asked for could be the profile's own "map" or "log".
+                // A sync's uninstall leaves the module's folder for the reinstall to overwrite, but a self-renamed
+                // module unpacks under its file name and last time's folder blocks its rename: the old folder
+                // would be imported, the new files left behind for good, and updates never taken up. Checked
+                // against mModuleInfo from before config.lua, so only a folder the profile already knew as this
+                // module's is replaced - a freshly requested name could be the profile's own "map" or "log".
                 const QString theModulesFolderFromLastTime = QDir(newpath).absolutePath();
                 if (theModulesFolderFromLastTime.startsWith(QDir(_home).absolutePath() + QLatin1Char('/')) && !theProfileKeepsItsOwnDataIn(packageName)) {
                     removeDir(theModulesFolderFromLastTime, theModulesFolderFromLastTime);
@@ -3135,23 +3026,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     folderThisInstallMade = QDir(newpath).absolutePath();
                 }
             } else if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence) {
-                // A folder already sitting at the name the manifest asks for
-                // makes the rename fail, and going on reads that folder rather
-                // than the one this install unpacked: whatever XML is in it is
-                // imported, registered under the name the archive asked for,
-                // and the install reports success - so the user ends up running
-                // a stranger's package while everything that reports on it
-                // describes the archive they installed. An orphaned folder is
-                // easy to come by: #9654 leaves one, and so does an uninstall
-                // whose folder removal did not go through.
+                // A folder already at the requested name makes the rename fail, and going on would import its XML
+                // under this package's name and report success - a stranger's package passing as this one.
+                // Orphaned folders are common: #9654 leaves one, as does an uninstall whose removal failed.
                 //: %1 is the name the package's config.lua asks to be installed under
                 return refuseTheRenamedInstall(
                         tr("A folder called \"%1\" is already in the profile, so the package could not be put in place. Please remove or rename that folder first.").arg(packageName));
             } else {
-                // Going on reads the folder that was in the way, so the one just
-                // unpacked is of no further use: leaving it would put a folder in
-                // the profile under the archive's file name that nothing ever
-                // takes away again.
+                // Going on reads the folder in the way, so the one just unpacked would be orphaned
                 discardTheFolderThisInstallMade();
             }
         }
@@ -3183,9 +3065,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 mInstalledPackages.append(packageName);
             }
-            // Holds anything the scripts in this file ask to have done to this
-            // very package until the read has finished - see
-            // mPackagesBeingInstalled and runUninstallsDeferredByAnInstall().
             mPackagesBeingInstalled.push(packageName);
             auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
             mPackagesBeingInstalled.pop();
@@ -3243,9 +3122,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         } else {
             mInstalledPackages.append(packageName);
         }
-        // Holds anything the scripts in this file ask to have done to this very
-        // package until the read has finished - see mPackagesBeingInstalled and
-        // runUninstallsDeferredByAnInstall().
         mPackagesBeingInstalled.push(packageName);
         auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
         mPackagesBeingInstalled.pop();
@@ -3265,27 +3141,17 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         file2.close();
     }
-    // An item whose Lua does not work is kept, so that it can be fixed in the
-    // editor, and the install carries on around it. Nothing else owns up to
-    // that: importPackage() only answers for the XML, so without the line below
-    // a package that is not working looks exactly like a healthy one to the
-    // player, to installPackage()'s caller and to an install-event handler.
+    // An item whose Lua fails is kept for fixing in the editor and the install goes on. importPackage()
+    // only answers for the XML, so without this a broken package looks healthy to the player, the caller
+    // and install-event handlers.
     const QString itemErrors = itemsWithErrors.join(qsl("; "));
     if (!itemErrors.isEmpty()) {
         qWarning() << "Host::installPackage() WARNING - lua in" << packageName << "did not work:" << itemErrors;
-        // Only an install a person asked for and is watching says it, on the same
-        // terms as the fail() lambda above, and never while a profile is opening:
-        // every module is reinstalled from its archive then
-        // (mudlet::installModulesList()), so the line would otherwise come back
-        // on every launch for as long as the module is broken - at somebody who,
-        // for a module they did not write, can do nothing about it. A caller that
-        // asked to be left alone is left alone too: the reason rides back with
-        // the true it is handed, and with the install event, which is where a
-        // package manager reads it.
+        // Only for an install a person asked for and is watching, as with fail(), and never while a profile
+        // opens: installModulesList() reinstalls every module then, so it would repeat every launch at someone
+        // who may not own the module. Quiet callers get the reason in the return value and the install event.
         const bool sayItOnTheConsole = !quiet && !mIsProfileLoadingSequence;
-        // Only the names. The error text names a line of Lua in an item the
-        // player did not write, which is of use to whoever did - so it is left to
-        // the editor, which shows it against the item itself, and to the return
+        // Only the names: the errors are for the item's author, and are shown in the editor, the return
         // value and the install event.
         const QString itemNames = itemsWithErrorNames.join(qsl("\", \""));
         switch (thing) {
@@ -3303,11 +3169,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
             break;
         case enums::PackageModuleType::ModuleSync:
-            // Left out for the reason the fail() lambda above gives: a sync
-            // reinstalls the same archive on every profile save and on every
-            // reloadModule(), so this would say the same sentence again for as
-            // long as the module is broken. Its return value and its install
-            // event still carry the reason.
+            // Silent, as in fail(): a sync reinstalls on every save and reloadModule(). The return value
+            // and install event still carry the reason.
             break;
         }
     }
@@ -3349,9 +3212,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         genericInstallEvent.mArgumentList.append(packageName);
         genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        // Only the install that has something to own up to carries the extra
-        // argument, so a handler with the arguments it always declared is
-        // unaffected
+        // Only added when there are errors, so handlers declaring the usual arguments are unaffected
         if (!itemErrors.isEmpty()) {
             genericInstallEvent.mArgumentList.append(itemErrors);
             genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -3385,22 +3246,16 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         raiseEvent(detailedInstallEvent);
     });
 
-    // A script an install ran asked for the package it was being read into to be
-    // taken away again. Queued after the install events above, so a handler hears
-    // sysInstall and then the matching sysUninstall rather than the pair the wrong
-    // way round - two zero timers are delivered in the order they were registered,
-    // which is how Qt's dispatchers behave rather than something Qt promises, so
-    // the order is pinned by a spec in Package_spec.lua. Only once the install
-    // stack has emptied: an install nested inside another one would otherwise
-    // carry out a removal owed to the install still around it, whose sysInstall
-    // has yet to go out. The snapshot goes with the call, so a drain can never
-    // carry work that belongs to a later one.
+    // An install's script asked to remove the package being read in. Queued after the install events so
+    // handlers hear sysInstall before sysUninstall: zero timers fire in registration order, which Qt does
+    // but doesn't promise, so Package_spec.lua pins it. Only once the install stack is empty, or a nested
+    // install would run a removal owed to the outer one before its sysInstall. The snapshot keeps a drain
+    // from carrying a later one's work.
     if (mPackagesBeingInstalled.isEmpty() && !mUninstallsDeferredByAnInstall.isEmpty()) {
         const auto deferred = mUninstallsDeferredByAnInstall;
         mUninstallsDeferredByAnInstall.clear();
         QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), deferred]() {
-            // Guarded for the same reason as the install-events timer above: the
-            // queued call can be delivered once this Host has been destroyed.
+            // As above: the queued call can arrive after this Host is destroyed.
             if (!guard) {
                 return;
             }
@@ -3422,14 +3277,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
 
 QString Host::sanitizePackageName(const QString packageName) const
 {
-    // Taking an ending off can leave another that was not there to begin with -
-    // ".x.zipml" gives up its ".zip" to become ".xml" - so this goes round until
-    // a pass finds nothing left to take. One pass is not the same answer as two,
-    // and this is asked at more than one level of an install: the name a package
-    // is installed under and the name its details are filed under would otherwise
-    // come out of the same string differently, leaving it unable to describe
-    // itself and its details behind under a name no uninstall knows to take away.
-    // Each pass can only shorten the name, so this always comes to a stop.
+    // Removing an ending can expose another (".x.zipml" loses ".zip" to become ".xml"), so repeat until a
+    // pass finds nothing. This runs at several levels of an install, and the install name and details
+    // name must agree or the details are left where no uninstall looks. Each pass shortens, so it ends.
     QString tempName = packageName;
     QString beforeThisPass;
     while (tempName != beforeThisPass) {
@@ -3497,31 +3347,19 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         }
     }
 
-    // A package's own scripts run while the install is still reading the package
-    // in, and one of them can ask for the package to be uninstalled from there.
-    // Taking its items away now would free the ones the importer is still
-    // holding, and leave the rest of the file being read into a package that is
-    // no longer installed - so note the request and carry it out once the install
-    // has finished. Asked before the save guard below rather than after it:
-    // noting a request touches nothing a save is reading, and the drain waits any
-    // save out itself, so a script that saves before removing itself is answered
-    // like any other.
+    // A package's scripts run while it is being read in and may ask to uninstall it. Removing its items now
+    // would free ones the importer still holds, so note the request and carry it out after the install.
+    // Before the save guard: noting touches nothing a save reads, and the drain waits any save out itself.
     if (mPackagesBeingInstalled.contains(packageName)) {
-        // A sync's removal is half of an operation whose other half runs straight
-        // away: reloadModule() and installPackage() take the module apart in order
-        // to put it back, neither looks at the answer, and a removal held over
-        // until later would take away the copy they had just reinstalled. Nothing
-        // of the module is freed by refusing - which is what keeps the importer's
-        // items intact - so refuse it and say so.
+        // A sync removal is half of a take-apart-and-reinstall that runs straight away and ignores the
+        // answer, so deferring it would remove the fresh copy. Refusing frees nothing of the module.
         if (thing == enums::PackageModuleType::ModuleSync) {
             qWarning() << "Host::uninstallPackage() WARNING - refusing to sync-remove" << packageName << "while its own install is still reading it in.";
             return false;
         }
         const DeferredUninstall request{packageName, thing};
-        // A script is free to ask twice; one removal is all that is owed. Kept as
-        // a pair so that a name asked for as both a package and a module - which a
-        // profile saved before installPackage() refused that can still hold - is
-        // two requests rather than one.
+        // One removal per request. Keyed on the pair: a profile saved before installPackage() refused it can
+        // hold a name as both package and module.
         if (!mUninstallsDeferredByAnInstall.contains(request)) {
             mUninstallsDeferredByAnInstall.append(request);
         }
@@ -3529,8 +3367,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         return true;
     }
 
-    // block packages/modules from being uninstalled while a profile save is in progress
-    // just so the save mechanism doesn't get surprised with something getting removed from memory under its feet
+    // Don't remove items from under a running profile save
     if (currentlySavingProfile()) {
         return false;
     }
@@ -3567,26 +3404,20 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedUninstallEvent);
 
-    // The guard at the top cannot see a save that a handler of the events just
-    // raised has started, and from here the package's items are destroyed under
-    // whatever that save is reading. Refusing is not the answer either - the
-    // events above have already told every handler this uninstall is happening,
-    // and packages dismantle themselves when they hear it, generic_mapper by
-    // killing every one of its event handlers - so wait the save out rather than
-    // abandon what has been announced.
+    // A handler of the events above may have started a save the top guard couldn't see. Refusing is too
+    // late - handlers were told, and packages dismantle themselves on hearing it (generic_mapper kills all
+    // its event handlers) - so wait the save out.
     if (currentlySavingProfile()) {
         waitForProfileSave();
     }
 
-    // waitForProfileSave() pumps the event loop, so a handler may have taken this
-    // away itself in the meantime. That is the outcome that was asked for, and
-    // reporting it as a refusal would have callers replacing a package skip the
-    // replacement they removed it for.
+    // waitForProfileSave() pumps the event loop, so a handler may have removed it already. That's success:
+    // a refusal would make callers replacing the package skip the replacement.
     if (!(isModule ? mInstalledModules.contains(packageName) : mInstalledPackages.contains(packageName))) {
         return true;
     }
 
-    // a save still running after all of that is not one to destroy items alongside
+    // still saving after the wait: don't destroy items under it
     if (currentlySavingProfile()) {
         return false;
     }
@@ -3595,10 +3426,8 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         removePackageInfo(packageName, isModule);
     }
 
-    // installPackage() no longer lets one name be installed as both a package and
-    // a module, but a profile saved before it refused that can still hold the
-    // combination - and the units below take items away by name alone, so both
-    // halves lose their items whichever one was named.
+    // A profile saved before installPackage() refused it can hold a name as both package and module, and
+    // the units below remove items by name alone, so both halves lose their items.
     const bool installedBothWays = mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName);
 
     //we check for ModuleFromScript because if we reset the editor, we will re-execute the
@@ -3622,12 +3451,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mInstalledPackages.removeAll(packageName);
     }
 
-    // Before the ModuleSync exit, not after: a sync destroys both halves' items
-    // just the same, so leaving the other half listed for the reload to step
-    // over would hand the user a package with nothing in it and no word of why.
+    // Before the ModuleSync exit: a sync empties both halves too, and leaving the other listed would show
+    // the user an empty package with no explanation.
     if (installedBothWays) {
-        // take the half that was not named away as well: leaving it listed would
-        // offer the user something the uninstall above has already emptied
         mInstalledPackages.removeAll(packageName);
         mInstalledModules.remove(packageName);
         mModulesLoadedOk.remove(packageName);
@@ -3637,7 +3463,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         postMessage(tr("[ ALERT ] - \"%1\" was installed as both a package and a module, so removing it has removed both.").arg(packageName));
     }
 
-    //if ModuleSync, this is a temporary uninstall for reloading so we exit here
+    // a ModuleSync uninstall is temporary, for the reload
     if (isModule && thing == enums::PackageModuleType::ModuleSync) {
         return true;
     }
@@ -3668,17 +3494,14 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     if (thing == enums::PackageModuleType::ModuleFromScript) {
         emit signal_editorCleanResetRequested();
     }
-    // the Module Manager lists what a script can take away behind its back, and
-    // a row left over from a module that has gone offers a removal that can only
-    // be refused - installPackage() already puts the listing straight this way
+    // Refresh the Module Manager: a script may have removed this behind its back, and a stale row offers a
+    // removal that can only be refused
     emit signal_packageListChanged();
     return true;
 }
 
-// Carries out the removals that uninstallPackage() held over because the package
-// was still being installed when they were asked for. The requests come in by
-// value: uninstallPackage() raises events, and a handler of one can install and
-// remove a package all over again.
+// The requests come by value: uninstallPackage() raises events whose handlers may install and remove
+// packages again.
 void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred)
 {
     const auto names = [](const QList<DeferredUninstall>& requests) {
@@ -3689,21 +3512,15 @@ void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& defe
         return packageNames;
     };
 
-    // A package install saves the profile on its way out, and uninstallPackage()
-    // refuses outright while a save is in flight, so wait that save out first. A
-    // module install has no save of its own under way yet - it starts one 100ms
-    // after this was queued - and takes this as a no-op. Not while the profile is
-    // closing, though: the wait pumps the event loop, and the close has a save of
-    // its own to get through.
+    // uninstallPackage() refuses during a save, and a package install saves on its way out, so wait it out.
+    // A module install's save starts 100ms after this was queued, so this is a no-op for it. Not while
+    // closing: the wait pumps the event loop, and the close has its own save to finish.
     if (currentlySavingProfile() && !isClosingDown()) {
         waitForProfileSave();
     }
 
-    // Either the profile was closing already, or the pump above delivered the
-    // close. Nothing is owed to a Host that is going away, but a script was told
-    // these removals were happening, and the install saved the profile with the
-    // packages still in it - so name what is being left behind rather than let it
-    // turn up again next session with no word of why.
+    // Closing, already or via the pump above. The script was told these removals were happening and the
+    // install saved the packages, so name what is left behind rather than let it silently return next session.
     if (isClosingDown()) {
         qWarning() << "Host::runUninstallsDeferredByAnInstall() WARNING - the profile is closing down, so" << names(deferred)
                    << "were left installed although their own install scripts asked for them to be removed.";
@@ -3712,11 +3529,8 @@ void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& defe
 
     QList<DeferredUninstall> refused;
     for (const auto& request : deferred) {
-        // The answer matters. waitForProfileSave() gives up on a save that never
-        // reports itself finished, and uninstallPackage() has a second save guard
-        // of its own past the events it raises, so a removal can still be turned
-        // away here; any other refusal means the package has gone already, which
-        // is what was asked for.
+        // A save can still refuse it: waitForProfileSave() gives up on one that never finishes, and
+        // uninstallPackage() re-checks after its events. Any other refusal means it is gone already.
         if (!uninstallPackage(request.packageName, request.thing) && currentlySavingProfile()) {
             refused.append(request);
         }
@@ -3725,9 +3539,7 @@ void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& defe
         return;
     }
 
-    // Nothing else is coming to ask again - the script that wanted the removal was
-    // told it was happening - so say that it has not happened yet, and ask once
-    // more when the save that is in the way reports itself finished.
+    // Nothing else will ask again, so retry when the blocking save finishes.
     qWarning() << "Host::runUninstallsDeferredByAnInstall() WARNING - a profile save is still running, so" << names(refused)
                << "could not yet be removed although their own install scripts asked for it; trying again when the save has finished.";
     QObject* obj = new QObject(this);
@@ -3814,8 +3626,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     QFile configFile(luaConfig);
     QStringList strings;
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // an empty script runs perfectly well and names no package, so without
-        // this the name silently falls back to the one the file came in
+        // an empty script would run and name no package, silently keeping the file's own name
         return noManifest(configFile.errorString());
     }
     QTextStream in(&configFile);
@@ -3838,20 +3649,14 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
         QString theNameItAsksFor;
         if (lua_isstring(L, -1)) {
             theNameItAsksFor = QString(lua_tostring(L, -1));
-            // the name a manifest asks for is trimmed of what a package file is
-            // called before anything is installed under it, so the details have
-            // to be filed under the trimmed name as well: filed under the raw
-            // one, the package that was installed cannot describe itself, and
-            // what was filed sits under a name no uninstall knows to take away,
-            // so it outlives the package and is written back out on every save
+            // trimmed like the install name, or the details are filed where no uninstall looks,
+            // outliving the package and written back out on every save
             packageName = sanitizePackageName(theNameItAsksFor);
         }
         lua_pop(L, -1);
         if (!theNameItAsksFor.isEmpty() && packageName.isEmpty()) {
-            // Trimming can leave nothing at all - "MyPackage/" and ".mpackage"
-            // both do - and there is then no name to install under or to file the
-            // details beneath. Said, rather than quietly falling back to the name
-            // the archive's own file has and leaving no details at all.
+            // Trimming can leave nothing ("MyPackage/", ".mpackage"); say so rather than silently fall
+            // back to the archive's file name with no details.
             lua_close(L);
             return noManifest(qsl("the name \"%1\" its config.lua asks for has nothing left in it once the endings a package file is named by are taken off").arg(theNameItAsksFor));
         }
@@ -3910,21 +3715,16 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
 
     lua_pop(L, -1);
     lua_close(L);
-    // the whole manifest goes with the error - name, author, version and all -
-    // so this cannot be left to the debug console alone
+    // the whole manifest is lost with the error, so this can't be left to the debug console alone
     return noManifest(qsl("%1: %2").arg(QString::fromStdString(reason), QString::fromStdString(e)));
 }
 
-// profile.ini holds the command lines' history settings and the notepad's
-// window state. Opened once per Host; setName() drops it because the path
-// carries the name:
+// Holds the command lines' history settings and the notepad's window state.
 QSettings& Host::profileIni()
 {
     if (!mpProfileIni) {
         mpProfileIni = new QSettings(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
-        // Constructing it only splits the file into sections, and each section is
-        // parsed by the first lookup that needs it, so status() cannot see damage
-        // inside one until allKeys() has parsed them all
+        // status() only sees damage in sections already parsed, and each is parsed lazily, so parse them all
         static_cast<void>(mpProfileIni->allKeys());
         if (mpProfileIni->status() == QSettings::FormatError) {
             qWarning().nospace().noquote() << "Host::profileIni() ERROR - the \"profile.ini\" file of profile \"" << getName() << "\" (" << mpProfileIni->fileName()
@@ -4586,11 +4386,8 @@ void Host::setEnableSpellCheck(const bool enable)
         return;
     }
     mEnableSpellCheck = enable;
-    // The load-end warm skips a profile with spell check off, so this is when
-    // the dictionary first becomes wanted. During a profile load there is
-    // nothing to do: the handle is warmed once at the end, after the profile's
-    // own settings have been read - which is what
-    // TSpellChecker::setSystemDictionary() defends against too.
+    // The load-end warm skips a profile with spell check off, so this is when the dictionary is first
+    // wanted. Not during a load: it is warmed once at the end, after the profile's own settings are read.
     if (enable && !mIsProfileLoadingSequence) {
         emit signal_spellCheckEnabled();
     }
@@ -5029,13 +4826,9 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     return mpConsole->openUserWindow(name, loadLayout, autoDock, area);
 }
 
-// The parent window has to exist: TMainConsole::createMiniConsole(),
-// createScrollBox() and createLabel() still put an element whose parent window
-// they cannot resolve into the main console instead, where it is painted over
-// the game text rather than anywhere the caller asked for - and answer as if it
-// had worked. Every Lua-reachable path therefore has to refuse before it gets
-// there. "main" is matched case-insensitively, as Host::setWindow() already
-// matches it - the other call that takes a parent window name.
+// Must refuse up front: TMainConsole::createMiniConsole(), createScrollBox() and createLabel() put an
+// element with an unresolvable parent into the main console, over the game text, and report success.
+// "main" is matched case-insensitively, as Host::setWindow() does.
 bool Host::parentWindowMissing(const QString& windowname) const
 {
     if (windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive)) {
@@ -5374,11 +5167,8 @@ std::pair<bool, QString> Host::closeMapWidget()
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
-    // Ask whether the widget was ever made first, so that a profile which never
-    // made one is told apart from one that has put its widget away.
-    // createMapper() nulls the widget when it takes a hidden one over, so a
-    // profile that traded its map widget for an embedded mapper gets the
-    // never-made answer too.
+    // Checked first so a profile that never made a widget is told apart from one that hid it.
+    // createMapper() nulls the widget when it takes a hidden one over, so that also answers never-made.
     if (!mpConsole->mapWidgetCreated()) {
         return {false, qsl("no map widget found to close")};
     }

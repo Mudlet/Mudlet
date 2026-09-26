@@ -464,8 +464,7 @@ QTreeWidgetItem* TTreeWidget::findItemByTriggerID(QTreeWidgetItem* pParent, int 
 
 void TTreeWidget::buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden)
 {
-    // rows from the tree that came before stand for variables this walk is
-    // about to replace, so they go rather than be re-validated by the stamp
+    // Old rows stand for variables this walk replaces, so drop them rather than re-validate by stamp
     clearVariableRows();
     mVariablesGeneration = pVarUnit->treeGeneration();
     addVariableRows(pVarUnit, pParent, pVariable, showHidden);
@@ -522,18 +521,13 @@ void TTreeWidget::clearVariableRows()
     mNewVariableForRow.clear();
 }
 
-// The rows outlive the variables they stand for: resetting a profile builds a
-// fresh variable tree and frees every TVar without the editor hearing about it.
-// Answering from rows built against a tree that is gone would hand back a freed
-// pointer, so they only answer while the tree they were built from is the
-// current one.
+// Rows outlive their variables: a profile reset frees every TVar without telling the editor,
+// so rows only answer while the tree they were built from is current.
 bool TTreeWidget::rowsStandForCurrentVariables(VarUnit* pVarUnit) const
 {
     return pVarUnit->treeGeneration() == mVariablesGeneration;
 }
 
-// Rows left over from a tree that has since been replaced stand for variables
-// that are gone, so they go rather than sit beside entries for the current tree.
 void TTreeWidget::adoptVariableTree(VarUnit* pVarUnit)
 {
     if (rowsStandForCurrentVariables(pVarUnit)) {

@@ -123,8 +123,8 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     void test_createMapperWithALoadedMap()
@@ -445,10 +445,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

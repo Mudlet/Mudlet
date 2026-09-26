@@ -170,8 +170,7 @@ static void centerOverlayIn(QFrame* overlay, QWidget* parent, int minWidth)
     overlay->setGeometry((parent->width() - w) / 2, (parent->height() - h) / 2, w, h);
 }
 
-// Taking the application palette explicitly is what stops the mapper inheriting
-// one from mpConsole->mpMainFrame.
+// Set explicitly, or the mapper inherits mpConsole->mpMainFrame's palette.
 void dlgMapper::refreshColours()
 {
     setPalette(QApplication::palette());
