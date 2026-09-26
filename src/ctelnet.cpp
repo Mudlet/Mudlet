@@ -5340,6 +5340,7 @@ void cTelnet::initStreamDecompressor()
     mZstream.avail_in = 0;
     mZstream.next_in = Z_NULL;
     mUninflatedInput.clear();
+    mUninflatedInputComplete = true;
 
     inflateInit(&mZstream);
 }
@@ -5371,7 +5372,9 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     const auto consumed = static_cast<size_t>(inputLength - length);
     // Nothing has come out of the stream yet and every byte inflate() took is
     // still at hand - this read's, plus the few earlier ones kept for this.
-    const bool allInputAtHand = mZstream.total_out == 0 && mZstream.total_in == mUninflatedInput.size() + consumed;
+    // Not judged by total_in: zlib leaves it at 0 when it stops for a preset
+    // dictionary, six bytes in.
+    const bool allInputAtHand = mZstream.total_out == 0 && mUninflatedInputComplete;
 
     if (zval == Z_NEED_DICT || zval == Z_DATA_ERROR || zval == Z_STREAM_ERROR || zval == Z_MEM_ERROR) {
         // The compressed stream is broken (e.g. the server announced
@@ -5414,6 +5417,7 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         mUninflatedInput.append(inputStart, consumed);
     } else {
         mUninflatedInput.clear();
+        mUninflatedInputComplete = false;
     }
 
     if (zval == Z_STREAM_END) {
