@@ -39,6 +39,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     CommandLineKeyHandlingTest.cpp
+    PasswordEntryTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     DockWidgetWithoutProfileTest.cpp
@@ -138,6 +139,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
+    PasswordEntryPolicyTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp

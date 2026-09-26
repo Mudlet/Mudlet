@@ -282,6 +282,10 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
     auto pN = COMMANDLINE(L, QString{name});
+    if (isMain(QString{name})) {
+        getHostFromLua(L).mpConsole->appendToCommandLine(text);
+        return 0;
+    }
 
     const QString curText = pN->toPlainText();
     pN->setPlainText(curText + text);
@@ -302,6 +306,10 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     auto pN = COMMANDLINE(L, QString{name});
+    if (isMain(QString{name})) {
+        getHostFromLua(L).mpConsole->clearCommandLine();
+        return 0;
+    }
     pN->clear();
     pN->adjustHeight();
     return 0;
@@ -1481,6 +1489,10 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
 
     auto pN = COMMANDLINE(L, QString{name});
+    if (isMain(QString{name})) {
+        getHostFromLua(L).mpConsole->printToCommandLine(text);
+        return 0;
+    }
     pN->setPlainText(text);
     QTextCursor cur = pN->textCursor();
     cur.clearSelection();

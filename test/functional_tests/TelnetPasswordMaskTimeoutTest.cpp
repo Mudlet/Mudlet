@@ -194,7 +194,7 @@ private slots:
         if (!mpHost->mTelnet.mConnectionTimer.isValid()) {
             mpHost->mTelnet.mConnectionTimer.restart();
         }
-        mpHost->mDisablePasswordMasking = false;
+        mpHost->setDisablePasswordMasking(false);
         mpHost->mTelnet.mCharacterModeDetected = false;
         mpHost->mTelnet.mServerRequestedSGA = false;
         mpHost->setLogin(QString());
@@ -211,7 +211,7 @@ private slots:
     {
         QVERIFY(mpHost);
 
-        QVERIFY2(!mpHost->mDisablePasswordMasking, "the profile has password masking switched off, so no timeout would ever be armed");
+        QVERIFY2(!mpHost->disablePasswordMasking(), "the profile has password masking switched off, so no timeout would ever be armed");
         QVERIFY2(!mpHost->isRemoteEchoingActive(), "masking was already on before this test announced any ECHO");
         QVERIFY2(!echoNegotiatedByServer(), "ECHO was already negotiated, so the WILL below would be ignored as a repeat");
         QTimer* timer = mpHost->mTelnet.mTimerPasswordModeTimeout;
@@ -378,7 +378,7 @@ private slots:
         QVERIFY2(!mpHost->isRemoteEchoingActive(), "masking was still on when this test started");
         QVERIFY2(!echoNegotiatedByServer(), "ECHO was still negotiated, so the WILL below would be ignored as a repeat");
 
-        mpHost->mDisablePasswordMasking = true;
+        mpHost->setDisablePasswordMasking(true);
 
         serverSaysEcho(TN_WILL);
 

@@ -255,6 +255,8 @@ void cTelnet::reset()
     }
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
+    // After ECHO is released, or a disconnect during the auto-login opens a box
+    setAutoLoginPending(false);
     mGA_Driver = false;
     // An outstanding measurement belongs to the connection being reset, so the
     // next connection's first packet must not be taken for its reply
@@ -416,6 +418,20 @@ void cTelnet::cancelLoginTimers()
     // prompt left to answer and a password arriving later must not be typed into that session
     mAutoLoginPasswordOutstanding = false;
     mAutoLoginPasswordOutstandingSince.invalidate();
+    setAutoLoginPending(false);
+}
+
+void cTelnet::setAutoLoginPending(const bool pending)
+{
+    mAutoLoginPending = pending;
+    if (mpHost) {
+        mpHost->recomputePasswordEntryWanted();
+    }
+}
+
+bool cTelnet::autoLoginTimersRunning() const
+{
+    return (mTimerLogin && mTimerLogin->isActive()) || (mTimerPass && mTimerPass->isActive());
 }
 
 // This configures the encoding for all outgoing data and incoming OutOfBand data
@@ -891,14 +907,18 @@ void cTelnet::slot_send_login()
 {
     if (!mpHost->getLogin().isEmpty()) {
         sendData(mpHost->getLogin());
+        // So a password prompt after an Esc-dismissed name prompt gets its box
+        mpHost->playerSentLineFromCommandLine();
     }
-    if (mpHost->hasAutoLoginCredentials()) {
+    const bool passwordStepArmed = mpHost->hasAutoLoginCredentials();
+    if (passwordStepArmed) {
         QSettings& settings = *MudletApp::getQSettings();
         bool passwordDelayOk = false;
         const int passwordDelayRaw = settings.value(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS).toInt(&passwordDelayOk);
         const auto passwordDelay = qBound(0, passwordDelayOk ? passwordDelayRaw : AUTO_LOGIN_PASSWORD_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
         mTimerPass->start(std::chrono::milliseconds(passwordDelay));
     }
+    setAutoLoginPending(passwordStepArmed);
 }
 
 void cTelnet::slot_send_pass()
@@ -912,6 +932,9 @@ void cTelnet::slot_send_pass()
         // without doing anything.
         if (sendData(mpHost->getPass(), false)) {
             restartPasswordMaskTimeout();
+            mpHost->autoLoginPasswordSent();
+        } else {
+            setAutoLoginPending(false);
         }
         return;
     }
@@ -921,6 +944,8 @@ void cTelnet::slot_send_pass()
     mAutoLoginPasswordOutstanding = true;
     mAutoLoginPasswordMaskWithdrawn = false;
     mAutoLoginPasswordOutstandingSince.start();
+    // The box may open for the player; their first character cancels a late send
+    setAutoLoginPending(false);
     qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
 }
 
@@ -973,6 +998,7 @@ void cTelnet::sendOutstandingAutoLoginPassword()
     // slot_send_pass() does, against a game that never releases the mask after it
     if (sendData(mpHost->getPass(), false)) {
         restartPasswordMaskTimeout();
+        mpHost->autoLoginPasswordSent();
     }
 }
 
@@ -1065,6 +1091,7 @@ void cTelnet::slot_socketConnected()
     const int usernameDelayRaw = settings.value(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS).toInt(&usernameDelayOk);
     const auto usernameDelay = qBound(0, usernameDelayOk ? usernameDelayRaw : AUTO_LOGIN_USERNAME_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
     mTimerLogin->start(std::chrono::milliseconds(usernameDelay));
+    setAutoLoginPending(mpHost->hasAutoLoginCredentials());
 
     emit signal_connected(mpHost);
 
@@ -1682,12 +1709,19 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
-        auto errorMsgTemplate = "[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.";
+        // The event is withheld only for passwords
+        const auto encodingWarning = [&]() {
+            if (permitDataSendRequestEvent) {
+                //: Shown when a line typed or sent by a script cannot be encoded for the game; %1 is that line
+                return tr("[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.").arg(data);
+            }
+            //: Shown instead of quoting the text when the line the game is unlikely to understand was hidden input - a password - so that it never appears on screen
+            return tr("[ WARN ]  - Tried to send hidden input to the game, but it is unlikely to understand it.");
+        };
         if (!mEncoding.isEmpty()) {
             if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 if ((!mEncodingWarningIssued) && (!TEncodingHelper::canEncode(data, mEncoding))) {
-                    QString errorMsg = tr(errorMsgTemplate, "%1 is the command that was sent to the game.").arg(data);
-                    postMessage(errorMsg);
+                    postMessage(encodingWarning());
                     mEncodingWarningIssued = true;
                 }
                 // Even if there are bad characters - try to send it anyway...
@@ -1711,8 +1745,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
             // Plain, raw ASCII, we hope!
             for (const auto c : std::as_const(data)) {
                 if ((!mEncodingWarningIssued) && (c.row() || c.cell() > 127)) {
-                    QString errorMsg = tr(errorMsgTemplate, "%1 is the command that was sent to the game.").arg(data);
-                    postMessage(errorMsg);
+                    postMessage(encodingWarning());
                     mEncodingWarningIssued = true;
                     break;
                 }
@@ -5759,6 +5792,14 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (amount <= 0) {
         return;
     }
+    // Negotiation and out-of-band data alone answer nothing. Reported after the
+    // read is parsed, so a WONT in it ends the hold instead.
+    bool gameSpoke = false;
+    const auto dataArrivedGuard = qScopeGuard([this, &gameSpoke] {
+        if (mpHost && gameSpoke) {
+            mpHost->gameDataArrived();
+        }
+    });
     // Restates the input contract for decompressBuffer() below, which may swap
     // `buffer` over to out_buffer before the terminator is written again.
     in_buffer[amount] = '\0';
@@ -5900,6 +5941,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                         if (_compress) {
                             mNeedDecompression = true;
                             // from this position in stream onwards, data will be compressed by zlib
+                            gameSpoke = gameSpoke || !cleandata.empty();
                             gotRest(cleandata);
                             cleandata = "";
                             initStreamDecompressor();
@@ -6006,6 +6048,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
 
                 cleandata.push_back('\xff');
                 recvdGA = false;
+                gameSpoke = true;
                 gotPrompt(cleandata);
                 cleandata = "";
             } else {
@@ -6016,6 +6059,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
     } //for
 
     if (!cleandata.empty()) {
+        gameSpoke = true;
         gotRest(cleandata);
     }
 
@@ -6453,7 +6497,7 @@ void cTelnet::restartPasswordMaskTimeout()
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
     }
-    if (!mpHost || mpHost->mDisablePasswordMasking || mCharacterModeDetected) {
+    if (!mpHost || mpHost->disablePasswordMasking() || mCharacterModeDetected) {
         return;
     }
     if (!mConnectionTimer.isValid() || mConnectionTimer.durationElapsed() >= PASSWORD_MASK_LOGIN_PHASE) {
@@ -6473,6 +6517,13 @@ void cTelnet::slot_passwordMaskTimeout()
         return;
     }
     qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
+    if (mpHost->passwordEntryWanted()) {
+        //: Shown when the game has hidden input for a minute after the last line without saying it had stopped, so Mudlet stops hiding input itself and closes the hidden-input box
+        postMessage(tr("[ WARN ]  - The game did not say it had stopped hiding input, so Mudlet stopped hiding it. Anything left in the hidden-input box was dropped."));
+    } else {
+        //: Shown when the game has hidden input for a minute after the last line without saying it had stopped, so Mudlet stops hiding input itself
+        postMessage(tr("[ WARN ]  - The game did not say it had stopped hiding input, so Mudlet stopped hiding it."));
+    }
     // Told to the game as well, so that its next WILL ECHO is a fresh request
     // and not a repeat of one Mudlet still has on the books:
     sendTelnetOption(TN_DONT, OPT_ECHO);

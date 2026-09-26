@@ -482,9 +482,9 @@ private slots:
         QCOMPARE(selection(pCommandLine), qsl("lo world"));
     }
 
-    // A password typed at a game's login prompt arrives with remote echo on, and
-    // must not be left in a history the next player at the keyboard can page
-    // through.
+    // A password typed at a game's login prompt arrives with remote echo on -
+    // past the hidden-input box, after an Esc - and must not be left in a
+    // history the next player at the keyboard can page through.
     void test_aPasswordIsNotKeptInTheHistory()
     {
         TCommandLine* pCommandLine = freshCommandLine();

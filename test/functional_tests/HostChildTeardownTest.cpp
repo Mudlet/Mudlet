@@ -213,7 +213,7 @@ private slots:
     // the last test leaves open on purpose is deliberately not named here.
     void cleanup()
     {
-        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren")}) {
+        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren"), qsl("HostChildTeardown-HiddenInputBox")}) {
             if (HostManager::self()->getHost(profileName)) {
                 HostManager::self()->deleteHost(profileName);
             }
@@ -242,6 +242,27 @@ private slots:
             QDir(leftOpenProfilePath).removeRecursively();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // Its close path is refused once the Host is closing down
+    void test_closingTheProfileWithTheHiddenInputBoxOpenIsSafe()
+    {
+        const QString profileName = qsl("HostChildTeardown-HiddenInputBox");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+
+        pHost->setRemoteEchoingActive(true);
+        QVERIFY2(pHost->mpConsole->passwordEntry(), "the box did not open");
+
+        pHost->forceClose();
+        QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
+        const QPointer<Host> hostGuard(pHost);
+        pHost = nullptr;
+        HostManager::self()->deleteHost(profileName);
+        QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        deleteProfileDirectory(profileName);
     }
 
     // Nothing calls closeChildren(): the host pool simply lets go of the Host.

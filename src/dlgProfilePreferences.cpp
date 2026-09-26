@@ -3848,7 +3848,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
-    disable_password_masking_checkbox->setChecked(pHost->mDisablePasswordMasking);
+    disable_password_masking_checkbox->setChecked(pHost->disablePasswordMasking());
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
@@ -6299,7 +6299,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         }
         if (mSnapshot.dirty(disable_password_masking_checkbox)) {
-            pHost->mDisablePasswordMasking = disable_password_masking_checkbox->isChecked();
+            pHost->setDisablePasswordMasking(disable_password_masking_checkbox->isChecked());
         }
         if (mSnapshot.dirty(checkBox_highlightHistory)) {
             pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();

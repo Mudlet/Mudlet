@@ -2779,7 +2779,11 @@ int TLuaInterpreter::selectCmdLineText(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     auto commandline = COMMANDLINE(L, name);
-    commandline->selectAll();
+    if (isMain(name)) {
+        getHostFromLua(L).mpConsole->selectCommandLineText();
+    } else {
+        commandline->selectAll();
+    }
     lua_pushboolean(L, true);
     return 1;
 }

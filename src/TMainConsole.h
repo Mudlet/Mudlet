@@ -38,6 +38,7 @@
 class TAction;
 class TEasyButtonBar;
 class TMediaPlayer;
+class TPasswordEntry;
 class TScrollBox;
 class TTextBox;
 class TToolBar;
@@ -48,6 +49,9 @@ class QProgressDialog;
 class TMainConsole : public TConsole
 {
     Q_OBJECT
+
+    friend class PasswordEntryTest;
+    friend class HostChildTeardownTest;
 
 public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
@@ -160,7 +164,13 @@ public:
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
     void setCommandLinePlaceholderText(const QString& text);
     void updateCommandLineSpellCheck(bool enabled);
+    // While the hidden-input box is up these write into it, so a script
+    // pre-filling a password lands it masked. Reads never see the box.
     void setCommandLineText(const QString& text);
+    void printToCommandLine(const QString& text);
+    void appendToCommandLine(const QString& text);
+    void clearCommandLine();
+    void selectCommandLineText();
     TCommandLine* raiseCommandLine();
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // Shared by scroll boxes, command lines and text boxes: each is the same plain QWidget call.
@@ -246,6 +256,7 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
+    void slot_passwordEntryWanted(const bool wanted);
 
 
 signals:
@@ -256,6 +267,10 @@ signals:
 
 
 private:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    void openPasswordEntry();
+    void closePasswordEntry();
+    TPasswordEntry* passwordEntry() const;
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     // Shared by reparentLabel() and reparentWindow() so they agree on what "main" means.
     QWidget* parentWidgetFor(const QString& windowname) const;
@@ -288,6 +303,8 @@ private:
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
+
+    QPointer<TPasswordEntry> mpPasswordEntry;
 
     bool mEnableClose = false;
 };

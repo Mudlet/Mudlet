@@ -62,6 +62,7 @@
 #include "SecureStringUtils.h"
 
 #include <chrono>
+#include <QResizeEvent>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
@@ -1924,7 +1925,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         break;
     }
 
-    if (shouldPrint && !mIsRemoteEchoingActive) {
+    if (shouldPrint && !mIsRemoteEchoingActive && mpConsole) {
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
@@ -4564,6 +4565,8 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
     } else if (!success && !errorMessage.isEmpty()) {
         qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
     }
+    // A refused or empty keychain must not go on holding the hidden-input box back
+    mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning());
 }
 
 // Only needed for places outside of this class:
@@ -6165,10 +6168,98 @@ void Host::sendCmdLine(const QString& cmd)
 
 void Host::setRemoteEchoingActive(bool active)
 {
-    if (mIsRemoteEchoingActive != active) {
-        mIsRemoteEchoingActive = active;
-        emit signal_remoteEchoChanged(active);
+    if (!active) {
+        mPasswordEntrySuppressed = false;
+        mPasswordEntryDismissed = false;
+        mPasswordEntryDismissedOnce = false;
+        mPasswordEntryDismissalEnding = false;
     }
+    mIsRemoteEchoingActive = active;
+    mPasswordEntryOpensWithThePrompt = active;
+    recomputePasswordEntryWanted();
+    mPasswordEntryOpensWithThePrompt = false;
+}
+
+void Host::recomputePasswordEntryWanted()
+{
+    const bool wanted = mIsRemoteEchoingActive && !mDisablePasswordMasking && !mPasswordEntrySuppressed && !mPasswordEntryDismissed && !mTelnet.autoLoginPending();
+    if (wanted == mPasswordEntryWanted) {
+        return;
+    }
+    mPasswordEntryWanted = wanted;
+    emit signal_passwordEntryWantedChanged(wanted);
+}
+
+void Host::setDisablePasswordMasking(const bool disable)
+{
+    mDisablePasswordMasking = disable;
+    recomputePasswordEntryWanted();
+}
+
+void Host::dismissPasswordEntry()
+{
+    if (mPasswordEntryDismissedOnce) {
+        mPasswordEntrySuppressed = true;
+    } else {
+        mPasswordEntryDismissed = true;
+        mPasswordEntryDismissedOnce = true;
+    }
+    mPasswordEntryDismissalEnding = false;
+    recomputePasswordEntryWanted();
+}
+
+void Host::playerSentLineFromCommandLine()
+{
+    if (mPasswordEntryDismissed) {
+        mPasswordEntryDismissalEnding = true;
+    }
+}
+
+void Host::gameDataArrived()
+{
+    // Not on Enter itself: the box would flicker up, eat what is typed meanwhile
+    // and be closed by the WONT that follows an accepted password
+    if (!mPasswordEntryDismissalEnding) {
+        return;
+    }
+    mPasswordEntryDismissalEnding = false;
+    mPasswordEntryDismissed = false;
+    recomputePasswordEntryWanted();
+}
+
+void Host::autoLoginPasswordSent()
+{
+    // Only under a mask: with ECHO off there is no answer to wait for, and a
+    // prompt an hour later must still get its box
+    if (mIsRemoteEchoingActive) {
+        mPasswordEntryDismissed = true;
+        mPasswordEntryDismissalEnding = true;
+    }
+    // Before the pending flag falls, as that recomputes: the other way round
+    // would open a box for an instant
+    mTelnet.setAutoLoginPending(false);
+}
+
+void Host::passwordEntryEdited()
+{
+    mTelnet.cancelLoginTimers();
+}
+
+bool Host::sendPasswordEntry(QString&& text)
+{
+    QString line = std::move(text);
+    // For the GMCP sign-in path, as send() does
+    mUserSentInputThisConnection = true;
+    // A denyCurrentSend() made outside a handler leaves a stale refusal that
+    // would drop the password without a word
+    mAllowToSendCommand = true;
+    // A game command, so it arms character-at-a-time detection and the mask
+    // safety timeout as a command line's line does
+    const bool sent = mTelnet.sendData(line, false, true);
+    mTelnet.cancelLoginTimers();
+    // Best effort: the encoder and the socket have made their own copies
+    line.fill(QChar());
+    return sent;
 }
 
 QFont Host::getDisplayFont()

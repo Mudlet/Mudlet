@@ -330,7 +330,7 @@ private slots:
         const bool priorForceLf = mpHost->mUSE_FORCE_LF_AFTER_PROMPT;
         const bool priorIreBugfix = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         const bool priorAutoClear = mpHost->mAutoClearCommandLineAfterSend;
-        const bool priorPasswordMasking = mpHost->mDisablePasswordMasking;
+        const bool priorPasswordMasking = mpHost->disablePasswordMasking();
         const bool priorRunAllKeys = mpHost->getKeyUnit()->mRunAllKeyMatches;
         const bool priorTimestamps = mpHost->mIsLoggingTimestamps;
         restoreLater([=, this]() {
@@ -351,7 +351,7 @@ private slots:
             mpHost->mUSE_FORCE_LF_AFTER_PROMPT = priorForceLf;
             mpHost->set_USE_IRE_DRIVER_BUGFIX(priorIreBugfix);
             mpHost->mAutoClearCommandLineAfterSend = priorAutoClear;
-            mpHost->mDisablePasswordMasking = priorPasswordMasking;
+            mpHost->setDisablePasswordMasking(priorPasswordMasking);
             mpHost->getKeyUnit()->mRunAllKeyMatches = priorRunAllKeys;
             mpHost->mIsLoggingTimestamps = priorTimestamps;
         });
@@ -416,7 +416,7 @@ private slots:
         QCOMPARE(mpHost->mUSE_FORCE_LF_AFTER_PROMPT, !priorForceLf);
         QCOMPARE(mpHost->mUSE_IRE_DRIVER_BUGFIX, !priorIreBugfix);
         QCOMPARE(mpHost->mAutoClearCommandLineAfterSend, !priorAutoClear);
-        QCOMPARE(mpHost->mDisablePasswordMasking, !priorPasswordMasking);
+        QCOMPARE(mpHost->disablePasswordMasking(), !priorPasswordMasking);
         QCOMPARE(mpHost->getKeyUnit()->mRunAllKeyMatches, !priorRunAllKeys);
         QCOMPARE(mpHost->mIsLoggingTimestamps, !priorTimestamps);
 

@@ -32,11 +32,10 @@
 #include <QString>
 #include <QStringList>
 #include <QStringDecoder>
-#include <QToolButton>
-#include <QResizeEvent>
 
 class Host;
 class KeyUnit;
+class QMimeData;
 class TConsole;
 
 class TCommandLine : public QPlainTextEdit //QLineEdit
@@ -77,7 +76,12 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const;
-    void setEchoSuppression(bool suppress);
+    // Whether everything on the line was typed or pasted by the player, starting
+    // from an empty or wholly selected line. A recalled, left-selected or
+    // script-written command is not.
+    bool playerTypedLine() const { return mPlayerTypedLine; }
+    // So the hidden-input box can make the same claims
+    bool claimsShortcutOverride(const QKeyEvent*) const;
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -109,6 +113,8 @@ private:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion();
+    void insertFromMimeData(const QMimeData*) override;
+    void slot_contentsChange();
     void spellCheck();
     void fillSpellCheckList(QMouseEvent*, QMenu*);
     void handleTabCompletion(bool);
@@ -120,11 +126,7 @@ private:
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
-    void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
     int heightForRows(const int) const;
-    void updatePasswordToggleButton();
-    void positionPasswordToggleButton();
 
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
@@ -152,22 +154,22 @@ private:
     // The file used to store the command history between sessions:
     QString mBackingFileName;
 
-    // Track echo suppression state
-    bool mIsEchoSuppressed = false;
-    // Track password visibility state when echo is suppressed
-    bool mPasswordVisible = false;
-    // Button to toggle password visibility
-    QToolButton* mpPasswordToggleButton = nullptr;
-    // Store text that was in the command line before echo suppression started
-    // This allows us to restore user input after password prompts complete
-    QString mTextToRestoreAfterEchoSuppression;
-    // Track whether the preserved text was originally selected (for auto-clear OFF)
-    bool mRestoredTextShouldBeSelected = false;
-    // Track whether user typed anything during echo suppression mode
-    bool mUserTypedDuringEchoSuppression = false;
+    // Never raised around anything that can run Lua
+    bool mUserEditInProgress = false;
+    bool mEditStartedOnBlankLine = false;
+    bool mPlayerTypedLine = false;
+    QString mLastPlainText;
 
-private slots:
-    void slot_togglePasswordVisibility();
+    class UserEditScope
+    {
+    public:
+        explicit UserEditScope(TCommandLine& line);
+        ~UserEditScope();
+        Q_DISABLE_COPY(UserEditScope)
+
+    private:
+        TCommandLine& mLine;
+    };
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
