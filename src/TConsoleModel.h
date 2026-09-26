@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "TBuffer.h"
+#include "TConsoleModelNotifier.h"
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
@@ -120,6 +121,18 @@ struct TConsoleModel
     // most recently (a plain button sets it back to 1), read back by
     // getButtonState() with no arguments
     int mButtonState = 1;
+
+    // The name scripts know this console by. Only the main console, user
+    // windows, miniconsoles and buffers can be addressed by scripts, so only
+    // they tell scripts when their line indexes shift.
+    QString mConsoleName;
+    bool mScriptAddressable = false;
+    // The line on which the current search result has been found, or the next
+    // one is to start (currently only for the main console). An index into the
+    // buffer, so it moves with the buffer's lines.
+    int mCurrentSearchResult = 0;
+
+    TConsoleModelNotifier mNotifier;
 
     // The OSC 8 hyperlink managers. Registering, concealing and revealing a
     // link are all model work, so they run with or without a view; repainting

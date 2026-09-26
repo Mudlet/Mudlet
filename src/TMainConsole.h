@@ -44,6 +44,7 @@ class TToolBar;
 class QDialog;
 class QDockWidget;
 class QProgressDialog;
+class QTimer;
 
 class TMainConsole : public TConsole
 {
@@ -260,6 +261,10 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
+    // Commits a line held back for its continuation if the game goes quiet
+    // without sending one - a full-width line that really was the end of the
+    // output.
+    void slot_serverWrapLineHeld();
 
 
 signals:
@@ -322,6 +327,12 @@ private:
     QMap<QString, TScrollBox*> mScrollBoxMap;
 
     bool mEnableClose = false;
+
+    // Named so that a test can find it on the console and observe the state it
+    // leaves behind, which no polling assertion can catch: the posting timer
+    // in cTelnet::slot_timerPosting() calls finalize() too and hides an
+    // unpainted line within a tick of it being committed.
+    QTimer* mpServerWrapFlushTimer = nullptr;
 };
 
 #endif // MUDLET_TMAINCONSOLE_H
