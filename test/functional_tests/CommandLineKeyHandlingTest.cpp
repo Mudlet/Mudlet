@@ -30,7 +30,10 @@
 //
 // A fresh sub command line per test rather than the profile's main one: the
 // history list is private and has no reset, so a shared command line would
-// make each test's history depend on the ones that ran before it.
+// make each test's history depend on the ones that ran before it. The one
+// exception is the password-prompt Tab case, which has to drive the profile's
+// own command line because only that one is ever masked - see
+// mainCommandLine().
 
 #include <QClipboard>
 #include <QFileInfo>
@@ -80,6 +83,20 @@ private:
     static bool portableMarkerPresent()
     {
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
+    // The profile's own command line. freshCommandLine() below makes a
+    // SubCommandLine, and setEchoSuppression() returns early for anything that is
+    // not a MainCommandLine, so only this one is ever masked. It belongs to the
+    // profile rather than to a case, so it starts from a known empty line.
+    TCommandLine* mainCommandLine() const
+    {
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        if (pCommandLine) {
+            pCommandLine->mSaveCommands = false;
+            pCommandLine->clear();
+        }
+        return pCommandLine;
     }
 
     // A command line of this test's own, with an empty history and no
@@ -253,6 +270,12 @@ private slots:
 
     void cleanup()
     {
+        // Per-Host and shared across this class's cases, so a case that aborts with
+        // the prompt still open would mask the ones after it. Not inline in the
+        // cases: QTest abandons a slot on a failed assertion, which is exactly when
+        // this matters.
+        mpHost->setRemoteEchoingActive(false);
+
         if (!mLineName.isEmpty()) {
             mpHost->resetCmdLineAction(mLineName);
             mLineName.clear();
@@ -572,6 +595,87 @@ private slots:
         press(pCommandLine, Qt::Key_Tab);
 
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxbrachiosaurus "));
+    }
+
+    // Tab at a password prompt rewrites the line the player cannot read: it
+    // takes what has been typed so far - the password - as the prefix to
+    // complete, and puts a word lifted from the console buffer, or from a
+    // script's registered suggestions, in its place.
+    // The player sees asterisks throughout, so the next Return sends a
+    // credential they never typed and it looks like a mistyped password.
+    // The two history keys have the same hole at a masked prompt; #10965 closes
+    // that half, and is not in this branch.
+    void test_tabDoesNothingAtAPasswordPrompt()
+    {
+        mpHost->mpConsole->print(qsl("qzxpassphrase appears\n"));
+        TCommandLine* pCommandLine = mainCommandLine();
+        QVERIFY(pCommandLine);
+        QCOMPARE(pCommandLine->getType(), TCommandLine::MainCommandLine);
+
+        // The control, on the same widget: Tab completes here, so a pass below
+        // cannot come from this command line never completing anything at all.
+        type(pCommandLine, qsl("qzxpass"));
+        press(pCommandLine, Qt::Key_Tab);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxpassphrase"));
+        pCommandLine->clear();
+
+        // The one precondition that can actually be tested. Asserting on the
+        // line's contents here would not do it: the prompt opens on an empty line
+        // and leaves it empty, so that reads true whether the mask engaged or
+        // setEchoSuppression() returned early on this preference.
+        // mIsEchoSuppressed is private and this class is not a friend of the
+        // widget, so there is nothing else to read.
+        QVERIFY2(!mpHost->mDisablePasswordMasking, "password masking is off in this profile, so this case proves nothing");
+        mpHost->setRemoteEchoingActive(true);
+
+        type(pCommandLine, qsl("qzxpass"));
+        press(pCommandLine, Qt::Key_Tab);
+        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxpass"), qPrintable(qsl("Tab completed the password against the console buffer, leaving '%1'").arg(pCommandLine->toPlainText())));
+
+        press(pCommandLine, Qt::Key_Backtab, Qt::ShiftModifier);
+        QVERIFY2(pCommandLine->toPlainText() == qsl("qzxpass"), qPrintable(qsl("Shift+Tab completed the password against the console buffer, leaving '%1'").arg(pCommandLine->toPlainText())));
+
+        mpHost->setRemoteEchoingActive(false);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), "the password was left on the line after the prompt ended");
+
+        // The refusal is scoped to the prompt rather than latched off for the
+        // session. This cannot fail against the guard as written - it reads a flag
+        // setEchoSuppression() has just cleared - so it earns its place as a fence
+        // rather than as proof: a later refusal keyed on something that outlives
+        // the prompt would kill completion for the rest of the session, and
+        // nothing else here would notice.
+        type(pCommandLine, qsl("qzxpass"));
+        press(pCommandLine, Qt::Key_Tab);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxpassphrase"));
+
+        // This case is the only one that drives the profile's own command line, so
+        // it is also the only one that can leave a completion cycle on it. Escape
+        // resets that state, keeping the shared widget as it was found.
+        press(pCommandLine, Qt::Key_Escape);
+    }
+
+    // Something can empty the line without the completion cycle being told, and
+    // then a bare Tab used to carry on from the prefix that is no longer there,
+    // putting a word the player never typed onto an empty line for Return to send.
+    // clearCmdLine() from a script does it, and so does the end of a password
+    // prompt - which is how the guard above can be reached with a cycle still live
+    // from before the prompt opened.
+    void test_tabDoesNothingOnALineThatWasCleared()
+    {
+        mpHost->mpConsole->print(qsl("qzxstalealpha qzxstalebravo\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("qzxstale"));
+        press(pCommandLine, Qt::Key_Tab);
+        const QString completed = pCommandLine->toPlainText();
+        QVERIFY2(completed.startsWith(qsl("qzxstale")) && completed != qsl("qzxstale"), qPrintable(qsl("control failed, line reads '%1'").arg(completed)));
+
+        // What Lua clearCmdLine() does, and what the end of a password prompt does.
+        pCommandLine->clear();
+
+        press(pCommandLine, Qt::Key_Tab);
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), qPrintable(qsl("Tab on an empty line completed against the stale prefix, leaving '%1'").arg(pCommandLine->toPlainText())));
     }
 
     // Typing a space accepts the completion. A Tab straight after it must not
