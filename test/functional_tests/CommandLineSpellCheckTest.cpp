@@ -444,8 +444,16 @@ private slots:
 
     // Every right-click builds a new menu, so one the user dismisses has to go
     // away together with its entries instead of piling up on the command line
+    void test_aDismissedMenuIsDeletedWithItsEntries_data()
+    {
+        QTest::addColumn<bool>("chooseAnEntry");
+        QTest::newRow("dismissed with Escape") << false;
+        QTest::newRow("an entry chosen with Return") << true;
+    }
+
     void test_aDismissedMenuIsDeletedWithItsEntries()
     {
+        QFETCH(bool, chooseAnEntry);
         const QString name = freshCommandLineName();
         TCommandLine* pCommandLine = freshCommandLine(name);
         QVERIFY(pCommandLine);
@@ -459,12 +467,18 @@ private slots:
             QMenu* pMenu = rightClickLeavingOtherMenus(pCommandLine, qsl("qzxleaky"));
             QVERIFY2(pMenu, "right-clicking the command line opened no menu");
             QVERIFY2(findAction(pMenu, qsl("Add to user dictionary")), qPrintable(actionTexts(pMenu).join(qsl(" | "))));
-            QVERIFY2(findAction(pMenu, qsl("Leak check")), qPrintable(actionTexts(pMenu).join(qsl(" | "))));
+            QAction* pEntry = findAction(pMenu, qsl("Leak check"));
+            QVERIFY2(pEntry, qPrintable(actionTexts(pMenu).join(qsl(" | "))));
             built << pMenu;
             for (QAction* pAction : pMenu->actions()) {
                 built << pAction;
             }
-            QTest::keyClick(pMenu, Qt::Key_Escape);
+            if (chooseAnEntry) {
+                pMenu->setActiveAction(pEntry);
+                QTest::keyClick(pMenu, Qt::Key_Return);
+            } else {
+                QTest::keyClick(pMenu, Qt::Key_Escape);
+            }
         }
 
         const auto stillAlive = [&built]() {
