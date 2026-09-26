@@ -295,7 +295,12 @@ describe("Tests the tags MXP handles", function()
       assert.is_not_nil(quoted, actions[1])
       local compiled = loadstring("return " .. quoted)
       assert.is_function(compiled, actions[1])
-      assert.are.equal(address, compiled())
+      -- run with nothing in reach, so a regression fails here rather than
+      -- running the injected os.exit() and taking the test run down with it
+      setfenv(compiled, {})
+      local ran, value = pcall(compiled)
+      assert.is_true(ran, tostring(value))
+      assert.are.equal(address, value)
     end)
   end)
 
