@@ -321,6 +321,51 @@ private:
     int mConnectionCount = 0;
 };
 
+// Counts warnings whose text contains a substring for as long as it is in scope, forwarding every
+// message on so the ordinary output is unchanged. Installed per case rather than for the binary,
+// because Qt Test's own handler is what makes QTest::ignoreMessage() work and other cases here rely
+// on it. QTest::failOnWarning() asserts a warning's absence and is the right tool where that is all a
+// case needs; this counts them instead, for the cases that assert exactly one arrived - or exactly
+// none - over the same run.
+class ScopedWarningCounter
+{
+public:
+    explicit ScopedWarningCounter(const QString& substring)
+    {
+        smSubstring = substring;
+        smCount = 0;
+        smPrevious = qInstallMessageHandler(&ScopedWarningCounter::handler);
+    }
+
+    ~ScopedWarningCounter()
+    {
+        qInstallMessageHandler(smPrevious);
+        smPrevious = nullptr;
+        smSubstring.clear();
+    }
+
+    int count() const { return smCount; }
+
+private:
+    static void handler(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        if (type == QtWarningMsg && message.contains(smSubstring)) {
+            ++smCount;
+        }
+        if (smPrevious) {
+            smPrevious(type, context, message);
+        }
+    }
+
+    static QtMessageHandler smPrevious;
+    static QString smSubstring;
+    static int smCount;
+};
+
+QtMessageHandler ScopedWarningCounter::smPrevious = nullptr;
+QString ScopedWarningCounter::smSubstring;
+int ScopedWarningCounter::smCount = 0;
+
 // Serves a static OpenID Connect discovery document over loopback http, which
 // OAuthClientFlow::acceptableEndpointUrl() permits, so no second certificate is needed.
 class DiscoveryServerStub : public QObject
@@ -501,6 +546,98 @@ private slots:
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("player"));
         QCOMPARE(sent.value(qsl("version")).toInt(), 1);
         QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
+    }
+
+    void testStringifiedServerVersionIsUnderstood_data()
+    {
+        QTest::addColumn<QString>("versionLiteral");
+        QTest::addColumn<int>("expectedVersion");
+        QTest::addColumn<bool>("expectWarning");
+
+        // The standard asks servers to accept a stringified version from a client, and a client should
+        // cope with the same shape coming the other way: a driver with no JSON number type sends it.
+        // Read as a plain int this yielded the default, so a version 2 server was answered as version 1.
+        QTest::newRow("a number, as most servers send it") << qsl("2") << 2 << false;
+        QTest::newRow("stringified by a driver with no number type") << qsl("\"2\"") << 2 << false;
+        QTest::newRow("stringified with padding") << qsl("\" 2 \"") << 2 << false;
+        QTest::newRow("newer than this client implements") << qsl("\"3\"") << 2 << false;
+        // Out of spec (the version is a positive, non-zero integer) but unambiguous: the clamp answers
+        // it as version 1 without comment, as it always has.
+        QTest::newRow("non-positive") << qsl("\"0\"") << 1 << false;
+        // Unreadable shapes all act as version 1, which changes the hand-off - a version 1 client sends
+        // a bare {} with no token_storage, so a game may conclude it cannot offer "remember me". Saying
+        // so is the difference between a server author finding that in a log and never finding it.
+        QTest::newRow("not a number at all") << qsl("\"abc\"") << 1 << true;
+        QTest::newRow("a decimal string") << qsl("\"2.0\"") << 1 << true;
+        QTest::newRow("v-prefixed") << qsl("\"v2\"") << 1 << true;
+        QTest::newRow("empty string") << qsl("\"\"") << 1 << true;
+        QTest::newRow("a boolean") << qsl("true") << 1 << true;
+        QTest::newRow("a fraction") << qsl("2.5") << 1 << true;
+    }
+
+    void testStringifiedServerVersionIsUnderstood()
+    {
+        QFETCH(QString, versionLiteral);
+        QFETCH(int, expectedVersion);
+        QFETCH(bool, expectWarning);
+
+        ScopedWarningCounter warnings(qsl("'version' value of type"));
+
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": %1, \"type\": [\"password-credentials\"]}").arg(versionLiteral));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send Char.Login.Credentials");
+        QCOMPARE(sent.value(qsl("version")).toInt(), expectedVersion);
+        QCOMPARE(warnings.count(), expectWarning ? 1 : 0);
+    }
+
+    void testAnAbsentNonceRequiredIsNotReportedAsMalformed()
+    {
+        // A conformant server simply omits nonce_required. Read through a non-const QJsonObject's
+        // operator[], a missing key is INSERTED as Null rather than answering Undefined, so the guard
+        // meant to stay quiet about an absent field never fired: every such server was told its value
+        // was malformed, by a message that also claims the sign-in will carry no nonce.
+        // Matched on the quoted key alone rather than on the sentence around it: an absence assertion
+        // tied to today's wording stops asserting anything the moment the message is reworded, and the
+        // bug it guards - a missing key INSERTED as Null by a non-const operator[] - would come back
+        // unnoticed.
+        ScopedWarningCounter warnings(qsl("'nonce_required'"));
+
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not reach the sign-in hand-off");
+        QCOMPARE(warnings.count(), 0);
+    }
+
+    void testAMalformedNonceRequiredIsStillReported()
+    {
+        // The complement of the absent case: reading through value() must not silence the diagnostic
+        // for a value the server really did send in a shape the standard does not permit.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        // ignoreMessage fails the test if the message never arrives, so this asserts the diagnostic.
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("'nonce_required' value of type .* is not a boolean")));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"], \"nonce_required\": \"perhaps\"}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not reach the sign-in hand-off");
     }
 
     void testNoCredentialsHandsOffToTheGamesSignInScreen()
@@ -954,6 +1091,29 @@ private slots:
         QVERIFY2(!consoleContains(host, qsl("signed in automatically next time")), "a silent rotation must not be announced as a new opt-in");
     }
 
+    void testSavedTokenIsReplayedWhenOauthIsNotAdvertised()
+    {
+        // The standard verifies a reconnect token ahead of the advertised methods rather than as one
+        // of them, so a game offering only password-credentials can still mint one and honour it.
+        // Gating the replay on oauth left such a player typing a password on every connect while the
+        // token Mudlet had saved for them sat unused.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        // Emptied so the stored-credentials rung above the token cannot answer first.
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "a saved token should be replayed even when the server does not advertise oauth");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("acct:char"));
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("saved-token"));
+    }
+
     void testTokenStoredUnderItsOwnKeyIsReplayed()
     {
         Host* host = connectAndNegotiate(true);
@@ -1007,6 +1167,80 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
         QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    void testResumeHintIsNotSentToAServerThatDoesNotOfferOauth()
+    {
+        // Replaying a reconnect token is not OAuth-scoped, so that rung is deliberately ungated - but a
+        // resume asks the game to restart a provider's browser sign-in, which a game offering only
+        // password-credentials cannot do. Sending it there would spend the one sign-in attempt on a
+        // frame the game cannot answer, after attemptReconnect() has already cancelled the login
+        // timers, and tell the player a browser sign-in was resuming that never will. The hand-off is
+        // what that player needs instead.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off to the game's own sign-in screen");
+        // A resume carries both; the hand-off is identified by carrying neither.
+        QVERIFY2(!sent.contains(qsl("provider")), "the resume form was sent to a game that never offered oauth");
+        QVERIFY2(!sent.contains(qsl("account")), "a hand-off is identified by the absence of account");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    void testASkippedResumeLeavesNoProviderOnTheNextToken()
+    {
+        // The stored provider is copied onto the connection so a resume can use it. Where the game
+        // offers no oauth that resume is skipped, the player signs in another way, and a token minted
+        // by that sign-in must not be filed under a provider this connection never used: a later
+        // connection to a game that does offer oauth would then resume a browser sign-in the player
+        // never chose.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off to the game's own sign-in screen");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:other\", \"token\": \"password-earned\"}"));
+        QVERIFY2(waitForStoredToken(host, qsl("password-earned")), "the token from the hand-off sign-in should be persisted");
+        const QJsonObject stored = readStoredReconnect(host);
+        QCOMPARE(stored.value(qsl("account")).toString(), qsl("acct:other"));
+        QVERIFY2(stored.value(qsl("provider")).toString().isEmpty(), "a provider the skipped resume never used was filed with the new token");
+    }
+
+    void testAGameThatNeverAnswersAReconnectStillHandsOff()
+    {
+        // The token replay is deliberately ungated, so it now reaches games that never implemented
+        // Char.Login.Reconnect - and a profile's stored entry is not bound to a server, so it can also
+        // reach a game that never issued it. Such a game drops the frame and says nothing. Since
+        // attemptReconnect() cancels the auto-login timers before replaying, nothing else is coming:
+        // without a deadline the player watches a sign-in that never happens and is told nothing.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        host->mpAuth->mReconnectResultTimeout = std::chrono::milliseconds(250);
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"secure_only\": false}"), qsl("ignored-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        QJsonObject replay;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), replay), "the saved token should still be replayed");
+
+        // The game answers nothing at all.
+        QJsonObject handoff;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), handoff), "the sign-in never fell through to the hand-off");
     }
 
     void testReconnectAcceptedAsTheIntegerOneKeepsTheToken_data()
@@ -1165,6 +1399,49 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
         QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
         QVERIFY2(!sent.contains(qsl("token")), "the resume form must not carry the token");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    void testARejectedTokenOnAPasswordOnlyGameHandsOffRatherThanResumes()
+    {
+        // The whole cycle a rejection puts the connection through, on the kind of game this PR newly
+        // sends tokens to. The rejection keeps {account, provider} as a resume hint, and the next
+        // sign-in attempt reads it with the token rung disabled - so the provider is present, a token
+        // is not, and the only thing standing between the player and a resume frame the game cannot
+        // answer is the oauth gate.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("dead-token")));
+
+        const int firstConnection = mpServer->connectionCount();
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        QJsonObject replay;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), replay), "the saved token should be replayed");
+
+        // The rejection rewrites the entry as a resume hint and reconnects to sign in cleanly.
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->connectionCount() > firstConnection && mpServer->gmcpEnabled();
+                         },
+                         8000),
+                 "client did not reconnect and renegotiate GMCP after the rejection");
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("provider")).toString() == qsl("discord") && !entry.contains(qsl("token"));
+                                        }),
+                 "the rejection should leave an {account, provider} resume hint behind");
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off to the game's own sign-in screen");
+        QVERIFY2(!sent.contains(qsl("provider")), "the resume form was sent to a game that never offered oauth");
+        QVERIFY2(!sent.contains(qsl("account")), "a hand-off is identified by the absence of account");
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
