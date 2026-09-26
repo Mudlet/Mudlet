@@ -789,7 +789,12 @@ jobs:
   prune-superseded-ccache:
     name: Delete superseded ccache entries
     needs: compile-mudlet
-    if: always() && github.repository_owner == 'Mudlet' && github.ref == 'refs/heads/development'
+    # Skipped on PTBs, which save no ccache. A failed sweep must not fail the run:
+    # releases from development are built from whichever platforms' runs succeeded.
+    if: >-
+      always() && github.repository_owner == 'Mudlet' && github.ref == 'refs/heads/development'
+      && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       actions: write
