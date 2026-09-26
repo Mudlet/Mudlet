@@ -2434,17 +2434,24 @@ describe("sending protocol data to a game server that has not negotiated", funct
 
   -- The profile is written before the connection is started, so it can be read
   -- back straight away. after_each closes the connection.
-  local function assertNotFixtureAddress(port)
+  --
+  -- Starts from no saved address at all, so that the specs above, which connect
+  -- to the fixture without saving, cannot have left its address behind to make
+  -- these pass (or fail) for a reason of their own.
+  local function clearSavedAddress(port)
+    local directory = getMudletHomeDir()
+    os.remove(directory .. "/url")
+    os.remove(directory .. "/port")
     local host, storedPort = storedProfileAddress()
     assert.is_false(host == "127.0.0.1" and storedPort == tostring(port),
-                    "the profile already holds the fixture's address, so this proves nothing")
+                    "the profile still reports the fixture's address, so this proves nothing")
   end
 
   it("saves the host and port to the profile when asked to", function()
     if serverUnavailable() then return end
     local port = serverPort()
     finally(preserveProfileAddress())
-    assertNotFixtureAddress(port)
+    clearSavedAddress(port)
 
     assert.is_true(connectToServer("127.0.0.1", port, true))
     local host, storedPort = storedProfileAddress()
@@ -2456,7 +2463,7 @@ describe("sending protocol data to a game server that has not negotiated", funct
     if serverUnavailable() then return end
     local port = serverPort()
     finally(preserveProfileAddress())
-    assertNotFixtureAddress(port)
+    clearSavedAddress(port)
     local hostBefore, portBefore = storedProfileAddress()
 
     assert.is_true(connectToServer("127.0.0.1", port, false))
