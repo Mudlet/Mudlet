@@ -43,6 +43,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
+#include "TAction.h"
 #include "TAlias.h"
 #include "TEvent.h"
 #include "TKey.h"
@@ -389,6 +390,54 @@ private slots:
              "a key switched off during a reset must run its script once "
              "switched back on");
     QVERIFY(mpHost->getKeyUnit()->disableKey(qsl("resetDisabledKey")));
+  }
+
+  void test_childOfADisabledAliasGroupRunsItsScriptAfterResetAndEnable() {
+    auto *group = new TAlias(qsl("resetDisabledAliasGroup"), mpHost);
+    group->setIsFolder(true);
+    group->setIsActive(false);
+    QVERIFY(mpHost->getAliasUnit()->registerAlias(group));
+    auto *child = new TAlias(group, mpHost);
+    child->setName(qsl("resetDisabledAliasGroupChild"));
+    child->setRegexCode(qsl("^resetDisabledAliasGroupChild$"));
+    child->setIsActive(true);
+    QVERIFY(mpHost->getAliasUnit()->registerAlias(child));
+    QVERIFY(child->setScript(qsl("resetDisabledAliasGroupChildRan = true")));
+
+    performReset();
+
+    group->setIsActive(true);
+    QVERIFY(!luaGlobalIsTrue("resetDisabledAliasGroupChildRan"));
+    QVERIFY(mpHost->getAliasUnit()->processDataStream(
+        qsl("resetDisabledAliasGroupChild")));
+    QVERIFY2(luaGlobalIsTrue("resetDisabledAliasGroupChildRan"),
+             "an alias in a group switched off during a reset must run its "
+             "script once the group is switched back on");
+    delete group;
+  }
+
+  void test_buttonOnAHiddenToolbarRunsItsScriptAfterResetAndShow() {
+    auto *actionUnit = mpHost->getActionUnit();
+    auto *toolbar = new TAction(qsl("resetHiddenToolbar"), mpHost);
+    toolbar->setIsFolder(true);
+    toolbar->setIsActive(true);
+    QVERIFY(actionUnit->registerAction(toolbar));
+    auto *button = new TAction(toolbar, mpHost);
+    button->setName(qsl("resetHiddenToolbarButton"));
+    button->setIsActive(true);
+    QVERIFY(actionUnit->registerAction(button));
+    QVERIFY(button->setScript(qsl("resetHiddenToolbarButtonRan = true")));
+    QVERIFY(actionUnit->hideToolBar(qsl("resetHiddenToolbar")).first);
+
+    performReset();
+
+    QVERIFY(actionUnit->showToolBar(qsl("resetHiddenToolbar")).first);
+    QVERIFY(!luaGlobalIsTrue("resetHiddenToolbarButtonRan"));
+    button->execute();
+    QVERIFY2(luaGlobalIsTrue("resetHiddenToolbarButtonRan"),
+             "a button on a toolbar hidden during a reset must run its script "
+             "once the toolbar is shown again");
+    delete toolbar;
   }
 
   // -----------------------------------------------------------------------
