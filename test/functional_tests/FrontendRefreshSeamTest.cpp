@@ -34,8 +34,14 @@
 //    pixmap. Only what is drawn is at stake: hit-testing reads
 //    TChar::linkIndex() out of the buffer, so a stale pixmap cannot leave a
 //    dead link clickable.
+//  - TConsoleModelNotifier::linkCharactersChanged, which the buffer emits once
+//    it has restyled a link's characters, reaches TConsole::repaintPanes().
+//    Cut it and the restyled text stays off screen until something else
+//    repaints. Its sibling spoilerRevealed only schedules a QWidget::update()
+//    of the console, which leaves nothing an observer can read and is not
+//    gated: other widgets repaint the console often enough to hide its loss.
 //
-// Both are read through a second observer attached to the same signal after the
+// All are read through a second observer attached to the same signal after the
 // production connect. Qt delivers to receivers in connection order, so what the
 // observer sees is the state the production consumer has just left behind, with
 // no event loop in between for anything else to interfere in.
@@ -53,6 +59,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TBuffer.h"
+#include "TConsoleModel.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -64,6 +71,37 @@
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
+
+// Counts the paint events one widget receives.
+class PaintCounter : public QObject
+{
+public:
+    explicit PaintCounter(QWidget* widget)
+    : mpWidget(widget)
+    {
+        widget->installEventFilter(this);
+    }
+    ~PaintCounter() override
+    {
+        if (mpWidget) {
+            mpWidget->removeEventFilter(this);
+        }
+    }
+
+    int mCount = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Paint) {
+            ++mCount;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    QPointer<QWidget> mpWidget;
+};
 
 // A game that accepts one connection and can drop it on demand, which is all
 // either test needs of a server.
@@ -350,7 +388,62 @@ private slots:
         QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a hyperlink that had just been revealed");
     }
 
+    // repaintPanes() paints synchronously, so a paint landing on the upper pane
+    // between the call and the observer can only have come from this wire.
+    void test_restylingALinksCharactersRepaintsThePanes()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        const int linkId = feedSpoilerLink(host, qsl("OSCPAINT1"));
+        QVERIFY2(linkId > 0, "no spoiler link reached the buffer");
+
+        PaintCounter upperPaints(console->mUpperPane);
+        int paintsSeen = -1;
+        QObject observerContext;
+        connect(&console->model().mNotifier, &TConsoleModelNotifier::linkCharactersChanged, &observerContext, [&]() {
+            paintsSeen = upperPaints.mCount;
+        });
+
+        console->buffer.updateLinkCharacters(linkId);
+        QVERIFY2(paintsSeen >= 0, "restyling the link's characters raised no notification");
+        QVERIFY2(paintsSeen > 0, "the upper pane was not repainted for a link whose characters had just been restyled");
+    }
+
 private:
+    // Answers the link's index, or 0 when the link never landed.
+    int feedSpoilerLink(Host* host, const QString& marker)
+    {
+        host->mEnableOSC8Hyperlinks = true;
+        // See test_aHyperlinkVisibilityChangeForcesBothPanesToRedraw on why
+        // these are real escape bytes.
+        const QString esc = QString(QChar(0x1B));
+        const QString stringTerminator = esc + QLatin1Char('\\');
+        const QString link = qsl("%1]8;;send:osc8paint?config={\"spoiler\":true}%2SECRETWORD%1]8;;%2").arg(esc, stringTerminator);
+        const QString feed = qsl("feedTriggers([==[%1(%2)%1\n]==])").arg(marker, link);
+        if (!host->getLuaInterpreter()->compileAndExecuteScript(feed)) {
+            return 0;
+        }
+        TMainConsole* console = host->mpConsole;
+        int lineNumber = -1;
+        const bool landed = QTest::qWaitFor(
+                [&]() {
+                    lineNumber = lineHolding(console, marker);
+                    return lineNumber >= 0;
+                },
+                8000);
+        if (!landed) {
+            return 0;
+        }
+        for (const auto& character : console->buffer.buffer.at(lineNumber)) {
+            if (character.linkIndex() > 0) {
+                return character.linkIndex();
+            }
+        }
+        return 0;
+    }
+
     static QString describe(const TabConnectionIndicator state)
     {
         switch (state) {

@@ -424,6 +424,7 @@ set(mudlet_HDRS
     TCommandLine.h
     TConsole.h
     TConsoleModel.h
+    TConsoleModelNotifier.h
     TDebug.h
     TDebugFilterBar.h
     TDetachedWindow.h
