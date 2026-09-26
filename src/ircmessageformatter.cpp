@@ -22,6 +22,7 @@
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
+#include <QDateTime>
 #include <QUrl>
 
 // communi escapes & and < before it strips the IRC formatting codes, and hands
@@ -464,8 +465,10 @@ QString IrcMessageFormatter::formatWhoisMessage(IrcWhoisMessage* message, bool i
     // communi reads a missing one as the epoch and a missing idle time as zero.
     const QString idle = message->parameters().value(6);
     if (!idle.isEmpty()) {
-        if (message->parameters().value(5).toLongLong() > 0) {
-            lines << QObject::tr("[WHOIS] %1 is connected since %2 (idle %3)").arg(nick, message->since().toString(), formatDuration(message->idle()));
+        // parsed here rather than through since(), which reads it as a 32-bit int
+        const qint64 signOn = message->parameters().value(5).toLongLong();
+        if (signOn > 0) {
+            lines << QObject::tr("[WHOIS] %1 is connected since %2 (idle %3)").arg(nick, QDateTime::fromSecsSinceEpoch(signOn).toString(), formatDuration(message->idle()));
         } else {
             //: %1 is the nick, %2 how long they have been idle, e.g. '3 mins 20 secs'
             lines << QObject::tr("[WHOIS] %1 has been idle %2").arg(nick, formatDuration(message->idle()));
