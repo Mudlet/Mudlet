@@ -2790,6 +2790,12 @@ describe("Tests the open and closed states of the map widget", function()
     openMapWidget()
   end)
 
+  it("refuses a docking area it does not know, naming the ones it does", function()
+    local ok, message = openMapWidget("middle")
+    assert.is_nil(ok)
+    assert.are.equal([[docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating]], message)
+  end)
+
   -- companion guard rather than a guard for the bug: closeMapWidget() reported
   -- "already closed" before this was fixed too. It is here so that a fix which
   -- stopped distinguishing the two calls would be caught.

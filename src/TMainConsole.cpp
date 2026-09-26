@@ -2423,7 +2423,7 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
         return {true, QString()};
     }
 
-    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+    return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
 }
 
 void TMainConsole::showMapperScriptReminder()
