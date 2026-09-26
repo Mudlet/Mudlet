@@ -1107,7 +1107,7 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
     } else if (mode == QLatin1String("long")) {
         sensitivity = SpeechRecognizer::Sensitivity::Long;
     } else {
-        return warnArgumentValue(L, "stt.setSensitivity", qsl(R"(sensitivity must be "short", "default" or "long", got "%1")").arg(mode));
+        return warnArgumentChoice(L, "stt.setSensitivity", qsl("sensitivity"), {qsl("short"), qsl("default"), qsl("long")}, mode);
     }
 
     auto* pMudlet = mudlet::self();

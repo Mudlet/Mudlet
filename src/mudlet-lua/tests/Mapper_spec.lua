@@ -1626,7 +1626,7 @@ describe("Tests mapper functions against a shared fixture", function()
     it("addCustomLine rejects an invalid line style", function()
       local ok, err = addCustomLine(rSandA, {{2, 2, 0}}, "e", "wiggly line", {0, 0, 0}, false)
       assert.is_nil(ok)
-      assert.is_string(err)
+      assert.are.equal('line style must be "solid line", "dot line", "dash line", "dash dot line" or "dash dot dot line", got "wiggly line"', err)
     end)
 
     it("addCustomLine rejects an out-of-range colour component", function()

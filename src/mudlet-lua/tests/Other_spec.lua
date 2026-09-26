@@ -1416,7 +1416,7 @@ describe("Tests Other.lua functions", function()
       assert.is_true(setConfig("mapperButton", "scripted"))
       local ok, err = setConfig("mapperButton", "sideways")
       assert.is_nil(ok)
-      assert.is_string(err)
+      assert.equals('mapperButton must be "default", "scripted" or "disabled", got "sideways"', err)
       assert.equals("scripted", getConfig("mapperButton"))
       restore("mapperButton")
     end)
@@ -1531,46 +1531,48 @@ describe("Tests Other.lua functions", function()
       local original = getConfig("showSentText", true)
       originalValues.showSentText = original
 
+      -- the refusal is the only place a script can read which modes there are
       local ok, err = setConfig("showSentText", "sometimes")
       assert.is_nil(ok)
-      assert.is_string(err)
+      assert.equals('showSentText must be "never", "always" or "script", got "sometimes"', err)
       assert.equals(original, getConfig("showSentText", true), "a rejected mode was applied anyway")
 
+      -- a number is read as the string it would print as, so it is refused as
+      -- a mode it does not have rather than as the wrong type
+      local okNumber, errNumber = setConfig("showSentText", 42)
+      assert.is_nil(okNumber)
+      assert.equals('showSentText must be "never", "always" or "script", got "42"', errNumber)
+      assert.equals(original, getConfig("showSentText", true))
+
       -- neither a boolean nor a string is not a mode at all
-      local okType, errType = setConfig("showSentText", 42)
+      local okType, errType = setConfig("showSentText", {})
       assert.is_nil(okType)
-      assert.is_string(errType)
+      assert.equals("showSentText must be a boolean or a string, got table", errType)
       assert.equals(original, getConfig("showSentText", true))
       originalValues.showSentText = nil
     end)
 
     -- Each of these keys refuses a value outside its own set. The refusal has to
-    -- carry the set, because that list is the only place a script author can
-    -- read what the key accepts.
-    it("lists what it accepts when refusing a string enum, and changes nothing", function()
-      local enums = {
-        blankLinesBehaviour = {"replacewithspace", "sideways"},
-        controlCharacterHandling = {"picture", "sideways"},
-        ambiguousEAsianWidthCharacters = {"narrow", "sideways"},
-      }
-      for key, pair in pairs(enums) do
-        local expectedInMessage, rejected = pair[1], pair[2]
+    -- name the key and carry the set, because that list is the only place a
+    -- script author can read what the key accepts - blankLinesBehaviour and
+    -- controlCharacterHandling used to name other keys (#10391).
+    local enumRefusals = {
+      blankLinesBehaviour = 'blankLinesBehaviour must be "show", "hide" or "replacewithspace", got "sideways"',
+      controlCharacterHandling = 'controlCharacterHandling must be "asis", "oem" or "picture", got "sideways"',
+      ambiguousEAsianWidthCharacters = 'ambiguousEAsianWidthCharacters must be "narrow", "wide" or "auto", got "sideways"',
+      caretShortcut = 'caretShortcut must be "none", "tab", "ctrltab" or "f6", got "sideways"',
+    }
+    for key, expected in pairs(enumRefusals) do
+      it("names " .. key .. " and what it accepts when refusing a value, and changes nothing", function()
         snapshot(key)
         local before = getConfig(key)
-        local ok, err = setConfig(key, rejected)
-        assert.is_nil(ok, key .. " accepted '" .. rejected .. "'")
-        assert.is_string(err)
-        assert.is_truthy(err:find(expectedInMessage, 1, true),
-          key .. " did not say it accepts '" .. expectedInMessage .. "', got: " .. tostring(err))
+        local ok, err = setConfig(key, "sideways")
+        assert.is_nil(ok, key .. " accepted 'sideways'")
+        assert.equals(expected, err)
         assert.equals(before, getConfig(key), key .. " was changed by a rejected value")
         restore(key)
-      end
-    end)
-
-    -- the refusals for blankLinesBehaviour and controlCharacterHandling name
-    -- caretShortcut and commandLineHistorySaveSize instead of the key that was
-    -- actually rejected (#10391)
-    pending("names the key it rejected in every string enum refusal")
+      end)
+    end
 
     -- A setting that changed raises sysSettingChanged with its getConfig key
     -- and the new value. Writing the value a setting already holds raises
