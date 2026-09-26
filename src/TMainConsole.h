@@ -217,6 +217,16 @@ public:
     // A negative line counts back from the end. One at or past the end, or
     // toEnd, puts the console back to following new lines.
     bool scrollWindowTo(const QString& name, int line, bool toEnd);
+    // The timestamp and wrap operations, found by name in the same way.
+    std::optional<TConsole::ConsoleType> getWindowConsoleType(const QString& name);
+    std::optional<bool> getWindowTimeStamps(const QString& name);
+    // Answers whether they were shown before, and leaves them alone when that
+    // is already what was asked for.
+    std::optional<bool> setWindowTimeStamps(const QString& name, bool shown);
+    std::optional<int> getWindowWrapAt(const QString& name);
+    bool setWindowWrapAt(const QString& name, int wrapAt);
+    bool setWindowWrapIndent(const QString& name, int indent);
+    bool setWindowWrapHangingIndent(const QString& name, int indent);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.
