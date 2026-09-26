@@ -28,7 +28,6 @@
 #include "discord.h"
 #include "MudletApp.h"
 #include "dlgIRC.h"
-#include "dlgMapper.h"
 #include "dlgNotepad.h"
 #include "dlgTriggerEditor.h"
 #include "GifTracker.h"
@@ -632,11 +631,8 @@ void Host::loadMap()
     qDebug() << "Host::loadMap() - restore map case 4.";
     if (mpMap->restore(QString())) {
         mpMap->audit();
-        if (mpMap->mpMapper) {
-            mpMap->mpMapper->mp2dMap->init();
-            mpMap->mpMapper->updateAreaComboBox();
-            mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            mpMap->mpMapper->show();
+        if (mpConsole) {
+            mpConsole->showLoadedMap();
         }
     }
 }
@@ -690,14 +686,14 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
 
 bool Host::loadMapFile(const QString& location)
 {
-    if (!mpMap || !mpMap->mpMapper) {
+    if (!mpMap || mpMap->mpMapper.isNull()) {
         // No map or map currently loaded - so try and created mapper
         // but don't load a map here by default, we do that below and it may not
         // be the default map anyhow
         showHideOrCreateMapper(false);
     }
 
-    if (!mpMap || !mpMap->mpMapper) {
+    if (!mpMap || mpMap->mpMapper.isNull()) {
         // And that failed so give up
         return false;
     }
@@ -718,15 +714,12 @@ bool Host::loadMapFile(const QString& location)
     bool result = false;
     if (mpMap->restore(filePathName)) {
         mpMap->audit();
-        mpMap->mpMapper->mp2dMap->init();
-        mpMap->mpMapper->updateAreaComboBox();
-        mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        mpMap->mpMapper->show();
+        if (mpConsole) {
+            mpConsole->showLoadedMap();
+        }
         result = true;
-    } else {
-        mpMap->mpMapper->mp2dMap->init();
-        mpMap->mpMapper->updateAreaComboBox();
-        mpMap->mpMapper->show();
+    } else if (mpConsole) {
+        mpConsole->showMapAfterFailedLoad();
     }
 
     if (filePathName.isEmpty()) {
@@ -749,12 +742,12 @@ bool Host::loadMapFile(const QString& location)
 // console - if possible!
 bool Host::importMapFile(const QString& location, QString* errMsg)
 {
-    if (!mpMap || !mpMap->mpMapper) {
+    if (!mpMap || mpMap->mpMapper.isNull()) {
         // No map or mapper currently loaded/present - so try and create mapper
         showHideOrCreateMapper(false);
     }
 
-    if (!mpMap || !mpMap->mpMapper) {
+    if (!mpMap || mpMap->mpMapper.isNull()) {
         // And that failed so give up
         if (errMsg) {
             *errMsg = qsl("loadMap: unable to initialise mapper {in Host::importMapFile(...)} - something is wrong!");
@@ -1930,13 +1923,8 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             mpConsole->printCommand(cmd);
         }
 
-        //If 3D Mapper is active mpConsole->requestRepaint(); seems to be superfluous and even cause problems in MacOS
-#if defined(INCLUDE_3DMAPPER)
-        if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
-#else
-        if (!mpMap->mpMapper) {
-#endif
-            mpConsole->requestRepaint();
+        if (mpConsole) {
+            mpConsole->requestRepaintAfterCommand();
         }
     }
 
@@ -4624,9 +4612,6 @@ void Host::restoreOwnMapper()
     if (mpConsole) {
         mpConsole->restoreOwnMapper();
     }
-#if defined(DEBUG_WINDOW_HANDLING)
-    qDebug() << "Host::restoreOwnMapper:" << getName() << "- map is now drawn by" << mpMap->mpMapper.data();
-#endif
 }
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
@@ -4766,8 +4751,8 @@ void Host::setAnnounceIncomingText(const bool state)
 
 void Host::setMapperPanelVisible(const bool state)
 {
-    if (mpMap && mpMap->mpMapper) {
-        mpMap->mpMapper->slot_setMapperPanelVisible(state);
+    if (mpConsole) {
+        mpConsole->setMapperPanelVisible(state);
     }
     changeSetting(mShowPanel, state, qsl("mapperPanelVisible"));
 }
@@ -5145,7 +5130,7 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
-    if (!mpConsole->mapWidgetCreated() && !mpMap.data()->mpMapper) {
+    if (!mpConsole->mapWidgetCreated() && mpMap->mpMapper.isNull()) {
         showHideOrCreateMapper(true);
     }
 
@@ -5591,8 +5576,7 @@ bool Host::interceptMapperButton()
 // loads/imports a non-default (last saved map in profile's map directory).
 void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 {
-    auto pMap = mpMap.data();
-    if (pMap->mpMapper) {
+    if (!mpMap->mpMapper.isNull()) {
         toggleMapperVisibility();
         return;
     }
@@ -5605,36 +5589,16 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 // menu label saying what the next activation will do cannot disagree with it.
 bool Host::mapperShown() const
 {
-    if (!mpMap || !mpMap->mpMapper) {
+    if (!mpMap || !mpConsole) {
         return false;
     }
-    if (mpMap->mpMapper->isFloatAndDockable()) {
-        // When in a dock widget, check the parent's visibility, not the child's,
-        // to correctly handle the case where the dock widget was closed via X button.
-        return mpMap->mpMapper->parentWidget()->isVisible();
-    }
-    return mpMap->mpMapper->isVisible();
+    return mpConsole->mapperShown();
 }
 
 void Host::toggleMapperVisibility()
 {
-    auto pMap = mpMap.data();
-    const bool shown = mapperShown();
-    if (pMap->mpMapper->isFloatAndDockable()) {
-        // If we are using a floating/dockable widget we must show/hide that
-        // only and not the mapper widget (otherwise it messes up {shrinks
-        // to a minimal size} the mapper inside the container dock widget). This
-        // is the same as the case for a TConsole inside a TDockWidget in
-        // (void) TDockWidget::setVisible(bool).
-        if (shown) {
-            pMap->mpMapper->parentWidget()->setVisible(false);
-        } else {
-            // When showing, show child first then parent - same pattern as TDockWidget
-            pMap->mpMapper->show();
-            pMap->mpMapper->parentWidget()->setVisible(true);
-        }
-    } else {
-        pMap->mpMapper->setVisible(!shown);
+    if (mpConsole) {
+        mpConsole->setMapperShown(!mapperShown());
     }
 }
 
@@ -5655,34 +5619,17 @@ void Host::createMapper(const bool loadDefaultMap)
         const QDateTime now(QDateTime::currentDateTime());
         if (pMap->restore(QString())) {
             pMap->audit();
-            pMap->mpMapper->mp2dMap->init();
-            pMap->mpMapper->updateAreaComboBox();
-            pMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            pMap->mpMapper->show();
+            mpConsole->showLoadedMap();
         }
 
         pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
     } else {
-        if (pMap->mpMapper) {
-            // Needed to set the area selector widget to right area when map is
-            // loaded by clicking on Map main toolbar button:
-            pMap->mpMapper->updateAreaComboBox();
-            pMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            pMap->mpMapper->show();
-        }
+        // Needed to set the area selector widget to right area when map is
+        // loaded by clicking on Map main toolbar button:
+        mpConsole->showMapAtPlayerArea();
     }
-    mpConsole->dockMapWidget(Qt::RightDockWidgetArea);
-
-    // XXX: should this be called multiple times?
-    mudlet::self()->loadWindowLayout();
-
-    // Ensure the mapper is visible after creation - loadWindowLayout() may have
-    // restored a previous hidden state, but when first creating the mapper, we
-    // always want it to be visible.
-    pMap->mpMapper->show();
-    mpConsole->showMapWidget();
-    pMap->mpMapper->updateEmptyStateOverlay();
+    mpConsole->showNewMapperDock();
 
     check_for_mappingscript();
     TEvent mapOpenEvent{};
@@ -5871,9 +5818,8 @@ void Host::setLargeAreaExitArrows(const bool state)
 {
     if (mLargeAreaExitArrows != state) {
         mLargeAreaExitArrows = state;
-        if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
-            mpMap->mpMapper->mp2dMap->mLargeAreaExitArrows = state;
-            mpMap->mpMapper->mp2dMap->update();
+        if (mpMap && mpConsole) {
+            mpConsole->setMapLargeAreaExitArrows(state);
         }
     }
 }
@@ -6176,11 +6122,8 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
 
 #if defined(INCLUDE_3DMAPPER)
     // Refresh maps if any experiments changed the 3D map
-    if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
-        mpMap->mpMapper->mp2dMap->update();
-    }
-    if (mpMap && mpMap->mpM) {
-        mpMap->mpM->update();
+    if (mpMap && mpConsole) {
+        mpConsole->requestMapRepaint();
     }
 #endif
 

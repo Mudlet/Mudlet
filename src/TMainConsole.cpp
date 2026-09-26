@@ -2413,9 +2413,134 @@ bool TMainConsole::hideMapWidget()
     return true;
 }
 
-void TMainConsole::showMapWidget()
+void TMainConsole::showNewMapperDock()
 {
+    dockMapWidget(Qt::RightDockWidgetArea);
+
+    // XXX: should this be called multiple times?
+    mudlet::self()->loadWindowLayout();
+
+    // loadWindowLayout() may have restored a previous hidden state, but a
+    // mapper that has just been made is always shown.
+    mpHost->mpMap->mpMapper->show();
     mpDockableMapWidget->show();
+    mpHost->mpMap->mpMapper->updateEmptyStateOverlay();
+}
+
+void TMainConsole::showLoadedMap()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return;
+    }
+
+    mapper->mp2dMap->init();
+    mapper->updateAreaComboBox();
+    mapper->resetAreaComboBoxToPlayerRoomArea();
+    mapper->show();
+}
+
+void TMainConsole::showMapAfterFailedLoad()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return;
+    }
+
+    mapper->mp2dMap->init();
+    mapper->updateAreaComboBox();
+    mapper->show();
+}
+
+void TMainConsole::showMapAtPlayerArea()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return;
+    }
+
+    mapper->updateAreaComboBox();
+    mapper->resetAreaComboBoxToPlayerRoomArea();
+    mapper->show();
+}
+
+bool TMainConsole::mapperShown() const
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return false;
+    }
+    if (mapper->isFloatAndDockable()) {
+        // The dock rather than the mapper, so that a dock closed by its own
+        // button counts as not shown.
+        return mapper->parentWidget()->isVisible();
+    }
+    return mapper->isVisible();
+}
+
+void TMainConsole::setMapperShown(const bool shown)
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return;
+    }
+    if (!mapper->isFloatAndDockable()) {
+        mapper->setVisible(shown);
+        return;
+    }
+
+    // Hiding the mapper inside the dock rather than the dock would shrink the
+    // mapper to a minimal size, as for a TConsole in TDockWidget::setVisible().
+    if (shown) {
+        mapper->show();
+        mapper->parentWidget()->setVisible(true);
+    } else {
+        mapper->parentWidget()->setVisible(false);
+    }
+}
+
+void TMainConsole::setMapperPanelVisible(const bool visible)
+{
+    if (auto* mapper = mpHost->mpMap->mpMapper.data()) {
+        mapper->slot_setMapperPanelVisible(visible);
+    }
+}
+
+void TMainConsole::setMapLargeAreaExitArrows(const bool enabled)
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper || !mapper->mp2dMap) {
+        return;
+    }
+
+    mapper->mp2dMap->mLargeAreaExitArrows = enabled;
+    mapper->mp2dMap->update();
+}
+
+void TMainConsole::requestMapRepaint()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (mapper && mapper->mp2dMap) {
+        mapper->mp2dMap->update();
+    }
+#if defined(INCLUDE_3DMAPPER)
+    if (mpHost->mpMap->mpM) {
+        mpHost->mpMap->mpM->update();
+    }
+#endif
+}
+
+void TMainConsole::requestRepaintAfterCommand()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+#if defined(INCLUDE_3DMAPPER)
+    // With a 3D mapper this repaint is superfluous and causes problems on macOS
+    if (!mapper || !mapper->glWidget) {
+#else
+    if (!mapper) {
+#endif
+        requestRepaint();
+    }
 }
 
 bool TMainConsole::requestClose()
@@ -2453,6 +2578,9 @@ void TMainConsole::restoreOwnMapper()
     } else if (auto* hostMapper = dockedMapper()) {
         mpHost->mpMap->mpMapper = hostMapper;
     }
+#if defined(DEBUG_WINDOW_HANDLING)
+    qDebug() << "TMainConsole::restoreOwnMapper:" << mpHost->getName() << "- map is now drawn by" << mpHost->mpMap->mpMapper.data();
+#endif
 }
 
 dlgMapper* TMainConsole::dockedMapper() const

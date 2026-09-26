@@ -200,8 +200,9 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
-    void showMapWidget();
-    void dockMapWidget(Qt::DockWidgetArea area);
+    // Docks the dock createMapperDock() made on the right, restores the saved
+    // window layout and then shows the dock and its mapper regardless of it.
+    void showNewMapperDock();
     std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
     // The map dock's state as values, so the core never holds the widget. mapWidgetCreated() does not
     // mean on screen, which is what the four after it go by.
@@ -210,6 +211,25 @@ public:
     std::optional<QString> mapWidgetTitle() const;
     std::optional<QRect> mapWidgetGeometry() const;
     bool hideMapWidget();
+    // The mapper drawing the map is TMap::mpMapper, which a main window or
+    // detached window dock may have borrowed from this console, so these act on
+    // that one and do nothing when there is none.
+    // After a map load: redraw from scratch and show the player's area.
+    void showLoadedMap();
+    // After a failed load: redraw from scratch, staying on the area shown.
+    void showMapAfterFailedLoad();
+    // The map was already loaded when the mapper was made: show the player's area.
+    void showMapAtPlayerArea();
+    // A mapper in a dock counts as shown when its dock does, and is shown and
+    // hidden with it.
+    bool mapperShown() const;
+    void setMapperShown(bool shown);
+    void setMapperPanelVisible(bool visible);
+    void setMapLargeAreaExitArrows(bool enabled);
+    void requestMapRepaint();
+    // requestRepaint() for after echoing a command, skipped while the mapper
+    // has a 3D view - or, in builds without one, while there is any mapper.
+    void requestRepaintAfterCommand();
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
     void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
@@ -272,6 +292,7 @@ signals:
 
 private:
     dlgMapper* dockedMapper() const;
+    void dockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     // Shared by reparentLabel() and reparentWindow() so they agree on what "main" means.
