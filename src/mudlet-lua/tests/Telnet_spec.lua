@@ -1902,3 +1902,149 @@ describe("MXP auto-detection from the mode switch escape", function()
     assert.is_false(getConfig("promptForMXPProcessorOn"))
   end)
 end)
+
+-- cTelnet already withheld this event for the password it sends itself: the
+-- auto-login call passes permitDataSendRequestEvent false where the one for the
+-- character name does not. What it did not withhold was the password the player
+-- types at the game's own prompt: that goes through Host::send(), and it reached
+-- every handler in cleartext. Masking did not help - it is painted over the
+-- widget, not applied to what is sent.
+--
+-- That is held shut now, but not from here. What is withheld is text that came
+-- from a command line, and Lua cannot produce any: send() and expandAlias() are
+-- script sends by definition, however they are dressed up. So the typed case
+-- lives in CommandLineKeyHandlingTest, which can press Return, and these two pin
+-- the half that must keep working - a script's send and a script's alias are not
+-- a password being hidden, and treating them as one took denyCurrentSend() and
+-- every vault-lookup alias with it.
+describe("Tests what sysDataSendRequest carries at a server password prompt", function()
+  -- Password mode cannot be turned on from Lua; the server takes the ECHO option,
+  -- so the real parser has to be fed. cTelnet stops answering ECHO after five
+  -- negotiations chained less than five seconds apart, and a prompt costs two.
+  -- What keeps that off this block is the five-second window rather than anything
+  -- an earlier file did: a chain only continues while the toggles keep arriving
+  -- inside it, so the count is back to zero by the time these cases run. It is a
+  -- budget within the block, though - the two cases below spend 4 of the 5, so a
+  -- third written the same way would have its WILL ECHO refused and would need to
+  -- reuse a prompt one of these already opened.
+  -- The real hazard is TelnetTriggerFuzz_spec.lua, which sorts immediately before
+  -- this file and fuzzes IAC WILL/WONT over an option list that includes ECHO. It
+  -- is gated on MUDLET_FUZZ so CI never runs it, but under the fuzz campaign it
+  -- can latch the anomaly detector and this block then fails pointing at the
+  -- password rather than at the fuzzer.
+  local echoActive = false
+  local function serverEcho(takesEcho)
+    local ok, msg = feedTelnet(takesEcho and "<T_IAC><T_WILL><O_ECHO>" or "<T_IAC><T_WONT><O_ECHO>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    echoActive = takesEcho
+  end
+
+  after_each(function()
+    -- The suppression is process wide, so a prompt left open by a failed
+    -- assertion would follow every later spec file. This WONT is a no-op once
+    -- the anomaly detector has latched, because ctelnet.cpp ignores WONT ECHO
+    -- then - but in that case the WILL was refused too and nothing engaged, so
+    -- the probe in the test body fails first and says which half broke.
+    if echoActive then
+      serverEcho(false)
+    end
+    clearCmdLine("main")
+  end)
+
+  it("still raises sysDataSendRequest for a script's send at a prompt", function()
+    local seen = {}
+    local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, data)
+      seen[#seen + 1] = data
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    -- The control: with no prompt open the event still carries what was sent, so
+    -- a pass below cannot come from the handler never firing at all.
+    send("specOrdinaryCommandBeforeThePrompt", false)
+    assert.is_true(table.contains(seen, "specOrdinaryCommandBeforeThePrompt"),
+                   "an ordinary command should still raise sysDataSendRequest")
+
+    -- Without this a refused negotiation would fail the assertion below with a
+    -- message blaming the guard, when the real cause was that no prompt opened.
+    -- There is no getter for echo suppression, so this keys off the one thing it
+    -- does that Lua can see, exactly as CommandLine_spec.lua does: the text on the
+    -- line when the prompt opens is put aside. It has to be selected first. An
+    -- unselected line that does not match the history is read as password
+    -- characters the player had already started typing and is deliberately left in
+    -- place, so the probe would sit there and the assertion would blame the guard
+    -- for it. Masking itself is painted over the document rather than applied to
+    -- it, so text printed after this point stays readable and cannot be probed.
+    printCmdLine("main", "specPromptEngagedProbe")
+    selectCmdLineText("main")
+    serverEcho(true)
+    assert.are.equal("", getCmdLine("main"), "echo suppression did not engage, so this case proves nothing")
+
+    send("specScriptSendAtThePrompt", false)
+    serverEcho(false)
+
+    -- A script's send is not a password being typed, and the event still carries
+    -- it. Withholding it here as well cost the profile denyCurrentSend() - a
+    -- package could no longer turn a send down at a prompt, which
+    -- TelnetLatePasswordTest pins from the other side. What a PLAYER types is
+    -- withheld, and that cannot be said from here: Lua has no way to type into a
+    -- command line, so CommandLineKeyHandlingTest makes that claim instead.
+    assert.is_true(table.contains(seen, "specScriptSendAtThePrompt"),
+                   "a script's send at a password prompt no longer raises sysDataSendRequest, so denyCurrentSend() cannot act on it")
+
+    -- And the event comes back once the prompt is over, so the guard is scoped to
+    -- the prompt rather than latching off for the rest of the session.
+    send("specOrdinaryCommandAfterThePrompt", false)
+    assert.is_true(table.contains(seen, "specOrdinaryCommandAfterThePrompt"),
+                   "sysDataSendRequest stopped firing after the password prompt ended")
+  end)
+
+  -- expandAlias() leaves dontExpandAliases at its default, as the command line
+  -- does, so the alias pass really runs - but that default is also what a trigger
+  -- or timer command field, a key, a button and a label callback leave alone.
+  -- Holding the pass back for all of them at a prompt meant an alias like ^pw$
+  -- that looks a password up in a vault simply stopped running, and the literal
+  -- text went to the game as the password. Only what came from a command line is
+  -- held back now, which Lua cannot produce - so this pins the other half: a
+  -- script asking for an alias to be expanded at a prompt still gets it.
+  it("still expands an alias asked for by a script at a prompt", function()
+    local aliasSaw = {}
+    local commandSaw = {}
+    -- Matches only the sentinel, so it cannot swallow anything else a spec sends.
+    -- A matching alias makes Host::send skip sendData entirely.
+    --
+    -- `command` is read here, inside the pass, rather than after expandAlias()
+    -- returns. expandAlias() parks the caller's `command` and puts it back when the
+    -- pass ends, so that a script calling it does not resume holding the nested
+    -- command - which means the value the pass set is gone by the time it returns,
+    -- and an assertion made out here would be reading the parked value whether the
+    -- guard held or not.
+    local aliasId = tempAlias("^specAliasSentinel", function()
+      aliasSaw[#aliasSaw + 1] = matches[1]
+      commandSaw[#commandSaw + 1] = command
+    end)
+    finally(function() killAlias(aliasId) end)
+
+    -- The control: outside a prompt the alias pass runs and sees it, so a pass
+    -- below cannot come from the alias never having matched anything.
+    expandAlias("specAliasSentinelBeforeThePrompt", false)
+    assert.are.equal(1, #aliasSaw, "the alias did not fire outside a password prompt, so this case proves nothing")
+    assert.are.equal("specAliasSentinelBeforeThePrompt", commandSaw[1],
+                     "the alias pass did not set the command global outside a password prompt")
+
+    -- Same probe as the case above, and selected for the same reason.
+    printCmdLine("main", "specPromptEngagedProbe")
+    selectCmdLineText("main")
+    serverEcho(true)
+    assert.are.equal("", getCmdLine("main"), "echo suppression did not engage, so this case proves nothing")
+
+    expandAlias("specAliasSentinelAtThePrompt", false)
+    serverEcho(false)
+
+    -- Two now, the control and this one: the pass ran and the alias fired, which
+    -- is what a vault-lookup alias at a login prompt depends on.
+    assert.are.equal(2, #aliasSaw,
+                     "an alias a script asked to expand at a password prompt did not run, so its own name would go to the game as the password")
+    assert.are.equal("specAliasSentinelAtThePrompt", commandSaw[2],
+                     "the alias pass ran without setting the command global")
+  end)
+end)

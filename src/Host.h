@@ -286,7 +286,12 @@ public:
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
 
-    void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
+    // fromCommandLine marks text the player typed into a command line and
+    // submitted. Only that text is held back from the alias pass at a masked
+    // password prompt: a script's send(), a trigger or timer command field, a key,
+    // a button, a label callback and expandAlias() all rely on the alias pass and
+    // are not what a prompt is hiding.
+    void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false, bool fromCommandLine = false);
 
     int getHostID() { return mHostID; }
 
@@ -783,6 +788,10 @@ public:
 public:
     void setRemoteEchoingActive(bool active);
     bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
+    // Whether the server's echo suppression should be read as "a password is being
+    // typed". Narrower than isRemoteEchoingActive() on purpose - see the definition
+    // for the two states that are echo-off but not a password prompt.
+    bool maskedPasswordPromptActive() const;
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of

@@ -1904,7 +1904,7 @@ QPair<QString, QString> Host::getSearchEngine()
 
 // cmd is UTF-16BE encoded here, but will be transcoded to Server's one by
 // cTelnet::sendData(...) call:
-void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
+void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases, bool fromCommandLine)
 {
     // Record that the player (or a script acting for them) has interacted this connection; a later
     // unsolicited GMCP Char.Login.URL may then auto-open the browser (see GMCPAuthenticator).
@@ -1962,13 +1962,35 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             continue;
         }
         command.remove(QChar::LineFeed);
-        if (dontExpandAliases) {
-            mTelnet.sendData(command, true, true);
+        // The alias pass is skipped at a masked password prompt.
+        // processDataStream() writes what it is given to the Lua global `command`
+        // before matching anything, and runs the script of every alias whose pattern
+        // matches - so the password would reach Lua in cleartext, as a global
+        // anything can later read, one frame before cTelnet::sendData() gets a say. A
+        // matching alias also returns true and swallows the send, so the guard inside
+        // sendData() would never be reached for it at all.
+        //
+        // Only what the player typed into a command line is held back, which is why
+        // this asks fromCommandLine rather than reading dontExpandAliases' default.
+        // Most callers leave that default alone without being typed input at all -
+        // expandAlias(), a trigger or timer command field, a key binding, a button,
+        // a label callback, a notepad, an alias's own command field - and every one
+        // of them needs the alias pass. Skipping it for them sent the alias's own
+        // name to the game as the password: an alias like ^pw$ that looks a password
+        // up in a vault simply stopped running, the literal text went out instead,
+        // and the failed login could count toward a lockout with nothing said.
+        //
+        // And the question asked is maskedPasswordPromptActive() rather than echo
+        // suppression alone, because people do deliberately use an alias at a prompt
+        // - a vault lookup, or a short alias standing in for a long password - and
+        // turning masking off is how they keep doing it.
+        if (dontExpandAliases || (fromCommandLine && maskedPasswordPromptActive())) {
+            mTelnet.sendData(command, true, true, fromCommandLine);
             continue;
         }
 
         if (!mAliasUnit.processDataStream(command)) {
-            mTelnet.sendData(command, true, true);
+            mTelnet.sendData(command, true, true, fromCommandLine);
         }
     }
 }
@@ -6161,6 +6183,30 @@ void Host::sendCmdLine(const QString& cmd)
     }
 
     mpConsole->setCommandLineText(cmd);
+}
+
+bool Host::maskedPasswordPromptActive() const
+{
+    if (!mIsRemoteEchoingActive) {
+        return false;
+    }
+    // The player asked not to have input hidden from them. TCommandLine's history
+    // guard honours the same preference, and without this there is no supported way
+    // to keep using an alias at a prompt - which some people deliberately do, for a
+    // vault lookup or a short alias standing in for a long password.
+    if (mDisablePasswordMasking) {
+        return false;
+    }
+    // A game recognised as character-at-a-time is not asking for a password on every
+    // line, though it holds ECHO as if it were. Treating it as one would disable
+    // sysDataSendRequest, and the command line's own masking, permanently on the
+    // games where client-side masking never worked in the first place.
+    //
+    // What this reads is the recognition, not the holding of ECHO: detection only
+    // arms once the server has requested SGA, so a line-mode game that keeps
+    // server-side echo without SGA is never exempted, and the flag never clears
+    // before a reconnect once set. Read directly because Host is a friend of cTelnet.
+    return !mTelnet.mCharacterModeDetected;
 }
 
 void Host::setRemoteEchoingActive(bool active)

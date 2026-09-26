@@ -501,6 +501,144 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("ordinarycommandbefore"));
     }
 
+    // The alias pass is held back only for what the player typed. A script asking
+    // for an alias to be expanded at a masked prompt is not a password being
+    // hidden - it is the documented way to answer one, and an alias like ^pw$ that
+    // looks a password up in a vault is exactly why people turn to it. Skipping the
+    // pass for every caller that left dontExpandAliases at its default sent the
+    // alias's own NAME to the game as the password, and a failed login can count
+    // toward a lockout with nothing said about why.
+    void test_aScriptsAliasStillExpandsAtAMaskedPrompt()
+    {
+        QVERIFY2(runLua(qsl("permAlias('vaultpw', '', '^pw$', [[send('vaultsecret', false)]])")), "the alias could not be created");
+        mpServer->forgetReceived();
+
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY2(runLua(qsl("expandAlias('pw')")), "expandAlias() failed to run");
+        mpHost->setRemoteEchoingActive(false);
+
+        const bool expanded = waitForServerToReceive("vaultsecret");
+        const QByteArray received = mpServer->received();
+        runLua(qsl("killAlias('vaultpw')"));
+
+        QVERIFY2(expanded, qPrintable(qsl("the alias did not run at the masked prompt - the game got: %1").arg(QString::fromUtf8(received))));
+        // asSent() rather than a literal line feed: on a profile sending CRLF the
+        // wire holds "pw\r\n", which does not contain "pw\n" at all, so the check
+        // meant to catch the alias name going out would quietly never fire.
+        QVERIFY2(!received.contains(asSent({qsl("pw")})), qPrintable(qsl("the alias's own name was sent as the password: %1").arg(QString::fromUtf8(received))));
+    }
+
+    // What Telnet_spec.lua cannot say any more. Withholding sysDataSendRequest is
+    // now keyed on the text having come from a command line, and Lua has no way to
+    // type into one - send() and expandAlias() are script sends by definition. So
+    // the claim "a typed password is not handed to a handler" can only be made
+    // here, where Return can actually be pressed.
+    void test_aTypedPasswordIsWithheldFromSysDataSendRequest()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY2(runLua(qsl("_sentRequests = {}\n_sendRequestHandler = registerAnonymousEventHandler('sysDataSendRequest', function(_, data)\n"
+                            "  _sentRequests[#_sentRequests + 1] = data\nend)")),
+                 "the sysDataSendRequest handler could not be registered");
+
+        // The control: outside a prompt the event carries what was sent, so a pass
+        // below cannot come from the handler never firing at all.
+        sendCommand(pCommandLine, qsl("ordinarybeforetheprompt"));
+
+        mpHost->setRemoteEchoingActive(true);
+        sendCommand(pCommandLine, qsl("typedpasswordatprompt"));
+        mpHost->setRemoteEchoingActive(false);
+
+        // And it comes back afterwards, so the guard is scoped to the prompt rather
+        // than latching off for the rest of the session.
+        sendCommand(pCommandLine, qsl("ordinaryaftertheprompt"));
+
+        QVERIFY(runLua(qsl("_sentSaw = table.concat(_sentRequests, '|')")));
+        const QString saw = luaGlobal("_sentSaw");
+        runLua(qsl("killAnonymousEventHandler(_sendRequestHandler)"));
+
+        QVERIFY2(saw.contains(qsl("ordinarybeforetheprompt")), qPrintable(qsl("an ordinary command raised no sysDataSendRequest, so this case proves nothing: \"%1\"").arg(saw)));
+        QVERIFY2(!saw.contains(qsl("typedpasswordatprompt")), qPrintable(qsl("the typed password was handed to a sysDataSendRequest handler: \"%1\"").arg(saw)));
+        QVERIFY2(saw.contains(qsl("ordinaryaftertheprompt")), qPrintable(qsl("sysDataSendRequest stopped firing after the prompt ended: \"%1\"").arg(saw)));
+    }
+
+    // The other side of the same guard, and the reason it had to be narrowed: a
+    // script's send at a prompt still raises the event. Withholding it there cost
+    // the profile denyCurrentSend(), which is how a package turns a send down -
+    // TelnetLatePasswordTest covers what that breaks.
+    void test_aScriptsSendStillRaisesSysDataSendRequestAtAPrompt()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY2(runLua(qsl("_scriptRequests = {}\n_scriptRequestHandler = registerAnonymousEventHandler('sysDataSendRequest', function(_, data)\n"
+                            "  _scriptRequests[#_scriptRequests + 1] = data\nend)")),
+                 "the sysDataSendRequest handler could not be registered");
+
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY(runLua(qsl("send('scriptsentatprompt', false)")));
+        mpHost->setRemoteEchoingActive(false);
+
+        QVERIFY(runLua(qsl("_scriptSaw = table.concat(_scriptRequests, '|')")));
+        const QString saw = luaGlobal("_scriptSaw");
+        runLua(qsl("killAnonymousEventHandler(_scriptRequestHandler)"));
+
+        QVERIFY2(saw.contains(qsl("scriptsentatprompt")), qPrintable(qsl("a script's send at a prompt raised no sysDataSendRequest, so denyCurrentSend() cannot act on it: \"%1\"").arg(saw)));
+    }
+
+    // The masking-off exception, which nothing covered: with the preference set, a
+    // prompt is not treated as a password prompt at all, so typed input goes
+    // through aliases as usual. That is the supported way to keep using an alias -
+    // a vault lookup, or a short alias standing in for a long password - at a
+    // prompt, and removing the early return left the whole Lua suite green.
+    void test_turningMaskingOffLetsTypedInputExpandAliasesAtAPrompt()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY2(runLua(qsl("permAlias('unmaskedpw', '', '^pw$', [[send('unmaskedsecret', false)]])")), "the alias could not be created");
+        const bool savedPreference = mpHost->mDisablePasswordMasking;
+        mpHost->mDisablePasswordMasking = true;
+        mpServer->forgetReceived();
+
+        mpHost->setRemoteEchoingActive(true);
+        sendCommand(pCommandLine, qsl("pw"));
+        mpHost->setRemoteEchoingActive(false);
+
+        const bool expanded = waitForServerToReceive("unmaskedsecret");
+        const QByteArray received = mpServer->received();
+        mpHost->mDisablePasswordMasking = savedPreference;
+        runLua(qsl("killAlias('unmaskedpw')"));
+
+        QVERIFY2(expanded, qPrintable(qsl("the alias did not run with masking turned off - the game got: %1").arg(QString::fromUtf8(received))));
+    }
+
+    // The other half: what the player types at a masked prompt still bypasses the
+    // alias pass, so a password that happens to match an alias pattern cannot reach
+    // Lua as the `command` global - and it still reaches the game, which is the
+    // part no test asserted. A guard that dropped the send entirely would leave
+    // every login broken while both of the specs stayed green.
+    void test_aTypedPasswordSkipsAliasesAndStillReachesTheGame()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY2(runLua(qsl("_aliasSawIt = nil\npermAlias('sawpw', '', '^hunter2secret$', [[_aliasSawIt = command]])")), "the alias could not be created");
+        mpServer->forgetReceived();
+
+        mpHost->setRemoteEchoingActive(true);
+        sendCommand(pCommandLine, qsl("hunter2secret"));
+        mpHost->setRemoteEchoingActive(false);
+
+        const bool reachedTheGame = waitForServerToReceive("hunter2secret");
+        const QByteArray received = mpServer->received();
+        QVERIFY(runLua(qsl("_aliasSawItText = tostring(_aliasSawIt)")));
+        runLua(qsl("killAlias('sawpw')"));
+        QVERIFY2(reachedTheGame, qPrintable(qsl("the password never reached the game - it got: %1").arg(QString::fromUtf8(received))));
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "_aliasSawItText");
+        const QString sawIt = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(sawIt, qsl("nil"));
+    }
+
     // Tab completes the word being typed from what the game has said recently,
     // and pressing it again cycles on to the next match.
     void test_tabCompletesAWordFromTheConsoleBuffer()
