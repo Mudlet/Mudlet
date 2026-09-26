@@ -1428,6 +1428,17 @@ describe("Tests MCCP compressed streams", function()
     assert.is_truthy(shown:find("MCCPSPLIT", 1, true), shown)
   end)
 
+  -- zlib reports a header asking for a preset dictionary without counting the
+  -- six bytes it read for it, so those have to be kept track of another way
+  it("shows all of a text that begins like a stream wanting a dictionary", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>8nMCCPDICT\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("8nMCCPDICT", 1, true), shown)
+  end)
+
   -- a broken stream is refused on the wire, so a start sequence the game sends
   -- after that is not the start of a stream until it offers MCCP again
   it("stops decompressing after a broken stream until the game offers MCCP again", function()

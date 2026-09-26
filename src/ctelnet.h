@@ -545,6 +545,8 @@ private:
     // Real text fails the header check within two bytes; past this many the
     // stream is taken to be compressed and nothing is kept.
     inline static const size_t scmMaxUninflatedInput = 32;
+    // Whether mUninflatedInput still holds every byte the stream has taken
+    bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;
