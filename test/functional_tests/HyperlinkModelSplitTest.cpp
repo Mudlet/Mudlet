@@ -194,7 +194,7 @@ private slots:
 
         const int linkIndex = model.buffer.getLinkIndexAt(lineNumber, line.indexOf(qsl("go north")));
         QVERIFY2(linkIndex > 0, "the linked characters carry no link index, so the MXP link is not clickable");
-        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[north]])")});
+        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[\nnorth]])")});
     }
 
     // The case above cannot tell the model's buffer from the view's, because
