@@ -1344,7 +1344,9 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 continue;
             }
 
-            if (exitRoomId != -1 && roomRemapping.contains(exitRoomId)) {
+            // Unlike a normal exit, a special exit is only there when it leads
+            // somewhere, so one to -1 does follow that room to its new id:
+            if (roomRemapping.contains(exitRoomId)) {
                 const QString auditKey = qsl("audit.remapped_special_exit.%1").arg(exitName);
                 userData.insert(auditKey, QString::number(exitRoomId));
                 //: %1 is the room ID, %2 is the exit name, %3 is the old destination room ID, %4 is the new destination room ID
