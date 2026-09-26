@@ -1080,6 +1080,19 @@ signals:
     // exist, so both need a direct connection.
     void signal_closeProfileDialogs();
     void signal_destroyProfileDialogs();
+    // For the profile's script editor, if it has one: a script toggled an item,
+    // rewrote a script's code, changed items behind the editor's trees or gave
+    // a key binding a key something else holds; or there is a Lua error or
+    // debug line, or a map error, for the editor's error console.
+    void signal_triggerToggled(int id);
+    void signal_aliasToggled(int id);
+    void signal_timerToggled(int id);
+    void signal_keyToggled(int id);
+    void signal_scriptToggled(int id);
+    void signal_scriptCodeChanged(int id);
+    void signal_itemsChangedByScript();
+    void signal_keyTakenWarning(const QString& warning);
+    void signal_errorConsolePrint(const QString& text, const QColor& fgColor, const QColor& bgColor);
 
 public slots:
     void slot_timerFires();
