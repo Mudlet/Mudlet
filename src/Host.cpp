@@ -4397,6 +4397,31 @@ bool Host::getMMCPShowSnoopInMainConsole()
     return mMMCPShowSnoopInMainConsole;
 }
 
+void Host::setMMCPChatPrefix(const QString& prefix)
+{
+    mMMCPChatPrefix = prefix;
+}
+
+void Host::setMMCPPort(const quint16 port)
+{
+    mMMCPChatPort = port;
+}
+
+void Host::setMMCPPrefixEmotes(const bool prefixEmotes)
+{
+    mMMCPPrefixEmotes = prefixEmotes;
+}
+
+void Host::setMMCPAddChatMessageNewline(const bool addNewline)
+{
+    mMMCPAddChatMessageNewline = addNewline;
+}
+
+void Host::setMMCPShowSnoopInMainConsole(const bool showSnoop)
+{
+    mMMCPShowSnoopInMainConsole = showSnoop;
+}
+
 QString Host::getSpellDic() const
 {
     if (!mSpellDic.isEmpty()) {
