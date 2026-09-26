@@ -158,6 +158,22 @@ private slots:
         QVERIFY2(mapOpenEventCountIs(1), "a repeat createMapper() raised mapOpenEvent again");
     }
 
+    // Destroying the main window hides the still-open map dock, and the dock's
+    // visibilityChanged handler used to run then against members ~mudlet had
+    // already destroyed: heap corruption, or a use-after-free under ASan (#11020)
+    void test_theMainWindowCanBeDestroyedWithItsMapDockOpen()
+    {
+        mudlet::self()->slot_showMapperDialog();
+        qApp->processEvents();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "the toolbar action created no map dock, so this case covers nothing");
+        QVERIFY2(pDock->isVisible(), "a hidden dock emits nothing when the window closes, so this case would cover nothing");
+
+        mpHost = nullptr;
+        delete mudlet::self();
+        QVERIFY(!mudlet::self());
+    }
+
     // An embedded mapper stops redrawing once the toolbar's own map dock has
     // been opened and closed again. slot_showMapperDialog() repoints
     // TMap::mpMapper at the mapper it puts in that dock, and on hide restores
