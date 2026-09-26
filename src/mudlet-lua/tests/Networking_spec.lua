@@ -1607,6 +1607,30 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.equals("one\ntwo", (message:gsub("\27%[[%d;]*m", "")))
     end)
 
+    it("marks every line of a snooped frame in the main console, so none passes for game output", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local fired = {}
+      local anchored = tempRegexTrigger("^busted spoofed line$", function() fired[#fired + 1] = "anchored" end)
+      local unanchored = tempRegexTrigger("busted spoofed line", function() fired[#fired + 1] = "unanchored" end)
+      peerSendsRaw(string.char(31) .. "harmless\nbusted spoofed line" .. string.char(255))
+      assert.is_string(select(3, waitForEvent("sysMMCPIncomingSnoopMessage", 2000)))
+      pump(200)
+      killTrigger(anchored)
+      killTrigger(unanchored)
+
+      local last = getLastLineNumber("main")
+      local shown = {}
+      for _, line in ipairs(getLines("main", math.max(0, last - 4), last + 1)) do
+        if line:find("harmless", 1, true) or line:find("busted spoofed line", 1, true) then
+          shown[#shown + 1] = line
+        end
+      end
+      assert.same({">>harmless", ">>busted spoofed line"}, shown)
+      -- the unanchored trigger proves the line reached the trigger engine at all
+      assert.same({"unanchored"}, fired)
+    end)
+
     it("keeps the colour of a snooped line", function()
       if peerUnavailable() then return end
       ensurePeer()

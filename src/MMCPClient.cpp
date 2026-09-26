@@ -993,6 +993,7 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     const char* inEnd = inScan + len;
     std::stringstream ss;
     std::string outputMessage;
+    bool lineStarted = false;
 
     // If the remote client has prepended color information,
     // skip over it as we'll be using our own.
@@ -1004,6 +1005,10 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
             return;
         }
         inScan += 4;
+        // The colour prefix ends its own line, which is not a line of the snooped output
+        if (inScan < inEnd && *inScan == '\n') {
+            inScan++;
+        }
     }
 
     for (; inScan < inEnd; inScan++) {
@@ -1024,12 +1029,11 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
                 line = mLastSgrState + line;
             }
 
-            // Lines are joined back with the newline between them, which a
-            // leading blank line (the one after MudMaster's colour prefix) does not need
-            if (!outputMessage.empty()) {
+            if (lineStarted) {
                 outputMessage += '\n';
             }
             outputMessage += line;
+            lineStarted = true;
 
             ss.str("");
             ss.clear();
@@ -1077,7 +1081,7 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
         if (mNeedsColorTracking) {
             remaining = mLastSgrState + remaining;
         }
-        if (!outputMessage.empty()) {
+        if (lineStarted) {
             outputMessage += '\n';
         }
         outputMessage += remaining;

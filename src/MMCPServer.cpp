@@ -1005,9 +1005,14 @@ void MMCPServer::snoopMessage(const std::string& message)
 {
     using namespace AnsiColors;
 
+    // Every line carries the marker, or a peer could make a line of its snoop
+    // data pass for the game's own output, and fire triggers anchored to it
+    std::istringstream lines(message);
+    std::string line;
     std::stringstream ss;
-    ss << FBLDGRN << ">>" << RST;
-    ss << message << "\n";
+    while (std::getline(lines, line)) {
+        ss << FBLDGRN << ">>" << RST << line << "\n";
+    }
 
     std::string outStr = ss.str();
 
