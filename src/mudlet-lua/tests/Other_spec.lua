@@ -1354,12 +1354,30 @@ describe("Tests Other.lua functions", function()
     it("round-trips a mapExitSize that is not a whole number", function()
       assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
       snapshot("mapExitSize")
+      finally(function() restore("mapExitSize") end)
       assert.is_true(setConfig("mapExitSize", 12.5))
       assert.equals(12.5, getConfig("mapExitSize"))
 
       assert.is_true(setConfig("mapExitSize", getConfig("mapExitSize")))
       assert.equals(12.5, getConfig("mapExitSize"), "handing getConfig's answer back to setConfig changed the exit size")
-      restore("mapExitSize")
+    end)
+
+    -- The exit size divides the pen width, is saved with the profile and is
+    -- turned back into a spin box integer by the preferences, so a value that
+    -- is not a positive finite number must never reach it.
+    it("rejects a mapExitSize that is not a positive finite number", function()
+      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      snapshot("mapExitSize")
+      finally(function() restore("mapExitSize") end)
+      assert.is_true(setConfig("mapExitSize", 10))
+      assert.equals(10, getConfig("mapExitSize"))
+
+      for _, bad in ipairs({ 0/0, math.huge, -math.huge, 0, -1 }) do
+        local ok, message = setConfig("mapExitSize", bad)
+        assert.is_nil(ok, "setConfig accepted a mapExitSize of " .. tostring(bad))
+        assert.is_truthy(tostring(message):find("positive", 1, true), tostring(message))
+        assert.equals(10, getConfig("mapExitSize"), "a rejected mapExitSize of " .. tostring(bad) .. " still changed the exit size")
+      end
     end)
 
     it("returns nil and a message for an unknown key", function()
