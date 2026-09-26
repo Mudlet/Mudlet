@@ -296,7 +296,9 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         return;
     }
 
-    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
+    // A pause or stop asked for by a script or the game leaves the input unset, and names a file
+    // unless it says it is a stream - so an unset input has its path trimmed as a file's is.
+    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() != TMediaData::MediaInputStream) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
@@ -352,7 +354,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
         return;
     }
 
-    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
+    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() != TMediaData::MediaInputStream) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
@@ -627,7 +629,7 @@ bool TMedia::resume(TMediaData mediaData)
         return resumed;
     }
 
-    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
+    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() != TMediaData::MediaInputStream) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
