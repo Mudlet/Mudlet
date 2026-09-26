@@ -4831,7 +4831,7 @@ describe("Window and label state", function()
     it("rejects an unknown blink mode", function()
       local ok, err = setTextFormat(console, 0, 0, 0, 1, 2, 3, false, false, false, false, false, false, "sometimes")
       assert.is_nil(ok)
-      assert.are.equal('blink mode must be "none", "slow", or "fast", got "sometimes"', err)
+      assert.are.equal('blink mode must be "none", "slow" or "fast", got "sometimes"', err)
     end)
 
     it("takes numbers as well as booleans for the attribute flags", function()

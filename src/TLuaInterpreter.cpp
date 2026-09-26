@@ -102,6 +102,7 @@ const QString TLuaInterpreter::csmInvalidExitRoomID{qsl("number %1 is not a vali
 const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem to be parseable as a positive integer")};
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
+const QStringList TLuaInterpreter::csmItemTypes{qsl("alias"), qsl("button"), qsl("script"), qsl("keybind"), qsl("timer"), qsl("trigger")};
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
@@ -341,6 +342,20 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
         TDebug(Qt::white, QColorConstants::Svg::orange, TDebug::Category::LuaWarning) << "Lua: " << functionName << ": " << message << "\n" >> &host;
     }
     return 2;
+}
+
+// No documentation available in wiki - internal function
+// returns nil+msg for a value outside a fixed set; the refusal is the only
+// place a script can read what the set is, so it lists every accepted value
+int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value)
+{
+    Q_ASSERT(accepted.size() > 1);
+    QStringList quoted;
+    for (const auto& choice : accepted) {
+        quoted << qsl("\"%1\"").arg(choice);
+    }
+    const QString lastChoice = quoted.takeLast();
+    return warnArgumentValue(L, functionName, qsl("%1 must be %2 or %3, got \"%4\"").arg(argumentName, quoted.join(qsl(", ")), lastChoice, value));
 }
 
 // No documentation available in wiki - internal function
@@ -1847,7 +1862,7 @@ int TLuaInterpreter::findItems(lua_State* L)
         generateList(itemList, L);
         return 1;
     }
-    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+    return warnArgumentChoice(L, __func__, qsl("item type"), csmItemTypes, type);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAncestorsActive
@@ -1926,7 +1941,7 @@ int TLuaInterpreter::isAncestorsActive(lua_State* L)
         return 1;
     }
 
-    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+    return warnArgumentChoice(L, __func__, qsl("item type"), csmItemTypes, type);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ancestors
@@ -2257,7 +2272,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
             return 1;
         }
 
-        return warnArgumentValue(L, functionName, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+        return warnArgumentChoice(L, functionName, qsl("item type"), csmItemTypes, type);
     }();
     if (results == csmErrorAlreadyPushed) {
         return lua_error(L);
@@ -8095,17 +8110,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
-    // a refusal of a value outside a key's fixed set is the only place a script
-    // can read what the key does accept, so it lists them:
-    auto refuseChoice = [&](const char* keyName, const QStringList& accepted, const QString& value) {
-        QStringList quoted;
-        for (const auto& choice : accepted) {
-            quoted << qsl("\"%1\"").arg(choice);
-        }
-        const QString lastChoice = quoted.takeLast();
-        return warnArgumentValue(L, "setConfig", qsl("%1 must be %2 or %3, got \"%4\"").arg(QLatin1String(keyName), quoted.join(qsl(", ")), lastChoice, value));
-    };
-
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
             host.mpMap->mpMapper->slot_roomSize(getVerifiedInt(L, __func__, 2, "value"));
@@ -8160,7 +8164,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
         if (key == qsl("mapInfoColor")) {
             if (!lua_istable(L, 2)) {
-                lua_pushfstring(L, "%s: bad argument #%d type (table expected for mapInfoColor, got %s!)", __func__, 2, luaL_typename(L, 2));
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor requires a table {r, g, b} or {r, g, b, a}"));
             }
 
@@ -8227,7 +8230,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         } else if (value == qsl("disabled")) {
             host.mMapperButtonMode = Host::MapperButtonMode::Disabled;
         } else {
-            return warnArgumentValue(L, __func__, qsl("mapperButton must be \"default\", \"scripted\" or \"disabled\", got \"%1\"").arg(value));
+            return warnArgumentChoice(L, __func__, qsl("mapperButton"), {qsl("default"), qsl("scripted"), qsl("disabled")}, value);
         }
         mudlet::self()->updateMapActionAvailability();
         return success();
@@ -8324,7 +8327,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             } else if (value == "script") {
                 host.mCommandEchoMode = Host::CommandEchoMode::ScriptControl;
             } else {
-                return refuseChoice("showSentText", {qsl("never"), qsl("always"), qsl("script")}, value);
+                return warnArgumentChoice(L, __func__, qsl("showSentText"), {qsl("never"), qsl("always"), qsl("script")}, value);
             }
         } else {
             return warnArgumentValue(L, __func__, qsl("showSentText must be a boolean or a string, got %1").arg(luaL_typename(L, 2)));
@@ -8464,7 +8467,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
-            return refuseChoice("blankLinesBehaviour", behaviours, behaviour);
+            return warnArgumentChoice(L, __func__, qsl("blankLinesBehaviour"), behaviours, behaviour);
         }
 
         if (behaviour == qsl("show")) {
@@ -8481,7 +8484,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            return refuseChoice("caretShortcut", values, value);
+            return warnArgumentChoice(L, __func__, qsl("caretShortcut"), values, value);
         }
 
         if (value == qsl("tab")) {
@@ -8505,7 +8508,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            return refuseChoice("controlCharacterHandling", values, value);
+            return warnArgumentChoice(L, __func__, qsl("controlCharacterHandling"), values, value);
         }
 
         if (value == qsl("oem")) {
@@ -8535,7 +8538,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            return refuseChoice("ambiguousEAsianWidthCharacters", values, value);
+            return warnArgumentChoice(L, __func__, qsl("ambiguousEAsianWidthCharacters"), values, value);
         }
 
         if (value == qsl("narrow")) {

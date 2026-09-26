@@ -435,7 +435,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         } else if (!lineStyleString.compare(QLatin1String("dash dot dot line"))) {
             line_style = Qt::DashDotDotLine;
         } else {
-            return warnArgumentValue(L, __func__, qsl("invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'").arg(lineStyleString));
+            return warnArgumentChoice(L, __func__, qsl("line style"), {qsl("solid line"), qsl("dot line"), qsl("dash line"), qsl("dash dot line"), qsl("dash dot dot line")}, lineStyleString);
         }
     }
 
