@@ -230,6 +230,44 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests room IDs", function()
+    it("renumbers a room whose ID is below one and keeps its area, exits and hash", function()
+      local area = newArea("MapFileAuditSpecBadRoomId")
+      local from = newRoom(area, 0)
+      newRoom(area, 1, distantRoomId)
+      setRoomName(distantRoomId, "MapFileAuditSpecBadRoom")
+      setRoomIDbyHash(distantRoomId, "MapFileAuditSpecBadRoomHash")
+      assert.are.equal(distantRoomId, getRoomIDbyHash("MapFileAuditSpecBadRoomHash"))
+      assert.is_true(setExit(from, distantRoomId, "east"))
+      assert.is_true(setExit(distantRoomId, from, "west"))
+
+      reloadWith(function(data)
+        -- the room's own key, its place in its area's list of rooms, the east
+        -- exit that leads to it and its entry in the table of room hashes
+        return planted(data, int32(distantRoomId), int32(-7), 4)
+      end)
+
+      local renumbered
+      for id, name in pairs(getRooms()) do
+        if name == "MapFileAuditSpecBadRoom" then
+          renumbered = id
+        end
+      end
+      assert.is_not_nil(renumbered, "the room with the bad ID was lost")
+      assert.is_true(renumbered >= 1)
+      assert.are.equal("-7", getRoomUserData(renumbered, "audit.remapped_id"))
+      assert.are.equal(area, getRoomArea(renumbered))
+      local areaRooms = getAreaRooms1(area)
+      table.sort(areaRooms)
+      local expected = {from, renumbered}
+      table.sort(expected)
+      assert.are.same(expected, areaRooms)
+      assert.are.equal(renumbered, getRoomExits(from)["east"])
+      assert.are.equal(from, getRoomExits(renumbered)["west"])
+      assert.are.equal(renumbered, getRoomIDbyHash("MapFileAuditSpecBadRoomHash"))
+    end)
+  end)
+
   describe("Tests area IDs and area membership", function()
     it("renumbers an area whose ID is below one and moves its rooms with it", function()
       assert.is_true(setAreaName(distantAreaId, "MapFileAuditSpecBadId"))
