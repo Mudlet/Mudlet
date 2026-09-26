@@ -522,9 +522,8 @@ T2DMap::T2DMap(QWidget* parent)
 
     mCustomLineSession = std::make_unique<CustomLineSession>(*this);
 
-    // A hands-free pan ends on the next press of any other button, so this
-    // handler has to see every press before one of the others consumes it.
-    // It only takes middle-button events for itself and passes the rest on.
+    // A hands-free pan ends on any other button's press, so this must see every press first.
+    // It consumes only middle-button events.
     mMiddleMousePanHandler = std::make_unique<MiddleMousePanHandler>(*this);
     registerInteractionHandler(mMiddleMousePanHandler.get(), 500);
 
@@ -1677,12 +1676,8 @@ void T2DMap::drawRoom(QPainter& painter,
     painter.restore();
 }
 
-// A click on an area exit marker starts a speed walk into the area that marker
-// points at. The markers belong to the frame rather than to any one room -
-// paintRoomExits() gathers them from every room it draws - so the hit test runs
-// once, after the room passes, rather than out of a room loop. Hanging it off a
-// room made it conditional on that room being drawn in full, which below four
-// pixels a room is true of the player's room alone.
+// Markers are gathered from every drawn room, so hit-test once after the room passes rather than
+// from a room loop: below four pixels a room, only the player's room is drawn in full.
 void T2DMap::resolveAreaExitClick(QPainter& painter, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId)
 {
     if (!mPick || !mStartSpeedWalk) {
@@ -1731,8 +1726,6 @@ void T2DMap::resolveAreaExitClick(QPainter& painter, const QMap<int, QPointF>& a
     }
 }
 
-// The argument is taken by value because an environment can be remapped onto
-// another one before it is resolved to a colour.
 QColor T2DMap::environmentColor(int env) const
 {
     if (mpMap->mEnvColors.contains(env)) {
@@ -1791,66 +1784,38 @@ QColor T2DMap::environmentColor(int env) const
             quint8 const k = ((env - 232) * 10) + 8;
             return QColor(k, k, k, 255);
         }
-        // Reached when mEnvColors remaps an environment onto an id that
-        // carries no colour of its own: a map file can write such an entry and
-        // nothing rejects it on the way in. The fallback is the one an
-        // environment that was not remapped at all already gets above, because
-        // the background colour would leave the room invisible rather than
-        // merely miscoloured.
+        // mEnvColors can remap onto an id with no colour, as map files aren't validated. Fall back as
+        // for an unmapped env: the background colour would make the room invisible.
         return mpHost->mRed_2;
     }
 }
 
-// Below this many pixels per room both room loops stop building a QPainter
-// shape for each room and fill in its environment colour instead, dropping the
-// border, symbol, name and vertical-exit markers. Not because those are
-// invisible at that size - a border is always drawn at least a pixel wide -
-// but because they cost far more there than they are worth: see the note on
-// QPainterPath::addRect() in drawGridModeRooms().
+// Below this many pixels per room, both room loops just fill the environment colour, dropping border,
+// symbol, name and vertical-exit markers: still visible, but far too costly there (see the note on
+// QPainterPath::addRect() in drawGridModeRooms()).
 static constexpr float cLodPixelThreshold = 4.0f;
 
-// The whole pixels a room is drawn as in that tier. It also decides which
-// exits can be left out there, since the rooms are painted over the exits: an
-// exit whose two ends are within one blob of each other on both axes runs
-// under the two blobs it joins. Not quite - a door tick is drawn on the exit
-// and so goes with it - so this tier simplifies those, it does not leave them
-// pixel for pixel.
-// Never smaller than one pixel, or the rooms would not be drawn at all.
+// Also decides which exits that tier drops: rooms are painted over exits, so one whose ends are within
+// a blob on both axes is hidden (bar its door tick, so this simplifies rather than matches).
+// At least one pixel, or rooms would not be drawn.
 QSize T2DMap::lodRoomBlobSize() const
 {
     return QSize(qMax(1, qRound(mRoomWidth * rSize)), qMax(1, qRound(mRoomHeight * rSize)));
 }
 
-// A double brought into the int range, which is the range the cast to int is
-// defined over. Callers can exceed it: a zoom has no upper bound, so at a
-// ten-millionth of a pixel per room the viewport spans billions of cells, and
-// the map's pixel origin scales the centre room coordinate, which a map can put
-// at INT_MAX, by how many pixels a room is drawn as. A NaN - which a zoom far
-// enough out makes of that product, as 0 * inf - comes back as the lower bound.
+// Casting a double outside int range is undefined, and callers exceed it: zoom is unbounded, and the
+// pixel origin scales a centre coordinate that can be INT_MAX. NaN (0 * inf at extreme zoom) maps to INT_MIN.
 static int clampedToIntRange(const double value)
 {
     return static_cast<int>(qBound(static_cast<double>(INT_MIN), value, static_cast<double>(INT_MAX)));
 }
 
-// The inclusive range of room coordinates that can put a room on screen, given
-// where the map is panned and how big a room is drawn. The forward transform is
-//     rx = room->x() * roomWidth + rx0
-//     ry = room->y() * -1 * roomHeight + ry0
-// so inverting it gives the range, rounded outwards and then given a cell of
-// margin. The margin is not load bearing - both room loops go on to drop rooms
-// this hands them, the non-grid one to those whose centre is on the widget and
-// the grid one to those within a room of it - it is there so that no rounding
-// of the float arithmetic here can cost a room that would have been drawn, and
-// an extra cell only costs an index lookup that comes back empty.
+// Inverts rx = x * roomWidth + rx0, ry = -y * roomHeight + ry0, rounded outwards plus a cell of margin
+// so float rounding can't lose a drawable room; both room loops cull more tightly afterwards.
 QRect T2DMap::viewportRoomBounds(const float rx0, const float ry0, const float roomWidth, const float roomHeight, const float widgetWidth, const float widgetHeight)
 {
-    // A zoom far enough out leaves a room zero pixels across, and every bound
-    // below then divides by that zero. The clamp cannot rescue the result: qBound
-    // is qMax(min, qMin(max, val)) and no comparison against a NaN is true, so a
-    // NaN pins a bound onto the lower end whichever bound it is, an infinity onto
-    // the end its sign points at, and int(NaN) is INT_MIN on x86-64 but 0 on
-    // ARM64. Answer the whole coordinate range instead: every room into the one
-    // pixel the map has become.
+    // A zero-pixel room would divide by zero below, and clamping can't rescue that: NaN fails every
+    // qBound comparison and int(NaN) differs between x86-64 and ARM64. Return the whole coordinate range.
     if (!(roomWidth > 0.0f) || !(roomHeight > 0.0f)) {
         return QRect(QPoint(INT_MIN, INT_MIN), QPoint(INT_MAX, INT_MAX));
     }
@@ -1861,9 +1826,7 @@ QRect T2DMap::viewportRoomBounds(const float rx0, const float ry0, const float r
     return QRect(QPoint(minX, minY), QPoint(maxX, maxY));
 }
 
-// Grid mode rendering driven by the spatial grid index.
-// Only rooms inside the current viewport rectangle are fetched from the index,
-// reducing the collect phase from O(Z-level rooms) to O(visible cells).
+// Fetches only viewport cells from the grid index: O(visible cells), not O(rooms on the level).
 void T2DMap::drawGridModeRooms(QPainter& painter,
                                const TArea* pDrawnArea,
                                const int zLevel,
@@ -1906,11 +1869,8 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         QImage lodImage(imgW, imgH, QImage::Format_ARGB32_Premultiplied);
         lodImage.fill(0); // transparent: background was already rendered beneath us
 
-        // Cache env -> QRgb so environmentColor() is called at most once per env ID.
-        // Premultiplied, because these go straight into the scanlines of a
-        // premultiplied image rather than through a QPainter: setCustomEnvColor()
-        // takes an alpha, and a translucent colour left unpremultiplied here
-        // composites at full strength.
+        // Premultiplied, as these go straight into a premultiplied image's scanlines: a translucent
+        // setCustomEnvColor() left unpremultiplied would composite at full strength.
         QHash<int, QRgb> envColorCache;
 
         if (mRoomWidth < 1.0f) {
@@ -2405,16 +2365,9 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
     }
 }
 
-// The room loop for a non-grid area drawn at fewer than cLodPixelThreshold
-// pixels per room. Each room becomes its environment colour written straight
-// into a scanline and the lot is blitted once, in place of a QPainter shape, a
-// border, a symbol and four exit markers each.
-//
-// What survives the simplification is what a pixel cannot hide: the selection
-// tint, because selecting a large region and zooming out to look at it is the
-// reason to be at this zoom at all, and per-room highlights, whose radius is
-// set in room units by the script that asked for them and so can be far bigger
-// than the room.
+// Rooms are written as environment colours into scanlines and blitted once. Kept: the selection tint
+// (selecting a region and zooming out is why you'd be here) and highlights, whose script-set radius
+// can far exceed the room.
 void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
                                      const TArea* pDrawnArea,
                                      const int zLevel,
@@ -2434,17 +2387,14 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     QImage lodImage(imgW, imgH, QImage::Format_ARGB32_Premultiplied);
     lodImage.fill(0); // transparent: the background and the exit lines are already under us
 
-    // Non-grid rooms are drawn at a fraction of their cell, so the blob is
-    // sized from that fraction and not from the cell.
+    // Non-grid rooms are drawn at rSize of their cell.
     const float blobWidth = mRoomWidth * static_cast<float>(rSize);
     const float blobHeight = mRoomHeight * static_cast<float>(rSize);
     const QSize blobSize = lodRoomBlobSize();
     const int blobPixelWidth = blobSize.width();
     const int blobPixelHeight = blobSize.height();
 
-    // Premultiplied for the same reason as in drawGridModeRooms(): a
-    // translucent environment colour written raw into a premultiplied image
-    // composites at full strength.
+    // Premultiplied: see drawGridModeRooms().
     QHash<int, QRgb> envColorCache;
     QList<QPair<TRoom*, QPointF>> highlightedRooms;
     QList<QRect> selectedRoomRects;
@@ -2514,9 +2464,7 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
 
     painter.drawImage(0, 0, lodImage);
 
-    // A semi-transparent blue over the environment colour, standing in for the
-    // gradient the full-detail path fills a selected room with: at this size
-    // the two ends of that gradient are the same pixel.
+    // Stands in for the full-detail selection gradient, whose two ends are one pixel at this size.
     if (!selectedRoomRects.isEmpty()) {
         painter.save();
         painter.setPen(Qt::NoPen);
@@ -2544,27 +2492,20 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     const qreal timeBlit = timer.nsecsElapsed() / 1000000.0;
 
     if (qEnvironmentVariableIsSet("MUDLET_PROFILE_MAP") && profileOutput) {
-        // Handed back to paintEvent to print rather than printed here, so that
-        // the qDebug() call does not land inside the phase this is timing.
+        // paintEvent prints it, keeping qDebug() out of the timed phase.
         QDebug dbg(profileOutput);
         dbg.noquote().nospace() << "drawNonGridModeRoomsLod timing (ms):" << " total:" << (timeCollect + timeBlit) << " collect+pixelWrite:" << timeCollect << " imageBlit:" << timeBlit
                                 << " candidates:" << viewportRooms.size() << " drawnRooms:" << roomCount << " roomSizePx:" << mRoomWidth << " blobPx:" << blobPixelWidth << "x" << blobPixelHeight;
     }
 
-    // drawRoom() resolves a double-click on a room into a speed-walk and is not
-    // called from here, so the click has to be resolved against the grid
-    // instead. mPick is only cleared when a room was actually under the
-    // pointer, because paintEvent() offers what is left of the click to the
-    // area exit markers after this returns.
+    // drawRoom(), which resolves speed-walk clicks, isn't called here, so use the grid. Clear mPick only
+    // on a hit: paintEvent() then offers the click to the area exit markers.
     if (mPick) {
         const int clickWorldX = qRound(static_cast<double>(mPHighlight.x() - mRX) / mRoomWidth);
         const int clickWorldY = qRound(static_cast<double>(mRY - mPHighlight.y()) / mRoomHeight);
         const TAreaGridIndex::RoomIds& clickedRooms = pDrawnArea->getGridIndex().roomsAt(zLevel, clickWorldX, clickWorldY);
         for (const int clickedRoomId : clickedRooms) {
-            // The index knows nothing of hidden rooms, and this tier does not
-            // draw them: drawRoom() returns before its own hit test for one, so
-            // a click where a hidden room sits has to go on being a click on
-            // nothing here as well.
+            // The index includes hidden rooms, which drawRoom() never hit-tests either.
             const TRoom* pClickedRoom = mpMap->mpRoomDB->getRoom(clickedRoomId);
             if (!pClickedRoom || pClickedRoom->isHidden()) {
                 continue;
@@ -2780,8 +2721,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         mPrevRoomHeight = mRoomHeight;
     }
 
-    // std::round() rather than qRound(), which returns an int and so would
-    // overflow before the clamp could act on it.
+    // Not qRound(): it returns int, overflowing before the clamp.
     mRX = clampedToIntRange(std::round(mRoomWidth * ((xspan / 2.0) - mMapCenterX)));
     mRY = clampedToIntRange(std::round(mRoomHeight * ((yspan / 2.0) - mMapCenterY)));
     const QRect roomBounds = viewportRoomBounds(mRX, mRY, mRoomWidth, mRoomHeight, widgetWidth, widgetHeight);
@@ -3000,11 +2940,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
     qreal timeViewportQuery = 0.0;
     QList<int> viewportRooms;
     if (!pDrawnArea->gridMode) {
-        // The exit pass here and the room pass below want the same rooms, and
-        // once the rooms themselves are cheap to draw this query is the most
-        // expensive thing either pass does, so it is made once and shared.
-        // Grid mode is left out: it paints no exits, and its room loop needs
-        // the collision flag that only the other query returns.
+        // Shared by the exit and room passes, as it's the costliest part of each. Not for grid mode: it
+        // paints no exits and needs the collision flag only the other query returns.
         QElapsedTimer viewportQueryTimer;
         viewportQueryTimer.start();
         viewportRooms = pDrawnArea->getGridIndex().roomsInViewport(zLevel, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
@@ -3016,9 +2953,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     phaseTimer.restart();
 
     // Draw rooms on selected z-level - use batch rendering for grid mode
-    // The room collection time is printed by the final profiling block below
-    // rather than here, to avoid inflating phase6Time with qDebug() overhead on
-    // Windows.
+    // Room collection time is printed at the end, keeping qDebug() overhead (large on Windows) out of phase6Time.
     QString roomLoopProfileOutput;
     QElapsedTimer phase6Sub;
     phase6Sub.start();
@@ -3078,9 +3013,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     qreal timePhase6Gradient = 0.0;
     painter.save(); // prevent player-room drawing state from leaking into labels/info box
     if (isPlayerRoomVisible) {
-        // Only the full-detail non-grid loop fills usedRoomPositions; the grid
-        // and LOD loops ask the spatial index instead, which also finds a
-        // collision with a room that is off screen or hidden.
+        // Only the full-detail non-grid loop fills usedRoomPositions. The index also counts off-screen and hidden rooms.
         const bool roomCollision = (pDrawnArea->gridMode || mRoomWidth < cLodPixelThreshold) ? pDrawnArea->getGridIndex().roomsAt(zLevel, pPlayerRoom->x(), pPlayerRoom->y()).size() > 1
                                                                                              : usedRoomPositions.contains({pPlayerRoom->x(), pPlayerRoom->y()});
         drawRoom(painter,
@@ -3387,9 +3320,7 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
-// Not QRect::contains(): it works out which way round the rectangle is from
-// left - 1, which overflows once a viewport bound reaches the coordinate limit,
-// and its comparison against the wrapped result then comes out inverted.
+// Not QRect::contains(): it computes left - 1, which overflows at the coordinate limit and inverts the test.
 static bool withinViewportBounds(const QRect& bounds, const int x, const int y)
 {
     return x >= bounds.left() && x <= bounds.right() && y >= bounds.top() && y <= bounds.bottom();
@@ -3408,20 +3339,13 @@ void T2DMap::paintRoomExits(QPainter& painter,
     const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
     const float widgetHeight = height();
-    // At this zoom the rooms are drawn as blobs on top of these lines, so a
-    // line that stays under the blobs at its two ends has next to nothing to
-    // contribute. keepExit() below decides which lines those are, as they are
-    // gathered rather than when they are drawn.
+    // Rooms are drawn as blobs over these lines; keepExit() drops lines hidden under their end blobs.
     const bool lodTier = mRoomWidth < cLodPixelThreshold;
     const QSize lodBlobSize = lodRoomBlobSize();
 
-    // The largest per-axis coordinate delta, in room units, at which
-    // keepExit() below is certain to drop an exit. Settled against the very
-    // float test keepExit() performs - the rounding of float(delta) * width
-    // is monotonic in the delta, so passing at this span proves every
-    // smaller one - because the area's exit index is only allowed to be
-    // wrong in the too-many-rooms direction, never too few. The division
-    // lands within a step of the boundary; the loops absorb its rounding.
+    // Largest per-axis delta (room units) that keepExit() surely drops, settled with keepExit()'s own
+    // float test (monotonic in delta) as the exit index may only err towards too many rooms. The loops
+    // fix the division's rounding.
     int maxSkippableSpan = 0;
     if (lodTier && mRoomWidth > 0.0f && mRoomHeight > 0.0f) {
         const auto exitDropped = [&](const int span) {
@@ -3472,16 +3396,10 @@ void T2DMap::paintRoomExits(QPainter& painter,
             }
         }
     }
-    // The rooms with something to draw here are those in the viewport, plus
-    // every room on the level that has custom exit lines: one of those lines
-    // can cross the whole level, so its room owes pixels from anywhere. The
-    // copy is free unless the loop below actually appends to it.
-    //
-    // In the reduced tier the area's exit index can instead hand over just
-    // the rooms whose exits survive the cut, which at the furthest zooms is
-    // a handful where the viewport holds hundreds of thousands. Taken only
-    // when it really is the smaller set: the index is not viewport-culled,
-    // so on a level rich in long exits it can exceed the viewport instead.
+    // Viewport rooms plus every custom-line room on the level, as such a line can cross the whole level.
+    // The copy is free unless appended to. In the reduced tier the exit index can instead give just the
+    // rooms whose exits survive (a handful vs hundreds of thousands); used only when smaller, as it
+    // isn't viewport-culled.
     QList<int> roomsToPaint;
     mLodExitIndexRoomsHandedOver = -1;
     if (!mLodExitIndexDisabled && maxSkippableSpan > 0 && pArea->lodVisibleExitRoomCount(zLevel, maxSkippableSpan) < viewportRooms.size()) {
@@ -3489,15 +3407,13 @@ void T2DMap::paintRoomExits(QPainter& painter,
         mLodExitIndexRoomsHandedOver = int(roomsToPaint.size());
         QSet<int> alreadyListed{roomsToPaint.cbegin(), roomsToPaint.cend()};
         for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
-            // All of them this time, not just the ones outside the bounds:
-            // the index only knows about exits drawn as plain lines.
+            // All of them: the index only covers exits drawn as plain lines.
             if (!alreadyListed.contains(customLineRoomId)) {
                 alreadyListed.insert(customLineRoomId);
                 roomsToPaint.append(customLineRoomId);
             }
         }
-        // The target ring at the bottom of the loop is drawn on whatever room
-        // the in-progress custom line happens to lead to:
+        // The loop draws a target ring on whatever room the in-progress custom line leads to:
         if (customLineDestinationTarget > 0 && !alreadyListed.contains(customLineDestinationTarget)) {
             const TRoom* pTargetRoom = mpMap->mpRoomDB->getRoom(customLineDestinationTarget);
             if (pTargetRoom && pTargetRoom->getArea() == mAreaID && pTargetRoom->z() == zLevel && withinViewportBounds(roomBounds, pTargetRoom->x(), pTargetRoom->y())) {
@@ -3508,8 +3424,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
         roomsToPaint = viewportRooms;
         for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
             TRoom* pRoomWithCustomLines = mpMap->mpRoomDB->getRoom(customLineRoomId);
-            // Rooms inside the bounds are in the list already, and painting a
-            // room's exits twice does not look like painting them once.
+            // Already listed, and painting exits twice doesn't look like painting them once.
             if (!pRoomWithCustomLines || withinViewportBounds(roomBounds, pRoomWithCustomLines->x(), pRoomWithCustomLines->y())) {
                 continue;
             }
@@ -3549,19 +3464,10 @@ void T2DMap::paintRoomExits(QPainter& painter,
 
         room->rendered = true;
 
-        // In the reduced tier a line between two rooms less than a blob apart
-        // is hidden by the blobs drawn over it, so it is dropped here rather
-        // than after it has been gathered: at the furthest zoom that is every
-        // exit on the level, and gathering them only for the drawing pass to
-        // throw them all away cost ~98 ms a frame. The destination is already
-        // in hand at this point, which is what makes the test nearly free.
-        // Kept per axis rather than on the length because a blob is a
-        // rectangle, and area exits are never dropped - their marker is a
-        // fixed size whatever the exit's length, and is the click target for
-        // a speed walk into that area. Measured as a coordinate delta scaled
-        // once, not as a difference of two separately rounded screen
-        // positions, so that maxSkippableSpan above can reason about it
-        // exactly.
+        // Drop lines hidden under the blobs before gathering: at the furthest zoom that is every exit, and
+        // gathering them cost ~98ms a frame. Per axis because blobs are rectangles. Area exits stay: their
+        // fixed-size marker is the speed-walk click target. A delta scaled once, not two rounded screen
+        // positions, so maxSkippableSpan can reason about it exactly.
         const auto keepExit = [&](const TRoom* pDestination) {
             if (!lodTier || pDestination->getArea() != mAreaID) {
                 return true;
@@ -3860,8 +3766,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
 
         for (const ExitToPaint& exit : exitList) {
             const int rID = exit.destinationId;
-            // Defensive: TRoomDB::addRoom() will not create a room whose id is
-            // 0 or less, so nothing should be able to point an exit at one.
+            // Defensive: TRoomDB::addRoom() rejects ids <= 0.
             if (rID <= 0) {
                 continue;
             }
@@ -3880,10 +3785,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
             QLineF line;
             if (!areaExit) {
                 // Non-area exit:
-                // Whether an arrow is drawn is decided by the destination
-                // rather than by this particular exit: two exits from this room
-                // leading to the same place are drawn on top of each other, and
-                // one of them being one-way makes both show it.
+                // Exits to the same room overlap, so one being one-way arrows them all.
                 bool oneWayToDestination = false;
                 for (const ExitToPaint& other : exitList) {
                     if (other.oneWay && other.destinationId == rID) {
@@ -4148,13 +4050,8 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
-    // A script can clear or replace the map while the dialog is open (the user
-    // can too, as it is not modal), deleting the area from under it: look it up
-    // again by id rather than keep the pointer. The ids alone are not enough to
-    // find it again either - a map loaded after the clear numbers its areas
-    // from the lowest free one and its labels from zero in each area, so the
-    // pair can just as well name a label of the new map that this dialog has
-    // nothing to do with. The map's generation says which map they came from.
+    // The map can be replaced while this non-modal dialog is open, so re-find the area by id rather than
+    // keep the pointer, and check the map generation, since a new map reuses area and label ids.
     const int areaId = mAreaID;
     const unsigned int mapGeneration = mpMap->mpRoomDB->mapGeneration();
     connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, labelId, areaId, mapGeneration]() {
@@ -6407,9 +6304,7 @@ void T2DMap::slot_setCustomLine2()
 
     QList<QPointF> const list;
     room->customLines[mCustomLinesRoomExit] = list;
-    // The room now has a custom line - an empty one until points are clicked
-    // in - and nothing on this path calls calcRoomDimensions(), which is what
-    // otherwise puts the room into the area's custom line index.
+    // Nothing on this path calls calcRoomDimensions(), which would otherwise index the (still empty) line.
     room->indexCustomLines();
     //    qDebug("T2DMap::slot_setCustomLine2() NORMAL EXIT: %s", qPrintable(exitKey));
     room->customLinesColor[mCustomLinesRoomExit] = mCurrentLineColor;
@@ -6446,9 +6341,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     }
     QList<QPointF> const _list;
     room->customLines[exit] = _list;
-    // The room now has a custom line - an empty one until points are clicked
-    // in - and nothing on this path calls calcRoomDimensions(), which is what
-    // otherwise puts the room into the area's custom line index.
+    // Nothing on this path calls calcRoomDimensions(), which would otherwise index the (still empty) line.
     room->indexCustomLines();
     //    qDebug("T2DMap::slot_setCustomLine2B() SPECIAL EXIT: %s", qPrintable(exit));
     room->customLinesColor[exit] = mCurrentLineColor;
@@ -6831,7 +6724,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         }
     }
 
-    // Set up exit lists (like paintEvent does)
     QList<int> exitList;
     QList<int> oneWayExits;
 
