@@ -597,14 +597,10 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "and change through the coming years and those players who seek challenge and "
                  "possess imagination will come in search of what the 3D world fails to offer them.")},
 
-            // Deliberately without artwork. The connection dialog draws a list
-            // entry as its artwork and nothing else, so an entry that has none is
-            // listed and can still be selected, yet shows nothing - which is how
-            // this testing aid stays out of a player's way (it needs Busted, which
-            // is not installed for players) while a developer can still reach it,
-            // with --profile="Mudlet self-test" or from "My games" in a debug
-            // build. So do not give it an icon, and do not stand a generated name
-            // plate in for the missing one: either puts it in front of everybody.
+            // Deliberately without artwork: the connection dialog draws an entry only as its artwork, so this
+            // testing aid (it needs Busted, which players lack) is listed and selectable yet invisible, while a
+            // developer can reach it with --profile="Mudlet self-test" or from "My games" in a debug build.
+            // An icon or a generated name plate would show it to everybody.
             // See https://github.com/Mudlet/Mudlet/issues/6443
             {qsl("Mudlet self-test"),
              qsl("mudlet.org"),

@@ -86,9 +86,8 @@ public:
     }
 
     T* mpParent;
-    // Tree<T>* and not T*: a node adds itself to its parent's list from Tree's
-    // own constructor, where its T subobject does not exist yet, so casting
-    // down to T* there is undefined behaviour.
+    // Not T*: a node adds itself to its parent's list from Tree's constructor, before its T
+    // subobject exists, so downcasting there is undefined behaviour.
     std::list<Tree<T>*>* mpMyChildrenList;
     int mID;
     QString mPackageName;
@@ -152,7 +151,7 @@ Tree<T>::~Tree()
     delete mpMyChildrenList;
     mpMyChildrenList = nullptr;
     if (mpParent) {
-        mpParent->popChild(this); // tell parent about my death
+        mpParent->popChild(this);
         if (std::uncaught_exceptions()) {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }

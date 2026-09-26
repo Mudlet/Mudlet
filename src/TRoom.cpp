@@ -36,6 +36,8 @@
 #include <QString>
 #include <QStringBuilder>
 
+#include <cstddef>
+
 
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
 // in Qt5 - the compilation errors that result in not having this are really
@@ -71,6 +73,13 @@ TRoom::TRoom(TRoomDB* pRDB)
 , highlightColor2(scDefaultHighlightBackground)
 , mpRoomDB(pRDB)
 {
+    // Here rather than at file scope because mX is private. TRoom mixes access
+    // levels, which makes offsetof conditionally-supported; GCC and Clang
+    // support it and only warn.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static_assert(offsetof(TRoom, mX) == 0 && offsetof(TRoom, highlight) < 16, "see the comment above TRoom::mX");
+#pragma GCC diagnostic pop
 }
 
 TRoom::~TRoom()
