@@ -453,7 +453,7 @@ private slots:
         QVERIFY(server()->chatPrivate(qsl("Iota")).first);
         asking->clearReceived();
         asking->send(frame(PeekConnections));
-        QVERIFY2(asking->waitToReceive("doesn't have any other connections"), asking->received().constData());
+        QVERIFY2(asking->waitToReceive(frame(Message, "<CHAT> " + csListenerName + " doesn't have any other connections")), asking->received().constData());
         asking->clearReceived();
         asking->send(frame(RequestConnections));
         QTest::qWait(300);
