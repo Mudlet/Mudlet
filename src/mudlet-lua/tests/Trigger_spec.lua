@@ -1190,6 +1190,40 @@ describe("Trigger processing", function()
             assert.are.equal(2, _G.TrigSpecExpire.count, "a callback body should renew the expiry count the same way a script one does")
         end)
 
+        -- a multiline trigger with an expiry count runs its script through its
+        -- own path, which has to honour the same renewal
+        it("renews the expiry count of a multiline trigger while its script returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local code = [==[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1; return _G.TrigSpecExpire.count < 3]==]
+            tempComplexRegexTrigger("SpecMLExpiryRenew", [[^mlrenew one$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1)
+            tempComplexRegexTrigger("SpecMLExpiryRenew", [[^mlrenew two$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1)
+            finally(function() killTrigger("SpecMLExpiryRenew") end)
+
+            for _ = 1, 5 do
+                feedTriggers("mlrenew one\n")
+                feedTriggers("mlrenew two\n")
+            end
+
+            assert.are.equal(3, _G.TrigSpecExpire.count, "a multiline trigger set to expire after one fire should be renewed for as long as it returns true")
+        end)
+
+        it("expires a multiline trigger after its expiry count", function()
+            _G.TrigSpecExpire = {count = 0}
+            local code = [==[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1]==]
+            tempComplexRegexTrigger("SpecMLExpiryGone", [[^mlgone one$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 2)
+            tempComplexRegexTrigger("SpecMLExpiryGone", [[^mlgone two$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 2)
+
+            for _ = 1, 4 do
+                feedTriggers("mlgone one\n")
+                feedTriggers("mlgone two\n")
+            end
+
+            local count = _G.TrigSpecExpire.count
+            local killed = killTrigger("SpecMLExpiryGone")
+            assert.are.equal(2, count, "a multiline trigger set to expire after 2 fires should fire exactly twice")
+            assert.is_false(killed, "the expired trigger should already be gone")
+        end)
+
     end)
 
     describe("tempColorTrigger legacy colour remap", function()
@@ -1570,6 +1604,41 @@ describe("Trigger processing", function()
 
             assert.are.equal(1, _G.TrigColourPattern.control, "the control trigger shows a coloured run does reach the colour pattern engine")
             assert.are.equal(0, _G.TrigColourPattern.fires, "a colour pattern that ignores both colours has nothing to match")
+        end)
+
+        -- like a regex that does not compile, a colour pattern that names no
+        -- colour leaves its trigger in place but switched off, so that it can
+        -- be seen and repaired
+        it("switches off a trigger whose colour pattern names no ANSI colour", function()
+            _G.TrigColourPattern = {fires = 0}
+            tempComplexRegexTrigger("SpecColourPatternUnusable", "ANSI_COLORS_F{002}_B{IGNORE}",
+                [==[_G.TrigColourPattern.fires = _G.TrigColourPattern.fires + 1]==], 0, "fg", "bg", 0, 0, 0, 0, 0, 0, 0)
+            assert.are.equal(1, isActive("SpecColourPatternUnusable", "trigger"), "a usable colour pattern should leave the trigger on")
+            tempComplexRegexTrigger("SpecColourPatternUnusable", "ANSI_COLORS_F{999}_B{IGNORE}",
+                [==[_G.TrigColourPattern.fires = _G.TrigColourPattern.fires + 1]==], 0, "fg", "bg", 0, 0, 0, 0, 0, 0, 0)
+            finally(function() killTrigger("SpecColourPatternUnusable") end)
+
+            feedTriggers("colour_pattern_unusable \27[32mgreenrun\27[0m\n")
+
+            assert.are.equal(1, exists("SpecColourPatternUnusable", "trigger"))
+            assert.are.equal(0, isActive("SpecColourPatternUnusable", "trigger"))
+            assert.are.equal(0, _G.TrigColourPattern.fires, "a switched off trigger should not fire even on the colour its other pattern names")
+        end)
+
+        it("can be a condition of a multiline trigger", function()
+            _G.TrigColourPattern = {fires = 0}
+            local code = [==[_G.TrigColourPattern.fires = _G.TrigColourPattern.fires + 1; _G.TrigColourPattern.rows = {multimatches[1][1], multimatches[2][2]}]==]
+            tempComplexRegexTrigger("SpecColourMultiline", "ANSI_COLORS_F{002}_B{IGNORE}", code, 1, "fg", "bg", 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecColourMultiline", [[^colour_ml then (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            finally(function() killTrigger("SpecColourMultiline") end)
+
+            feedTriggers("colour_ml then early\n")
+            feedTriggers("colour_ml \27[32mgreenrun\27[0m first\n")
+            assert.are.equal(0, _G.TrigColourPattern.fires, "the state should wait for the line after the coloured run")
+
+            feedTriggers("colour_ml then later\n")
+            assert.are.equal(1, _G.TrigColourPattern.fires, "the perl line after the coloured run should complete the state")
+            assert.are.same({"greenrun", "later"}, _G.TrigColourPattern.rows)
         end)
 
     end)
@@ -2522,8 +2591,10 @@ describe("Trigger processing", function()
             _G.TriggerKindsSpec = {}
         end)
 
-        -- every trigger in the fixture is saved disabled, so nothing it carries
-        -- can fire in the thousands of specs that run after these
+        -- every top-level trigger in the fixture is saved disabled, so nothing
+        -- it carries can fire in the thousands of specs that run after these;
+        -- the children of the filter parents are saved enabled, as they only
+        -- ever see what their disabled parent hands them
         local function withTrigger(name, body)
             -- busted keeps only the last finally() a test registers, so a body
             -- that needs cleanup of its own hands it over rather than
@@ -2688,6 +2759,102 @@ describe("Trigger processing", function()
 
                 feedTriggers("tkcommand trigger\n")
                 assert.is_true(_G.TriggerKindsSpec.commandSeen, "a trigger's command should be sent the way a typed one is")
+            end)
+        end)
+
+        -- A filter ("only pass matches") parent hands its children the text it
+        -- matched instead of the line, whatever kind of pattern did the matching.
+        -- Each child below matches ^(.+)$ and records what it was given.
+        describe("filter parents", function()
+
+            it("passes a start of line match on as just the matched text", function()
+                withTrigger("filter start", function()
+                    feedTriggers("not tkfstart at the start\n")
+                    assert.is_nil(_G.TriggerKindsSpec.filterStartSeen, "the parent should not have matched, so its child should see nothing")
+
+                    feedTriggers("tkfstart and the rest of the line\n")
+                    assert.are.same({"tkfstart"}, _G.TriggerKindsSpec.filterStartSeen)
+                end)
+            end)
+
+            it("passes an exact match on to its children", function()
+                withTrigger("filter exact", function()
+                    feedTriggers("tkfexact line and more\n")
+                    assert.is_nil(_G.TriggerKindsSpec.filterExactSeen, "a longer line is not an exact match, so the child should see nothing")
+
+                    feedTriggers("tkfexact line\n")
+                    assert.are.same({"tkfexact line"}, _G.TriggerKindsSpec.filterExactSeen)
+                end)
+            end)
+
+            it("passes a substring match on as just the matched text", function()
+                withTrigger("filter substring", function()
+                    feedTriggers("somewhere tkfsub in here\n")
+                    assert.are.same({"tkfsub"}, _G.TriggerKindsSpec.filterSubstringSeen)
+                end)
+            end)
+
+            it("passes every coloured run on as its own capture", function()
+                withTrigger("filter colour", function()
+                    feedTriggers("plain \27[32mfirst run\27[0m plain \27[32msecond\27[0m end\n")
+                    assert.are.same({"first run", "second"}, _G.TriggerKindsSpec.filterColourSeen)
+                end)
+            end)
+
+            -- a multiline filter passes on the captures of every line of the
+            -- state: a regex line's capture groups without its whole match, and
+            -- the matched text of a line whose pattern has no groups
+            it("passes a completed multiline state's captures on", function()
+                withTrigger("multiline filter", function()
+                    feedTriggers("tkmlf alpha\n")
+                    assert.is_nil(_G.TriggerKindsSpec.multilineFilterSeen, "nothing should pass before the state completes")
+
+                    feedTriggers("then tkmlf end of it\n")
+                    assert.are.equal(1, _G.TriggerKindsSpec.multilineFilterFired, "the multiline parent should have fired")
+                    assert.are.same({"alpha", "tkmlf end"}, _G.TriggerKindsSpec.multilineFilterSeen)
+                end)
+            end)
+
+        end)
+
+        it("completes a multiline trigger through start of line, exact, lua and substring conditions", function()
+            withTrigger("multiline kinds", function()
+                feedTriggers("tkmlk start here\n")
+                feedTriggers("tkmlk exact line\n")
+                feedTriggers("the tkmlk lua line\n")
+                assert.is_nil(_G.TriggerKindsSpec.multilineKinds, "the state should still be waiting for its last condition")
+
+                feedTriggers("it has tkmlk middle in it\n")
+                -- start of line, exact and substring conditions capture their
+                -- own pattern; a lua condition captures nothing but still takes
+                -- its row
+                assert.are.same({"tkmlk start", "tkmlk exact line", "", "tkmlk middle"}, _G.TriggerKindsSpec.multilineKinds)
+
+                -- a longer line is no exact match, so the state has to stay on
+                -- that condition and the lines for the later ones cannot finish it
+                _G.TriggerKindsSpec.multilineKinds = nil
+                feedTriggers("tkmlk start here\n")
+                feedTriggers("tkmlk exact line but longer\n")
+                feedTriggers("the tkmlk lua line\n")
+                feedTriggers("it has tkmlk middle in it\n")
+                assert.is_nil(_G.TriggerKindsSpec.multilineKinds, "a line only starting with the exact pattern satisfied the exact condition")
+            end)
+        end)
+
+        it("completes a multiline trigger on a prompt", function()
+            withTrigger("multiline prompt", function()
+                local ok, msg = feedTelnet("tkmlp ready\r\n")
+                assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+                feedTelnet("tkmlp not a prompt\r\n")
+                local beforePrompt = _G.TriggerKindsSpec.multilinePrompt
+
+                feedTelnet("tkmlp> <T_IAC><T_GA>")
+                local afterPrompt = _G.TriggerKindsSpec.multilinePrompt
+                -- the GA leaves the prompt line open for whatever comes next
+                feedTelnet("\r\n")
+
+                assert.is_nil(beforePrompt, "an ordinary line should not satisfy a prompt condition")
+                assert.are.equal(1, afterPrompt, "the prompt should complete the state")
             end)
         end)
 
