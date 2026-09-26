@@ -223,10 +223,11 @@ void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
 
 void KeyUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto key : mKeyRootNodeList) {
-        if (key->isActive()) {
-            key->compileAll();
-        }
+        key->compileAll();
     }
 }
 

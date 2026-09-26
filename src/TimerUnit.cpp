@@ -126,10 +126,11 @@ void TimerUnit::stopAllTriggers()
 
 void TimerUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto timer : mTimerRootNodeList) {
-        if (timer->isActive()) {
-            timer->compileAll();
-        }
+        timer->compileAll();
     }
 }
 

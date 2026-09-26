@@ -43,6 +43,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
+#include "TAction.h"
 #include "TAlias.h"
 #include "TEvent.h"
 #include "TKey.h"
@@ -104,6 +105,14 @@ private:
       }
     }
     return count;
+  }
+
+  bool luaGlobalIsTrue(const char *name) {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, name);
+    const bool isTrue = lua_toboolean(L, -1);
+    lua_pop(L, 1);
+    return isTrue;
   }
 
   int countTempKeys() {
@@ -291,6 +300,144 @@ private slots:
       }
     }
     QVERIFY2(found, "Permanent timer not found after reset");
+  }
+
+  // A reset closes the Lua state every item's compiled function lived in, and
+  // the units' compileAll() rebuilds them in the new one. An item the user had
+  // switched off at the time has to come back with its function as well, or
+  // switching it on afterwards runs nothing but "attempt to call a nil value".
+  void test_disabledAliasRunsItsScriptAfterResetAndEnable() {
+    auto [id, msg] = mpHost->mLuaInterpreter.startPermAlias(
+        qsl("resetDisabledAlias"), qsl(""), qsl("^resetDisabledAliasProbe$"),
+        qsl("resetDisabledAliasRan = true"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    QVERIFY(mpHost->getAliasUnit()->disableAlias(qsl("resetDisabledAlias")));
+
+    performReset();
+
+    QVERIFY(mpHost->getAliasUnit()->enableAlias(qsl("resetDisabledAlias")));
+    QVERIFY(!luaGlobalIsTrue("resetDisabledAliasRan"));
+    QVERIFY(mpHost->getAliasUnit()->processDataStream(
+        qsl("resetDisabledAliasProbe")));
+    QVERIFY2(luaGlobalIsTrue("resetDisabledAliasRan"),
+             "an alias switched off during a reset must run its script once "
+             "switched back on");
+    QVERIFY(mpHost->getAliasUnit()->disableAlias(qsl("resetDisabledAlias")));
+  }
+
+  void test_disabledTriggerRunsItsScriptAfterResetAndEnable() {
+    auto [id, msg] = mpHost->mLuaInterpreter.startPermSubstringTrigger(
+        qsl("resetDisabledTrigger"), qsl(""),
+        QStringList{qsl("resetDisabledTriggerProbe")},
+        qsl("resetDisabledTriggerRan = true"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    QVERIFY(
+        mpHost->getTriggerUnit()->disableTrigger(qsl("resetDisabledTrigger")));
+
+    performReset();
+
+    QVERIFY(
+        mpHost->getTriggerUnit()->enableTrigger(qsl("resetDisabledTrigger")));
+    QVERIFY(!luaGlobalIsTrue("resetDisabledTriggerRan"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "feedTriggers('resetDisabledTriggerProbe\\n')"),
+             0);
+    QVERIFY2(luaGlobalIsTrue("resetDisabledTriggerRan"),
+             "a trigger switched off during a reset must run its script once "
+             "switched back on");
+    QVERIFY(
+        mpHost->getTriggerUnit()->disableTrigger(qsl("resetDisabledTrigger")));
+  }
+
+  void test_disabledTimerRunsItsScriptAfterResetAndEnable() {
+    // permTimer() makes its timer switched off
+    auto [id, msg] = mpHost->mLuaInterpreter.startPermTimer(
+        qsl("resetDisabledTimer"), qsl(""), 0.05,
+        qsl("resetDisabledTimerRan = true"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    QVERIFY(!mpHost->getTimerUnit()->getTimer(id)->isActive());
+
+    performReset();
+
+    QVERIFY(mpHost->getTimerUnit()->enableTimer(qsl("resetDisabledTimer")));
+    QVERIFY(!luaGlobalIsTrue("resetDisabledTimerRan"));
+    QTRY_VERIFY2_WITH_TIMEOUT(
+        luaGlobalIsTrue("resetDisabledTimerRan"),
+        "a timer switched off during a reset must run its script once "
+        "switched back on",
+        2000);
+    QVERIFY(mpHost->getTimerUnit()->disableTimer(qsl("resetDisabledTimer")));
+  }
+
+  void test_disabledKeyRunsItsScriptAfterResetAndEnable() {
+    QString name = qsl("resetDisabledKey");
+    QString parent;
+    int keyCode = Qt::Key_F11;
+    int modifier = Qt::NoModifier;
+    QString script = qsl("resetDisabledKeyRan = true");
+    auto [id, msg] = mpHost->mLuaInterpreter.startPermKey(name, parent, keyCode,
+                                                          modifier, script);
+    QVERIFY2(id > 0, qPrintable(msg));
+    QVERIFY(mpHost->getKeyUnit()->disableKey(qsl("resetDisabledKey")));
+
+    performReset();
+
+    QVERIFY(mpHost->getKeyUnit()->enableKey(qsl("resetDisabledKey")));
+    QVERIFY(!luaGlobalIsTrue("resetDisabledKeyRan"));
+    QVERIFY(mpHost->getKeyUnit()->processDataStream(Qt::Key_F11,
+                                                     Qt::NoModifier));
+    QVERIFY2(luaGlobalIsTrue("resetDisabledKeyRan"),
+             "a key switched off during a reset must run its script once "
+             "switched back on");
+    QVERIFY(mpHost->getKeyUnit()->disableKey(qsl("resetDisabledKey")));
+  }
+
+  void test_childOfADisabledAliasGroupRunsItsScriptAfterResetAndEnable() {
+    auto *group = new TAlias(qsl("resetDisabledAliasGroup"), mpHost);
+    group->setIsFolder(true);
+    group->setIsActive(false);
+    QVERIFY(mpHost->getAliasUnit()->registerAlias(group));
+    auto *child = new TAlias(group, mpHost);
+    child->setName(qsl("resetDisabledAliasGroupChild"));
+    child->setRegexCode(qsl("^resetDisabledAliasGroupChild$"));
+    child->setIsActive(true);
+    QVERIFY(mpHost->getAliasUnit()->registerAlias(child));
+    QVERIFY(child->setScript(qsl("resetDisabledAliasGroupChildRan = true")));
+
+    performReset();
+
+    group->setIsActive(true);
+    QVERIFY(!luaGlobalIsTrue("resetDisabledAliasGroupChildRan"));
+    QVERIFY(mpHost->getAliasUnit()->processDataStream(
+        qsl("resetDisabledAliasGroupChild")));
+    QVERIFY2(luaGlobalIsTrue("resetDisabledAliasGroupChildRan"),
+             "an alias in a group switched off during a reset must run its "
+             "script once the group is switched back on");
+    delete group;
+  }
+
+  void test_buttonOnAHiddenToolbarRunsItsScriptAfterResetAndShow() {
+    auto *actionUnit = mpHost->getActionUnit();
+    auto *toolbar = new TAction(qsl("resetHiddenToolbar"), mpHost);
+    toolbar->setIsFolder(true);
+    toolbar->setIsActive(true);
+    QVERIFY(actionUnit->registerAction(toolbar));
+    auto *button = new TAction(toolbar, mpHost);
+    button->setName(qsl("resetHiddenToolbarButton"));
+    button->setIsActive(true);
+    QVERIFY(actionUnit->registerAction(button));
+    QVERIFY(button->setScript(qsl("resetHiddenToolbarButtonRan = true")));
+    QVERIFY(actionUnit->hideToolBar(qsl("resetHiddenToolbar")).first);
+
+    performReset();
+
+    QVERIFY(actionUnit->showToolBar(qsl("resetHiddenToolbar")).first);
+    QVERIFY(!luaGlobalIsTrue("resetHiddenToolbarButtonRan"));
+    button->execute();
+    QVERIFY2(luaGlobalIsTrue("resetHiddenToolbarButtonRan"),
+             "a button on a toolbar hidden during a reset must run its script "
+             "once the toolbar is shown again");
+    delete toolbar;
   }
 
   // -----------------------------------------------------------------------

@@ -695,10 +695,11 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
 void TriggerUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto trigger : mTriggerRootNodeList) {
-        if (trigger->isActive()) {
-            trigger->compileAll();
-        }
+        trigger->compileAll();
     }
 }
 

@@ -112,10 +112,11 @@ void AliasUnit::uninstall(const QString& packageName)
 
 void AliasUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto alias : mAliasRootNodeList) {
-        if (alias->isActive()) {
-            alias->compileAll();
-        }
+        alias->compileAll();
     }
 }
 
