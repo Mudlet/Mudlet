@@ -222,6 +222,18 @@ private:
 
     void runDeferredDeletes() { QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete); }
 
+    // Host::setFocusOnHostActiveCommandLine() leaves 10 ms and 50 ms focus
+    // retries behind, which must not fire inside a later case that has moved
+    // the focus elsewhere on purpose. A plain qWait(60) does not guarantee that:
+    // it can end in its sleep with the 50 ms one still pending, its last event
+    // pass having come before the timer was due (seen on the macOS runner). So:
+    // past both due times, then one more event pass.
+    static void drainFocusRetries()
+    {
+        QTest::qWait(70);
+        QTest::qWait(0);
+    }
+
     void resetState()
     {
         auto& telnet = mpHost->mTelnet;
@@ -1044,9 +1056,8 @@ private slots:
         typeIntoWindow(qsl("c"));
         QTRY_COMPARE(box()->text(), qsl("abc"));
         QCOMPARE(commandLine()->toPlainText(), QString());
-        // The forwarder's Host::setFocusOnHostActiveCommandLine() leaves 10 ms
-        // and 50 ms focus retries behind, which must not fire inside a later case
-        QTest::qWait(60);
+        // The forwarder went through Host::setFocusOnHostActiveCommandLine()
+        drainFocusRetries();
     }
 
     // Red without TCommandLine::event()'s redirect to its proxy.
@@ -1089,12 +1100,14 @@ private slots:
         QTRY_COMPARE(focusWidget(), &elsewhere);
         mpHost->setFocusOnHostActiveCommandLine();
         QTRY_COMPARE(focusWidget(), box());
-        QTest::qWait(60);
+        drainFocusRetries();
     }
 
     // Red with openPasswordEntry() taking focus from any widget.
     void test_theBoxDoesNotStealFocusFromOutsideTheCommandLines()
     {
+        // No earlier case's focus retry may decide this one
+        drainFocusRetries();
         QLineEdit editor(mudlet::self());
         editor.show();
         editor.setFocus();
