@@ -368,6 +368,7 @@ private:
     void guardScrollWheel();
     void buildMigrationBanner();
     void placeBannerOn(QWidget* pColumn);
+    void updateNoProfileNotice();
     void showCategory(const QString& key, QWidget* pSpotlightTarget = nullptr);
     void spotlight(QWidget* pTarget);
     void applyShellStyle();
@@ -440,6 +441,7 @@ private:
     QLabel* mpLabel_pageTitle = nullptr;
     QLabel* mpLabel_pageTitleIcon = nullptr;
     QFrame* mpFrame_migrationBanner = nullptr;
+    QLabel* mpLabel_noProfileNotice = nullptr;
     QScrollArea* mpScrollArea_searchResults = nullptr;
     QVBoxLayout* mpLayout_searchResults = nullptr;
     QLabel* mpLabel_searchEmpty = nullptr;

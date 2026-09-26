@@ -746,6 +746,16 @@ void dlgProfilePreferences::buildShell()
     pTitleRowLayout->addStretch(1);
     pContentLayout->addWidget(pTitleRow);
 
+    // Tab skips disabled controls and screen readers only call them unavailable, so with no profile the
+    // explanation has to be a Tab stop itself
+    mpLabel_noProfileNotice = new QLabel(pContent);
+    mpLabel_noProfileNotice->setObjectName(qsl("settingsNoProfileNotice"));
+    mpLabel_noProfileNotice->setWordWrap(true);
+    mpLabel_noProfileNotice->setMaximumWidth(scmContentColumnWidth);
+    mpLabel_noProfileNotice->setFocusPolicy(Qt::TabFocus);
+    mpLabel_noProfileNotice->hide();
+    pContentLayout->addWidget(mpLabel_noProfileNotice);
+
     mpStackedWidget_categories = new QStackedWidget(pContent);
     mpStackedWidget_categories->setObjectName(qsl("settingsStack"));
     pContentLayout->addWidget(mpStackedWidget_categories, 1);
@@ -902,6 +912,13 @@ void dlgProfilePreferences::placeBannerOn(QWidget* pColumn)
     pColumnLayout->insertWidget(0, mpFrame_migrationBanner);
     // Reparenting hides a widget, and the page may not be showing yet
     mpFrame_migrationBanner->show();
+}
+
+void dlgProfilePreferences::updateNoProfileNotice()
+{
+    mpLabel_noProfileNotice->setVisible(!mpHost);
+    // Screen readers can read a dialog's description out as it opens, before Tab would reach the notice
+    setAccessibleDescription(mpHost ? QString() : mpLabel_noProfileNotice->text());
 }
 
 void dlgProfilePreferences::buildSearchResultsPage()
@@ -1164,6 +1181,11 @@ void dlgProfilePreferences::retranslateShell()
         //: Button that dismisses the "Same settings, new look!" banner for good
         mpFrame_migrationBanner->findChild<QPushButton*>(qsl("settingsMigrationBannerDismiss"))->setText(tr("Got it"));
     }
+
+    //: Notice above the settings page when the dialog has no profile - it was opened before any was loaded, or its profile has since closed - explaining why most settings are greyed out. Screen readers may also read it out as the dialog opens.
+    mpLabel_noProfileNotice->setText(tr("These settings are not linked to an open profile, so the ones that belong to a profile are greyed out. "
+                                        "To change those, including the accessibility options, open Settings from a loaded profile."));
+    updateNoProfileNotice();
 
     setSearchKeywords();
 
@@ -2106,8 +2128,8 @@ static void collectFocusableInLayoutOrder(const QLayout* pLayout, QList<QWidget*
 // order. Only the showing page's widgets are traversed, so one chain in sidebar order fixes it.
 void dlgProfilePreferences::rebuildTabOrder()
 {
-    // Traversal skips a hidden chevron rather than getting trapped on it
-    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpButton_subpageBack, mpListWidget_categories};
+    // Traversal skips a hidden chevron or notice rather than getting trapped on it
+    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpButton_subpageBack, mpListWidget_categories, mpLabel_noProfileNotice};
     const auto collectPage = [&chain, this](const int pageIndex) {
         auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(pageIndex));
         QWidget* pColumn = pScrollArea ? pScrollArea->widget() : nullptr;
@@ -2965,6 +2987,8 @@ void dlgProfilePreferences::applyShellStyle()
                                       "QGroupBox[settingsCard=\"true\"] QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 0px; padding: 0px; }"
                                       "#settingsMigrationBanner { background-color: %4; border: 1px solid %7; border-radius: 8px; }"
                                       "#settingsMigrationBannerTitle { font-weight: bold; }"
+                                      "#settingsNoProfileNotice { background-color: %4; border: 1px solid %7; border-radius: 8px; padding: 12px 16px; }"
+                                      "#settingsNoProfileNotice:focus { border: 1px solid %5; }"
                                       "#settingsSearchHeader { font-weight: bold; font-size: 110%; color: %2; }"
                                       "#settingsSearchEmpty { padding: 32px; color: %9; }"
                                       "QLabel[searchMatch=\"true\"], QCheckBox[searchMatch=\"true\"], QRadioButton[searchMatch=\"true\"], QPushButton[searchMatch=\"true\"]"
@@ -3436,6 +3460,7 @@ void dlgProfilePreferences::disableHostDetails()
     if (mpCard_discord) {
         mpCard_discord->hide();
     }
+    groupBox_MMCPOptions->setEnabled(false);
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(false);
@@ -3447,6 +3472,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_advertiseScreenReader->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
     checkBox_enableBlinkText->setEnabled(false);
+    checkBox_f3SearchEnabled->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -3465,6 +3491,8 @@ void dlgProfilePreferences::disableHostDetails()
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
+
+    updateNoProfileNotice();
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -3556,6 +3584,7 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_chat =====
     groupBox_discordPrivacy->show();
     mpCard_discord->show();
+    groupBox_MMCPOptions->setEnabled(true);
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(true);
@@ -3567,6 +3596,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_advertiseScreenReader->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
     checkBox_enableBlinkText->setEnabled(true);
+    checkBox_f3SearchEnabled->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -3580,6 +3610,8 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
+
+    updateNoProfileNotice();
 }
 
 // Every write is signal-blocked: a control writing the value straight back could undo a language or
@@ -3640,6 +3672,10 @@ void dlgProfilePreferences::populateApplicationSettings()
     {
         const QSignalBlocker blocker(comboBox_appearance);
         comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
+    }
+    {
+        const QSignalBlocker blocker(telnetHandlerEnabled);
+        telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     }
     {
         // The one setting here that lives in its own QSettings group rather than
@@ -3987,7 +4023,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
-    telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
 
@@ -6445,13 +6480,6 @@ void dlgProfilePreferences::applyAll()
             pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
         }
 
-        if (mSnapshot.dirty(telnetHandlerEnabled)) {
-            QSettings* settings = MudletApp::getQSettings();
-            if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
-                settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
-            }
-        }
-
         if (mSnapshot.dirty(groupBox_proxy)) {
             pHost->mUseProxy = groupBox_proxy->isChecked();
         }
@@ -6749,6 +6777,12 @@ void dlgProfilePreferences::applyAll()
     }
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
+    }
+    if (mSnapshot.dirty(telnetHandlerEnabled)) {
+        QSettings* settings = MudletApp::getQSettings();
+        if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
+            settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
+        }
     }
 
     Discord::self()->UpdatePresence();
