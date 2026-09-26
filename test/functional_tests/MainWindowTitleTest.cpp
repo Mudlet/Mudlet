@@ -34,7 +34,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TDetachedWindow.h"
@@ -60,7 +60,7 @@ private:
 
     void startProfile(const QString& profileName)
     {
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, profileName)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, profileName)).removeRecursively();
         Host* pHost = TestProfile::create(profileName, mLocalhost, mPort);
         if (!pHost) {
             QTest::qFail(qPrintable(qsl("no active host after creating '%1'").arg(profileName)), __FILE__, __LINE__);
@@ -90,7 +90,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -124,8 +124,8 @@ private slots:
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString firstPath = MudletPaths::getMudletPath(enums::profileHomePath, mFirstProfile);
-            const QString secondPath = MudletPaths::getMudletPath(enums::profileHomePath, mSecondProfile);
+            const QString firstPath = MudletApp::getMudletPath(enums::profileHomePath, mFirstProfile);
+            const QString secondPath = MudletApp::getMudletPath(enums::profileHomePath, mSecondProfile);
             delete mudlet::self();
             QDir(firstPath).removeRecursively();
             QDir(secondPath).removeRecursively();
@@ -158,7 +158,7 @@ private slots:
         // the detached profile is still loaded, which is the whole point: the
         // old title reset only fired when nothing was loaded anywhere
         QVERIFY2(HostManager::self()->getHost(mSecondProfile), "the detached profile closed too, so an empty title proves nothing");
-        QCOMPARE(mudlet::self()->windowTitle(), mudlet::self()->scmVersion);
+        QCOMPARE(mudlet::self()->windowTitle(), MudletApp::scmVersion());
     }
 };
 

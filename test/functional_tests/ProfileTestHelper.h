@@ -147,7 +147,11 @@ inline Host* create(const QString& profileName,
                     return button != nullptr && button->isEnabled();
                 },
                 timeout)) {
-        qWarning() << "TestProfile::create() - the Connect button never became enabled";
+        // Every check validateProfile() fails adds its reason to the notification
+        // area, so that text says why Connect stayed disabled
+        const dlgConnectionProfiles* current = mudlet::self()->mpConnectionDialog;
+        qWarning() << "TestProfile::create() - the Connect button never became enabled. The dialog says:" << current->notificationAreaMessageBox->text().trimmed()
+                   << "- name:" << current->profile_name_entry->text() << "address:" << current->host_name_entry->text() << "port:" << current->port_entry->text();
         return nullptr;
     }
 
