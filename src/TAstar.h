@@ -46,9 +46,16 @@ struct location
 {
     int id;    // Typically 4 bytes
     TRoom* pR; // 4 or 8 bytes? - so may have reduced size from 20 to 8 or 12 plus padding...?
+    float areaChebyshevScale = 0; // EXPERIMENT
 };
 
 typedef float cost;
+
+// EXPERIMENT (#3334): 0 = euclidean (current), 1 = zero (Dijkstra), 2 = euclidean scaled by gHeuristicScale, 0 across areas
+inline int gHeuristicMode = 0;
+inline float gHeuristicScale = 1.0f;
+// 3 = chebyshev scaled by gChebyshevScale (global), 4 = chebyshev scaled per area; both 0 across areas
+inline float gChebyshevScale = 1.0f;
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route
@@ -77,14 +84,26 @@ public:
 
     CostType operator()(Vertex u)
     {
+        if (gHeuristicMode == 1) {
+            return 0;
+        }
         if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea()) {
-            return 1;
+            return gHeuristicMode >= 2 ? 0 : 1;
         }
         CostType dx = m_location[m_goal].pR->x() - m_location[u].pR->x();
         CostType dy = m_location[m_goal].pR->y() - m_location[u].pR->y();
         CostType dz = m_location[m_goal].pR->z() - m_location[u].pR->z();
 
-        return std::sqrt(dx * dx + dy * dy + dz * dz);
+        if (gHeuristicMode == 3 || gHeuristicMode == 4) {
+            const CostType cheb = std::max({std::abs(dx), std::abs(dy), std::abs(dz)});
+            return cheb * (gHeuristicMode == 3 ? gChebyshevScale : m_location[u].areaChebyshevScale);
+        }
+        if (gHeuristicMode == 5) {
+            const CostType cheb = std::max({std::abs(dx), std::abs(dy), std::abs(dz)});
+            return cheb * m_location[u].areaChebyshevScale;
+        }
+        const CostType d = std::sqrt(dx * dx + dy * dy + dz * dz);
+        return gHeuristicMode == 2 ? d * gHeuristicScale : d;
     }
 
 private:

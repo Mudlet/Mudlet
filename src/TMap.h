@@ -425,6 +425,9 @@ private:
     std::vector<cost> mSearchDistance;
     std::vector<quint8> mSearchState;
     std::vector<vertex> mSearchTouched;
+public:
+    std::size_t mLastSearchTouched = 0; // EXPERIMENT
+private:
 
     // Held for the whole of a map operation that pumps the event loop, so that
     // mapOperationInProgress() can tell anything re-entered from that pump that

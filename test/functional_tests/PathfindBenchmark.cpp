@@ -39,6 +39,7 @@
  */
 
 #include <QFileInfo>
+#include <QRandomGenerator>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -228,6 +229,7 @@ private slots:
 
     void benchFindPath()
     {
+        gHeuristicMode = qEnvironmentVariableIntValue("MUDLET_HEURISTIC_MODE");
         mudlet::self()->mSkipDefaultPackageInstall = true;
         Host* host = TestProfile::create(mHostname, mLocalhost, QString::number(mPort));
         QVERIFY(host);
@@ -441,6 +443,124 @@ private slots:
         if (const qint64 peakRssKb = readPeakRssKb(); peakRssKb > 0) {
             emitMetric("peak_rss_kb", peakRssKb);
         }
+    }
+
+    // EXPERIMENT (#3334): compare heuristic modes for optimality and work
+    void benchHeuristics()
+    {
+        mudlet::self()->mSkipDefaultPackageInstall = true;
+        Host* host = TestProfile::create(mHostname, mLocalhost, QString::number(mPort));
+        QVERIFY(host);
+        QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
+        QVERIFY2(connected.wait(3000), "could not connect to the stub");
+        host->showHideOrCreateMapper(false);
+        TMap* pMap = host->mpMap.data();
+        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        gHeuristicMode = 0;
+        pMap->initGraph();
+        const int n = static_cast<int>(pMap->locations.size());
+        emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));
+        emitMetric("graph_vertices", static_cast<qint64>(n));
+        emitMetric("heuristic_scale", static_cast<double>(gHeuristicScale));
+        emitMetric("chebyshev_scale", static_cast<double>(gChebyshevScale));
+
+        QHash<int, std::vector<int>> byArea;
+        for (int i = 0; i < n; ++i) {
+            byArea[pMap->locations[i].pR->getArea()].push_back(pMap->locations[i].id);
+        }
+        const int pairCount = qEnvironmentVariableIsSet("MUDLET_BENCH_PAIRS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_PAIRS") : 300;
+
+        auto pathCost = [pMap](int from) {
+            double total = 0;
+            unsigned int previous = from;
+            for (const int roomId : std::as_const(pMap->mPathList)) {
+                total += pMap->edgeHash.value(qMakePair(previous, static_cast<unsigned int>(roomId))).cost;
+                previous = roomId;
+            }
+            return total;
+        };
+
+        for (const char* cls : {"uniform", "samearea"}) {
+            QRandomGenerator rng(3334);
+            std::vector<std::pair<int, int>> pairs;
+            std::vector<double> optimum;
+            int unreachable = 0;
+            gHeuristicMode = 1;
+            for (int attempt = 0; attempt < pairCount * 50 && static_cast<int>(pairs.size()) < pairCount; ++attempt) {
+                const int from = pMap->locations[rng.bounded(n)].id;
+                int to;
+                if (qstrcmp(cls, "uniform") == 0) {
+                    to = pMap->locations[rng.bounded(n)].id;
+                } else {
+                    const std::vector<int>& area = byArea[pMap->mpRoomDB->getRoom(from)->getArea()];
+                    if (area.size() < 2) {
+                        continue;
+                    }
+                    to = area[rng.bounded(static_cast<int>(area.size()))];
+                }
+                if (to == from) {
+                    continue;
+                }
+                if (!pMap->findPath(from, to)) {
+                    ++unreachable;
+                    continue;
+                }
+                pairs.emplace_back(from, to);
+                optimum.push_back(pathCost(from));
+            }
+            emitMetric(qsl("%1_pairs").arg(cls), static_cast<qint64>(pairs.size()));
+            emitMetric(qsl("%1_unreachable_skipped").arg(cls), static_cast<qint64>(unreachable));
+
+            const int modes[] = {0, 1, 4, 5};
+            const char* modeNames[] = {"current", "zero", "scaled", "cheb", "chebarea", "chebtie"};
+            std::vector<double> times[6];
+            qint64 touched[6] = {0, 0, 0, 0, 0, 0};
+            qint64 maxTouched[6] = {0, 0, 0, 0, 0, 0};
+            int suboptimal[6] = {0, 0, 0, 0, 0, 0};
+            double worstRatio[6] = {1, 1, 1, 1, 1, 1};
+            int failed[6] = {0, 0, 0, 0, 0, 0};
+            QElapsedTimer timer;
+            for (std::size_t i = 0; i < pairs.size(); ++i) {
+                for (const int m : modes) {
+                    gHeuristicMode = m;
+                    timer.restart();
+                    const bool found = pMap->findPath(pairs[i].first, pairs[i].second);
+                    times[m].push_back(timer.nsecsElapsed() / 1.0e6);
+                    touched[m] += static_cast<qint64>(pMap->mLastSearchTouched);
+                    maxTouched[m] = std::max(maxTouched[m], static_cast<qint64>(pMap->mLastSearchTouched));
+                    if (!found) {
+                        ++failed[m];
+                        continue;
+                    }
+                    const double c = pathCost(pairs[i].first);
+                    if (c > optimum[i] * (1 + 1e-5) + 1e-3) {
+                        ++suboptimal[m];
+                        worstRatio[m] = std::max(worstRatio[m], optimum[i] > 0 ? c / optimum[i] : 0.0);
+                    }
+                }
+            }
+            for (const int m : modes) {
+                std::vector<double>& t = times[m];
+                std::sort(t.begin(), t.end());
+                double sum = 0;
+                for (const double v : t) {
+                    sum += v;
+                }
+                const QString p = qsl("%1_%2").arg(cls, modeNames[m]);
+                emitMetric(qsl("%1_suboptimal").arg(p), static_cast<qint64>(suboptimal[m]));
+                emitMetric(qsl("%1_worst_ratio").arg(p), worstRatio[m]);
+                emitMetric(qsl("%1_failed").arg(p), static_cast<qint64>(failed[m]));
+                emitMetric(qsl("%1_total_ms").arg(p), sum);
+                if (!t.empty()) {
+                    emitMetric(qsl("%1_median_ms").arg(p), t[t.size() / 2]);
+                    emitMetric(qsl("%1_p95_ms").arg(p), t[t.size() * 95 / 100]);
+                    emitMetric(qsl("%1_max_ms").arg(p), t.back());
+                }
+                emitMetric(qsl("%1_touched_total").arg(p), touched[m]);
+                emitMetric(qsl("%1_touched_max").arg(p), maxTouched[m]);
+            }
+        }
+        gHeuristicMode = 0;
     }
 
 private:

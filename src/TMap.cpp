@@ -972,6 +972,50 @@ void TMap::initGraph()
         }
     } // End of foreach(location l, locations)
 
+    // EXPERIMENT: largest k with k * euclidean(u, v) <= cost(u, v) for every same-area edge
+    {
+        float k = std::numeric_limits<float>::max();
+        for (auto it = edgeHash.cbegin(); it != edgeHash.cend(); ++it) {
+            TRoom* a = mpRoomDB->getRoom(it.key().first);
+            TRoom* b = mpRoomDB->getRoom(it.key().second);
+            if (!a || !b || a->getArea() != b->getArea()) {
+                continue;
+            }
+            const float dx = a->x() - b->x(), dy = a->y() - b->y(), dz = a->z() - b->z();
+            const float len = std::sqrt(dx * dx + dy * dy + dz * dz);
+            if (len > 0) {
+                k = std::min(k, it.value().cost / len);
+            }
+        }
+        gHeuristicScale = (k == std::numeric_limits<float>::max()) ? 0.0f : k;
+
+        QHash<int, float> areaScale;
+        for (auto it = edgeHash.cbegin(); it != edgeHash.cend(); ++it) {
+            TRoom* a = mpRoomDB->getRoom(it.key().first);
+            TRoom* b = mpRoomDB->getRoom(it.key().second);
+            if (!a || !b || a->getArea() != b->getArea()) {
+                continue;
+            }
+            const float cheb = std::max({std::abs(a->x() - b->x()), std::abs(a->y() - b->y()), std::abs(a->z() - b->z())});
+            if (cheb > 0) {
+                const float ratio = it.value().cost / cheb;
+                auto found = areaScale.find(a->getArea());
+                if (found == areaScale.end()) {
+                    areaScale.insert(a->getArea(), ratio);
+                } else if (ratio < found.value()) {
+                    found.value() = ratio;
+                }
+            }
+        }
+        float global = std::numeric_limits<float>::max();
+        for (const float v : std::as_const(areaScale)) {
+            global = std::min(global, v);
+        }
+        gChebyshevScale = areaScale.isEmpty() ? 0.0f : global;
+        for (location& l : locations) {
+            l.areaChebyshevScale = areaScale.value(l.pR->getArea(), 0.0f);
+        }
+    }
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
@@ -1016,16 +1060,17 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
     const WeightMap weights = boost::get(boost::edge_weight, g);
     distance_heuristic<mygraph_t, cost, std::vector<location>> heuristic(locations, goal);
 
-    typedef std::pair<cost, vertex> frontierEntry;
+    // EXPERIMENT: middle element breaks ties on f in favour of the smaller h in mode 5
+    typedef std::tuple<cost, cost, vertex> frontierEntry;
     std::priority_queue<frontierEntry, std::vector<frontierEntry>, std::greater<frontierEntry>> frontier;
 
     mSearchDistance[start] = 0;
     mSearchState[start] = stateFrontier;
     mSearchTouched.push_back(start);
-    frontier.push({heuristic(start), start});
+    frontier.push({heuristic(start), gHeuristicMode == 5 ? heuristic(start) : 0, start});
 
     while (!frontier.empty()) {
-        const vertex current = frontier.top().second;
+        const vertex current = std::get<2>(frontier.top());
         frontier.pop();
         if (mSearchState[current] == stateExpanded) {
             // Stale duplicate: a cheaper route was queued later.
@@ -1033,6 +1078,7 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
         }
         mSearchState[current] = stateExpanded;
         if (current == goal) {
+            mLastSearchTouched = mSearchTouched.size();
             return true;
         }
 
@@ -1050,10 +1096,12 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
             // Re-open: the heuristic uses map coordinates but costs are room weights, so they can
             // disagree and a better route to an expanded room can appear (boost does the same).
             mSearchState[neighbour] = stateFrontier;
-            frontier.push({throughCurrent + heuristic(neighbour), neighbour});
+            const cost h = heuristic(neighbour);
+            frontier.push({throughCurrent + h, gHeuristicMode == 5 ? h : 0, neighbour});
         }
     }
 
+    mLastSearchTouched = mSearchTouched.size();
     return false;
 }
 
