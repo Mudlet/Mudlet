@@ -32,9 +32,11 @@
 
 #include <QMenu>
 #include <QMouseEvent>
+#include <QPointer>
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QtTest/QtTest>
+#include <algorithm>
 
 #include "Host.h"
 #include "MudletApp.h"
@@ -142,6 +144,12 @@ private:
         for (QMenu* stale : pCommandLine->findChildren<QMenu*>()) {
             delete stale;
         }
+        return rightClickLeavingOtherMenus(pCommandLine, word);
+    }
+
+    static QMenu* rightClickLeavingOtherMenus(TCommandLine* pCommandLine, const QString& word)
+    {
+        const QList<QMenu*> menusBefore = pCommandLine->findChildren<QMenu*>();
         const int start = pCommandLine->toPlainText().indexOf(word);
         if (start < 0) {
             return nullptr;
@@ -154,7 +162,12 @@ private:
         QApplication::sendEvent(pViewport, &press);
         QMouseEvent release(QEvent::MouseButtonRelease, position, pViewport->mapToGlobal(position), Qt::RightButton, Qt::NoButton, Qt::NoModifier);
         QApplication::sendEvent(pViewport, &release);
-        return pCommandLine->findChild<QMenu*>();
+        for (QMenu* pMenu : pCommandLine->findChildren<QMenu*>()) {
+            if (!menusBefore.contains(pMenu)) {
+                return pMenu;
+            }
+        }
+        return nullptr;
     }
 
     static QAction* findAction(const QMenu* pMenu, const QString& text)
@@ -427,6 +440,55 @@ private slots:
         QVERIFY2(pMenu, "right-clicking the command line opened no menu");
         QVERIFY2(!findAction(pMenu, qsl("Do the thing")), "a removed menu entry was still offered");
         closeMenu(pMenu);
+    }
+
+    // Every right-click builds a new menu, so one the user dismisses has to go
+    // away together with its entries instead of piling up on the command line
+    void test_aDismissedMenuIsDeletedWithItsEntries_data()
+    {
+        QTest::addColumn<bool>("chooseAnEntry");
+        QTest::newRow("dismissed with Escape") << false;
+        QTest::newRow("an entry chosen with Return") << true;
+    }
+
+    void test_aDismissedMenuIsDeletedWithItsEntries()
+    {
+        QFETCH(bool, chooseAnEntry);
+        const QString name = freshCommandLineName();
+        TCommandLine* pCommandLine = freshCommandLine(name);
+        QVERIFY(pCommandLine);
+        enterText(pCommandLine, qsl("qzxleaky"));
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxleaky")));
+        QVERIFY(runLua(qsl("addCommandLineMenuEvent('%1', 'Leak check', 'cmdLineSpellTestLeakEvent')").arg(name)));
+        const qsizetype actionsBefore = pCommandLine->findChildren<QAction*>().size();
+
+        QList<QPointer<QObject>> built;
+        for (int i = 0; i < 3; ++i) {
+            QMenu* pMenu = rightClickLeavingOtherMenus(pCommandLine, qsl("qzxleaky"));
+            QVERIFY2(pMenu, "right-clicking the command line opened no menu");
+            QVERIFY2(findAction(pMenu, qsl("Add to user dictionary")), qPrintable(actionTexts(pMenu).join(qsl(" | "))));
+            QAction* pEntry = findAction(pMenu, qsl("Leak check"));
+            QVERIFY2(pEntry, qPrintable(actionTexts(pMenu).join(qsl(" | "))));
+            built << pMenu;
+            for (QAction* pAction : pMenu->actions()) {
+                built << pAction;
+            }
+            if (chooseAnEntry) {
+                pMenu->setActiveAction(pEntry);
+                QTest::keyClick(pMenu, Qt::Key_Return);
+            } else {
+                QTest::keyClick(pMenu, Qt::Key_Escape);
+            }
+        }
+
+        const auto stillAlive = [&built]() {
+            return std::count_if(built.cbegin(), built.cend(), [](const QPointer<QObject>& pObject) {
+                return !pObject.isNull();
+            });
+        };
+        QTRY_COMPARE_WITH_TIMEOUT(stillAlive(), 0, 2000);
+        QCOMPARE(pCommandLine->findChildren<QMenu*>().size(), 0);
+        QCOMPARE(pCommandLine->findChildren<QAction*>().size(), actionsBefore);
     }
 };
 

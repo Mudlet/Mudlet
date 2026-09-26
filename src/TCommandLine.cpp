@@ -772,14 +772,6 @@ void TCommandLine::slot_popupMenu()
     c.removeSelectedText();
     c.insertText(t);
     c.clearSelection();
-    auto systemDictionaryHandle = mpHost->spellChecker().systemHandle();
-    if (systemDictionaryHandle) {
-        Hunspell_free_list(mpHost->spellChecker().systemHandle(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
-    }
-    auto userDictionaryHandle = mpHost->spellChecker().userHandle();
-    if (userDictionaryHandle) {
-        Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
-    }
 
     // Call the function again so that the replaced word gets rechecked:
     spellCheck();
@@ -809,9 +801,9 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         //    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
         //    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
         // } else {
-        action_addWord = new QAction(tr("Add to user dictionary"));
+        action_addWord = new QAction(tr("Add to user dictionary"), popup);
         action_addWord->setEnabled(false);
-        action_removeWord = new QAction(tr("Remove from user dictionary"));
+        action_removeWord = new QAction(tr("Remove from user dictionary"), popup);
         action_removeWord->setEnabled(false);
         // }
         if (MudletApp::usingMudletDictionaries()) {
@@ -824,7 +816,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             bundled with Mudlet; the entries about this line are the ones that the user
             has personally added.
             */
-            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
+            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"), popup);
         } else {
             /*:
             This line is shown in the list of spelling suggestions on the profile's command
@@ -835,7 +827,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             as part of the OS; the entries about this line are the ones that the user has
             personally added.
             */
-            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
+            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"), popup);
         }
         action_dictionarySeparatorLine->setEnabled(false);
     }
@@ -846,9 +838,11 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     // need to have a codec prepared for it and can use QString::toUtf8()
     // directly:
     const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
-    if (!(handle_system && !codecName.isEmpty())) {
-        mSystemDictionarySuggestionsCount = 0;
-    } else {
+    int systemSuggestionsCount = 0;
+    int userSuggestionsCount = 0;
+    char** pSystemSuggestionsList = nullptr;
+    char** pUserSuggestionsList = nullptr;
+    if (handle_system && !codecName.isEmpty()) {
         // The dictionary used from "the system" may not be UTF-8 encoded so we
         // will need to transform the UTF-16BE "QString" to the appropriate encoding:
         const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
@@ -875,25 +869,23 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             }
         }
 
-        mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
+        systemSuggestionsCount = Hunspell_suggest(handle_system, &pSystemSuggestionsList, encodedText.constData());
     }
 
     if (handle_profile) {
-        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, utf8Text.constData());
-    } else {
-        mUserDictionarySuggestionsCount = 0;
+        userSuggestionsCount = Hunspell_suggest(handle_profile, &pUserSuggestionsList, utf8Text.constData());
     }
 
-    if (mSystemDictionarySuggestionsCount) {
-        for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
-            auto pA = new QAction(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
+    if (systemSuggestionsCount) {
+        for (int i = 0; i < systemSuggestionsCount; ++i) {
+            auto pA = new QAction(TEncodingHelper::decode(pSystemSuggestionsList[i], codecName), popup);
 #if defined(Q_OS_FREEBSD)
             // Adding the text afterwards as user data as well as in the
             // constructor is to fix a bug(?) in FreeBSD that
             // automagically adds a '&' somewhere in the text to be a
             // shortcut - but doesn't show it and forgets to remove
             // it when asked for the text later:
-            pA->setData(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
+            pA->setData(TEncodingHelper::decode(pSystemSuggestionsList[i], codecName));
 #endif
             connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
             spellings_system << pA;
@@ -904,22 +896,22 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         Used when the command spelling checker using the selected system dictionary has
         no words to suggest.
         */
-        auto pA = new QAction(tr("no suggestions (system)"));
+        auto pA = new QAction(tr("no suggestions (system)"), popup);
         pA->setEnabled(false);
         spellings_system << pA;
     }
 
     if (handle_profile) {
-        if (mUserDictionarySuggestionsCount) {
-            for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                auto pA = new QAction(QString::fromUtf8(mpUserSuggestionsList[i]));
+        if (userSuggestionsCount) {
+            for (int i = 0; i < userSuggestionsCount; ++i) {
+                auto pA = new QAction(QString::fromUtf8(pUserSuggestionsList[i]), popup);
 #if defined(Q_OS_FREEBSD)
                 // Adding the text afterwards as user data as well as in the
                 // constructor is to fix a bug(?) in FreeBSD that
                 // automagically adds a '&' somewhere in the text to be a
                 // shortcut - but doesn't show it and forgets to remove
                 // it when asked for the text later:
-                pA->setData(QString::fromUtf8(mpUserSuggestionsList[i]));
+                pA->setData(QString::fromUtf8(pUserSuggestionsList[i]));
 #endif
                 connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                 spellings_profile << pA;
@@ -932,17 +924,25 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
                 Used when the command spelling checker using the dictionary shared between
                 profile has no words to suggest.
                 */
-                pA = new QAction(tr("no suggestions (shared)"));
+                pA = new QAction(tr("no suggestions (shared)"), popup);
             } else {
                 /*:
                 Used when the command spelling checker using the profile's own dictionary has
                 no words to suggest.
                 */
-                pA = new QAction(tr("no suggestions (profile)"));
+                pA = new QAction(tr("no suggestions (profile)"), popup);
             }
             pA->setEnabled(false);
             spellings_profile << pA;
         }
+    }
+
+    // The actions hold copies of the suggestions, so the lists can go now
+    if (pSystemSuggestionsList) {
+        Hunspell_free_list(handle_system, &pSystemSuggestionsList, systemSuggestionsCount);
+    }
+    if (pUserSuggestionsList) {
+        Hunspell_free_list(handle_profile, &pUserSuggestionsList, userSuggestionsCount);
     }
 
     /*
@@ -990,6 +990,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
+        popup->setAttribute(Qt::WA_DeleteOnClose);
         if (mpHost->getEnableSpellCheck()) {
             fillSpellCheckList(event, popup);
             // else the word is in the dictionary - in either case show the context
@@ -998,7 +999,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
         popup->addSeparator();
         for (const auto& [label, eventName] : contextMenuItems.asKeyValueRange()) {
-            auto action = new QAction(label, this);
+            auto action = new QAction(label, popup);
             connect(action, &QAction::triggered, this, [=, this]() {
                 TEvent mudletEvent = {};
                 mudletEvent.mArgumentList << eventName;
