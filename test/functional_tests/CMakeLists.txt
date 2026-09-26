@@ -173,6 +173,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EdbeeReinitTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
     EditorReshowTest.cpp
     PackageExporterTest.cpp

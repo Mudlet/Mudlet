@@ -342,6 +342,8 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
     }
 
     if (!patterns.isEmpty()) {
+        // the snapshot is written by XMLexport, which numbers colours the way a save file does
+        XMLimport::remapColorsToAnsiNumber(patterns, patternKinds);
         pT->setRegexCodeList(patterns, patternKinds);
     }
 
@@ -450,9 +452,10 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot)
         }
     }
 
-    if (!patterns.isEmpty()) {
-        pT->setRegexCodeList(patterns, patternKinds);
-    }
+    // An edit may have given the trigger patterns the snapshot did not have, so
+    // an empty list is restored too
+    XMLimport::remapColorsToAnsiNumber(patterns, patternKinds);
+    pT->setRegexCodeList(patterns, patternKinds);
 
     pT->compileAll();
 
@@ -947,9 +950,8 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot)
     }
 
     // Set event handlers
-    if (!eventHandlers.isEmpty()) {
-        pS->setEventHandlerList(eventHandlers);
-    }
+    // An edit may have added handlers the snapshot did not have
+    pS->setEventHandlerList(eventHandlers);
 
     pS->compileAll();
 
@@ -1223,6 +1225,9 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
             pA->mPosX = nodeValue.toInt();
         } else if (nodeName == "posY") {
             pA->mPosY = nodeValue.toInt();
+        } else if (nodeName == "mButtonState") {
+            // written as the 1 (up) or 2 (down) the format has always used
+            pA->mButtonState = (nodeValue.toInt() == 2);
         }
     }
 
