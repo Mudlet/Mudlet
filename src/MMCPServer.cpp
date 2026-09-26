@@ -92,8 +92,9 @@ void MMCPServer::sendSnoopData(std::string& lines)
         outData1.append(line.data(), line.size());
         outData2.append(line.data(), line.size());
 
-        // If line already had an 0xff at the end, don't bother adding one back here
-        if (!line.empty() && static_cast<unsigned char>(line.back()) != static_cast<unsigned char>(End)) {
+        // If line already had an 0xff at the end, don't bother adding one back
+        // here - but an empty line has none, and still needs one to end its frame
+        if (line.empty() || static_cast<unsigned char>(line.back()) != static_cast<unsigned char>(End)) {
             outData1.append(static_cast<char>(End));
             outData2.append(static_cast<char>(End));
         }
