@@ -355,6 +355,31 @@ private slots:
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "west"); // Should be "west"
   }
+
+  // MXP takes the menu's tooltip from the first hint when there are more hints
+  // than hrefs, so the excess has to be dropped from the end (#8382)
+  void testSendExcessHintsKeepTheFirstAsTooltip() {
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
+
+    auto startTag = parseNode(
+        R"(<SEND HREF="north|south" hint="Click for exits|Go north|Go south|Go nowhere">)");
+    auto endTag = parseNode("</SEND>");
+    QVERIFY(startTag);
+    QVERIFY(endTag);
+
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+    tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+    tagHandler.handleContent("exits");
+    tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+    QCOMPARE(stub.mHrefs.size(), 2);
+    QCOMPARE(stub.mHints.size(), 3);
+    QCOMPARE(stub.mHints[0], "Click for exits");
+    QCOMPARE(stub.mHints[1], "Go north");
+    QCOMPARE(stub.mHints[2], "Go south");
+  }
 };
 
 #include "TMxpSendTagHandlerTest.moc"

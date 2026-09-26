@@ -42,6 +42,9 @@
  * wrote is lost - an emptied folder would also stop gating its children and
  * start handing them every line.
  *
+ * setRegexCodeList() is also where a pattern that cannot compile at all is
+ * refused, so what it records for the editor's banner is pinned here too.
+ *
  * Run with: ctest -R CorruptTriggerPatternsTest -V
  */
 
@@ -49,7 +52,7 @@
 
 #include <QTemporaryDir>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -238,7 +241,7 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt marker present - config dir cannot be redirected for this test");
         }
-        QVERIFY2(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletApp::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
     }
 
     void cleanupTestCase()
@@ -249,7 +252,7 @@ private slots:
 
     void test_aTriggerWithMismatchedPatternListsDoesNotCrashTheLoad()
     {
-        const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QVERIFY(QDir().mkpath(folder));
         {
             QFile xmlFile(qsl("%1/2020-01-01#00-00-00.xml").arg(folder));
@@ -350,6 +353,31 @@ private slots:
         const QString secondViolation = matcherInvariantViolation(pTempColour);
         QVERIFY2(secondViolation.isEmpty(), qPrintable(secondViolation));
         QVERIFY2(!matches(pHealthy, qsl("survivor with more after it")), "the perl pattern's anchors stopped being honoured");
+    }
+
+    // The editor drops this text into a banner the theme colours, so the message
+    // must carry no colour of its own - the blue it used to be wrapped in was
+    // unreadable in dark mode (#9606)
+    void test_aPatternThatCannotCompileRecordsAnUncolouredError()
+    {
+        Host* pHost = HostManager::self()->getHost(mProfileName);
+        QVERIFY2(pHost, "the profile the earlier case loaded is gone, so there is no host to build a trigger on");
+
+        // Both pattern kinds that report a compile failure of their own, since the
+        // colour was stripped from each of their messages separately
+        const QList<QPair<QString, int>> uncompilable{{qsl("this is not lua +"), REGEX_LUA_CODE}, {qsl("(unclosed group"), REGEX_PERL}};
+        for (const auto& [pattern, kind] : uncompilable) {
+            auto* pTrigger = new TTrigger(nullptr, pHost);
+            pTrigger->setName(qsl("pattern of kind %1 that cannot compile").arg(kind));
+            QVERIFY(pTrigger->registerTrigger());
+            QVERIFY2(!pTrigger->setRegexCodeList({pattern}, {kind}), qPrintable(qsl("a pattern of kind %1 that cannot compile was accepted").arg(kind)));
+
+            // The pattern is spliced in after the message is translated, so it is
+            // the one part of the error that names the failure in any language
+            const QString error = pTrigger->getError();
+            QVERIFY2(error.contains(pattern), qPrintable(qsl("the error does not name the pattern that failed: %1").arg(error)));
+            QVERIFY2(!error.contains(qsl("color"), Qt::CaseInsensitive), qPrintable(qsl("the error carries a colour of its own: %1").arg(error)));
+        }
     }
 
 private:

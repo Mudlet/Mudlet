@@ -46,6 +46,8 @@ jobs:
     env:
       BUILD_TASK: 'PR'
       LUA_VERSION: '5.1.5'
+      CCACHE_MAXSIZE: 2G
+      CCACHE_COMPRESSLEVEL: 1
     strategy:
       fail-fast: false
       matrix:
@@ -68,9 +70,7 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
-          # Ships the Intel binary only: no test here branches on the host
-          # architecture, so the arm64 job below is the same coverage, and this
-          # is the slower pool.
+          # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64
@@ -91,7 +91,9 @@ jobs:
       uses: actions/checkout@v7
       with:
         submodules: recursive
-        fetch-depth: 0
+        # Enough for CI/generate-changelog.lua.
+        # MAX_COMMITS_PER_CHANGELOG (100) commits
+        fetch-depth: 100
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
@@ -159,7 +161,6 @@ jobs:
         done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
@@ -247,7 +248,6 @@ jobs:
         sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks --lua-version 5.1 install --local lua-yajl
@@ -366,7 +366,9 @@ jobs:
         echo "CC=clang" >> $GITHUB_ENV
 
     - name: check ccache stats prior to build
-      run: ccache --zero-stats --show-stats
+      run: |
+        ccache --zero-stats --show-stats -v
+        ccache --show-compression
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
@@ -386,7 +388,9 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: check ccache stats post build
-      run: ccache --show-stats
+      run: |
+        ccache --show-stats -v
+        ccache --show-compression
 
     - name: install dependencies for packaging/tests
       run: |
@@ -440,8 +444,7 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
-    # the full ctest run above already covers every functional-labelled test,
-    # and a BUILD_TESTING=OFF tree has no tests to find - bare ctest exits 8 there
+    # Skipped after the full ctest run, which covers these, and with BUILD_TESTING=OFF (bare ctest exits 8)
     - name: Run QTest
       if: matrix.run_tests != 'true' && matrix.build_tests != 'false'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)

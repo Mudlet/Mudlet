@@ -29,7 +29,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEasyButtonBar.h"
@@ -334,6 +334,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     descNewItem = tr("new item");
     //: Accessible description indicating an item belongs to a package, shown after the item name. Keep short, as it's appended to other descriptions like "activated, package item"
     descPackageItem = tr("package item");
+    //: Accessible description for a key binding whose key one of Mudlet's own shortcuts or an add-on command gets first, shown after the item name. Keep short, as it's appended to other descriptions like "activated, will not fire, key in use"
+    descKeyTaken = tr("will not fire, key in use");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
     const QString hostName{mpHost->getName()};
@@ -1413,19 +1415,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
     mpHost->editorThemeChanged();
 
-    // Force the minimum size of the scroll area for the trigger items to be
-    // enough for a useful number of them. The right hand column of advanced
-    // options used to provide that height as a side effect, so collapsing it
-    // left a single row and a sliver of the next one - hiding the very
-    // patterns the room was made for. Issue #2548 settled on five.
-    //
-    // A row is measured by its minimum rather than its preferred height: once
-    // the list is longer than it can show - the case this floor is here for -
-    // the scroll area lays its inner widget out at that widget's minimum, so
-    // the minimum is the height the rows really get. The frame and the
-    // horizontal scrollbar come off the viewport rather than off the rows, so
-    // they are paid for on top; a colour trigger's row is wider than a narrow
-    // editor and without that allowance its scrollbar eats the fifth row.
+    // Keep room for csmMinimumVisiblePatternRows patterns (#2548), which collapsing the advanced
+    // options would otherwise shrink to one. Rows are measured at their minimum height, since that is
+    // what the scroll area lays an overflowing list out at. The frame and horizontal scrollbar come on
+    // top: a colour trigger's row is wider than a narrow editor, and its scrollbar would eat the fifth row.
     const int scrollAreaChromeHeight = 2 * mpScrollArea->frameWidth() + mpScrollArea->horizontalScrollBar()->sizeHint().height();
     mpScrollArea->setMinimumHeight(mPatternRowHeight * csmMinimumVisiblePatternRows + scrollAreaChromeHeight);
 
@@ -1680,15 +1673,9 @@ void dlgTriggerEditor::createPatternItem(int index)
     mTriggerPatternEdit.push_back(pItem);
     pItem->mRow = index;
 
-    // Measure a row here, while every control it can carry is still on show -
-    // which is how the .ui hands one over, before a pattern type hides the
-    // ones it has no use for. Each type shows a different set of them and
-    // they are not all the same height: on macOS a colour trigger's two
-    // colour buttons stand a pixel taller than the controls the other types
-    // show, so a row measured wearing one type's clothes is not the height
-    // rows are laid out at wearing another's. With all of them showing the
-    // row's own layout takes its minimum from whichever is tallest, which is
-    // the tallest a row can end up however it is later set.
+    // Measure while the .ui still shows every control, before a pattern type hides some. They differ
+    // in height (on macOS a colour trigger's buttons are a pixel taller), so this takes the tallest,
+    // the most any row can need.
     if (!mPatternRowHeight) {
         mPatternRowHeight = pItem->minimumSizeHint().height();
     }
@@ -1932,14 +1919,13 @@ void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 
 void dlgTriggerEditor::readSettings()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
 
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
 
-    // Only place the editor ourselves the very first time it is opened; after
-    // that the position the user left it at wins, even on another screen -
-    // showEvent() deals with a screen that has since gone away
+    // Only place the editor ourselves on first open; after that the user's position wins, even on
+    // another screen - showEvent() deals with a screen that has since gone away
     const QVariant savedPosition = settings.value("script_editor_pos");
     if (savedPosition.isValid()) {
         move(savedPosition.toPoint());
@@ -1963,7 +1949,7 @@ void dlgTriggerEditor::readSettings()
 
 void dlgTriggerEditor::writeSettings()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     if (mHasBeenShown) {
         settings.setValue("script_editor_pos", pos());
         settings.setValue("script_editor_size", size());
@@ -6481,7 +6467,14 @@ void dlgTriggerEditor::setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT, bo
     QIcon icon;
     QString itemDescription;
     computeAliasIcon(pT, icon, itemDescription);
-    pItem->setIcon(0, icon);
+    // QIcon has no operator==, so setIcon() always emits dataChanged() and the
+    // view re-measures the row - skip it when the icon is the cached one
+    // already shown, which is every alias toggled off and back on within one
+    // coalesced refresh.
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
+        ++mAliasIconPaintCount;
+    }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
@@ -6490,7 +6483,10 @@ void dlgTriggerEditor::showAliasError(QTreeWidgetItem* pItem, const QString& nam
 {
     QIcon iconError;
     iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
-    pItem->setIcon(0, iconError);
+    if (pItem->icon(0).cacheKey() != iconError.cacheKey()) {
+        pItem->setIcon(0, iconError);
+        ++mAliasIconPaintCount;
+    }
     pItem->setText(0, name);
     pItem->setData(0, Qt::AccessibleDescriptionRole, descError);
     if (touchNotification) {
@@ -6526,30 +6522,70 @@ void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool 
 // user is actually looking at in a different view.
 void dlgTriggerEditor::refreshAliasIcon(int aliasID)
 {
-    // The dialog is never deleted once opened (see closeEvent()), so a script
-    // toggling items per prompt line would otherwise pay a tree walk on every
-    // call for the rest of the session even with the editor closed.
+    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
+    // than a findItemByID() scan per Lua call.
     if (!isVisible()) {
         return;
     }
-    TAlias* pT = mpHost->getAliasUnit()->getAlias(aliasID);
-    if (!pT) {
-        return;
+    mPendingAliasIconRefresh.insert(aliasID);
+    if (!mAliasIconRefreshQueued) {
+        mAliasIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingAliasIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpAliasBaseItem, aliasID);
-    if (!pItem) {
-        return;
-    }
+}
 
-    const bool touchNotification = pItem == mpCurrentAliasItem && mCurrentView == EditorViewType::cmAliasView;
+void dlgTriggerEditor::flushPendingAliasIconRefresh()
+{
+    mAliasIconRefreshQueued = false;
+    if (mPendingAliasIconRefresh.isEmpty()) {
+        return;
+    }
+    if (!mpAliasBaseItem || !isVisible()) {
+        // See flushPendingTriggerIconRefresh() - leave the IDs queued rather
+        // than dropping the update.
+        return;
+    }
+    ++mAliasIconFlushCount;
+    int remaining = mPendingAliasIconRefresh.size();
+    refreshAliasIconsIn(mpAliasBaseItem, false, false, remaining);
+    mPendingAliasIconRefresh.clear();
+}
+
+// See refreshTriggerIconsIn() for the shape of this walk, including what
+// ancestorTouchNotification carries forward.
+void dlgTriggerEditor::refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingAliasIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentAliasItem) && (mCurrentView == EditorViewType::cmAliasView)) : ancestorTouchNotification;
+        if (dirty) {
+            if (TAlias* pT = mpHost->getAliasUnit()->getAlias(id)) {
+                paintAliasItem(pItem, pT, touchNotification);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshAliasIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification)
+{
     // A profile's aliases stay TAlias::mIsNew until explicitly saved in the
     // editor, so respecting that here would paint every Lua-toggled alias
     // with the "unsaved" icon instead of reporting its actual state.
+    // setAliasNormalIcon()/showAliasError() bump mAliasIconPaintCount
+    // themselves, at their own cacheKey() guards.
     applyAliasState(pItem, pT, touchNotification, false);
-
-    if (pItem->childCount() > 0) {
-        children_icon_alias(pItem, touchNotification);
-    }
 }
 
 void dlgTriggerEditor::saveAction()
@@ -6935,6 +6971,28 @@ void dlgTriggerEditor::updatePackageItemAccessibility(QTreeWidgetItem* pItem, co
         newDescription = currentDescription + qsl(", ") + descPackageItem;
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, newDescription);
+}
+
+// Also kept in the item's accessible description, heard on landing on it, so announcing is optional
+void dlgTriggerEditor::showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, const bool announce)
+{
+    if (!warning.isEmpty()) {
+        showWarning(warning, announce);
+    }
+    if (!pItem) {
+        return;
+    }
+    // Selecting an item runs this again, so the old mark comes off first
+    const QString suffix = qsl(", ") + descKeyTaken;
+    QString description = pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    description.remove(suffix);
+    if (description == descKeyTaken) {
+        description.clear();
+    }
+    if (!warning.isEmpty()) {
+        description = description.isEmpty() ? descKeyTaken : description + suffix;
+    }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, description);
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int newValueType)
@@ -7906,12 +7964,9 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             patternItem->spinBox_lineSpacer->hide();
             patternItem->comboBox_patternType->setCurrentIndex(0);
         }
-        // Open the pattern list on pattern 1 - that is the one wanted first, and
-        // it is the row a trigger's own name and command sit next to. Setting
-        // the scrollbar rather than calling ensureWidgetVisible() also settles
-        // where the list opens: the widget is asked for its position before the
-        // layout that follows this selection has run, so scrolling to a row
-        // further down landed on a different row from one opening to the next.
+        // Open on pattern 1, beside the trigger's name and command. Set the scrollbar, not
+        // ensureWidgetVisible(): that reads positions before this selection's layout has run, so it
+        // landed on a different row from one opening to the next.
         mpScrollArea->verticalScrollBar()->setValue(0);
         const QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
@@ -8138,6 +8193,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
                     firstPackageAnnounced = true;
                 }
             }
+            // A warning given while the editor was closed is replaced when it opens, so a script-made binding
+            // is only warned about here. Not announced, or arrowing through the keys would be talked over.
+            showKeyTakenWarning(pItem, mpHost->getKeyUnit()->takenKeyWarning(pT), false);
         }
     } else {
         clearKeyForm();
@@ -9003,40 +9061,83 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
 // background state change could clobber a diagnostic in a different view.
 void dlgTriggerEditor::refreshKeyIcon(int keyID)
 {
-    // See refreshAliasIcon() - the dialog outlives its own visibility.
+    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
+    // than a findItemByID() scan per Lua call.
     if (!isVisible()) {
         return;
     }
-    TKey* pT = mpHost->getKeyUnit()->getKey(keyID);
-    if (!pT) {
-        return;
+    mPendingKeyIconRefresh.insert(keyID);
+    if (!mKeyIconRefreshQueued) {
+        mKeyIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingKeyIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpKeyBaseItem, keyID);
-    if (!pItem) {
-        return;
-    }
+}
 
-    const bool isCurrentItem = (pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView);
+void dlgTriggerEditor::flushPendingKeyIconRefresh()
+{
+    mKeyIconRefreshQueued = false;
+    if (mPendingKeyIconRefresh.isEmpty()) {
+        return;
+    }
+    if (!mpKeyBaseItem || !isVisible()) {
+        // See flushPendingTriggerIconRefresh() - leave the IDs queued rather
+        // than dropping the update.
+        return;
+    }
+    ++mKeyIconFlushCount;
+    int remaining = mPendingKeyIconRefresh.size();
+    refreshKeyIconsIn(mpKeyBaseItem, false, false, remaining);
+    mPendingKeyIconRefresh.clear();
+}
+
+// See refreshTriggerIconsIn() for the shape of this walk, including what
+// ancestorTouchNotification carries forward.
+void dlgTriggerEditor::refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingKeyIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView)) : ancestorTouchNotification;
+        if (dirty) {
+            if (TKey* pT = mpHost->getKeyUnit()->getKey(id)) {
+                paintKeyItem(pItem, pT, touchNotification);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshKeyIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touchNotification)
+{
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        if (isCurrentItem) {
+        if (touchNotification) {
             clearEditorNotification();
         }
         computeKeyIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        if (isCurrentItem) {
+        if (touchNotification) {
             showError(pT->getError());
         }
     }
-    pItem->setIcon(0, icon);
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-
-    if (pItem->childCount() > 0) {
-        children_icon_key(pItem, isCurrentItem);
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
+        ++mKeyIconPaintCount;
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
 void dlgTriggerEditor::populateActions()
@@ -9246,18 +9347,36 @@ void dlgTriggerEditor::computeScriptIcon(TScript* pT, QIcon& icon, QString& item
             }
         } else {
             if (itemActive) {
-                icon = cachedIcon(qsl(":/icons/folder-orange.png"));
+                if (pT->ancestorsActive()) {
+                    icon = cachedIcon(qsl(":/icons/folder-orange.png"));
+                } else {
+                    icon = cachedIcon(qsl(":/icons/folder-grey.png"));
+                    itemDescription = descInactiveParent.arg(itemDescription);
+                }
             } else {
-                icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
+                if (pT->ancestorsActive()) {
+                    icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
+                } else {
+                    icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
+                }
             }
         }
     } else {
         if (pT->isActive()) {
-            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             itemDescription = descActive;
+            if (pT->ancestorsActive()) {
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
+            } else {
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
+                itemDescription = descInactiveParent.arg(itemDescription);
+            }
         } else {
-            icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             itemDescription = descInactive;
+            if (pT->ancestorsActive()) {
+                icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
+            } else {
+                icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
+            }
         }
     }
 }
@@ -9272,40 +9391,83 @@ void dlgTriggerEditor::computeScriptIcon(TScript* pT, QIcon& icon, QString& item
 // different view.
 void dlgTriggerEditor::refreshScriptIcon(int scriptID)
 {
-    // See refreshAliasIcon() - the dialog outlives its own visibility.
+    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
+    // than a findItemByID() scan per Lua call.
     if (!isVisible()) {
         return;
     }
-    TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
-    if (!pT) {
-        return;
+    mPendingScriptIconRefresh.insert(scriptID);
+    if (!mScriptIconRefreshQueued) {
+        mScriptIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingScriptIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpScriptsBaseItem, scriptID);
-    if (!pItem) {
-        return;
-    }
+}
 
-    const bool isCurrentItem = (pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView);
+void dlgTriggerEditor::flushPendingScriptIconRefresh()
+{
+    mScriptIconRefreshQueued = false;
+    if (mPendingScriptIconRefresh.isEmpty()) {
+        return;
+    }
+    if (!mpScriptsBaseItem || !isVisible()) {
+        // See flushPendingTriggerIconRefresh() - leave the IDs queued rather
+        // than dropping the update.
+        return;
+    }
+    ++mScriptIconFlushCount;
+    int remaining = mPendingScriptIconRefresh.size();
+    refreshScriptIconsIn(mpScriptsBaseItem, false, false, remaining);
+    mPendingScriptIconRefresh.clear();
+}
+
+// See refreshTriggerIconsIn() for the shape of this walk, including what
+// ancestorTouchNotification carries forward.
+void dlgTriggerEditor::refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingScriptIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView)) : ancestorTouchNotification;
+        if (dirty) {
+            if (TScript* pT = mpHost->getScriptUnit()->getScript(id)) {
+                paintScriptItem(pItem, pT, touchNotification);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshScriptIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintScriptItem(QTreeWidgetItem* pItem, TScript* pT, bool touchNotification)
+{
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        if (isCurrentItem) {
+        if (touchNotification) {
             clearEditorNotification();
         }
         computeScriptIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        if (isCurrentItem) {
+        if (touchNotification) {
             showError(pT->getError());
         }
     }
-    pItem->setIcon(0, icon);
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-
-    if (pItem->childCount() > 0) {
-        children_icon_script(pItem, isCurrentItem);
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
+        ++mScriptIconPaintCount;
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 void dlgTriggerEditor::populateTimers()
 {
@@ -9413,40 +9575,83 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
 // different view.
 void dlgTriggerEditor::refreshTimerIcon(int timerID)
 {
-    // See refreshAliasIcon() - the dialog outlives its own visibility.
+    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
+    // than a findItemByID() scan per Lua call.
     if (!isVisible()) {
         return;
     }
-    TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
-    if (!pT) {
-        return;
+    mPendingTimerIconRefresh.insert(timerID);
+    if (!mTimerIconRefreshQueued) {
+        mTimerIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingTimerIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpTimerBaseItem, timerID);
-    if (!pItem) {
-        return;
-    }
+}
 
-    const bool isCurrentItem = (pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView);
+void dlgTriggerEditor::flushPendingTimerIconRefresh()
+{
+    mTimerIconRefreshQueued = false;
+    if (mPendingTimerIconRefresh.isEmpty()) {
+        return;
+    }
+    if (!mpTimerBaseItem || !isVisible()) {
+        // See flushPendingTriggerIconRefresh() - leave the IDs queued rather
+        // than dropping the update.
+        return;
+    }
+    ++mTimerIconFlushCount;
+    int remaining = mPendingTimerIconRefresh.size();
+    refreshTimerIconsIn(mpTimerBaseItem, false, false, remaining);
+    mPendingTimerIconRefresh.clear();
+}
+
+// See refreshTriggerIconsIn() for the shape of this walk, including what
+// ancestorTouchNotification carries forward.
+void dlgTriggerEditor::refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingTimerIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView)) : ancestorTouchNotification;
+        if (dirty) {
+            if (TTimer* pT = mpHost->getTimerUnit()->getTimer(id)) {
+                paintTimerItem(pItem, pT, touchNotification);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshTimerIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT, bool touchNotification)
+{
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        if (isCurrentItem) {
+        if (touchNotification) {
             clearEditorNotification();
         }
         computeTimerIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        if (isCurrentItem) {
+        if (touchNotification) {
             showError(pT->getError());
         }
     }
-    pItem->setIcon(0, icon);
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-
-    if (pItem->childCount() > 0) {
-        children_icon_timer(pItem, isCurrentItem);
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
+        ++mTimerIconPaintCount;
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
 void dlgTriggerEditor::populateTriggers()
@@ -9573,17 +9778,29 @@ void dlgTriggerEditor::flushPendingTriggerIconRefresh()
     if (mPendingTriggerIconRefresh.isEmpty()) {
         return;
     }
-    if (mpTriggerBaseItem && isVisible()) {
-        int remaining = mPendingTriggerIconRefresh.size();
-        refreshTriggerIconsIn(mpTriggerBaseItem, false, remaining);
+    if (!mpTriggerBaseItem || !isVisible()) {
+        // Editor closed before this flush ran - leave the IDs queued rather
+        // than silently dropping the update. showEvent() flushes them when
+        // the editor becomes visible again, and the next toggle would too.
+        return;
     }
+    int remaining = mPendingTriggerIconRefresh.size();
+    refreshTriggerIconsIn(mpTriggerBaseItem, false, false, remaining);
     mPendingTriggerIconRefresh.clear();
 }
 
 // One pass over the tree: repaints every pending item and, since a folder's
 // state changes its descendants' greyed-out look, everything under one. Stops
 // as soon as every pending ID has been seen.
-void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+//
+// ancestorTouchNotification carries the notification-eligibility of whichever
+// pending item most recently rooted the current dirty subtree - matching the
+// pre-coalescing behaviour where one refreshTriggerIcon(id) call decided
+// touchNotification once, from id's own selection state, and applied it to
+// that id's whole subtree. A descendant swept in only because an ancestor
+// folder toggled must not touch the notification banner on its own account,
+// even if that descendant happens to be the selected item.
+void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining)
 {
     for (int i = 0, n = pParent->childCount(); i < n; ++i) {
         QTreeWidgetItem* pItem = pParent->child(i);
@@ -9593,13 +9810,14 @@ void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ance
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
+        const bool touchNotification = pending ? ((pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView)) : ancestorTouchNotification;
         if (dirty) {
             if (TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(id)) {
-                paintTriggerItem(pItem, pT);
+                paintTriggerItem(pItem, pT, touchNotification);
             }
         }
         if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
-            refreshTriggerIconsIn(pItem, dirty, remaining);
+            refreshTriggerIconsIn(pItem, dirty, dirty ? touchNotification : false, remaining);
         }
         if (!ancestorDirty && remaining <= 0) {
             return;
@@ -9607,20 +9825,19 @@ void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ance
     }
 }
 
-void dlgTriggerEditor::paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT)
+void dlgTriggerEditor::paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bool touchNotification)
 {
-    const bool isCurrentItem = (pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        if (isCurrentItem) {
+        if (touchNotification) {
             clearEditorNotification();
         }
         computeTriggerIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        if (isCurrentItem) {
+        if (touchNotification) {
             showError(pT->getError());
         }
     }
@@ -10258,6 +10475,15 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
 
     mHasBeenShown = true;
     widgetutils::keepDialogOnAScreen(this, mpHost->mpConsole);
+
+    // A Lua toggle that arrived while this editor was hidden stays queued
+    // rather than being dropped (see flushPendingTriggerIconRefresh()) -
+    // flush it now instead of waiting for the next toggle to trigger it.
+    flushPendingTriggerIconRefresh();
+    flushPendingAliasIconRefresh();
+    flushPendingTimerIconRefresh();
+    flushPendingScriptIconRefresh();
+    flushPendingKeyIconRefresh();
 }
 
 void dlgTriggerEditor::changeView(EditorViewType view)
@@ -10838,7 +11064,7 @@ QString dlgTriggerEditor::profileSettingsPrefix() const
         return QString();
     }
 
-    const QString sanitized = MudletPaths::sanitizeForPath(profileName);
+    const QString sanitized = MudletApp::sanitizeForPath(profileName);
     if (sanitized.isEmpty()) {
         return QString();
     }
@@ -11253,8 +11479,7 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
         // If this is the first time the window is shown we want any previously
         // enqueued messages to be painted onto the central debug console:
         TDebug::flushMessageQueue();
-        // Every time it is opened, not just the first: the filters may well
-        // have been narrowed since it was last closed:
+        // Every time, not just the first: the filters may have been narrowed since it was last closed:
         TDebug::announceFilters();
     }
     mudlet::self()->refreshTabBar();
@@ -12018,7 +12243,7 @@ void dlgTriggerEditor::slot_export()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export Item"), lastDir, tr("Mudlet packages (*.xml)"));
@@ -12840,7 +13065,7 @@ void dlgTriggerEditor::slot_import()
         qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
     //: Trigger editor - import packages from file dialog (multi-select enabled)
     //: Trigger editor - file filter for supported package types (mpackage, zip, xml)
@@ -12984,7 +13209,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
 {
     mSavingAs = true;
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
     QString fileName = QFileDialog::getSaveFileName(this, tr("Backup Profile"), lastDir, tr("trigger files (*.trigger *.xml)"));
 
@@ -13146,7 +13371,7 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             pT->setKeyModifiers(modifier);
             QString newStateXML = exportKeyToXML(pT);
 
-            pKeyUnit->warnIfAddonCommandHoldsKey(pT);
+            showKeyTakenWarning(pItem, pKeyUnit->takenKeyWarning(pT), true);
 
             pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("keyBinding"), oldStateXML, newStateXML);
         }
@@ -13257,7 +13482,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
 void dlgTriggerEditor::slot_soundTrigger()
 {
     // Use the existing path/filename if it is not empty, otherwise start in last global user dir
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     const QString fileName = QFileDialog::getOpenFileName(
@@ -15005,7 +15230,7 @@ bool dlgTriggerEditor::bannerPermanentlyHidden(EditorViewType viewType, const QS
         return false;
     }
 
-    QSettings* settings = mudlet::getQSettings();
+    QSettings* settings = MudletApp::getQSettings();
     if (!settings) {
         return false;
     }
@@ -15043,7 +15268,7 @@ void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, const
         return;
     }
 
-    QSettings* settings = mudlet::getQSettings();
+    QSettings* settings = MudletApp::getQSettings();
     settings->setValue(qsl("Editor/banner_permanently_hidden/%1").arg(key), hidden);
 
     if (!legacyKey.isEmpty() && legacyKey != key) {

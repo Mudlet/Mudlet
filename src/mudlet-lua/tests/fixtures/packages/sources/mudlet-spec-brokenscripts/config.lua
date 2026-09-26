@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-brokenscripts]]
+author = [[Mudlet test suite]]
+title = [[Fixture package whose scripts stop with an error, for Package_spec.lua]]
+version = [[1.0]]
+description = [[Two scripts that stop with an error and one that does not, so that an install with something to own up to can be told from a clean one.]]

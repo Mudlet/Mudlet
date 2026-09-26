@@ -50,6 +50,21 @@
 
 #include <memory>
 
+// Undoes the rich-text markup TLuaInterpreter::compile() adds (kept in step by hand), for the
+// console line and installPackage()'s reason. Unescaped in reverse order, ampersand last, so a
+// script whose own text says "&amp;lt;b&amp;gt;" comes back as itself rather than as markup.
+static QString compileErrorAsPlainText(const QString& error)
+{
+    QString plainText = error;
+    plainText.remove(qsl("<b>"));
+    plainText.remove(qsl("</b>"));
+    plainText.replace(qsl("&quot;"), qsl("\""));
+    plainText.replace(qsl("&lt;"), qsl("<"));
+    plainText.replace(qsl("&gt;"), qsl(">"));
+    plainText.replace(qsl("&amp;"), qsl("&"));
+    return plainText;
+}
+
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 {
@@ -58,6 +73,8 @@ XMLimport::XMLimport(Host* pH)
 std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
 {
     mPackageName = packName;
+    mItemsWithErrors.clear();
+    mItemsWithErrorNames.clear();
     setDevice(pfile);
 
     module = moduleFlag;
@@ -783,10 +800,8 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
-    // Through the setter rather than at the field, so that turning spell check
-    // on always queues the dictionary read. Nothing is queued here: the whole
-    // import runs inside the profile loading sequence, which the setter skips,
-    // and the warm that follows the load covers whatever was read in.
+    // Via the setter, so enabling spell check always queues the dictionary read. Nothing is queued
+    // here: the import runs inside profile loading, which the setter skips, and the post-load warm covers it.
     bool enableSpellCheck = false;
     setBoolAttribute(qsl("mEnableSpellCheck"), enableSpellCheck);
     pHost->setEnableSpellCheck(enableSpellCheck);
@@ -1396,6 +1411,8 @@ int XMLimport::readTrigger(TTrigger* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
@@ -1515,6 +1532,8 @@ int XMLimport::readTimer(TTimer* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTimer(...): ERROR: can not compile timer's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
@@ -1585,6 +1604,8 @@ int XMLimport::readAlias(TAlias* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
@@ -1653,6 +1674,8 @@ int XMLimport::readAction(TAction* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAction(...): ERROR: can not compile action's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("css")) {
                 pT->css = readElementText();
@@ -1748,6 +1771,8 @@ int XMLimport::readScript(TScript* pParent)
                 const QString tempScript = readScriptElement();
                 if (!script->setScript(tempScript)) {
                     qDebug().nospace().noquote() << "XMLimport::readScript(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
+                    mItemsWithErrors.append(qsl("%1: %2").arg(script->getName(), compileErrorAsPlainText(script->getError())));
+                    mItemsWithErrorNames.append(script->getName());
                 }
             } else if (name() == qsl("eventHandlerList")) {
                 readStringList(script->mEventHandlerList, what);
@@ -1812,6 +1837,8 @@ int XMLimport::readKey(TKey* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readKey(...): ERROR: can not compile key's lua code for: " << pT->getName();
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    mItemsWithErrorNames.append(pT->getName());
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
@@ -1955,10 +1982,8 @@ QString XMLimport::readScriptElement()
         qDebug() << "XMLimport::readScriptElement() ERROR:" << errorString();
     }
 
-    // From format 1.001 on, control characters are stored as U+FFFC (Object
-    // Replacement) followed by the matching Control Picture. Hardly any script
-    // holds a U+FFFC, so one contains() spares every script the 29 full-text
-    // replace() scans below:
+    // From format 1.001, control characters are stored as U+FFFC then the matching Control Picture.
+    // Few scripts hold a U+FFFC, so one contains() spares most scripts the 29 replace() scans below:
     if ((mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0)) && localScript.contains(QChar(0xFFFC))) {
         localScript.replace(qsl("\xFFFC\x2401"), QChar('\x01')); // SOH
         localScript.replace(qsl("\xFFFC\x2402"), QChar('\x02')); // STX
@@ -2106,18 +2131,14 @@ void XMLimport::readStopWatchMap()
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;
                 pStopWatch->mIsInitialised = true;
-                // Both of the stored times come straight out of the profile
-                // file, so they are clamped to the range a stopwatch holds the
-                // same way its own operations are - otherwise an edited or
-                // damaged profile could load one whose time no longer fits:
+                // Clamp both stored times as the stopwatch's own operations do, so an edited or damaged
+                // profile cannot load a time that no longer fits:
                 if (attributes().value(qsl("running")) == YES) {
                     pStopWatch->mIsRunning = true;
                     // The stored value is the point in epoch time that the
                     // stopwatch appears to have been started so we need to
                     // make that into a QDateTime that is the equivalent.
-                    // Bounding that instant rather than the elapsed time it
-                    // implies keeps the subtraction which would work that time
-                    // out from overflowing on a wild value:
+                    // Bounding the instant, not the elapsed time, keeps that subtraction from overflowing:
                     const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
                     pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(qBound(
                             nowMSecs - stopWatch::csmMaximumMilliSeconds, attributes().value(qsl("effectiveStartDateTimeEpochMSecs")).toLongLong(), nowMSecs + stopWatch::csmMaximumMilliSeconds));

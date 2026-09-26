@@ -39,7 +39,7 @@
 
 #include <functional>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "AliasUnit.h"
@@ -118,6 +118,15 @@ private:
     static const int scmTimerCount = 6;
     static const int scmKeyCount = 6;
     static const int scmScriptCount = 6;
+
+    // A map info contributor name no Mudlet default can collide with - a fresh
+    // profile is given "Short", and a legacy map "Full".
+    inline static const QString scmContributorName = qsl("ProfileRoundTripContributor");
+
+    // An address of the target profile's own, so that keeping it can be told
+    // apart from blanking it.
+    inline static const QString scmTargetUrl = qsl("target.example.org");
+    static const int scmTargetPort = 4321;
 
     // -----------------------------------------------------------------------
     // Tree builders - these mirror the construction order XMLimport uses
@@ -453,7 +462,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -483,7 +492,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -510,6 +519,7 @@ private slots:
         // an import that leaves them alone cannot pass.
         mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
         mpSource->setShowIdsInEditor(true);
+        mpSource->mMapInfoContributors.insert(scmContributorName);
 
         auto [saved, xmlPath, saveError] = mpSource->saveProfile(mSaveDir.path(), qsl("roundtrip"));
         QVERIFY2(saved, qPrintable(saveError));
@@ -522,6 +532,8 @@ private slots:
         QVERIFY2(hostManager->addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
         mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
+        mpTarget->setUrl(scmTargetUrl);
+        mpTarget->setPort(scmTargetPort);
 
         QFile file(xmlPath);
         QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
@@ -544,6 +556,14 @@ private slots:
         QString legacyXml = mExportedXml;
         legacyXml.replace(QRegularExpression(qsl(R"((<m(?:Lower|Upper)LevelColor) alpha="\d+">)")), qsl("\\1>"));
         QVERIFY2(!legacyXml.contains(qsl("LevelColor alpha=")), "failed to strip the alpha attribute from the level color elements");
+
+        // The same copy also carries the map info contributors inside the one
+        // container they shared between #4718 and #5911 - the shape a profile
+        // last saved by a Mudlet of that vintage still has.
+        legacyXml.replace(QRegularExpression(qsl(R"(((?:\s*<mapInfoContributor>[^<]*</mapInfoContributor>)+))")), qsl("<mMapInfoContributors>\\1</mMapInfoContributors>"));
+        QCOMPARE(legacyXml.count(qsl("<mMapInfoContributors>")), 1);
+        const QString legacyContainer = QRegularExpression(qsl(R"(<mMapInfoContributors>[\s\S]*</mMapInfoContributors>)")).match(legacyXml).captured();
+        QVERIFY2(legacyContainer.contains(qsl("<mapInfoContributor>%1</mapInfoContributor>").arg(scmContributorName)), "failed to put this test's map info contributor back into the old container");
 
         QTemporaryDir legacyDir;
         QVERIFY(legacyDir.isValid());
@@ -703,6 +723,33 @@ private slots:
     {
         QCOMPARE(mpLegacyTarget->mLowerLevelColor, QColor(30, 60, 90, 255));
         QCOMPARE(mpLegacyTarget->mUpperLevelColor, QColor(200, 150, 100, 255));
+    }
+
+    // Map info contributors are written one per element straight into <Host>
+    // rather than wrapped in a container of their own (#5911). The container
+    // still has to be read on the way in, for profiles saved while it was in
+    // use.
+    void test_mapInfoContributorsRoundTripFlattenedAndFromTheOldContainer_5911()
+    {
+        QVERIFY2(mExportedXml.contains(qsl("<mapInfoContributor>%1</mapInfoContributor>").arg(scmContributorName)), "the contributor was not written as an element of its own");
+        QVERIFY2(!mExportedXml.contains(qsl("<mMapInfoContributors>")), "the contributors were written inside a container again");
+        QVERIFY2(mpTarget->mMapInfoContributors.contains(scmContributorName), "the contributor written straight into <Host> was not read back");
+        QVERIFY2(mpLegacyTarget->mMapInfoContributors.contains(scmContributorName), "the contributor in the old container was not read back");
+    }
+
+    // A game save is not where a profile's identity lives - the name, address
+    // and port are kept in the profile's base directory, and what the "Connect"
+    // dialog says there wins. A profile whose XML overwrote them connected to
+    // whatever game the save came from instead. The XML's own values are still
+    // read, into backup members.
+    void test_theProfileKeepsItsOwnNameAndAddressAfterImport_6709()
+    {
+        QCOMPARE(mpTarget->getName(), mTargetName);
+        QCOMPARE(mpTarget->getUrl(), scmTargetUrl);
+        QCOMPARE(mpTarget->getPort(), scmTargetPort);
+        QCOMPARE(mpTarget->mBackupHostName, mSourceName);
+        QCOMPARE(mpTarget->mBackupUrl, mpSource->getUrl());
+        QCOMPARE(mpTarget->mBackupPort, mpSource->getPort());
     }
 
     // The imported scripts registered their event handlers in the fresh Host:
