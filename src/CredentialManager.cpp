@@ -354,9 +354,17 @@ bool CredentialManager::shouldUseKeychain(const QString& profileName) const
 {
     Q_UNUSED(profileName)
 
+    // Which file these messages mean, because there are two and only one of them is
+    // encrypted: this manager's own credential file, which carries a salt, a nonce,
+    // an HMAC and a PBKDF2-derived per-profile key. The profile's "password" data
+    // file is the other one - a length-prefixed UTF-16BE string, no encryption at
+    // all - and nothing here writes it: the connect dialog writes it directly and
+    // Host reads it back. Saying "encrypted storage" without saying which file had
+    // a player reasonably conclude that his plain password file was encrypted.
+
     // If portable mode is active, prefer SecureStringUtils for portability
     if (isPortableModeActive()) {
-        qDebug() << "CredentialManager: Using encrypted storage (portable mode)";
+        qDebug() << "CredentialManager: Using this profile's encrypted credential file (portable mode)";
         return false;
     }
 
@@ -366,18 +374,18 @@ bool CredentialManager::shouldUseKeychain(const QString& profileName) const
     // On a desktop keychain that meant prompts for a store the player had asked Mudlet not to use
     // (#11029).
     if (profileStoragePreferred().value_or(false)) {
-        qDebug() << "CredentialManager: Using encrypted storage (the profile is the chosen place for passwords)";
+        qDebug() << "CredentialManager: Using this profile's encrypted credential file (Preferences -> Store passwords in names the profile)";
         return false;
     }
 
     // If in test environment, use SecureStringUtils to avoid keychain access
     if (SecureStringUtils::isTestEnvironment()) {
-        qDebug() << "CredentialManager: Using encrypted storage (test mode)";
+        qDebug() << "CredentialManager: Using this profile's encrypted credential file (test mode)";
         return false;
     }
 
     // Otherwise, prefer keychain for better security
-    qDebug() << "CredentialManager: Using keychain storage";
+    qDebug() << "CredentialManager: Using the system keychain";
     return true;
 }
 
