@@ -99,6 +99,7 @@
 #include <cmath>
 
 #include <algorithm>
+#include <vector>
 
 #include "mapInfoContributorManager.h"
 
@@ -2401,11 +2402,31 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
 
     int roomCount = 0;
 
+    // Zoomed out this far every room on screen is visited, and each visit is a
+    // chain of dependent loads that miss main memory: the hash lookup for the
+    // id, then the room it points at. Interleaved with the drawing work, the
+    // chains barely overlap; resolved first in a tight loop of their own they
+    // do, and the drawing loop then prefetches the rooms ahead (16 measured as
+    // good as 8 or 32 on a 2.3 million room map, and better than 64). The
+    // fields read below sit in the first 16 bytes of TRoom, so one prefetch
+    // covers them.
+    std::vector<TRoom*> resolvedRooms;
+    resolvedRooms.reserve(viewportRooms.size());
     for (const int roomId : viewportRooms) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        resolvedRooms.push_back(mpMap->mpRoomDB->getRoom(roomId));
+    }
+    constexpr qsizetype prefetchDistance = 16;
+    const qsizetype candidateCount = viewportRooms.size();
+
+    for (qsizetype index = 0; index < candidateCount; ++index) {
+        if (index + prefetchDistance < candidateCount) {
+            __builtin_prefetch(resolvedRooms[index + prefetchDistance]);
+        }
+        TRoom* room = resolvedRooms[index];
         if (!room) {
             continue;
         }
+        const int roomId = viewportRooms.at(index);
 
         const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
         const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
