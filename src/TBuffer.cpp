@@ -2342,14 +2342,15 @@ void TBuffer::startServerWrapFlushTimer()
         mpServerWrapFlushTimer->setSingleShot(true);
         mpServerWrapFlushTimer->setInterval(csmServerWrapFlushDelayMs);
         QObject::connect(mpServerWrapFlushTimer, &QTimer::timeout, mpConsole, [this]() {
-            if (!mpHost || !mpHost->mpConsole) {
+            TConsoleModel* pModel = mpHost ? mpHost->mainConsoleModelOrNull() : nullptr;
+            if (!pModel) {
                 return;
             }
             // Mimic TMainConsole::printOnDisplay() so that trigger-context
             // functions behave the same as for any other committed line:
-            mpHost->mpConsole->mTriggerEngineMode = true;
+            pModel->mTriggerEngineMode = true;
             flushPendingServerWrapJoin();
-            mpHost->mpConsole->mTriggerEngineMode = false;
+            pModel->mTriggerEngineMode = false;
             mpHost->finalizeMainConsole();
         });
     }
