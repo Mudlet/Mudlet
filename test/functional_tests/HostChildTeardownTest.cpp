@@ -44,6 +44,7 @@
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
@@ -118,10 +119,10 @@ private:
         OpenWindows windows;
 
         // loading the profile opened this one already
-        windows.editor = pHost->mpEditorDialog;
+        windows.editor = HostDialogs::of(pHost).mpEditorDialog;
 
         mudlet::self()->slot_notes();
-        windows.notePad = pHost->mpNotePad;
+        windows.notePad = HostDialogs::of(pHost).mpNotePad;
         if (windows.notePad) {
             if (auto* note = qobject_cast<QPlainTextEdit*>(windows.notePad->tabWidget->widget(0))) {
                 note->setPlainText(csmNoteText);
@@ -225,7 +226,7 @@ private slots:
     // the last test leaves open on purpose is deliberately not named here.
     void cleanup()
     {
-        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren")}) {
+        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren"), qsl("HostChildTeardown-First"), qsl("HostChildTeardown-Second")}) {
             if (HostManager::self()->getHost(profileName)) {
                 HostManager::self()->deleteHost(profileName);
             }
@@ -275,7 +276,7 @@ private slots:
         pHost->mpConsole->close();
         QTRY_VERIFY2(pHost->mpConsole.isNull(), "The main console did not go away"); // Qt 6 disposes of a WA_DeleteOnClose widget by deleteLater()
         QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
-        QVERIFY2(pHost->mpNotePad, "requestClose() reached closeChildren() after all - this no longer tests a Host that skips it");
+        QVERIFY2(HostDialogs::of(pHost).mpNotePad, "requestClose() reached closeChildren() after all - this no longer tests a Host that skips it");
 
         const QPointer<Host> hostGuard(pHost);
         pHost = nullptr;
@@ -323,6 +324,40 @@ private slots:
         // anything ~Host() already took would land
         QTRY_VERIFY2(windowsLeftBehind(windows).isEmpty(), "Closing and then destroying the Host left one of its windows behind");
         deleteProfileDirectory(profileName);
+    }
+
+    // A second profile gets an editor of its own rather than the first one's,
+    // and opening one profile's notepad, or closing one profile, leaves the
+    // other's dialogs as they were.
+    void test_eachProfileKeepsItsOwnDialogs()
+    {
+        const QString firstName = qsl("HostChildTeardown-First");
+        Host* pFirst = startProfile(firstName);
+        QVERIFY2(pFirst, "The first profile took too long to load");
+        Host* pSecond = startProfile(qsl("HostChildTeardown-Second"));
+        QVERIFY2(pSecond, "The second profile took too long to load");
+
+        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::of(pFirst).mpEditorDialog;
+        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::of(pSecond).mpEditorDialog;
+        QVERIFY2(firstEditor && secondEditor, "Loading a profile did not open its editor");
+        QVERIFY2(firstEditor != secondEditor, "Both profiles hold the same editor");
+
+        QCOMPARE(mudlet::self()->getActiveHost(), pSecond);
+        mudlet::self()->slot_notes();
+        QVERIFY2(HostDialogs::of(pSecond).mpNotePad, "The notepad did not open for the active profile");
+        QVERIFY2(!HostDialogs::of(pFirst).mpNotePad, "Opening the second profile's notepad gave the first profile one too");
+
+        pFirst->forceClose();
+        QVERIFY2(pFirst->requestClose(), "Closing the first profile was refused");
+        pFirst = nullptr;
+        HostManager::self()->deleteHost(firstName);
+        QTRY_VERIFY2(firstEditor.isNull(), "Closing the first profile left its editor behind");
+        QVERIFY2(secondEditor, "Closing the first profile took the second profile's editor with it");
+        QCOMPARE(HostDialogs::of(pSecond).mpEditorDialog.data(), secondEditor.data());
+
+        pSecond->forceClose();
+        QVERIFY2(pSecond->requestClose(), "Closing the second profile was refused");
+        HostManager::self()->deleteHost(qsl("HostChildTeardown-Second"));
     }
 
     // cleanupTestCase() is what destroys the main window on top of it.

@@ -28,6 +28,7 @@
 #include "CredentialManager.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "TAction.h"
@@ -6573,11 +6574,13 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_showIdNumbers)) {
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         }
-        // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
-        if (pHost->mpEditorDialog
-            && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
-            // From the Host, which the write above updated, not a box a script may have moved on from
-            pHost->mpEditorDialog->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
+        // Re-theming an open script editor is a full edbee reconfiguration, so it
+        // waits for one of the settings it carries to actually move
+        if (auto* pEditor = HostDialogs::of(pHost).mpEditorDialog.data();
+            pEditor && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
+            // The write above settled the choice into the Host, so the name comes
+            // from there rather than a box a script may have moved on from
+            pEditor->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
         }
 
         if (mSnapshot.dirty(script_preview_combobox)) {

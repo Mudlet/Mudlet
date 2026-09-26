@@ -51,6 +51,12 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
     connect(mpHost, &Host::signal_packageListChanged, this, &dlgModuleManager::layoutModules);
+    connect(mpHost, &Host::signal_moduleListChangedByScript, this, [this]() {
+        if (moduleTable->isVisible()) {
+            layoutModules();
+        }
+    });
+    connect(mpHost, &Host::signal_moduleSyncChangedByScript, this, &dlgModuleManager::showModuleSync);
     setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -123,6 +129,17 @@ void dlgModuleManager::layoutModules()
         }
     }
     moduleTable->resizeColumnsToContents();
+}
+
+void dlgModuleManager::showModuleSync(const QString& module, const bool sync)
+{
+    const QList<QTableWidgetItem*> found = moduleTable->findItems(module, Qt::MatchExactly);
+    if (found.isEmpty()) {
+        return;
+    }
+    if (auto* checkItem = moduleTable->item(found.first()->row(), 2)) {
+        checkItem->setCheckState(sync ? Qt::Checked : Qt::Unchecked);
+    }
 }
 
 void dlgModuleManager::slot_installModule()

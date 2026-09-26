@@ -49,6 +49,7 @@
 #include "ShortcutsManager.h"
 #include "TMainConsole.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -216,13 +217,13 @@ private:
     // first.
     dlgTriggerEditor* editorFor(Host* pHost) const
     {
-        if (!pHost->mpEditorDialog) {
+        if (!HostDialogs::of(pHost).mpEditorDialog) {
             mudlet::self()->activateProfile(pHost);
             QTest::qWait(100ms);
             mudlet::self()->slot_showScriptDialog();
             QTest::qWait(100ms);
         }
-        return pHost->mpEditorDialog.data();
+        return HostDialogs::of(pHost).mpEditorDialog.data();
     }
 
     // Clearing a message hides the area but leaves its text behind

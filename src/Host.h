@@ -78,15 +78,10 @@ class TRoom;
 class TConsole;
 class TMainConsole;
 struct TConsoleModel;
-class dlgNotepad;
-class dlgTriggerEditor;
 class TMap;
 class MMCPServer;
 class dlgIRC;
 class TIrcClient;
-class dlgPackageManager;
-class dlgModuleManager;
-class dlgProfilePreferences;
 class cTelnet;
 
 class stopWatch
@@ -696,8 +691,6 @@ public:
     // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
-    QPointer<dlgPackageManager> mpPackageManager;
-    QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
     bool mDisablePasswordMasking = false;
@@ -761,11 +754,9 @@ public:
     bool mIsProfileLoadingSequence = false;
 
 
-    QPointer<dlgTriggerEditor> mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
-    QPointer<dlgNotepad> mpNotePad;
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {
@@ -1005,7 +996,6 @@ public:
     // Null while the profile has no IRC session.
     QPointer<TIrcClient> mpIrcClient;
     QPointer<MMCPServer> mMMCPServer;
-    QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<QPointer<TToolBar>> mToolbarLayoutChanges;
 
@@ -1100,6 +1090,10 @@ signals:
     void signal_itemsChangedByScript();
     void signal_keyTakenWarning(const QString& warning);
     void signal_errorConsolePrint(const QString& text, const QColor& fgColor, const QColor& bgColor);
+    // For the profile's module manager, if it has one: a script installed or
+    // uninstalled a module, or turned a module's sync on or off.
+    void signal_moduleListChangedByScript();
+    void signal_moduleSyncChangedByScript(const QString& module, bool sync);
 
 public slots:
     void slot_timerFires();

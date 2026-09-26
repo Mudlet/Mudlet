@@ -22,6 +22,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "HostDialogs.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -151,6 +152,30 @@ private slots:
         QVERIFY2(!host->mInstalledModules.contains(qsl("listing-b")), "The module was answered yes but is still listed by the profile");
 
         QCOMPARE(rowNames(manager), QStringList({qsl("listing-a"), qsl("listing-c"), qsl("listing-d")}));
+
+        delete manager;
+    }
+
+    // A script turning a module's sync on or off ticks or clears its box in
+    // the open dialog, which does not rebuild its listing for that.
+    void test_aScriptChangingAModulesSyncShowsInTheOpenDialog()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        mudlet::self()->slot_moduleManager();
+        dlgModuleManager* manager = HostDialogs::of(host).mpModuleManager;
+        QVERIFY2(manager, "The module manager did not open for the profile");
+        const int row = rowNames(manager).indexOf(qsl("listing-c"));
+        QVERIFY2(row >= 0, "The seeded module is not listed");
+        QCOMPARE(manager->moduleTable->item(row, 2)->checkState(), Qt::Unchecked);
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("enableModuleSync(\"listing-c\")")));
+        QCOMPARE(manager->moduleTable->item(row, 2)->checkState(), Qt::Checked);
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("disableModuleSync(\"listing-c\")")));
+        QCOMPARE(manager->moduleTable->item(row, 2)->checkState(), Qt::Unchecked);
 
         delete manager;
     }

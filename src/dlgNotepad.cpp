@@ -25,6 +25,7 @@
 
 #include "MudletApp.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "utils.h"
 
 #include <QApplication>
@@ -199,9 +200,9 @@ void dlgNotepad::setTabsStyleSheet(const QString& styleSheet)
 
 dlgNotepad::~dlgNotepad()
 {
-    if (mpHost && mpHost->mpNotePad) {
+    if (mpHost && HostDialogs::of(mpHost).mpNotePad) {
         save();
-        mpHost->mpNotePad = nullptr;
+        HostDialogs::of(mpHost).mpNotePad = nullptr;
     }
 }
 

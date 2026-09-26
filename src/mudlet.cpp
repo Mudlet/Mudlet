@@ -1362,12 +1362,12 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // editor is where a key binding is looked at and where it is changed.
         // Opening it replaces this notice, so it is read out only if the editor
         // is open; selecting the binding says it again.
-        if (pOtherHost->mpEditorDialog) {
+        if (auto* pEditor = HostDialogs::of(pOtherHost.data()).mpEditorDialog.data()) {
             //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
-            pOtherHost->mpEditorDialog->showWarning(
+            pEditor->showWarning(
                     tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
                             .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()),
-                    pOtherHost->mpEditorDialog->isVisible());
+                    pEditor->isVisible());
         }
     }
 }
@@ -2230,15 +2230,16 @@ void mudlet::init()
             return;
         }
 
-        if (!host->mpEditorDialog && !createMudletEditor()) {
+        HostDialogs& dialogs = HostDialogs::of(host);
+        if (!dialogs.mpEditorDialog && !createMudletEditor()) {
             qWarning() << "Failed to create editor dialog";
             return;
         }
-        host->mpEditorDialog->showCurrentTriggerItem();
-        host->mpEditorDialog->raise();
-        showEditorRestoringWindowState(host->mpEditorDialog);
-        host->mpEditorDialog->activateWindow();
-        host->mpEditorDialog->mpErrorConsole->setVisible(true);
+        dialogs.mpEditorDialog->showCurrentTriggerItem();
+        dialogs.mpEditorDialog->raise();
+        showEditorRestoringWindowState(dialogs.mpEditorDialog);
+        dialogs.mpEditorDialog->activateWindow();
+        dialogs.mpEditorDialog->mpErrorConsole->setVisible(true);
     });
 
 #if defined(INCLUDE_UPDATER)
@@ -3197,10 +3198,10 @@ void mudlet::slot_moduleManager()
     if (!pH) {
         return;
     }
-    auto moduleManager = pH->mpModuleManager;
+    auto moduleManager = HostDialogs::of(pH).mpModuleManager;
     if (!moduleManager) {
         moduleManager = new dlgModuleManager(this, pH);
-        pH->mpModuleManager = moduleManager;
+        HostDialogs::of(pH).mpModuleManager = moduleManager;
 
         // Set up focus restoration for when this module manager is closed
         setupModuleManagerFocusRestoration(moduleManager);
@@ -3236,10 +3237,10 @@ void mudlet::slot_packageManager()
         return;
     }
 
-    auto packageManager = pH->mpPackageManager;
+    auto packageManager = HostDialogs::of(pH).mpPackageManager;
     if (!packageManager) {
         packageManager = new dlgPackageManager(this, pH);
-        pH->mpPackageManager = packageManager;
+        HostDialogs::of(pH).mpPackageManager = packageManager;
 
         // Set up focus restoration for when this package manager is closed
         setupPackageManagerFocusRestoration(packageManager);
@@ -4133,11 +4134,13 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pConsole->show();
 
     auto pEditor = new dlgTriggerEditor(pH);
-    pH->mpEditorDialog = pEditor;
-    connect(pH, &Host::profileSaveStarted, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pH, &Host::profileSaveFinished, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
-    // Item trees are deliberately not populated here: ScriptUnit::compileAll() queues a full rebuild once
-    // the profile's scripts have run, so populating now would double the cost of the load.
+    HostDialogs::of(pH).mpEditorDialog = pEditor;
+    connect(pH, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pH, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
+    // The editor's item trees are deliberately not populated here: the
+    // profile's scripts have yet to run and ScriptUnit::compileAll() queues a
+    // full rebuild once they have, so populating now would only double the
+    // cost of the load.
 
     pH->getActionUnit()->updateAllToolbars();
 
@@ -5699,12 +5702,12 @@ void mudlet::showOptionsDialog(const QString& tab, Host* pHost)
         pHost = getActiveHost();
     }
 
-    auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mpDlgProfilePreferences;
+    auto pPrefs = pHost ? HostDialogs::of(pHost).mpDlgProfilePreferences : mpDlgProfilePreferences;
 
     if (!pPrefs) {
         pPrefs = new dlgProfilePreferences(this, pHost);
         if (pHost) {
-            pHost->mpDlgProfilePreferences = pPrefs;
+            HostDialogs::of(pHost).mpDlgProfilePreferences = pPrefs;
         } else {
             mpDlgProfilePreferences = pPrefs;
         }
@@ -6300,15 +6303,16 @@ void mudlet::slot_notes()
         return;
     }
 
-    dlgNotepad* pNotes = pHost->mpNotePad;
+    HostDialogs& dialogs = HostDialogs::of(pHost);
+    dlgNotepad* pNotes = dialogs.mpNotePad;
 
     if (!pNotes) {
-        pHost->mpNotePad = new dlgNotepad(pHost);
-        pNotes = pHost->mpNotePad;
+        dialogs.mpNotePad = new dlgNotepad(pHost);
+        pNotes = dialogs.mpNotePad;
 
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(qsl(":/icons/mudlet_notepad.png")));
-        pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
+        dialogs.mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
 
         // Set up focus restoration for the notepad
         setupNotepadFocusRestoration(pNotes);
@@ -8842,14 +8846,15 @@ dlgTriggerEditor* mudlet::createMudletEditor()
         return nullptr;
     }
 
-    if (pHost->mpEditorDialog != nullptr) {
-        return pHost->mpEditorDialog;
+    HostDialogs& dialogs = HostDialogs::of(pHost);
+    if (dialogs.mpEditorDialog != nullptr) {
+        return dialogs.mpEditorDialog;
     }
 
     auto* pEditor = new dlgTriggerEditor(pHost);
-    pHost->mpEditorDialog = pEditor;
-    connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+    dialogs.mpEditorDialog = pEditor;
+    connect(pHost, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pHost, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
     pEditor->fillout_form();
 
     return pEditor;

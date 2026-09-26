@@ -48,6 +48,7 @@
 #include "CredentialManager.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "ctelnet.h"
 #include "SignInStoreReconciler.h"
@@ -2496,7 +2497,7 @@ private slots:
         QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect-token"), qsl("left-behind")));
 
         mudlet::self()->showOptionsDialog(qsl("tab_general"), host);
-        auto* preferences = host->mpDlgProfilePreferences.data();
+        auto* preferences = HostDialogs::of(host).mpDlgProfilePreferences.data();
         QVERIFY2(preferences, "Preferences dialog was not created");
         QVERIFY2(QTest::qWaitFor(
                          [&]() {

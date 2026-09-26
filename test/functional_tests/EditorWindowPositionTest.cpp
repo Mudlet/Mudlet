@@ -39,6 +39,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
@@ -140,7 +141,7 @@ private:
         // reposition that happens after the window is shown, and a QTRY_ would
         // stop looking the moment the position was still right
         QTest::qWait(50ms);
-        return mpHost->mpEditorDialog;
+        return HostDialogs::of(mpHost).mpEditorDialog;
     }
 
 private slots:
@@ -173,7 +174,7 @@ private slots:
             return;
         }
 
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
     }
 
@@ -223,7 +224,7 @@ private slots:
         // stop looking the moment the position was still right
         QTest::qWait(50ms);
 
-        QCOMPARE(mpHost->mpEditorDialog.data(), mpEditor);
+        QCOMPARE(HostDialogs::of(mpHost).mpEditorDialog.data(), mpEditor);
         QCOMPARE(mpEditor->pos(), left);
     }
 
@@ -282,7 +283,7 @@ private slots:
     void testTheFirstEverEditorIsCentred()
     {
         MudletApp::getQSettings()->remove("script_editor_pos");
-        delete mpHost->mpEditorDialog.data();
+        delete HostDialogs::of(mpHost).mpEditorDialog.data();
 
         mpEditor = reopenEditor();
         QVERIFY2(mpEditor != nullptr, "The editor should have been built again");
@@ -301,8 +302,8 @@ private slots:
         const QSize leftSize = mpEditor->size();
         QCOMPARE(MudletApp::getQSettings()->value("script_editor_pos").toPoint(), left);
 
-        delete mpHost->mpEditorDialog.data();
-        QVERIFY(mpHost->mpEditorDialog.isNull());
+        delete HostDialogs::of(mpHost).mpEditorDialog.data();
+        QVERIFY(HostDialogs::of(mpHost).mpEditorDialog.isNull());
 
         mpEditor = reopenEditor();
         QVERIFY2(mpEditor != nullptr, "The editor should have been built again");
@@ -320,7 +321,7 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        dlgTriggerEditor* pSecondEditor = pSecondHost->mpEditorDialog;
+        dlgTriggerEditor* pSecondEditor = HostDialogs::of(pSecondHost).mpEditorDialog;
         QVERIFY2(pSecondEditor != nullptr, "The second profile should have built an editor of its own");
         QVERIFY2(pSecondEditor != mpEditor, "The two profiles should not be sharing one editor");
 
@@ -359,7 +360,7 @@ private slots:
         TDetachedWindow* pDetachedWindow = mudlet::self()->getDetachedWindows().value(mDetachedProfileName);
         QVERIFY2(pDetachedWindow != nullptr, qPrintable(qsl("detaching tab %1 produced no window for '%2'").arg(QString::number(tabIndex), mDetachedProfileName)));
 
-        dlgTriggerEditor* pDetachedEditor = pDetachedHost->mpEditorDialog;
+        dlgTriggerEditor* pDetachedEditor = HostDialogs::of(pDetachedHost).mpEditorDialog;
         QVERIFY2(pDetachedEditor != nullptr, "The detached profile should have built an editor of its own");
         const QPoint left = offCentrePoint() + QPoint(51, 53);
         placeEditorAtAndClose(pDetachedEditor, left);
@@ -367,7 +368,7 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(pDetachedWindow, "slot_showTriggerDialog", Qt::DirectConnection));
         QTest::qWait(50ms);
 
-        QCOMPARE(pDetachedHost->mpEditorDialog.data(), pDetachedEditor);
+        QCOMPARE(HostDialogs::of(pDetachedHost).mpEditorDialog.data(), pDetachedEditor);
         QCOMPARE(pDetachedEditor->pos(), left);
 
         mudlet::self()->slot_tabReattachRequested(mDetachedProfileName);
