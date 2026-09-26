@@ -22,7 +22,7 @@
 
 #include "Host.h"
 #include "CredentialManager.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "OAuthClientFlow.h"
 #include "SecureStringUtils.h"
 #include "UntrustedText.h"
@@ -151,17 +151,17 @@ QString metadataKey()
 // provider are, so the file is narrowed to its owner rather than left at the default.
 QString metadataPathInProfile(const QString& profileName)
 {
-    return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, metadataKey());
+    return MudletApp::getMudletPath(enums::profileDataItemPath, profileName, metadataKey());
 }
 
 QString readMetadataFromProfile(const QString& profileName)
 {
-    return MudletPaths::readProfileData(profileName, metadataKey());
+    return MudletApp::readProfileData(profileName, metadataKey());
 }
 
 QPair<bool, QString> writeMetadataToProfile(const QString& profileName, const QString& payload)
 {
-    const auto written = MudletPaths::writeProfileData(profileName, metadataKey(), payload);
+    const auto written = MudletApp::writeProfileData(profileName, metadataKey(), payload);
     if (written.first) {
         // Who the player signs in as is nobody else's business on a shared machine
         QFile::setPermissions(metadataPathInProfile(profileName), QFileDevice::ReadOwner | QFileDevice::WriteOwner);
