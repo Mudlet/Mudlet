@@ -240,6 +240,7 @@ public:
 
     static void writeJsonColor(QJsonObject&, const QColor&);
     static QColor readJsonColor(const QJsonObject&);
+    static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     void restore16ColorSet();
 
     // These trivial methods are to prevent casual modification to the
