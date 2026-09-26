@@ -314,6 +314,35 @@ private slots:
         QVERIFY2(unmarked(pCommandLine, qsl("qzxthird")), "turning spell check off left a word marked");
     }
 
+    void test_switchingSpellCheckOnChecksWordsNextToPunctuationAndSpaces_data()
+    {
+        QTest::addColumn<QString>("text");
+        QTest::newRow("comma after the first word") << qsl("qzxfirst, qzxsecond qzxthird");
+        QTest::newRow("comma and full stop") << qsl("qzxfirst qzxsecond, qzxthird.");
+        QTest::newRow("leading and doubled spaces") << qsl(" qzxfirst  qzxsecond qzxthird");
+    }
+
+    void test_switchingSpellCheckOnChecksWordsNextToPunctuationAndSpaces()
+    {
+        QFETCH(QString, text);
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        QVERIFY(pCommandLine);
+        const auto clearTheLine = qScopeGuard([pCommandLine]() {
+            pCommandLine->clear();
+        });
+        mpHost->setEnableSpellCheck(false);
+        mpHost->setUserDictionaryOptions(true, false);
+        pCommandLine->setPlainText(text);
+        QVERIFY(unmarked(pCommandLine, qsl("qzxfirst")));
+
+        mpHost->setEnableSpellCheck(true);
+        mpHost->setUserDictionaryOptions(true, false);
+
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfirst")), "the first word was not checked");
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxsecond")), "the second word was not checked");
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxthird")), "the third word was not checked");
+    }
+
     void test_rightClickingAMisspeltWordOffersToAddIt()
     {
         TCommandLine* pCommandLine = freshCommandLine();

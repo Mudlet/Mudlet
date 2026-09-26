@@ -1414,19 +1414,22 @@ void TCommandLine::recheckWholeLine()
     // Save the current position
     const QTextCursor oldCursor = textCursor();
 
-    QTextCursor c = textCursor();
-    // Move Cursor AND selection anchor to start:
-    c.movePosition(QTextCursor::Start);
-    // In case the first character is something other than the beginning of a
-    // word
-    c.movePosition(QTextCursor::NextWord);
-    c.movePosition(QTextCursor::PreviousWord);
-    // Now select the word
-    c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
-    while (c.hasSelection()) {
+    // spellCheckWord() takes the word under the cursor, which for a cursor at
+    // the end of a word is whatever follows it - so hand it each word's start
+    QTextCursor c(document());
+    const int length = document()->characterCount() - 1;
+    int position = 0;
+    while (position < length) {
+        c.setPosition(position);
+        c.select(QTextCursor::WordUnderCursor);
+        if (!c.hasSelection()) {
+            ++position;
+            continue;
+        }
+        const int wordEnd = c.selectionEnd();
+        c.setPosition(c.selectionStart());
         spellCheckWord(c);
-        c.movePosition(QTextCursor::NextWord);
-        c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+        position = std::max(wordEnd, position + 1);
     }
     // Jump back to where we started
     setTextCursor(oldCursor);
