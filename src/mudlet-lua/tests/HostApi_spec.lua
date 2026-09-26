@@ -87,9 +87,16 @@ describe("openUserWindow", function()
     return n
   end
 
+  local miniConsoles = {}
+
   teardown(function()
     for _, n in ipairs(opened) do
-      hideWindow(n)
+      if miniConsoles[n] then
+        deleteMiniConsole(n)
+      else
+        -- no Lua function deletes a user window
+        hideWindow(n)
+      end
     end
     pumpEvents(500)
   end)
@@ -109,6 +116,7 @@ describe("openUserWindow", function()
 
   it("refuses the name of a mini console, which is no user window", function()
     local miniName = name("Mini")
+    miniConsoles[miniName] = true
     assert.is_true(createMiniConsole(miniName, 0, 0, 50, 50))
     local ok, err = openUserWindow(miniName, false)
     assert.is_nil(ok)
