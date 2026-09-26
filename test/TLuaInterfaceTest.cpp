@@ -1493,11 +1493,11 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
                 member->setNewName(newName, LUA_TSTRING);
                 smCapturedWarnings.clear();
-                const QtMessageHandler previousHandler = qInstallMessageHandler(captureWarnings);
+                smPreviousHandler = qInstallMessageHandler(captureWarnings);
                 budget.failAt = budget.allocations + failAfter;
                 const bool renamed = luaInterface.renameVar(member);
                 budget.failAt = -1;
-                qInstallMessageHandler(previousHandler);
+                qInstallMessageHandler(smPreviousHandler);
 
                 const QString warnings = smCapturedWarnings.join(QChar('\n'));
                 const bool probeFailed = warnings.contains(qsl("treated as a name already in use"));
@@ -1531,11 +1531,14 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
 private:
     static inline QStringList smCapturedWarnings;
+    static inline QtMessageHandler smPreviousHandler = nullptr;
 
-    static void captureWarnings(QtMsgType type, const QMessageLogContext&, const QString& message)
+    static void captureWarnings(QtMsgType type, const QMessageLogContext& context, const QString& message)
     {
         if (type == QtWarningMsg) {
             smCapturedWarnings << message;
+        } else if (smPreviousHandler) {
+            smPreviousHandler(type, context, message);
         }
     }
 
