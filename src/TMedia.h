@@ -269,6 +269,7 @@ private:
     bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
     QList<std::shared_ptr<TMediaPlayer>> findMediaPlayersByCriteria(const TMediaData& mediaData);
     bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
+    static TMediaData requestForFilePlayers(const TMediaData& mediaData);
     bool resume(TMediaData mediaData);
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
