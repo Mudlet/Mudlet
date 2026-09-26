@@ -2820,7 +2820,6 @@ describe("Trigger processing", function()
         it("completes a multiline trigger through start of line, exact, lua and substring conditions", function()
             withTrigger("multiline kinds", function()
                 feedTriggers("tkmlk start here\n")
-                feedTriggers("tkmlk exact line but longer\n")
                 feedTriggers("tkmlk exact line\n")
                 feedTriggers("the tkmlk lua line\n")
                 assert.is_nil(_G.TriggerKindsSpec.multilineKinds, "the state should still be waiting for its last condition")
@@ -2830,6 +2829,15 @@ describe("Trigger processing", function()
                 -- own pattern; a lua condition captures nothing but still takes
                 -- its row
                 assert.are.same({"tkmlk start", "tkmlk exact line", "", "tkmlk middle"}, _G.TriggerKindsSpec.multilineKinds)
+
+                -- a longer line is no exact match, so the state has to stay on
+                -- that condition and the lines for the later ones cannot finish it
+                _G.TriggerKindsSpec.multilineKinds = nil
+                feedTriggers("tkmlk start here\n")
+                feedTriggers("tkmlk exact line but longer\n")
+                feedTriggers("the tkmlk lua line\n")
+                feedTriggers("it has tkmlk middle in it\n")
+                assert.is_nil(_G.TriggerKindsSpec.multilineKinds, "a line only starting with the exact pattern satisfied the exact condition")
             end)
         end)
 
