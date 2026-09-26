@@ -29,6 +29,7 @@
  * Run with: ctest -R DetachedWindowTabsTest -V
  */
 
+#include <QDockWidget>
 #include <QFileInfo>
 #include <QMimeData>
 #include <QPointer>
@@ -46,9 +47,11 @@
 #include "ProfileTestHelper.h"
 #include "TDetachedWindow.h"
 #include "TMainConsole.h"
+#include "TMap.h"
 #include "TTabBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgMapper.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -402,6 +405,43 @@ private slots:
         QCOMPARE(pMainTabBar->currentIndex(), secondIndex);
         QVERIFY(mudlet::self()->getActiveHost());
         QCOMPARE(mudlet::self()->getActiveHost()->getName(), mProfiles.at(1));
+    }
+
+    // The toolbar's map button docks a map into the detached window itself.
+    // One window can hold several profiles, so their maps take turns: only the
+    // current tab's is shown, and only if the user left it open. Last, since
+    // the reattach in cleanup() takes the dock into the main window with it.
+    void test_theMapButtonDocksAMapThatFollowsItsTab()
+    {
+        TDetachedWindow* pWindow = detach(mProfiles.at(3), mFirstWindowPos);
+        QVERIFY(pWindow);
+        QVERIFY(drop(pWindow, mProfiles.at(2)));
+        const QString mapKey = qsl("map_%1").arg(mProfiles.at(2));
+        Host* pHost = HostManager::self()->getHost(mProfiles.at(2));
+        QVERIFY(pHost && pHost->mpMap);
+        QVERIFY(!pWindow->getDockWidget(mapKey));
+
+        QVERIFY(QMetaObject::invokeMethod(pWindow, "slot_showMapperDialog"));
+
+        QPointer<QDockWidget> pDock = pWindow->getDockWidget(mapKey);
+        QVERIFY2(pDock, "the map button made no map dock in the detached window");
+        QVERIFY(pDock->isVisible());
+        auto pMapper = qobject_cast<dlgMapper*>(pDock->widget());
+        QVERIFY(pMapper);
+        QCOMPARE(pHost->mpMap->mpMapper.data(), pMapper);
+
+        pWindow->switchToProfile(mProfiles.at(3));
+        QVERIFY2(!pDock->isVisible(), "another profile's map stayed on screen after its tab was left");
+
+        pWindow->switchToProfile(mProfiles.at(2));
+        QVERIFY2(pDock->isVisible(), "the map did not come back with its tab");
+
+        // Closed by the user, it stays closed when its tab comes round again
+        QVERIFY(QMetaObject::invokeMethod(pWindow, "slot_showMapperDialog"));
+        QVERIFY(!pDock->isVisible());
+        pWindow->switchToProfile(mProfiles.at(3));
+        pWindow->switchToProfile(mProfiles.at(2));
+        QVERIFY2(!pDock->isVisible(), "a map the user closed reopened when its tab was selected again");
     }
 
 private:
