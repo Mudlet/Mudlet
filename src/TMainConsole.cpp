@@ -105,10 +105,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TMainConsole::slot_reloadMap, Qt::UniqueConnection);
     connect(this, &TMainConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
 
-    // Reading the dictionaries costs tens of milliseconds, so they are not read
-    // here - but leaving that for the first spell-check would put the wait in
-    // front of the first word typed, so a queued connection has the event loop
-    // do it once the profile has finished loading:
+    // Reading it takes tens of ms, so neither here nor at the first word typed, but once the profile has loaded:
     connect(
             mudlet::self(),
             &mudlet::signal_profileLoaded,
@@ -119,8 +116,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
                 }
             },
             Qt::QueuedConnection);
-    // ...and turning spell check on mid-session is the other moment the
-    // dictionary goes from unwanted to wanted, so it is read the same way
+    // ...or when spell check is turned on mid-session:
     connect(
             mpHost,
             &Host::signal_spellCheckEnabled,
@@ -138,15 +134,10 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
-    // There is one window in which these widgets' destroyed() handlers are unsafe:
-    // after this console's members - the maps they write to among them - have been
-    // destroyed, but before ~QObject severs incoming connections. The only ones that
-    // can be destroyed inside it are the ones QWidget::~QWidget deletes, i.e. this
-    // console's own children, so sweeping those is enough. One created into a user
-    // window belongs to a TDockWidget reparented onto the main window instead, and
-    // can only die after ~QObject has already dropped the connection. Children rather
-    // than map entries, because deleteCommandLine() and resetMainConsole() drop the
-    // entry while the widget lives on until its deferred delete is delivered.
+    // These widgets' destroyed() handlers would write to maps already destroyed if they ran after this
+    // console's members go but before ~QObject severs connections. Only our own children, deleted by
+    // ~QWidget, die in that window (a user window's belong to its TDockWidget), so sweep children - not map
+    // entries, as deleteCommandLine() and resetMainConsole() drop entries before the deferred delete.
     for (auto commandLine : findChildren<TCommandLine*>()) {
         disconnect(commandLine, &QObject::destroyed, this, nullptr);
     }
@@ -157,15 +148,10 @@ TMainConsole::~TMainConsole()
         disconnect(textBox, &QObject::destroyed, this, nullptr);
     }
 
-    // A label and a sub-console take themselves out of the registry from their own
-    // destructor; none of the three kinds here does. For the ones that are this
-    // console's own children the handler that would have done it was disconnected just
-    // above, and the rest die after ~QObject has dropped the connection. A dock
-    // widget has no destructor either but needs no sweep: one only ever exists beside a
-    // user window's sub-console, and closing the profile closes every sub-console before
-    // the console goes, which takes the dock out through TConsole::closeEvent(). Quitting
-    // destroys every Host before the console, so there is not always a registry left
-    // to clear.
+    // Unlike labels and sub-consoles, these kinds don't deregister in their destructors, and their
+    // destroyed() handlers are disconnected above or die with ~QObject. Docks need no sweep: closing the
+    // profile closes every sub-console first, taking its dock via TConsole::closeEvent(). Quitting destroys
+    // every Host before the console, so there may be no registry.
     if (mpHost) {
         const QStringList scrollBoxNames = mScrollBoxMap.keys();
         for (const QString& scrollBoxName : scrollBoxNames) {
@@ -183,8 +169,7 @@ TMainConsole::~TMainConsole()
 
     mSubCommandLineMap.clear();
 
-    // Labels carry a destroyed() handler of the same shape, so the same window is
-    // unsafe for them and the same sweep closes it.
+    // Labels' destroyed() handlers have the same unsafe window.
     for (auto label : findChildren<TLabel*>()) {
         disconnect(label, &QObject::destroyed, this, nullptr);
     }
@@ -316,8 +301,7 @@ void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString&
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 {
-    // A click has flipped the checkable button already; this is for logging
-    // toggled from Lua, and for a start that failed
+    // A click has already flipped the button; this is for logging toggled from Lua, and failed starts.
     logButton->setChecked(isLogging);
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
 }
@@ -450,8 +434,7 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
     dockwidget->setContentsMargins(0, 0, 0, 0);
     dockwidget->setWindowTitle(name);
     registerDockWidget(name, dockwidget);
-    // It wasn't obvious but the parent passed to the TConsole constructor
-    // is sliced down to a QWidget and is NOT a TDockWidget pointer:
+    // The parent is the dock's inner QWidget, NOT the TDockWidget:
     auto console = new TConsole(mpHost, name, TConsole::UserWindow, dockwidget->widget());
     console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
     console->setContentsMargins(0, 0, 0, 0);
@@ -1208,31 +1191,21 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
-    // an embedded map can only be put in a user window, so - unlike
-    // Host::parentWindowMissing() - a scroll box is not a parent it can use
-    // either; without this the map goes on the main console over the game text
-    // and the caller is told it worked
+    // An embedded map can only go in a user window, so unlike Host::parentWindowMissing() a scroll box
+    // won't do; else the map lands on the main console over the game text while reporting success.
     const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
     if (!pW && !wantsMainConsole) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
-    // Only the profile's own map dock, and only while it is on screen, holds the
-    // mapper slot. One that is merely hidden - by closeMapWidget(), by the dock's
-    // own close button, by a restored layout, or by mudlet::slot_showMapperDialog()
-    // handing the map over to a main window dock - used to refuse an embedded mapper
-    // for the rest of the session, while the map window getters, setMapWindowTitle()
-    // and closeMapWidget() reported no map window at all. Asking mapWidget() rather
-    // than the raw pointer is what keeps those answers the same as this one.
+    // Only the profile's map dock, while on screen, holds the mapper slot; a hidden one does not. Ask
+    // mapWidget(), not the raw pointer, to agree with the map window getters and closeMapWidget().
     if (mpDockableMapWidget) {
         if (mapWidget()) {
             return {false, qsl("cannot create mapper. Do you already use a map window?")};
         }
-        // The dock is the dlgMapper's parent, so taking it away takes the mapper
-        // with it. deleteLater() leaves every QPointer to the pair set until the
-        // event loop gets to run, which the script that called this will not let
-        // it do, so drop ours now. Conditional because the map may be being drawn
-        // by a main window or detached window dock instead, which this leaves
-        // alone; when it is not, the mapper below takes TMap::mpMapper over.
+        // The dock parents the dlgMapper, so both go. deleteLater() leaves QPointers set until the event
+        // loop runs, which the calling script prevents, so drop ours now - unless a main window or detached
+        // window dock is drawing the map instead.
         if (mpHost->mpMap->mpMapper.data() == mpDockableMapWidget->widget()) {
             mpHost->mpMap->mpMapper = nullptr;
         }
@@ -1281,9 +1254,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
     } else if (!mpHost->mpMap->mpMapper) {
-        // Nothing is drawing the map: either the map widget taken away above was
-        // doing it, or a window that borrowed TMap::mpMapper went without handing
-        // it back. The mapper this console already has takes over.
+        // Nothing draws the map: the widget removed above did, or a borrower of TMap::mpMapper never gave it back.
         mpHost->restoreOwnMapper();
     }
     mpMapper->resize(width, height);
@@ -1313,8 +1284,7 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         return {false, QLatin1String("a commandLine cannot have an empty string as its name")};
     }
 
-    // there is no Host::createCommandLine() wrapper, so the refusal the other
-    // creators make in Host::create...() is made here
+    // No Host::createCommandLine() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -1357,11 +1327,8 @@ void TMainConsole::registerLabelWidget(const QString& name, TLabel* pLabel)
     mLabelMap[name] = pLabel;
     mpHost->windowRegistry().registerLabel(name, &pLabel->model());
 
-    // A label created into a user window or a scroll box is a child widget of it,
-    // so deleting that window destroys the label with deleteLabel() never called.
-    // ~TLabel takes the model out of the window registry; without this the map
-    // beside it, which holds no QPointers, keeps an entry that every by-name label
-    // call Host forwards through this class then reads as a live widget.
+    // A label in a user window or scroll box dies with it, without deleteLabel(). ~TLabel updates the
+    // registry, but this map holds no QPointers, so Host's by-name calls would read a dead widget.
     connect(pLabel, &QObject::destroyed, this, [this, pLabel]() {
         deregisterLabelWidget(pLabel);
     });
@@ -1369,14 +1336,10 @@ void TMainConsole::registerLabelWidget(const QString& name, TLabel* pLabel)
 
 void TMainConsole::deregisterLabelWidget(TLabel* pLabel)
 {
-    // Reached from destroyed() as well, by which point ~TLabel has run and the
-    // label's model has gone - so nothing here may read through pLabel.
-    //
-    // This is the only destroyed() connection made from a label to this console,
-    // so severing all of them is severing just that one.
+    // Also reached from destroyed(), after ~TLabel, so never read through pLabel.
+    // The only destroyed() connection from a label to this console, so severing all is safe.
     disconnect(pLabel, &QObject::destroyed, this, nullptr);
-    // Erase by value: destroyed() names the widget, not the name it was filed
-    // under, and a replacement filed under that name must be left in place.
+    // By value: destroyed() names the widget, and a replacement may hold the name.
     mLabelMap.removeIf([pLabel](const auto& it) {
         return it.value() == pLabel;
     });
@@ -1389,15 +1352,13 @@ void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
     disconnect(pCommandLine, &QObject::destroyed, this, nullptr);
     // Erase by value rather than by name: a replacement command line may have been
     // registered under the same name in the meantime and must be left in place.
-    // The window registry hears only about the names this erase actually took, so
-    // the replacement keeps its entry there too.
+    // Only names this erase took are deregistered, so the replacement keeps its registry entry too.
     mSubCommandLineMap.removeIf([this, pCommandLine](const auto& it) {
         if (it.value() != pCommandLine) {
             return false;
         }
-        // The destroyed() handler above can run once the Host is gone: quitting
-        // destroys every Host before the deferred deletes of the widgets a user
-        // window holds. There is no registry left to take the name out of then.
+        // Quitting destroys every Host before a user window's widgets' deferred deletes, so there
+        // may be no registry.
         if (mpHost) {
             mpHost->windowRegistry().deregisterCommandLine(it.key());
         }
@@ -1440,8 +1401,7 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
         return {false, QLatin1String("a text edit cannot have an empty string as its name")};
     }
 
-    // there is no Host::createTextEdit() wrapper, so the refusal the other
-    // creators make in Host::create...() is made here
+    // No Host::createTextEdit() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -1586,9 +1546,7 @@ std::pair<bool, QString> TMainConsole::setLabelMovie(const QString& name, const 
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
-    // The file is read through a throwaway QMovie: the label's own must not take
-    // the path, and the gif tracker must not be given a movie to count, before
-    // the file is known to be one
+    // Validate with a throwaway QMovie first, so neither the label's movie nor the gif tracker gets a non-movie.
     if (const QMovie candidate(moviePath); !candidate.isValid()) {
         return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
     }
@@ -1625,9 +1583,8 @@ std::optional<QColor> TMainConsole::getLabelBackgroundColor(const QString& name)
     if (!pL) {
         return {};
     }
-    // Answered from the palette, as this API always has; TLabel re-stamps it with
-    // the last set colour across restyles, so a caller's own background-color
-    // stylesheet can paint something this does not report
+    // From the palette, as always; TLabel re-stamps it with the last set colour, so a caller's own
+    // background-color stylesheet may paint something else.
     return {pL->palette().color(QPalette::Window)};
 }
 
@@ -1745,8 +1702,7 @@ void TMainConsole::closeSubConsole(const QString& name)
         return;
     }
 
-    // Only a user window has a dock, and it has to be undocked before it goes or
-    // the main window is left holding the space it occupied.
+    // Only a user window has a dock; remove it first or the main window keeps its space.
     if (auto pD = mDockWidgetMap.value(name)) {
         mudlet::self()->removeDockWidget(pD);
     }
@@ -1795,8 +1751,7 @@ bool TMainConsole::resizeSubConsole(const QString& name, int width, int height)
     }
     if (auto pD = mDockWidgetMap.value(name)) {
         if (!pD->isFloating()) {
-            // Docked, its size belongs to the main window's layout - only a
-            // floating one can be given one of its own
+            // A docked widget's size belongs to the main window's layout:
             pD->setFloating(true);
         }
         pD->resize(width, height);
@@ -1814,8 +1769,7 @@ bool TMainConsole::moveSubConsole(const QString& name, int x, int y)
     }
     if (auto pD = mDockWidgetMap.value(name)) {
         if (!pD->isFloating()) {
-            // Docked, its position belongs to the main window's layout - only a
-            // floating one can be given one of its own
+            // A docked widget's position belongs to the main window's layout:
             pD->setFloating(true);
         }
         pD->move(x, y);
@@ -1938,8 +1892,7 @@ std::optional<QRect> TMainConsole::getSubConsoleGeometry(const QString& name) co
     if (!pC) {
         return {};
     }
-    // A user window is moved and resized through its dock, so that is what its
-    // geometry has to be read back from
+    // A user window is moved and resized through its dock:
     if (auto pD = mDockWidgetMap.value(name)) {
         return {QRect(pD->pos(), pD->size())};
     }
@@ -1958,9 +1911,7 @@ std::optional<bool> TMainConsole::getSubConsoleVisible(const QString& name) cons
     return {pC->isVisibleTo(this)};
 }
 
-// Scroll box first, then command line, then text box: nothing stops one name
-// being more than one of the three, and this is the order the core has always
-// resolved such a name in.
+// A name can be several of these; this is the order the core has always resolved it in.
 QWidget* TMainConsole::plainWindowWidget(const QString& name) const
 {
     if (auto pS = mScrollBoxMap.value(name)) {
@@ -2455,9 +2406,8 @@ void TMainConsole::showPackageDownloadProgress(const QString& title, const QStri
     // so closing the superseded dialog while it is still wired to
     // slot_cancelPackageDownload() would abort the download this new dialog is
     // about to track; detach that connection before closing. Only that one: a
-    // wildcard disconnect() also severs the destroyed() hook Qt's style sheet
-    // support uses to evict a widget from its caches, so the closed dialog stays
-    // cached and the next setAppStyleSheet() walks a freed widget.
+    // wildcard disconnect() also severs Qt's style sheet cache-eviction hook, and
+    // the next setAppStyleSheet() walks the freed dialog.
     if (mpPackageDownloadProgressDialog) {
         disconnect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
         mpPackageDownloadProgressDialog->close();
@@ -2685,7 +2635,6 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
 
     if (area == QLatin1String("f") || area == QLatin1String("floating")) {
         if (!pM->isFloating()) {
-            // Undock a docked window
             // Change of position or size is only possible when floating
             pM->setFloating(true);
         }

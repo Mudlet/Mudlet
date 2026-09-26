@@ -379,10 +379,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(profileHome());
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mProfileName);
     }
 
 private slots:
@@ -447,8 +444,8 @@ private slots:
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
         mpHost = nullptr;
 
         for (const auto& packageName : std::as_const(mStagedPackageNames)) {

@@ -52,11 +52,8 @@ public:
     void setBase(TVar*);
     TVar* getBase();
     void clear();
-    // Identifies the variable tree currently held. Anything holding TVar
-    // pointers can tell they are stale by comparing this against what it
-    // recorded when it took them. Unique across VarUnits as well as across
-    // clear()s, so a freshly made one cannot be mistaken for the tree a caller
-    // last saw - resetting a profile builds both a new VarUnit and a new tree.
+    // Holders of TVar pointers compare this with the value they recorded to detect stale pointers.
+    // Unique across VarUnits as well as clear()s: a profile reset makes a new VarUnit and a new tree.
     quint64 treeGeneration() const { return mTreeGeneration; }
     void addSavedVar(TVar*);
     void removeSavedVar(TVar*);

@@ -1915,15 +1915,11 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
         return;
     }
 
-    // Turning the line you are already looking at into a filter beats typing it
-    // into the box, so the selection drives most of this menu. establishSelectedText()
-    // is what actually decides whether there IS a selection - mPA and mPB keep
-    // their old values after one is dropped, so without it the menu offers text
-    // the user can no longer see highlighted:
+    // mPA and mPB keep their old values after a selection is dropped, so establishSelectedText() decides
+    // whether there IS one; otherwise the menu offers text no longer highlighted:
     QString selection = establishSelectedText() ? getSelectedText(QChar::Space).simplified() : QString();
-    // The profile marking is added after the filters have run, so a selection
-    // that starts at the beginning of a line would otherwise contain a prefix
-    // that no message can ever match:
+    // The profile marking is added after filters run, so a selection from a line start would carry a
+    // prefix no message can match:
     static const QRegularExpression profileTag(qsl("^\\[(?:[A-Z]|\\?|\\x{2731})\\]\\s*"));
     selection.remove(profileTag);
 
@@ -1955,8 +1951,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
     }
 
     menu.addSeparator();
-    // The search strip is hidden until asked for, so this is where people find
-    // out it exists at all:
+    // The search strip is hidden until asked for, so this is how people discover it:
     //: Central Debug Console right-click action that reveals its search box
     auto* pActionFind = menu.addAction(tr("Find..."));
     pActionFind->setShortcut(QKeySequence::Find);
@@ -2158,8 +2153,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             forceUpdate();
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
-        // Invalid until the first click, so a click soon after the console
-        // appears does not count as the second half of a double-click:
+        // Invalid until the first click, so an early click isn't taken as a double-click's second half:
         if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
             mMouseTracking = true;
             mMouseTrackLevel++;

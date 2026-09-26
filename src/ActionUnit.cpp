@@ -107,8 +107,7 @@ void ActionUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
+    // Runs per unit on every line of game text and next to never has work queued.
     if (!hasPendingDeletes()) {
         return;
     }
@@ -243,7 +242,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     pChild->setDataChanged();
 
     if ((!pOldParent) && (pNewParent)) {
-        // The bars are the console's widgets; a profile with no view has none to take down
+        // A profile with no view has no console, so no bars to take down
         if (mpHost->mpConsole) {
             mpHost->mpConsole->detachActionBars(pChild);
         }
