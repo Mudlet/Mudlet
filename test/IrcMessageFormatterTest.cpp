@@ -54,6 +54,8 @@ private slots:
 
     void join_namesWhoJoinedAndWhere() { QCOMPARE(forLua(":bob!u@h JOIN #mudlet"), QStringLiteral("! bob has joined #mudlet")); }
 
+    void join_ownJoinSaysWhichNickItWasAs() { QCOMPARE(forLua(":me!u@h JOIN #mudlet"), QStringLiteral("! You have joined #mudlet as me")); }
+
     void part_withoutAReason() { QCOMPARE(forLua(":bob!u@h PART #mudlet"), QStringLiteral("! bob has left #mudlet")); }
 
     void part_withAReason() { QCOMPARE(forLua(":bob!u@h PART #mudlet :getting dinner"), QStringLiteral("! bob has left #mudlet (getting dinner)")); }
@@ -66,6 +68,15 @@ private slots:
 
     void mode_namesWhoSetWhatOnWhom() { QCOMPARE(forLua(":bob!u@h MODE #mudlet +o alice"), QStringLiteral("! bob sets mode #mudlet +o alice")); }
 
+    // The 324 reply to asking what a channel's modes are is composed by communi
+    void mode_replySaysWhatTheChannelsModesAre()
+    {
+        auto* message = new IrcModeMessage(&mConnection);
+        message->setCommand(QString::number(Irc::RPL_CHANNELMODEIS));
+        message->setParameters({QStringLiteral("#mudlet"), QStringLiteral("+l"), QStringLiteral("10")});
+        QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("! #mudlet mode is +l 10"));
+    }
+
     void topic_changed() { QCOMPARE(forLua(":bob!u@h TOPIC #mudlet :a new topic"), QStringLiteral("! bob changed topic")); }
 
     void topic_cleared() { QCOMPARE(forLua(":bob!u@h TOPIC #mudlet :"), QStringLiteral("! bob cleared topic")); }
@@ -74,7 +85,26 @@ private slots:
 
     void away_withoutAReasonMeansBack() { QCOMPARE(forLua(":bob!u@h AWAY"), QStringLiteral("! bob is back")); }
 
+    // Being marked away ourselves is shown in the server's own words
+    void away_ownIsTheServersWordsAlone() { QCOMPARE(forLua(":me!u@h AWAY :You have been marked as being away"), QStringLiteral("! You have been marked as being away")); }
+
+    void away_reasonIsEscapedForTheWindow()
+    {
+        const QString html = forWindow(":bob!u@h AWAY :<u>not underlined</u>");
+        QVERIFY2(!html.contains(QStringLiteral("<u>")), qPrintable(html));
+        QVERIFY2(html.contains(QStringLiteral("! bob is away (&lt;u")), qPrintable(html));
+    }
+
     void invite_namesWhoWasInvitedWhere() { QCOMPARE(forLua(":bob!u@h INVITE alice #mudlet"), QStringLiteral("! bob invited to #mudlet")); }
+
+    // The 341 reply confirming an invitation this connection sent
+    void invite_replyNamesWhoWasInvited()
+    {
+        auto* message = new IrcInviteMessage(&mConnection);
+        message->setCommand(QString::number(Irc::RPL_INVITING));
+        message->setParameters({QStringLiteral("alice"), QStringLiteral("#mudlet")});
+        QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("! invited alice to #mudlet"));
+    }
 
     // A kick is the one thing that happens to a player without their asking, so
     // silently dropping it leaves them looking at a channel they are no longer in.
@@ -127,6 +157,27 @@ private slots:
     void notice_ctcpVersionReplyIsReportedAsAVersion() { QCOMPARE(forLua(":bob!u@h NOTICE me :\001VERSION Mudlet 5.0\001"), QStringLiteral("! bob version is Mudlet 5.0")); }
 
     void notice_ctcpTimeReplyIsReportedAsATime() { QCOMPARE(forLua(":bob!u@h NOTICE me :\001TIME Tue Jan 1 00:00:00 2030\001"), QStringLiteral("! bob time is Tue Jan 1 00:00:00 2030")); }
+
+    // A CTCP PING carries the time it was sent, and the reply echoes it back
+    void notice_ctcpPingReplyIsReportedAsTheRoundTrip()
+    {
+        // however long a slow machine takes over it, the round trip lies between
+        // the five seconds ago it was sent and the time it was formatted by
+        const qint64 sent = QDateTime::currentSecsSinceEpoch() - 5;
+        const QString text = forLua(":bob!u@h NOTICE me :\001PING " + QByteArray::number(sent) + "\001");
+        const qint64 latest = QDateTime::currentSecsSinceEpoch() - sent;
+        const QRegularExpressionMatch match = QRegularExpression(QStringLiteral("^! bob replied in (\\d+)s$")).match(text);
+        QVERIFY2(match.hasMatch(), qPrintable(text));
+        const qint64 seconds = match.captured(1).toLongLong();
+        QVERIFY2(seconds >= 5 && seconds <= latest, qPrintable(text));
+    }
+
+    void notice_toThisConnectionNamesTheSenderInTheWindow()
+    {
+        const QString html = forWindow(":bob!u@h NOTICE me :<u>just for you</u>");
+        QVERIFY2(html.contains(QStringLiteral("[bob] &lt;u")), qPrintable(html));
+        QVERIFY2(!html.contains(QStringLiteral("<u>")), qPrintable(html));
+    }
 
     void numeric_belowThreeHundredIsInformation() { QCOMPARE(forLua(":server 001 me :Welcome to the network"), QStringLiteral("[INFO] Welcome to the network")); }
 
@@ -211,9 +262,53 @@ private slots:
 
     void numeric_anythingElseFallsBackToItsOwnCode() { QCOMPARE(forLua(":server 333 me #mudlet bob :1234567890"), QStringLiteral("[333] #mudlet bob 1234567890")); }
 
+    void numeric_serverVersionReply() { QCOMPARE(forLua(":server 351 me 2.11 irc.example.org :comments"), QStringLiteral("! server version is 2.11")); }
+
+    void numeric_serverTimeReply() { QCOMPARE(forLua(":server 391 me irc.example.org :Friday September 25 2026"), QStringLiteral("! irc.example.org time is Friday September 25 2026")); }
+
+    // A numeric that communi folds into a composed message (here one line of
+    // the MOTD) is shown through that message, so it says nothing of its own
+    void numeric_partOfAComposedReplyIsNotShownTwice()
+    {
+        QVERIFY(forLua(":server 372 me :- a line of the MOTD").isEmpty());
+        QVERIFY(forWindow(":server 372 me :- a line of the MOTD").isEmpty());
+    }
+
+    void numeric_implicitIsNotShown()
+    {
+        const QByteArray raw = ":server 333 me #mudlet bob :1234567890";
+        QVERIFY2(!forLua(raw).isEmpty(), "the same numeric should be shown when it is not implicit");
+        IrcMessage* message = fromRaw(raw);
+        message->setFlag(IrcMessage::Implicit);
+        QVERIFY(IrcMessageFormatter::formatMessage(message, true).isEmpty());
+        QVERIFY(IrcMessageFormatter::formatMessage(message, false).isEmpty());
+    }
+
+    void numeric_channelUrlIsALinkInTheWindow()
+    {
+        const QString html = forWindow(":server 328 me #mudlet :https://www.mudlet.org/");
+        QVERIFY2(html.contains(QStringLiteral("[Channel URL] #mudlet <a href='https://www.mudlet.org/'>")), qPrintable(html));
+    }
+
+    void numeric_errorAndOtherCodesAreEscapedForTheWindow()
+    {
+        const QString error = forWindow(":server 401 me <u>nick</u> :No such nick");
+        QVERIFY2(error.contains(QStringLiteral("[ERROR] &lt;u")) && !error.contains(QStringLiteral("<u>")), qPrintable(error));
+        const QString other = forWindow(":server 333 me #<u>mudlet</u> bob :1234567890");
+        QVERIFY2(other.contains(QStringLiteral("[333] #&lt;u")) && !other.contains(QStringLiteral("<u>")), qPrintable(other));
+    }
+
     void error_isMarkedAsAnError() { QCOMPARE(forLua("ERROR :Closing link"), QStringLiteral("[ERROR] Closing link")); }
 
     void unknown_isShownVerbatimRatherThanDropped() { QCOMPARE(forLua(":bob!u@h FROBNICATE one two"), QStringLiteral("? bob FROBNICATE one two")); }
+
+    // A message type the formatter has no line for, such as the server's PING,
+    // comes out empty, which is what tells the IRC window to leave it out
+    void ping_isNotShown()
+    {
+        QVERIFY(forLua(":server PING :irc.example.org").isEmpty());
+        QVERIFY(forWindow(":server PING :irc.example.org").isEmpty());
+    }
 
     void pong_reportsHowLongTheReplyTook()
     {
@@ -246,6 +341,24 @@ private slots:
         message->setCommand(QString::number(Irc::RPL_TOPIC));
         message->setParameters({QStringLiteral("#mudlet"), QStringLiteral("Fish & Chips <here>")});
         QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("[TOPIC] Fish & Chips <here>"));
+    }
+
+    void topic_replyWithNoTopicSaysSo()
+    {
+        auto* message = new IrcTopicMessage(&mConnection);
+        message->setCommand(QString::number(Irc::RPL_NOTOPIC));
+        message->setParameters({QStringLiteral("#mudlet"), QStringLiteral("No topic is set")});
+        QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("! no topic"));
+    }
+
+    void topic_replyIsColouredAsATopicInTheWindow()
+    {
+        auto* message = new IrcTopicMessage(&mConnection);
+        message->setCommand(QString::number(Irc::RPL_TOPIC));
+        message->setParameters({QStringLiteral("#mudlet"), QStringLiteral("<u>not underlined</u>")});
+        const QString html = IrcMessageFormatter::formatMessage(message, false);
+        QVERIFY2(html.startsWith(QStringLiteral("<font color='#3283bc'>")), qPrintable(html));
+        QVERIFY2(html.contains(QStringLiteral("[TOPIC] &lt;u")) && !html.contains(QStringLiteral("<u>")), qPrintable(html));
     }
 
     void motd_reachesLuaAsItWasSent()
@@ -295,6 +408,27 @@ private slots:
         QVERIFY2(!text.contains(QStringLiteral("logged in as")), qPrintable(text));
         QVERIFY2(!text.contains(QStringLiteral("secure connection")), qPrintable(text));
         QVERIFY2(!text.contains(QStringLiteral("is on")), qPrintable(text));
+    }
+
+    void whowas_reportsTheAccountTheyWereLoggedInAs()
+    {
+        auto* message = new IrcWhowasMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        message->setParameters({QStringLiteral("Bob Smith"), QStringLiteral("irc.example.org"), QStringLiteral("Example Network"), QStringLiteral("bobaccount")});
+        const QString text = IrcMessageFormatter::formatMessage(message, true);
+        QVERIFY2(text.contains(QStringLiteral("[WHOWAS] bob was logged in as bobaccount")), qPrintable(text));
+    }
+
+    void whois_reportsWhyTheyAreAway()
+    {
+        auto* message = new IrcWhoisMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        QStringList parameters(10);
+        parameters[0] = QStringLiteral("Bob Smith");
+        parameters[9] = QStringLiteral("gone fishing");
+        message->setParameters(parameters);
+        const QString text = IrcMessageFormatter::formatMessage(message, true);
+        QVERIFY2(text.contains(QStringLiteral("[WHOIS] bob is away: gone fishing")), qPrintable(text));
     }
 
     void whowas_reportsWhoTheyWere()
