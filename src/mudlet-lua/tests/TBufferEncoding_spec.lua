@@ -138,13 +138,23 @@ end)
 
 describe("Tests UTF-8 decoding of malformed sequences", function()
 
-  -- Each form below is complete and made of valid continuation bytes, so it is
-  -- the sequence's value that is refused, not its shape. What must not happen
-  -- is the value being let through, or the refusal spilling onto the ASCII
-  -- byte after it. How many replacement marks a refused form earns is left
-  -- open: decoders differ on it. The caller selects UTF-8, and only once per
-  -- case, as busted keeps just the last finally() a case registers.
+  -- Each form below is complete: every byte after its lead is a continuation
+  -- byte, so it is refused for its lead byte or its value, not for being cut
+  -- short. What must not happen is a character being let through, or the
+  -- refusal spilling onto the ASCII byte after it. How many replacement marks a
+  -- refused form earns is left open: decoders differ on it - Mudlet gives each
+  -- form one, where the WHATWG decoder gives one per byte for a lead byte UTF-8
+  -- no longer has. The caller selects UTF-8, and only once per case, as busted
+  -- keeps just the last finally() a case registers.
+  --
+  -- A sequence cut short by a byte that is not a continuation byte is not one
+  -- of these: Mudlet takes the cutting byte into the replacement mark too, so a
+  -- line ending, an escape or an ASCII character after a truncated sequence is
+  -- lost - see PR #11068, which fixes that.
   local function assertRefused(data, what)
+    -- Under any decoder but UTF-8 these bytes would be refused, or mangled,
+    -- for other reasons:
+    assert.equals("é", decoded(bytes(0xC3, 0xA9)), "the precondition failed - UTF-8 is not the decoder in use")
     local payload = decoded(data .. "Z")
     local rest, marks = payload:gsub(replacement, "")
     assert.is_true(marks > 0 and rest == "Z", what .. " decoded to " .. payload)
@@ -154,6 +164,13 @@ describe("Tests UTF-8 decoding of malformed sequences", function()
     using("UTF-8")
 
     assert.equals("é日😀Z", decoded(bytes(0xC3, 0xA9, 0xE6, 0x97, 0xA5, 0xF0, 0x9F, 0x98, 0x80) .. "Z"))
+  end)
+
+  it("still decodes the smallest code point of every length", function()
+    using("UTF-8")
+
+    -- the first value each length may carry, just past the overlong forms below
+    assert.same({0x80, 0x800, 0x10000, 0x5A}, codePoints(decoded(bytes(0xC2, 0x80, 0xE0, 0xA0, 0x80, 0xF0, 0x90, 0x80, 0x80) .. "Z")))
   end)
 
   it("refuses an overlong encoding of an ASCII character", function()

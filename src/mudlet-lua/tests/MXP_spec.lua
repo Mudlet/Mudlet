@@ -127,24 +127,41 @@ describe("Tests MXP handling", function()
     -- an ANSI escape cannot be part of a tag, so one arriving before the tag
     -- closed shows what had been read of the tag as plain text and still acts
     it("shows a tag an escape sequence cut short as the text it was", function()
-      local mark = getLastLineNumber("main")
-      feedTriggers("MXPESC1<B\27[31mred\27[0m tail\n")
-      local row
-      for candidate = mark, getLastLineNumber("main") do
-        if getLines("main", candidate, candidate + 1)[1] == "MXPESC1<Bred tail" then
-          row = candidate
+      local function rowReading(mark, text)
+        local row
+        for candidate = mark, getLastLineNumber("main") do
+          if getLines("main", candidate, candidate + 1)[1] == text then
+            row = candidate
+          end
         end
+        return row
       end
+      local function fgAt(row, column)
+        moveCursor("main", column, row)
+        selectSection("main", column, 1)
+        local colour = {getFgColor("main")}
+        deselect("main")
+        moveCursorEnd("main")
+        return colour
+      end
+
+      -- with no MXP processor the tag would be shown as text anyway
+      local mark = getLastLineNumber("main")
+      feedTriggers("MXPESC0<B>x</B>\n")
+      assert.is_not_nil(rowReading(mark, "MXPESC0x"), "the precondition failed - MXP tags are not being processed")
+
+      mark = getLastLineNumber("main")
+      feedTriggers("MXPESC1<B\27[31mred\27[0m tail\n")
+      local row = rowReading(mark, "MXPESC1<Bred tail")
       assert.is_not_nil(row, "no line reads \"MXPESC1<Bred tail\"")
 
-      -- and the escape sequence still coloured the text after it
-      moveCursor("main", 0, row)
-      selectSection("main", 0, 1)
-      local before = {getFgColor("main")}
-      selectSection("main", #"MXPESC1<B", 1)
-      local after = {getFgColor("main")}
-      deselect("main")
-      moveCursorEnd("main")
+      -- the partial tag is shown in the colour in use before the escape
+      -- sequence, and the escape sequence still coloured the text after it
+      local tagStart = #"MXPESC1"
+      local before = fgAt(row, 0)
+      assert.same(before, fgAt(row, tagStart), "the '<'")
+      assert.same(before, fgAt(row, tagStart + 1), "the 'B'")
+      local after = fgAt(row, tagStart + 2)
       assert.are_not.same(before, after)
       assert.same(color_table.ansi_001, after)
     end)
