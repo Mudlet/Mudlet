@@ -83,6 +83,7 @@ class dlgTriggerEditor;
 class TMap;
 class MMCPServer;
 class dlgIRC;
+class TIrcClient;
 class dlgPackageManager;
 class dlgModuleManager;
 class dlgProfilePreferences;
@@ -326,6 +327,10 @@ public:
     void raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName);
     void raiseLoggingStateChanged(const bool isLogging);
     void postIrcMessage(const QString&, const QString&, const QString&);
+    // The running IRC session, creating one if there is none.
+    TIrcClient* getOrCreateIrcClient();
+    // As getOrCreateIrcClient(), and asks the frontend to show it.
+    void showIrcClient();
     void enableTimer(const QString&);
     void disableTimer(const QString&);
     void enableTrigger(const QString&);
@@ -997,6 +1002,8 @@ public:
     enums::EditorSearchOptions mSearchOptions = enums::EditorSearchOptionNone;
     enums::BufferSearchOptions mBufferSearchOptions = enums::BufferSearchOptionNone;
     QPointer<dlgIRC> mpDlgIRC;
+    // Null while the profile has no IRC session.
+    QPointer<TIrcClient> mpIrcClient;
     QPointer<MMCPServer> mMMCPServer;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
@@ -1059,6 +1066,7 @@ signals:
     void signal_showMapperScriptReminder();
     void signal_showUnpackingProgress(const QString& message, const QString& title);
     void signal_hideUnpackingProgress();
+    void signal_showIrcClient();
     // Raised while logging is still off when a log starts, and already off when
     // one stops, so that the frontend's print lands on screen but outside the
     // log file. That only holds while the connection is direct - a queued one

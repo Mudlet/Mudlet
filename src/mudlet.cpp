@@ -61,6 +61,7 @@
 #endif
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
@@ -3958,6 +3959,20 @@ void mudlet::addConsoleForNewHost(Host* pH)
         connect(pH->mpMedia.data(), &TMedia::signal_setupVideoOutput, pConsole, &TMainConsole::setupVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
         connect(pH->mpMedia.data(), &TMedia::signal_hideVideoOutput, pConsole, &TMainConsole::hideVideoOutput, static_cast<Qt::ConnectionType>(Qt::DirectConnection | Qt::UniqueConnection));
     }
+
+    // Direct: openIRC() and sendIrc() expect the window to be up once the emit returns.
+    connect(
+            pH,
+            &Host::signal_showIrcClient,
+            this,
+            [pH]() {
+                if (!pH->mpDlgIRC) {
+                    pH->mpDlgIRC = new dlgIRC(pH);
+                }
+                pH->mpDlgIRC->raise();
+                pH->mpDlgIRC->show();
+            },
+            Qt::DirectConnection);
 
 #if !defined(QT_NO_SSL)
     // A queued connection is essential here. signal_promptTlsAvailable() is

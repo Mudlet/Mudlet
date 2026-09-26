@@ -46,6 +46,7 @@
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "TIrcClient.h"
 #include "TLabelModel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -2653,6 +2654,20 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
     event.mArgumentList << a << b << c;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     raiseEvent(event);
+}
+
+TIrcClient* Host::getOrCreateIrcClient()
+{
+    if (!mpIrcClient) {
+        mpIrcClient = new TIrcClient(this);
+    }
+    return mpIrcClient;
+}
+
+void Host::showIrcClient()
+{
+    getOrCreateIrcClient();
+    emit signal_showIrcClient();
 }
 
 void Host::enableTimer(const QString& name)

@@ -48,9 +48,9 @@
 #include "TRoomDB.h"
 #include "TTextEdit.h"
 #include "TEncodingHelper.h"
+#include "TIrcClient.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
@@ -9361,21 +9361,21 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
 
     if (key == qsl("ircHostName")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcHostName(&host, getVerifiedString(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcHostName(&host, getVerifiedString(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
         return warnArgumentValue(L, __func__, result.second);
     }
     if (key == qsl("ircHostPort")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcHostPort(&host, getVerifiedInt(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcHostPort(&host, getVerifiedInt(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
         return warnArgumentValue(L, __func__, result.second);
     }
     if (key == qsl("ircHostSecure")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcHostSecure(&host, getVerifiedBool(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcHostSecure(&host, getVerifiedBool(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
@@ -9383,21 +9383,21 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("ircChannels")) {
         const QString channels = getVerifiedString(L, __func__, 2, "value");
-        QPair<bool, QString> result = dlgIRC::writeIrcChannels(&host, channels.split(qsl(" "), Qt::SkipEmptyParts));
+        QPair<bool, QString> result = TIrcClient::writeIrcChannels(&host, channels.split(qsl(" "), Qt::SkipEmptyParts));
         if (result.first) {
             return success();
         }
         return warnArgumentValue(L, __func__, result.second);
     }
     if (key == qsl("ircNickName")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcNickName(&host, getVerifiedString(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcNickName(&host, getVerifiedString(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
         return warnArgumentValue(L, __func__, result.second);
     }
     if (key == qsl("ircPassword")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcPassword(&host, getVerifiedString(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcPassword(&host, getVerifiedString(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
@@ -9777,26 +9777,26 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("ircHostName"),
              [&]() {
-                 lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData());
+                 lua_pushstring(L, TIrcClient::readIrcHostName(&host).toUtf8().constData());
              }},
             {qsl("ircHostPort"),
              [&]() {
-                 lua_pushnumber(L, dlgIRC::readIrcHostPort(&host));
+                 lua_pushnumber(L, TIrcClient::readIrcHostPort(&host));
              }},
             {qsl("ircHostSecure"),
              [&]() {
-                 lua_pushboolean(L, dlgIRC::readIrcHostSecure(&host));
+                 lua_pushboolean(L, TIrcClient::readIrcHostSecure(&host));
              }},
             {qsl("ircChannels"),
              [&]() {
-                 lua_pushstring(L, dlgIRC::readIrcChannels(&host).join(qsl(" ")).toUtf8().constData());
+                 lua_pushstring(L, TIrcClient::readIrcChannels(&host).join(qsl(" ")).toUtf8().constData());
              }},
             {qsl("ircNickName"),
              [&]() {
-                 lua_pushstring(L, dlgIRC::readIrcNickName(&host).toUtf8().constData());
+                 lua_pushstring(L, TIrcClient::readIrcNickName(&host).toUtf8().constData());
              }},
             {qsl("ircPassword"), [&]() {
-                 lua_pushstring(L, dlgIRC::readIrcPassword(&host).toUtf8().constData());
+                 lua_pushstring(L, TIrcClient::readIrcPassword(&host).toUtf8().constData());
              }}};
 
     auto it = configMap.find(key);
