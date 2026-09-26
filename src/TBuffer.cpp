@@ -1872,6 +1872,25 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         return false;
     }
 
+    // A hyperlink the game opened and never closed ends here, with the line it
+    // began on. The specification would leave it open, and for a terminal that
+    // only means a URL stays clickable; Mudlet's send: form types a command into
+    // the game, so one malformed link - or output cut mid-sequence - made every
+    // later line carry a command of the server's choosing, on text that looks
+    // exactly like ordinary output and reports the same format as it. Bounded
+    // the way the MXP parser resets its mode per line and an abandoned CSI is
+    // dropped. What the game did mark stays a link: those characters already
+    // carry the id.
+    //
+    // Its visibility is registered only when no held segment is waiting to be
+    // prepended to this line: the columns the link recorded are relative to the
+    // text it was opened on, and a prefix arriving in front of it would move
+    // them, so concealing at them would hide the text ahead of the link
+    // instead. Left unregistered in that case, as a multi-line link already is.
+    if (mHyperlinkActive) {
+        finaliseActiveHyperlink(mServerWrapPendingLine.isEmpty());
+    }
+
     // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
     // EN: MUD lines are always written at the beginning of the line
 
@@ -3755,103 +3774,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             qDebug().noquote() << "[OSC] Hyperlink terminator - closing active hyperlink";
 #endif
 
-            // Apply initial selection/disabled state styling when link closes (from selection branch)
-            // OR apply :link pseudo-class styling for preset-only links (from compact branch)
-            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId << "selected:" << mCurrentHyperlinkStyling.selection.selected
-                         << "disabled:" << mCurrentHyperlinkStyling.selection.disabled << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
-#endif
-                if (mCurrentHyperlinkStyling.selection.selected) {
-                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
-                    mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
-                } else if (mCurrentHyperlinkStyling.selection.disabled) {
-                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
-                    mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
-                }
-            } else if (mCurrentHyperlinkLinkId > 0) {
-                // Set initial :link pseudo-class state for regular links
-                setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDefault);
-                // DON'T call updateLinkCharacters() here - the link text hasn't been added to
-                // the buffer yet! It gets added later during COMMIT_LINE. Calling it now would
-                // scan the entire buffer looking for characters that don't exist yet, causing
-                // severe performance degradation with many links.
-                // The :link styling will be applied when characters are created in COMMIT_LINE.
-            }
-
-            // For spoilers, capture original text BEFORE any visibility concealment
-            // This ensures spoiler reveal works even when combined with visibility actions
-            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
-                int currentColumn = mMudLine.length();
-                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
-
-                if (linkLength > 0) {
-                    // Store the original text before any replacements
-                    QString originalText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
-                    mLinkOriginalText[mCurrentHyperlinkLinkId] = originalText;
-
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Spoiler link" << mCurrentHyperlinkLinkId << "- storing original text:" << originalText << "and replacing with spaces, length:" << linkLength;
-#endif
-                    // Replace spoiler text with spaces to hide it
-                    QString spaces(linkLength, ' ');
-                    mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
-                }
-            }
-
-            // Register with visibility manager if visibility settings exist
-            // Visibility currently only supports single-line hyperlinks
-            // Multi-line links will not have visibility management applied
-            if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mpConsole && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
-                int currentColumn = mMudLine.length();
-                int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
-
-                if (linkLength > 0) {
-                    // Only register if we have a valid link range
-                    QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
-
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Registering hyperlink" << mCurrentHyperlinkLinkId << "line:" << mCurrentHyperlinkStartLine << "col:" << mCurrentHyperlinkStartColumn << "length:" << linkLength
-                             << "text:" << linkText;
-#endif
-                    bool shouldStartConcealed = mpConsole->getHyperlinkVisibilityManager().registerHyperlink(
-                            mCurrentHyperlinkLinkId, mCurrentHyperlinkStartLine, mCurrentHyperlinkStartColumn, linkLength, linkText, mCurrentHyperlinkStyling);
-
-                    // If link should start concealed, replace its text with spaces in mMudLine
-                    // Skip if spoiler already did this to avoid double-replacement
-                    if (shouldStartConcealed && !mCurrentHyperlinkStyling.isSpoiler) {
-#if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "[OSC] Link starts concealed - replacing text with spaces";
-#endif
-                        // CRITICAL: Maintain exact character length to preserve buffer consistency
-                        // Even though emojis have different visual widths, we must keep the same
-                        // character count to avoid disrupting buffer indices and causing crashes.
-                        QString spaces(linkLength, ' ');
-                        mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
-                    }
-                } else {
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Skipping registration for hyperlink with invalid length:" << linkLength;
-#endif
-                }
-            } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Skipping visibility registration for multi-line hyperlink" << "(visibility only applies to single-line links)" << "- started on line" << mCurrentHyperlinkStartLine
-                         << "ending on line" << static_cast<int>(lineBuffer.size()) - 1;
-#endif
-            }
-
-            mCurrentHyperlinkCommand.clear();
-            mCurrentHyperlinkHint.clear();
-            mCurrentHyperlinkLinkId = 0;
-            mHyperlinkActive = false;
-            // Reset enhanced styling
-            mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
-            mCurrentHyperlinkMenu.clear();
-            // Reset visibility tracking
-            mCurrentHyperlinkStartLine = 0;
-            mCurrentHyperlinkStartColumn = 0;
-            mCurrentHyperlinkText.clear();
+            finaliseActiveHyperlink();
             break;
         }
 
@@ -5997,6 +5920,123 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 // scratch buffer can carry a console back-pointer, and every model builds its
 // buffer before a view attaches, so reaching a manager on the strength of the
 // pointer alone would let one buffer drop another's links.
+// Everything a hyperlink needs when it ends: the selection or :link state it
+// opened with, a spoiler's original text set aside and its own text masked, and
+// its visibility registration. Then the state goes, so nothing after it is
+// stamped with the id. Characters already stamped keep it, which is what leaves
+// the text the game marked clickable.
+//
+// Shared by the two ways a link can end - the OSC 8 terminator, and the line
+// boundary for one the game never closed - so a link left open still gets its
+// spoiler masked and its visibility applied on the line it was on, rather than
+// having that metadata dropped along with the leak it used to cause.
+void TBuffer::finaliseActiveHyperlink(const bool mayRegisterVisibility)
+{
+    // Apply initial selection/disabled state styling when link closes (from selection branch)
+    // OR apply :link pseudo-class styling for preset-only links (from compact branch)
+    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId << "selected:" << mCurrentHyperlinkStyling.selection.selected
+                 << "disabled:" << mCurrentHyperlinkStyling.selection.disabled << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
+#endif
+        if (mCurrentHyperlinkStyling.selection.selected) {
+            setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
+            mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+        } else if (mCurrentHyperlinkStyling.selection.disabled) {
+            setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+            mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+        }
+    } else if (mCurrentHyperlinkLinkId > 0) {
+        // Set initial :link pseudo-class state for regular links
+        setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDefault);
+        // DON'T call updateLinkCharacters() here - the link text hasn't been added to
+        // the buffer yet! It gets added later during COMMIT_LINE. Calling it now would
+        // scan the entire buffer looking for characters that don't exist yet, causing
+        // severe performance degradation with many links.
+        // The :link styling will be applied when characters are created in COMMIT_LINE.
+    }
+
+    // For spoilers, capture original text BEFORE any visibility concealment
+    // This ensures spoiler reveal works even when combined with visibility actions
+    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+        int currentColumn = mMudLine.length();
+        int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+
+        if (linkLength > 0) {
+            // Store the original text before any replacements
+            QString originalText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+            mLinkOriginalText[mCurrentHyperlinkLinkId] = originalText;
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Spoiler link" << mCurrentHyperlinkLinkId << "- storing original text:" << originalText << "and replacing with spaces, length:" << linkLength;
+#endif
+            // Replace spoiler text with spaces to hide it
+            QString spaces(linkLength, ' ');
+            mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+        }
+    }
+
+    // Register with visibility manager if visibility settings exist
+    // Visibility currently only supports single-line hyperlinks
+    // Multi-line links will not have visibility management applied
+    // mayRegisterVisibility is false when a held segment is about to be
+    // prepended to this line: the column recorded when the link opened is
+    // relative to the text it was opened on, so registering at it would conceal
+    // the wrong characters once the prefix arrives. Left unregistered, as a
+    // multi-line link already is - visibility covers single lines only.
+    if (mayRegisterVisibility && mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mpConsole
+        && mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
+        int currentColumn = mMudLine.length();
+        int linkLength = currentColumn - mCurrentHyperlinkStartColumn;
+
+        if (linkLength > 0) {
+            // Only register if we have a valid link range
+            QString linkText = mMudLine.mid(mCurrentHyperlinkStartColumn, linkLength);
+
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Registering hyperlink" << mCurrentHyperlinkLinkId << "line:" << mCurrentHyperlinkStartLine << "col:" << mCurrentHyperlinkStartColumn << "length:" << linkLength
+                     << "text:" << linkText;
+#endif
+            bool shouldStartConcealed = mpConsole->getHyperlinkVisibilityManager().registerHyperlink(
+                    mCurrentHyperlinkLinkId, mCurrentHyperlinkStartLine, mCurrentHyperlinkStartColumn, linkLength, linkText, mCurrentHyperlinkStyling);
+
+            // If link should start concealed, replace its text with spaces in mMudLine
+            // Skip if spoiler already did this to avoid double-replacement
+            if (shouldStartConcealed && !mCurrentHyperlinkStyling.isSpoiler) {
+#if defined(DEBUG_OSC_PROCESSING)
+                qDebug() << "[OSC] Link starts concealed - replacing text with spaces";
+#endif
+                // CRITICAL: Maintain exact character length to preserve buffer consistency
+                // Even though emojis have different visual widths, we must keep the same
+                // character count to avoid disrupting buffer indices and causing crashes.
+                QString spaces(linkLength, ' ');
+                mMudLine.replace(mCurrentHyperlinkStartColumn, linkLength, spaces);
+            }
+        } else {
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug() << "[OSC] Skipping registration for hyperlink with invalid length:" << linkLength;
+#endif
+        }
+    } else if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings && mCurrentHyperlinkStartLine != static_cast<int>(lineBuffer.size()) - 1) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Skipping visibility registration for multi-line hyperlink" << "(visibility only applies to single-line links)" << "- started on line" << mCurrentHyperlinkStartLine
+                 << "ending on line" << static_cast<int>(lineBuffer.size()) - 1;
+#endif
+    }
+
+    mCurrentHyperlinkCommand.clear();
+    mCurrentHyperlinkHint.clear();
+    mCurrentHyperlinkLinkId = 0;
+    mHyperlinkActive = false;
+    // Reset enhanced styling
+    mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
+    mCurrentHyperlinkMenu.clear();
+    // Reset visibility tracking
+    mCurrentHyperlinkStartLine = 0;
+    mCurrentHyperlinkStartColumn = 0;
+    mCurrentHyperlinkText.clear();
+}
+
 THyperlinkVisibilityManager* TBuffer::hyperlinkVisibilityManagerOrNull()
 {
     if (mpConsole) {
