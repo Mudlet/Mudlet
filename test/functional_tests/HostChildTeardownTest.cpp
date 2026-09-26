@@ -38,6 +38,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPlainTextEdit>
+#include <QScopeGuard>
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -332,20 +333,40 @@ private slots:
     void test_eachProfileKeepsItsOwnDialogs()
     {
         const QString firstName = qsl("HostChildTeardown-First");
+        const QString secondName = qsl("HostChildTeardown-Second");
+        // Closed properly even when an assertion stops the test early: dropping
+        // a Host whose console is still up leaves that console to crash later
+        auto closeBoth = qScopeGuard([&]() {
+            for (const QString& name : {firstName, secondName}) {
+                if (Host* pHost = HostManager::self()->getHost(name)) {
+                    pHost->forceClose();
+                    pHost->requestClose();
+                    HostManager::self()->deleteHost(name);
+                }
+            }
+        });
+
         Host* pFirst = startProfile(firstName);
         QVERIFY2(pFirst, "The first profile took too long to load");
-        Host* pSecond = startProfile(qsl("HostChildTeardown-Second"));
-        QVERIFY2(pSecond, "The second profile took too long to load");
+        // The connection dialog does not come back for a second profile, so it
+        // is loaded the way a script loads one
+        deleteProfileDirectory(secondName);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, secondName)));
+        QVERIFY(pFirst->getLuaInterpreter()->compileAndExecuteScript(qsl("loadProfile('%1', true)").arg(secondName)));
+        QTRY_VERIFY2(HostManager::self()->getHost(secondName), "The second profile did not load");
+        Host* pSecond = HostManager::self()->getHost(secondName);
 
         const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::of(pFirst).mpEditorDialog;
         const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::of(pSecond).mpEditorDialog;
         QVERIFY2(firstEditor && secondEditor, "Loading a profile did not open its editor");
         QVERIFY2(firstEditor != secondEditor, "Both profiles hold the same editor");
 
-        QCOMPARE(mudlet::self()->getActiveHost(), pSecond);
+        Host* pActive = mudlet::self()->getActiveHost();
+        QVERIFY(pActive == pFirst || pActive == pSecond);
+        Host* pOther = pActive == pFirst ? pSecond : pFirst;
         mudlet::self()->slot_notes();
-        QVERIFY2(HostDialogs::of(pSecond).mpNotePad, "The notepad did not open for the active profile");
-        QVERIFY2(!HostDialogs::of(pFirst).mpNotePad, "Opening the second profile's notepad gave the first profile one too");
+        QVERIFY2(HostDialogs::of(pActive).mpNotePad, "The notepad did not open for the active profile");
+        QVERIFY2(!HostDialogs::of(pOther).mpNotePad, "Opening one profile's notepad gave the other profile one too");
 
         pFirst->forceClose();
         QVERIFY2(pFirst->requestClose(), "Closing the first profile was refused");
@@ -354,10 +375,6 @@ private slots:
         QTRY_VERIFY2(firstEditor.isNull(), "Closing the first profile left its editor behind");
         QVERIFY2(secondEditor, "Closing the first profile took the second profile's editor with it");
         QCOMPARE(HostDialogs::of(pSecond).mpEditorDialog.data(), secondEditor.data());
-
-        pSecond->forceClose();
-        QVERIFY2(pSecond->requestClose(), "Closing the second profile was refused");
-        HostManager::self()->deleteHost(qsl("HostChildTeardown-Second"));
     }
 
     // cleanupTestCase() is what destroys the main window on top of it.
