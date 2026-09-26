@@ -21,14 +21,9 @@
 
 const TAreaGridIndex::RoomIds TAreaGridIndex::csmEmptyCell;
 
-// There are two ways to reach the cells of a Y range: probe the range's keys
-// one at a time, or walk the keys the column holds and drop the ones outside
-// it. A zoomed-in viewport covers a handful of the rows a level occupies and a
-// zoomed-out one covers more rows than exist, so neither wins outright - the
-// smaller key count is the one to get through.
-//
-// The probing loops count in qint64 because an int counter at INT_MAX overflows
-// back to INT_MIN rather than passing a bound of INT_MAX, and never terminates.
+// Probe each key in the range or walk the column's keys, whichever is fewer: zoomed in the range is
+// a few rows, zoomed out it spans more rows than exist.
+// qint64 counters: an int at INT_MAX wraps to INT_MIN instead of passing a bound of INT_MAX.
 static void appendRoomsInYRange(const QHash<int, TAreaGridIndex::RoomIds>& yMap, int minY, int maxY, QList<int>& result)
 {
     const qint64 wantedRows = static_cast<qint64>(maxY) - minY + 1;

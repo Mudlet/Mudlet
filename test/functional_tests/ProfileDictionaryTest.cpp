@@ -42,10 +42,13 @@
 
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
+#include "TSpellChecker.h"
 #include "mudlet.h"
 
 #include <QtTest/QtTest>
+
+#include <hunspell/hunspell.h>
 
 #include <algorithm>
 
@@ -73,11 +76,11 @@ private:
     const QString mQuietProfile = qsl("dictionary quiet");
     const QString mAffixProfile = qsl("dictionary affix");
 
-    QString dictionaryPath(const QString& profileName) const { return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.dic")); }
+    QString dictionaryPath(const QString& profileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.dic")); }
 
-    QString affixPath(const QString& profileName) const { return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.aff")); }
+    QString affixPath(const QString& profileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.aff")); }
 
-    void makeProfileFolder(const QString& name) const { QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileDataItemPath, name, QString()))); }
+    void makeProfileFolder(const QString& name) const { QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, name, QString()))); }
 
     void writeDictionary(const QString& profileName, const QString& contents) const
     {
@@ -121,7 +124,7 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         // never touch the user's real profiles:
-        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
 
@@ -145,7 +148,7 @@ private slots:
     void test_newProfileWritesALoadableWordCount()
     {
         QSet<QString> wordSet;
-        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mEmptyProfile, wordSet);
+        Hunhandle* handle = TSpellChecker::prepareProfileDictionary(mEmptyProfile, wordSet);
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 
@@ -169,7 +172,7 @@ private slots:
         writeDictionary(mSingleWordProfile, qsl("1\nbrandish\n"));
 
         QSet<QString> wordSet;
-        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mSingleWordProfile, wordSet);
+        Hunhandle* handle = TSpellChecker::prepareProfileDictionary(mSingleWordProfile, wordSet);
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 
@@ -178,7 +181,7 @@ private slots:
 
         writeDictionary(mStockedProfile, qsl("2\nbrandish\nquaff\n"));
 
-        handle = mudlet::self()->prepareProfileDictionary(mStockedProfile, wordSet);
+        handle = TSpellChecker::prepareProfileDictionary(mStockedProfile, wordSet);
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 
@@ -195,7 +198,7 @@ private slots:
         writeDictionary(mZeroCountProfile, qsl("0\n"));
 
         QSet<QString> wordSet;
-        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mZeroCountProfile, wordSet);
+        Hunhandle* handle = TSpellChecker::prepareProfileDictionary(mZeroCountProfile, wordSet);
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 
@@ -210,7 +213,7 @@ private slots:
     void test_emptyDictionaryReportsNoWordsLost()
     {
         QSet<QString> wordSet;
-        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mQuietProfile, wordSet);
+        Hunhandle* handle = TSpellChecker::prepareProfileDictionary(mQuietProfile, wordSet);
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
         QCOMPARE(dictionaryLines(mQuietProfile), QStringList({qsl("1")}));
@@ -221,8 +224,8 @@ private slots:
         // among them - turn off by default in their shipped qtlogging.ini:
         QLoggingCategory::setFilterRules(qsl("default.debug=true"));
         QtMessageHandler previousHandler = qInstallMessageHandler(captureMessage);
-        handle = mudlet::self()->prepareProfileDictionary(mQuietProfile, wordSet);
-        const bool saved = mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mQuietProfile, qsl("profile")), wordSet);
+        handle = TSpellChecker::prepareProfileDictionary(mQuietProfile, wordSet);
+        const bool saved = TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mQuietProfile, qsl("profile")), wordSet);
         qInstallMessageHandler(previousHandler);
         QLoggingCategory::setFilterRules(QString());
 
@@ -247,7 +250,7 @@ private slots:
     void test_affixFileOmitsAnEmptyTryLine()
     {
         QSet<QString> wordSet;
-        Hunhandle* handle = mudlet::self()->prepareProfileDictionary(mAffixProfile, wordSet);
+        Hunhandle* handle = TSpellChecker::prepareProfileDictionary(mAffixProfile, wordSet);
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 
@@ -255,7 +258,7 @@ private slots:
 
         // ...and it comes back as soon as there is something to try:
         writeDictionary(mAffixProfile, qsl("1\nbrandish\n"));
-        handle = mudlet::self()->prepareProfileDictionary(mAffixProfile, wordSet);
+        handle = TSpellChecker::prepareProfileDictionary(mAffixProfile, wordSet);
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 

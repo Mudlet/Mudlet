@@ -62,9 +62,8 @@ EditorUndoStack::EditorUndoStack(QObject* parent)
 
 EditorUndoStack::~EditorUndoStack()
 {
-    // ~QUndoStack runs before ~QObject severs the connection, and it calls
-    // clear(), which emits indexChanged(). By then this object is only a
-    // QUndoStack, so the lambda above must not be allowed to touch our members.
+    // ~QUndoStack calls clear(), emitting indexChanged(), before ~QObject disconnects; by then
+    // this is only a QUndoStack, so the lambda above must not touch our members.
     disconnect(this, &QUndoStack::indexChanged, this, nullptr);
 }
 
