@@ -40,15 +40,13 @@ class TDebugFilterBar : public QToolBar
 public:
     explicit TDebugFilterBar(QWidget* parent = nullptr);
 
-    // Called when a profile is loaded or closed, so the profile menu keeps up:
+    // Call when a profile is loaded or closed.
     void refreshProfiles();
-    // Called when something outside the bar changes the text filter, such as
-    // the console's own right-click menu:
+    // Call when something outside the bar changes the text filter, e.g. the console's context menu.
     void refreshTextFilter();
 
 public slots:
-    // Public so the console's right-click menu can empty it through the bar,
-    // which keeps the "N messages held" label in step:
+    // Public so the console's context menu can clear through the bar, keeping "N messages held" in step.
     void slot_clear();
 
 private slots:
@@ -71,8 +69,7 @@ private:
     QAction* mpActionPause = nullptr;
     QMenu* mpCategoryMenu = nullptr;
     QToolButton* mpProfileButton = nullptr;
-    // Hiding the button alone is not enough - a toolbar shows its widgets
-    // through the action that wraps them:
+    // Hiding the button alone is not enough: a toolbar shows its widgets through the wrapping action.
     QAction* mpActionProfiles = nullptr;
     QMenu* mpProfileMenu = nullptr;
     QLineEdit* mpTextFilter = nullptr;

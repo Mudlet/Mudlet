@@ -61,7 +61,7 @@
 #include <chrono>
 
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TelnetServerStub.h"
@@ -134,11 +134,11 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -161,7 +161,7 @@ private slots:
         // possibly before XDG_CONFIG_HOME was redirected - the path would then
         // name a directory in the developer's own config
         if (mudlet::self()) {
-            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
