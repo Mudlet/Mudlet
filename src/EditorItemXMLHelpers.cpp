@@ -1329,9 +1329,6 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
             pA->mPosX = nodeValue.toInt();
         } else if (nodeName == "posY") {
             pA->mPosY = nodeValue.toInt();
-        } else if (nodeName == "mButtonState") {
-            // written as the 1 (up) or 2 (down) the format has always used
-            pA->mButtonState = (nodeValue.toInt() == 2);
         } else if (nodeName == "packageName") {
             pA->mPackageName = nodeValue;
         }
