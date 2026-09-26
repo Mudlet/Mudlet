@@ -365,8 +365,7 @@ void TArea::addRoom(int id)
             if (mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z())) {
                 publishSpanForZ(pR->z());
             }
-            // Rooms of this area with an exit leading to the new one were
-            // measuring that exit against another area until now:
+            // Rooms here with exits to the new room were treating it as another area's:
             updateLodExitRoomAndEntrances(id);
         } else {
             qDebug() << "TArea::addRoom(" << id << ") No creation! room already exists";
@@ -380,10 +379,8 @@ void TArea::addRoom(int id)
 void TArea::addRoomWithCustomLines(int id, int z)
 {
     if (!rooms.contains(id)) {
-        // Rooms are read in before they are handed to an area, so this gets
-        // called for rooms this area does not hold yet. calcSpan() picks those
-        // up once it does; claiming one here would have this area's renderer
-        // paint a room belonging to another area.
+        // Rooms are read before being handed to an area; calcSpan() picks them up later.
+        // Claiming one now could paint another area's room.
         return;
     }
     mCustomLineIndex.addRoom(id, z);
@@ -405,8 +402,7 @@ void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, 
 
     mZLevelIndex.moveRoom(id, fromZ, toZ);
     mGridIndex.moveRoom(id, fromZ, fromX, fromY, toZ, toX, toY);
-    // moveRoom() adds to the destination unconditionally, so a room without
-    // custom lines has to be kept out of it by hand:
+    // moveRoom() adds to the destination unconditionally:
     if (mCustomLineIndex.roomsForZ(fromZ).contains(id)) {
         mCustomLineIndex.moveRoom(id, fromZ, toZ);
     }
@@ -418,8 +414,6 @@ void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, 
     if (toExtremesMoved) {
         publishSpanForZ(toZ);
     }
-    // The moved room's exit spans change, and so do those of any room with an
-    // exit leading to it:
     updateLodExitRoomAndEntrances(id);
 }
 
@@ -516,12 +510,8 @@ void TArea::calcSpan()
     mLodExitIndex.markDirty();
 }
 
-// The one place that decides how far a room's 2D-plane exits reach, and so
-// the one place that has to agree with what the renderer will actually drop.
-// Rooms with something that draws at any zoom - an exit into another area,
-// which paints a fixed-size marker, or a 2D-plane exit stub - come back as
-// cAlwaysVisibleSpan. positions, when given, answers the destination lookups
-// that this area's own rooms can answer: see rebuildLodExitIndex().
+// Must agree with what the renderer drops. An other-area exit (fixed-size marker) or a 2D exit stub
+// draws at any zoom, so gives cAlwaysVisibleSpan. positions, if given, answers lookups for this area's rooms.
 int TArea::lodExitSpanOfRoom(const TRoom* pR, const QList<LodRoomPos>* positions) const
 {
     for (const int direction : pR->exitStubs) {
@@ -545,10 +535,8 @@ int TArea::lodExitSpanOfRoom(const TRoom* pR, const QList<LodRoomPos>* positions
             exitX = pos.x;
             exitY = pos.y;
         } else {
-            // Either there is no table, or the destination is not one of this
-            // area's rooms - an exit leading out of it, or a dangling one, and
-            // only the room database can tell those apart. Rare enough on a
-            // real map to be worth the lookup.
+            // No table, or the destination is outside this area or dangling; only the room
+            // database can tell which. Rare enough on real maps to be worth the lookup.
             const TRoom* pE = mpRoomDB->getRoom(exitId);
             if (!pE) {
                 continue;
@@ -562,24 +550,17 @@ int TArea::lodExitSpanOfRoom(const TRoom* pR, const QList<LodRoomPos>* positions
         // qint64 so a delta between extreme coordinates cannot overflow:
         span = qMax(span, qMax(qAbs(exitX - pR->x()), qAbs(exitY - pR->y())));
     }
-    // Saturating: a span too large for an int cannot be skipped by any
-    // threshold either, so it may share the always-visible bucket.
+    // Saturate: a span too large for an int cannot be skipped by any threshold either.
     return int(qMin<qint64>(span, TAreaLodExitIndex::cAlwaysVisibleSpan));
 }
 
-// Recomputes every entry. Only the paths that change this area as a whole come
-// here - anything that knows which room changed re-files that one room - so in
-// practice this runs about once per map load.
+// Only whole-area changes come here, about once per map load; single-room changes re-file that room.
 void TArea::rebuildLodExitIndex() const
 {
     mLodExitIndex.beginRebuild();
 
-    // Destination coordinates come from a table indexed by room id rather than
-    // from the room database: there are up to eight of those lookups per room,
-    // and on a large area that hash is many times the size of any cache. An id
-    // above the area's highest cannot be one of its rooms, so the table stops
-    // there; very sparse ids would leave it mostly holes, and then the hash is
-    // the better bet after all.
+    // A table indexed by room id, not the room database hash: up to eight lookups per room, and on a
+    // large area that hash dwarfs any cache. Capped for very sparse ids, where the hash wins.
     int highestRoomId = 0;
     for (const int roomId : rooms) {
         highestRoomId = qMax(highestRoomId, roomId);
@@ -612,7 +593,6 @@ void TArea::rebuildLodExitIndex() const
 void TArea::updateLodExitRoom(const int roomId)
 {
     if (mLodExitIndex.needsRebuild()) {
-        // The pending rebuild will take this room's new state into account.
         return;
     }
     const TRoom* pR = rooms.contains(roomId) ? mpRoomDB->getRoom(roomId) : nullptr;
@@ -623,11 +603,8 @@ void TArea::updateLodExitRoom(const int roomId)
     mLodExitIndex.updateRoom(roomId, pR->z(), lodExitSpanOfRoom(pR, nullptr));
 }
 
-// A room's own span is not the only one its position decides: every room with
-// an exit leading to it measures that exit against where it now is. The
-// entrance map is the only way to find those rooms without a pass over the
-// area, and it is kept current by the same exit setters that come through
-// here.
+// Rooms with exits here measure them against this room's position. The entrance map finds them
+// without a pass over the area; the same exit setters that call this keep it current.
 void TArea::refreshLodExitEntrances(const int roomId)
 {
     const QMultiHash<int, int>& entrances = mpRoomDB->getEntranceHash();
@@ -692,11 +669,9 @@ void TArea::removeRoom(int room)
         bumpRoomsVersion();
     }
     mAreaExits.remove(room);
-    // Exits leading here from the area's remaining rooms are handled by
-    // whoever took the room away: TRoomDB::__removeRoom() clears them through
-    // the exit setters, and TRoom::setArea() asks for a refresh once the
-    // room's new area is in place. Doing it here would be too early - the
-    // room still claims to belong to this area.
+    // Exits here from remaining rooms are left to the remover: TRoomDB::__removeRoom() clears them via
+    // the exit setters, TRoom::setArea() refreshes once the new area is set. Here is too early: the
+    // room still claims this area.
     dropLodExitRoom(room);
 }
 

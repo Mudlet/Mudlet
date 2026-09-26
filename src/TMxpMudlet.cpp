@@ -54,11 +54,8 @@ void TMxpMudlet::popColor()
 
 void TMxpMudlet::pushColor(QList<QColor>& stack, const QString& color)
 {
-    // A name the client does not know gives an invalid QColor, which a TChar
-    // would store as opaque black - so treat it like an attribute that was not
-    // given at all and carry on with the color in force, as an empty name has
-    // always done. Repeating that color rather than not pushing is what keeps
-    // the stack in step with popColor().
+    // An unknown name gives an invalid QColor, which a TChar would store as opaque black, so
+    // repeat the color in force instead; still pushing keeps the stack in step with popColor().
     const QColor newColor(color);
     if (!newColor.isValid()) {
         if (!stack.isEmpty()) {

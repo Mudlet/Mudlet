@@ -1047,9 +1047,7 @@ if(UNIX AND NOT APPLE)
                                      WORLD_READ
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    # the map fixture the pathfinding specs need. It stays zipped rather than
-    # joining the *.xml above because unpacked it is 5.5MiB rather than 633KiB,
-    # and every package built from this tree would carry the difference
+    # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
     PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"

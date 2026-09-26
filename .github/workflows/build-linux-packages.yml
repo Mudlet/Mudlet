@@ -42,8 +42,7 @@ jobs:
           - format: rpm
             base: fedora:43
     steps:
-      # The packaging scripts come from this workflow's commit, so a tag that
-      # predates them can still be packaged
+      # Packaging scripts come from this workflow's commit, so tags predating them can still be packaged
       - uses: actions/checkout@v7
         with:
           path: packaging
@@ -109,8 +108,7 @@ jobs:
             exit 1
           fi
 
-      # Signing and publishing check the key against the checkout's mudlet.asc, so
-      # a dispatch from any other branch would publish whatever key it carries
+      # Signing trusts the checkout's mudlet.asc, so another branch could publish any key it carries
       - name: Check the workflow runs from the default branch
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
@@ -209,9 +207,8 @@ jobs:
           printf '%s\n' "${SIGNING_KEY}" | gpg --batch --import
           echo "GNUPGHOME=${GNUPGHOME}" >> "${GITHUB_ENV}"
 
-      # The repositories are rebuilt from the releases each time, so the bucket
-      # holds no state of its own and keeps a few versions to downgrade to. A gh
-      # failure must fail the step, as upload replaces the bucket with incoming/.
+      # The repos are rebuilt from releases, keeping a few versions for downgrades. A gh failure
+      # must fail the step, as upload replaces the bucket with incoming/.
       - name: Gather packages from the latest releases
         run: |
           mkdir -p incoming/
@@ -241,10 +238,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.LINUX_PACKAGES_R2_SECRET_ACCESS_KEY }}
         run: CI/linux-packages/publish upload site
 
-      # publish has already checked the key it signed with against the committed
-      # copy, so what is left to go wrong is delivery: this confirms the bucket
-      # serves those same bytes, which is what pinning the committed copy relies
-      # on. Retried because a read-back straight after the upload can be flaky.
+      # publish already checked its signing key against git; this confirms the bucket serves those
+      # same bytes, which pinning the committed copy relies on. Retried: a read-back right after upload can be flaky.
       - name: Check the served key against the one committed in git
         run: |
           curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors "${BASE_URL}/mudlet.asc" -o served.asc

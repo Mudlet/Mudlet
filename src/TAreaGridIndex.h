@@ -31,14 +31,9 @@
 class TAreaGridIndex
 {
 public:
-    // The rooms occupying one grid cell. Nearly every cell holds a single
-    // room and one Z level of a large area holds a million cells, so the id
-    // lives in the cell rather than behind a container's pointer: giving each
-    // cell its own QSet meant a scattered allocation to chase per room, which
-    // measured as 95% of the time a viewport query took on such a level.
-    // A cell never holds the same id twice, which the type no longer says for
-    // itself: addRoom() looks before it appends, and the rebuild() overloads
-    // take their ids from the keys of a QHash.
+    // Nearly every cell holds one room and a large level has a million cells, so the id lives inline:
+    // a QSet per cell meant a scattered allocation per room, 95% of a viewport query's time.
+    // Ids are unique per cell: addRoom() checks before appending, rebuild() takes QHash keys.
     using RoomIds = QVarLengthArray<int, 1>;
 
     void addRoom(int id, int z, int x, int y);
@@ -51,8 +46,7 @@ public:
     // Replaces the entire index from a pre-bucketed z → (roomId → (x,y)) mapping.
     void rebuild(const QHash<int, QHash<int, QPair<int, int>>>& zToRoomXY);
 
-    // Returns all room IDs at the exact grid cell (z, x, y), in no particular
-    // order. Returns a reference to a stable empty cell when it is unoccupied.
+    // Unordered; a stable empty cell when unoccupied.
     const RoomIds& roomsAt(int z, int x, int y) const;
 
     // Returns all room IDs whose grid cell lies within the inclusive rectangle

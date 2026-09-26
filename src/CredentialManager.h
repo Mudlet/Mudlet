@@ -92,10 +92,8 @@ public:
     // retrieved value), so callers such as UI code need not materialize the secret just to test presence.
     void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback);
 
-    // Where this manager's own last store left a secret that other accounts on the machine can
-    // still read, empty when it left none. Asked by the caller that reports the store to the
-    // user, so that what it reports is the store it is reporting on and not a narrowing that
-    // failed somewhere else in the meantime.
+    // What this manager's last store left readable by other accounts, or empty. Kept per manager, not
+    // process-wide, so the report is about this store and not a failure elsewhere in the meantime.
     QString unprotectedSecretPath() const { return mUnprotectedSecretPath; }
 
     // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
@@ -205,16 +203,12 @@ private:
     AvailabilityCallback mCurrentAvailabilityCallback;
     // What mCurrentJob is doing, for the log line if it is abandoned before it answers.
     QString mCurrentOperationDescription;
-    // What the file fallback of this manager's last store could not narrow; see
-    // unprotectedSecretPath().
     QString mUnprotectedSecretPath;
 
     int mOperationTimeoutMs = OPERATION_TIMEOUT_MS;
     // Called with each keychain job just before it starts, so a test can make one stall or fail.
-    // Returning false leaves the job unstarted and hands it to the hook to answer: a credential
-    // store call cannot be cancelled, so a job that has reached the store has to be answered - and
-    // outlived - by the store alone, and a test that answers one itself would be deleting a job the
-    // store still holds a pointer to.
+    // Returning false leaves the job unstarted for the hook to answer. A job that has reached the store
+    // can't be cancelled and the store keeps a pointer to it, so only the store may answer that one.
     std::function<bool(QKeychain::Job*)> mJobStartHook;
 
     // Destruction flag to prevent operations during cleanup

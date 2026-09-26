@@ -242,7 +242,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     pChild->setDataChanged();
 
     if ((!pOldParent) && (pNewParent)) {
-        // The bars are the console's widgets; a profile with no view has none to take down
+        // A profile with no view has no console, so no bars to take down
         TMainConsole* pConsole = mpHost->mpConsole;
         if (!pConsole) {
             return;
@@ -713,8 +713,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 
 void ActionUnit::updateAllToolbars()
 {
-    // The bars are the console's widgets, so a profile with no view has nothing
-    // to build; the regenerate paths below reach the console only through here
+    // A profile with no view has no console; the regenerate functions below rely on this check
     if (!mpHost->mpConsole) {
         return;
     }

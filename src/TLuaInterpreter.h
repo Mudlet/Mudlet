@@ -960,21 +960,16 @@ private:
     const int LUA_FUNCTION_MAX_ARGS = 50;
     std::vector<std::string> mCaptureGroupList;
     std::vector<int> mCaptureGroupPosList;
-    // clearCaptureGroups() parks the emptied capture storage here instead of
-    // freeing it, so the next trigger fire assigns over std::strings that still
-    // own their buffers rather than allocating a fresh node per capture
+    // clearCaptureGroups() parks emptied storage here so the next fire reuses the strings' buffers
     std::vector<std::string> mSpareCaptureGroupList;
     std::vector<int> mSpareCaptureGroupPosList;
-    // Bounds on what the parking above holds onto between fires
     static constexpr std::size_t scmMaxParkedCaptures = 512;
     static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
-    // Well past the cap, not at it: a trigger overshooting the cap by less than
-    // this would otherwise pay a reallocation each way per fire
+    // Well past the cap, so a trigger slightly over it doesn't reallocate each way per fire
     static constexpr std::size_t scmMaxParkedCaptureSlack = 4 * scmMaxParkedCaptures;
     QString mLastGlobalName;
     QByteArray mLastGlobalNameUtf8;
-    // Storage set_lua_string() encodes the line into, kept between calls for
-    // its capacity alone, and dropped past a length no game line reaches
+    // set_lua_string()'s encode buffer, kept for its capacity; dropped past a length no game line reaches
     static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
     QByteArray mUtf8Scratch;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
@@ -982,11 +977,8 @@ private:
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
-    // An alias pass a script asks for - expandAlias() - sets "command" and the
-    // capture groups for the scripts that pass runs. What the calling script was
-    // given is parked here for the duration and handed back when the pass
-    // returns, so nesting does not leave the caller reading the inner pass's
-    // command and none of its own captures. One entry per level of nesting.
+    // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
+    // nesting level) and restored when the pass returns.
     struct NestedDispatchState
     {
         std::vector<std::string> captureGroupList;
