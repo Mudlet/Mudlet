@@ -6594,7 +6594,8 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QString extension = fileInfo.suffix();
         QString basePath = fileInfo.absolutePath();
 
-        // A copy, as each export's calcSpan() replaces zLevels
+        // Iterates a copy: each export's calcSpan() replaces zLevels, which
+        // would free the list under this loop
         const QList<int> zLevels = pArea->zLevels;
         for (const int currentZLevel : zLevels) {
             QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);

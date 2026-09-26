@@ -2713,8 +2713,8 @@ describe("Tests mapper functions against a shared fixture", function()
   end)
 
   describe("Tests area image export", function()
-    -- The image is saved on a pool thread, which the wait lets finish, and a
-    -- failure is only reported once events are pumped
+    -- The save runs on a pool thread and a failure is only reported through
+    -- the event loop, so the wait pumps events rather than just polling
     local function waitUntil(condition, timeoutMilliseconds)
       local waited = 0
       while waited < timeoutMilliseconds do
@@ -2842,13 +2842,13 @@ describe("Tests mapper functions against a shared fixture", function()
       local written, removeAll = expectExports({"mapper_spec_export_ok.png"})
       finally(removeAll)
       local badPath = exportPath("mapper_spec_no_such_dir/unsaved.png")
+      assert.is_false(io.exists(exportPath("mapper_spec_no_such_dir")), "the spec needs a directory nothing has made")
       assert.is_true(exportAreaImage(areaAlpha, badPath))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_ok.png")))
-      assert.is_false(io.exists(exportPath("mapper_spec_no_such_dir")), "the spec needs a directory nothing has made")
       assert.is_true(waitUntil(written, 5000))
       assert.is_true(waitUntil(function() return mainConsoleCount("Failed to save image to ") > 0 end, 5000))
-      -- Give the good export time to report as well, before checking that only
-      -- the bad one did
+      -- Best effort: gives the good export time to report as well, before
+      -- checking that only the bad one did
       pumpEvents(500)
       assert.are.equal(1, mainConsoleCount("Failed to save image to "))
       assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))

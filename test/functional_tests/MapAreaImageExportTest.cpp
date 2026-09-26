@@ -186,6 +186,7 @@ private slots:
         const QString filePath = qsl("%1/area-exit.png").arg(exportDir);
         const auto [exported, message] = mp2dMap->exportAreaToImage(areaId, filePath);
         QVERIFY2(exported, qPrintable(message));
+        QVERIFY(exportsInFlight(mp2dMap));
 
         // The export hands the actual file write to a QtConcurrent task
         QImage exportedImage;
@@ -236,17 +237,21 @@ private slots:
     }
 
     // A map view can outlive its profile - closeHost() only deleteLater()s the
-    // main window's map dock - and a failed save used to report to the Host
-    // it no longer had (#11019)
+    // main window's map dock - and a failed save used to call postMessage()
+    // on the null Host (#11019)
     void aFailedExportThatFinishesAfterItsProfileClosedIsLoggedInstead()
     {
         const QString closingProfile = qsl("MapAreaImageExport-Closing");
         auto* hostManager = HostManager::self();
         QVERIFY(hostManager->addHost(closingProfile, qsl("23"), QString(), QString()));
-        // A second deleteHost() for a profile that is already gone does nothing
+        // Declared ahead of the guard, so that on an early return the guard
+        // waits for the save before the view it was given is destroyed
+        auto survivingView = std::make_unique<T2DMap>();
         auto closeProfile = qScopeGuard([hostManager, closingProfile] {
             QThreadPool::globalInstance()->waitForDone(10000);
-            hostManager->deleteHost(closingProfile);
+            if (hostManager->getHost(closingProfile)) {
+                hostManager->deleteHost(closingProfile);
+            }
         });
         QPointer<Host> pClosingHost = hostManager->getHost(closingProfile);
         QVERIFY(pClosingHost);
@@ -257,7 +262,6 @@ private slots:
             return;
         }
 
-        auto survivingView = std::make_unique<T2DMap>();
         survivingView->mpMap = pClosingMap;
         survivingView->mpHost = pClosingHost;
         const QString unwritablePath = qsl("%1/no-such-directory/closing.png").arg(mConfigDir.path());
