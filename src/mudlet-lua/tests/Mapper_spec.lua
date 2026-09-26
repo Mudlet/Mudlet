@@ -2713,8 +2713,8 @@ describe("Tests mapper functions against a shared fixture", function()
   end)
 
   describe("Tests area image export", function()
-    -- The image is saved on a pool thread and reports back through the event
-    -- loop, so both a file and an error message need events pumped to turn up
+    -- The image is saved on a pool thread, which the wait lets finish, and a
+    -- failure is only reported once events are pumped
     local function waitUntil(condition, timeoutMilliseconds)
       local waited = 0
       while waited < timeoutMilliseconds do
@@ -2741,9 +2741,19 @@ describe("Tests mapper functions against a shared fixture", function()
         end
       end
       removeAll()
+      for _, name in ipairs(names) do
+        assert.is_false(io.exists(exportPath(name)), "a stale " .. name .. " could not be removed")
+      end
+      -- The file appears as soon as the save opens it, so look for the whole
+      -- PNG signature rather than for the file
       local function written()
         for _, name in ipairs(names) do
-          if not io.exists(exportPath(name)) then
+          local file = io.open(exportPath(name), "rb")
+          local signature = file and file:read(8)
+          if file then
+            file:close()
+          end
+          if signature ~= "\137PNG\r\n\26\n" then
             return false
           end
         end
@@ -2753,9 +2763,18 @@ describe("Tests mapper functions against a shared fixture", function()
     end
 
     -- Joined without separators because a long path wraps across console lines
-    local function mainConsoleHas(text)
+    local function mainConsoleCount(text)
       local last = getLastLineNumber("main")
-      return table.concat(getLines("main", math.max(0, last - 20), last + 1), ""):find(text, 1, true) ~= nil
+      local recent = table.concat(getLines("main", math.max(0, last - 20), last + 1), "")
+      local count, from = 0, 1
+      while true do
+        local at = recent:find(text, from, true)
+        if not at then
+          return count
+        end
+        count = count + 1
+        from = at + #text
+      end
     end
 
     it("exportAreaImage returns true for a valid area (the file is written asynchronously)", function()
@@ -2771,7 +2790,7 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
-    it("exportAreaImage without an areaID exports the area the player is in", function()
+    it("exportAreaImage takes a nil areaID when the player is in a room", function()
       local written, removeAll = expectExports({"mapper_spec_export_player.png"})
       finally(removeAll)
       assert.is_true(centerview(rA1))
@@ -2786,7 +2805,8 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_true(waitUntil(written, 5000))
     end)
 
-    -- One export per z level, all in flight at once, which #10393 used to crash on
+    -- One export per z level, all in flight at once: this crashed on the shared
+    -- watcher (#10393) and wrote the wrong levels from a freed zLevels list
     it("exportAreaImage takes true for every z level at once", function()
       local area = addAreaName("MapperSpecExportLevels")
       local written, removeAll = expectExports({
@@ -2808,7 +2828,8 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_true(waitUntil(written, 5000))
     end)
 
-    -- A second export before the first had reported back used to crash Mudlet (#10393)
+    -- Crashed Mudlet when the first save had finished but not reported back
+    -- (#10393); MapAreaImageExportTest pins that ordering, this spec cannot
     it("exportAreaImage can be called twice in a row", function()
       local written, removeAll = expectExports({"mapper_spec_export_a.png", "mapper_spec_export_b.png"})
       finally(removeAll)
@@ -2823,9 +2844,14 @@ describe("Tests mapper functions against a shared fixture", function()
       local badPath = exportPath("mapper_spec_no_such_dir/unsaved.png")
       assert.is_true(exportAreaImage(areaAlpha, badPath))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_ok.png")))
-      assert.is_true(waitUntil(function() return mainConsoleHas("Failed to save image to " .. badPath) end, 5000))
+      assert.is_false(io.exists(exportPath("mapper_spec_no_such_dir")), "the spec needs a directory nothing has made")
       assert.is_true(waitUntil(written, 5000))
-      assert.is_false(mainConsoleHas("Failed to save image to " .. exportPath("mapper_spec_export_ok.png")))
+      assert.is_true(waitUntil(function() return mainConsoleCount("Failed to save image to ") > 0 end, 5000))
+      -- Give the good export time to report as well, before checking that only
+      -- the bad one did
+      pumpEvents(500)
+      assert.are.equal(1, mainConsoleCount("Failed to save image to "))
+      assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
     end)
 
     it("exportAreaImage rejects false where a z level or true is wanted", function()

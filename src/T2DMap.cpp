@@ -6594,8 +6594,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QString extension = fileInfo.suffix();
         QString basePath = fileInfo.absolutePath();
 
-        // Export each Z level as a separate file; iterates a copy because each
-        // export recalculates the area's span, which replaces zLevels
+        // A copy, as each export's calcSpan() replaces zLevels
         const QList<int> zLevels = pArea->zLevels;
         for (const int currentZLevel : zLevels) {
             QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
@@ -7292,16 +7291,16 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     }
 
     // Each export has a watcher of its own: several can be in flight at once,
-    // one per z level when exporting them all
+    // from calls made back to back or one per z level
     auto* pWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
-    connect(pWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this, pWatcher]() {
+    connect(pWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this, pWatcher, profileName = mpHost->getName()]() {
         const auto [saved, errorMessage] = pWatcher->result();
         if (!saved) {
             // This view can outlive its profile, which may have closed before the save reported back
             if (mpHost) {
                 mpHost->postMessage(tr("[MAP]: %1").arg(errorMessage));
             } else {
-                qWarning().noquote() << "T2DMap::exportAreaToImage() WARNING - the profile closed before this export finished:" << errorMessage;
+                qWarning().noquote().nospace() << "T2DMap::exportAreaToImage() WARNING - profile \"" << profileName << "\" closed before this export finished: " << errorMessage;
             }
         }
         pWatcher->deleteLater();

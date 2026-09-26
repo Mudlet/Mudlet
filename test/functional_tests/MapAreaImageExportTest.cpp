@@ -23,14 +23,15 @@
  * arrowhead that stand for an exit leading out of the area among them.
  *
  * Why not a spec: Lua can ask for the export, but nothing in the API reads a
- * pixel back out of the file it wrote, holds the saves back until both have
- * finished, or keeps a map view alive after its profile has closed.
+ * pixel back out of the file it wrote, lets a save finish without letting it
+ * report back, or keeps a map view alive after its profile has closed.
  *
  * Run with: ctest -R MapAreaImageExportTest -V
  */
 
 #include <QFutureWatcher>
 #include <QImage>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QThreadPool>
 #include <QtTest/QtTest>
@@ -202,9 +203,9 @@ private slots:
         QCOMPARE(countPixels(exportedImage, QColor(Qt::black)) + outlinePixels, exportedImage.width() * exportedImage.height());
     }
 
-    // Every export used to share one watcher, so the first watcher's handler
-    // reported the second export's result, deleted that watcher and left a
-    // null for the second handler to crash on (#10393)
+    // Every export's handler used to read one shared watcher member, so the
+    // first handler reported the second export's result, deleted that watcher
+    // and left a null for the second handler to crash on (#10393)
     void twoExportsInQuickSuccessionBothFinish()
     {
         map()->mapClear();
@@ -226,6 +227,8 @@ private slots:
         const auto [secondExported, secondMessage] = mp2dMap->exportAreaToImage(areaId, secondPath);
         QVERIFY2(secondExported, qPrintable(secondMessage));
         QVERIFY(QThreadPool::globalInstance()->waitForDone(10000));
+        // Or the wait below would pass without running a single handler
+        QVERIFY(exportsInFlight(mp2dMap));
 
         QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10000);
         QVERIFY(!QImage(firstPath).isNull());
@@ -235,18 +238,22 @@ private slots:
     // A map view can outlive its profile - closeHost() only deleteLater()s the
     // main window's map dock - and a failed save used to report to the Host
     // it no longer had (#11019)
-    void aFailedExportThatFinishesAfterItsProfileClosedIsDropped()
+    void aFailedExportThatFinishesAfterItsProfileClosedIsLoggedInstead()
     {
         const QString closingProfile = qsl("MapAreaImageExport-Closing");
         auto* hostManager = HostManager::self();
         QVERIFY(hostManager->addHost(closingProfile, qsl("23"), QString(), QString()));
+        // A second deleteHost() for a profile that is already gone does nothing
+        auto closeProfile = qScopeGuard([hostManager, closingProfile] {
+            QThreadPool::globalInstance()->waitForDone(10000);
+            hostManager->deleteHost(closingProfile);
+        });
         QPointer<Host> pClosingHost = hostManager->getHost(closingProfile);
         QVERIFY(pClosingHost);
         TMap* pClosingMap = pClosingHost->mpMap.data();
         int areaId = 0;
         addOneRoomArea(pClosingMap, qsl("Closing area"), areaId);
         if (QTest::currentTestFailed()) {
-            hostManager->deleteHost(closingProfile);
             return;
         }
 
@@ -254,14 +261,15 @@ private slots:
         survivingView->mpMap = pClosingMap;
         survivingView->mpHost = pClosingHost;
         const QString unwritablePath = qsl("%1/no-such-directory/closing.png").arg(mConfigDir.path());
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("profile \"%1\" closed before this export finished: Failed to save image to .*closing\\.png").arg(closingProfile)));
         const auto [exported, message] = survivingView->exportAreaToImage(areaId, unwritablePath);
         QVERIFY2(exported, qPrintable(message));
 
         hostManager->deleteHost(closingProfile);
         QVERIFY(pClosingHost.isNull());
+        // deleteHost() freed the map this view points at
         survivingView->mpMap = nullptr;
 
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("the profile closed before this export finished: Failed to save image to .*closing\\.png")));
         QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(survivingView.get()), 10000);
     }
 };
