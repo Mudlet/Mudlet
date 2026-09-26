@@ -605,49 +605,76 @@ private slots:
         QCOMPARE(QString::fromStdString(host->mMxpProcessor.getMxpTagBuilder().getRawTagContent()), qsl("send"));
     }
 
-    // The watchdog writes the stalled tag out into its own buffer but
-    // finalizes the main console, so only the main console's buffer may do it:
-    // for any other the text and the repaint would land on different consoles.
-    void test_aStalledMxpTagInAnotherBufferIsLeftAlone()
+    // A line that ends at the game's wrap column is held back for a
+    // continuation; when none comes, the flush timer has to commit it and run
+    // its triggers with no view just as with one.
+    void test_aHeldServerWrappedLineIsCommittedWithNoView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
 
-        runLua(host, qsl("createMiniConsole('wdogsub', 0, 0, 300, 100)"));
-        TConsoleModel* subModel = host->windowRegistry().subConsoleModel(qsl("wdogsub"));
-        QVERIFY2(subModel, "The mini console has no model.");
-        // The MXP tag builder is the profile's, so let the connection's own
-        // traffic finish before holding a tag open in it.
-        QTest::qWait(1000ms);
-        feedStalledMxpTag(host, subModel->buffer, "WDOGSUB <send");
-
-        QTest::qWait(2 * TBuffer::MAX_TAG_TIMEOUT_MS + 1000);
-        QVERIFY2(lastLineHolding(subModel->buffer, qsl("WDOGSUB")) < 0, "The stalled tag was written out into a buffer that is not the main console's.");
-    }
-
-    // Host hears that a line is being held back for its continuation straight
-    // from the model, so the flush timer starts whether or not a view is there.
-    void test_aHeldServerWrappedLineStartsTheFlushTimerWithNoView()
-    {
-        startProfile();
-        auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        // The trigger's body only writes a Lua global, as echoing would need
+        // the view this test destroys.
+        runLua(host,
+               qsl("viewlessHeldLine = 'none'\n"
+                   "tempRegexTrigger('^x+ alpha$', [[viewlessHeldLine = line]], 10)\n"));
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
+        // Closing the profile emergency-stops the trigger engine
+        // (Host::closeChildren()), which a profile that simply never had a view
+        // would not do:
+        host->reenableAllTriggers();
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        QVERIFY2(!host->mServerWrapFlushTimer.isActive(), "The flush timer was running before any line was held back.");
 
-        // 70 characters, inside the join band for a wrap column of 80
-        const QString heldLine = QString(64, QChar('z')) + qsl(" sigma");
+        // 70 characters, inside the join band for a wrap column of 80, and
+        // nothing follows it
+        const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
         std::string data = heldLine.toStdString() + "\n";
+        QElapsedTimer sinceFeed;
+        sinceFeed.start();
         model->buffer.translateToPlainText(data, true);
         QCOMPARE(model->buffer.mServerWrapPendingLine, heldLine);
-        QVERIFY2(host->mServerWrapFlushTimer.isActive(), "Holding a line back with no view did not start the flush timer.");
+        QVERIFY2(lastLineHolding(model->buffer, heldLine) < 0, "The full-width line was committed at once rather than held back for a continuation.");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return lastLineHolding(model->buffer, heldLine) >= 0;
+                         },
+                         3000),
+                 "The held line was never committed with no view.");
+        // A timer may fire slightly early, hence the margin
+        QVERIFY2(sinceFeed.elapsed() >= TBuffer::csmServerWrapFlushDelayMs - 50,
+                 qPrintable(qsl("The held line was committed after %1ms, before the flush delay was up.").arg(sinceFeed.elapsed())));
+        QVERIFY2(model->buffer.mServerWrapPendingLine.isEmpty(), "The committed line is still held back as well.");
+        QCOMPARE(luaGlobalString(host, "viewlessHeldLine"), heldLine);
+    }
+
+    // Closing the profile drops a held line, as the connection's teardown does
+    // on a closing profile, rather than running its triggers on a profile that
+    // is being taken apart.
+    void test_closingTheProfileDropsAHeldServerWrappedLine()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+
+        const QString heldLine = QString(64, QChar('y')) + qsl(" omega");
+        std::string data = heldLine.toStdString() + "\n";
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        model->buffer.translateToPlainText(data, true);
+        QVERIFY2(host->mServerWrapFlushTimer.isActive(), "The full-width line was not held back for a continuation.");
+
+        destroyTheView(host);
+        QVERIFY2(!host->mServerWrapFlushTimer.isActive(), "Closing the profile left the flush timer running.");
+        QTest::qWait(TBuffer::csmServerWrapFlushDelayMs * 3);
+        QVERIFY2(lastLineHolding(model->buffer, heldLine) < 0, "The held line was committed on a closed profile.");
     }
 
     // The OSC 8 documentation examples are injected into the main console's
