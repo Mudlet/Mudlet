@@ -79,6 +79,15 @@ private slots:
     void testARecoveredPasswordSurvivesAKeychainThatRefusesToStoreIt();
     void testAKeychainErrorIsReportedRatherThanNothingFound_data();
     void testAKeychainErrorIsReportedRatherThanNothingFound();
+    void testAStoreThatRefusesIsNotAskedForEveryOtherLayout();
+    void testAFreshRefusalSparesTheNextLookupTheStore();
+    void testTheProfileStoragePreferenceKeepsTheKeychainOutOfIt();
+    void testARefusalForOneProfileDoesNotSkipTheStoreForAnother();
+    void testATrimmedLookupStillFindsTheProfilesOwnCopy();
+    void testForgettingSaysSoWhenTheKeychainCopyRemains();
+    void testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain();
+    void testOneUnreadableEntryDoesNotHideAnOlderLayout();
+    void testASignInKeyIsNotLookedForInLayoutsOlderThanItself();
     void testALookupThatAnswersInTimeOwesNoLateAnswer();
     void testALateAnswerFollowsALookupThatTimedOut_data();
     void testALateAnswerFollowsALookupThatTimedOut();
@@ -205,6 +214,16 @@ bool waitUntilTargetHolds(const QString& targetName, const QString& expectedSecr
 // Deliberately duplicates the private CredentialManager::generateServiceName: the format
 // is persisted in users' credential stores, so this test doubles as a tripwire against
 // changing it and orphaning stored entries
+// The service/key pairs a test saw, for an assertion message that says what actually happened
+QString describeDeletes(const QList<QPair<QString, QString>>& deletes)
+{
+    QStringList described;
+    for (const auto& deletion : deletes) {
+        described << QStringLiteral("(%1, %2)").arg(deletion.first, deletion.second);
+    }
+    return described.join(QStringLiteral(", "));
+}
+
 QString expectedServiceName(const QString& profileName, const QString& key)
 {
     static const QRegularExpression sanitizePattern(QStringLiteral(R"REGEX([^\w\-\.])REGEX"));
@@ -336,23 +355,33 @@ QList<ExpectedRead> expectedReads(const QString& profileName, const QString& key
 {
     const QString service = expectedServiceName(profileName, key);
     const QString legacyService = expectedLegacyServiceName(profileName, key);
+    // The sign-in keys are not read out of a layout older than they are: the colliding format
+    // belongs to 4.20.0 and 4.20.1 and the key=account layout to builds before the Windows keychain
+    // fix, both of which predate saved sign-ins (#11029).
+    const bool olderLayouts = key != QStringLiteral("reconnect") && key != QStringLiteral("reconnect-token");
     QList<ExpectedRead> reads;
     reads.append({QStringLiteral("current format"), service, service});
 #if defined(Q_OS_WIN)
     reads.append({QStringLiteral("pre-0.17 naming"), QString(), service});
-    reads.append({QStringLiteral("old key=account format"), QString(), key});
+    if (olderLayouts) {
+        reads.append({QStringLiteral("old key=account format"), QString(), key});
+    }
 #else
-    reads.append({QStringLiteral("old key=account format"), service, key});
+    if (olderLayouts) {
+        reads.append({QStringLiteral("old key=account format"), service, key});
+    }
 #endif
     if (key == QStringLiteral("character") || key == QStringLiteral("password")) {
         reads.append({QStringLiteral("pre-4.20.0 format"), QStringLiteral("Mudlet profile"), profileName});
     }
-    reads.append({QStringLiteral("colliding format"), legacyService, legacyService});
+    if (olderLayouts) {
+        reads.append({QStringLiteral("colliding format"), legacyService, legacyService});
 #if defined(Q_OS_WIN)
-    reads.append({QStringLiteral("colliding format under pre-0.17 naming"), QString(), legacyService});
+        reads.append({QStringLiteral("colliding format under pre-0.17 naming"), QString(), legacyService});
 #else
-    reads.append({QStringLiteral("colliding format with key=account"), legacyService, key});
+        reads.append({QStringLiteral("colliding format with key=account"), legacyService, key});
 #endif
+    }
     return reads;
 }
 
@@ -385,6 +414,19 @@ public:
         };
     }
 
+    // Stalls several jobs of type T by index, counting from zero, so a test can let the store
+    // answer one read and refuse the two after it
+    template <typename T>
+    void stallNths(const QList<int>& indices)
+    {
+        mShouldStall = [this, indices](QKeychain::Job* job) {
+            if (!qobject_cast<T*>(job)) {
+                return false;
+            }
+            return indices.contains(mSeen++);
+        };
+    }
+
     template <typename T>
     void stallEvery()
     {
@@ -409,6 +451,9 @@ public:
             if (read) {
                 mReads.append({job->service(), job->key()});
             }
+            if (qobject_cast<QKeychain::DeletePasswordJob*>(job)) {
+                mDeletes.append({job->service(), job->key()});
+            }
             if (mShouldStall && mShouldStall(job)) {
                 watch(job);
                 mStalled.append(job);
@@ -426,6 +471,7 @@ public:
     }
 
     const QList<QPair<QString, QString>>& reads() const { return mReads; }
+    const QList<QPair<QString, QString>>& deletes() const { return mDeletes; }
 
     bool waitForAnyStalled()
     {
@@ -438,6 +484,23 @@ public:
 
     // The first stalled job, while it is still alive
     QKeychain::Job* waitForStalled() { return waitForAnyStalled() ? mStalled.constFirst().data() : nullptr; }
+
+    // The nth stalled job, counting from zero, once the staller has taken that many over. A test
+    // answering one refusal and then waiting again would otherwise be handed the same job back -
+    // mStalled keeps what it has taken over, and the one just answered is on its way to deletion -
+    // so a chain of refusals has to name which of them it means.
+    QKeychain::Job* waitForStalled(int index)
+    {
+        const bool arrived = QTest::qWaitFor(
+                [this, index]() {
+                    return mStalled.size() > index;
+                },
+                kWaitMs);
+        if (!arrived) {
+            return nullptr;
+        }
+        return mStalled.at(index).data();
+    }
 
     bool firstStalledAlive() const { return !mStalled.isEmpty() && mStalled.constFirst(); }
 
@@ -487,6 +550,7 @@ private:
     std::function<bool(QKeychain::Job*)> mShouldStall;
     QList<QPointer<QKeychain::Job>> mStalled;
     QList<QPair<QString, QString>> mReads;
+    QList<QPair<QString, QString>> mDeletes;
     QObject mWitness;
     int mOutsideAnswers = 0;
     int mSeen = 0;
@@ -597,6 +661,10 @@ void CredentialManagerKeychainTest::initTestCase()
 
 void CredentialManagerKeychainTest::init()
 {
+    // Process-wide, so a case that had a read refused would otherwise trim the chain of the
+    // cases after it
+    CredentialManager::forgetStoreRefusal();
+    CredentialManager::profileStorageOverrideForTesting().reset();
     const QString runId = QUuid::createUuid().toString(QUuid::Id128).left(8);
     mProfile = QStringLiteral("MudletKCTest-%1").arg(runId);
     mKey = QStringLiteral("kctest_%1").arg(runId);
@@ -1221,8 +1289,303 @@ void CredentialManagerKeychainTest::testAKeychainErrorIsReportedRatherThanNothin
     QVERIFY2(answer->error.contains(QStringLiteral("synthetic: access refused")),
              qPrintable(QStringLiteral("a keychain that refused the read may still hold the password, but the lookup said: %1").arg(answer->error)));
     // A refused read is one place the password is not known to be missing from, not a reason to stop
-    // looking in the others
+    // looking in the others: the read after it is answered here, so the chain runs to the end. Only
+    // refusals with nothing answered between them are the store itself saying no (#11029).
     QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
+}
+
+// SlySven's report (#11029): a locked or dismissed keychain was asked once per historical layout,
+// and each ask is another wallet prompt in front of the player for an answer the store has already
+// given. The file is still read - the store has no say over that one - so a password kept there is
+// still found.
+void CredentialManagerKeychainTest::testAStoreThatRefusesIsNotAskedForEveryOtherLayout()
+{
+    JobStaller staller;
+    staller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QKeychain::Job* firstRead = staller.waitForStalled(0);
+    QVERIFY(firstRead);
+    JobStaller::answer(firstRead, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+    QKeychain::Job* secondRead = staller.waitForStalled(1);
+    QVERIFY2(secondRead, "one refusal was taken for the whole store, so an entry locked on its own would lose the layouts behind it");
+    QVERIFY2(secondRead != firstRead, "the second refusal answered the same read again, so the chain was never followed");
+    JobStaller::answer(secondRead, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY(!answer->success);
+    QVERIFY2(answer->error.contains(QStringLiteral("synthetic: the wallet is locked")), qPrintable(QStringLiteral("the refusal was not what the lookup reported: %1").arg(answer->error)));
+    // Two reads to tell a locked store from one unreadable entry, and no more: the chain has five or
+    // six layouts and each would prompt the player again
+    QCOMPARE(staller.reads().size(), 2);
+}
+
+// The profile preferences ask about "reconnect" and then "reconnect-token", each through a
+// CredentialManager of its own, which is how one dismissed prompt became two rounds of them.
+void CredentialManagerKeychainTest::testAFreshRefusalSparesTheNextLookupTheStore()
+{
+    JobStaller firstStaller;
+    firstStaller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager firstManager;
+    firstManager.mJobStartHook = firstStaller.hook();
+
+    const auto firstAnswer = startRetrieval(firstManager, mProfile, mKey);
+    // Two, because one refusal could be that entry's own
+    for (int refusal = 0; refusal < 2; ++refusal) {
+        QKeychain::Job* refused = firstStaller.waitForStalled(refusal);
+        QVERIFY(refused);
+        JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+    }
+    QVERIFY(waitForAnswer(firstAnswer));
+
+    JobStaller secondStaller;
+    secondStaller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager secondManager;
+    secondManager.mJobStartHook = secondStaller.hook();
+
+    const auto secondAnswer = startRetrieval(secondManager, mProfile, QStringLiteral("reconnect-token"));
+    QVERIFY(waitForAnswer(secondAnswer));
+    QVERIFY(!secondAnswer->success);
+    QVERIFY2(secondStaller.reads().isEmpty(), "the store was asked again moments after refusing, so the player is prompted twice");
+}
+
+// With the profile chosen as the place for passwords, nothing here may reach for the keychain:
+// that is what SlySven's setting asks for, and on his desktop every read of it costs a wallet
+// prompt. Stored, read back and removed without a single keychain job (#11029).
+void CredentialManagerKeychainTest::testTheProfileStoragePreferenceKeepsTheKeychainOutOfIt()
+{
+    CredentialManager::profileStorageOverrideForTesting() = true;
+    const QString secret = QStringLiteral("token-that-stays-in-the-profile");
+
+    JobStaller watcher;
+    // Deletes are taken over and answered here rather than reaching the machine's own keychain: the
+    // cleanup below is the one keychain job this mode starts, and the test has to see its outcome
+    // rather than wait on a real store.
+    watcher.stallEvery<QKeychain::DeletePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+
+    bool stored = false;
+    bool storeAnswered = false;
+    manager.storePassword(mProfile, mKey, secret, [&stored, &storeAnswered](bool success, const QString&) {
+        stored = success;
+        storeAnswered = true;
+    });
+    QTRY_VERIFY(storeAnswered);
+    QVERIFY2(stored, "the profile's own store did not take the credential");
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(answer->success, qPrintable(QStringLiteral("the profile's own copy was not read back: %1").arg(answer->error)));
+    QCOMPARE(answer->password, secret);
+
+    bool removed = false;
+    bool removeAnswered = false;
+    manager.removePassword(mProfile, mKey, [&removed, &removeAnswered](bool success, const QString&) {
+        removed = success;
+        removeAnswered = true;
+    });
+
+    // Forgetting reaches across to the keychain, because an entry stored before the preference
+    // changed is unreachable by every other path once it points at the file: both names a lookup
+    // would read are cleared, and "nothing there" is the ordinary answer for a profile that has only
+    // ever used the file.
+    // Two entries to clear, and on Windows each is swept twice: removeCredential() follows the
+    // named delete with one against the bare key, for entries a qtkeychain before 0.17 wrote under
+    // TargetName == key.
+    const int expectedDeletions = onWindows() ? 4 : 2;
+    for (int deletion = 0; deletion < expectedDeletions; ++deletion) {
+        QKeychain::Job* cleanup = watcher.waitForStalled(deletion);
+        QVERIFY2(cleanup, "the keychain copy was not cleared, so forgetting a sign-in would leave one behind");
+        JobStaller::answer(cleanup, QKeychain::EntryNotFound, QStringLiteral("synthetic: nothing stored here"));
+    }
+
+    QTRY_VERIFY(removeAnswered);
+    QVERIFY2(removed, "the removal reported failure although both stores are clear");
+
+    QVERIFY2(watcher.reads().isEmpty(), "the keychain was read although the player asked for passwords to be kept in the profile");
+    QCOMPARE(watcher.deletes().size(), expectedDeletions);
+    // Both layouts a lookup reads, named rather than merely different: clearing the current entry
+    // twice under two keys would satisfy "not equal" while leaving the colliding one behind
+    QVERIFY2(watcher.deletes().contains({expectedServiceName(mProfile, mKey), expectedServiceName(mProfile, mKey)}),
+             qPrintable(QStringLiteral("the current-format entry was not cleared, only: %1").arg(describeDeletes(watcher.deletes()))));
+    QVERIFY2(watcher.deletes().contains({expectedLegacyServiceName(mProfile, mKey), expectedLegacyServiceName(mProfile, mKey)}),
+             qPrintable(QStringLiteral("the colliding-format entry was not cleared, only: %1").arg(describeDeletes(watcher.deletes()))));
+}
+
+// A single refusal can be one entry's own - a per-item ACL, or an item another build saved under
+// terms this one cannot meet - while the rest of the store reads perfectly well, so the password
+// kept in a layout behind it still has to be found. Raised in review of #11031.
+void CredentialManagerKeychainTest::testOneUnreadableEntryDoesNotHideAnOlderLayout()
+{
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QKeychain::Job* refused = staller.waitForStalled();
+    QVERIFY(refused);
+    JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: this one entry is not readable"));
+
+    QVERIFY(waitForAnswer(answer));
+    QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
+}
+// readable, and a lookup for one of those must not be answered out of the file because of a
+// refusal that was nothing to do with it (raised in review of #11032).
+void CredentialManagerKeychainTest::testARefusalForOneProfileDoesNotSkipTheStoreForAnother()
+{
+    JobStaller refusingStaller;
+    refusingStaller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager refusedManager;
+    refusedManager.mJobStartHook = refusingStaller.hook();
+
+    const auto refusedAnswer = startRetrieval(refusedManager, mProfile, mKey);
+    for (int refusal = 0; refusal < 2; ++refusal) {
+        QKeychain::Job* read = refusingStaller.waitForStalled(refusal);
+        QVERIFY(read);
+        JobStaller::answer(read, QKeychain::AccessDenied, QStringLiteral("synthetic: this profile's entries are locked"));
+    }
+    QVERIFY(waitForAnswer(refusedAnswer));
+
+    JobStaller otherStaller;
+    otherStaller.answerOtherReadsNotFound();
+    CredentialManager otherManager;
+    otherManager.mJobStartHook = otherStaller.hook();
+
+    const QString otherProfile = mProfile + QStringLiteral("-elsewhere");
+    const auto otherAnswer = startRetrieval(otherManager, otherProfile, mKey);
+    QVERIFY(waitForAnswer(otherAnswer));
+    QVERIFY2(!otherStaller.reads().isEmpty(), "another profile's lookup was answered out of the file because this profile's keychain was refused");
+}
+
+// What the window is for: while the store is refusing, the file is still read - it is not the
+// store's to refuse - so a password kept there goes on working (raised in review of #11032).
+void CredentialManagerKeychainTest::testATrimmedLookupStillFindsTheProfilesOwnCopy()
+{
+    const QString secret = QStringLiteral("kept-in-the-file-while-the-wallet-is-locked");
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, secret));
+
+    JobStaller refusingStaller;
+    refusingStaller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager refusedManager;
+    refusedManager.mJobStartHook = refusingStaller.hook();
+
+    const auto refusedAnswer = startRetrieval(refusedManager, mProfile, mKey);
+    for (int refusal = 0; refusal < 2; ++refusal) {
+        QKeychain::Job* read = refusingStaller.waitForStalled(refusal);
+        QVERIFY(read);
+        JobStaller::answer(read, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+    }
+    QVERIFY(waitForAnswer(refusedAnswer));
+    QVERIFY2(refusedAnswer->success, "the file was not read once the store had refused, so a saved password stops working while a wallet is locked");
+    QCOMPARE(refusedAnswer->password, secret);
+
+    JobStaller trimmedStaller;
+    trimmedStaller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager trimmedManager;
+    trimmedManager.mJobStartHook = trimmedStaller.hook();
+
+    const auto trimmedAnswer = startRetrieval(trimmedManager, mProfile, mKey);
+    QVERIFY(waitForAnswer(trimmedAnswer));
+    QVERIFY2(trimmedAnswer->success, "the lookup the window trimmed did not read the file, so the password it holds was lost");
+    QCOMPARE(trimmedAnswer->password, secret);
+    QVERIFY2(trimmedStaller.reads().isEmpty(), "the store was asked again moments after refusing");
+
+    CredentialManager::removeCredential(mProfile, mKey);
+}
+
+// Forgetting has to be honest: a keychain that holds a credential and will not let it go means the
+// sign-in is not gone, whatever the profile's own copy did (raised in review of #11032).
+void CredentialManagerKeychainTest::testForgettingSaysSoWhenTheKeychainCopyRemains()
+{
+    CredentialManager::profileStorageOverrideForTesting() = true;
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, QStringLiteral("a-token-in-both-stores")));
+
+    JobStaller watcher;
+    watcher.stallEvery<QKeychain::DeletePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+
+    bool removed = true;
+    bool removeAnswered = false;
+    QString reported;
+    manager.removePassword(mProfile, mKey, [&removed, &removeAnswered, &reported](bool success, const QString& error) {
+        removed = success;
+        reported = error;
+        removeAnswered = true;
+    });
+
+    const int deletions = onWindows() ? 4 : 2;
+    for (int deletion = 0; deletion < deletions; ++deletion) {
+        QKeychain::Job* cleanup = watcher.waitForStalled(deletion);
+        QVERIFY(cleanup);
+        // The first refuses; the rest answer, so the refusal is the only reason to report failure
+        JobStaller::answer(cleanup,
+                           deletion == 0 ? QKeychain::AccessDenied : QKeychain::EntryNotFound,
+                           deletion == 0 ? QStringLiteral("synthetic: this entry will not be deleted") : QStringLiteral("synthetic: nothing stored here"));
+    }
+
+    QTRY_VERIFY(removeAnswered);
+    QVERIFY2(!removed, "a keychain copy that could not be removed was reported as forgotten");
+    QVERIFY2(reported.contains(QStringLiteral("keychain")), qPrintable(QStringLiteral("the failure does not say where the credential still is: %1").arg(reported)));
+    QVERIFY2(reported.contains(QStringLiteral("synthetic: this entry will not be deleted")), qPrintable(QStringLiteral("the keychain's own reason was dropped: %1").arg(reported)));
+}
+
+// Once the store has answered a read it is unlocked, so every refusal after that is one entry's
+// own however many of them arrive - and the password may be in a layout behind them. Two in a row
+// must not be read as a locked store here, which is what separates "nothing has answered" from
+// "this entry will not answer" (raised in review of #11031).
+void CredentialManagerKeychainTest::testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain()
+{
+    JobStaller staller;
+    // The first read answers, the two after it refuse
+    staller.stallNths<QKeychain::ReadPasswordJob>({1, 2});
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    for (int refusal = 0; refusal < 2; ++refusal) {
+        QKeychain::Job* refused = staller.waitForStalled(refusal);
+        QVERIFY(refused);
+        JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: this entry will not answer"));
+    }
+
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(staller.reads().size() == expectedReads(mProfile, mKey).size(),
+             qPrintable(QStringLiteral("the chain stopped after two refusals although the store had already answered: %1 of %2 layouts were read")
+                                .arg(staller.reads().size())
+                                .arg(expectedReads(mProfile, mKey).size())));
+}
+
+// A reconnect token cannot be in the colliding format - that layout belongs to 4.20.0 and 4.20.1,
+// months before the sign-in keys existed - nor in the key=account layout that the Windows keychain
+// fix replaced. Reading them anyway found nothing and cost the player a prompt each, on a keychain
+// that asks per item: two of them per profile, on the two keys the profile preferences ask about
+// (#11029, reported against a development build).
+void CredentialManagerKeychainTest::testASignInKeyIsNotLookedForInLayoutsOlderThanItself()
+{
+    JobStaller staller;
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, QStringLiteral("reconnect-token"));
+    QVERIFY(waitForAnswer(answer));
+
+    const QString service = expectedServiceName(mProfile, QStringLiteral("reconnect-token"));
+    QList<QPair<QString, QString>> expected;
+    expected.append({service, service});
+#if defined(Q_OS_WIN)
+    // The bare-name read stays: it is the same entry under the naming a qtkeychain before 0.17 used,
+    // not an older layout of Mudlet's own
+    expected.append({QString(), service});
+#endif
+    QCOMPARE(staller.reads(), expected);
 }
 
 void CredentialManagerKeychainTest::testALookupThatAnswersInTimeOwesNoLateAnswer()

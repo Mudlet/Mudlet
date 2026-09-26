@@ -486,10 +486,16 @@ private slots:
             reads->append(job);
             return false;
         };
-        // The keychain path is the one under test, and MUDLET_TEST_MODE puts CredentialManager on
-        // file storage - it is read as the lookup starts, so it can go straight back
+        // The keychain path is the one under test, and two things route CredentialManager away from
+        // it: MUDLET_TEST_MODE, and - since saved sign-ins began following the "Store passwords in"
+        // preference (#11029) - the preference this class turns off in init() so that no case can
+        // reach the real keychain by accident. Both are read as the lookup starts, so both go back
+        // immediately afterwards; the job hook above is what actually keeps the reads away from the
+        // machine's own store.
         qunsetenv("MUDLET_TEST_MODE");
+        mudlet::self()->setStorePasswordsSecurely(true);
         host->lookUpSecuredPassword(manager);
+        mudlet::self()->setStorePasswordsSecurely(false);
         qputenv("MUDLET_TEST_MODE", "1");
 
         QVERIFY2(!reads->isEmpty(), "the lookup never read the keychain, so this test cannot cover it");

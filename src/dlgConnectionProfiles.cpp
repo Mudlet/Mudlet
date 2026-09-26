@@ -3053,6 +3053,19 @@ void dlgConnectionProfiles::passwordArrivedLate(const QString& profileName, bool
 
 void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name)
 {
+    // The profile's own "password" file first, because that is where this dialog
+    // writes it when passwords are kept in the profile (slot_updatePassword), and
+    // where Host reads it back. The settings below are the older location, from
+    // before there were profile data files at all: reading only those left the
+    // field blank for everyone whose password lives in the file, which is everyone
+    // who has chosen profile storage since that choice existed.
+    const QString fromProfile = readProfileData(profile_name, qsl("password"));
+    if (!fromProfile.isEmpty()) {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(fromProfile);
+        return;
+    }
+
     auto& settings = *MudletApp::getQSettings();
     settings.beginGroup(qsl("profiles/%1").arg(profile_name));
 

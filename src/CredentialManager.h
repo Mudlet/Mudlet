@@ -20,11 +20,14 @@
 #ifndef MUDLET_CREDENTIALMANAGER_H
 #define MUDLET_CREDENTIALMANAGER_H
 
+#include <QElapsedTimer>
+#include <QHash>
 #include <QObject>
 #include <QString>
 #include <QPointer>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 class QTimer;
@@ -112,8 +115,6 @@ private:
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);
 
-    // Password migration method - migrates plaintext passwords to encrypted storage
-    void migratePassword(const QString& profileName, const QString& key, const QString& plaintextPassword, CredentialCallback callback);
     static constexpr int OPERATION_TIMEOUT_MS = 30000; // 30 seconds
 
     // Portable mode detection
@@ -177,11 +178,54 @@ private:
         // The first read that failed for a reason other than there being no such entry, reported in
         // place of "not found" if nothing turns up.
         QString keychainError;
+        // Whether any read has reached the store, answering either with a password or with "no such
+        // entry". Until one has, a refusal is the store itself saying no - locked, or a prompt the
+        // player dismissed - and the layouts behind it cannot be read either. Once one has, every
+        // refusal after it is that entry's own, however many of them there are, and the chain runs
+        // to the end: the password may be in a layout behind them.
+        bool storeHasAnswered = false;
+        // Set when the store has refused scmRefusalsBeforeGivingUpOnTheStore reads in a row without
+        // answering any: every remaining keychain read would ask it the same question, and be
+        // refused the same way, at the cost of another prompt. Only the file is read from then on.
+        bool storeRefused = false;
+        // Refusals since the last read the store answered. One can be an entry of its own that the
+        // player - or a per-item ACL - has locked away while the rest of the store is readable, so
+        // one is not enough to give up on the layouts behind it.
+        int consecutiveRefusals = 0;
     };
     using LookupPtr = std::shared_ptr<Lookup>;
 
     void finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage, bool timedOut = false);
     void runLookupStage(const LookupPtr& lookup, std::size_t index);
+    // When the store last refused a profile's reads before answering any of them. Kept per profile
+    // and across managers, because a caller asking about two keys - the profile preferences ask
+    // about "reconnect" and then "reconnect-token" - builds a CredentialManager for each, and the
+    // point is to spare the player a second prompt for the answer the first one already gave. Not
+    // wider than the profile: another profile's entries may be readable, and a lookup for one of
+    // those must not be answered out of the file because of a refusal that was nothing to do with
+    // it. It runs out rather than latching, so a player who unlocks their keychain is not left
+    // without it until they restart: while it is open no read reaches the store, so the window's
+    // own expiry - or a lookup that began before it opened, whose reads the store then answers - is
+    // what ends it. A write is deliberately not enough, for the reason storeCredential() gives.
+    static QHash<QString, QElapsedTimer>& storeRefusals();
+    static bool storeRefusedRecently(const QString& profileName);
+    static void noteStoreRefusal(const QString& profileName);
+    // Forgets every refusal window. The state outlives one test, and a case that had a read refused
+    // would otherwise decide what the cases after it are allowed to ask the store.
+    static void forgetStoreRefusal();
+
+    // Whether the player asked for passwords to be kept in the profile rather than in secure
+    // storage. Empty when there is nothing to ask - a unit test with no mudlet instance - so the
+    // caller keeps its own default.
+    static std::optional<bool> profileStoragePreferred();
+    // Test-only: stands in for that preference where there is no mudlet to read it from.
+    static std::optional<bool>& profileStorageOverrideForTesting();
+    static constexpr int scmStoreRefusalCooldownMs = 30000;
+    // How many reads the store may refuse, without answering any of them, before a lookup stops
+    // asking it. Two rather than one: a single refusal can be one entry's own, and an older layout
+    // behind it may still hold the password, so the second read is what tells a locked or dismissed
+    // store apart from an entry that is simply not readable.
+    static constexpr int scmRefusalsBeforeGivingUpOnTheStore = 2;
     // Hands the answer of the read the deadline cut short to the lookup's lateCallback, whenever
     // the keychain gets round to giving it
     static void awaitLateAnswer(const LookupPtr& lookup);
