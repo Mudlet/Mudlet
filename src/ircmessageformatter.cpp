@@ -23,18 +23,14 @@
 
 #include <IrcTextFormat>
 
-// communi escapes & and < before it strips the IRC formatting codes, and hands
-// out the plain text with those entities still in it; a script wants the text
-// the way it was sent. Only those two are escaped, and &lt; is undone first so
-// that a literal "&lt;" (which came through as "&amp;lt;") survives the trip.
+// communi escapes only & and < before stripping formatting; scripts want the text as sent.
+// &lt; is undone first so a literal "&lt;" (arriving as "&amp;lt;") survives.
 static QString plainTextForLua(const QString& text)
 {
     return IrcTextFormat().toPlainText(text).replace(QStringLiteral("&lt;"), QStringLiteral("<")).replace(QStringLiteral("&amp;"), QStringLiteral("&"));
 }
 
-// Whatever a server or another user fills in reaches the IRC window as HTML and
-// a script as it was sent, so every such field goes through here rather than
-// being interpolated raw into a line that QTextBrowser will render as markup.
+// Every server- or user-supplied field goes through here, never raw into markup QTextBrowser renders.
 static QString contentFor(const QString& text, bool isForLua)
 {
     if (isForLua) {
