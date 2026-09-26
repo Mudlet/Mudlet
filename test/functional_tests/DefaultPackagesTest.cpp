@@ -73,10 +73,10 @@ private:
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
 
-    QStringList preinstallsFor(const QString& gameUrl, const QString& profileName = qsl("test"))
+    QStringList preinstallsFor(const QString& gameUrl, const QString& profileName = qsl("test"), const bool serverGuiAccepted = true)
     {
         mudlet::self()->mPackagesToInstallList.clear();
-        mudlet::self()->setupPreInstallPackages(gameUrl, profileName);
+        mudlet::self()->setupPreInstallPackages(gameUrl, profileName, serverGuiAccepted);
         return mudlet::self()->mPackagesToInstallList;
     }
 
@@ -168,6 +168,15 @@ private slots:
         // StickMUD has no loader - its Client.GUI only arrives after login, too
         // late for the starter UI to stand aside before building itself
         QVERIFY(!preinstallsFor(qsl("stickmud.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+    }
+
+    // A profile copied with its settings can refuse server GUIs or GMCP before the
+    // preinstall runs; a Client.GUI game's interface then never arrives, while a
+    // bundled loader fetches its own regardless.
+    void test_refusedServerGuiKeepsTheStarterUi()
+    {
+        QVERIFY(preinstallsFor(qsl("stickmud.com"), qsl("test"), false).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+        QVERIFY(!preinstallsFor(qsl("icesus.org"), qsl("test"), false).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
     }
 
     // Why mpkg cannot be in a test profile: see setupPreInstallPackages() in
