@@ -53,6 +53,22 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+// spellCheckWord() takes the word under the cursor it is given, and for a
+// cursor at the end of a word that is whatever follows it - so hand it the
+// start of the word that ends at, or runs across, the position instead
+QTextCursor cursorAtWordStart(QTextDocument* pDocument, const int position)
+{
+    QTextCursor cursor(pDocument);
+    const bool onALetter = pDocument->characterAt(position).isLetterOrNumber();
+    const bool afterALetter = position > 0 && pDocument->characterAt(position - 1).isLetterOrNumber();
+    cursor.setPosition(afterALetter && !onALetter ? position - 1 : position);
+    cursor.select(QTextCursor::WordUnderCursor);
+    cursor.setPosition(cursor.selectionStart());
+    return cursor;
+}
+} // namespace
+
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mCommandLineName(name)
@@ -747,7 +763,7 @@ void TCommandLine::spellCheck()
     }
 
     QTextCursor oldCursor = textCursor();
-    QTextCursor c = textCursor();
+    QTextCursor c = cursorAtWordStart(document(), oldCursor.position());
     spellCheckWord(c);
     QTextCharFormat f;
     f.setFontUnderline(false);
@@ -781,8 +797,11 @@ void TCommandLine::slot_popupMenu()
         Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
     }
 
-    // Call the function again so that the replaced word gets rechecked:
-    spellCheck();
+    // Recheck the replacement, which the caret need not be on
+    const QTextCursor oldCursor = textCursor();
+    QTextCursor replacement = cursorAtWordStart(document(), c.position());
+    spellCheckWord(replacement);
+    setTextCursor(oldCursor);
 }
 
 void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
@@ -1290,8 +1309,9 @@ void TCommandLine::slot_removeWord()
     }
 
     mpHost->spellChecker().removeWord(mSpellCheckedWord);
-    // Redo spell check to update underlining
-    spellCheck();
+    // The word right-clicked need not be the one the caret is on, and it
+    // may be in the line more than once
+    recheckWholeLine();
 }
 
 void TCommandLine::slot_addWord()
@@ -1301,8 +1321,9 @@ void TCommandLine::slot_addWord()
     }
 
     mpHost->spellChecker().addWord(mSpellCheckedWord);
-    // Redo spell check to update underlining
-    spellCheck();
+    // The word right-clicked need not be the one the caret is on, and it
+    // may be in the line more than once
+    recheckWholeLine();
 }
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
@@ -1414,8 +1435,6 @@ void TCommandLine::recheckWholeLine()
     // Save the current position
     const QTextCursor oldCursor = textCursor();
 
-    // spellCheckWord() takes the word under the cursor, which for a cursor at
-    // the end of a word is whatever follows it - so hand it each word's start
     QTextCursor c(document());
     const int length = document()->characterCount() - 1;
     int position = 0;
@@ -1427,8 +1446,8 @@ void TCommandLine::recheckWholeLine()
             continue;
         }
         const int wordEnd = c.selectionEnd();
-        c.setPosition(c.selectionStart());
-        spellCheckWord(c);
+        QTextCursor word = cursorAtWordStart(document(), c.selectionStart());
+        spellCheckWord(word);
         position = std::max(wordEnd, position + 1);
     }
     // Jump back to where we started
