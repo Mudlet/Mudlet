@@ -419,7 +419,11 @@ private slots:
 
         // UTF-8 indexes count bytes, so everything before the 'a' adds up to 24:
         // 1 + 1 + 1 + 2 + 3 + 2 + 3 + 4 + 4 + 3
-        QVERIFY2(analysis.contains(qsl("<th><center>25</center></th>")), "the UTF-8 index of the first letter does not count the bytes before it");
+        QVERIFY2(analysis.contains(qsl("<th><center>25</center></th>")), qPrintable(qsl("the UTF-8 index of the first letter does not count the bytes before it:\n%1").arg(analysis)));
+        // and the ten letters that follow end on 34, which pins the count from
+        // both sides - an undercount shifts some other letter onto 25
+        QVERIFY2(analysis.contains(qsl("<th><center>34</center></th>")), "the UTF-8 index of the last letter undercounts the bytes before it");
+        QVERIFY2(!analysis.contains(qsl("<th><center>35</center></th>")), "the UTF-8 index of the last letter overcounts the bytes before it");
         QVERIFY2(analysis.contains(qsl("<td colspan=\"1\"><center>j</center></td>")), "the analysis lost the end of the line");
         QVERIFY2(analysis.count(qsl("<table")) > 1, "a line of over 16 code points was not split into more than one table");
     }

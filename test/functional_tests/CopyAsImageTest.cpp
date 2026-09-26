@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QClipboard>
+#include <QScopeGuard>
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -367,7 +368,7 @@ private slots:
     {
         QTest::addColumn<int>("mode");
         QTest::addColumn<QString>("expectedGlyphs");
-        QTest::addColumn<int>("tabCells");
+        QTest::addColumn<bool>("tabAdvancesToATabStop");
 
         // The Unicode "Control Pictures" block puts each C0 control at
         // U+2400 plus its value, and DEL at U+2421
@@ -382,50 +383,63 @@ private slots:
 
         // A tab still moves on to the next tab stop under its picture, whereas
         // the OEM font drew it as a single-cell circle
-        QTest::newRow("picture") << static_cast<int>(ControlCharacterMode::Picture) << pictures << -1;
-        QTest::newRow("oem") << static_cast<int>(ControlCharacterMode::OEM) << oem << 1;
+        QTest::newRow("picture") << static_cast<int>(ControlCharacterMode::Picture) << pictures << true;
+        QTest::newRow("oem") << static_cast<int>(ControlCharacterMode::OEM) << oem << false;
     }
 
     void test_controlCharactersAreDrawnAsTheGlyphsTheProfileChose()
     {
         QFETCH(int, mode);
         QFETCH(QString, expectedGlyphs);
-        QFETCH(int, tabCells);
+        QFETCH(bool, tabAdvancesToATabStop);
 
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
         Host* host = mudlet::self()->getActiveHost();
         TMainConsole* console = host->mpConsole;
         QVERIFY(!console->showTimeStamps());
+        QCOMPARE(host->getControlCharacterMode(), ControlCharacterMode::AsIs);
+        auto restoreMode = qScopeGuard([host] {
+            host->setControlCharacterMode(ControlCharacterMode::AsIs);
+        });
 
-        QString text;
+        // The printable prefix moves the tab off a tab stop, so a tab that
+        // always took a whole stop's width would land in the wrong place
+        const QString prefix = qsl("abc");
+        QString text = prefix;
         for (const char16_t c : controlCharacters()) {
             text.append(QChar(c));
         }
         console->print(text + QChar::LineFeed);
         const int line = console->buffer.getLastLineNumber() - 1;
         QCOMPARE(console->buffer.line(line), text);
+        const int tabPosition = static_cast<int>(text.indexOf(QChar::Tabulation));
+        QVERIFY2(tabPosition % pane->mTabStopwidth != 0, "the tab starts on a tab stop, so its width cannot tell a stop's width from the rest of one");
 
+        // As is, a control character takes no room and draws nothing, except the tab
         std::vector<TTextEdit::GraphemeRun> layout;
-        QCOMPARE(host->getControlCharacterMode(), ControlCharacterMode::AsIs);
-        QVERIFY2(glyphsLaidOut(pane, line, layout) != expectedGlyphs, "the glyphs were drawn before the profile asked for them");
+        QCOMPARE(glyphsLaidOut(pane, line, layout), prefix + QChar(QChar::Tabulation));
 
         host->setControlCharacterMode(static_cast<ControlCharacterMode>(mode));
-        QCOMPARE(glyphsLaidOut(pane, line, layout), expectedGlyphs);
+        QCOMPARE(glyphsLaidOut(pane, line, layout), prefix + expectedGlyphs);
+        QCOMPARE(static_cast<int>(layout.size()), static_cast<int>(text.size()));
 
-        // The tab is the ninth character, so it starts in the ninth cell
-        const int tabIndex = static_cast<int>(controlCharacters().indexOf(u'\t'));
-        const auto& tabRun = layout.at(tabIndex);
-        const auto& afterTabRun = layout.at(tabIndex + 1);
-        QCOMPARE(tabRun.textRect.left(), tabIndex * pane->mFontWidth);
-        if (tabCells < 0) {
-            QVERIFY2(afterTabRun.textRect.left() > tabRun.textRect.left(), "the tab took up no room");
-            QCOMPARE(afterTabRun.textRect.left() % (pane->mTabStopwidth * pane->mFontWidth), 0);
-        } else {
-            QCOMPARE(afterTabRun.textRect.left() - tabRun.textRect.left(), tabCells * pane->mFontWidth);
+        // Every replacement glyph takes one cell; the tab either runs on to the
+        // next tab stop or, like the OEM font's circle, takes one cell too
+        int cell = 0;
+        for (int i = 0; i < static_cast<int>(layout.size()); ++i) {
+            const int cells = (i == tabPosition && tabAdvancesToATabStop) ? pane->mTabStopwidth - cell % pane->mTabStopwidth : 1;
+            const QRect& rect = layout.at(i).textRect;
+            QVERIFY2(rect.left() == cell * pane->mFontWidth && rect.width() == cells * pane->mFontWidth,
+                     qPrintable(qsl("character %1 (U+%2) was laid out at x=%3, %4px wide, rather than in cell %5, %6 cells wide")
+                                        .arg(i)
+                                        .arg(static_cast<int>(text.at(i).unicode()), 4, 16, QLatin1Char('0'))
+                                        .arg(rect.left())
+                                        .arg(rect.width())
+                                        .arg(cell)
+                                        .arg(cells)));
+            cell += cells;
         }
-
-        host->setControlCharacterMode(ControlCharacterMode::AsIs);
     }
 
     void test_repeatedCopyKeepsWorking()
