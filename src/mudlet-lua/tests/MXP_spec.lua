@@ -350,8 +350,6 @@ describe("Tests MXP handling", function()
       assert.is_true(mainRecentlyHolds("MXPDEST13 anchored in main"))
     end)
 
-    -- EOL is the narrower of the two: it must leave the finished lines above
-    -- the open one where they are, which is what tells it apart from EOF
     -- a redirect into a frame that was never opened has nowhere else to go,
     -- so the text stays where it would have been without one
     it("leaves the text in the main window when the frame it names is not there", function()
@@ -361,6 +359,8 @@ describe("Tests MXP handling", function()
       assert.is_false(holds(frameLines(), "MXPDEST14"))
     end)
 
+    -- EOL is the narrower of the two: it must leave the finished lines above
+    -- the open one where they are, which is what tells it apart from EOF
     it("keeps the frame's finished lines when the redirect carries EOL", function()
       assert.is_true(feedTriggers(('<DEST %s>MXPDEST9 kept</DEST>'):format(frame) .. "\n"))
       echo(frame, "MXPDEST10 unfinished")
@@ -496,6 +496,17 @@ describe("Tests MXP handling", function()
       assert.are.equal(rows, getRowCount("main"))
     end)
 
+    it("takes no main window space for a frame given only a TOP", function()
+      finally(function() closeFrame("mxpSpecTopFrame") end)
+      local columns, rows = getColumnCount("main"), getRowCount("main")
+
+      openFrame("mxpSpecTopFrame", 'Top="10%" Width="30%" Height="30%"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecTopFrame"))
+      assert.are.equal(columns, getColumnCount("main"))
+      assert.are.equal(rows, getRowCount("main"))
+    end)
+
     -- the first tab turns its parent into a tab widget; later ones join it, and
     -- closing one of them leaves the others and the parent alone
     it("closes one tab of a frame without its sibling or its parent", function()
@@ -510,11 +521,14 @@ describe("Tests MXP handling", function()
       local columns = getColumnCount("main")
       assert.are.equal("miniconsole", windowType("mxpSpecTabFirst"))
       assert.are.equal("miniconsole", windowType("mxpSpecTabSecond"))
+      assert.is_true(windowVisible("mxpSpecTabFirst"))
+      assert.is_false(windowVisible("mxpSpecTabSecond"))
 
       closeFrame("mxpSpecTabFirst")
 
       assert.is_nil(windowType("mxpSpecTabFirst"))
       assert.are.equal("miniconsole", windowType("mxpSpecTabSecond"))
+      assert.is_true(windowVisible("mxpSpecTabSecond"), "the tab left showing is not the one that remains")
       assert.are.equal("miniconsole", windowType("mxpSpecTabHost"))
       assert.are.equal(columns, getColumnCount("main"), "closing a tab changed the space its parent takes")
     end)
