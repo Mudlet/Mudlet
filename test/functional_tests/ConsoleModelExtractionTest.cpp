@@ -33,6 +33,7 @@
 #include "GifTestHelper.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "GifTracker.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -52,7 +53,6 @@
 #include "TelnetServerStub.h"
 #include "XMLimport.h"
 #include "ctelnet.h"
-#include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -1089,10 +1089,10 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
+        delete mudlet::self();
         deleteProfileDirectory(mHostname);
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
-        delete mudlet::self();
     }
 
     // Every one of these Lua functions used to reach through Host::mpConsole
@@ -2813,37 +2813,15 @@ private:
     // GUI
     void startProfile()
     {
-        const QString hostname = mHostname;
-        const QString address = mLocalhost;
-        const QString port = mPort;
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5s)) {
-            QFAIL("Profile took too long to load.");
+        Host* host = TestProfile::create(mHostname, mLocalhost, mPort);
+        if (!host) {
+            QFAIL("The profile did not load.");
         }
-        if (!mudlet::self()->getActiveHost()) {
-            QFAIL("No active host available for the test.");
-        }
-
-        QSignalSpy spy2(&(mudlet::self()->getActiveHost()->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2s)) {
+        if (!QTest::qWaitFor(
+                    [host]() {
+                        return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+                    },
+                    5000)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -2871,9 +2849,13 @@ private:
         // profile should be saved, which would block on a modal dialog here.
         host->forceClose();
         QVERIFY2(host->requestClose(), "Closing the profile was refused.");
-        QTest::qWait(500ms); // the console carries WA_DeleteOnClose
-
-        QVERIFY2(console.isNull(), "The main console view was not destroyed by closing the profile.");
+        // the console carries WA_DeleteOnClose, so it goes on a later turn of the event loop
+        QVERIFY2(QTest::qWaitFor(
+                         [&console]() {
+                             return console.isNull();
+                         },
+                         5000),
+                 "The main console view was not destroyed by closing the profile.");
         QVERIFY2(host->mpConsole.isNull(), "The host still points at a main console.");
     }
 
@@ -3137,12 +3119,7 @@ private:
     // Utility function
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

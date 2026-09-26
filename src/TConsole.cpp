@@ -75,8 +75,7 @@
 using namespace std::chrono_literals;
 
 namespace {
-// The gap the layout leaves between the text panes and the vertical scroll bar.
-// Anything predicting how wide the panes come out has to take it off too.
+// Between the text panes and the vertical scroll bar; predictions of pane width must subtract it.
 constexpr int scrollBarSpacing = 1;
 
 double relativeLuminance(const QColor& color)
@@ -102,16 +101,10 @@ QColor readableLinkColor(const QColor& background)
     return contrastRatio(QColor(Qt::blue), background) >= contrastRatio(lightBlue, background) ? QColor(Qt::blue) : lightBlue;
 }
 
-// Windows 11 colours the handle for the application's colour scheme rather than
-// for the surface it sits on - black at 45% alpha, invisible on a black console.
-// A style and not a style sheet: a widget's own style sheet outranks every other
-// rule, so a sheet here would drop a profile's setProfileStyleSheet() rules.
-//
-// Only that style is taken over. Every other style Mudlet meets draws its handle
-// against the groove it paints underneath it, so it is visible on any console
-// colour already, and it carries the hover and pressed feedback that this
-// painting cannot - measured on Linux/Fusion, the platform handle stands at
-// 19.8:1 against a black console where a handle drawn here reaches 20.1:1.
+// Windows 11 colours the handle for the app's colour scheme, not its surface: 45% black, invisible on a
+// black console. A style, not a style sheet: a widget's own sheet outranks every rule, so it would drop
+// setProfileStyleSheet() rules. Other styles draw the handle against their own groove, so it is visible
+// already, and keep hover/pressed feedback this painting lacks.
 bool consoleScrollBarStyleWanted()
 {
     const QStyle* pStyle = QApplication::style();
@@ -119,16 +112,14 @@ bool consoleScrollBarStyleWanted()
         return false;
     }
 
-    // Mudlet's application style is a proxy - AltFocusMenuBarDisable, or DarkTheme -
-    // and those carry no object name of their own, so it comes from the style wrapped.
+    // Mudlet's style is a proxy (AltFocusMenuBarDisable or DarkTheme) with no object name; use the base's.
     QString styleName = pStyle->objectName();
     if (styleName.isEmpty()) {
         if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
             styleName = pProxy->baseStyle()->objectName();
         }
     }
-    // Windows 10's style is not this one: it paints an opaque handle on a light
-    // track, which has the same contrast whatever the console is set to.
+    // Not windows10: its opaque handle on a light track has the same contrast on any console.
     return !styleName.compare(qsl("windows11"), Qt::CaseInsensitive);
 }
 
@@ -141,18 +132,15 @@ public:
     {
         const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
         const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
-        // Asked here rather than when the style is installed, so that replacing the
-        // application style - which the appearance setting does - is picked up without
-        // every console having to be told, and so a test can stand a Windows 11 style
-        // in on a platform that has none.
+        // Checked here, not at install, so a style switch (the appearance setting) needs no console
+        // told, and a test can stand in a Windows 11 style on any platform.
         if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !consoleScrollBarStyleWanted()) {
             QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
             return;
         }
 
-        // The groove and the arrows stay the base style's work, but its handle is masked
-        // out - and with it the handle's own hover state - because ours is alpha blended
-        // and would otherwise take its colour from that handle rather than the console.
+        // Mask the base style's handle (and its hover state): ours is alpha blended and would take its
+        // colour rather than the console's.
         QStyleOptionSlider baseOption(*pSlider);
         baseOption.subControls &= ~SC_ScrollBarSlider;
         QProxyStyle::drawComplexControl(control, &baseOption, pPainter, pWidget);
@@ -169,9 +157,8 @@ public:
         constexpr int cornerRadius = 4;
         const QRectF handleRect = (pSlider->orientation == Qt::Vertical) ? QRectF(handle).adjusted(inset, 0, -inset, 0) : QRectF(handle).adjusted(0, inset, 0, -inset);
 
-        // Outlined in the opposite colour because a background image on an ancestor shows
-        // through the groove: a fill alone can land on a matching image, a fill and its
-        // outline cannot both blend into one surface.
+        // An ancestor's background image shows through the groove; a fill can match it, but not a fill
+        // and an inverse outline both.
         const QColor outlineColor(255 - handleColor.red(), 255 - handleColor.green(), 255 - handleColor.blue(), handleColor.alpha());
 
         pPainter->save();
@@ -700,9 +687,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layerCommandLine->setAutoFillBackground(true);
 
     if (mType == CentralDebugConsole) {
-        // The filters decide what arrives from now on; searching is how you get
-        // back to something that has already scrolled past - so the find bar
-        // stays out of sight until Ctrl+F asks for it.
         createFindBar();
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
@@ -832,10 +816,8 @@ TConsole::~TConsole()
     // whole of this teardown, so drop them up front.
     disconnect(&mpModel->mNotifier, nullptr, this, nullptr);
 
-    // The backstop against a stale registry entry: TMainConsole deregisters
-    // where it destroys a sub-console, but one can also die as a child of the
-    // widget it was created into - a scroll box, say - with nobody having taken
-    // it out of the map first.
+    // Backstop: TMainConsole deregisters sub-consoles it destroys, but one can also die with the
+    // widget it was created into, e.g. a scroll box.
     if (mpHost && (mType & (SubConsole | UserWindow | Buffer))) {
         mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel.get());
     }
@@ -915,11 +897,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
-        // A console is sized as it is created, before this frame's layout has
-        // ever run, and a child widget still carries Qt's 100x30 default
-        // geometry until then, so ask the bar for the height it will be given.
-        // The hint is exact: the bar's vertical size policy is Fixed inside a
-        // QVBoxLayout.
+        // Sized before this frame's layout has run, while the bar still has Qt's 100x30 default
+        // geometry, so use its size hint - exact, as its vertical policy is Fixed in a QVBoxLayout.
         if (!mpTopToolBar->isHidden()) {
             y -= mpTopToolBar->sizeHint().height();
         }
@@ -950,9 +929,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
     if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
         syncHostScreenDimensions(mUpperPane->visibleRegion().boundingRect().width(), -1);
 
-        // The consoles put away in background tabs share this one's container
-        // and get no resize event of their own, so they are worked out from here.
-        // A detached profile has a window of its own and says nothing about them.
+        // Background-tab consoles share this container but get no resize event, so size them from here.
+        // A detached profile has its own window.
         mudlet* const app = mudlet::self();
         if (app && !app->getDetachedWindows().contains(mpHost->getName())) {
             for (const auto& otherHostPtr : *HostManager::self()) {
@@ -966,15 +944,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     if (mType & CentralDebugConsole) {
         positionFindBar();
-        // Wrap to whatever the window is now, rather than the fixed 100 columns
-        // it starts at - debug messages are long and a narrow wrap turns most of
-        // them into continuation lines. Only new messages are affected, which is
-        // the same rule the filters follow.
-        // Deferred because the panes have not been laid out at this point, so
-        // asking them how wide they are here just returns the old size:
+        // Wrap to the window, not the initial 100 columns: debug messages are long. Only new messages are
+        // affected, as with the filters. Deferred: the panes are not laid out yet and report the old size.
         QTimer::singleShot(0ms, this, [this]() {
-            // A hidden console reports no width at all - leave the wrap alone
-            // rather than clamping it to something narrow that would then stick:
+            // A hidden console reports no width; don't clamp the wrap to something narrow that would stick:
             const int columns = mUpperPane->getColumnCount();
             if (columns <= 0) {
                 return;
@@ -1073,8 +1046,7 @@ void TConsole::clear()
     // no longer exist and the copy actions work on out of range indices
     clearSelection();
     buffer.clear();
-    // the line --mirror was building went with the buffer, so the next copied
-    // line must not still carry it
+    // --mirror's pending line went with the buffer.
     mMirrorPendingLine.clear();
     clearSplit();
     mUpperPane->update();
@@ -1194,9 +1166,7 @@ void TConsole::slot_toggleReplayRecording()
             dirLogFile.mkpath(directoryLogFile);
         }
         if (!telnet.startReplayRecording(mLogFileName)) {
-            // The button has already toggled itself on - clicked() fires after
-            // that - so put it back rather than leave it looking pressed with
-            // no recording behind it:
+            // clicked() fires after the button has toggled itself on:
             replayButton->setChecked(false);
             qWarning() << "TConsole: failed to open replay file for writing:" << telnet.replayRecordingErrorString();
             //: Informational message displayed when replay recording file could not be opened. %1 is the reason
@@ -2326,9 +2296,8 @@ void TConsole::printFormatted(const QString& text, const std::vector<TChar>& for
 }
 
 namespace {
-// Writes one --mirror line to standard output. A reader that has gone away, or
-// a stream that cannot take any more, would otherwise cost a line per game line
-// in silence, so the first failure turns the option off and says so once.
+// The first failure (reader gone, stream full) turns --mirror off and says so once, rather than
+// silently losing every line.
 void writeMirrorLine(const QString& line)
 {
     QByteArray output = line.toUtf8();
@@ -2342,11 +2311,8 @@ void writeMirrorLine(const QString& line)
     qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
 }
 
-// Says which console a copied line came from. Every profile's main console is
-// called "main", so the console name on its own cannot tell two profiles apart.
-// Both names reach here from Lua, which takes any string at all, so a control
-// character in one - a line feed above all - would split the record in two for
-// a reader that goes by lines.
+// Every main console is "main", so the profile name is needed too. Both names come from Lua and may
+// hold control characters; a line feed would split the record for a line-based reader.
 QString mirrorPrefix(const QString& profileName, const QString& consoleName)
 {
     QString prefix = qsl("%1.%2| ").arg(profileName, consoleName);
@@ -2365,13 +2331,8 @@ void TConsole::mirrorToStdOut(const QString& text)
         return;
     }
 
-    // The print paths hand over a fragment of a line as readily as whole ones:
-    // Lua's print() sends its text and the newline that ends it as two calls of
-    // its own, and echo() need not end a line at all. TBuffer::appendLine()
-    // adds each fragment to the line it is building and starts a new one at
-    // every line feed, so this does the same and writes a line out once a line
-    // feed has ended it - one copied line per line shown, carrying what the
-    // console shows on it.
+    // Text may be a fragment (Lua's print() sends its newline separately, echo() need not end a line),
+    // so like TBuffer::appendLine(), write a line out only once a line feed ends it.
     QStringList fragments = text.split(QChar::LineFeed);
     const QString stillOpen = fragments.takeLast();
     const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
@@ -2389,9 +2350,7 @@ void TConsole::mirrorLineToStdOut(const QString& line)
     }
 
     const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
-    // A committed line does not join a line the print path left open: when the
-    // line being built holds anything, TBuffer::commitLineData() puts the one
-    // from the game on a line of its own below it. So does this.
+    // Like TBuffer::commitLineData(), put a committed line below a non-empty open line, not onto it.
     if (!mMirrorPendingLine.isEmpty()) {
         writeMirrorLine(prefix + mMirrorPendingLine);
         mMirrorPendingLine.clear();
@@ -2399,9 +2358,8 @@ void TConsole::mirrorLineToStdOut(const QString& line)
     writeMirrorLine(prefix + line);
 }
 
-// Not a bare buffer.clear(): the selection and scroll state have to go with
-// the deleted lines, or the copy actions index far out of the buffer. Same
-// as Lua's clearWindow() on this console.
+// Not a bare buffer.clear(): selection and scroll state must go with the lines, or the copy actions
+// index out of the buffer. Same as Lua's clearWindow().
 void TConsole::discardAll()
 {
     clear();
@@ -2494,19 +2452,15 @@ void TConsole::slot_stopAllItems(bool b)
     }
 }
 
-// Moves this console's search widgets into a find bar of its own. Used for the
-// Central Debug Console, whose bar floats over the bottom right of the console
-// the way the script editor's does - the filters are the everyday controls,
-// searching is the occasional one, so it only takes the room it needs and only
-// once Ctrl+F has asked for it.
+// For the Central Debug Console: its search widgets float over its bottom right, like the script
+// editor's, shown only on Ctrl+F since searching is occasional.
 void TConsole::createFindBar()
 {
     auto* pFindBar = new QFrame(this);
     pFindBar->setObjectName(qsl("debugFindBar"));
     pFindBar->setFrameShape(QFrame::StyledPanel);
     pFindBar->setFrameShadow(QFrame::Raised);
-    // It sits on top of the console's own text rather than in a space of its
-    // own, so it has to paint a background instead of letting that show through:
+    // It overlays the console's text, so it must paint its own background:
     pFindBar->setAutoFillBackground(true);
     mpFindBar = pFindBar;
 
@@ -2514,8 +2468,6 @@ void TConsole::createFindBar()
     pFindBarLayout->setContentsMargins(4, 2, 4, 2);
     pFindBarLayout->setSpacing(2);
 
-    // No longer the width of the window, so the search box gets a width that
-    // suits a search term rather than whatever room happens to be going:
     mpBufferSearchBox->setMaximumWidth(200);
     pFindBarLayout->addWidget(mpBufferSearchBox);
     pFindBarLayout->addWidget(mpBufferSearchUp);
@@ -2532,8 +2484,7 @@ void TConsole::createFindBar()
     connect(pButton_closeFindBar, &QAbstractButton::clicked, this, &TConsole::hideSearchBar);
     pFindBarLayout->addWidget(pButton_closeFindBar);
 
-    // Escape only while the bar has the focus, so it stays available to
-    // anything else in the window:
+    // Escape only while the bar has focus, leaving it free elsewhere in the window:
     auto* pShortcut_hide = new QShortcut(QKeySequence(Qt::Key_Escape), pFindBar);
     pShortcut_hide->setContext(Qt::WidgetWithChildrenShortcut);
     connect(pShortcut_hide, &QShortcut::activated, this, &TConsole::hideSearchBar);
@@ -2542,8 +2493,7 @@ void TConsole::createFindBar()
     pFindBar->hide();
 }
 
-// Nothing lays the find bar out for us, so it has to be told where the corner
-// it hangs off has got to.
+// Not in a layout, so it must follow its corner by hand.
 void TConsole::positionFindBar()
 {
     if (mpFindBar.isNull()) {
@@ -2553,8 +2503,7 @@ void TConsole::positionFindBar()
     const int margin = 6;
     int x = width() - mpFindBar->width() - margin;
     int y = height() - mpFindBar->height() - margin;
-    // Clear of the scroll bars, so it does not sit on the one thing being used
-    // to get to what is being searched for:
+    // Clear of the scroll bars, which are how the user reaches what is searched for:
     if (!mpScrollBar->isHidden()) {
         x -= mpScrollBar->width();
     }
@@ -2610,9 +2559,8 @@ void TConsole::slot_searchBufferUp()
     // The search term entry box is one widget that does not pass a mouse press
     // event up to the main TConsole and thus does not cause the focus to shift
     // to the profile's tab when in multi-view mode - so add a call to make that
-    // happen. Only for a profile's own console: the Central Debug Console is
-    // shared, and its mpHost is whichever profile happened to be open when it
-    // was created, so searching it would drag the user to an unrelated tab:
+    // happen. Only for a profile's own console: the Central Debug Console is shared,
+    // and its mpHost is an arbitrary profile, so this would switch to an unrelated tab:
     if (mType == MainConsole) {
         mudlet::self()->activateProfile(mpHost);
     }
@@ -2698,21 +2646,13 @@ void TConsole::slot_searchBufferDown()
     print(qsl("%1\n").arg(tr("No search results, sorry!")));
 }
 
-// How big this console's upper pane comes out when the main window gives the
-// console a container this size. Deselecting a tab resizes its console to
-// nothing and leaves the panes inside at whatever they last happened to be, so
-// a console in the background cannot simply be measured - but what it will get
-// is not a mystery either, since every main-window console shares a container
-// and only differs in what it takes out of it. Each term mirrors what
-// resizeEvent() does with the size it is given, in the same order, so that the
-// two cannot drift apart.
+// A background tab's console is resized to nothing with stale panes, so it can't be measured, but every
+// main-window console shares one container. Each term mirrors resizeEvent(), in order; keep them in step.
 int TConsole::upperPaneWidthFor(const int containerWidth) const
 {
     int paneWidth = containerWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
     if (!mpHost.isNull()) {
-        // The host's borders rather than mBorders: that copy is only refreshed
-        // when the console lays out, so for one that has been in the background
-        // across a setBorderLeft() it is the width it is coming back from.
+        // Not mBorders: it is only refreshed on layout, so is stale for a background console.
         const QMargins borders = mpHost->borders();
         paneWidth -= borders.left() + borders.right();
     }
@@ -2724,8 +2664,7 @@ int TConsole::upperPaneWidthFor(const int containerWidth) const
 
 int TConsole::upperPaneHeightFor(const int containerHeight) const
 {
-    // A scrolled-back console shows the lower pane as well, and where the user
-    // has dragged the split between the two is not something to guess at
+    // A scrolled-back console also shows the lower pane, and the user-dragged split can't be predicted.
     if (!mLowerPane->isHidden()) {
         return -1;
     }
@@ -2772,9 +2711,8 @@ void TConsole::syncHostScreenDimensions(const int paneWidthPx, const int paneHei
 
 void TConsole::syncHiddenScreenDimensions()
 {
-    // Only a console put away by a tab switch. One that is merely sharing the
-    // container - multi-view, or a splitter share not handed out yet - is on
-    // screen and sizes itself, and a detached one has a window of its own.
+    // Only for a console hidden by a tab switch. One sharing the container (multi-view, or an unassigned
+    // splitter share) is on screen and sizes itself; a detached one has its own window.
     const QWidget* container = parentWidget();
     if (mType != MainConsole || mpHost.isNull() || !isHidden() || !container) {
         return;
@@ -2788,9 +2726,7 @@ void TConsole::syncHiddenScreenDimensions()
 
 QSize TConsole::getMainWindowSize() const
 {
-    // A console put away by a tab switch is resized to nothing while the panes
-    // inside it keep whatever geometry they last had, so it cannot be measured -
-    // but it is going back into the container it came out of, and that can be.
+    // A console hidden by a tab switch can't be measured, but the container it returns to can.
     const bool predicted = mType == MainConsole && isHidden() && parentWidget();
     const QSize consoleSize = predicted ? parentWidget()->size() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
@@ -2820,10 +2756,7 @@ QSize TConsole::getMainWindowSize() const
 
 void TConsole::setCompactInputLine(const bool state)
 {
-    // the button row belongs to the main console alone - setCmdVisible() keeps
-    // it hidden for every other type and the constructor only applies the
-    // setting for a main console, so showing it here on the bare setting would
-    // put it on a console that never has one
+    // Only main consoles have the button row; the setting alone would show it on other types.
     mpButtonMainLayer->setVisible(!state && (mType & MainConsole));
 }
 

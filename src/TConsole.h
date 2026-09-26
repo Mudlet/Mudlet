@@ -158,8 +158,7 @@ class TSplitter;
 class dlgNotepad;
 
 
-// TPrintSink and TDebug::Sink are the write-only faces core code redirects
-// output to; QWidget stays first so moc sees the QObject base it needs.
+// QWidget stays first so moc sees the QObject base.
 class TConsole : public QWidget, public TPrintSink, public TDebug::Sink
 {
     Q_OBJECT
@@ -263,22 +262,14 @@ public:
     void scrollUp(int lines);
     void print(const QString& msg);
     void print(const char*);
-    // timeStampOverride is for content being replayed after being held back -
-    // it keeps the time the text arrived instead of the time it is shown:
+    // timeStampOverride keeps the arrival time for held-back content being replayed.
     void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
-    // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
-    // until its right-click menu asks for it:
+    // The Central Debug Console's find bar is hidden until Ctrl+F or its context menu calls this.
     void showSearchBar();
-    // Copies text a caller is putting on this console to standard output for
-    // --mirror, one line per line shown, each prefixed with the profile and
-    // console names. Does nothing unless --mirror was given. The text is a
-    // fragment of a line as often as it is whole lines, so a line is written
-    // out once a line feed has ended it and what is left over is held until
-    // one does.
+    // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
+    // line fragment, so what follows the last line feed is held until one arrives.
     void mirrorToStdOut(const QString& text);
-    // The same for a line that is already complete: TBuffer::commitLineData()
-    // calls this with a line as the game sent it, before a trigger can gag or
-    // rewrite it.
+    // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
     void mirrorLineToStdOut(const QString& line);
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
     void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
@@ -323,8 +314,7 @@ public:
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
-    // For a MainConsole put away by a tab switch, which no resize event reaches:
-    // works out the size it will come back to and has NAWS report it
+    // For a MainConsole hidden by a tab switch, which gets no resize events: NAWS-reports its restored size.
     void syncHiddenScreenDimensions();
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
@@ -364,17 +354,11 @@ public:
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
-    // The Central Debug Console's find bar, floating over the bottom right of
-    // the console itself:
+    // The Central Debug Console's find bar, floating over its bottom right.
     QPointer<QWidget> mpFindBar;
 
-    // The buffer, cursor/prompt state, selection, current format and fg/bg
-    // colours live in a core TConsoleModel reached through model(). For the
-    // main console that model is co-owned with Host (which drives the trigger
-    // pipeline through it - see Host::runTriggers); sub-consoles own theirs.
-    // The members below are references aliasing the model, so the existing
-    // buffer/mFgColor/... accesses across the codebase are unchanged - which is
-    // why the model has to stay declared ahead of every one of them.
+    // The main console co-owns its model with Host, which runs triggers through it; sub-consoles own theirs.
+    // The members below alias the model, so it must be declared first.
     std::shared_ptr<TConsoleModel> mpModel;
     TBuffer& buffer;
     static const QString cmLuaLineVariable;
@@ -400,8 +384,7 @@ public:
     int& mButtonState;
 
     QString& mConsoleName;
-    // What --mirror has been handed for the line this console is building, and
-    // has not written out yet because no line feed has ended it
+    // --mirror text not yet ended by a line feed.
     QString mMirrorPendingLine;
     QString& mCurrentLine;
     int& mEngineCursor;
@@ -499,8 +482,7 @@ private slots:
 private:
     void createFindBar();
     void positionFindBar();
-    // MainConsole only - they take off the profile's own main window borders.
-    // The height is -1 when it cannot be known.
+    // MainConsole only: subtract the profile's main window borders. Height is -1 when unknown.
     int upperPaneWidthFor(const int containerWidth) const;
     int upperPaneHeightFor(const int containerHeight) const;
     void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
