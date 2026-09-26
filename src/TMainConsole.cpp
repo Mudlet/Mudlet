@@ -1325,6 +1325,110 @@ bool TMainConsole::setCommandLineVisible(const QString& name, bool visible)
     return true;
 }
 
+TConsole* TMainConsole::consoleNamed(const QString& name)
+{
+    if (name.isEmpty() || !name.compare(qsl("main"))) {
+        return this;
+    }
+    return mSubConsoleMap.value(name);
+}
+
+bool TMainConsole::clearWindowSelection(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->deselect();
+    return true;
+}
+
+bool TMainConsole::selectWindowCurrentLine(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->selectCurrentLine();
+    return true;
+}
+
+std::optional<bool> TMainConsole::selectWindowSection(const QString& name, int from, int length)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->selectSection(from, length)};
+}
+
+std::optional<int> TMainConsole::selectWindowString(const QString& name, const QString& text, int matchNumber)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->select(text, matchNumber)};
+}
+
+std::optional<std::tuple<bool, QString, int, int>> TMainConsole::getWindowSelection(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getSelection()};
+}
+
+std::optional<QPair<quint8, TChar>> TMainConsole::getWindowTextFormat(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getTextAttributes()};
+}
+
+bool TMainConsole::setWindowDisplayAttributes(const QString& name, TChar::AttributeFlags attributes, bool enabled)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setDisplayAttributes(attributes, enabled);
+    return true;
+}
+
+bool TMainConsole::setWindowFgColor(const QString& name, const QColor& color)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setFgColor(color);
+    return true;
+}
+
+bool TMainConsole::setWindowBgColor(const QString& name, const QColor& color)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setBgColor(color);
+    return true;
+}
+
+bool TMainConsole::resetWindowFormat(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->reset();
+    return true;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
