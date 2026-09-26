@@ -3164,8 +3164,26 @@ describe("Tests installing a module whose XML cannot be read", function()
     installFixtureModule(name)
     local text = textFrom(mark)
 
+    -- installFixtureModule() only returns once the module is listed
     assert.is_true(containsWrapped(text, 'Failed to load module "' .. name .. '"'), text)
-    assert.is_true(moduleInstalled(name))
+  end)
+
+  it("says so for a bare XML module too", function()
+    local name = "mudlet-spec-badxml-bare"
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    copyFile(fixtureDirectory .. "/sources/" .. name .. "/" .. name .. ".xml", path)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the truncated bare XML module")
+
+    assert.is_true(containsWrapped(textFrom(mark), 'Failed to load module "' .. name .. '"'), textFrom(mark))
   end)
 end)
 

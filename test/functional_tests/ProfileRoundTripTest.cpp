@@ -103,6 +103,9 @@ private:
     Host* mpSource = nullptr;
     Host* mpTarget = nullptr;
     Host* mpLegacyTarget = nullptr;
+    // Runs from just before the running stopwatch is started, so the time it
+    // has on it once read back has an upper bound as well as a lower one.
+    QElapsedTimer mSinceStopWatchStarted;
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
     const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
@@ -540,6 +543,7 @@ private slots:
         QVERIFY(mpSource->makeStopWatchPersistent(runningWatch, true));
         QVERIFY(mpSource->makeStopWatchPersistent(stoppedWatch, true));
         QVERIFY(mpSource->adjustStopWatch(runningWatch, scmStopWatchMilliSeconds));
+        mSinceStopWatchStarted.start();
         QVERIFY(mpSource->startStopWatch(runningWatch).first);
         QVERIFY(mpSource->adjustStopWatch(stoppedWatch, scmStopWatchMilliSeconds));
 
@@ -590,7 +594,8 @@ private slots:
         for (const auto& [from, to] : {std::pair{qsl("caretShortcut=\"Tab\""), qsl("caretShortcut=\"CtrlTab\"")},
                                        std::pair{qsl("blankLineBehaviour=\"Hide\""), qsl("blankLineBehaviour=\"ReplaceWithSpace\"")},
                                        std::pair{qsl("ControlCharacterHandling=\"1\""), qsl("ControlCharacterHandling=\"2\"")},
-                                       std::pair{qsl("AmbigousWidthGlyphsToBeWide=\"yes\""), qsl("AmbigousWidthGlyphsToBeWide=\"no\"")}}) {
+                                       std::pair{qsl("AmbigousWidthGlyphsToBeWide=\"yes\""), qsl("AmbigousWidthGlyphsToBeWide=\"no\"")},
+                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")}}) {
             QVERIFY2(legacyXml.count(from) == 1, qPrintable(qsl("the export does not hold %1 exactly once").arg(from)));
             legacyXml.replace(from, to);
         }
@@ -797,6 +802,7 @@ private slots:
         QCOMPARE(mpLegacyTarget->mBlankLineBehaviour, Host::BlankLineBehaviour::ReplaceWithSpace);
         QCOMPARE(mpLegacyTarget->getControlCharacterMode(), ControlCharacterMode::OEM);
         QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
+        QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
     }
 
     // A persistent stopwatch comes back under its own name, still running or
@@ -817,7 +823,10 @@ private slots:
         QVERIFY2(stopped, "the stopped stopwatch was not read back");
         QVERIFY(running->persistent());
         QVERIFY(running->running());
-        QVERIFY(running->getElapsedMilliSeconds() >= scmStopWatchMilliSeconds);
+        const qint64 elapsed = running->getElapsedMilliSeconds();
+        // a second's slack for the wall clock the file is written and read by
+        // against the monotonic one timing this
+        QVERIFY2(elapsed >= scmStopWatchMilliSeconds && elapsed <= scmStopWatchMilliSeconds + mSinceStopWatchStarted.elapsed() + 1000, qPrintable(qsl("%1 ms on the running stopwatch").arg(elapsed)));
         QVERIFY(stopped->persistent());
         QVERIFY(!stopped->running());
         QCOMPARE(stopped->getElapsedMilliSeconds(), scmStopWatchMilliSeconds);

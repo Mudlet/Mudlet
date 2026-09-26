@@ -69,8 +69,9 @@ QString readable(const QString& snapshot)
 // Each of these would be refused for a different reason, and each item kind
 // checks for every one of them in code of its own.
 const QStringList scmUnreadableSnapshots{
-        // not base64 of anything qUncompress() accepts
-        qsl("bm90IGEgc25hcHNob3Q="),
+        // base64 of a size header and bytes that are not zlib data - a small
+        // size, as qUncompress() allocates whatever the header asks for first
+        qsl("AAAAEGdhcmJhZ2U="),
         // uncompressed XML is taken as it is, but this is not well formed
         qsl("<TriggerSnapshot><Trigger>"),
         // well formed, but without the snapshot root of any kind
@@ -115,9 +116,14 @@ private:
         trigger->mSoundTrigger = true;
         trigger->setSound(qsl("/sounds/%1.wav").arg(tag));
         trigger->mPackageName = qsl("%1 package").arg(tag);
+        trigger->setTemporary(true);
+        trigger->setTriggerType(REGEX_PERL);
+        trigger->mColorTrigger = true;
+        trigger->mColorTriggerFgColor = QColor(qsl("#778899"));
+        trigger->mColorTriggerBgColor = QColor(qsl("#aabbcc"));
         QVERIFY(trigger->setRegexCodeList({qsl("%1 substring").arg(tag), qsl("^%1 (\\d+)$").arg(tag), qsl("%1 start").arg(tag), qsl("%1 exact").arg(tag), qsl("return true"), qsl("2"), QString()},
                                           {REGEX_SUBSTRING, REGEX_PERL, REGEX_BEGIN_OF_LINE_SUBSTRING, REGEX_EXACT_MATCH, REGEX_LUA_CODE, REGEX_LINE_SPACER, REGEX_PROMPT}));
-        trigger->setIsActive(false);
+        trigger->setIsActive(true);
     }
 
     TAlias* newAlias(const QString& name, TAlias* parent = nullptr)
@@ -134,7 +140,7 @@ private:
         alias->setScript(qsl("local undone = \"%1 <&>\"").arg(tag));
         alias->setCommand(qsl("%1 command").arg(tag));
         alias->mPackageName = qsl("%1 package").arg(tag);
-        alias->setIsActive(false);
+        alias->setIsActive(true);
     }
 
     TTimer* newTimer(const QString& name, TTimer* parent = nullptr)
@@ -151,6 +157,9 @@ private:
         timer->setScript(qsl("local undone = \"%1 <&>\"").arg(tag));
         timer->setCommand(qsl("%1 command").arg(tag));
         timer->mPackageName = qsl("%1 package").arg(tag);
+        timer->setTemporary(true);
+        // only what the snapshot records, without starting the timer
+        timer->setShouldBeActive(true);
     }
 
     TScript* newScript(const QString& name, TScript* parent = nullptr)
@@ -166,7 +175,7 @@ private:
         script->setScript(qsl("local undone = \"%1 <&>\"").arg(tag));
         script->setEventHandlerList({qsl("%1FirstEvent").arg(tag), qsl("%1SecondEvent").arg(tag)});
         script->mPackageName = qsl("%1 package").arg(tag);
-        script->setIsActive(false);
+        script->setIsActive(true);
     }
 
     TKey* newKey(const QString& name, TKey* parent = nullptr)
@@ -184,7 +193,7 @@ private:
         key->setKeyCode(Qt::Key_F7);
         key->setKeyModifiers(Qt::ControlModifier | Qt::ShiftModifier);
         key->mPackageName = qsl("%1 package").arg(tag);
-        key->setIsActive(false);
+        key->setIsActive(true);
     }
 
     TAction* newAction(const QString& name, TAction* parent = nullptr)
@@ -214,8 +223,9 @@ private:
         action->setButtonColumns(3);
         action->setButtonFillerOffset(2);
         action->setButtonRotation(2);
+        action->mButtonState = true;
         action->mPackageName = qsl("%1 package").arg(tag);
-        action->setIsActive(false);
+        action->setIsActive(true);
     }
 
 private slots:
@@ -287,6 +297,12 @@ private slots:
         trigger->setColorizerFgColor(QColor(qsl("#abcdef")));
         trigger->setColorizerBgColor(QColor(qsl("#fedcba")));
         trigger->mSoundTrigger = false;
+        trigger->setTemporary(false);
+        trigger->setTriggerType(REGEX_SUBSTRING);
+        trigger->mColorTrigger = false;
+        trigger->mColorTriggerFgColor = QColor(qsl("#010203"));
+        trigger->mColorTriggerBgColor = QColor(qsl("#040506"));
+        trigger->setIsActive(false);
         QVERIFY(exportTriggerToXML(trigger) != before);
 
         QVERIFY(updateTriggerFromXML(trigger, before));
@@ -317,7 +333,7 @@ private slots:
         const QString before = exportAliasToXML(alias);
         alias->setName(qsl("eixh alias renamed"));
         dressAlias(alias, qsl("after"));
-        alias->setIsActive(true);
+        alias->setIsActive(false);
         QVERIFY(exportAliasToXML(alias) != before);
 
         QVERIFY(updateAliasFromXML(alias, before));
@@ -349,6 +365,8 @@ private slots:
         timer->setName(qsl("eixh timer renamed"));
         dressTimer(timer, qsl("after"));
         timer->setTime(QTime(0, 0, 9));
+        timer->setTemporary(false);
+        timer->setShouldBeActive(false);
         QVERIFY(exportTimerToXML(timer) != before);
 
         QVERIFY(updateTimerFromXML(timer, before));
@@ -379,6 +397,7 @@ private slots:
         const QString before = exportScriptToXML(script);
         script->setName(qsl("eixh script renamed"));
         dressScript(script, qsl("after"));
+        script->setIsActive(false);
         QVERIFY(exportScriptToXML(script) != before);
 
         QVERIFY(updateScriptFromXML(script, before));
@@ -411,6 +430,7 @@ private slots:
         dressKey(key, qsl("after"));
         key->setKeyCode(Qt::Key_F8);
         key->setKeyModifiers(Qt::AltModifier);
+        key->setIsActive(false);
         QVERIFY(exportKeyToXML(key) != before);
 
         QVERIFY(updateKeyFromXML(key, before));
@@ -453,6 +473,7 @@ private slots:
         action->mPosY = 6;
         action->setButtonColumns(7);
         action->setButtonFillerOffset(0);
+        action->setIsActive(false);
         QVERIFY(exportActionToXML(action) != before);
 
         QVERIFY(updateActionFromXML(action, before));
@@ -572,6 +593,13 @@ private slots:
         TScript* script = newScript(qsl("eixh untouched script"));
         TKey* key = newKey(qsl("eixh untouched key"));
         TAction* action = newAction(qsl("eixh untouched button"));
+        // dressed, so that a restore writing anything before it refuses shows
+        dressTrigger(trigger, qsl("untouched"));
+        dressAlias(alias, qsl("untouched"));
+        dressTimer(timer, qsl("untouched"));
+        dressScript(script, qsl("untouched"));
+        dressKey(key, qsl("untouched"));
+        dressAction(action, qsl("untouched"));
         const QString triggerBefore = exportTriggerToXML(trigger);
         const QString aliasBefore = exportAliasToXML(alias);
         const QString timerBefore = exportTimerToXML(timer);
