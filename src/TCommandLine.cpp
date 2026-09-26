@@ -809,9 +809,9 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         //    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
         //    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
         // } else {
-        action_addWord = new QAction(tr("Add to user dictionary"));
+        action_addWord = new QAction(tr("Add to user dictionary"), popup);
         action_addWord->setEnabled(false);
-        action_removeWord = new QAction(tr("Remove from user dictionary"));
+        action_removeWord = new QAction(tr("Remove from user dictionary"), popup);
         action_removeWord->setEnabled(false);
         // }
         if (MudletApp::usingMudletDictionaries()) {
@@ -824,7 +824,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             bundled with Mudlet; the entries about this line are the ones that the user
             has personally added.
             */
-            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
+            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"), popup);
         } else {
             /*:
             This line is shown in the list of spelling suggestions on the profile's command
@@ -835,7 +835,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             as part of the OS; the entries about this line are the ones that the user has
             personally added.
             */
-            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
+            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"), popup);
         }
         action_dictionarySeparatorLine->setEnabled(false);
     }
@@ -886,7 +886,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
     if (mSystemDictionarySuggestionsCount) {
         for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
-            auto pA = new QAction(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
+            auto pA = new QAction(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName), popup);
 #if defined(Q_OS_FREEBSD)
             // Adding the text afterwards as user data as well as in the
             // constructor is to fix a bug(?) in FreeBSD that
@@ -904,7 +904,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         Used when the command spelling checker using the selected system dictionary has
         no words to suggest.
         */
-        auto pA = new QAction(tr("no suggestions (system)"));
+        auto pA = new QAction(tr("no suggestions (system)"), popup);
         pA->setEnabled(false);
         spellings_system << pA;
     }
@@ -912,7 +912,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     if (handle_profile) {
         if (mUserDictionarySuggestionsCount) {
             for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                auto pA = new QAction(QString::fromUtf8(mpUserSuggestionsList[i]));
+                auto pA = new QAction(QString::fromUtf8(mpUserSuggestionsList[i]), popup);
 #if defined(Q_OS_FREEBSD)
                 // Adding the text afterwards as user data as well as in the
                 // constructor is to fix a bug(?) in FreeBSD that
@@ -932,13 +932,13 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
                 Used when the command spelling checker using the dictionary shared between
                 profile has no words to suggest.
                 */
-                pA = new QAction(tr("no suggestions (shared)"));
+                pA = new QAction(tr("no suggestions (shared)"), popup);
             } else {
                 /*:
                 Used when the command spelling checker using the profile's own dictionary has
                 no words to suggest.
                 */
-                pA = new QAction(tr("no suggestions (profile)"));
+                pA = new QAction(tr("no suggestions (profile)"), popup);
             }
             pA->setEnabled(false);
             spellings_profile << pA;
@@ -990,6 +990,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
+        popup->setAttribute(Qt::WA_DeleteOnClose);
         if (mpHost->getEnableSpellCheck()) {
             fillSpellCheckList(event, popup);
             // else the word is in the dictionary - in either case show the context
@@ -998,7 +999,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
         popup->addSeparator();
         for (const auto& [label, eventName] : contextMenuItems.asKeyValueRange()) {
-            auto action = new QAction(label, this);
+            auto action = new QAction(label, popup);
             connect(action, &QAction::triggered, this, [=, this]() {
                 TEvent mudletEvent = {};
                 mudletEvent.mArgumentList << eventName;
