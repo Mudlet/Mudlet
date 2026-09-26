@@ -53,17 +53,14 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
         return false;
     }
 
-    // We now scan for directories first, and gather needed ones first, not
-    // just relying on (zero length) archive entries ending in '/' as some
-    // (possibly broken) archive building libraries seem to forget to
-    // include them.
+    // Gather the needed directories first rather than relying on (zero length) entries ending in '/',
+    // which some archive building libraries omit.
     QMap<QString, QString> directoriesNeededMap;
     //   Key is: relative path stored in archive
     // Value is: absolute path needed when extracting files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        // Only the fields zs.valid marks as filled may be read, so an entry
-        // whose name libzip could not work out is passed over rather than
-        // reaching QString() with whatever the previous entry left behind
+        // Only fields zs.valid marks as filled may be read, so skip an entry libzip couldn't name rather
+        // than read the previous entry's leftovers
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs) && (zs.valid & ZIP_STAT_NAME)) {
             const QString entryInArchive(zs.name);
             const QString pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
@@ -79,7 +76,6 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
         }
     }
 
-    // Now create the needed directories:
     QMapIterator<QString, QString> itPath(directoriesNeededMap);
     while (itPath.hasNext()) {
         itPath.next();
@@ -87,18 +83,16 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
         if (!tmpDir.exists(folderToCreate)) {
             if (!tmpDir.mkpath(folderToCreate)) {
                 zip_close(archive);
-                return false; // Abort reading rest of archive
+                return false;
             }
             tmpDir.refresh();
         }
     }
 
-    // Now extract the files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        // Unlike the pass above, a failure here cannot be skipped over: zs would
-        // still hold the previous entry's name and size, so that entry would be
-        // extracted a second time - from this entry's zip_file - over the file
-        // just written. An archive libzip cannot describe is not extractable.
+        // Unlike above, a failure can't be skipped: zs would still hold the previous entry's name and size,
+        // so that file would be extracted again, from this entry's data. An archive libzip can't describe
+        // isn't extractable.
         constexpr zip_uint64_t neededFields = ZIP_STAT_NAME | ZIP_STAT_SIZE;
         if (zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs) || (zs.valid & neededFields) != neededFields) {
             zip_close(archive);
@@ -123,12 +117,10 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
             bytesRead = 0;
             zip_uint64_t const bytesExpected = zs.size;
             while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
-                char buf[4096]; // Was 100 but that seems unduly stingy...!
+                char buf[4096];
                 zip_int64_t const len = zip_fread(zf, buf, sizeof(buf));
-                // zip_fread() reports the end of the entry's data as 0 rather
-                // than as an error, so an archive declaring a size larger than
-                // the data behind it would spin here forever - the loop runs in
-                // unzipAsync()'s worker thread, where nothing can interrupt it
+                // zip_fread() reports end of data as 0, not an error, so a declared size larger than the data
+                // would spin forever on unzipAsync()'s worker thread, where nothing can interrupt it
                 if (len <= 0) {
                     fd.close();
                     zip_fclose(zf);
