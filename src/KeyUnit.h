@@ -77,12 +77,6 @@ public:
     bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
     // The binding wouldMatch() found, for naming it in a clash report
     const TKey* firstMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
-    // Qt matches Mudlet's own shortcuts and add-on menu shortcuts before the command line sees the
-    // key, so a binding on one of their keys never fires. It is still accepted, only warned about.
-    // Empty when the binding will fire.
-    QString takenKeyWarning(const TKey* pKey) const;
-    // For a binding a script made
-    void warnIfKeyIsTaken(const TKey* pKey) const;
     void markCleanup(TKey* pT);
     void doCleanup();
     int processingDepth() const { return mProcessingDepth; }
