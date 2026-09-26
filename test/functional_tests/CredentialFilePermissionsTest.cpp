@@ -52,7 +52,7 @@
 #include <QTemporaryDir>
 
 #include "CredentialManager.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "SecureStringUtils.h"
 #include "utils.h"
 
@@ -101,13 +101,13 @@ private:
 
     QString configRoot() const { return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation); }
 
-    QString profileDirectory(const QString& profile) const { return qsl("%1/profiles/%2").arg(configRoot(), MudletPaths::sanitizeForPath(profile)); }
+    QString profileDirectory(const QString& profile) const { return qsl("%1/profiles/%2").arg(configRoot(), MudletApp::sanitizeForPath(profile)); }
 
     // SecureStringUtils builds its paths from the raw profile name where CredentialManager
     // sanitizes, so for a long name the key and the credential are in different directories
     QString rawProfileDirectory(const QString& profile) const { return qsl("%1/profiles/%2").arg(configRoot(), profile); }
 
-    QString credentialFile(const QString& profile) const { return qsl("%1/passwords/%2").arg(profileDirectory(profile), MudletPaths::sanitizeForPath(mKey)); }
+    QString credentialFile(const QString& profile) const { return qsl("%1/passwords/%2").arg(profileDirectory(profile), MudletApp::sanitizeForPath(mKey)); }
 
     QString credentialDirectory(const QString& profile) const { return QFileInfo(credentialFile(profile)).absolutePath(); }
 

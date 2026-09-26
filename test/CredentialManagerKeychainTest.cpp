@@ -638,6 +638,16 @@ void CredentialManagerKeychainTest::initTestCase()
     QVERIFY(mConfigDir.isValid());
     qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
+#if defined(Q_OS_MACOS)
+    // No probe here, and so no test that writes to the store. The suite hands every test a
+    // CFFIXED_USER_HOME of its own (test/CMakeLists.txt) and the Security framework resolves the
+    // login keychain from that home, so there is no keychain to write to - and a write does not
+    // fail, it asks whoever ran the suite whether to reset their keychain to defaults. Nothing in
+    // a test run should put that question in front of anyone. The reads the lookup-chain cases
+    // make are answered as "not found" without any of that, so those cases still run; the ones
+    // that need a store of their own skip, and Linux and Windows CI cover them.
+    mStoreAvailable = false;
+#else
     // On every platform: the Windows migration tests need it, and so do the tests of the lookup chain
     // that need its reads to be answered.
     const QString probe = QStringLiteral("MudletKCTest-probe-%1").arg(QUuid::createUuid().toString(QUuid::Id128).left(8));
@@ -646,6 +656,7 @@ void CredentialManagerKeychainTest::initTestCase()
     if (!mStoreAvailable) {
         qWarning() << "CredentialManagerKeychainTest: credential store unavailable, tests will skip";
     }
+#endif
 }
 
 void CredentialManagerKeychainTest::init()

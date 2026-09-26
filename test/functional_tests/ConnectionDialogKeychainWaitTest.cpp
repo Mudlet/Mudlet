@@ -29,7 +29,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
@@ -70,7 +70,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -184,8 +184,8 @@ private slots:
     void test_aPortablePasswordInTheProfileFileReachesTheField()
     {
         const QString profile = qsl("ConnDialogPortable-Test");
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profile)));
-        QVERIFY2(MudletPaths::writeProfileData(profile, qsl("password"), qsl("portable-secret")).first, "could not seed the profile's password file");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY2(MudletApp::writeProfileData(profile, qsl("password"), qsl("portable-secret")).first, "could not seed the profile's password file");
 
         auto* dlg = new dlgConnectionProfiles(mudlet::self());
         {
@@ -208,7 +208,7 @@ private slots:
     void test_aPasswordLeftInTheOldSettingsIsStillFound()
     {
         const QString profile = qsl("ConnDialogSettingsOnly-Test");
-        auto& settings = *mudlet::self()->mpSettings;
+        auto& settings = *MudletApp::getQSettings();
         settings.beginGroup(qsl("profiles/%1").arg(profile));
         settings.setValue(qsl("password"), qsl("from-the-ini"));
         settings.endGroup();

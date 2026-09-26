@@ -502,9 +502,18 @@ void TriggerUnit::refreshRootNodeSnapshot()
     const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild && !mpRootNodeSnapshot->mPrescan.shouldRebuild();
     if (canPatch) {
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        // Removals first: a refile can be queued for a position whose trigger
+        // is freed before this runs, and emptying the slot here is what turns
+        // that into a skip below rather than a dangling dereference.
         for (const int position : mRootNodesRemoved) {
             snapshot.mNodes[position] = nullptr;
             snapshot.mPrescan.removeSlot(position);
+        }
+        if (mRootNodesRefiled.size() > 1) {
+            // One slot queued twice refiles to the same state twice, and the
+            // index counts both towards the mutations that buy a rebuild.
+            std::sort(mRootNodesRefiled.begin(), mRootNodesRefiled.end());
+            mRootNodesRefiled.erase(std::unique(mRootNodesRefiled.begin(), mRootNodesRefiled.end()), mRootNodesRefiled.end());
         }
         for (const int position : mRootNodesRefiled) {
             if (TTrigger* pT = snapshot.mNodes[position]) {
@@ -530,6 +539,7 @@ void TriggerUnit::refreshRootNodeSnapshot()
             snapshot.mNodes[position]->setRootSnapshotPosition(position);
         }
         snapshot.mPrescan.rebuild(snapshot.mNodes);
+        ++mPrescanRebuilds;
     }
     mRootNodesAppended.clear();
     mRootNodesRemoved.clear();
@@ -820,11 +830,29 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     // start mid-run and skip duplicates on some QMultiMap implementations
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
-        it.value()->mKeepFiring = lines;
+        TTrigger* pT = it.value();
+        const bool wasOpen = pT->mKeepFiring > 0;
+        pT->mKeepFiring = lines;
+        const bool nowOpen = pT->mKeepFiring > 0;
+        if (wasOpen == nowOpen) {
+            // A script that sets the same count every line is the common shape,
+            // and a window that stays open or stays shut changes nothing the
+            // trigger is filed or filtered by - refiling anyway would spend a
+            // mutation per call and buy a rebuild with them. The grams are no
+            // guide: a regex or color trigger has none either way, yet can be
+            // ruled out of a line while it is shut.
+            continue;
+        }
+        if (nowOpen) {
+            // it now fires without matching, so it can no longer be filtered out
+            // of a line - including the one being processed right now
+            markPrescanStaleForLineInFlight(pT);
+        } else {
+            // closing the window only makes it filterable again, which the line
+            // in flight can ignore: it was already being offered the trigger.
+            markPrescanStale(pT);
+        }
     }
-    // it now fires without matching, so it can no longer be filtered out of a
-    // line - including the one being processed right now
-    markRootUnfilterable();
 }
 
 bool TriggerUnit::killTrigger(const QString& name)
