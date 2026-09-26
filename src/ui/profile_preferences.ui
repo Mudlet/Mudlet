@@ -602,13 +602,13 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string extracomment="Tooltip of the profile preference that stops the hidden-input box opening when the game asks for hidden input">&lt;p&gt;Turn this on for a game that hides everything you type, not only passwords. Everything you type then goes through the normal command line, and is shown, kept in the history and run through your aliases as usual.&lt;/p&gt;</string>
+             <string extracomment="Tooltip of the profile preference that stops the hidden-input box opening when the game asks for hidden input">&lt;p&gt;Passwords are typed into the normal command line, where they are shown, kept in the history and run through your aliases like any other command.&lt;/p&gt;&lt;p&gt;Turn this on for a game that hides everything you type, not only passwords.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string extracomment="Accessibility-friendly description of the profile preference that stops the hidden-input box opening when the game asks for hidden input">Turn this on for a game that hides everything you type, not only passwords. Everything you type then goes through the normal command line.</string>
+             <string extracomment="Accessibility-friendly description of the profile preference that stops the hidden-input box opening when the game asks for hidden input">Passwords are typed into the normal command line, where they are shown and kept in the history. Turn this on for a game that hides everything you type, not only passwords.</string>
             </property>
             <property name="text">
-             <string extracomment="Label of the profile preference that stops the hidden-input box opening when the game asks for hidden input">Do not open a hidden-input box when the game asks for hidden input</string>
+             <string extracomment="Label of the profile preference that stops the hidden-input box opening when the game asks for hidden input">Show passwords as you type them</string>
             </property>
            </widget>
           </item>

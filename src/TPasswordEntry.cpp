@@ -46,8 +46,8 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
     setFont(pCommandLine->font());
     // The command line's palette sets its text colour after construction, so
     // its placeholder colour is still derived from the default text colour -
-    // black on a black command line. The placeholder carries the Esc hint, so
-    // it is derived from the text colour that is actually in use.
+    // black on a black command line - so it is derived from the text colour
+    // that is actually in use.
     QPalette palette = pCommandLine->mRegularPalette;
     QColor placeholderColor = palette.color(QPalette::Text);
     placeholderColor.setAlpha(128);
@@ -61,7 +61,9 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
     setRevealed(false);
 
     //: Placeholder text of the box the game's request for hidden input is answered with
-    setPlaceholderText(tr("Hidden input - Esc to answer in the command line instead"));
+    setPlaceholderText(tr("Enter password"));
+    //: Tooltip of the box the game's request for hidden input is answered with; Esc closes it so the command line can be used instead
+    setToolTip(tr("Enter password or press Esc"));
 
     // So that a keychain password arriving late cannot be typed over a player
     // who has started answering
@@ -157,8 +159,7 @@ void TPasswordEntry::submit()
     line.remove(QChar::CarriageReturn);
     line.remove(QChar::LineFeed);
     if (mpHost->sendPasswordEntry(std::move(line))) {
-        //: Placeholder text of the hidden-input box after Enter, while the game still hides input
-        setPlaceholderText(tr("Sent - waiting for the game"));
+        setPlaceholderText(QString());
     } else {
         // Nothing to write to - the connection is gone, or this is a replay -
         // and the text is already dropped, so say so rather than claim a send

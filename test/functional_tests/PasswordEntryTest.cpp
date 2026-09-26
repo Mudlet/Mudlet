@@ -481,7 +481,6 @@ private slots:
         serverSaysEcho(TN_WILL);
         const QPointer<TPasswordEntry> pBox = box();
         QVERIFY(pBox);
-        const QString freshPlaceholder = pBox->placeholderText();
         QTRY_COMPARE(focusWidget(), pBox.data());
 
         typeIntoWindow(qsl("pw"));
@@ -491,7 +490,7 @@ private slots:
         QVERIFY2(pBox && box() == pBox, "Return closed the box, so a rejected password's retry would be typed in the clear");
         QVERIFY(pBox->isVisible());
         QCOMPARE(pBox->text(), QString());
-        QVERIFY2(pBox->placeholderText() != freshPlaceholder, "the box did not say the text was sent");
+        QVERIFY2(pBox->placeholderText().isEmpty(), "the box still asked for a password after it was sent");
         QCOMPARE(focusWidget(), pBox.data());
 
         serverSaysEcho(TN_WONT);
