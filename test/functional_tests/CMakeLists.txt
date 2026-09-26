@@ -51,6 +51,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     LabelMovieRefusalTest.cpp
     TabBarStyleTest.cpp
     LabelSvgBackgroundTest.cpp
+    DetachedWindowTabsTest.cpp
     CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
