@@ -63,12 +63,7 @@
 #include <QTextCodec>
 #include <QPainter>
 #include <QResizeEvent>
-#include <QTimer>
 #include <QVideoWidget>
-
-#include <chrono>
-
-using namespace std::chrono_literals;
 
 namespace {
 // See TWindowRegistry::SubConsoleKind for what Other is for.
@@ -1315,21 +1310,6 @@ void TMainConsole::openPasswordEntry()
     }
 
     connect(mpPasswordEntry, &TPasswordEntry::dismissed, mpHost, &Host::dismissPasswordEntry);
-
-    if (mpHost->readProfileData(qsl("passwordEntryIntroduced")).isEmpty()) {
-        mpHost->writeProfileData(qsl("passwordEntryIntroduced"), qsl("1"));
-        // Deferred: this runs in the middle of a telnet parse, and a line
-        // posted now would land inside the prompt line
-        QTimer::singleShot(0ms, this, [this]() {
-            if (mpHost && !mpHost->isClosingDown()) {
-                //: Shown once per profile, the first time the game asks for hidden input and the box for it opens over the command line
-                mpHost->postMessage(tr("[ INFO ]  - The game is hiding what you type, so it goes into a hidden-input box over the command line. "
-                                       "Enter sends it straight to the game - aliases do not apply there. Esc empties the box, and Esc on an "
-                                       "empty box steps past it to use the command line instead. For a game that hides everything you "
-                                       "type, turn on \"Do not open a hidden-input box\" in the profile's settings."));
-            }
-        });
-    }
 }
 
 void TMainConsole::closePasswordEntry()

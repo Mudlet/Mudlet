@@ -29,7 +29,7 @@ auto-login (below).
 | Policy: `passwordEntryWanted()`, its inputs and mutators, `sendPasswordEntry()`, the one signal | `Host` (core side of the core/front-end split, #9011; answers with no view) |
 | The auto-login-pending input and the encoding warning that never quotes hidden input | `cTelnet` |
 | The box itself: key surface, placeholder wording, reveal toggle, Paste-only menu | `TPasswordEntry` (front-end) |
-| Open, close, focus, geometry, the one-time info line, Lua writes to "main" | `TMainConsole` |
+| Open, close, focus, geometry, Lua writes to "main" | `TMainConsole` |
 | Redirect of synthetic keys to the proxy; the `playerTypedLine()` fact; reporting the player's line | `TCommandLine` |
 | Policy tests | `test/functional_tests/PasswordEntryPolicyTest.cpp` (telnet group) |
 | Box tests | `test/functional_tests/PasswordEntryTest.cpp` (window group) |
