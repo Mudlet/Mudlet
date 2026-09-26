@@ -69,7 +69,7 @@ private:
     static QString appBinary() { return QString::fromUtf8(MUDLET_APP_BINARY); }
 
     // A portable.txt beside the shipped binary, or in $HOME/.config/mudlet,
-    // outranks XDG_CONFIG_HOME (MudletPaths::resolveConfigRoot()), so the child
+    // outranks XDG_CONFIG_HOME (MudletApp::resolveConfigRoot()), so the child
     // would read the real install's config instead of the sandbox's. Note the
     // directory checked is the application's, not this test binary's.
     // DialogTeardownTest and HeadlessVersionTest skip for the same reason.
@@ -90,7 +90,7 @@ private slots:
             // A root of its own per run, so the child reads none of the
             // developer's profiles and leaves nothing behind. Creating
             // mudlet/profiles is what makes XDG_CONFIG_HOME outrank the legacy
-            // ~/.config/mudlet, see MudletPaths::xdgConfigDir()
+            // ~/.config/mudlet, see MudletApp::xdgConfigDir()
             QTemporaryDir sandbox;
             QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
             QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
