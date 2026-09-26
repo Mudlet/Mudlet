@@ -371,6 +371,7 @@ void MMCPClient::slot_readData()
             mPeerBuffer.clear();
             //: %1 is the MMCP peer's name, %2 is the limit in bytes
             mpHost->postMessage(tr("[ CHAT ]  - %1 sent more than %2 bytes without ending a command, disconnecting.").arg(mPeerName, QString::number(csMaxPeerFrameLength)));
+            mState = Disconnected;
             disconnect();
         }
         return;
