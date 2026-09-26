@@ -79,6 +79,8 @@ must see the result the moment `feedTelnet` returns; nothing is deferred.
 | Keychain prompt unanswered or refused | a box opens; its first edit cancels the auto-login |
 | A script, trigger or key binding sends the password | goes through `Host::send()` as before, aliases and all |
 | Enter in the box while not connected (or during a replay) | the text is dropped, the box says "Not sent" and a warning line says why |
+| The preference turned on while a box is up | the box closes and drops its text; typed input goes through the command line from then on, history included |
+| A label's `prompt:` link clicked while a box is up | the text lands in the box for Enter to send; a script's write, so it does not count as the player's first edit and cancels no auto-login |
 | The ECHO anomaly latch (five WILL/WONT toggles inside five seconds) | cTelnet refuses ECHO for the rest of the connection, as before: no box, input in the clear |
 | The login-phase timeout fires (a game that forgot its WONT) | the box closes and drops its text, and a warning line says so |
 | F-key or Ctrl+letter binding pressed in the box | offered to the key bindings; a plain printable key is typed, never offered |

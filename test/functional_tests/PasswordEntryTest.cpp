@@ -260,6 +260,10 @@ private:
         runDeferredDeletes();
         commandLine()->clear();
         commandLine()->setFocus();
+        // A pane selection left by a case would be what Ctrl+C copies in the next
+        for (TTextEdit* pPane : {mpHost->mpConsole->mUpperPane, mpHost->mpConsole->mLowerPane}) {
+            pPane->mSelectedRegion = QRegion();
+        }
         mpServer->forgetReceived();
     }
 
@@ -603,8 +607,12 @@ private slots:
         pressInWindow(Qt::Key_Return);
         QVERIFY(waitForServerToReceive(asSent({qsl("hunter2"), qsl("pw2")})));
         typeIntoWindow(qsl("next"));
+        // A box opened on the way would be closed again by the same WONT, so it
+        // is the policy's announcements that show one never opened
+        QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
         serverSaysEcho(TN_WONT);
-        QVERIFY2(!box(), "the WONT that answered the player's line let a box open on the way");
+        QVERIFY(!box());
+        QVERIFY2(wanted.isEmpty(), "the WONT that answered the player's line let a box open on the way");
         QCOMPARE(commandLine()->toPlainText(), qsl("next"));
     }
 

@@ -838,7 +838,7 @@ public:
     // sysDataSendRequest event withheld - no alias pass, no command-separator
     // split, no local echo, no history. Empty sends an empty line. Taken by
     // rvalue so that the caller's copy is the one zeroed afterwards.
-    bool sendPasswordEntry(QString&& line);
+    bool sendPasswordEntry(QString&& text);
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of

@@ -147,13 +147,15 @@ void TPasswordEntry::submit()
     setRevealed(false);
     // The one place the text leaves the box
     QString line = text();
+    // Also clears the undo history, and leaves `line` the last holder of the
+    // buffer the keystrokes went into, for the send path to zero - before any
+    // edit to `line`, which on a shared buffer would copy it and leave the
+    // original to be freed unzeroed
+    setText(QString());
     // A pasted line break must never make a second line: sendData() strips only
     // the line feed
     line.remove(QChar::CarriageReturn);
     line.remove(QChar::LineFeed);
-    // Also clears the undo history, and leaves `line` the last holder of the
-    // buffer the keystrokes went into, for the send path to zero
-    setText(QString());
     if (mpHost->sendPasswordEntry(std::move(line))) {
         //: Placeholder text of the hidden-input box after Enter, while the game still hides input
         setPlaceholderText(tr("Sent - waiting for the game"));
