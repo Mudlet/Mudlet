@@ -175,8 +175,13 @@ QPair<bool, QString> TIrcClient::sendText(const QString& target, const QString& 
     return {true, QString()};
 }
 
-void TIrcClient::restart(bool reloadConfigs)
+bool TIrcClient::restart(bool reloadConfigs)
 {
+    // A session no frontend has started stays closed until one does
+    if (!mStarted) {
+        return false;
+    }
+
     const QString reason = QCoreApplication::translate("dlgIRC", "Restarting IRC Client");
     emit signal_restarting(reason);
 
@@ -207,6 +212,7 @@ void TIrcClient::restart(bool reloadConfigs)
     mpConnection->open();
 
     emit signal_restarted();
+    return true;
 }
 
 void TIrcClient::slot_nickNameRequired(const QString& reserved, QString* alt)

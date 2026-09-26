@@ -38,6 +38,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "TIrcClient.h"
 #include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
 #include "dlgIRC.h"
@@ -436,6 +437,25 @@ private slots:
         QCOMPARE(luaValues(qsl("getIrcConnectedHost()")), qsl("false|no client active"));
         QCOMPARE(luaValues(qsl("restartIrc()")), qsl("false"));
         QCOMPARE(luaValues(qsl("getIrcNick()")), mNick);
+    }
+
+    // With no frontend to start it, openIRC() leaves a session that never
+    // connected, and restarting it must not connect it behind no window. Last,
+    // since it takes the frontend away for good.
+    void test_restartIrcLeavesASessionWithNoFrontendClosed()
+    {
+        QVERIFY(storeSettings(mNick, mChannel));
+        QVERIFY(!mpHost->mpDlgIRC);
+        QObject::disconnect(mpHost, &Host::signal_showIrcClient, nullptr, nullptr);
+        const int connectionsBefore = mpIrcServer->connectionCount();
+
+        QCOMPARE(luaValues(qsl("openIRC()")), qsl("true"));
+        QVERIFY2(!mpHost->mpDlgIRC, "SETUP: something still opened the IRC window");
+        QVERIFY2(mpHost->mpIrcClient, "SETUP: openIRC() made no session");
+
+        QCOMPARE(luaValues(qsl("restartIrc()")), qsl("false"));
+        QTest::qWait(500);
+        QCOMPARE(mpIrcServer->connectionCount(), connectionsBefore);
     }
 };
 

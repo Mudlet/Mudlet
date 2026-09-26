@@ -81,7 +81,8 @@ public:
     IrcConnection* connection() const { return mpConnection; }
     // Queues the auto-join and opens the connection; later calls do nothing.
     void start();
-    void restart(bool reloadConfigs = true);
+    // False, doing nothing, for a session that was never started
+    bool restart(bool reloadConfigs = true);
     QPair<bool, QString> sendText(const QString& target, const QString& message);
     QString getHostName() const { return mHostName; }
     int getHostPort() const { return mHostPort; }

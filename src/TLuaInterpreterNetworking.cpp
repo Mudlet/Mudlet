@@ -284,8 +284,7 @@ int TLuaInterpreter::restartIrc(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     bool rv = false;
     if (pHost->mpIrcClient) {
-        pHost->mpIrcClient->restart();
-        rv = true;
+        rv = pHost->mpIrcClient->restart();
     }
 
     lua_pushboolean(L, rv);
