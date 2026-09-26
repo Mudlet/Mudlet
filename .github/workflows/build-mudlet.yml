@@ -25,6 +25,14 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     if: ${{ github.repository_owner == 'Mudlet' }}
+    # The organization gets five macOS runners, and pull request builds queue
+    # behind every development push for them. Merges land in bursts, so a newer
+    # development push cancels the macOS jobs of the one before - the Linux jobs
+    # still build and test every commit. Tags, release branches, PTBs and manual
+    # runs each get a group of their own, so none of them is ever cancelled.
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.buildname }}-${{ (github.event_name == 'push' && github.ref == 'refs/heads/development' && startsWith(matrix.os, 'macos')) && 'development' || github.run_id }}
+      cancel-in-progress: true
     env:
       LUA_VERSION: '5.1.5'
       CCACHE_MAXSIZE: 500M
@@ -404,8 +412,10 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save ccache
+      # Not always(): that would save a cancelled build's half-finished cache as
+      # the newest entry.
       if: >-
-        always() && github.ref_name == 'development'
+        !cancelled() && github.ref_name == 'development'
         && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
       uses: actions/cache/save@v6
       with:
