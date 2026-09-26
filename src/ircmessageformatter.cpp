@@ -22,6 +22,7 @@
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
+#include <QDateTime>
 #include <QUrl>
 
 // communi escapes & and < before it strips the IRC formatting codes, and hands
@@ -460,7 +461,19 @@ QString IrcMessageFormatter::formatWhoisMessage(IrcWhoisMessage* message, bool i
     QStringList lines;
     lines << QObject::tr("[WHOIS] %1 is %2@%3 (%4)").arg(nick, nameFor(message->ident(), isForLua), nameFor(message->host(), isForLua), contentFor(message->realName(), isForLua));
     lines << QObject::tr("[WHOIS] %1 is connected via %2 (%3)").arg(nick, nameFor(message->server(), isForLua), contentFor(message->info(), isForLua));
-    lines << QObject::tr("[WHOIS] %1 is connected since %2 (idle %3)").arg(nick, message->since().toString(), formatDuration(message->idle()));
+    // RPL_WHOISIDLE is optional, and the sign-on time in it is an extension to RFC 1459.
+    // communi reads a missing one as the epoch and a missing idle time as zero.
+    const QString idle = message->parameters().value(6);
+    if (!idle.isEmpty()) {
+        // parsed here rather than through since(), which reads it as a 32-bit int
+        const qint64 signOn = message->parameters().value(5).toLongLong();
+        if (signOn > 0) {
+            lines << QObject::tr("[WHOIS] %1 is connected since %2 (idle %3)").arg(nick, QDateTime::fromSecsSinceEpoch(signOn).toString(), formatDuration(message->idle()));
+        } else {
+            //: %1 is the nick, %2 how long they have been idle, e.g. '3 mins 20 secs'
+            lines << QObject::tr("[WHOIS] %1 has been idle %2").arg(nick, formatDuration(message->idle()));
+        }
+    }
     if (!message->awayReason().isEmpty()) {
         lines << QObject::tr("[WHOIS] %1 is away: %2").arg(nick, contentFor(message->awayReason(), isForLua));
     }
