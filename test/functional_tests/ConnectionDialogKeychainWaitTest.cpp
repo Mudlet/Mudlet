@@ -174,6 +174,52 @@ private slots:
         dlg->deleteLater();
     }
 
+    // Where a portable profile's password actually lives. Since #3121 (2019) the
+    // dialog has written it to the profile's own "password" data file, and
+    // Host::loadPassword still reads it from there - but #7956 replaced the
+    // dialog's read of that file with a read of QSettings, the pre-2019 location,
+    // in both the portable branch and the keychain-came-back-empty fallback. The
+    // password still worked at connect time, so the only symptom was a field that
+    // was always blank for the people who keep passwords out of the keychain.
+    void test_aPortablePasswordInTheProfileFileReachesTheField()
+    {
+        const QString profile = qsl("ConnDialogPortable-Test");
+        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY2(MudletPaths::writeProfileData(profile, qsl("password"), qsl("portable-secret")).first, "could not seed the profile's password file");
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        QVERIFY2(dlg->character_password_entry->text().isEmpty(), "a fresh dialog's password field is not empty, so this test cannot cover the load");
+
+        dlg->loadPasswordFromSettings(profile);
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("portable-secret"));
+        dlg->deleteLater();
+    }
+
+    // The pre-2019 location is still a real one - a profile last written by a Mudlet
+    // old enough to keep passwords in mudlet.ini has nothing in its profile
+    // directory - so it stays as the fallback rather than being replaced.
+    void test_aPasswordLeftInTheOldSettingsIsStillFound()
+    {
+        const QString profile = qsl("ConnDialogSettingsOnly-Test");
+        auto& settings = *mudlet::self()->mpSettings;
+        settings.beginGroup(qsl("profiles/%1").arg(profile));
+        settings.setValue(qsl("password"), qsl("from-the-ini"));
+        settings.endGroup();
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        dlg->loadPasswordFromSettings(profile);
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-ini"));
+        dlg->deleteLater();
+    }
+
     // A later read of the same profile that fails falls back on the password kept in the settings,
     // which is empty for a profile whose password lives in the keychain: it must not wipe the one an
     // earlier read handed over late.
