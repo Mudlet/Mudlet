@@ -5818,10 +5818,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
     if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
-        // A feedTelnet() from a trigger at the deepest drain level lands here
-        // with fresh data of its own, and the stream it arrived during is intact.
-        const bool drainingStream = !loopbackTesting || mDecompressionRecursionDepth > mLoopbackEntryRecursionDepth + 1;
-        if (mNeedDecompression && drainingStream) {
+        if (mNeedDecompression) {
             // What is dropped here is the rest of the compressed stream, and
             // zlib cannot pick a stream up again past a gap, so whatever the
             // game compresses next would come out as garbage or not at all.
