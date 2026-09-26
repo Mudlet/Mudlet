@@ -262,8 +262,11 @@ public:
     void loopbackTest(QByteArray& data)
     {
         ++mLoopbackProcessingDepth;
-        const auto loopbackGuard = qScopeGuard([this] {
+        const int outerEntryDepth = mLoopbackEntryRecursionDepth;
+        mLoopbackEntryRecursionDepth = mDecompressionRecursionDepth;
+        const auto loopbackGuard = qScopeGuard([this, outerEntryDepth] {
             --mLoopbackProcessingDepth;
+            mLoopbackEntryRecursionDepth = outerEntryDepth;
         });
         processSocketData(data.data(), data.size(), true);
     }
@@ -396,6 +399,9 @@ private:
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    // Sends DONT for the running MCCP stream and stops decompressing it, for a
+    // stream that can no longer be followed.
+    void refuseCompressedStream();
     void reset();
     void handleFailedConnection();
     void sendLoginAndPass();
@@ -542,6 +548,9 @@ private:
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;
+    // mDecompressionRecursionDepth when the innermost loopbackTest() began, to
+    // tell its first processSocketData() level apart from the drain levels under it.
+    int mLoopbackEntryRecursionDepth = 0;
     std::string command;
     bool iac = false;
     bool iac2 = false;

@@ -1455,6 +1455,55 @@ describe("Tests MCCP compressed streams", function()
     assert.is_truthy(shown:find("MCCPVERSIONONEOK MCCPVERSIONONEOK", 1, true), shown)
     assert.is_truthy(shown:find("MCCPV1PLAINAFTER", 1, true), shown)
   end)
+
+  -- One read that inflates past the decompression bomb cap cannot be followed
+  -- to the end, and the part it drops leaves the stream unreadable, so the
+  -- stream has to be refused there rather than fed whatever comes next.
+  it("refuses a stream that inflates past the cap in one read", function()
+    -- zlib.compress(string.rep("\0", 1000000) .. "MCCPTAILOFBOMB\r\n", 9): NULs
+    -- are not displayed, so the cap is reached without drawing ~1 MB of text.
+    -- It has to inflate to more than scmMaxDecompressionRecursion * BUFFER_SIZE
+    -- (8 * 100000 bytes in ctelnet), or raising either leaves the cap unreached.
+    local bomb = "\120\218\237\193\209\9\0\16\20\0\64\223\202\80\40\165\188\248\176\255\44\6\113\119\41\1"
+      .. string.rep("\0", 968)
+      .. "\191\138\222\207\173\115\237\209\118\180\146\31\105\128\4\26"
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(bomb))
+    -- what a game sends once it has seen the DONT
+    feed("MCCPPLAINAFTERCAP\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), "the plain text was fed to the dropped stream: " .. shown)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERCAP", 1, true), shown)
+
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
+  end)
+
+  -- A feedTelnet() from a trigger at the deepest level of a drain arrives past
+  -- the cap too, but what it would drop is its own text, not the stream's.
+  it("keeps a stream a trigger feeds text into at the deepest drain level", function()
+    -- the first part of one stream, flushed but not finished: 750000 NULs then
+    -- MCCPFEEDTRIGGER, so the line lands in the eighth and last output buffer
+    local part1 = "\120\218\236\193\209\9\0\16\20\0\64\223\202\84\60\242\161\36\251\207\98\16\119\151\18"
+      .. string.rep("\0", 726)
+      .. "\252\107\213\186\123\68\187\103\142\17\167\228\7\0\0\255\255"
+    -- the rest of that stream: MCCPSTREAMSURVIVES, then its end
+    local part2 = "\3\9\4\135\4\185\58\250\6\135\6\133\121\134\185\6\243\114\1\0\51\35\9\240"
+    local trigger = tempTrigger("MCCPFEEDTRIGGER", function() feedTelnet("MCCPFEDBYTRIGGER\r\n") end)
+    finally(function() killTrigger(trigger) end)
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(part1))
+    feed(escaped(part2))
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPFEEDTRIGGER", 1, true), shown)
+    assert.is_falsy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPSTREAMSURVIVES", 1, true), "the stream was refused: " .. shown)
+  end)
 end)
 
 describe("Tests CHARSET negotiation", function()
