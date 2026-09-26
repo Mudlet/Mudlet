@@ -55,6 +55,7 @@ class QJsonObject;
 class QRegularExpression;
 class QTimer;
 class TConsole;
+struct TConsoleModel;
 class THyperlinkVisibilityManager;
 
 class WrapInfo
@@ -312,6 +313,9 @@ static_assert(sizeof(TChar) == 16, "TChar has grown - every character of every b
 
 class TBuffer
 {
+    // Binds mpModel once the whole model, managers included, is built.
+    friend struct TConsoleModel;
+
     // Reads the deferred-logging state directly, to pin that
     // logRemainingOutput() clears it even when there is no view to log through:
     friend class ConsoleModelExtractionTest;
@@ -477,6 +481,7 @@ public:
 
 private:
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
+    TChar currentFormat() const;
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void syncPreTriggerPassLine(int y);
@@ -537,6 +542,11 @@ private:
     void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
 
     QPointer<TConsole> mpConsole;
+    // The model this buffer is the text of. The hyperlink managers, the
+    // current format and the console background are read off it, so none of
+    // them needs a view. Unset on a scratch buffer, such as a copy or a cut,
+    // and never copied: a copy is nobody's model's buffer.
+    TConsoleModel* mpModel = nullptr;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:

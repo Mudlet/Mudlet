@@ -2339,6 +2339,15 @@ void Host::refreshMainConsoleColors()
     mpMainConsoleModel->buffer.updateColors();
 }
 
+void Host::applyMainConsoleColors()
+{
+    if (mpConsole) {
+        mpConsole->changeColors();
+    } else {
+        refreshMainConsoleColors();
+    }
+}
+
 void Host::printToMainConsole(const QString& msg)
 {
     mpConsole->print(msg);
