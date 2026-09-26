@@ -84,6 +84,8 @@ describe("Tests the Lua an MXP link runs", function()
     feed([[<!ELEMENT mxpLinksTell '<SEND href="tell &who; " PROMPT>' ATT='who'>]])
     feed([[<!ELEMENT mxpLinksItem '<SEND href="buy &text;">'>]])
     feed([[<!ELEMENT mxpLinksWiki '<A href="https://wiki.example/&text;">'>]])
+    feed([[<!ENTITY mxpLinksSite "https://site.example">]])
+    feed([[<!ENTITY mxpLinksFile "file:///etc/passwd">]])
   end)
 
   teardown(function()
@@ -212,6 +214,10 @@ describe("Tests the Lua an MXP link runs", function()
       end)
     end
 
+    it("does not open an address whose scheme comes from an entity", function()
+      assertOpensNothing([[<A href="&mxpLinksFile;">go</A>]])
+    end)
+
     it("shows the text of an A it will not open as plain text", function()
       feed([[<A href="file:///etc/passwd">mxpLinksRefusedWord</A>]])
       local lineNumber = getLastLineNumber("main") - 1
@@ -221,6 +227,26 @@ describe("Tests the Lua an MXP link runs", function()
       local format = getTextFormat("main")
       deselect("main")
       assert.is_false(format.underline)
+    end)
+  end)
+
+  -- entities can be used anywhere in MXP, even within other tags - the same
+  -- as a SEND href already does
+  describe("Tests the entities in an A", function()
+    it("expands a standard entity in an A href", function()
+      assertRunsOnly(actionsAfter([[<A href="https://page.example/?a=1&amp;b=2">go</A>]]), "openUrl", "https://page.example/?a=1&b=2")
+    end)
+
+    it("expands an entity the game defined in an A href", function()
+      assertRunsOnly(actionsAfter([[<A href="&mxpLinksSite;/page">go</A>]]), "openUrl", "https://site.example/page")
+    end)
+
+    it("expands entities in an A href that also takes its text", function()
+      assertRunsOnly(actionsAfter([[<A href="&mxpLinksSite;/?a=1&amp;q=&text;">Page</A>]]), "openUrl", "https://site.example/?a=1&q=Page")
+    end)
+
+    it("leaves an ampersand that starts no entity in an A href as it was", function()
+      assertRunsOnly(actionsAfter([[<A href="https://page.example/?a=1&b=2">go</A>]]), "openUrl", "https://page.example/?a=1&b=2")
     end)
   end)
 

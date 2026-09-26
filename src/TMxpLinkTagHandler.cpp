@@ -28,8 +28,6 @@
 // <A href=URL [hint=text] [expire=name]>
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    Q_UNUSED(ctx)
-
     // Extract expire name if present
     QString expireName;
     if (tag->hasAttribute(qsl("expire"))) {
@@ -37,7 +35,8 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     }
 
     mCurrentTagContent.clear();
-    mHref = getHref(tag);
+    // Expanded before the scheme is checked, so the check sees what would be opened
+    mHref = ctx.getEntityResolver().interpolate(getHref(tag));
     if (mHref.isEmpty()) {
         mIsHrefInContent = false;
         return MXP_TAG_NOT_HANDLED;
