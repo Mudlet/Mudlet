@@ -26,6 +26,7 @@
 
 
 #include "Host.h"
+#include "TAction.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
@@ -646,6 +647,253 @@ void TMainConsole::dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area)
 void TMainConsole::undockToolBar(TToolBar* pToolBar)
 {
     mudlet::self()->removeDockWidget(pToolBar);
+}
+
+void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions, std::list<QPointer<TToolBar>>& toolBars)
+{
+    for (auto& action : rootActions) {
+        if (action->mLocation != 4) {
+            // This TAction is not set to be a floating/dockable widget type toolbar
+            if (action->mpToolBar) {
+                // But it has a TToolBar type toolbar so we need to
+                // remove the ToolBar from the list of TToolBars:
+                toolBars.remove(action->mpToolBar);
+                // And destroy it:
+                action->mpToolBar->deleteLater();
+                action->mpToolBar = nullptr;
+            }
+            continue; // skip over any root action node that is NOT going to be a TToolBar.
+        }
+        if (!action->mPackageName.isEmpty()) {
+            for (auto* childActionNode : *action->mpMyChildrenList) {
+                auto* childAction = static_cast<TAction*>(childActionNode);
+                QPointer<TToolBar> pTB = nullptr;
+                for (auto& toolBar : toolBars) {
+                    if (toolBar == childAction->mpToolBar) {
+                        pTB = toolBar;
+                        break;
+                    }
+                }
+                if (!pTB) {
+                    pTB = createToolBar(childAction, childAction->getName());
+                    toolBars.push_back(pTB);
+                }
+                if (childAction->mOrientation == 1) {
+                    pTB->setVerticalOrientation();
+                } else {
+                    pTB->setHorizontalOrientation();
+                }
+                constructToolbar(childAction, pTB, toolBars);
+                childAction->mpToolBar = pTB;
+                pTB->setStyleSheet(pTB->mpTAction->css);
+            }
+            continue; //action package
+        }
+
+        QPointer<TToolBar> pTB = nullptr;
+        for (auto& toolBar : toolBars) {
+            if (toolBar == action->mpToolBar) {
+                pTB = toolBar;
+                break;
+            }
+        }
+        if (!pTB) {
+            pTB = createToolBar(action, action->getName());
+            toolBars.push_back(pTB);
+        }
+        if (action->mOrientation == 1) {
+            pTB->setVerticalOrientation();
+        } else {
+            pTB->setHorizontalOrientation();
+        }
+        constructToolbar(action, pTB, toolBars);
+        action->mpToolBar = pTB;
+        pTB->setStyleSheet(pTB->mpTAction->css);
+    }
+}
+
+void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActions, std::list<QPointer<TEasyButtonBar>>& easyButtonBars)
+{
+    for (auto& rootAction : rootActions) {
+        if (rootAction->mLocation == 4) {
+            // This TAction is set to be a floating/dockable widget
+            if (rootAction->mpEasyButtonBar) {
+                // But it has a TEasyButtonBar type toolbar so we need to
+                // remove the TEasyButtonBar from the list of TEasyButtonBars:
+                easyButtonBars.remove(rootAction->mpEasyButtonBar);
+                // And destroy it:
+                rootAction->mpEasyButtonBar->deleteLater();
+                rootAction->mpEasyButtonBar = nullptr;
+            }
+            continue; // skip over any root action node that IS going to be a TToolBar.
+        }
+        if (!rootAction->mPackageName.isEmpty()) {
+            // It has a package name so it is actually the parent
+            // module/package item rather than the actual ToolBar
+            for (auto* childActionNode : *rootAction->mpMyChildrenList) {
+                auto* childAction = static_cast<TAction*>(childActionNode);
+                TEasyButtonBar* pTB = nullptr;
+                for (auto& easyButtonBar : easyButtonBars) {
+                    if (easyButtonBar == childAction->mpEasyButtonBar) {
+                        pTB = easyButtonBar;
+                        break;
+                    }
+                }
+                if (!pTB) {
+                    pTB = createEasyButtonBar(rootAction, childAction->getName());
+                    easyButtonBars.emplace_back(pTB);
+                    childAction->mpEasyButtonBar = pTB; // needed for drag&drop
+                }
+                if (childAction->mOrientation == 1) {
+                    pTB->setVerticalOrientation();
+                } else {
+                    pTB->setHorizontalOrientation();
+                }
+                constructToolbar(childAction, pTB, easyButtonBars);
+                childAction->mpEasyButtonBar = pTB;
+                pTB->setStyleSheet(pTB->mpTAction->css);
+            }
+            continue; //rootAction package
+        }
+
+        TEasyButtonBar* pTB = nullptr;
+        for (auto& easyButtonBar : easyButtonBars) {
+            if (easyButtonBar == rootAction->mpEasyButtonBar) {
+                pTB = easyButtonBar;
+                break;
+            }
+        }
+        if (!pTB) {
+            pTB = createEasyButtonBar(rootAction, rootAction->getName());
+            easyButtonBars.emplace_back(pTB);
+            rootAction->mpEasyButtonBar = pTB; // needed for drag&drop
+        }
+        if (rootAction->mOrientation == 1) {
+            pTB->setVerticalOrientation();
+        } else {
+            pTB->setHorizontalOrientation();
+        }
+        constructToolbar(rootAction, pTB, easyButtonBars);
+        rootAction->mpEasyButtonBar = pTB;
+        pTB->setStyleSheet(pTB->mpTAction->css);
+    }
+}
+
+void TMainConsole::constructToolbar(TAction* pAction, TToolBar* pToolBar, std::list<QPointer<TToolBar>>& toolBars)
+{
+    if (!pAction->isDataChanged()) {
+        return;
+    }
+
+    pToolBar->clear();
+    if (pAction->mLocation != 4) {
+        // EasyButtonBars are handled differently from ToolBars, and
+        // if we get here then the TAction has just been changed to be one of
+        // those; we might still have a TToolBar associated with the
+        // (owner) TAction and if so we need to dispose of it:
+        if (pAction->mpToolBar) {
+            // We need to remove the TToolBar from the list of TToolBars
+            toolBars.remove(pAction->mpToolBar);
+            // before we get rid of it:
+            pAction->mpToolBar->deleteLater();
+            pAction->mpToolBar = nullptr;
+        }
+    }
+
+    if (!pAction->isActive()) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+        return;
+    }
+
+    if (pAction->mLocation == 4) {
+        pToolBar->addActionButtons(pAction);
+        pToolBar->setTitleBarWidget(nullptr);
+    }
+
+    pToolBar->finalize();
+
+    if (pAction->mOrientation == 0) {
+        pToolBar->setHorizontalOrientation();
+    } else {
+        pToolBar->setVerticalOrientation();
+    }
+
+    pToolBar->setTitleBarWidget(nullptr);
+    if (pAction->mLocation == 4) {
+        if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
+            qWarning().nospace().noquote() << "TMainConsole::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
+                                           << "\"), for this toolbar forcing it to the Left one!";
+        }
+        dockToolBar(pToolBar, (pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea);
+        if (pAction->mToolbarLastFloatingState) {
+            pToolBar->setFloating(true);
+            const QPoint pos = QPoint(pAction->mPosX, pAction->mPosY);
+            pToolBar->show();
+            pToolBar->move(pos);
+        } else {
+            pToolBar->setFloating(false);
+            pToolBar->show();
+        }
+        pToolBar->mpTAction = pAction;
+        pToolBar->recordMove();
+    } else {
+        pToolBar->show();
+    }
+
+    pToolBar->setStyleSheet(pToolBar->mpTAction->css);
+    pAction->setDataSaved();
+}
+
+void TMainConsole::constructToolbar(TAction* pA, TEasyButtonBar* pTB, std::list<QPointer<TEasyButtonBar>>& easyButtonBars)
+{
+    pTB->clear();
+    if (pA->mLocation == 4) {
+        // Floating toolbars are handled differently from EasyButtonBars, and
+        // if we get here then the TAction has just been changed to be one of
+        // those; we might still have a TEasyButtonBar associated with the
+        // (owner) TAction and if so we need to dispose of it:
+        if (pA->mpEasyButtonBar) {
+            // We need to remove the TEasyButtonBar from the list of TEasyButtonBars
+            easyButtonBars.remove(pA->mpEasyButtonBar);
+            // before we get rid of it:
+            pA->mpEasyButtonBar->deleteLater();
+            pA->mpEasyButtonBar = nullptr;
+        }
+        return;
+    }
+
+    // However, just because pA->mLocation != 4 does not mean that pA is for a
+    // TEasyButtonBar - it could be a menu or a button or a package/module
+    // (container)
+
+    if (!pA->isActive()) {
+        pTB->hide();
+        return;
+    }
+
+    pTB->addActionButtons(pA);
+    pTB->finalize();
+    if (pA->mOrientation == 0) {
+        pTB->setHorizontalOrientation();
+    } else {
+        pTB->setVerticalOrientation();
+    }
+    attachEasyButtonBar(pTB, pA->mLocation);
+
+    pTB->setStyleSheet(pTB->mpTAction->css);
+    pTB->show();
+}
+
+void TMainConsole::detachActionBars(TAction* pAction)
+{
+    if (pAction->mpEasyButtonBar) {
+        detachEasyButtonBar(pAction->mpEasyButtonBar, pAction->mLocation);
+    }
+    if (pAction->mpToolBar && pAction->mLocation == 4) {
+        pAction->mpToolBar->setFloating(false);
+        undockToolBar(pAction->mpToolBar);
+    }
 }
 
 // This is a scrollBox overlaid on to the main console
