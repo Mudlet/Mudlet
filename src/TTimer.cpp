@@ -87,6 +87,8 @@ TTimer::~TTimer()
         // During shutdown (mpHost is null), delete immediately
         delete mpQTimer;
     }
+
+    deleteChildren();
 }
 
 void TTimer::setName(const QString& name)

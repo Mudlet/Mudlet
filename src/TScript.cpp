@@ -51,13 +51,14 @@ TScript::TScript(const QString& name, Host* pHost)
 
 TScript::~TScript()
 {
-    if (!mpHost) {
-        return;
+    if (mpHost) {
+        for (const auto& handler : std::as_const(mEventHandlerList)) {
+            mpHost->unregisterEventHandler(handler, this);
+        }
+        mpHost->getScriptUnit()->unregisterScript(this);
     }
-    for (const auto& handler : std::as_const(mEventHandlerList)) {
-        mpHost->unregisterEventHandler(handler, this);
-    }
-    mpHost->getScriptUnit()->unregisterScript(this);
+
+    deleteChildren();
 }
 
 
