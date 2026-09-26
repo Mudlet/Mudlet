@@ -122,6 +122,9 @@ private:
     // password - asking the game to restart the browser sign-in for the provider remembered from an
     // earlier Char.Login.URL. The absence of a password (not the presence of provider) distinguishes it.
     void sendResume(const QString& account, const QString& provider);
+    // Starts the wait for the Char.Login.Result that answers a replayed token, so a game that never
+    // answers one still reaches the interactive sign-in. Called wherever awaitingReconnectResult is set.
+    void armReconnectResultDeadline();
     void handleAuthToken(const QString& packageMessage, const QString& data);
     // Requests that the stored sign-in become {account, provider, secureOnly} plus the token, and
     // decides what to tell the player once it has - or has not. secureOnly is the token's transport
@@ -284,6 +287,14 @@ private:
     // One automatic browser hand-off per connection for an address reached from the game's sign-in
     // offer, so a server cannot turn a burst of frames into a burst of tabs.
     bool mUnpromptedBrowserOpenAvailable = true;
+
+    // How long a replayed token waits for the Char.Login.Result that answers it. A game that drops the
+    // frame - one that never implemented Reconnect, or a profile pointed at a different game, since the
+    // stored entry is not bound to a server - would otherwise leave the sign-in waiting for ever:
+    // attemptReconnect() cancels the auto-login timers before replaying, so nothing else is coming.
+    // Generous, because the answer is the game's to give and a slow one is not a broken one.
+    inline static constexpr std::chrono::milliseconds scmReconnectResultTimeout = std::chrono::seconds(15);
+    std::chrono::milliseconds mReconnectResultTimeout = scmReconnectResultTimeout;
 };
 
 #endif // MUDLET_AUTHENTICATOR_H

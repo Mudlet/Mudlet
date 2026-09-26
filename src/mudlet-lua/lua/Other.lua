@@ -223,8 +223,6 @@ function appendScript(name, luaCode, pos)
   assert(type(name) == "string", "appendScript: bad argument #1 type (script name as string expected, got "..type(name).."!)")
   assert(type(luaCode) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
   assert(type(pos) == "number", "appendScript: bad argument #3 type (script position as number expected, got "..type(pos).."!)")
-  -- getScript reports a missing script as the number -1 plus a message; concatenating
-  -- that into the new body would have setScript complain about "-1" as invalid Lua
   local existingCode, message = getScript(name, pos)
   if existingCode == -1 then
     error("appendScript: cannot append to script ("..message..")", 0)
@@ -1142,8 +1140,7 @@ function verbosePackageInstall(fileName)
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok and reason and reason ~= "" then
-    -- the install has already named on the console whatever in the package is
-    -- not working, so this owns up to it rather than claiming a clean install
+    -- installed, but with problems already reported on the console
     local partialText = mudlet.Locale.packageInstallPartial.message
     partialText = string.format(partialText, packageName)
     local warnPrefix = mudlet.Locale.prefixWarn.message

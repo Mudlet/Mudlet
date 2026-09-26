@@ -27,31 +27,16 @@
 class TChar;
 class TLinkStore;
 
-// A write-only text destination that core code can be handed instead of a view
-// pointer. The MXP DEST redirect resolves the frame it is writing into to one
-// of these, so the translation loop in TBuffer never holds a TConsole (#8681).
-//
-// Write-only is the whole point: nothing here reads state back, so a sink can
-// be satisfied by a TConsole widget today and by a view-less TConsoleModel
-// later without the callers changing. Keep it that way - a getter added here
-// is a coupling that the model-backed implementation would have to invent an
-// answer for.
+// A text destination core code can hold instead of a view, e.g. the MXP DEST target in TBuffer.
+// Keep it write-only: a getter would be coupling a view-less TConsoleModel sink must invent answers for.
 class TPrintSink
 {
 public:
-    // Appends text carrying its own per-character formatting. sourceLinkStore
-    // holds the links that formatting's link indices refer to; the sink remaps
-    // them into its own store, so the two must be passed together.
-    //
-    // The line semantics every implementation must reproduce (today they live
-    // in TBuffer::appendFormatted, which the TConsole implementation defers
-    // to): the first segment continues a part-written trailing line if the
-    // sink holds one, an embedded QChar::LineFeed starts a new line, and every
-    // call with non-empty text finishes on a committed line boundary - the
-    // next call never continues this call's text. Empty text is a no-op, with
-    // no boundary committed. formatting must be the same length as text; a
-    // mismatch is tolerated (missing entries print unformatted, extras are
-    // ignored) but warns, so callers must not lean on it.
+    // formatting's link indices refer to sourceLinkStore; the sink remaps them into its own store.
+    // Every implementation must match TBuffer::appendFormatted: the first segment continues a part-written
+    // trailing line, QChar::LineFeed starts a new line, and non-empty text ends on a committed line
+    // boundary. Empty text is a no-op. formatting must match text's length; a mismatch only warns
+    // (missing entries print unformatted, extras are ignored), so callers must not rely on it.
     virtual void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) = 0;
 
     // Empties the sink of everything it holds (<DEST ... EOF>).

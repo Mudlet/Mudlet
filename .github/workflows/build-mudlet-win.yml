@@ -217,8 +217,7 @@ jobs:
       run: |
         set -o pipefail
         PACKAGE_DIR="${GITHUB_WORKSPACE}/package-${MSYSTEM}-release"
-        # Staged a level deep: SignPath only documents ** as matching
-        # subdirectories, so a pattern cannot be relied on to reach the ZIP root
+        # Staged a level deep: SignPath doesn't document ** as matching the ZIP root
         STAGING_DIR="${GITHUB_WORKSPACE}/signing-binaries/app"
         rm -rf "${GITHUB_WORKSPACE}/signing-binaries"
         mkdir -p "${STAGING_DIR}"
@@ -269,8 +268,7 @@ jobs:
         echo "Replaced $(find . -type f \( -iname '*.exe' -o -iname '*.dll' \) | wc -l) binaries with signed versions."
 
     - name: (Windows) Verify binaries are signed
-      # Deliberately not gated on the signing steps: a release build that
-      # skipped them must fail here rather than ship unsigned binaries
+      # Not gated on the signing steps, so a release that skipped them fails here instead of shipping unsigned
       if: |
         startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'
       shell: pwsh
