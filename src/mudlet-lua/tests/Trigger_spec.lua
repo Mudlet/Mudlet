@@ -2400,6 +2400,67 @@ describe("Trigger processing", function()
             assert.is_nil(named.absent, "each line only carries the names its own pattern defined")
         end)
 
+        -- a Lua function as the body runs through yet another call path, which
+        -- used to set matches but never multimatches
+        for _, expiry in ipairs({0, 5}) do
+            it("gives a Lua function body multimatches" .. (expiry > 0 and " with an expiry count" or ""), function()
+                local name = "SpecMLFunction" .. expiry
+                local seen = {}
+                finally(function()
+                    killTrigger(name)
+                end)
+                local body = function()
+                    seen.fired = (seen.fired or 0) + 1
+                    seen.count = #multimatches
+                    seen.positional = multimatches[1][2]
+                    seen.first = multimatches[1]["alpha"]
+                    seen.second = multimatches[2]["beta"]
+                end
+                for _, pattern in ipairs({[[^function one (?<alpha>\w+)$]], [[^function two (?<beta>\w+)$]]}) do
+                    if expiry > 0 then
+                        tempComplexRegexTrigger(name, pattern, body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, expiry)
+                    else
+                        tempComplexRegexTrigger(name, pattern, body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                    end
+                end
+
+                feedTriggers("function one aaa\n")
+                feedTriggers("function two bbb\n")
+
+                assert.are.equal(1, seen.fired, "the state should have completed and run the function once")
+                assert.are.same({count = 2, positional = "aaa", first = "aaa", second = "bbb"},
+                    {count = seen.count, positional = seen.positional, first = seen.first, second = seen.second})
+            end)
+        end
+
+        -- the captures are handed to a function body only while its multiline
+        -- state is firing, not to whatever function-bodied trigger fires later
+        it("does not hand a multiline function body's captures to a later trigger", function()
+            local seen = {}
+            local laterId
+            finally(function()
+                killTrigger("SpecMLFunctionLeak")
+                if laterId then
+                    killTrigger(laterId)
+                end
+            end)
+            local body = function()
+                seen.multiline = #multimatches
+            end
+            tempComplexRegexTrigger("SpecMLFunctionLeak", [[^leak one (\w+)$]], body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecMLFunctionLeak", [[^leak two (\w+)$]], body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            laterId = tempRegexTrigger("^leak later$", function()
+                seen.later = #multimatches
+            end)
+
+            feedTriggers("leak one aaa\n")
+            feedTriggers("leak two bbb\n")
+            feedTriggers("leak later\n")
+
+            assert.are.equal(2, seen.multiline, "the multiline state should have completed with both lines")
+            assert.are.equal(0, seen.later, "a later single-line trigger saw the multiline trigger's multimatches")
+        end)
+
     end)
 
     -- A colour-pattern trigger that is the child of a filter parent ("only pass
