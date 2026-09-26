@@ -1190,6 +1190,122 @@ describe("Trigger processing", function()
             assert.are.equal(2, _G.TrigSpecExpire.count, "a callback body should renew the expiry count the same way a script one does")
         end)
 
+        -- tempComplexRegexTrigger's arguments after the script: multiline flag,
+        -- fg and bg colour, filter, match all, highlight fg and bg, sound, fire
+        -- length, line delta and then the expiry count
+        local function expiringMultiline(name, pattern, script, expireAfter)
+            return tempComplexRegexTrigger(name, pattern, script, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, expireAfter)
+        end
+
+        it("renews an expiring multi-line trigger while its script returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = expiringMultiline("SpecExpireMulti", [[^expire_multi_renewed$]], [[
+                _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                return _G.TrigSpecExpire.count < 3
+            ]], 1)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecExpireMulti") end)
+
+            for _ = 1, 5 do
+                feedTriggers("\nexpire_multi_renewed\n")
+            end
+
+            assert.are.equal(3, _G.TrigSpecExpire.count, "a multi-line trigger should be renewed for as long as its script returns true")
+        end)
+
+        it("hands an expiring multi-line trigger's script the lines it matched", function()
+            _G.TrigSpecExpire = {}
+            local id = expiringMultiline("SpecExpireMultimatches", [[^expire_multi_(\w+)$]], [[
+                _G.TrigSpecExpire.whole = multimatches[1][1]
+                _G.TrigSpecExpire.capture = multimatches[1][2]
+            ]], 1)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecExpireMultimatches") end)
+
+            feedTriggers("\nexpire_multi_wombat\n")
+
+            assert.are.equal("expire_multi_wombat", _G.TrigSpecExpire.whole)
+            assert.are.equal("wombat", _G.TrigSpecExpire.capture)
+        end)
+
+        -- A script that raises has returned nothing, so it has not asked to be
+        -- renewed - the trigger has to count down as if it had returned false,
+        -- rather than either living forever or taking the triggers after it down.
+        describe("with a script that raises an error", function()
+            local function feedAndCount(line, times)
+                for _ = 1, times do
+                    assert.is_true(feedTriggers("\n" .. line .. "\n"))
+                end
+                -- without this a script that just returned would count the same
+                assert.is_nil(_G.TrigSpecExpire.pastError, "the script ran on past the error it raised")
+                return _G.TrigSpecExpire.count
+            end
+
+            local function watchLine(line)
+                _G.TrigSpecExpire.after = 0
+                local watcher = tempExactMatchTrigger(line, [[_G.TrigSpecExpire.after = _G.TrigSpecExpire.after + 1]])
+                return watcher
+            end
+
+            it("still expires a script body", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempTrigger("expire_raises_script", [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 2)
+                local watcher = watchLine("expire_raises_script")
+                finally(function() killTrigger(id); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_script", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("still expires a function body", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempTrigger("expire_raises_fn", function()
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                end, 2)
+                local watcher = watchLine("expire_raises_fn")
+                finally(function() killTrigger(id); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_fn", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("still expires a multi-line script", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = expiringMultiline("SpecExpireMultiRaises", [[^expire_raises_multi$]], [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 2)
+                assert.is_number(id)
+                local watcher = watchLine("expire_raises_multi")
+                finally(function() killTrigger("SpecExpireMultiRaises"); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_multi", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("keeps firing a multi-line trigger that never expires", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempComplexRegexTrigger("SpecMultiRaises", [[^multi_raises$]], [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+                assert.is_number(id)
+                local watcher = watchLine("multi_raises")
+                finally(function() killTrigger("SpecMultiRaises"); killTrigger(watcher) end)
+
+                assert.are.equal(3, feedAndCount("multi_raises", 3))
+                assert.are.equal(3, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+        end)
+
     end)
 
     describe("tempColorTrigger legacy colour remap", function()

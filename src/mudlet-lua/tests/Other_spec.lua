@@ -1299,6 +1299,100 @@ describe("Tests Other.lua functions", function()
       assert.is_true(exercised > 0, "expected at least one string enum config option")
     end)
 
+    -- These keys go to the 2D map widget itself, so setConfig() only knows them
+    -- while the mapper is open - with it closed they are refused as unknown.
+    describe("the map keys that need an open mapper", function()
+      before_each(function()
+        assert.is_true(openMapWidget(), "these keys cannot be set without the map widget")
+      end)
+
+      it("round-trips mapExitSize", function()
+        snapshot("mapExitSize")
+        local target = getConfig("mapExitSize") == 4 and 6 or 4
+        assert.is_true(setConfig("mapExitSize", target))
+        assert.equals(target, getConfig("mapExitSize"))
+        restore("mapExitSize")
+      end)
+
+      it("shows and hides a map info contributor by name", function()
+        local name = "mudletSpecConfigMapInfo"
+        assert.is_true(registerMapInfo(name, function() return "" end))
+        finally(function() killMapInfo(name) end)
+        assert.is_false(getMapInfo()[name], "a newly registered map info should start hidden")
+
+        assert.is_true(setConfig("showMapInfo", name))
+        assert.is_true(getMapInfo()[name])
+
+        assert.is_true(setConfig("hideMapInfo", name))
+        assert.is_false(getMapInfo()[name])
+      end)
+
+      describe("mapInfoColor", function()
+        local original
+
+        before_each(function()
+          original = getConfig("mapInfoColor")
+        end)
+
+        after_each(function()
+          setConfig("mapInfoColor", original)
+        end)
+
+        it("round-trips a colour with and without its alpha", function()
+          assert.is_true(setConfig("mapInfoColor", {10, 20, 30, 40}))
+          assert.same({10, 20, 30, 40}, getConfig("mapInfoColor"))
+
+          assert.is_true(setConfig("mapInfoColor", {50, 60, 70}))
+          assert.same({50, 60, 70, 255}, getConfig("mapInfoColor"), "a colour given without alpha should be opaque")
+        end)
+
+        it("refuses anything that is not a table", function()
+          local ok, err = setConfig("mapInfoColor", "red")
+          assert.is_nil(ok)
+          assert.equals("mapInfoColor requires a table {r, g, b} or {r, g, b, a}", err)
+        end)
+
+        it("names the component that is missing", function()
+          local cases = {
+            {value = {}, message = "red component at index 1"},
+            {value = {1}, message = "green component at index 2"},
+            {value = {1, 2}, message = "blue component at index 3"},
+          }
+          for _, case in ipairs(cases) do
+            local ok, err = setConfig("mapInfoColor", case.value)
+            assert.is_nil(ok)
+            assert.is_truthy(tostring(err):find(case.message, 1, true), tostring(err))
+          end
+          assert.same(original, getConfig("mapInfoColor"), "a refused colour was applied anyway")
+        end)
+
+        it("names the component that is out of range", function()
+          local cases = {
+            {value = {256, 0, 0}, message = "red value 256"},
+            {value = {0, -1, 0}, message = "green value -1"},
+            {value = {0, 0, 300}, message = "blue value 300"},
+            {value = {0, 0, 0, 256}, message = "alpha value 256"},
+          }
+          for _, case in ipairs(cases) do
+            local ok, err = setConfig("mapInfoColor", case.value)
+            assert.is_nil(ok)
+            assert.is_truthy(tostring(err):find(case.message, 1, true), tostring(err))
+          end
+          assert.same(original, getConfig("mapInfoColor"), "a refused colour was applied anyway")
+        end)
+      end)
+    end)
+
+    it("refuses a mapSymbolFont that is only whitespace", function()
+      snapshot("mapSymbolFont")
+      local before = getConfig("mapSymbolFont")
+      local ok, err = setConfig("mapSymbolFont", "   ")
+      assert.is_nil(ok)
+      assert.equals("mapSymbolFont must not be empty", err)
+      assert.equals(before, getConfig("mapSymbolFont"))
+      restore("mapSymbolFont")
+    end)
+
     it("errors on a wrongly typed value for a boolean option", function()
       -- setConfig defers to getVerifiedBool, which raises rather than silently
       -- coercing; the flag is never assigned so there is nothing to restore.
