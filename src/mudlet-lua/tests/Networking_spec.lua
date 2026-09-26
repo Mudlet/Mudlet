@@ -1649,6 +1649,35 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.equals("abc?\5Mallory chats to you, 'hi'", line.text, "payload bytes: " .. line.hex)
     end)
 
+    it("sends a blank game line to a snooper as a frame of its own", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      -- Registered before the snoop has started, and stops it only if it did,
+      -- so that a failure to start still has the permission withdrawn
+      finally(function()
+        if mmcp.getClientFlags(PEER_NAME) == "      N " then
+          peerSends(30, "")
+          waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+        end
+        mmcp.allowSnoop(PEER_NAME)
+      end)
+      peerSends(30, "")
+      assert.is_true(waitUntil(function()
+        return mmcp.getClientFlags(PEER_NAME) == "      N "
+      end, 2000))
+
+      local mark = captureSeq()
+      feedTelnet("before the gap\r\n\r\nafter the gap\r\n")
+      local after = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and contains(event.text, "after the gap")
+      end, 2000)
+      assert.is_table(after)
+      -- An empty line used to go out without its terminator, so the next
+      -- line's frame arrived with a stray SnoopData byte at its front.
+      assert.equals("after the gap", after.text, "payload bytes: " .. after.hex)
+    end)
+
     it("raises sysMMCPIncomingSnoopMessage for snooped output", function()
       if peerUnavailable() then return end
       ensurePeer()
