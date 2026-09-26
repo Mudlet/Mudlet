@@ -8105,11 +8105,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
             // not truncated to a whole number: the preferences store sizes such as
             // 12.5, which getConfig() answers and a script may hand back
             const double size = getVerifiedDouble(L, __func__, 2, "value");
-            // the size divides the exit pen width, is saved with the profile and
-            // is turned back into an int by the preferences, so NaN, infinity,
-            // zero and negatives would all outlive the script that set them
-            if (!std::isfinite(size) || size <= 0.0) {
-                return warnArgumentValue(L, __func__, qsl("mapExitSize must be a positive number, got %1").arg(size));
+            // the size divides the exit pen width, is saved with the profile to
+            // one decimal place and is turned back into an int by the preferences
+            // (qRound(50.0 / size)), so NaN, infinity and sizes below 1 - the
+            // smallest the old whole-number check let through - would all break
+            // the exits or outlive the script that set them
+            if (!std::isfinite(size) || size < 1.0) {
+                return warnArgumentValue(L, __func__, qsl("mapExitSize must be a number of at least 1, got %1").arg(size));
             }
             host.mpMap->mpMapper->mp2dMap->setExitSize(size);
             return success();
