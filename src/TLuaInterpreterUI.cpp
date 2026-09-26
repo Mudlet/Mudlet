@@ -39,7 +39,6 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "TArea.h"
-#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -197,18 +196,12 @@ static QColor colorFromColorTable(lua_State* L, const QString& name)
         console_;                                                                                                                                                                                      \
     })
 
-#define COMMANDLINE(ARG_L, ARG_name)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        const QString& name_ = (ARG_name);                                                                                                                                                             \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->subCommandLineWidget(name_));                                                                     \
-        if (!cmdLine_) {                                                                                                                                                                               \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        cmdLine_;                                                                                                                                                                                      \
-    })
+static int commandLineNotFound(lua_State* L, const QString& name)
+{
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_cmdline_value, name.toUtf8().constData());
+    return 2;
+}
 
 // Parsing a command or a commands table anchors each function it holds in the
 // Lua registry, so a call that goes on to fail has to let those references go
@@ -238,8 +231,11 @@ int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
     if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
         return lua_error(L);
     }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->addBlacklist(QString{lua_tostring(L, textIndex)});
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->addCommandLineBlacklistWord(commandLineName, QString{lua_tostring(L, textIndex)})) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -261,8 +257,10 @@ int TLuaInterpreter::addCommandLineMenuEvent(lua_State* L)
     const QString menuLabel{lua_tostring(L, menuLabelPos)};
     const QString eventName{lua_tostring(L, menuLabelPos + 1)};
 
-    const auto& commandline = COMMANDLINE(L, commandLineName);
-    commandline->contextMenuItems.insert(menuLabel, eventName);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->addCommandLineMenuItem(commandLineName, menuLabel, eventName)) {
+        return commandLineNotFound(L, commandLineName);
+    }
 
     lua_pushboolean(L, true);
     return 1;
@@ -389,8 +387,11 @@ int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->clearBlacklist();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->clearCommandLineBlacklist(commandLineName)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -986,11 +987,11 @@ int TLuaInterpreter::disableCommandLine(lua_State* L)
         return 1;
     }
 
-    // Else this might refer to an additional command line which must exist
-    // for it to be shown by this function - the following macro will fail
-    // (and return with a nil and an error message) if it doesn't:
-    auto commandLine = COMMANDLINE(L, commandLineName);
-    commandLine->setVisible(false);
+    // Else this might refer to an additional command line, which must exist:
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setCommandLineVisible(commandLineName, false)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1268,11 +1269,11 @@ int TLuaInterpreter::enableCommandLine(lua_State* L)
         return 1;
     }
 
-    // Else this might refer to an additional command line which must exist
-    // for it to be shown by this function - the following macro will fail
-    // (and return with a nil and an error message) if it doesn't:
-    auto commandLine = COMMANDLINE(L, commandLineName);
-    commandLine->setVisible(true);
+    // Else this might refer to an additional command line, which must exist:
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setCommandLineVisible(commandLineName, true)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1793,9 +1794,13 @@ int TLuaInterpreter::getSaveCommandHistory(lua_State* L)
     if (lua_gettop(L)) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto pCommandline = COMMANDLINE(L, QString{name});
-    lua_pushboolean(L, pCommandline->mSaveCommands);
-    lua_pushstring(L, (pCommandline->mSaveCommands ? qsl("enabled (%1 lines will be saved)").arg(QString::number(numberOfLines)) : qsl("disabled")).toUtf8().constData());
+    const QString commandLineName{name};
+    const auto savesHistory = host.mpConsole ? host.mpConsole->getCommandLineSavesHistory(commandLineName) : std::nullopt;
+    if (!savesHistory) {
+        return commandLineNotFound(L, commandLineName);
+    }
+    lua_pushboolean(L, *savesHistory);
+    lua_pushstring(L, (*savesHistory ? qsl("enabled (%1 lines will be saved)").arg(QString::number(numberOfLines)) : qsl("disabled")).toUtf8().constData());
     return 2;
 }
 
@@ -2540,8 +2545,11 @@ int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
     if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
         return lua_error(L);
     }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->removeBlacklist(QString{lua_tostring(L, textIndex)});
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->removeCommandLineBlacklistWord(commandLineName, QString{lua_tostring(L, textIndex)})) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -2562,9 +2570,12 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State* L)
     const QString commandLineName = hasCommandLineName ? QString{lua_tostring(L, 1)} : qsl("main");
     const QString menuLabel{lua_tostring(L, menuLabelPos)};
 
-    const auto& commandline = COMMANDLINE(L, commandLineName);
-
-    if (commandline->contextMenuItems.remove(menuLabel) == 0) {
+    const Host& host = getHostFromLua(L);
+    const auto removed = host.mpConsole ? host.mpConsole->removeCommandLineMenuItem(commandLineName, menuLabel) : std::nullopt;
+    if (!removed) {
+        return commandLineNotFound(L, commandLineName);
+    }
+    if (!*removed) {
         lua_pushboolean(L, false);
         lua_pushfstring(L, "removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist", menuLabel.toUtf8().constData());
         return 2;
@@ -2755,8 +2766,10 @@ int TLuaInterpreter::selectCmdLineText(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto commandline = COMMANDLINE(L, name);
-    commandline->selectAll();
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->selectCommandLineText(name)) {
+        return commandLineNotFound(L, name);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3986,8 +3999,10 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
         }
     }
 
-    auto pCommandline = COMMANDLINE(L, QString{name});
-    pCommandline->mSaveCommands = saveCommands;
+    const QString commandLineName{name};
+    if (!host.mpConsole || !host.mpConsole->setCommandLineSavesHistory(commandLineName, saveCommands)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
