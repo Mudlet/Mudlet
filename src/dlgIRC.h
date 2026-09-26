@@ -68,10 +68,10 @@ private slots:
     void slot_onBufferActivated(const QModelIndex& index);
     void slot_onUserActivated(const QModelIndex& index);
     void slot_nickNameReserved(const QString& reserved, const QString& replacement);
-    void slot_receiveMessage(IrcMessage* message);
+    void slot_showMessage(IrcBuffer* buffer, IrcMessage* message);
+    void slot_showOwnMessage(IrcMessage* message);
     void slot_onAnchorClicked(const QUrl& link);
     void slot_onHistoryCompletion();
-    void slot_connectedHostChanged(const QString& hostName);
     void slot_restarting(const QString& reason);
     void slot_restarted();
 
@@ -83,7 +83,6 @@ private:
     bool processCustomCommand(IrcCommand*);
     void displayHelp(const QString&);
     void appendToDocument(QTextDocument*, const QString&);
-    QString getMessageTarget(IrcMessage*, const QString&);
     void writeQSettings();
 
     void showEvent(QShowEvent* event) override;
@@ -93,15 +92,12 @@ private:
     bool mIrcStarted = false;
     IrcCompleter* completer = nullptr;
     IrcCommandParser* commandParser = nullptr;
-    IrcBufferModel* bufferModel = nullptr;
     QHash<IrcBuffer*, IrcUserModel*> userModels;
     QHash<IrcBuffer*, QTextDocument*> bufferTexts;
-    QPointer<IrcBuffer> serverBuffer;
     QStringList mInputHistory;
     int mInputHistoryMax = 8;
     int mInputHistoryIdxNext = 0;
     int mInputHistoryIdxCurrent = 0;
-    quint64 mPingStarted = 0;
     int mMessageBufferLimit = 0;
 };
 
