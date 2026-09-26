@@ -6802,10 +6802,12 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         // sequence, is left for the caller to handle rather than taken with it:
         const size_t available = std::min(utf8SequenceLength, len - pos);
         for (size_t i = 1; i < available; ++i) {
-            if ((bufferData.at(pos + i) & 0xC0) != 0x80) {
+            if ((static_cast<quint8>(bufferData[pos + i]) & 0xC0) != 0x80) {
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence cut short after " << i << " byte(s) by <" << Qt::hex
+                                   << static_cast<int>(static_cast<quint8>(bufferData.at(pos + i))) << Qt::dec << ">, rejected!";
+#endif
                 mMudLine.append(QChar::ReplacementCharacter);
-                // As there is already a unit increment at the bottom of loop
-                // add one less than the bytes taken:
                 pos += i - 1;
                 return true;
             }
@@ -6813,20 +6815,29 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
         if ((pos + utf8SequenceLength) > len) {
             // Not enough bytes left in bufferData to complete the utf-8
-            // sequence - need to save and prepend onto incoming data next
-            // time around.
-            // Everything the decoder was allowed to look at is taken - see
-            // decodableLength() for why that can stop short of the end of
-            // bufferData. This is only for data from the Server NOT from
-            // locally generated material from Lua feedTriggers(...)
+            // sequence. Everything the decoder was allowed to look at is taken
+            // - see decodableLength() for why that can stop short of the end of
+            // bufferData.
             if (isFromServer) {
+                // Save it to prepend onto the next packet:
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) Insufficient bytes in buffer to complete UTF-8 sequence, need:" << utf8SequenceLength
                          << " but we currently only have: " << bufferData.substr(pos, len - pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                 mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
+                return false; // Bail out
             }
-            return false; // Bail out
+
+            // Locally generated text, such as from Lua feedTriggers(...), is
+            // never continued by the next call, so this is the end of its
+            // input and the unfinished sequence is malformed:
+#if defined(DEBUG_UTF8_PROCESSING)
+            qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence cut short after " << len - pos
+                               << " byte(s) by the end of locally generated text, rejected!";
+#endif
+            mMudLine.append(QChar::ReplacementCharacter);
+            pos = len - 1;
+            return true;
         }
 
         // If we have got here we have enough bytes to work with:
@@ -6915,12 +6926,12 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // Fall-through
             [[fallthrough]];
         case 2: {
-            // Also test for (and reject) overlong sequences - don't need to check
-            // 5 or 6 byte ones as those are already rejected above
+            // Test for (and reject) overlong sequences - 5 and 6 byte ones do
+            // not get here, the default case rejects them
             const auto firstByte = static_cast<quint8>(bufferData.at(pos));
             const auto secondByte = static_cast<quint8>(bufferData.at(pos + 1));
             // Overlong 2-byte: C0/C1 xx (could be encoded in 1 byte)
-            const bool twoByteOverlong = ((firstByte & 0xFE) == 0xC0) && ((secondByte & 0xC0) == 0x80);
+            const bool twoByteOverlong = (firstByte & 0xFE) == 0xC0;
             // Overlong 3-byte: E0 80-9F xx (could be encoded in 2 bytes)
             const bool threeByteOverlong = (firstByte == 0xE0) && ((secondByte & 0xE0) == 0x80);
             // Overlong 4-byte: F0 80-8F xx xx (could be encoded in 3 bytes)

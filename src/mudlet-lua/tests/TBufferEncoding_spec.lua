@@ -323,6 +323,48 @@ describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", f
 
     assert.equals("A" .. replacement .. "REDZ", decoded("A" .. bytes(0xE2) .. "\27[31mRED\27[0mZ"))
   end)
+
+  -- cTelnet ends a prompt with a byte of its own when the game sends IAC GA
+  -- (cTelnet::gotPrompt()), and that byte cannot continue a sequence either
+  it("still commits a prompt that a sequence is cut short by", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet("gaprompt:" .. bytes(0xE2) .. "<T_IAC><T_GA>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    feedTelnet("gaafter\r\n")
+
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^ga") then
+        shown[#shown + 1] = line
+      end
+    end
+    assert.same({"gaprompt:" .. replacement, "gaafter"}, shown)
+  end)
+end)
+
+describe("Tests UTF-8 locally fed text that ends part way through a sequence", function()
+
+  -- Game data that stops part way through a sequence is held for the next
+  -- packet to finish, but nothing continues text a script feeds in: the next
+  -- feedTriggers() call starts afresh, so the unfinished sequence is malformed
+  -- and earns a replacement mark rather than vanishing.
+  it("marks the unfinished sequence at the end of the text", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    feedTriggers("localtail:" .. bytes(0xE2, 0x82))
+    feedTriggers("\n")
+
+    local seen
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^localtail:") then
+        seen = line
+      end
+    end
+    assert.equals("localtail:" .. replacement, seen)
+  end)
 end)
 
 describe("Tests a character whose bytes are split by the posting timeout", function()
@@ -714,26 +756,26 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
   end)
 
   it("takes a carriage return in locally fed text as data, not as a marker", function()
-    using("UTF-8")
+    using("GBK")
 
     -- Only cTelnet makes the marker, so a carriage return handed to
-    -- feedTriggers() is the caller's own byte and the decoder has to see it: it
-    -- cuts the truncated lead byte ahead of it short, which earns that byte a
-    -- replacement mark, and then ends the line as a carriage return does. Held
-    -- back as a marker, it would instead leave the lead byte waiting for the
-    -- rest of its sequence, and the line would end with no mark at all.
+    -- feedTriggers() is the caller's own byte and the decoder has to see it: as
+    -- the second byte of a GBK pair it is out of range, and the pair is refused
+    -- whole, in one replacement mark, so it does not end the line. Held back as
+    -- a marker, it would instead leave the lead byte unfinished at the end of the
+    -- text, and end the line.
+    -- (false: these are the game's own bytes, not UTF-8 to be converted to it)
     local mark = getLastLineNumber("main")
-    feedTriggers("local:" .. bytes(0xC3, 0x0D))
-    feedTriggers("tail\n")
+    feedTriggers("local:" .. bytes(0xC4, 0x0D), false)
+    feedTriggers("tail\n", false)
 
-    local seen = {}
-    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
-    for index, line in ipairs(lines) do
+    local seen
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
       if line:find("^local:") then
-        seen = {line, lines[index + 1]}
+        seen = line
       end
     end
-    assert.same({"local:" .. replacement, "tail"}, seen)
+    assert.equals("local:" .. replacement .. "tail", seen)
   end)
 end)
 
