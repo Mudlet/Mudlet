@@ -1482,6 +1482,28 @@ describe("Tests MCCP compressed streams", function()
     shown = linesSince(mark)
     assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
   end)
+
+  -- A feedTelnet() from a trigger at the deepest level of a drain arrives past
+  -- the cap too, but what it would drop is its own text, not the stream's.
+  it("keeps a stream a trigger feeds text into at the deepest drain level", function()
+    -- the first part of one stream, flushed but not finished: 750000 NULs then
+    -- MCCPFEEDTRIGGER, so the line lands in the eighth and last output buffer
+    local part1 = "\120\218\236\193\209\9\0\16\20\0\64\223\202\84\60\242\161\36\251\207\98\16\119\151\18"
+      .. string.rep("\0", 726)
+      .. "\252\107\213\186\123\68\187\103\142\17\167\228\7\0\0\255\255"
+    -- the rest of that stream: MCCPSTREAMSURVIVES, then its end
+    local part2 = "\3\9\4\135\4\185\58\250\6\135\6\133\121\134\185\6\243\114\1\0\51\35\9\240"
+    local trigger = tempTrigger("MCCPFEEDTRIGGER", function() feedTelnet("MCCPFEDBYTRIGGER\r\n") end)
+    finally(function() killTrigger(trigger) end)
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(part1))
+    feed(escaped(part2))
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPFEEDTRIGGER", 1, true), shown)
+    assert.is_falsy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPSTREAMSURVIVES", 1, true), "the stream was refused: " .. shown)
+  end)
 end)
 
 describe("Tests CHARSET negotiation", function()
