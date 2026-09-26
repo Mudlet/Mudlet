@@ -31,14 +31,12 @@
  * Run with: ctest -R MMCPIncomingCallTest -V
  */
 
-#include <QPointer>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <QtTest/QtTest>
 
 #include "Host.h"
-#include "HostManager.h"
 #include "MMCP.h"
 #include "MMCPClient.h"
 #include "MMCPServer.h"
@@ -173,7 +171,16 @@ private:
         if (!waitForClient(QString::fromLatin1(name)) || !server()->chatAccept(QString::fromLatin1(name)).first) {
             return nullptr;
         }
-        if (!caller->waitToReceive(frame(Version, QByteArrayLiteral("Mudlet")).chopped(1))) {
+        // the whole of the version frame, so no tail of it arrives after the
+        // clear below and reads as something the case under test was sent
+        const QByteArray versionStart = frame(Version, QByteArrayLiteral("Mudlet")).chopped(1);
+        if (!caller->waitToReceive(versionStart)
+            || !QTest::qWaitFor(
+                    [caller, &versionStart]() {
+                        const QByteArray& received = caller->received();
+                        return received.indexOf(static_cast<char>(End), received.indexOf(versionStart)) != -1;
+                    },
+                    5000)) {
             return nullptr;
         }
         caller->clearReceived();
@@ -235,10 +242,29 @@ private slots:
         QCOMPARE(mpHost->getMMCPChatName(), QString::fromLatin1(csListenerName));
 
         mpHost->initMMCPServer();
-        // 0 lets the OS pick, so parallel runs never collide on MMCP's 4050
+        // 0 lets the OS pick, so parallel runs never collide on MMCP's 4050.
+        // MMCPServer listens on every interface and takes no address to narrow
+        // that, so a desktop firewall may ask about this port during the run.
         QVERIFY(server()->startServer(0).first);
         mPort = server()->serverPort();
         QVERIFY(mPort != 0);
+    }
+
+    // A case that fails halfway leaves its callers connected, or do-not-disturb
+    // on, and every case after it would then fail for that rather than for
+    // anything of its own
+    void cleanup()
+    {
+        if (server()->isDoNotDisturb()) {
+            server()->toggleDoNotDisturb();
+        }
+        qDeleteAll(findChildren<MMCPCaller*>(Qt::FindDirectChildrenOnly));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return server()->getClients().isEmpty();
+                         },
+                         5000),
+                 "a caller from this case is still in the peer list");
     }
 
     void cleanupTestCase()

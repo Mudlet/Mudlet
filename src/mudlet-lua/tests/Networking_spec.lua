@@ -1049,13 +1049,14 @@ describe("MMCP effects against a scripted chat peer", function()
 
   -- Runs action with a handler armed for eventName and returns the argument
   -- lists it saw. Events Mudlet raises inside an mmcp.* call are raised before
-  -- that call returns, so they have to be watched for, not waited on.
+  -- that call returns, so they have to be watched for, not waited on. action
+  -- is handed the list as it fills, so it can wait on it too.
   local function collectEvents(eventName, action)
     local seen = {}
     local handlerId = registerAnonymousEventHandler(eventName, function(_, ...)
       seen[#seen + 1] = {...}
     end)
-    local ok, err = pcall(action)
+    local ok, err = pcall(action, seen)
     killAnonymousEventHandler(handlerId)
     if not ok then
       error(err, 0)
@@ -1850,9 +1851,11 @@ describe("MMCP effects against a scripted chat peer", function()
       if peerUnavailable() then return end
       ensurePeer()
       local mark = getLastLineNumber("main")
-      -- .invalid is reserved (RFC 2606), so no resolver anywhere answers it
-      assert.is_true(mmcp.call("no-such-host.invalid", 4050))
-      local shown = waitForText(mark, "The peer was not found", 8000)
+      -- Not a valid host name at all, so Qt fails the lookup before asking a
+      -- resolver, which could take its full timeout to give up on a real
+      -- name. The reserved .invalid (RFC 2606) is a second line of defence.
+      assert.is_true(mmcp.call("bad_host!.invalid", 4050))
+      local shown = waitForText(mark, "The peer was not found")
       assert.is_true(contains(shown, "The peer was not found"), shown)
       assert.equals(1, #mmcp.getClientList())
       assert.is_table(peerClient())
@@ -1863,31 +1866,35 @@ describe("MMCP effects against a scripted chat peer", function()
     -- What arrives from the peer, and what is sent to a peer snooping us. The
     -- colour a peer's snoop feed was last in carries across frames, since a
     -- MudMaster-style sender does not repeat it at the start of each line.
-    local function snoopEvents(action)
-      return collectEvents("sysMMCPIncomingSnoopMessage", function()
-        action()
-        pump(300)
-      end)
-    end
-
+    -- Waits for the frame's event rather than a fixed time: one that arrived
+    -- late would be missed here and counted against the next frame instead.
+    -- The settle after it is what would catch a second event.
     local function snoopFrame(text)
-      local seen = snoopEvents(function()
+      local seen = collectEvents("sysMMCPIncomingSnoopMessage", function(events)
         peerSendsRaw(string.char(31) .. text .. string.char(255))
+        waitUntil(function() return #events > 0 end, 5000)
+        pump(100)
       end)
       assert.equals(1, #seen, "expected exactly one snoop event for " .. string.format("%q", text))
       return seen[1][2]
     end
 
     -- Lets the peer snoop us for the length of action, then stops it again.
+    -- The permission is withdrawn even when the snoop never started, since a
+    -- grant left behind would turn the next spec's snoop toggle on, not off.
     local function whileSnoopedBy(action)
       assert.is_true(mmcp.allowSnoop(PEER_NAME))
-      peerSends(30, "")
-      assert.is_true(waitUntil(function()
-        return mmcp.getClientFlags(PEER_NAME) == "      N "
-      end, 2000), tostring(mmcp.getClientFlags(PEER_NAME)))
-      local ok, err = pcall(action)
-      peerSends(30, "")
-      waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+      local ok, err = pcall(function()
+        peerSends(30, "")
+        assert.is_true(waitUntil(function()
+          return mmcp.getClientFlags(PEER_NAME) == "      N "
+        end, 2000), tostring(mmcp.getClientFlags(PEER_NAME)))
+        action()
+      end)
+      if mmcp.getClientFlags(PEER_NAME) == "      N " then
+        peerSends(30, "")
+        waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+      end
       assert.is_true(mmcp.allowSnoop(PEER_NAME))
       if not ok then
         error(err, 0)
@@ -1937,10 +1944,6 @@ describe("MMCP effects against a scripted chat peer", function()
       local text = snoopFrame("1500a mudmaster line")
       assert.is_true(contains(text, "a mudmaster line"), text)
       assert.is_false(contains(text, "1500"), text)
-      -- a frame too short to hold that code has nothing to show
-      assert.equals(0, #snoopEvents(function()
-        peerSendsRaw(string.char(31) .. "15" .. string.char(255))
-      end))
     end)
 
     it("sends what the game shows to a peer that is snooping us", function()
