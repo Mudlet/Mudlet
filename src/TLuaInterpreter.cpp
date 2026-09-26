@@ -83,6 +83,7 @@
 #include <QTextStream>
 #include <QFileInfo>
 #include <QVector>
+#include <cmath>
 #include <limits>
 
 using namespace std::chrono_literals;
@@ -8101,7 +8102,18 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
         if (key == qsl("mapExitSize")) {
-            host.mpMap->mpMapper->slot_exitSize(getVerifiedInt(L, __func__, 2, "value"));
+            // not truncated to a whole number: the preferences store sizes such as
+            // 12.5, which getConfig() answers and a script may hand back
+            const double size = getVerifiedDouble(L, __func__, 2, "value");
+            // the size divides the exit pen width, is saved with the profile to
+            // one decimal place and is turned back into an int by the preferences
+            // (qRound(50.0 / size)), so NaN, infinity and sizes below 1 - the
+            // smallest the old whole-number check let through - would all break
+            // the exits or outlive the script that set them
+            if (!std::isfinite(size) || size < 1.0) {
+                return warnArgumentValue(L, __func__, qsl("mapExitSize must be a number of at least 1, got %1").arg(size));
+            }
+            host.mpMap->mpMapper->mp2dMap->setExitSize(size);
             return success();
         }
         if (key == qsl("mapRoundRooms")) {
