@@ -112,13 +112,6 @@ describe("Mudlet object API edges", function()
       assert.equals(2, _G.ObjSpec.count)
     end)
 
-    it("tempBeginOfLineTrigger rejects an expiration count below one", function()
-      local id, err = tempBeginOfLineTrigger("objSpecBolZero", [[]], 0)
-      if type(id) == "number" and id > 0 then track(id) end
-      assert.is_nil(id)
-      assert.is_truthy(tostring(err):find("greater than zero", 1, true), "got: " .. tostring(err))
-    end)
-
     it("tempBeginOfLineTrigger rejects a non-string, non-function body", function()
       assert.has_error(function() tempBeginOfLineTrigger("objSpecBolBody", {}) end)
     end)
@@ -132,42 +125,63 @@ describe("Mudlet object API edges", function()
       assert.equals(1, _G.ObjSpec.count)
     end)
 
-    it("tempExactMatchTrigger validates its expiration count", function()
-      local id, err = tempExactMatchTrigger("objSpecExactZero", [[]], 0)
-      if type(id) == "number" and id > 0 then track(id) end
-      assert.is_nil(id)
-      assert.is_truthy(tostring(err):find("greater than zero", 1, true), "got: " .. tostring(err))
-      assert.has_error(function() tempExactMatchTrigger("objSpecExactLater", [[]], "later") end)
+    it("tempPromptTrigger runs string code on a line the server ended with IAC GA", function()
+      -- a prompt trigger has no pattern, so this one is killed before any
+      -- assertion can leave it firing on the rest of the suite's prompts
+      local id = tempPromptTrigger([[_G.ObjSpec.count = _G.ObjSpec.count + 1]])
+      local ok, msg = feedTelnet("objSpecPrompt> <T_IAC><T_GA>")
+      local fired = _G.ObjSpec.count
+      feedTelnet("\r\n")
+      killTrigger(id)
+      assert.is_true(ok, "start the suite with --offline - feedTelnet said: " .. tostring(msg))
+      assert.equals(1, fired)
     end)
 
-    it("tempRegexTrigger validates its expiration count", function()
-      local id, err = tempRegexTrigger("^objSpecRegexZero$", [[]], 0)
-      if type(id) == "number" and id > 0 then track(id) end
-      assert.is_nil(id)
-      assert.is_truthy(tostring(err):find("greater than zero", 1, true), "got: " .. tostring(err))
-      assert.has_error(function() tempRegexTrigger("^objSpecRegexLater$", [[]], "later") end)
+    -- Trigger IDs come off a counter only a created trigger advances, so a gap
+    -- is the trace of a refusal that built something before walking away
+    it("the expiring creators refuse a count below one and build nothing", function()
+      local refusals = {
+        tempBeginOfLineTrigger = function(expiry) return tempBeginOfLineTrigger("objSpecExpiryBol", [[]], expiry) end,
+        tempExactMatchTrigger = function(expiry) return tempExactMatchTrigger("objSpecExpiryExact", [[]], expiry) end,
+        tempRegexTrigger = function(expiry) return tempRegexTrigger("^objSpecExpiryRegex$", [[]], expiry) end,
+        tempPromptTrigger = function(expiry) return tempPromptTrigger([[]], expiry) end,
+        tempComplexRegexTrigger = function(expiry)
+          return tempComplexRegexTrigger("objSpecExpiryComplex", "^objSpecExpiryComplex$", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, expiry)
+        end,
+      }
+      local first = track(tempTrigger("objSpecExpiryProbe", [[]]))
+      for fname, create in pairs(refusals) do
+        for _, expiry in ipairs({0, -3}) do
+          local id, err = create(expiry)
+          if type(id) == "number" and id > 0 then track(id) end
+          assert.is_nil(id, ("%s accepted an expiry of %d"):format(fname, expiry))
+          assert.is_truthy(tostring(err):find("greater than zero, got " .. expiry, 1, true), fname .. " gave: " .. tostring(err))
+        end
+      end
+      assert.equals(0, exists("objSpecExpiryComplex", "trigger"))
+      assert.equals(first + 1, track(tempTrigger("objSpecExpiryProbe", [[]])), "a refused creator consumed a trigger ID")
     end)
 
-    it("tempPromptTrigger accepts string code and validates its expiration count", function()
-      local id = track(tempPromptTrigger([[_G.ObjSpec.count = _G.ObjSpec.count + 1]]))
-      assert.is_number(id)
-      assert.is_true(id > 0)
-      assert.has_error(function() tempPromptTrigger([[]], "later") end)
+    it("the expiring creators reject an expiration count that is not a number", function()
+      for fname, call in pairs({
+        tempExactMatchTrigger = function() return tempExactMatchTrigger("objSpecLaterExact", [[]], "later") end,
+        tempRegexTrigger = function() return tempRegexTrigger("^objSpecLaterRegex$", [[]], "later") end,
+        tempPromptTrigger = function() return tempPromptTrigger([[]], "later") end,
+        tempComplexRegexTrigger = function()
+          return tempComplexRegexTrigger("objSpecLaterComplex", "^objSpecLaterComplex$", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "later")
+        end,
+      }) do
+        local index = ({tempPromptTrigger = 2, tempComplexRegexTrigger = 14})[fname] or 3
+        local ok, err = pcall(call)
+        assert.is_false(ok, fname .. " accepted a string count")
+        assert.is_truthy(tostring(err):find(("bad argument #%d value"):format(index), 1, true), fname .. " gave: " .. tostring(err))
+      end
     end)
 
     it("tempLineTrigger rejects a non-string, non-function body", function()
-      assert.has_error(function() tempLineTrigger(1, 1, {}) end)
-    end)
-
-    it("tempComplexRegexTrigger validates its expiration count", function()
-      local function create(expiry)
-        return tempComplexRegexTrigger("objSpecComplexExpiry", "^objSpecComplex$", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, expiry)
-      end
-      local id, err = create(0)
-      if type(id) == "number" and id > 0 then track(id) end
-      assert.is_nil(id)
-      assert.is_truthy(tostring(err):find("greater than zero", 1, true), "got: " .. tostring(err))
-      assert.has_error(function() create("later") end)
+      local ok, err = pcall(tempLineTrigger, 1, 1, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("bad argument #3 type", 1, true), "got: " .. tostring(err))
     end)
 
     it("the pattern-taking creators reject a non-string pattern", function()
@@ -178,9 +192,10 @@ describe("Mudlet object API edges", function()
         tempRegexTrigger = function() return tempRegexTrigger({}, [[]]) end,
         tempComplexRegexTrigger = function() return tempComplexRegexTrigger("objSpecComplexBad", {}, [[]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) end,
       }) do
+        local index = fname == "tempComplexRegexTrigger" and 2 or 1
         local ok, err = pcall(call)
         assert.is_false(ok, fname .. " accepted a table")
-        assert.is_truthy(tostring(err):find("bad argument #", 1, true), fname .. " gave: " .. tostring(err))
+        assert.is_truthy(tostring(err):find(("bad argument #%d type"):format(index), 1, true), fname .. " gave: " .. tostring(err))
       end
     end)
 
@@ -228,18 +243,18 @@ describe("Mudlet object API edges", function()
 
     it("tempButton creates nothing on a toolbar that does not exist", function()
       local orphan = "objSpecOrphanButton" .. suffix
-      assert.equals(0, select("#", tempButton("objSpecNoSuchToolbar" .. suffix, orphan, 0)))
+      assert.is_nil((tempButton("objSpecNoSuchToolbar" .. suffix, orphan, 0)))
       assert.equals(0, exists(orphan, "button"))
     end)
 
-    it("tempButtonToolbar and tempButton return nothing for a name already in use", function()
+    it("tempButtonToolbar and tempButton refuse a name already in use", function()
       -- buttons cannot be deleted from Lua, hence the per-run names
       assert.is_number(tempButtonToolbar(toolbarName, 0, 0))
-      assert.equals(0, select("#", tempButtonToolbar(toolbarName, 0, 0)))
+      assert.is_nil((tempButtonToolbar(toolbarName, 0, 0)))
       assert.equals(1, exists(toolbarName, "button"))
 
       assert.is_number(tempButton(toolbarName, buttonName, 0))
-      assert.equals(0, select("#", tempButton(toolbarName, buttonName, 0)))
+      assert.is_nil((tempButton(toolbarName, buttonName, 0)))
       assert.equals(1, exists(buttonName, "button"))
     end)
 
@@ -265,8 +280,9 @@ describe("Mudlet object API edges", function()
     end)
 
     it("rejects an argument of a type an event cannot carry", function()
-      local ok, err = pcall(raiseEvent, "objSpecThreadEvent", coroutine.create(function() end))
+      local ok, err = pcall(raiseEvent, "objSpecThreadEvent", 1, coroutine.create(function() end))
       assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("bad argument #3 type", 1, true), "got: " .. tostring(err))
       assert.is_truthy(tostring(err):find("got a thread", 1, true), "got: " .. tostring(err))
     end)
   end)
