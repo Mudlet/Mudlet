@@ -54,7 +54,6 @@ class QJsonArray;
 class QJsonObject;
 class QRegularExpression;
 class QTimer;
-class TConsole;
 struct TConsoleModel;
 class THyperlinkVisibilityManager;
 
@@ -144,10 +143,9 @@ public:
     // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
-    // Not a default constructor - the defaulted argument means it could have
-    // been used if supplied with no arguments, but the 'explicit' prevents
-    // this:
-    explicit TChar(TConsole* pC = nullptr);
+    // White on black with no attributes. Explicit, so `return {}` cannot stand
+    // in for it by accident:
+    explicit TChar();
     // Another non-default constructor:
     TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
     // Inline because filling a run's format and copying out a finished line call it per character:
@@ -336,28 +334,10 @@ public:
     // paints, so another width shifts the text origin and the mouse-to-column mapping:
     static inline QString smBlankTimeStamp = qsl("------------ ");
 
-    explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
+    explicit TBuffer(Host* pH);
     ~TBuffer();
     TBuffer(const TBuffer& other);
     TBuffer& operator=(const TBuffer& other);
-    // The main console's model can outlive the view built on it, so this
-    // back-pointer is bound when a view attaches and unbound when it goes away.
-    // A second live view attaching to the same model would silently steal it
-    // from the first, so trip on that rather than leave detachConsole() to
-    // guess which one owns the binding:
-    void setConsole(TConsole* pConsole)
-    {
-        Q_ASSERT(mpConsole.isNull() || mpConsole.data() == pConsole);
-        mpConsole = pConsole;
-    }
-    // Ignores views other than the bound one, so a departing view cannot orphan
-    // a successor that has already attached.
-    void detachConsole(const TConsole* pConsole)
-    {
-        if (mpConsole.data() == pConsole) {
-            mpConsole = nullptr;
-        }
-    }
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -400,8 +380,12 @@ public:
     // one - see translateToPlainTextInner().
     int pendingChunkLines() const { return mPendingChunkLines; }
     // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
-    // - public so that the connection teardown can flush it:
+    // - public so that the connection teardown and the view's flush timer can
+    // flush it:
     void flushPendingServerWrapJoin();
+    // How long to hold a full-width line for its continuation before deciding
+    // it really was complete:
+    static constexpr int csmServerWrapFlushDelayMs = 300;
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
     // Drops any half-received ANSI sequence or multi-byte character, on both
@@ -512,7 +496,6 @@ private:
     bool pendingLineHadRoomForNextWord() const;
     bool continuationRepeatsSegmentOpening() const;
     void joinPendingServerWrapOntoCurrent();
-    void startServerWrapFlushTimer();
     void processMxpWatchdogCallback();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
@@ -541,11 +524,11 @@ private:
     // Accessibility enhancements for hyperlink styling
     void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
 
-    QPointer<TConsole> mpConsole;
     // The model this buffer is the text of. The hyperlink managers, the
-    // current format and the console background are read off it, so none of
-    // them needs a view. Unset on a scratch buffer, such as a copy or a cut,
-    // and never copied: a copy is nobody's model's buffer.
+    // current format and the console background are read off it, and whatever
+    // a view should hear about goes out through its notifier, so none of it
+    // needs a view. Unset on a scratch buffer, such as a copy or a cut, and
+    // never copied: a copy is nobody's model's buffer.
     TConsoleModel* mpModel = nullptr;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
@@ -639,9 +622,6 @@ private:
     // Opening of that same game line, kept so that a continuation repeating it
     // can be told from one that carries on where it left off:
     QString mServerWrapPendingSegmentStart;
-    // Commits a held line if the game goes quiet without completing it - a
-    // full-width line that really was the end of the output:
-    QPointer<QTimer> mpServerWrapFlushTimer;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
     // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
@@ -741,9 +721,6 @@ private:
     static constexpr int csmServerWrapRepeatedWords = 2;
     // Stop joining once a logical line has grown this long - a runaway guard:
     static constexpr qsizetype csmServerWrapMaxJoinedLength = 10000;
-    // How long to hold a full-width line for its continuation before deciding
-    // it really was complete:
-    static constexpr int csmServerWrapFlushDelayMs = 300;
     // A longer number opening a line is likelier a year or a price ending a
     // wrapped sentence than a list number; only "[...]" is trusted past it:
     static constexpr qsizetype csmMaxListNumberDigits = 3;

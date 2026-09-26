@@ -383,7 +383,7 @@ public:
 
     int& mButtonState;
 
-    QString mConsoleName;
+    QString& mConsoleName;
     // --mirror text not yet ended by a line feed.
     QString mMirrorPendingLine;
     QString& mCurrentLine;
@@ -431,9 +431,7 @@ public:
     QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
     QToolButton* mpBufferSearchDown = nullptr;
-    // The line on which the current search result has been found, or the next
-    // one is to start (currently only for the main console):
-    int mCurrentSearchResult = 0;
+    int& mCurrentSearchResult;
     // Not used:
     // QList<int> mSearchResults;
     // The term that is currently being search for (currently only for the main

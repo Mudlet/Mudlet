@@ -59,6 +59,7 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
+#include <QTimer>
 #include <QTextCodec>
 #include <QPainter>
 #include <QVideoWidget>
@@ -95,6 +96,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // and re-labelling the log button are the only parts of it that need a view.
     connect(pH, &Host::signal_loggingAnnouncement, this, &TMainConsole::slot_loggingAnnouncement, Qt::UniqueConnection);
     connect(pH, &Host::signal_loggingStateChanged, this, &TMainConsole::slot_loggingStateChanged, Qt::UniqueConnection);
+    connect(&model().mNotifier, &TConsoleModelNotifier::serverWrapLineHeld, this, &TMainConsole::slot_serverWrapLineHeld);
 
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
@@ -303,6 +305,28 @@ void TMainConsole::slot_loggingStateChanged(const bool isLogging)
     // A click has already flipped the button; this is for logging toggled from Lua, and failed starts.
     logButton->setChecked(isLogging);
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
+}
+
+void TMainConsole::slot_serverWrapLineHeld()
+{
+    if (!mpServerWrapFlushTimer) {
+        mpServerWrapFlushTimer = new QTimer(this);
+        mpServerWrapFlushTimer->setObjectName(qsl("serverWrapFlushTimer"));
+        mpServerWrapFlushTimer->setSingleShot(true);
+        mpServerWrapFlushTimer->setInterval(TBuffer::csmServerWrapFlushDelayMs);
+        connect(mpServerWrapFlushTimer, &QTimer::timeout, this, [this]() {
+            if (!mpHost || !mpHost->mpConsole) {
+                return;
+            }
+            // Mimic printOnDisplay() so that trigger-context functions behave
+            // the same as for any other committed line:
+            mpHost->mpConsole->mTriggerEngineMode = true;
+            buffer.flushPendingServerWrapJoin();
+            mpHost->mpConsole->mTriggerEngineMode = false;
+            mpHost->finalizeMainConsole();
+        });
+    }
+    mpServerWrapFlushTimer->start();
 }
 
 void TMainConsole::selectCurrentLine(std::string& buf)

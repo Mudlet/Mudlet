@@ -19,12 +19,14 @@
 
 #include <QFile>
 #include <QImage>
+#include <QElapsedTimer>
 #include <QMovie>
 #include <QPointer>
 #include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <chrono>
 #include <memory>
 #include <tuple>
 
@@ -71,6 +73,8 @@ extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResourcesForConsoleModelExtraction();
+
+using namespace std::chrono_literals;
 
 // The main console's text buffer, cursor/prompt state, fg/bg colours and log
 // lifecycle were lifted out of the TConsole widget into a core TConsoleModel
@@ -468,8 +472,7 @@ private slots:
 
     // The model outlives the view, and scripts keeping their own line-index
     // bookkeeping still need to hear that the indexes moved. The console name
-    // the event carries lives on the view, but a view-less model can only be
-    // the main console's, which is always named "main".
+    // the event carries is the model's own, so it survives the view.
     void test_bufferShrinkEventWithNoView()
     {
         startProfile();
@@ -492,6 +495,57 @@ private slots:
 
         QVERIFY2(luaGlobalNumber(host, "shrinkCount") >= 1, "The view-less buffer shrank without raising sysBufferShrinkEvent.");
         QCOMPARE(luaGlobalString(host, "shrinkReport"), qsl("main:10"));
+    }
+
+    // An MXP tag the game never closes is given up on after two watchdog
+    // timeouts and written out as the literal text it was.
+    void test_aStalledMxpTagIsWrittenOutWithAView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        // A line ending that arrives while the tag is open writes it out too,
+        // and cTelnet's posting timer supplies one shortly after any game
+        // output - so let the connection's own traffic finish first.
+        QTest::qWait(1000ms);
+        TBuffer& buffer = host->mainConsoleModel().buffer;
+        QElapsedTimer sinceFeed;
+        sinceFeed.start();
+        feedStalledMxpTag(host, buffer, "WDOGVIEW <send");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return lastLineHolding(buffer, qsl("WDOGVIEW <send")) >= 0;
+                         },
+                         8000),
+                 "The stalled tag was never written out as text.");
+        // Both watchdog phases (TBuffer::MAX_TAG_TIMEOUT_MS each) have to have
+        // run, or something other than the watchdog wrote it out.
+        QVERIFY2(sinceFeed.elapsed() >= 2 * 1300 - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
+    }
+
+    // Writing the stalled tag out commits it and finalizes through the main
+    // console's view, so with none the watchdog has to leave it be rather than
+    // reach for one.
+    void test_aStalledMxpTagIsLeftAloneWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        feedStalledMxpTag(host, model->buffer, "WDOGNOVIEW <send");
+
+        // Both watchdog phases (TBuffer::MAX_TAG_TIMEOUT_MS each) and then
+        // some; there is nothing to poll for, since what is being checked is
+        // that nothing happens.
+        QTest::qWait(2 * 1300ms + 1000ms);
+        QVERIFY2(lastLineHolding(model->buffer, qsl("WDOGNOVIEW")) < 0, "The stalled tag was written out with no view.");
+        QCOMPARE(QString::fromStdString(host->mMxpProcessor.getMxpTagBuilder().getRawTagContent()), qsl("send"));
     }
 
     // The OSC 8 documentation examples are injected into the main console's
@@ -2803,6 +2857,31 @@ private:
                          5000),
                  "The main console view was not destroyed by closing the profile.");
         QVERIFY2(host->mpConsole.isNull(), "The host still points at a main console.");
+    }
+
+    // Utility function opening an MXP tag the game never closes, which arms the
+    // buffer's tag watchdog. The text before the tag is left on the line being
+    // built, so it is what the written-out tag lands behind.
+    void feedStalledMxpTag(Host* host, TBuffer& buffer, std::string text)
+    {
+        host->setForceMXPProcessorOn(true);
+        host->mMxpProcessor.enable();
+        // <send> is only allowed in secure mode
+        host->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+        host->mMxpProcessor.getMxpTagBuilder().reset();
+        host->mMxpProcessor.setLastEntityValue(QString());
+        buffer.translateToPlainText(text, true);
+        QVERIFY2(host->mMxpProcessor.getMxpTagBuilder().isInsideTag(), "The feed left no tag open, so no watchdog was armed.");
+    }
+
+    static int lastLineHolding(TBuffer& buffer, const QString& text)
+    {
+        for (int i = buffer.getLastLineNumber(); i >= 0; --i) {
+            if (buffer.lineBuffer.at(i).contains(text)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     void runLua(Host* host, const QString& code) { QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(code), qPrintable(qsl("Lua snippet failed to run: %1").arg(code))); }

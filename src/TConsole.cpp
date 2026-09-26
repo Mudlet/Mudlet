@@ -182,12 +182,15 @@ const QString TConsole::cmLuaLineVariable("line");
 namespace {
 // The main console co-owns Host's model so the trigger pipeline outlives the
 // view; every other console owns its own model.
-std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const TConsole::ConsoleType type)
+std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)
 {
     if (type == TConsole::MainConsole) {
         return pHost->sharedMainConsoleModel();
     }
-    return std::make_shared<TConsoleModel>(pHost);
+    auto model = std::make_shared<TConsoleModel>(pHost);
+    model->mConsoleName = name;
+    model->mScriptAddressable = type.testAnyFlags(TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer);
+    return model;
 }
 } // namespace
 
@@ -197,13 +200,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
-, mpModel(resolveConsoleModel(pH, type))
+, mpModel(resolveConsoleModel(pH, name, type))
 , buffer(mpModel->buffer)
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
 , mFgColor(mpModel->mFgColor)
 , mButtonState(mpModel->mButtonState)
-, mConsoleName(name)
+, mConsoleName(mpModel->mConsoleName)
 , mCurrentLine(mpModel->mCurrentLine)
 , mEngineCursor(mpModel->mEngineCursor)
 , mFormatCurrent(mpModel->mFormatCurrent)
@@ -224,12 +227,16 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
+, mCurrentSearchResult(mpModel->mCurrentSearchResult)
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
     // The model is built without a view (Host creates the main console's one
-    // before any widget exists), so point its buffer at this view now.
-    buffer.setConsole(this);
+    // before any widget exists), so this view subscribes to it now.
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesAppended, this, &TConsole::handleLinesOverflowEvent);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::lineCommitted, this, &TConsole::mirrorLineToStdOut);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::linkCharactersChanged, this, &TConsole::repaintPanes);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
 
     // Every console, not just the main one: the manager is per model, and only
     // the main console's buffer is translated today but nothing here relies on
@@ -804,10 +811,10 @@ TConsole::~TConsole()
     }
 
     // Host co-owns the main console's model, so the model - and its buffer -
-    // can outlive this view. The buffer's QPointer back-pointer would only null
-    // itself once ~QObject() runs, leaving it aimed at a half-destroyed widget
-    // for the whole of this teardown, so unbind it up front.
-    mpModel->buffer.detachConsole(this);
+    // can outlive this view. ~QObject() would only drop these connections once
+    // it runs, leaving the buffer notifying a half-destroyed widget for the
+    // whole of this teardown, so drop them up front.
+    disconnect(&mpModel->mNotifier, nullptr, this, nullptr);
 
     // Backstop: TMainConsole deregisters sub-consoles it destroys, but one can also die with the
     // widget it was created into, e.g. a scroll box.
