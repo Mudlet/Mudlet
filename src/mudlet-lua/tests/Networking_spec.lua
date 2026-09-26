@@ -126,6 +126,12 @@ describe("connectToServer validates its arguments without connecting", function(
     assert.is_nil(ok)
     assert.is_true(contains(err, "invalid port number"))
   end)
+
+  -- Checked before anything is written to the profile or a connection is tried.
+  it("raises a Lua error when the save flag is not a boolean", function()
+    assertArgError(function() connectToServer("example.invalid", 23, "yes") end,
+                   "connectToServer: bad argument #3 type")
+  end)
 end)
 
 describe("getConnectionInfo returns a host/port/connected triple", function()
@@ -2377,6 +2383,62 @@ describe("sending protocol data to a game server that has not negotiated", funct
     assert.is_true(waitUntil(function() return sawSubnegotiation(before) end, 2000),
                    "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
     assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
+  end)
+
+  it("saves the host and port to the profile when asked to", function()
+    if serverUnavailable() then return end
+    local port = serverPort()
+    local profileDir = getMudletHomeDir()
+    local function snapshot(name)
+      local handle = io.open(profileDir .. "/" .. name, "rb")
+      if not handle then
+        return nil
+      end
+      local contents = handle:read("*a")
+      handle:close()
+      return contents
+    end
+    local savedUrl, savedPort = snapshot("url"), snapshot("port")
+    finally(function()
+      for name, contents in pairs({url = savedUrl or false, port = savedPort or false}) do
+        if contents then
+          local handle = io.open(profileDir .. "/" .. name, "wb")
+          handle:write(contents)
+          handle:close()
+        else
+          os.remove(profileDir .. "/" .. name)
+        end
+      end
+    end)
+
+    local function stored()
+      local entry = getProfiles()[getProfileName()]
+      return entry.host, entry.port
+    end
+    local hostBefore, portBefore = stored()
+    assert.is_false(hostBefore == "127.0.0.1" and portBefore == tostring(port),
+                    "the profile already holds the fixture's address, so this proves nothing")
+
+    local ok = connectToServer("127.0.0.1", port, true)
+    assert.is_true(ok)
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+    local hostAfter, portAfter = stored()
+    assert.equals("127.0.0.1", hostAfter)
+    assert.equals(tostring(port), portAfter)
+  end)
+
+  it("accepts a string second argument to sendGMCP and sendATCP before the enabled check", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local gmcp, gmcpErr = sendGMCP("Core.Supports.Set", "[\"Char 1\"]")
+    assert.is_nil(gmcp)
+    assert.is_true(contains(gmcpErr, "GMCP is not currently enabled"), tostring(gmcpErr))
+
+    local atcp, atcpErr = sendATCP("Char.Login", "name password")
+    assert.is_nil(atcp)
+    assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
   end)
 
   -- sendGMCP and sendATCP keep the check sendMSDP does without: theirs has been

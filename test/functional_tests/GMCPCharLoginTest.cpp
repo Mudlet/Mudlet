@@ -39,6 +39,7 @@
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QUrlQuery>
+#include <algorithm>
 #include <functional>
 
 #include "AutoLoginDelaysTestHelper.h"
@@ -360,6 +361,57 @@ private:
     QTcpServer mServer;
     QHash<QTcpSocket*, QByteArray> mRequests;
 };
+
+namespace {
+// Records the text of every Qt message logged while it is alive, passing each one on to the handler
+// it displaced so QtTest still prints it. The malformed-frame diagnostics are the only sign such a
+// frame leaves, and the token frames' diagnostics must be seen to leave the token out.
+class MessageRecorder
+{
+public:
+    MessageRecorder()
+    {
+        smMessages.clear();
+        smPrevious = qInstallMessageHandler(record);
+    }
+    ~MessageRecorder() { qInstallMessageHandler(smPrevious); }
+    MessageRecorder(const MessageRecorder&) = delete;
+    MessageRecorder& operator=(const MessageRecorder&) = delete;
+
+    int count(const QRegularExpression& pattern) const
+    {
+        return static_cast<int>(std::count_if(smMessages.cbegin(), smMessages.cend(), [&pattern](const QString& message) {
+            return pattern.match(message).hasMatch();
+        }));
+    }
+    bool waitFor(const QRegularExpression& pattern, int timeoutMs = 4000) const
+    {
+        return QTest::qWaitFor(
+                [&]() {
+                    return count(pattern) > 0;
+                },
+                timeoutMs);
+    }
+    bool anyContains(const QString& text) const
+    {
+        return std::any_of(smMessages.cbegin(), smMessages.cend(), [&text](const QString& message) {
+            return message.contains(text);
+        });
+    }
+
+private:
+    static void record(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        smMessages.append(message);
+        if (smPrevious) {
+            smPrevious(type, context, message);
+        }
+    }
+
+    static inline QStringList smMessages;
+    static inline QtMessageHandler smPrevious = nullptr;
+};
+} // namespace
 
 class GMCPCharLoginTest : public QObject
 {
@@ -1875,6 +1927,79 @@ private slots:
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.AuthCode"), sent), "client did not complete the client-driven sign-in");
         QVERIFY2(!sent.contains(qsl("nonce")), "an empty nonce must be left out rather than sent as an empty string");
+    }
+
+    // ---- Malformed frames ---------------------------------------------------
+
+    void testMalformedFrameIsDroppedWithADiagnostic_data()
+    {
+        QTest::addColumn<QString>("frame");
+        QTest::addColumn<QString>("diagnostic");
+        QTest::newRow("Default that is an array") << qsl("Char.Login.Default [\"oauth\"]") << qsl("Char\\.Login\\.Default - Expected JSON object but got array");
+        QTest::newRow("URL that does not parse") << qsl("Char.Login.URL {\"url\": ") << qsl("Char\\.Login\\.URL - Failed to parse JSON");
+        QTest::newRow("URL that is an array") << qsl("Char.Login.URL [\"https://example.com/signin\"]") << qsl("Char\\.Login\\.URL - Expected JSON object but got array");
+        QTest::newRow("URL without a url") << qsl("Char.Login.URL {\"provider\": \"discord\"}") << qsl("Char\\.Login\\.URL - Missing 'url' field");
+        QTest::newRow("Result that does not parse") << qsl("Char.Login.Result {\"success\": ") << qsl("Char\\.Login\\.Result - Failed to parse JSON");
+        QTest::newRow("Result that is an array") << qsl("Char.Login.Result [false]") << qsl("Char\\.Login\\.Result - Expected JSON object but got array");
+        QTest::newRow("Token that does not parse") << qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"leaky-token\"")
+                                                   << qsl("Char\\.Login\\.Token - Failed to parse JSON.*withholding \\d+-character payload");
+        QTest::newRow("Token that is an array") << qsl("Char.Login.Token [\"acct:char\", \"leaky-token\"]") << qsl("Char\\.Login\\.Token - Expected JSON object but got array");
+        QTest::newRow("Token without an account") << qsl("Char.Login.Token {\"token\": \"leaky-token\"}") << qsl("Char\\.Login\\.Token - Missing 'account' or 'token' field");
+        QTest::newRow("Token without a token") << qsl("Char.Login.Token {\"account\": \"acct:char\"}") << qsl("Char\\.Login\\.Token - Missing 'account' or 'token' field");
+    }
+
+    void testMalformedFrameIsDroppedWithADiagnostic()
+    {
+        // A frame the client cannot read must leave no trace but its diagnostic: no sign-in link
+        // offered, no login reported failed, nothing sent back and nothing saved. The token frames
+        // carry a bearer secret, so their diagnostics must never quote it.
+        QFETCH(QString, frame);
+        QFETCH(QString, diagnostic);
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        MessageRecorder recorder;
+        mpServer->clearReceived();
+        mpServer->sendGmcp(frame);
+
+        QVERIFY2(recorder.waitFor(QRegularExpression(diagnostic)), qPrintable(qsl("no diagnostic matching \"%1\" was logged").arg(diagnostic)));
+        QVERIFY2(!recorder.anyContains(qsl("leaky-token")), "a diagnostic quoted the token from a malformed Char.Login.Token");
+        QVERIFY(!consoleContains(host, qsl("sign in")));
+        QVERIFY(!consoleContains(host, qsl("sign-in")));
+        QVERIFY(!consoleContains(host, qsl("Could not log in")));
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login")), 0);
+        QVERIFY(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty());
+        QVERIFY(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty());
+    }
+
+    void testAnUnlistedProviderIsNamedWithAnInitialCapital()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setUserSentInputThisConnection(true);
+        mOpenedUrls.clear();
+        mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin\", \"provider\": \"gitea\"}"));
+        QVERIFY2(waitForConsoleContains(host, qsl("Opening your browser to sign in with Gitea.")), "a provider with no brand name should be shown with its first letter capitalized");
+    }
+
+    void testMalformedOAuthScopesAreLeftOutOfTheAuthorizationRequest()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        startDiscoveryServer();
+        mOpenedUrls.clear();
+
+        MessageRecorder recorder;
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"], \"location\": \"%1\", \"client_id\": \"test-client\", "
+                               "\"scopes\": [\"openid\", \"\", 7, \"profile\"]}")
+                                   .arg(mpDiscovery->discoveryUrl()));
+        QTRY_VERIFY(!mOpenedUrls.isEmpty());
+        QCOMPARE(QUrlQuery(mOpenedUrls.first()).queryItemValue(qsl("scope"), QUrl::FullyDecoded), qsl("openid profile"));
+        QCOMPARE(recorder.count(QRegularExpression(qsl("ignoring a malformed \\(non-string or empty\\) OAuth scope entry"))), 2);
     }
 
     // ---- Char.Login.Default flood ------------------------------------------
