@@ -32,6 +32,12 @@
 
 using namespace std::chrono_literals;
 
+// The most a connected peer may send before it ends a command with 0xff. A
+// real command is a line of chat or game text, or a short list of peers, so
+// 1 MiB is far beyond any of them; without a limit a peer that never sends the
+// terminator makes us buffer until memory runs out.
+static constexpr qsizetype csMaxPeerFrameLength = 1024 * 1024;
+
 QString convertToIPv4(QHostAddress addr)
 {
     // Check if the address is an IPv4-mapped IPv6 address
@@ -351,17 +357,24 @@ void MMCPClient::slot_readData()
         break;
     }
 
-    case Connected:
-        if (!mPeerBuffer.endsWith(static_cast<char>(0xff))) {
-            qDebug().noquote().nospace() << "MMCPClient::slot_readData() INFO - partial buffer received, waiting for the rest...";
-            return;
+    case Connected: {
+        // Handle every command that is complete and keep only the partial one
+        // after them, so the limit below applies to a single command
+        const qsizetype lastEnd = mPeerBuffer.lastIndexOf(static_cast<char>(MMCPChatCommand::End));
+        if (lastEnd != -1) {
+            const QByteArray complete = mPeerBuffer.left(lastEnd + 1);
+            mPeerBuffer.remove(0, lastEnd + 1);
+            handleConnectedState(complete);
         }
 
-        if (!handleConnectedState(mPeerBuffer)) {
-            // We had a partial command in the buffer, wait for more data before clearing the buffer
-            return;
+        if (mPeerBuffer.size() > csMaxPeerFrameLength) {
+            mPeerBuffer.clear();
+            //: %1 is the MMCP peer's name, %2 is the limit in bytes
+            mpHost->postMessage(tr("[ CHAT ]  - %1 sent more than %2 bytes without ending a command, disconnecting.").arg(mPeerName, QString::number(csMaxPeerFrameLength)));
+            disconnect();
         }
-        break;
+        return;
+    }
 
     case Pending:
         // We got something from a pending peer, dont do anything with it
