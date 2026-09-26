@@ -638,6 +638,9 @@ bool TMap::setExit(int from, int to, int dir)
         ret = false;
     }
     pR->setExitStub(dir, false);
+    if (ret && to == -1) {
+        pR->removeExitExtras(dir);
+    }
     mMapGraphNeedsUpdate = true;
     TArea* pA = mpRoomDB->getArea(pR->getArea());
     if (!pA) {
