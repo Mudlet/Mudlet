@@ -19,6 +19,8 @@
 
 #include <QtTest/QtTest>
 
+#include <algorithm>
+
 #include "GroupedTest.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -28,7 +30,9 @@
 #include "TBuffer.h"
 #include "TConsole.h"
 #include "TDebug.h"
+#include "TDebugFilterBar.h"
 #include "TLuaInterpreter.h"
+#include "TTabBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -66,6 +70,42 @@ public:
     }
 
     void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override { lines.append(Line{text, foreground, background, timeStamp}); }
+};
+
+class RecordingProfileObserver : public TDebug::ProfileObserver
+{
+public:
+    QStringList calls;
+
+    ~RecordingProfileObserver()
+    {
+        if (TDebug::profileObserver() == this) {
+            TDebug::setProfileObserver(nullptr);
+        }
+    }
+
+    void profilesChanged() override { calls.append(qsl("profilesChanged")); }
+    void profileRenamed(const QString& newName, const QString& tag) override { calls.append(qsl("profileRenamed %1 %2").arg(newName, tag)); }
+    void profileAddedInDebugMode() override { calls.append(qsl("profileAddedInDebugMode")); }
+};
+
+// TDebug only ever uses a Host* as a key, so any address will do. It unregisters
+// itself, so a check that fails part way through cannot leave a phantom profile
+// behind for the methods that run after it.
+class StandInHost
+{
+public:
+    ~StandInHost()
+    {
+        if (!TDebug::getTag(host()).isNull()) {
+            TDebug::removeHost(host(), QString());
+        }
+    }
+
+    Host* host() { return reinterpret_cast<Host*>(&mStorage); }
+
+private:
+    int mStorage = 0;
 };
 } // namespace
 
@@ -670,6 +710,64 @@ private slots:
         QVERIFY2(late.lines.isEmpty(), qPrintable(late.lines.isEmpty() ? QString() : late.lines.at(0).text));
     }
 
+    // TDebug reports profile identifier changes rather than reaching into the
+    // GUI itself; the tab refresh is only asked for in debug mode.
+    void test_profileChangesAreReportedToTheObserver()
+    {
+        auto* previous = TDebug::profileObserver();
+        RecordingProfileObserver observer;
+        TDebug::setProfileObserver(&observer);
+        StandInHost standIn;
+        auto* pOther = standIn.host();
+
+        TDebug::smDebugMode = false;
+        TDebug::addHost(pOther, qsl("Observed profile"));
+        QCOMPARE(observer.calls, QStringList{qsl("profilesChanged")});
+
+        observer.calls.clear();
+        TDebug::removeHost(pOther, qsl("Observed profile"));
+        QCOMPARE(observer.calls, QStringList{qsl("profilesChanged")});
+
+        observer.calls.clear();
+        TDebug::smDebugMode = true;
+        TDebug::addHost(pOther, qsl("Observed profile"));
+        QCOMPARE(observer.calls, (QStringList{qsl("profilesChanged"), qsl("profileAddedInDebugMode")}));
+
+        observer.calls.clear();
+        TDebug::changeHostName(pOther, qsl("Renamed profile"));
+        QCOMPARE(observer.calls, (QStringList{qsl("profileRenamed Renamed profile %1").arg(TDebug::getTag(pOther)), qsl("profilesChanged")}));
+
+        TDebug::removeHost(pOther, qsl("Renamed profile"));
+        TDebug::setProfileObserver(previous);
+    }
+
+    // The GUI's observer keeps the filter bar's profile menu and the profile
+    // tabs' identifier prefixes in step with those changes.
+    void test_profileChangesReachTheFilterBarAndTabs()
+    {
+        auto* host = startDebuggingProfile();
+        auto* tabBar = mudlet::self()->mpTabBar;
+        const int tab = tabBar->tabIndex(mHostname);
+        QVERIFY(tab > -1);
+        tabBar->applyPrefixToDisplayedText(tab, QString());
+        QCOMPARE(tabBar->tabText(tab), mHostname);
+        StandInHost standIn;
+        auto* pOther = standIn.host();
+
+        TDebug::addHost(pOther, qsl("Second profile"));
+        QVERIFY2(profileMenuLists(qsl("Second profile")), "Adding a profile did not refresh the filter bar's profile menu");
+        QTRY_COMPARE(tabBar->tabText(tab), TDebug::getTag(host) + mHostname);
+
+        // Taking this profile's name makes the stand-in's tag land on its tab,
+        // which tells it apart from the tag the tab already carries:
+        TDebug::changeHostName(pOther, mHostname);
+        QCOMPARE(tabBar->tabText(tab), TDebug::getTag(pOther) + mHostname);
+        QVERIFY2(!profileMenuLists(qsl("Second profile")), "Renaming a profile did not refresh the filter bar's profile menu");
+
+        TDebug::removeHost(pOther, mHostname);
+        QVERIFY2(profileMenuEntries().size() == 1, qPrintable(profileMenuEntries().join(qsl(", "))));
+    }
+
     // The find bar floats over the console rather than sitting in a layout, so
     // nothing but the console itself keeps it in the corner and inside the
     // window.
@@ -775,6 +873,31 @@ private:
     }
 
     bool debugBufferContains(const QString& needle) { return joinedDebugBuffer().contains(needle); }
+
+    // The filter bar's profile menu is the one whose entries carry a "[A] "
+    // style identifier; the category menu's do not.
+    QStringList profileMenuEntries()
+    {
+        QStringList entries;
+        const auto menus = mudlet::smpDebugFilterBar->findChildren<QMenu*>();
+        for (const auto* menu : menus) {
+            const auto actions = menu->actions();
+            for (const auto* action : actions) {
+                if (action->text().startsWith(QLatin1Char('['))) {
+                    entries.append(action->text());
+                }
+            }
+        }
+        return entries;
+    }
+
+    bool profileMenuLists(const QString& profileName)
+    {
+        const auto entries = profileMenuEntries();
+        return std::any_of(entries.cbegin(), entries.cend(), [&profileName](const QString& entry) {
+            return entry.endsWith(profileName);
+        });
+    }
 
     void deleteProfileDirectory(const QString& profileName)
     {
