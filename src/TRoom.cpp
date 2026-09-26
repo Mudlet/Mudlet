@@ -754,13 +754,18 @@ void TRoom::clearSpecialExits()
         // Clean up related elements first:
         mSpecialExitLocks.remove(itSpecialExit.key());
         doors.remove(itSpecialExit.key());
-        exitWeights.remove(itSpecialExit.key());
         customLines.remove(itSpecialExit.key());
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
         customLinesArrow.remove(itSpecialExit.key());
+        const QString exitName = itSpecialExit.key();
         // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
+        // A special exit named like a normal one ("n", "up"...) shares that
+        // exit's weight, which has to stay while the normal exit does:
+        if (!hasExitOrSpecialExit(exitName)) {
+            exitWeights.remove(exitName);
+        }
     }
     if (TArea* pA = mpRoomDB->getArea(area)) {
         pA->determineAreaExitsOfRoom(id);
@@ -784,13 +789,18 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         // Clean up related elements first:
         mSpecialExitLocks.remove(itSpecialExit.key());
         doors.remove(itSpecialExit.key());
-        exitWeights.remove(itSpecialExit.key());
         customLines.remove(itSpecialExit.key());
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
         customLinesArrow.remove(itSpecialExit.key());
+        const QString exitName = itSpecialExit.key();
         // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
+        // A special exit named like a normal one ("n", "up"...) shares that
+        // exit's weight, which has to stay while the normal exit does:
+        if (!hasExitOrSpecialExit(exitName)) {
+            exitWeights.remove(exitName);
+        }
     }
 
     if (exitFound) {

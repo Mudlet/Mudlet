@@ -417,13 +417,50 @@ describe("Tests the room and area database behind the map", function()
       assert.is_true(addSpecialExit(from, to, "heave"))
       assert.is_true(setExitWeight(from, "heave", 8))
       assert.are.equal(8, getExitWeights(from)["heave"])
+      assert.is_true(addSpecialExit(from, to, "shove"))
+      assert.is_true(setExitWeight(from, "shove", 5))
 
       clearSpecialExits(from)
 
       assert.is_nil(getExitWeights(from)["heave"])
+      assert.is_nil(getExitWeights(from)["shove"])
       -- a new exit that reuses the command starts out unweighted
       assert.is_true(addSpecialExit(from, to, "heave"))
       assert.is_nil(getExitWeights(from)["heave"])
+    end)
+
+    it("clearSpecialExits leaves the weight of a normal exit a special exit is named after", function()
+      local from = makeRoom(areaHome, 29, 1, 0)
+      local to = makeRoom(areaHome, 30, 1, 0)
+      finally(function() deleteRoom(from); deleteRoom(to) end)
+
+      assert.is_true(setExit(from, to, "n"))
+      assert.is_true(setExitWeight(from, "n", 7))
+      assert.is_true(addSpecialExit(from, to, "n"))
+
+      clearSpecialExits(from)
+
+      assert.are.equal(to, getRoomExits(from)["north"])
+      assert.are.equal(7, getExitWeights(from)["n"])
+    end)
+
+    it("deleting the room a special exit leads to leaves the weight of a normal exit it is named after", function()
+      local from = makeRoom(areaHome, 31, 1, 0)
+      local to = makeRoom(areaHome, 32, 1, 0)
+      local gone = makeRoom(areaHome, 33, 1, 0)
+      finally(function()
+        deleteRoom(from); deleteRoom(to)
+        if roomExists(gone) then deleteRoom(gone) end
+      end)
+
+      assert.is_true(setExit(from, to, "n"))
+      assert.is_true(setExitWeight(from, "n", 7))
+      assert.is_true(addSpecialExit(from, gone, "n"))
+
+      assert.is_true(deleteRoom(gone))
+
+      assert.is_nil(getSpecialExitsSwap(from)["n"])
+      assert.are.equal(7, getExitWeights(from)["n"])
     end)
 
     it("clearSpecialExits takes the room off its area's list of exits", function()
