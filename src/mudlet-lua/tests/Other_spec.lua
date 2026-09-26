@@ -1064,6 +1064,116 @@ describe("Tests Other.lua functions", function()
       end)
     end)
 
+    describe("the exact refusals", function()
+      local unusedId = 900000
+      while getStopWatches()[unusedId] do
+        unusedId = unusedId + 1
+      end
+
+      it("reset, start and rename name an id with no stopwatch", function()
+        local expected = ("stopwatch with id %d not found"):format(unusedId)
+        for fname, call in pairs({
+          resetStopWatch = function() return resetStopWatch(unusedId) end,
+          startStopWatch = function() return startStopWatch(unusedId) end,
+          ["startStopWatch keeping the time"] = function() return startStopWatch(unusedId, false) end,
+          setStopWatchName = function() return setStopWatchName(unusedId, "stopwatchSpecNeverGiven") end,
+        }) do
+          local ok, err = call()
+          assert.is_nil(ok, fname)
+          assert.equals(expected, err, fname)
+        end
+      end)
+
+      it("say by id when a stopwatch was already reset or stopped", function()
+        local id = track(createStopWatch(false))
+        local ok, err = resetStopWatch(id)
+        assert.is_nil(ok)
+        assert.equals(("stopwatch with id %d was already reset"):format(id), err)
+        ok, err = stopStopWatch(id)
+        assert.is_nil(ok)
+        assert.equals(("stopwatch with id %d was already stopped"):format(id), err)
+      end)
+
+      it("say by name when a stopwatch was already running or reset", function()
+        local running = track(createStopWatch("stopwatchSpecExactRunning", true))
+        finally(function() stopStopWatch(running) end)
+        local ok, err = startStopWatch("stopwatchSpecExactRunning")
+        assert.is_nil(ok)
+        assert.equals(("stopwatch with name 'stopwatchSpecExactRunning' (id:%d) was already running"):format(running), err)
+
+        local fresh = track(createStopWatch("stopwatchSpecExactReset"))
+        ok, err = resetStopWatch("stopwatchSpecExactReset")
+        assert.is_nil(ok)
+        assert.equals(("stopwatch with name 'stopwatchSpecExactReset' (id:%d) was already reset"):format(fresh), err)
+      end)
+
+      it("setStopWatchName refuses a name another stopwatch has, by id or by name", function()
+        local takenId = track(createStopWatch("stopwatchSpecTakenName"))
+        local id = track(createStopWatch("stopwatchSpecWantsTakenName"))
+        local expected = ("the name 'stopwatchSpecTakenName' is already in use for another stopwatch (id:%d)"):format(takenId)
+
+        local ok, err = setStopWatchName(id, "stopwatchSpecTakenName")
+        assert.is_nil(ok)
+        assert.equals(expected, err)
+        ok, err = setStopWatchName("stopwatchSpecWantsTakenName", "stopwatchSpecTakenName")
+        assert.is_nil(ok)
+        assert.equals(expected, err)
+        assert.equals("stopwatchSpecWantsTakenName", getStopWatches()[id].name)
+      end)
+
+      it("setStopWatchName to the name a stopwatch already has is no change, and fine", function()
+        local id = track(createStopWatch("stopwatchSpecKeepsName"))
+        assert.is_true(setStopWatchName(id, "stopwatchSpecKeepsName"))
+        assert.is_true(setStopWatchName("stopwatchSpecKeepsName", "stopwatchSpecKeepsName"))
+        assert.equals("stopwatchSpecKeepsName", getStopWatches()[id].name)
+      end)
+    end)
+
+    -- The empty name stands for the first (lowest id) unnamed stopwatch. The
+    -- other specs here leave unnamed ones about until teardown, so these name
+    -- every unnamed one for the length of the test and give them back after.
+    describe("the empty name", function()
+      local function nameTheUnnamed()
+        local renamed = {}
+        for id, watch in pairs(getStopWatches()) do
+          if watch.name == "" then
+            assert.is_true(setStopWatchName(id, "stopwatchSpecWasUnnamed" .. id))
+            renamed[#renamed + 1] = id
+          end
+        end
+        finally(function()
+          for _, id in ipairs(renamed) do
+            setStopWatchName(id, "")
+          end
+        end)
+      end
+
+      it("finds nothing when every stopwatch has a name", function()
+        nameTheUnnamed()
+        for fname, call in pairs({
+          startStopWatch = function() return startStopWatch("") end,
+          stopStopWatch = function() return stopStopWatch("") end,
+          resetStopWatch = function() return resetStopWatch("") end,
+          setStopWatchName = function() return setStopWatchName("", "stopwatchSpecFromNothing") end,
+        }) do
+          local ok, err = call()
+          assert.is_nil(ok, fname)
+          assert.equals("no unnamed stopwatches found", err, fname)
+        end
+      end)
+
+      it("reaches the one unnamed stopwatch", function()
+        nameTheUnnamed()
+        local id = track(createStopWatch(false))
+        local ok, err = resetStopWatch("")
+        assert.is_nil(ok)
+        assert.equals(("the first unnamed stopwatch (id:%d) was already reset"):format(id), err)
+        adjustStopWatch(id, 7)
+        assert.is_true(resetStopWatch(""))
+        assert.equals(0, getStopWatchTime(id))
+      end)
+    end)
+
     describe("getStopWatches", function()
       it("reports name, running, persistent and elapsed time for each stopwatch", function()
         local id = track(createStopWatch("stopwatchSpecReport"))

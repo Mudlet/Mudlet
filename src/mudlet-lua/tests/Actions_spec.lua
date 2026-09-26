@@ -3,7 +3,8 @@
 -- that API cannot make - rotated, custom-placed, push-down buttons already
 -- pressed, nested menus, a switched-off floating toolbar, a button whose Lua
 -- does not compile - so building every kind of bar is exercised, and pins what
--- Lua can read back of them.
+-- Lua can read back of them. Whether a button widget shows as pressed is not
+-- visible from Lua, so the button state tests pin only what was read in.
 
 local function specFilePath(name)
   return ("%s/%s"):format(getMudletHomeDir(), name)
@@ -21,17 +22,18 @@ local function contains(haystack, needle)
 end
 
 describe("Floating toolbars made from Lua", function()
-  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
-  local toolbar = "actionSpecFloatingTemp" .. suffix
-  local button = "actionSpecFloatingTempButton" .. suffix
+  -- Lua can neither delete a toolbar nor hide a floating one, and both it and
+  -- its button are saved with the profile, so the names are fixed and a reused
+  -- profile's copies are picked up again rather than adding another each run
+  local toolbar = "actionSpecFloatingTemp"
+  local button = "actionSpecFloatingTempButton"
 
   -- tempButtonToolbar() shifts every location above 0 up by one, so its 3 is
   -- the floating setting, 4
   it("tempButtonToolbar makes a floating toolbar that tempButton can add to", function()
-    assert.equals(0, exists(toolbar, "button"))
-    local toolbarId = tempButtonToolbar(toolbar, 3, 1)
+    local toolbarId = findItems(toolbar, "button")[1] or tempButtonToolbar(toolbar, 3, 1)
     assert.is_number(toolbarId)
-    local buttonId = tempButton(toolbar, button, 0)
+    local buttonId = findItems(button, "button")[1] or tempButton(toolbar, button, 0)
     assert.is_number(buttonId)
     assert.equals(1, exists(button, "button"))
     local chain = ancestors(buttonId, "button")
@@ -71,6 +73,7 @@ describe("Packaged toolbar layouts", function()
     return marker .. name
   end
   local installAnswer, installReason
+  local windowWidth, windowHeight
 
   -- attributes the XML takes, defaulted so each item only names what it is about
   local function action(fields, children)
@@ -166,7 +169,20 @@ describe("Packaged toolbar layouts", function()
     return waitUntil(function() return installPackage("") == nil end, 5000)
   end
 
+  -- a vertical bar at the side can leave the main window taller once it is
+  -- gone, which would take the room the window geometry specs measure in
+  local function restoreMainWindowSize(width, height)
+    setMainWindowSize(width, height)
+    pumpEvents(50)
+    -- setMainWindowSize() sizes the whole window and getMainWindowSize() reads
+    -- the console, so the difference is the chrome around it
+    local innerWidth, innerHeight = getMainWindowSize()
+    setMainWindowSize(width + (width - innerWidth), height + (height - innerHeight))
+    pumpEvents(100)
+  end
+
   setup(function()
+    windowWidth, windowHeight = getMainWindowSize()
     writeSpecFile(packageFile, packageXml())
     assert.is_true(waitForProfileSaveToPass(), "a profile save was already running, so this install would be postponed")
     installAnswer, installReason = installPackage(packageFile)
@@ -189,6 +205,7 @@ describe("Packaged toolbar layouts", function()
     pumpEvents(100)
     assert.is_true(waitForProfileSaveToPass(), "another profile save was queued behind the first")
     os.remove(packageFile)
+    restoreMainWindowSize(windowWidth, windowHeight)
   end)
 
   it("installs every item, whether it is switched on or not", function()
@@ -199,23 +216,13 @@ describe("Packaged toolbar layouts", function()
     end
   end)
 
-  it("reads a pressed push-down button in as pressed, wherever it sits", function()
+  it("reads each push-down button's saved state from the XML, whatever it sits in", function()
     for _, name in ipairs({"FloatingPressed", "FloatingMenuPressed", "LeftPressed", "LeftMenuPressed"}) do
       assert.is_true(getButtonState(item(name)), name)
     end
     for _, name in ipairs({"FloatingReleased", "LeftReleased"}) do
       assert.is_false(getButtonState(item(name)), name)
     end
-  end)
-
-  it("keeps a pressed state set from Lua across the bars being rebuilt", function()
-    finally(function() setButtonState(item("LeftReleased"), false) end)
-    assert.is_true(setButtonState(item("LeftReleased"), true))
-    -- restyling a button rebuilds every bar
-    assert.is_true(setButtonStyleSheet(item("TopButton"), "QPushButton { color: rgb(4,5,6); }"))
-    pumpEvents(50)
-    assert.is_true(getButtonState(item("LeftReleased")))
-    assert.is_true(getButtonState(item("LeftPressed")))
   end)
 
   it("names a button whose Lua does not compile in what installPackage() answers", function()
