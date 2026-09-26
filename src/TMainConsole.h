@@ -33,8 +33,6 @@
 #include <optional>
 #include <utility>
 
-#include <hunspell/hunspell.h>
-
 #include <list>
 
 class TAction;
@@ -174,8 +172,6 @@ public:
     std::optional<bool> getPlainWindowVisible(const QString& name) const;
     bool setCommandLineAction(const QString& name, const int func);
     bool resetCommandLineAction(const QString& name);
-    void setSystemSpellDictionary(const QString&);
-    void setProfileSpellDictionary();
     void showStatistics();
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
@@ -210,22 +206,9 @@ public:
     void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
-    const QByteArray& getHunspellCodecName_system();
-    Hunhandle* getHunspellHandle_system();
-    // Either returns the handle of the per profile or the shared Mudlet one or
-    // nullptr depending on the state of the flags mEnableUserDictionary and
-    // mUseSharedDictionary:
-    Hunhandle* getHunspellHandle_user() const { return mEnableUserDictionary ? (mUseSharedDictionary ? mpHunspell_shared : mpHunspell_profile) : nullptr; }
-    QSet<QString> getWordSet() const;
-    QPair<bool, QString> addWordToSet(const QString&);
-    QPair<bool, QString> removeWordFromSet(const QString&);
-    bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
     void toggleLogging(bool);
     void printOnDisplay(std::string&, bool isFromServer = false);
     void finalize();
-    bool saveMap(const QString&, int saveVersion = 0);
-    bool loadMap(const QString&);
-    bool importMap(const QString&, QString* errMsg = nullptr);
     void refreshSubconsoles();
 
 
@@ -263,7 +246,6 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
-    void slot_warmSystemSpellDictionary();
 
 
 signals:
@@ -275,7 +257,6 @@ signals:
 
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
-    void loadSystemSpellDictionary();
     // Shared by reparentLabel() and reparentWindow() so they agree on what "main" means.
     QWidget* parentWidgetFor(const QString& windowname) const;
     // Resolves the three name-only kinds in the same order as the core.
@@ -308,30 +289,6 @@ private:
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
 
-    // The dictionary mpHunspell_system is built for, after load so the profile load never reads it whole.
-    // Host's mSpellDic is the setting; this is only what was requested from it.
-    QString mSystemDictionary;
-
-    // Cloned from Host
-    bool mEnableUserDictionary = true;
-    bool mUseSharedDictionary = false;
-
-    // Three handles, one for the dictionary the user choses from the system
-    // one created by the mudlet class for all profiles and the third for a per
-    // profile one - the last pair are built by the user and/or lua functions:
-    Hunhandle* mpHunspell_system = nullptr;
-    Hunhandle* mpHunspell_shared = nullptr;
-    Hunhandle* mpHunspell_profile = nullptr;
-    // The user dictionary will always use the UTF-8 codec, but the one
-    // selected from the system's ones may not:
-    QByteArray mHunspellCodecName_system;
-    // To update the profile dictionary we actually have to track all the words
-    // in it so we loaded the contents into this on startup and adjust it as we
-    // go. Then, at the end of a session we will put the revised contents
-    // back into the user's ".dic" file and regenerate the needed pair of lines
-    // for the ".aff" file - this member is for the per profile option only as
-    // the shared one is held by the mudlet singleton class:
-    QSet<QString> mWordSet_profile;
     bool mEnableClose = false;
 };
 

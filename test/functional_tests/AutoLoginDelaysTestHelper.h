@@ -23,7 +23,7 @@
 #include <QSettings>
 #include <QVariant>
 
-#include "mudlet.h"
+#include "MudletApp.h"
 #include "utils.h"
 
 // A test that waits for the timer-driven auto-login has to shorten its two delays, which live in a
@@ -33,7 +33,7 @@ class ScopedAutoLoginDelays
 {
 public:
     ScopedAutoLoginDelays(int usernameMs, int passwordMs)
-    : mpSettings(mudlet::getQSettings())
+    : mpSettings(MudletApp::getQSettings())
     , mSavedUsername(mpSettings->value(qsl("autoLoginUsernameDelay")))
     , mSavedPassword(mpSettings->value(qsl("autoLoginPasswordDelay")))
     {
