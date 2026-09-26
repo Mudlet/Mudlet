@@ -50,6 +50,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainWindowTitleTest.cpp
     LabelMovieRefusalTest.cpp
     TabBarStyleTest.cpp
+    CommandLineSpellCheckTest.cpp
     LabelSvgBackgroundTest.cpp
     CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
