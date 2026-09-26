@@ -43,6 +43,7 @@
 
 class Host;
 class TTrigger;
+struct TRootTriggerFilter;
 
 class TriggerUnit
 {
@@ -88,8 +89,13 @@ public:
     void markPrescanStaleForLineInFlight(TTrigger* pT)
     {
         ++mUnfilterableEpoch;
+        ++mRootFilterEpoch;
         markPrescanStale(pT);
     }
+    // How many times a change has been announced to the passes that pinned a copy of the root
+    // triggers' filters. Moves only for a change one of those copies could be of, so a spec can tell a
+    // needed announcement from one that cost a line its filters for nothing.
+    quint32 rootFilterEpoch() const { return mRootFilterEpoch; }
     // Both paths build the same index, so this is how a test checks the incremental path keeps full
     // rebuilds flat.
     quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
@@ -178,9 +184,12 @@ private:
     // when it started, so a mid-pass mutation only affects the next pass. Every mutation of
     // mTriggerRootNodeList must set the flag below, or a pass would walk freed triggers.
     // The prescan files triggers by snapshot position, so the two are rebuilt and pinned together.
+    // mFilters runs parallel to mNodes; what it says about a trigger holds only while mRootFilterEpoch
+    // stands still - see processDataStream().
     struct RootNodeSnapshot
     {
         std::vector<TTrigger*> mNodes;
+        std::vector<TRootTriggerFilter> mFilters;
         TTriggerPrescan mPrescan;
     };
     std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
@@ -196,6 +205,9 @@ private:
     std::vector<int> mCandidates;
     quint64 mPrescanRebuilds = 0;
     quint32 mUnfilterableEpoch = 0;
+    // Moves whenever a trigger changes in a way its TRootTriggerFilter copies,
+    // which a pass that has pinned those copies has no other way to hear of
+    quint32 mRootFilterEpoch = 0;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;

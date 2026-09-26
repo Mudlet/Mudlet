@@ -108,7 +108,6 @@ void ActionUnit::doCleanup()
         return;
     }
 
-    // Runs per unit on every line of game text and next to never has work queued.
     if (!hasPendingDeletes()) {
         return;
     }
