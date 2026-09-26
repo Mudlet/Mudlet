@@ -22,22 +22,16 @@
 
 #include "utils.h"
 
-#include <QBoxLayout>
-#include <QHBoxLayout>
+#include <QList>
 #include <QMap>
 #include <QMargins>
-#include <QPointer>
 #include <QRect>
 #include <QSize>
 #include <QString>
 #include <QStringList>
-#include <QTabWidget>
-#include <QVBoxLayout>
-#include <QWidget>
 
 class Host;
-class TConsole;
-class TDockWidget;
+class TMxpFrameWidgets;
 class TPrintSink;
 
 /**
@@ -50,6 +44,8 @@ class TPrintSink;
  *   does NOT delete children (to avoid double-deletion)
  * - During destruction, frames remove themselves from parent's childFrames list
  *   and orphan their children (set child->parentFrame = nullptr)
+ * - The frame's widgets are the view's, kept under the frame's name by
+ *   TMxpFrameWidgets
  */
 struct TMxpFrame {
     QString name;
@@ -64,12 +60,6 @@ struct TMxpFrame {
     bool scrolling = true;
     bool floating = false;  // When true, frame has no title bar/header (borderless)
     QString dockFrame;      // For tab support - name of frame to dock into
-    
-    // UI elements - using QPointer for automatic null on deletion
-    QPointer<QWidget> widget;           // The container widget (QFrame with title bar)
-    QPointer<TConsole> console;         // The actual TConsole for text output
-    QPointer<TDockWidget> dockWidget;   // Container for internal frames
-    QPointer<QTabWidget> tabWidget;     // For tab-based frames
     
     // Hierarchy tracking (non-owning references - see ownership model above)
     TMxpFrame* parentFrame = nullptr;
@@ -103,7 +93,6 @@ public:
     void setDestination(const QString& frameName, bool eol, bool eof);
     void clearDestination();
     QString getCurrentDestination() const { return mCurrentDestination; }
-    QWidget* getCurrentDestinationWidget() const;
     // Write-only so buffer translation never gets a view pointer back. Null when no destination
     // is set, its frame has gone, or it resolves to the main console (which would recurse).
     TPrintSink* currentDestinationSink() const;
@@ -137,12 +126,12 @@ private:
     void layoutInternalFrame(TMxpFrame* frame);
     void layoutExternalFrame(TMxpFrame* frame);
     void layoutTabFrame(TMxpFrame* frame);
-    void layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* targetFrame);
     QRect availableFrameArea() const;
     QRect calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* parentFrame);
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
     void relayoutFrames();
-    Qt::DockWidgetArea alignmentToDockArea(const QString& align);
+    // Null while the profile has no main console
+    TMxpFrameWidgets* frameWidgets() const;
 
     // Validation
     bool validateFrameName(const QString& name) const;

@@ -30,6 +30,7 @@
 #include <QPointer>
 #include <QTextStream>
 #include <QWidget>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -38,6 +39,7 @@
 class TAction;
 class TEasyButtonBar;
 class TMediaPlayer;
+class TMxpFrameWidgets;
 class TScrollBox;
 class TTextBox;
 class TToolBar;
@@ -58,6 +60,7 @@ public:
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     TConsole* createSubConsole(const QString& name, QWidget* parent);
+    TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
     bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
@@ -290,6 +293,7 @@ private:
     QMap<QString, TScrollBox*> mScrollBoxMap;
 
     bool mEnableClose = false;
+    std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;
 };
 
 #endif // MUDLET_TMAINCONSOLE_H
