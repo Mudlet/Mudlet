@@ -44,10 +44,17 @@ describe("Tests the Lua an MXP link runs", function()
     return calls
   end
 
-  local function assertRunsOnly(actions, name, argument)
+  -- each action runs exactly the one call expected of it, in order
+  local function assertRunsEach(actions, expected)
     assert.is_table(actions)
-    assert.are.equal(1, #actions)
-    assert.are.same({{name, {argument}}}, run(actions[1]))
+    assert.are.equal(#expected, #actions, table.concat(actions, "\n----\n"))
+    for i, call in ipairs(expected) do
+      assert.are.same({{call[1], {call[2]}}}, run(actions[i]))
+    end
+  end
+
+  local function assertRunsOnly(actions, name, argument)
+    assertRunsEach(actions, {{name, argument}})
   end
 
   -- text written to end a [[ ]] string, or one with any level of = signs, or
@@ -72,6 +79,11 @@ describe("Tests the Lua an MXP link runs", function()
   setup(function()
     setConfig("specialForceMXPProcessorOn", true)
     feed(("<!ELEMENT %s FLAG='%s'>"):format(probeElement, probeElement))
+    -- elements a game defines put its values into the same links
+    feed([[<!ELEMENT mxpLinksShop '<SEND href="buy &name;|sell &name;" hint="menu|buy|sell">' ATT='name'>]])
+    feed([[<!ELEMENT mxpLinksTell '<SEND href="tell &who; " PROMPT>' ATT='who'>]])
+    feed([[<!ELEMENT mxpLinksItem '<SEND href="buy &text;">'>]])
+    feed([[<!ELEMENT mxpLinksWiki '<A href="https://wiki.example/&text;">'>]])
   end)
 
   teardown(function()
@@ -104,6 +116,44 @@ describe("Tests the Lua an MXP link runs", function()
         assertRunsOnly(mxp and mxp.send and mxp.send.actions, "send", payload)
       end)
 
+      it("fills &text; into every command of a menu as it was given", function()
+        assertRunsEach(actionsAfter(("<SEND href=\"look &text;|get &text;\" hint=\"menu|look|get\">%s</SEND>"):format(payload)), {
+          {"send", "look " .. payload},
+          {"send", "get " .. payload},
+        })
+      end)
+
+      it("hands the mxp.send event the same menu the link runs", function()
+        if type(mxp) == "table" then
+          mxp.send = nil
+        end
+        feed(("<SEND href=\"look &text;|get &text;\" hint=\"menu|look|get\">%s</SEND>"):format(payload))
+        assertRunsEach(mxp and mxp.send and mxp.send.actions, {
+          {"send", "look " .. payload},
+          {"send", "get " .. payload},
+        })
+      end)
+
+      it("puts an element's attribute into every command of its menu as it was given", function()
+        assertRunsEach(actionsAfter(("<mxpLinksShop %s>item</mxpLinksShop>"):format(attribute("name", payload))), {
+          {"send", "buy " .. payload},
+          {"send", "sell " .. payload},
+        })
+      end)
+
+      it("puts an element's positional attribute on the command line as it was given", function()
+        local quote = payload:find("'", 1, true) and '"' or "'"
+        assertRunsOnly(actionsAfter(("<mxpLinksTell %s%s%s>who</mxpLinksTell>"):format(quote, payload, quote)), "printCmdLine", "tell " .. payload .. " ")
+      end)
+
+      it("fills &text; in an element's SEND with its text as it was given", function()
+        assertRunsOnly(actionsAfter(("<mxpLinksItem>%s</mxpLinksItem>"):format(payload)), "send", "buy " .. payload)
+      end)
+
+      it("fills &text; in an element's A with its text as it was given", function()
+        assertRunsOnly(actionsAfter(("<mxpLinksWiki>%s</mxpLinksWiki>"):format(payload)), "openUrl", "https://wiki.example/" .. payload)
+      end)
+
       it("opens an A href as it was given", function()
         assertRunsOnly(actionsAfter(("<A %s>go</A>"):format(attribute("href", payload))), "openUrl", payload)
       end)
@@ -113,6 +163,14 @@ describe("Tests the Lua an MXP link runs", function()
       end)
     end)
   end
+
+  it("keeps every command of a plain menu, in order", function()
+    assertRunsEach(actionsAfter([[<SEND href="who|look|say hi there" hint="Menu|W|L|S">x</SEND>]]), {
+      {"send", "who"},
+      {"send", "look"},
+      {"send", "say hi there"},
+    })
+  end)
 
   -- a bare <A> takes its address from the text it wraps; none of that text may
   -- carry over into the links that come after it
