@@ -1,7 +1,8 @@
 -- How MXP reads a tag: its attributes, the elements and entities a game
 -- defines with <!ELEMENT> and <!ENTITY>, and the ESC[#z line modes that decide
 -- which tags are read at all. MXPTags_spec.lua covers what each built-in tag
--- does once it has been read.
+-- does once it has been read, and Telnet_spec.lua's "Tests MXP line modes" the
+-- open, secure, temp secure and locked-secure switches.
 
 describe("Tests how MXP reads the tags a game sends", function()
   local function feed(data)
@@ -119,8 +120,7 @@ describe("Tests how MXP reads the tags a game sends", function()
 
   describe("Tests SUPPORT for an attribute of an element Mudlet lacks", function()
     it("answers with a minus for the element and attribute together", function()
-      local sent = table.concat(replyTo("<SUPPORT mxpnosuch.color>"))
-      assert.is_truthy(sent:find("-mxpnosuch.color", 1, true), sent)
+      assert.are.equal("\27[1z<SUPPORTS -mxpnosuch.color>", table.concat(replyTo("<SUPPORT mxpnosuch.color>")))
     end)
   end)
 end)
@@ -158,6 +158,9 @@ describe("Tests the MXP line modes a game switches between", function()
 
   setup(function()
     feed("<T_IAC><T_DO><O_MXP>")
+    -- forcing the processor on, as the block above does, locks the default
+    -- mode to secure, and turning it off again leaves that default behind
+    feed("\27[5z\r\n")
   end)
 
   teardown(function()
@@ -190,7 +193,9 @@ describe("Tests the MXP line modes a game switches between", function()
   end)
 
   it("ignores a mode switch that carries no number", function()
-    assert.equals("MXPPARSENONUMBER", displayed("\27[zMXPPARSENONUMBER\r\n"))
-    assert.equals("<SEND href=\"x\">MXPPARSESTILLOPEN</SEND>", displayed("\27[1;2z<SEND href=\"x\">MXPPARSESTILLOPEN</SEND>\r\n"))
+    -- the line stays open: B is taken out and SEND is not, which neither a
+    -- secure nor a locked reading of the switch would do
+    assert.equals("MXPPARSENONUMBER<SEND href=\"x\">N</SEND>", displayed("\27[z<B>MXPPARSENONUMBER</B><SEND href=\"x\">N</SEND>\r\n"))
+    assert.equals("MXPPARSESTILLOPEN<SEND href=\"x\">N</SEND>", displayed("\27[1;2z<B>MXPPARSESTILLOPEN</B><SEND href=\"x\">N</SEND>\r\n"))
   end)
 end)
