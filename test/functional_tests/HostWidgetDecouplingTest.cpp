@@ -799,7 +799,7 @@ private slots:
     }
 
     // The map settings reach whichever mapper is drawing the map, which is not
-    // always the profile's own: the toolbar's main window map dock borrows it.
+    // always one in the profile's map dock: here a script embedded it.
     void test_mapSettingsReachTheMapperDrawingTheMap()
     {
         startProfile(mHostname, mLocalhost, mPort);
@@ -810,27 +810,21 @@ private slots:
         host->setMapperPanelVisible(false);
         QVERIFY(host->getLargeAreaExitArrows());
 
-        host->showHideOrCreateMapper(true);
-        dlgMapper* ownMapper = host->mpMap->mpMapper.data();
-        QVERIFY2(ownMapper, "The mapper was not created.");
-        QVERIFY(ownMapper->mp2dMap->mLargeAreaExitArrows);
-        host->setLargeAreaExitArrows(false);
-        QVERIFY2(!ownMapper->mp2dMap->mLargeAreaExitArrows, "Turning the large area exit arrows off did not reach the mapper.");
-        host->setMapperPanelVisible(true);
-        QVERIFY2(!ownMapper->widget_panel->isHidden(), "Showing the mapper panel did not reach the mapper.");
-        host->setMapperPanelVisible(false);
-        QVERIFY2(ownMapper->widget_panel->isHidden(), "Hiding the mapper panel did not reach the mapper.");
+        auto [created, message] = host->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        QVERIFY2(!host->mpConsole->mpDockableMapWidget, "SETUP: the profile has a map dock, so its mapper could be reached without going through the map.");
+        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY2(mapper, "The embedded mapper was not made the map's mapper.");
+        QVERIFY(mapper->mp2dMap->mLargeAreaExitArrows);
 
-        mudlet::self()->slot_showMapperDialog();
-        qApp->processEvents();
-        dlgMapper* borrowingMapper = host->mpMap->mpMapper.data();
-        QVERIFY2(borrowingMapper && borrowingMapper != ownMapper, "SETUP: the main window map dock did not take the map over.");
+        host->setLargeAreaExitArrows(false);
+        QVERIFY2(!mapper->mp2dMap->mLargeAreaExitArrows, "Turning the large area exit arrows off did not reach the mapper drawing the map.");
         host->setLargeAreaExitArrows(true);
-        QVERIFY2(borrowingMapper->mp2dMap->mLargeAreaExitArrows, "The large area exit arrows did not reach the mapper drawing the map.");
-        QVERIFY2(!ownMapper->mp2dMap->mLargeAreaExitArrows, "The large area exit arrows reached a mapper that is not drawing the map.");
+        QVERIFY2(mapper->mp2dMap->mLargeAreaExitArrows, "Turning the large area exit arrows on did not reach the mapper drawing the map.");
         host->setMapperPanelVisible(true);
-        QVERIFY2(!borrowingMapper->widget_panel->isHidden(), "Showing the mapper panel did not reach the mapper drawing the map.");
-        QVERIFY2(ownMapper->widget_panel->isHidden(), "Showing the mapper panel reached a mapper that is not drawing the map.");
+        QVERIFY2(!mapper->widget_panel->isHidden(), "Showing the mapper panel did not reach the mapper drawing the map.");
+        host->setMapperPanelVisible(false);
+        QVERIFY2(mapper->widget_panel->isHidden(), "Hiding the mapper panel did not reach the mapper drawing the map.");
     }
 
     void cleanup()
@@ -885,10 +879,7 @@ private slots:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 
 private:
     // The player's area sorts after the other one, which is what the mapper
