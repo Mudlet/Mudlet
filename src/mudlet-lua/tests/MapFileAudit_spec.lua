@@ -298,6 +298,32 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.same({}, getSpecialExitsSwap(bystander))
     end)
 
+    it("renumbers a room whose ID is -1 and keeps the special exit that leads to it", function()
+      local distantRoomId = 0x5A5B5C01
+      local area = addAreaName("MapFileAuditSpecMinusOneSpecialExit")
+      local from = newRoom(area, 0)
+      assert.is_true(addRoom(distantRoomId))
+      assert.is_true(setRoomArea(distantRoomId, area))
+      setRoomName(distantRoomId, "MapFileAuditSpecMinusOneTarget")
+      assert.is_true(addSpecialExit(from, distantRoomId, "climb the rope"))
+
+      reloadWith(function(data)
+        -- the room's own key, its place in its area's list of rooms and the
+        -- special exit that leads to it
+        return planted(data, int32(distantRoomId), int32(-1), 3)
+      end)
+
+      local renumbered
+      for id, name in pairs(getRooms()) do
+        if name == "MapFileAuditSpecMinusOneTarget" then
+          renumbered = id
+        end
+      end
+      assert.is_not_nil(renumbered, "the room with the bad ID was lost")
+      assert.is_true(renumbered >= 1)
+      assert.are.same({["climb the rope"] = renumbered}, getSpecialExitsSwap(from))
+    end)
+
     it("keeps a room whose ID is below one when it loads a JSON map", function()
       local jsonPath = mapDirectory .. "/mapfileaudit_spec.json"
       local distantRoomId = 0x5A5B5C01
