@@ -4,7 +4,8 @@
 # not with a pull request. A Mudlet header in it would turn every edit to that
 # header into a rebuild of every file, and would hide a missing #include of it
 # everywhere. The list is the Qt headers that at least a third of mudlet_core
-# pulls in, directly or through Mudlet's own headers.
+# pulls in, directly or through Mudlet's own headers. None of them may bring in
+# windows.h, whose macros - interface, min, max - would then reach every file.
 #
 # -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON turns all of this off. CI's push-only
 # ubuntu / clang job does so, to catch a missing #include the precompiled
@@ -39,10 +40,6 @@ set(MUDLET_PRECOMPILED_HEADERS
   <QNetworkCookieJar> <QNetworkReply> <QNetworkRequest> <QSslConfiguration>
   <QSslPreSharedKeyAuthenticator> <QSslSocket>
 )
-if(WIN32)
-  # Ahead of anything that brings in windows.h, as INCLUDE_WINSOCK2 arranges
-  list(PREPEND MUDLET_PRECOMPILED_HEADERS <winsock2.h>)
-endif()
 
 # ccache only takes direct-mode hits on a file that uses a precompiled header
 # when told to be sloppy about the #defines and time macros it can no longer
