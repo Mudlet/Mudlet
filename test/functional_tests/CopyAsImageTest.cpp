@@ -173,6 +173,34 @@ private:
     // with its selection still on has the two swapped over.
     static bool invertedImage(const QImage& image, const QColor& backgroundColour) { return backgroundPixels(image, backgroundColour) * 2 < image.width() * image.height(); }
 
+    // Every C0 control that can reach the buffer - LF cannot, it ends the line
+    // - and DEL, which is the other character the glyph tables replace.
+    static QList<char16_t> controlCharacters()
+    {
+        QList<char16_t> result;
+        for (char16_t c = 1; c < 0x20; ++c) {
+            if (c != '\n') {
+                result.append(c);
+            }
+        }
+        result.append(0x7F);
+        return result;
+    }
+
+    // Both the screen and "Copy as image" draw a line from layoutLine(), so what
+    // it lays out for a control character is what either of them shows.
+    static QString glyphsLaidOut(TTextEdit* pane, int line, std::vector<TTextEdit::GraphemeRun>& layout)
+    {
+        pane->layoutLine(line, 0, pane->timeStampCharStyle(), layout);
+        QString glyphs;
+        for (const auto& run : layout) {
+            if (run.style) {
+                glyphs.append(run.grapheme);
+            }
+        }
+        return glyphs;
+    }
+
     // Mimics TBuffer::shrinkBuffer() dropping the oldest lines once the buffer
     // reaches its size limit, which shifts every remaining line's index down.
     void shrinkBuffer(TBuffer& buffer, int lines)
@@ -333,6 +361,71 @@ private slots:
         QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard (regression of #9715)");
         QCOMPARE(image.height(), expectedLines * pane->mFontHeight);
         QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
+    }
+
+    void test_controlCharactersAreDrawnAsTheGlyphsTheProfileChose_data()
+    {
+        QTest::addColumn<int>("mode");
+        QTest::addColumn<QString>("expectedGlyphs");
+        QTest::addColumn<int>("tabCells");
+
+        // The Unicode "Control Pictures" block puts each C0 control at
+        // U+2400 plus its value, and DEL at U+2421
+        QString pictures;
+        for (const char16_t c : controlCharacters()) {
+            pictures.append(QChar(c == 0x7F ? 0x2421 : 0x2400 + c));
+        }
+        // Code page 437, as the IBM PC's OEM font drew these bytes
+        const QString oem = QString::fromUtf16(u"☺☻♥♦♣♠•◘○♂♀♪♫☼"
+                                               u"►◄↕‼¶§▬↨↑↓→←∟↔▲▼⌂");
+        QCOMPARE(oem.size(), controlCharacters().size());
+
+        // A tab still moves on to the next tab stop under its picture, whereas
+        // the OEM font drew it as a single-cell circle
+        QTest::newRow("picture") << static_cast<int>(ControlCharacterMode::Picture) << pictures << -1;
+        QTest::newRow("oem") << static_cast<int>(ControlCharacterMode::OEM) << oem << 1;
+    }
+
+    void test_controlCharactersAreDrawnAsTheGlyphsTheProfileChose()
+    {
+        QFETCH(int, mode);
+        QFETCH(QString, expectedGlyphs);
+        QFETCH(int, tabCells);
+
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        Host* host = mudlet::self()->getActiveHost();
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(!console->showTimeStamps());
+
+        QString text;
+        for (const char16_t c : controlCharacters()) {
+            text.append(QChar(c));
+        }
+        console->print(text + QChar::LineFeed);
+        const int line = console->buffer.getLastLineNumber() - 1;
+        QCOMPARE(console->buffer.line(line), text);
+
+        std::vector<TTextEdit::GraphemeRun> layout;
+        QCOMPARE(host->getControlCharacterMode(), ControlCharacterMode::AsIs);
+        QVERIFY2(glyphsLaidOut(pane, line, layout) != expectedGlyphs, "the glyphs were drawn before the profile asked for them");
+
+        host->setControlCharacterMode(static_cast<ControlCharacterMode>(mode));
+        QCOMPARE(glyphsLaidOut(pane, line, layout), expectedGlyphs);
+
+        // The tab is the ninth character, so it starts in the ninth cell
+        const int tabIndex = static_cast<int>(controlCharacters().indexOf(u'\t'));
+        const auto& tabRun = layout.at(tabIndex);
+        const auto& afterTabRun = layout.at(tabIndex + 1);
+        QCOMPARE(tabRun.textRect.left(), tabIndex * pane->mFontWidth);
+        if (tabCells < 0) {
+            QVERIFY2(afterTabRun.textRect.left() > tabRun.textRect.left(), "the tab took up no room");
+            QCOMPARE(afterTabRun.textRect.left() % (pane->mTabStopwidth * pane->mFontWidth), 0);
+        } else {
+            QCOMPARE(afterTabRun.textRect.left() - tabRun.textRect.left(), tabCells * pane->mFontWidth);
+        }
+
+        host->setControlCharacterMode(ControlCharacterMode::AsIs);
     }
 
     void test_repeatedCopyKeepsWorking()
