@@ -86,11 +86,8 @@ public:
 
     void buildAreas();
     void clearMapDB();
-    // Counts how many times the map has been thrown away. Anything that
-    // captured room, area or label ids and outlives a clear - a dialog left
-    // open across a loadMap() - can compare this to tell whether those ids
-    // still mean what they did, since a replacement map hands the same ones
-    // out again.
+    // Bumped on every clear. Holders of room/area/label ids that can outlive one (e.g. a dialog open
+    // across loadMap()) compare it to detect stale ids, since the next map reuses them.
     unsigned int mapGeneration() const { return mMapGeneration; }
     void auditRooms(QHash<int, int>&, QHash<int, int>&);
     bool addRoom(int id, TRoom* pR, bool isMapLoading = false);

@@ -80,9 +80,8 @@ static const char* bad_cmdline_type = "%s: bad argument #%d type (command line n
 static const char* bad_window_value = "window \"%s\" not found";
 static const char* bad_cmdline_value = "command line \"%s\" not found";
 static const char* bad_label_value = "label \"%s\" not found";
-// A Host outlives its main console: closing a profile's window destroys the view
-// while triggers, the buffer, logging and Lua all keep running. Whatever only a
-// widget can answer has to report this rather than dereference what is gone.
+// A Host outlives its main console (closing the window destroys the view while Lua keeps running),
+// so widget-only queries report this rather than dereference what is gone.
 static const char* no_main_window_value = "the profile has no main window";
 
 // No documentation available in wiki - internal function
@@ -219,13 +218,11 @@ static void releaseLuaReferences(lua_State* L, const QVector<int>& luaReferences
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCmdLineText
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineBlacklist
 int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
-    // The mandatory text is last, but with no arguments at all that would be
-    // index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
-    // free slot for it rather than complaining:
+    // With no arguments n is 0, not a valid stack index; Lua 5.1 silently returns the first free slot for it.
     const int textIndex = qMax(n, 1);
     const char* name = "main";
     if (n > 1) {
@@ -1356,8 +1353,7 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
     }
 
     if (isMain(windowName)) {
-        // the view's colour is a reference to this one, so read it straight from
-        // the model and the answer is the same with or without a window
+        // The view's colour references this one, so this works with or without a window.
         color = host.mainConsoleModel().mBgColor;
     } else if (auto optionalColor = host.getBackgroundColor(windowName)) {
         color = optionalColor.value();
@@ -2942,8 +2938,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     const QString windowName{windowNameArg};
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
-        // Host outlives its main console, so there may be no view to restyle -
-        // the buffer's copy of the colours still has to follow:
+        // Host outlives its main console; with no view, the buffer's colours must still follow:
         if (host.mpConsole) {
             host.mpConsole->setConsoleBgColor(r, g, b, alpha);
         } else {
@@ -4592,8 +4587,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpConsole) {
-        // sub-windows die with the view, but the main window's buffer is the
-        // model's and still holds the wrap settings the view was using
+        // Sub-windows die with the view, but the main buffer is the model's and keeps the view's wrap settings.
         if (isMain(windowName)) {
             TBuffer& buffer = host.mainConsoleModel().buffer;
             buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
