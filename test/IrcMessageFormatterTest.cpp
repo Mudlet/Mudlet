@@ -20,6 +20,7 @@
 #include "ircmessageformatter.h"
 
 #include <IrcConnection>
+#include <ircnetwork_p.h>
 #include <QtTest/QtTest>
 
 /*
@@ -171,6 +172,21 @@ private slots:
         QTest::newRow("quitting nick") << QByteArrayLiteral(":<u>underlined</u>!u@h QUIT");
         QTest::newRow("topic setter") << QByteArrayLiteral(":<u>underlined</u>!u@h TOPIC #mudlet :new");
         QTest::newRow("pong sender") << QByteArrayLiteral(":<u>underlined</u>!u@h PONG me :1");
+        QTest::newRow("inviter") << QByteArrayLiteral(":<u>underlined</u>!u@h INVITE me #mudlet");
+        QTest::newRow("joining nick") << QByteArrayLiteral(":<u>underlined</u>!u@h JOIN #mudlet");
+        QTest::newRow("kicker") << QByteArrayLiteral(":<u>underlined</u>!u@h KICK #mudlet alice :bye");
+        QTest::newRow("mode") << QByteArrayLiteral(":bob!u@h MODE #mudlet +<u>underlined</u>");
+        QTest::newRow("mode setter") << QByteArrayLiteral(":<u>underlined</u>!u@h MODE #mudlet +o alice");
+        QTest::newRow("old nick") << QByteArrayLiteral(":<u>underlined</u>!u@h NICK :new");
+        QTest::newRow("notice sender") << QByteArrayLiteral(":<u>underlined</u>!u@h NOTICE #mudlet :hi");
+        QTest::newRow("CTCP VERSION replier") << QByteArrayLiteral(":<u>underlined</u>!u@h NOTICE me :\001VERSION Mudlet\001");
+        QTest::newRow("version numeric sender") << QByteArrayLiteral(":<u>underlined</u> 351 me 1.0 irc.example.org :comments");
+        QTest::newRow("time numeric server") << QByteArrayLiteral(":server 391 me <u>underlined</u> :Tue Jan 1 00:00:00 2030");
+        QTest::newRow("parting nick") << QByteArrayLiteral(":<u>underlined</u>!u@h PART #mudlet");
+        QTest::newRow("quitting nick with a reason") << QByteArrayLiteral(":<u>underlined</u>!u@h QUIT :bye");
+        QTest::newRow("topic clearer") << QByteArrayLiteral(":<u>underlined</u>!u@h TOPIC #mudlet :");
+        QTest::newRow("unknown command sender") << QByteArrayLiteral(":<u>underlined</u>!u@h FROBNICATE :hi");
+        QTest::newRow("unknown command") << QByteArrayLiteral(":bob!u@h FROB<u>underlined</u> :hi");
     }
 
     // Names are escaped rather than formatted, so a channel that looks like a
@@ -191,54 +207,143 @@ private slots:
         QVERIFY2(html.contains(QStringLiteral("&lt;u")), qPrintable(html));
     }
 
-    // The composed replies carry the fields any user fills in about themselves
-    void window_escapesMarkupInAWhoisReply()
+    // The composed replies carry the fields any user fills in about themselves,
+    // and the nick, ident and host every line of them repeats. Each row marks up
+    // one field only, so a field left unescaped cannot hide behind another.
+    void window_escapesMarkupInEachFieldOfAComposedReply_data()
     {
-        auto* whois = new IrcWhoisMessage(&mConnection);
-        whois->setPrefix(QStringLiteral("bob!ident@example.org"));
+        QTest::addColumn<QString>("kind");
+        QTest::addColumn<QString>("prefix");
+        QTest::addColumn<QStringList>("parameters");
+
+        const QString markup = QStringLiteral("<u>x</u>");
+        const QString prefix = QStringLiteral("bob!ident@example.org");
         // realName, server, info, account, address, connected since, idle, secure, channels, away reason
-        whois->setParameters({QStringLiteral("<u>real name</u>"),
-                              QStringLiteral("irc.example.org"),
-                              QStringLiteral("<u>server info</u>"),
-                              QStringLiteral("<u>account</u>"),
-                              QStringLiteral("192.0.2.1"),
-                              QStringLiteral("0"),
-                              QStringLiteral("5"),
-                              QString(),
-                              QStringLiteral("#<u>channel</u>"),
-                              QStringLiteral("<u>away</u>")});
-        const QString whoisHtml = IrcMessageFormatter::formatMessage(whois, false);
-        QVERIFY2(!whoisHtml.contains(QStringLiteral("<u>")), qPrintable(whoisHtml));
-        QCOMPARE(whoisHtml.count(QStringLiteral("&lt;u")), 5);
+        const QStringList whois{QStringLiteral("Bob"),
+                                QStringLiteral("irc.example.org"),
+                                QStringLiteral("Example Network"),
+                                QStringLiteral("bob"),
+                                QStringLiteral("192.0.2.1"),
+                                QStringLiteral("0"),
+                                QStringLiteral("5"),
+                                QString(),
+                                QStringLiteral("#mudlet"),
+                                QStringLiteral("brb")};
+        const QStringList whowas = whois.mid(0, 4);
+        const QStringList who{QStringLiteral("ident@example.org"), QStringLiteral("irc.example.org"), QStringLiteral("H"), QStringLiteral("Bob")};
+
+        QTest::newRow("WHOIS nick") << "WHOIS" << QStringLiteral("%1!ident@example.org").arg(markup) << whois;
+        QTest::newRow("WHOIS ident") << "WHOIS" << QStringLiteral("bob!%1@example.org").arg(markup) << whois;
+        QTest::newRow("WHOIS host") << "WHOIS" << QStringLiteral("bob!ident@%1").arg(markup) << whois;
+        const QStringList whoisFields{QStringLiteral("real name"), QStringLiteral("server"), QStringLiteral("server info"), QStringLiteral("account"), QStringLiteral("address")};
+        for (int i = 0; i < whoisFields.size(); ++i) {
+            QStringList parameters = whois;
+            parameters[i] = markup;
+            QTest::addRow("WHOIS %s", qPrintable(whoisFields.at(i))) << "WHOIS" << prefix << parameters;
+        }
+        QStringList parameters = whois;
+        parameters[8] = QStringLiteral("#") + markup;
+        QTest::newRow("WHOIS channels") << "WHOIS" << prefix << parameters;
+        parameters = whois;
+        parameters[9] = markup;
+        QTest::newRow("WHOIS away reason") << "WHOIS" << prefix << parameters;
+
+        QTest::newRow("WHOWAS nick") << "WHOWAS" << QStringLiteral("%1!ident@example.org").arg(markup) << whowas;
+        QTest::newRow("WHOWAS ident") << "WHOWAS" << QStringLiteral("bob!%1@example.org").arg(markup) << whowas;
+        QTest::newRow("WHOWAS host") << "WHOWAS" << QStringLiteral("bob!ident@%1").arg(markup) << whowas;
+        for (int i = 0; i < whowas.size(); ++i) {
+            parameters = whowas;
+            parameters[i] = markup;
+            QTest::addRow("WHOWAS %s", qPrintable(whoisFields.at(i))) << "WHOWAS" << prefix << parameters;
+        }
+
+        QTest::newRow("WHO nick") << "WHO" << QStringLiteral("%1!ident@example.org").arg(markup) << who;
+        parameters = who;
+        parameters[3] = markup;
+        QTest::newRow("WHO real name") << "WHO" << prefix << parameters;
+
+        QTest::newRow("NAMES channel") << "NAMES" << QString() << QStringList{QStringLiteral("#") + markup, QStringLiteral("alice")};
     }
 
-    void window_escapesMarkupInAWhowasReply()
+    void window_escapesMarkupInEachFieldOfAComposedReply()
     {
-        auto* whowas = new IrcWhowasMessage(&mConnection);
-        whowas->setPrefix(QStringLiteral("bob!ident@example.org"));
-        whowas->setParameters({QStringLiteral("<u>real name</u>"), QStringLiteral("irc.example.org"), QStringLiteral("<u>server info</u>"), QStringLiteral("<u>account</u>")});
-        const QString whowasHtml = IrcMessageFormatter::formatMessage(whowas, false);
-        QVERIFY2(!whowasHtml.contains(QStringLiteral("<u>")), qPrintable(whowasHtml));
-        QCOMPARE(whowasHtml.count(QStringLiteral("&lt;u")), 3);
+        QFETCH(QString, kind);
+        QFETCH(QString, prefix);
+        QFETCH(QStringList, parameters);
+
+        IrcMessage* message = nullptr;
+        if (kind == QLatin1String("WHOIS")) {
+            message = new IrcWhoisMessage(&mConnection);
+        } else if (kind == QLatin1String("WHOWAS")) {
+            message = new IrcWhowasMessage(&mConnection);
+        } else if (kind == QLatin1String("WHO")) {
+            message = new IrcWhoReplyMessage(&mConnection);
+        } else {
+            message = new IrcNamesMessage(&mConnection);
+        }
+        message->setPrefix(prefix);
+        message->setParameters(parameters);
+        const QString html = IrcMessageFormatter::formatMessage(message, false);
+        QVERIFY2(!html.contains(QStringLiteral("<u>")), qPrintable(html));
+        QVERIFY2(html.contains(QStringLiteral("&lt;u")), qPrintable(html));
     }
 
-    void window_escapesMarkupInAWhoReply()
+    // The 341 reply confirming an invitation this connection sent names whoever
+    // was invited, as the server spelled them
+    void window_escapesMarkupInAnInvitationReply()
     {
-        auto* who = new IrcWhoReplyMessage(&mConnection);
-        who->setPrefix(QStringLiteral("bob!ident@example.org"));
-        who->setParameters({QStringLiteral("ident@example.org"), QStringLiteral("irc.example.org"), QStringLiteral("H"), QStringLiteral("<u>real name</u>")});
-        const QString whoHtml = IrcMessageFormatter::formatMessage(who, false);
-        QVERIFY2(!whoHtml.contains(QStringLiteral("<u>")), qPrintable(whoHtml));
-        QVERIFY2(whoHtml.contains(QStringLiteral("&lt;u")), qPrintable(whoHtml));
+        auto* message = new IrcInviteMessage(&mConnection);
+        message->setCommand(QString::number(Irc::RPL_INVITING));
+        message->setParameters({QStringLiteral("<u>underlined</u>"), QStringLiteral("#mudlet")});
+        const QString html = IrcMessageFormatter::formatMessage(message, false);
+        QVERIFY2(!html.contains(QStringLiteral("<u>")), qPrintable(html));
+        QVERIFY2(html.contains(QStringLiteral("&lt;u")), qPrintable(html));
     }
 
-    void window_escapesMarkupInANamesReply()
+    // A server picks which characters address a notice to the channel's
+    // operators or voiced users alone, and so what the prefix can be
+    void window_escapesMarkupInANoticeStatusPrefix()
     {
-        auto* names = new IrcNamesMessage(&mConnection);
-        names->setParameters({QStringLiteral("#<u>channel</u>"), QStringLiteral("alice")});
-        const QString namesHtml = IrcMessageFormatter::formatMessage(names, false);
-        QVERIFY2(!namesHtml.contains(QStringLiteral("<u>")), qPrintable(namesHtml));
-        QVERIFY2(namesHtml.contains(QStringLiteral("&lt;u")), qPrintable(namesHtml));
+        IrcNetworkPrivate* network = IrcNetworkPrivate::get(mConnection.network());
+        network->setInfo({{QStringLiteral("STATUSMSG"), QStringLiteral("<u>")}});
+        const QString html = forWindow(":bob!u@h NOTICE <u>#mudlet :hi");
+        network->setInfo({{QStringLiteral("STATUSMSG"), QString()}});
+        QVERIFY2(!html.contains(QStringLiteral("<u>")), qPrintable(html));
+        QVERIFY2(html.contains(QStringLiteral(":&lt;u&gt;")), qPrintable(html));
+    }
+
+    // Anyone in a channel can type a URL of any scheme and have it made a link,
+    // so only one to a web page may be opened when it is clicked
+    void link_opensInABrowserOnlyForAWebPage_data()
+    {
+        QTest::addColumn<QString>("link");
+        QTest::addColumn<bool>("opens");
+
+        QTest::newRow("http") << QStringLiteral("http://www.example.org/") << true;
+        QTest::newRow("https") << QStringLiteral("https://example.org/a?b=c") << true;
+        QTest::newRow("upper case scheme") << QStringLiteral("HTTPS://example.org/") << true;
+        QTest::newRow("local file") << QStringLiteral("file:///C:/x.exe") << false;
+        QTest::newRow("file on a share") << QStringLiteral("file://attacker/share/x.exe") << false;
+        QTest::newRow("SMB share") << QStringLiteral("smb://attacker/share") << false;
+        QTest::newRow("settings app") << QStringLiteral("ms-settings:privacy") << false;
+        QTest::newRow("script") << QStringLiteral("javascript:alert(1)") << false;
+        QTest::newRow("e-mail") << QStringLiteral("mailto:bob@example.org") << false;
+        QTest::newRow("no scheme") << QStringLiteral("www.example.org") << false;
+        QTest::newRow("web scheme with no host") << QStringLiteral("http:x.exe") << false;
+    }
+
+    void link_opensInABrowserOnlyForAWebPage()
+    {
+        QFETCH(QString, link);
+        QFETCH(bool, opens);
+        QCOMPARE(IrcMessageFormatter::linkOpensInBrowser(QUrl(link)), opens);
+    }
+
+    // What the window makes a link of is what reaches the check above
+    void link_madeOfWhatAnyoneTypesKeepsItsScheme()
+    {
+        const QString html = forWindow(":bob!u@h PRIVMSG #mudlet :see file:///C:/x.exe");
+        QVERIFY2(html.contains(QStringLiteral("href='file:///C:/x.exe'")), qPrintable(html));
     }
 
     // communi escapes & and < for the window before it strips the formatting

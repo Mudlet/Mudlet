@@ -22,6 +22,7 @@
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
+#include <QUrl>
 
 // communi escapes only & and < before stripping formatting; scripts want the text as sent.
 // &lt; is undone first so a literal "&lt;" (arriving as "&amp;lt;") survives.
@@ -247,7 +248,7 @@ QString IrcMessageFormatter::formatNamesMessage(IrcNamesMessage* message, bool i
     if (isForLua) {
         // lua actually needs the names for parsing, since getting a names
         // list from the UI userModel alone would be limiting to the IRC commands.
-        const QString nameList = nameFor(message->names().join(" "), isForLua);
+        const QString nameList = message->names().join(" ");
         return QObject::tr("! %1 has %2 users: %3").arg(channel, count, nameList);
     }
     return QObject::tr("! %1 has %2 users").arg(channel, count);
@@ -513,4 +514,13 @@ QString IrcMessageFormatter::formatDuration(int secs)
     }
     idle += QObject::tr("%1 secs").arg(secs % 60);
     return idle.join(" ");
+}
+
+// Anything anyone types that looks like a URL, whatever its scheme, is made a
+// link in the IRC window - file:, smb: and the like included - so only a link to
+// a web page is handed to the desktop to open.
+bool IrcMessageFormatter::linkOpensInBrowser(const QUrl& link)
+{
+    const QString scheme = link.scheme();
+    return !link.host().isEmpty() && (scheme == QLatin1String("http") || scheme == QLatin1String("https"));
 }
