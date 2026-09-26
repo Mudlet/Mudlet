@@ -862,9 +862,11 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
         const int roomId = pR->readJsonRoom(areaObj.value(QLatin1String("rooms")).toArray(), roomIndex, id);
-        rooms.insert(roomId);
-        // This also sets the room id for the TRoom:
-        mpRoomDB->addRoom(roomId, pR, true);
+        // This also sets the room id for the TRoom, keeps one whose id is below
+        // one for the audit to renumber and frees one whose id is taken:
+        if (mpRoomDB->restoreSingleRoom(roomId, pR)) {
+            rooms.insert(roomId);
+        }
         if (++roomCount % 10 == 0) {
             if (mpMap->incrementJsonProgressDialog(false, true, 10)) {
                 // Cancel has been hit - so give up straight away:
