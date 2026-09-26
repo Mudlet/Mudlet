@@ -136,6 +136,94 @@ describe("Tests ISO 8859-1 decoding", function()
   end)
 end)
 
+describe("Tests UTF-8 decoding of malformed sequences", function()
+
+  -- Each form below is complete: every byte after its lead is a continuation
+  -- byte, so it is refused for its lead byte or its value, not for being cut
+  -- short. What must not happen is a character being let through, or the
+  -- refusal spilling onto the ASCII byte after it. How many replacement marks a
+  -- refused form earns is left open: decoders differ on it - Mudlet gives each
+  -- form one, where the WHATWG decoder gives one per byte for a lead byte UTF-8
+  -- no longer has. The caller selects UTF-8, and only once per case, as busted
+  -- keeps just the last finally() a case registers.
+  --
+  -- A sequence cut short by a byte that is not a continuation byte is not one
+  -- of these: Mudlet takes the cutting byte into the replacement mark too, so a
+  -- line ending, an escape or an ASCII character after a truncated sequence is
+  -- lost - see PR #11068, which fixes that.
+  local function assertRefused(data, what)
+    -- Under any decoder but UTF-8 these bytes would be refused, or mangled,
+    -- for other reasons:
+    assert.equals("é", decoded(bytes(0xC3, 0xA9)), "the precondition failed - UTF-8 is not the decoder in use")
+    local payload = decoded(data .. "Z")
+    local rest, marks = payload:gsub(replacement, "")
+    assert.is_true(marks > 0 and rest == "Z", what .. " decoded to " .. payload)
+  end
+
+  it("still decodes the well-formed sequences of every length", function()
+    using("UTF-8")
+
+    assert.equals("é日😀Z", decoded(bytes(0xC3, 0xA9, 0xE6, 0x97, 0xA5, 0xF0, 0x9F, 0x98, 0x80) .. "Z"))
+  end)
+
+  it("still decodes the smallest code point of every length", function()
+    using("UTF-8")
+
+    -- the first value each length may carry, just past the overlong forms below
+    assert.same({0x80, 0x800, 0x10000, 0x5A}, codePoints(decoded(bytes(0xC2, 0x80, 0xE0, 0xA0, 0x80, 0xF0, 0x90, 0x80, 0x80) .. "Z")))
+  end)
+
+  it("refuses an overlong encoding of an ASCII character", function()
+    using("UTF-8")
+
+    -- each of these spells '/' in more bytes than it needs, the classic way of
+    -- smuggling a character past a check made on the bytes
+    assertRefused(bytes(0xC0, 0xAF), "the two byte overlong form")
+    assertRefused(bytes(0xE0, 0x80, 0xAF), "the three byte overlong form")
+    assertRefused(bytes(0xF0, 0x80, 0x80, 0xAF), "the four byte overlong form")
+  end)
+
+  it("refuses a UTF-16 surrogate", function()
+    using("UTF-8")
+
+    assertRefused(bytes(0xED, 0xA0, 0x80), "a high surrogate")
+    assertRefused(bytes(0xED, 0xBF, 0xBF), "a low surrogate")
+  end)
+
+  it("accepts the code points either side of the surrogates", function()
+    using("UTF-8")
+
+    assert.same({0xD7FF, 0xE000, 0x5A}, codePoints(decoded(bytes(0xED, 0x9F, 0xBF, 0xEE, 0x80, 0x80) .. "Z")))
+  end)
+
+  it("refuses a code point past U+10FFFF", function()
+    using("UTF-8")
+
+    assertRefused(bytes(0xF4, 0x90, 0x80, 0x80), "U+110000")
+    assertRefused(bytes(0xF5, 0x80, 0x80, 0x80), "a lead byte that can only start such a code point")
+  end)
+
+  it("accepts U+10FFFF itself", function()
+    using("UTF-8")
+
+    assert.same({0x10FFFF, 0x5A}, codePoints(decoded(bytes(0xF4, 0x8F, 0xBF, 0xBF) .. "Z")))
+  end)
+
+  it("refuses the five and six byte forms UTF-8 no longer has", function()
+    using("UTF-8")
+
+    assertRefused(bytes(0xF8, 0x88, 0x80, 0x80, 0x80), "a five byte form")
+    assertRefused(bytes(0xFC, 0x84, 0x80, 0x80, 0x80, 0x80), "a six byte form")
+  end)
+
+  it("keeps a byte order mark as the character it encodes", function()
+    using("UTF-8")
+
+    -- inside a line it is a zero width no-break space, not a mark to drop
+    assert.same({0x41, 0xFEFF, 0x5A}, codePoints(decoded("A" .. bytes(0xEF, 0xBB, 0xBF) .. "Z")))
+  end)
+end)
+
 describe("Tests GBK decoding", function()
 
   it("decodes each of the areas the encoding is divided into", function()
@@ -277,6 +365,93 @@ describe("Tests EUC-KR decoding", function()
     using("EUC-KR")
 
     assert.equals(replacement, decoded(bytes(0xC7, 0x20)))
+  end)
+end)
+
+describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", function()
+
+  -- Only a byte from 0x80 to 0xBF can continue a sequence, so any other byte
+  -- ends a sequence it arrives in: the bytes before it earn a replacement mark
+  -- and it is then read in its own right. Taken as part of the sequence it
+  -- would be lost, and with it whatever it meant.
+
+  it("keeps the ASCII byte that cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals(replacement .. "AZ", decoded(bytes(0xC3) .. "AZ"), "after the lead of a two byte sequence")
+    assert.equals(replacement .. "AZ", decoded(bytes(0xE2, 0x82) .. "AZ"), "after two bytes of a three byte sequence")
+    assert.equals(replacement .. "AZ", decoded(bytes(0xF0, 0x9F, 0x98) .. "AZ"), "after three bytes of a four byte sequence")
+    assert.equals(replacement .. "ABCDZ", decoded(bytes(0xF8) .. "ABCDZ"), "after the lead of a five byte form")
+  end)
+
+  it("decodes a character whose lead byte cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals(replacement .. "日Z", decoded(bytes(0xE2, 0xE6, 0x97, 0xA5) .. "Z"))
+  end)
+
+  it("keeps a line ending that cuts a sequence short", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet("cut:one" .. bytes(0xE2) .. "\r\ncut:two\r\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^cut:") then
+        shown[#shown + 1] = line
+      end
+    end
+    assert.same({"cut:one" .. replacement, "cut:two"}, shown)
+  end)
+
+  it("still acts on an escape sequence that cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals("A" .. replacement .. "REDZ", decoded("A" .. bytes(0xE2) .. "\27[31mRED\27[0mZ"))
+  end)
+
+  -- cTelnet ends a prompt with a byte of its own when the game sends IAC GA
+  -- (cTelnet::gotPrompt()), and that byte cannot continue a sequence either
+  it("still commits a prompt that a sequence is cut short by", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet("gaprompt:" .. bytes(0xE2) .. "<T_IAC><T_GA>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    feedTelnet("gaafter\r\n")
+
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^ga") then
+        shown[#shown + 1] = line
+      end
+    end
+    assert.same({"gaprompt:" .. replacement, "gaafter"}, shown)
+  end)
+end)
+
+describe("Tests UTF-8 locally fed text that ends part way through a sequence", function()
+
+  -- Game data that stops part way through a sequence is held for the next
+  -- packet to finish, but nothing continues text a script feeds in: the next
+  -- feedTriggers() call starts afresh, so the unfinished sequence is malformed
+  -- and earns a replacement mark rather than vanishing.
+  it("marks the unfinished sequence at the end of the text", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    feedTriggers("localtail:" .. bytes(0xE2, 0x82))
+    feedTriggers("\n")
+
+    local seen
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^localtail:") then
+        seen = line
+      end
+    end
+    assert.equals("localtail:" .. replacement, seen)
   end)
 end)
 
@@ -669,15 +844,18 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
   end)
 
   it("takes a carriage return in locally fed text as data, not as a marker", function()
-    using("UTF-8")
+    using("GBK")
 
     -- Only cTelnet makes the marker, so a carriage return handed to
-    -- feedTriggers() is the caller's own byte and the decoder has to see it: the
-    -- truncated lead byte ahead of it is rejected together with it, in the one
-    -- replacement mark, and does not end the line.
+    -- feedTriggers() is the caller's own byte and the decoder has to see it: as
+    -- the second byte of a GBK pair it is out of range, and the pair is refused
+    -- whole, in one replacement mark, so it does not end the line. Held back as
+    -- a marker, it would instead leave the lead byte unfinished at the end of the
+    -- text, and end the line.
+    -- (false: these are the game's own bytes, not UTF-8 to be converted to it)
     local mark = getLastLineNumber("main")
-    feedTriggers("local:" .. bytes(0xC3, 0x0D))
-    feedTriggers("tail\n")
+    feedTriggers("local:" .. bytes(0xC4, 0x0D), false)
+    feedTriggers("tail\n", false)
 
     local seen
     for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do

@@ -83,22 +83,6 @@ void LuaInterface::releaseVariableReferences()
     lrefs.clear();
 }
 
-QStringList LuaInterface::varName(TVar* var)
-{
-    QStringList names;
-    if (var->getName() == qsl("_G")) {
-        names << "";
-        return names;
-    }
-    names << var->getName();
-    TVar* pParent = var->getParent();
-    while (pParent && pParent->getName() != qsl("_G")) {
-        names.insert(0, pParent->getName());
-        pParent = pParent->getParent();
-    }
-    return names;
-}
-
 std::pair<bool, QString> LuaInterface::validMove(TVar* pNewParent) const
 {
     if (pNewParent && pNewParent->getValueType() != LUA_TTABLE) {
@@ -106,22 +90,6 @@ std::pair<bool, QString> LuaInterface::validMove(TVar* pNewParent) const
         return {false, QObject::tr("Cannot move variable here - the target is not a table")};
     }
     return {true, QString()};
-}
-
-void LuaInterface::getAllChildren(TVar* var, QList<TVar*>* list)
-{
-    QListIterator<TVar*> it(var->getChildren(true));
-    if (varUnit->isSaved(var) || var->saved) {
-        list->append(var);
-    }
-    while (it.hasNext()) {
-        TVar* child = it.next();
-        if (child->getValueType() == LUA_TTABLE) {
-            getAllChildren(child, list);
-        } else if (varUnit->isSaved(child) || var->saved) {
-            list->append(child);
-        }
-    }
 }
 
 bool LuaInterface::loadKey(lua_State* L, TVar* var)
@@ -204,98 +172,6 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
         return false;
     }
     lua_settop(L, entryTop);
-    return false;
-}
-
-bool LuaInterface::reparentCVariable(TVar* from, TVar* to, TVar* curVar)
-{
-    //get the old parent on the stack
-    if (setjmp(buf) == 0) {
-        if (!from || !to || (from == to)) {
-            // moving from global to global or nowhere
-            return true;
-        }
-        const int stackSize = lua_gettop(mL);
-        const bool isSaved = varUnit->isSaved(curVar);
-        if (isSaved) {
-            QList<TVar*> list;
-            getAllChildren(curVar, &list);
-            QListIterator<TVar*> it(list);
-            while (it.hasNext()) {
-                TVar* t = it.next();
-                varUnit->removeSavedVar(t);
-            }
-        }
-        QList<TVar*> vars = varOrder(curVar);
-        lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
-        int i = 1;
-        for (; i < vars.size(); i++) {
-            if (!loadValue(mL, vars[i], -2)) {
-                lua_settop(mL, stackSize);
-                return false;
-            }
-        }
-        //redo the parenting in TVar
-        from->removeChild(curVar);
-        curVar->setParent(to);
-        to->addChild(curVar);
-        vars = varOrder(curVar);
-        //do the actual reparenting part
-        if (to == varUnit->getBase()) {
-            //we're going global
-            lua_setglobal(mL, curVar->getName().toUtf8().constData());
-        } else {
-            lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
-            i = 1;
-            for (; i < vars.size() - 1; i++) {
-                if (!loadValue(mL, vars[i], -2)) {
-                    lua_settop(mL, stackSize);
-                    return false;
-                }
-                lua_remove(mL, -2);
-            }
-            lua_insert(mL, -2);
-            if (!loadKey(mL, curVar)) {
-                lua_settop(mL, stackSize);
-                return false;
-            }
-            lua_insert(mL, -2);
-            if (!lua_istable(mL, -3)) {
-                lua_settop(mL, stackSize);
-                return false;
-            }
-            lua_settable(mL, -3);
-            lua_pop(mL, 1);
-        }
-        //delete the old copy
-        if (from == varUnit->getBase()) {
-            lua_pushnil(mL);
-            lua_setglobal(mL, curVar->getName().toUtf8().constData());
-        } else {
-            if (!loadKey(mL, curVar)) {
-                lua_settop(mL, stackSize);
-                return false;
-            }
-            lua_pushnil(mL);
-            if (!lua_istable(mL, -3)) {
-                lua_settop(mL, stackSize);
-                return false;
-            }
-            lua_settable(mL, -3);
-        }
-        if (isSaved) {
-            QList<TVar*> list;
-            list.append(to);
-            getAllChildren(curVar, &list);
-            QListIterator<TVar*> it(list);
-            while (it.hasNext()) {
-                TVar* t = it.next();
-                varUnit->addSavedVar(t);
-            }
-        }
-        lua_settop(mL, stackSize);
-        return true;
-    }
     return false;
 }
 
@@ -597,45 +473,6 @@ void LuaInterface::deleteVar(TVar* var)
     }
     lua_settop(mL, stackTop);
     qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Lua panicked while deleting \"" << var->getName() << "\"; it has not been deleted.";
-}
-
-bool LuaInterface::loadVar(TVar* var)
-{
-    //puts the value of a variable on the -1 position of the stack
-    if (setjmp(buf) == 0) {
-        const int kType = var->getKeyType();
-        const int vType = var->getValueType();
-        if (vType == LUA_TTABLE) {
-            if (kType == LUA_TNUMBER) {
-                lua_pushnumber(mL, QString(var->getName()).toDouble());
-            } else if (kType == LUA_TTABLE) {
-                lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
-            } else {
-                lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
-            }
-            if (lua_istable(mL, -2)) {
-                lua_gettable(mL, -2);
-                return true;
-            }
-            lua_pop(mL, 1);
-            return false;
-        }
-
-        if (vType == LUA_TNUMBER) {
-            lua_pushnumber(mL, QString(var->getValue()).toDouble());
-        } else if (vType == LUA_TBOOLEAN) {
-            lua_pushboolean(mL, var->getValue().toLower() == "true" ? 1 : 0);
-        } else if (vType == LUA_TSTRING) {
-            lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
-        } else {
-            return false;
-        }
-    } else {
-        qWarning().noquote().nospace() << "LuaInterface::loadVar() - Lua panic occurred while loading variable \"" << var->getName() << "\" with key type " << lua_typename(mL, var->getKeyType())
-                                       << " and value type " << lua_typename(mL, var->getValueType()) << ".";
-        return false;
-    }
-    return true;
 }
 
 // Whether the name a rename is about to write to is free. A rename copies the

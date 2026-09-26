@@ -123,6 +123,48 @@ describe("Tests MXP handling", function()
       local width = math.max(getWindowWrap("main"), 40)
       assertLineShown("\27[1zMXPRULE1<HR>MXPRULE2", ("-"):rep(width))
     end)
+
+    -- an ANSI escape cannot be part of a tag, so one arriving before the tag
+    -- closed shows what had been read of the tag as plain text and still acts
+    it("shows a tag an escape sequence cut short as the text it was", function()
+      local function rowReading(mark, text)
+        local row
+        for candidate = mark, getLastLineNumber("main") do
+          if getLines("main", candidate, candidate + 1)[1] == text then
+            row = candidate
+          end
+        end
+        return row
+      end
+      local function fgAt(row, column)
+        moveCursor("main", column, row)
+        selectSection("main", column, 1)
+        local colour = {getFgColor("main")}
+        deselect("main")
+        moveCursorEnd("main")
+        return colour
+      end
+
+      -- with no MXP processor the tag would be shown as text anyway
+      local mark = getLastLineNumber("main")
+      feedTriggers("MXPESC0<B>x</B>\n")
+      assert.is_not_nil(rowReading(mark, "MXPESC0x"), "the precondition failed - MXP tags are not being processed")
+
+      mark = getLastLineNumber("main")
+      feedTriggers("MXPESC1<B\27[31mred\27[0m tail\n")
+      local row = rowReading(mark, "MXPESC1<Bred tail")
+      assert.is_not_nil(row, "no line reads \"MXPESC1<Bred tail\"")
+
+      -- the partial tag is shown in the colour in use before the escape
+      -- sequence, and the escape sequence still coloured the text after it
+      local tagStart = #"MXPESC1"
+      local before = fgAt(row, 0)
+      assert.same(before, fgAt(row, tagStart), "the '<'")
+      assert.same(before, fgAt(row, tagStart + 1), "the 'B'")
+      local after = fgAt(row, tagStart + 2)
+      assert.are_not.same(before, after)
+      assert.same(color_table.ansi_001, after)
+    end)
   end)
 
   -- A colour name the client does not know gives an invalid QColor, and a

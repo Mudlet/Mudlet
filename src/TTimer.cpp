@@ -112,9 +112,8 @@ void TTimer::setTime(QTime time)
 
 void TTimer::validateTime()
 {
-    // A repeating QTimer with a zero interval fires on every pass of the event
-    // loop. A one-shot tempTimer(0, ...) is how scripts defer work to the next
-    // pass and an offset timer stops itself as it fires, so those keep a zero time
+    // A repeating zero-interval QTimer fires on every event loop pass. A one-shot tempTimer(0, ...)
+    // (how scripts defer to the next pass) and an offset timer (stops as it fires) may keep a zero time
     if (!isFolder() && !isTemporary() && !isOffsetTimer() && mTime.msecsSinceStartOfDay() == 0) {
         mOK_init = false;
         //: Error shown in the editor when a timer's time is left at zero
@@ -161,22 +160,6 @@ void TTimer::start()
 void TTimer::stop()
 {
     mpQTimer->stop();
-}
-
-void TTimer::compile()
-{
-    if (mNeedsToBeCompiled) {
-        if (!compileScript()) {
-            if (TDebug::wants(TDebug::Category::Error)) {
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
-            }
-            mOK_code = false;
-        }
-    }
-    for (auto* timerNode : *mpMyChildrenList) {
-        auto* timer = static_cast<TTimer*>(timerNode);
-        timer->compile();
-    }
 }
 
 void TTimer::compileAll()
@@ -330,11 +313,8 @@ void TTimer::enableTimer(int id)
     if (mID == id) {
         if (canBeUnlocked()) {
             if (activate()) {
-                // Restarting only the timers that hold a script left the other
-                // two kinds stopped for the rest of the session once the
-                // emergency stop had been used: a tempTimer() given a Lua
-                // function keeps its callback in the Lua registry and a timer
-                // that only sends a command has nothing to compile (#10751)
+                // Not just script timers: Lua-function tempTimers and command-only timers must also
+                // restart after the emergency stop (#10751)
                 if (hasPayload()) {
                     mpQTimer->start();
                 }
@@ -374,15 +354,8 @@ void TTimer::enableTimer()
 {
     if (canBeUnlocked()) {
         if (activate()) {
-            // enableTimer(name) comes through here for the children of a
-            // folder, where a command-only timer is an everyday thing - see
-            // enableTimer(int) above (#10751). TimerUnit::enableTimer(name)
-            // hands an offset timer straight to this as well, and an offset
-            // timer's schedule is its parent's: the parent firing arms it, by
-            // way of enableTimer(int). Arming a command-only one here would
-            // hand it a schedule of its own that it has never had, so those
-            // keep the narrower test - what a script offset timer does here is
-            // long-standing behaviour and a separate question from #10751
+            // An offset timer is armed by its parent firing, via enableTimer(int); starting a
+            // command-only one here would give it a schedule of its own, so it keeps the script-only test
             const bool startable = isOffsetTimer() ? (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) : hasPayload();
             if (startable) {
                 mpQTimer->start();
@@ -409,41 +382,6 @@ void TTimer::disableTimer()
     for (auto* timerNode : *mpMyChildrenList) {
         auto* timer = static_cast<TTimer*>(timerNode);
         timer->disableTimer();
-    }
-}
-
-
-void TTimer::enableTimer(const QString& name)
-{
-    if (mName == name) {
-        if (canBeUnlocked()) {
-            if (activate()) {
-                mpQTimer->start();
-            } else {
-                deactivate();
-                mpQTimer->stop();
-            }
-        }
-    }
-
-    if (!isOffsetTimer()) {
-        for (auto* timerNode : *mpMyChildrenList) {
-            auto* timer = static_cast<TTimer*>(timerNode);
-            timer->enableTimer(timer->getName());
-        }
-    }
-}
-
-void TTimer::disableTimer(const QString& name)
-{
-    if (mName == name) {
-        deactivate();
-        mpQTimer->stop();
-    }
-
-    for (auto* timerNode : *mpMyChildrenList) {
-        auto* timer = static_cast<TTimer*>(timerNode);
-        timer->disableTimer(timer->getName());
     }
 }
 
@@ -477,23 +415,6 @@ QString TTimer::packageName(TTimer* pTimer)
 
     if (pTimer->getParent()) {
         return packageName(pTimer->getParent());
-    }
-
-    return QString();
-}
-
-QString TTimer::moduleName(TTimer* pTimer)
-{
-    if (!pTimer) {
-        return QString();
-    }
-
-    if (!pTimer->mPackageName.isEmpty()) {
-        return mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
-    }
-
-    if (pTimer->getParent()) {
-        return moduleName(pTimer->getParent());
     }
 
     return QString();

@@ -6628,6 +6628,26 @@ describe("Toolbar buttons", function()
       assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), setErr)
     end)
 
+    it("round-trips a button state by ID", function()
+      local id = findItems(pushDownButton, "button")[1]
+      assert.is_number(id, "the package did not install " .. pushDownButton)
+      assert.is_false(getButtonState(id))
+      assert.is_true(setButtonState(id, true))
+      assert.is_true(getButtonState(id))
+      assert.is_true(getButtonState(pushDownButton), "the ID and the name should be the same button")
+    end)
+
+    it("both refuse a button that is not a push-down one when it is given by ID", function()
+      local id = findItems(plainButton, "button")[1]
+      assert.is_number(id, "the package did not install " .. plainButton)
+      local getOk, getErr = getButtonState(id)
+      assert.is_nil(getOk)
+      assert.are.equal(("item ID with %d is not a push-down button"):format(id), getErr)
+      local setOk, setErr = setButtonState(id, true)
+      assert.is_nil(setOk)
+      assert.are.equal(("item ID with %d is not a push-down button"):format(id), setErr)
+    end)
+
     it("both refuse a name that is no button at all", function()
       local unknown = "buttonSpecNoSuchButton" .. suffix
       local getOk, getErr = getButtonState(unknown)
@@ -7588,5 +7608,19 @@ describe("calcFontSize on the main window", function()
     assert.is_true(mainWidth > 0)
     assert.is_true(miniWidth > 0)
     assert.are_not.equal(mainWidth, miniWidth)
+  end)
+end)
+
+describe("openUserWindow docking areas", function()
+  local windowName = ("uiSpecDockNowhere%d%d"):format(os.time(), math.random(100000))
+
+  teardown(function()
+    hideWindow(windowName)
+  end)
+
+  it("refuses an area it does not know, naming the ones it does", function()
+    local ok, message = openUserWindow(windowName, false, true, "middle")
+    assert.is_nil(ok)
+    assert.are.equal([[docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating]], message)
   end)
 end)
