@@ -1358,8 +1358,8 @@ describe("Tests MCCP compressed streams", function()
   -- zlib.compress("MCCPVERSIONONEOK MCCPVERSIONONEOK\r\n")
   local COMPRESSED_V1 = "\120\156\243\117\118\14\8\115\13\10\246\244\247\243\247\115\245\247\86\240\69\19\224\229\2\0\183\122\9\194"
 
-  -- neither the end of a stream nor a broken one clears the WILL, so without this
-  -- every later spec's IAC SB is still a candidate MCCP start sequence
+  -- the end of a stream does not clear the WILL, so without this every later
+  -- spec's IAC SB is still a candidate MCCP start sequence
   after_each(function()
     feed("<T_IAC><T_WONT><O_MCCP2>")
     feed("<T_IAC><T_WONT><O_MCCP>")
@@ -1415,6 +1415,17 @@ describe("Tests MCCP compressed streams", function()
     local shown = linesSince(mark)
     assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
     assert.is_truthy(shown:find("MCCPLATERBROKEN", 1, true), shown)
+  end)
+
+  it("shows all of a text that arrives instead of a stream split across reads", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    -- zlib takes the first byte on its own as half of a stream header
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>M")
+    feed("CCPSPLIT\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPSPLIT", 1, true), shown)
   end)
 
   -- a broken stream is refused on the wire, so a start sequence the game sends
