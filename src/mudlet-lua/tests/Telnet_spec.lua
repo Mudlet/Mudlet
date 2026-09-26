@@ -1461,7 +1461,9 @@ describe("Tests MCCP compressed streams", function()
   -- stream has to be refused there rather than fed whatever comes next.
   it("refuses a stream that inflates past the cap in one read", function()
     -- zlib.compress(string.rep("\0", 1000000) .. "MCCPTAILOFBOMB\r\n", 9): NULs
-    -- are not displayed, so the cap is reached without drawing ~1 MB of text
+    -- are not displayed, so the cap is reached without drawing ~1 MB of text.
+    -- It has to inflate to more than scmMaxDecompressionRecursion * BUFFER_SIZE
+    -- (8 * 100000 bytes in ctelnet), or raising either leaves the cap unreached.
     local bomb = "\120\218\237\193\209\9\0\16\20\0\64\223\202\80\40\165\188\248\176\255\44\6\113\119\41\1"
       .. string.rep("\0", 968)
       .. "\191\138\222\207\173\115\237\209\118\180\146\31\105\128\4\26"
