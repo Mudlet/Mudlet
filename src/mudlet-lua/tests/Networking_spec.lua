@@ -1591,15 +1591,19 @@ describe("MMCP effects against a scripted chat peer", function()
       if peerUnavailable() then return end
       ensurePeer()
       assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      -- Registered before the snoop has started, and stops it only if it did,
+      -- so that a failure to start still has the permission withdrawn
+      finally(function()
+        if mmcp.getClientFlags(PEER_NAME) == "      N " then
+          peerSends(30, "")
+          waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+        end
+        mmcp.allowSnoop(PEER_NAME)
+      end)
       peerSends(30, "")
       assert.is_true(waitUntil(function()
         return mmcp.getClientFlags(PEER_NAME) == "      N "
       end, 2000))
-      finally(function()
-        peerSends(30, "")
-        waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
-        mmcp.allowSnoop(PEER_NAME)
-      end)
 
       local mark = captureSeq()
       feedTelnet("before the gap\r\n\r\nafter the gap\r\n")
