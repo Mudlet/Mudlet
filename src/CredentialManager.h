@@ -120,6 +120,7 @@ private:
     bool isPortableModeActive() const;
     bool shouldUseKeychain(const QString& profileName) const;
 
+    void trackCurrentJob(QKeychain::Job* job);
     void startJob(QKeychain::Job* job);
 
     // Timeout and cleanup management
@@ -198,6 +199,9 @@ private:
 
     // Current operation state
     QPointer<QKeychain::Job> mCurrentJob{nullptr};
+    // Whether the keychain has answered mCurrentJob, so abandoning it can tell a job QtKeychain is
+    // done with from one it still holds.
+    bool mCurrentJobFinished = false;
     QTimer* mTimeoutTimer{nullptr};
     CredentialCallback mCurrentCallback;
     AvailabilityCallback mCurrentAvailabilityCallback;
