@@ -136,10 +136,9 @@ void ActionUnit::endProcessing()
 
 void ActionUnit::compileAll()
 {
+    // Hidden toolbars as well - see AliasUnit::compileAll()
     for (auto action : mActionRootNodeList) {
-        if (action->isActive()) {
-            action->compileAll();
-        }
+        action->compileAll();
     }
 }
 
