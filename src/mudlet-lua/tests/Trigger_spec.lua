@@ -4727,6 +4727,73 @@ describe("Trigger processing", function()
             end)
         end)
 
+        describe("the lazyCaptureGlobals setting", function()
+            after_each(function()
+                setConfig("lazyCaptureGlobals", true)
+            end)
+
+            it("is on by default", function()
+                assert.is_true(getConfig("lazyCaptureGlobals"))
+            end)
+
+            it("sets matches, multimatches and line up front when switched off", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazySettingOff (\\w+)$", function()
+                    seen.matches = rawget(_G, "matches")
+                    seen.line = rawget(_G, "line")
+                end))
+
+                setConfig("lazyCaptureGlobals", false)
+                feedTriggers("\nLazySettingOff word\n")
+
+                assert.is_false(getConfig("lazyCaptureGlobals"))
+                assert.is_not_nil(seen.matches, "matches was left out with the setting off")
+                assert.are.equal("word", seen.matches[2])
+                assert.are.equal("LazySettingOff word", seen.line, "line was left out with the setting off")
+                assert.is_not_nil(rawget(_G, "multimatches"), "multimatches was left out between dispatches with the setting off")
+            end)
+
+            -- Read straight after switching off, as the getter hands out the
+            -- metatable as it stands
+            it("takes Mudlet's handlers off the globals metatable when switched off", function()
+                setConfig("lazyCaptureGlobals", false)
+                local metatable = getmetatable(_G)
+
+                assert.is_nil(rawget(metatable, "__index"), "__index stayed on with the setting off")
+                assert.is_nil(rawget(metatable, "__newindex"), "__newindex stayed on with the setting off")
+            end)
+
+            it("hands a fire what it is owed when switched off during it", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazySettingMidFire (\\w+)$", function()
+                    setConfig("lazyCaptureGlobals", false)
+                    seen.matches = rawget(_G, "matches")
+                    seen.line = rawget(_G, "line")
+                end))
+
+                feedTriggers("\nLazySettingMidFire word\n")
+
+                assert.is_not_nil(seen.matches, "the fire's matches were not put in when the setting went off")
+                assert.are.equal("word", seen.matches[2])
+                assert.are.equal("LazySettingMidFire word", seen.line, "the fire's line was not put in when the setting went off")
+            end)
+
+            it("leaves them out again once switched back on", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazySettingBack (\\w+)$", function()
+                    seen.matches = rawget(_G, "matches")
+                    seen.capture = matches[2]
+                end))
+
+                setConfig("lazyCaptureGlobals", false)
+                setConfig("lazyCaptureGlobals", true)
+                feedTriggers("\nLazySettingBack word\n")
+
+                assert.is_nil(seen.matches, "matches was set up front after the setting went back on")
+                assert.are.equal("word", seen.capture)
+            end)
+        end)
+
         -- Before, a metatable carrying both handlers put back on the globals
         -- table turned the deferral on again - on a table the script still
         -- held, and could change in place mid-fire, where nothing Mudlet

@@ -4522,7 +4522,7 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
         return 2;
     }
     TLuaInterpreter* self = getHostFromLua(L).getLuaInterpreter();
-    if (!self->mLazyGlobalsInstalled) {
+    if (!self->mLazyGlobalsInstalled || !self->mLazyCaptureGlobals) {
         lua_pushboolean(L, false);
         return 1;
     }
@@ -4542,7 +4542,7 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
 // Whether a global can be left out for lazyGlobalsIndex() to build
 bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
 {
-    if (!mLazyGlobalsInstalled) {
+    if (!mLazyGlobalsInstalled || !mLazyCaptureGlobals) {
         return false;
     }
     if (mGlobalsMetatableTouched) {
@@ -4937,30 +4937,36 @@ int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
 
 // No documentation available in wiki - internal function
 // Whether "matches", "multimatches" and "line" may be left out until a script
-// reads them. On unless lazyCaptureGlobals=false in Mudlet.ini, or
-// MUDLET_LAZY_GLOBALS=0 in the environment, which wins. Read as a profile's Lua
-// starts; switched off, nothing is installed and every dispatch sets all three
-// up front as Mudlet always did.
-static bool lazyCaptureGlobalsWanted()
+// reads them. Switched off, whatever is owed goes into the globals table and the
+// handlers come off it, so every dispatch sets all three up front as Mudlet
+// always did. Switched back on, the handlers return unless a script has been
+// handed the globals metatable meanwhile, which keeps them off for the session.
+void TLuaInterpreter::setLazyCaptureGlobals(const bool enabled)
 {
-    if (qEnvironmentVariableIsSet("MUDLET_LAZY_GLOBALS")) {
-        bool parsed = false;
-        const int value = qEnvironmentVariableIntValue("MUDLET_LAZY_GLOBALS", &parsed);
-        if (parsed) {
-            return value != 0;
-        }
-        qWarning().noquote() << "MUDLET_LAZY_GLOBALS is set to" << qEnvironmentVariable("MUDLET_LAZY_GLOBALS") << "but is not 0 or 1; ignoring it";
+    if (mLazyCaptureGlobals == enabled) {
+        return;
     }
-    QSettings* settings = mudlet::self() ? MudletApp::getQSettings() : nullptr;
-    return !settings || settings->value(qsl("lazyCaptureGlobals"), true).toBool();
+    mLazyCaptureGlobals = enabled;
+    if (!pGlobalLua || !mLazyGlobalsInstalled) {
+        return;
+    }
+    lua_State* L = pGlobalLua;
+    const int callerStackTop = lua_gettop(L);
+    if (!enabled) {
+        standDownDeferral(L);
+        stripGlobalsHandlers(L);
+    } else if (!mGlobalsMetatableTouched) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mGlobalsTableRef);
+        if (lua_getmetatable(L, -1)) {
+            restoreGlobalsHandlers(L, lua_gettop(L));
+        }
+    }
+    lua_settop(L, callerStackTop);
 }
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::installLazyGlobals()
 {
-    if (!lazyCaptureGlobalsWanted()) {
-        return;
-    }
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
     // Only onto the metatable Other.lua gives the globals table, and only into
@@ -4998,7 +5004,11 @@ void TLuaInterpreter::installLazyGlobals()
             lua_pushlightuserdata(L, this);
             lua_pushcclosure(L, &TLuaInterpreter::lazyGlobalsNewindex, 1);
             mNewindexHandlerRef = luaL_ref(L, LUA_REGISTRYINDEX);
-            restoreGlobalsHandlers(L, lua_gettop(L));
+            // Installed either way, so the guards are in place should the
+            // setting be turned on later
+            if (mLazyCaptureGlobals) {
+                restoreGlobalsHandlers(L, lua_gettop(L));
+            }
 
             mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
             mGlobalsMetatableTouched = false;
@@ -9085,6 +9095,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mFORCE_NO_COMPRESSION = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("lazyCaptureGlobals")) {
+        host.setLazyCaptureGlobals(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
     if (key == qsl("specialForceGAOff")) {
         host.mFORCE_GA_OFF = getVerifiedBool(L, __func__, 2, "value");
         if (host.mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState) {
@@ -9611,6 +9625,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("specialForceCompressionOff"),
              [&]() {
                  lua_pushboolean(L, host.mFORCE_NO_COMPRESSION);
+             }},
+            {qsl("lazyCaptureGlobals"),
+             [&]() {
+                 lua_pushboolean(L, host.lazyCaptureGlobals());
              }},
             {qsl("specialForceGAOff"),
              [&]() {
