@@ -5362,12 +5362,16 @@ void cTelnet::initStreamDecompressor()
     mZstream.opaque = Z_NULL;
     mZstream.avail_in = 0;
     mZstream.next_in = Z_NULL;
+    mUninflatedInput.clear();
 
     inflateInit(&mZstream);
 }
 
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 {
+    char* const inputStart = in_buffer;
+    const int inputLength = length;
+
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef*)in_buffer;
 
@@ -5387,6 +5391,11 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.next_in = Z_NULL;
     mZstream.next_out = Z_NULL;
 
+    const auto consumed = static_cast<size_t>(inputLength - length);
+    // Nothing has come out of the stream yet and every byte inflate() took is
+    // still at hand - this read's, plus the few earlier ones kept for this.
+    const bool allInputAtHand = mZstream.total_out == 0 && mZstream.total_in == mUninflatedInput.size() + consumed;
+
     if (zval == Z_NEED_DICT || zval == Z_DATA_ERROR || zval == Z_STREAM_ERROR || zval == Z_MEM_ERROR) {
         // The compressed stream is broken (e.g. the server announced
         // compression but sent uncompressed data). Only Z_STREAM_END used to be
@@ -5401,6 +5410,16 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         // Refuse the version the broken stream was using - with both negotiated,
         // refusing the other one leaves the game compressing - and stop taking
         // its start sequence as one until the game offers it again.
+        // A stream that breaks before producing any output was most likely
+        // never compressed at all (a game announcing compression and then not
+        // using it), so hand back the bytes inflate() took for its header too
+        // rather than cutting them off the text.
+        if (allInputAtHand) {
+            outSize = static_cast<int>(mUninflatedInput.copy(out_buffer, mUninflatedInput.size()));
+            in_buffer = inputStart;
+            length = inputLength;
+        }
+        mUninflatedInput.clear();
         sendTelnetOption(TN_DONT, mCompressionOption);
         hisOptionState.reset(static_cast<size_t>(mCompressionOption));
         if (mCompressionOption == OPT_COMPRESS) {
@@ -5412,6 +5431,12 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         // the next start sequence initialises a stream of its own
         inflateEnd(&mZstream);
         return outSize;
+    }
+
+    if (allInputAtHand && zval != Z_STREAM_END && mUninflatedInput.size() + consumed <= scmMaxUninflatedInput) {
+        mUninflatedInput.append(inputStart, consumed);
+    } else {
+        mUninflatedInput.clear();
     }
 
     if (zval == Z_STREAM_END) {

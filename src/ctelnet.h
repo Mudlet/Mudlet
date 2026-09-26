@@ -532,6 +532,13 @@ private:
     bool mNeedDecompression = false;
     // The MCCP version whose start sequence began the stream being inflated
     char mCompressionOption = OPT_COMPRESS2;
+    // Input of earlier reads inflate() took without producing any output yet -
+    // a stream header, or the first bytes of text a game sent instead of the
+    // stream it announced, to give back if it turns out to be the latter.
+    std::string mUninflatedInput;
+    // Real text fails the header check within two bytes; past this many the
+    // stream is taken to be compressed and nothing is kept.
+    inline static const size_t scmMaxUninflatedInput = 32;
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;

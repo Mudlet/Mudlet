@@ -1381,6 +1381,9 @@ describe("Tests MCCP compressed streams", function()
     feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>MCCPNOTCOMPRESSED\r\n")
     local shown = linesSince(mark)
     assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    -- the text was never compressed, so none of it may go missing into the
+    -- stream header zlib tried to read out of it
+    assert.is_truthy(shown:find("MCCPNOTCOMPRESSED", 1, true), shown)
     feed("MCCPPLAINAFTERBROKEN\r\n")
     shown = linesSince(mark)
     assert.is_truthy(shown:find("MCCPPLAINAFTERBROKEN", 1, true), shown)
@@ -1411,6 +1414,18 @@ describe("Tests MCCP compressed streams", function()
     feed("MCCPLATERBROKEN\r\n")
     local shown = linesSince(mark)
     assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPLATERBROKEN", 1, true), shown)
+  end)
+
+  it("shows all of a text that arrives instead of a stream split across reads", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    -- zlib takes the first byte on its own as half of a stream header
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>M")
+    feed("CCPSPLIT\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPSPLIT", 1, true), shown)
   end)
 
   -- a broken stream is refused on the wire, so a start sequence the game sends
