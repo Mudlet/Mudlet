@@ -222,9 +222,8 @@ bool MudletApp::portableRootUsable(const QString& path)
         return false;
     }
     const QFileInfo pathInfo(path);
-    // isFile() and isDir() both follow the link, so a symlink whose target is
-    // gone reads as neither - and mkpath() cannot create through one, so the
-    // root looks fine here and then swallows every profile
+    // isFile()/isDir() follow links, so a dangling symlink is neither - and mkpath() can't create through
+    // one, so it would pass here and then swallow every profile
     if ((pathInfo.exists() || pathInfo.isSymLink()) && !pathInfo.isDir()) {
         qWarning().nospace().noquote() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" is not a directory.";
         return false;
@@ -248,17 +247,14 @@ MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execD
     // Only beside the executable does an empty marker mean "the data is here
     // too"; the one in the config dir names no such default
     if (portPath.isEmpty() && marker == markerIn(execDir)) {
-        portPath = qsl("./portable"); // fallback value for empty portable.txt
+        portPath = qsl("./portable");
     }
     const QString portableRoot = pathResolveRelative(QDir::cleanPath(portPath), execDir);
     if (portableRootUsable(portableRoot)) {
         return {.path = portableRoot, .portable = true, .portableMarker = marker};
     }
-    // Never hand back an unusable root - an empty one roots every path at "/",
-    // which callers then mkpath() - so name the non-portable location instead
-    // and let each caller decide how loudly to complain. The marker and what it
-    // named travel with it, so the caller can say which file and which directory
-    // rather than going looking for them again.
+    // Never return an unusable root - an empty one roots every path at "/", which callers then mkpath() - so
+    // name the non-portable location, with the marker and what it named, and let each caller decide how loudly to complain.
     ConfigDirResolution resolution = xdgConfigDir(configDir);
     resolution.portable = true;
     resolution.portableRootRejected = true;
@@ -420,10 +416,8 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
         // handles the special case of the default theme "mudlet.tmTheme" that
         // is carried internally in the resource file:
         if (extra1.compare(qsl("Mudlet.tmTheme"), Qt::CaseSensitive)) {
-            // No match
             return qsl("%1/edbee/Colorsublime-Themes-master/themes/%2").arg(confPath, extra1);
         }
-        // Match - return path to copy held in resource file
         return qsl(":/edbee_defaults/Mudlet.tmTheme");
     case enums::editorWidgetThemeJsonFile:
         // Returns the pathFileName to the external JSON file needed to process
@@ -436,7 +430,6 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
     case enums::qtTranslationsPath:
         return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
     case enums::hunspellDictionaryPath:
-        // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
         mudletDictionariesInUse = true;
         return qsl("%1/../Resources/").arg(QCoreApplication::applicationDirPath());

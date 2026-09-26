@@ -640,8 +640,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         auto* tabPageLayout = new QVBoxLayout(tabPage);
         tabPageLayout->setContentsMargins(0, 0, 0, 0);
 
-        // Parented to the tab page rather than made by createMiniConsole, which
-        // parents to mpMainFrame and calls show() before we can intervene (a flash)
+        // Not createMiniConsole: it parents to mpMainFrame and calls show(), causing a flash
         console = mainConsole->createSubConsole(frame->name, tabPage);
         console->resize(frameWidth, frameHeight - tabBarHeight);
         console->mOldX = 0;
