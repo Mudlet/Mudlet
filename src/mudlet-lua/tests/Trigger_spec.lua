@@ -2433,6 +2433,34 @@ describe("Trigger processing", function()
             end)
         end
 
+        -- the captures are handed to a function body only while its multiline
+        -- state is firing, not to whatever function-bodied trigger fires later
+        it("does not hand a multiline function body's captures to a later trigger", function()
+            local seen = {}
+            local laterId
+            finally(function()
+                killTrigger("SpecMLFunctionLeak")
+                if laterId then
+                    killTrigger(laterId)
+                end
+            end)
+            local body = function()
+                seen.multiline = #multimatches
+            end
+            tempComplexRegexTrigger("SpecMLFunctionLeak", [[^leak one (\w+)$]], body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecMLFunctionLeak", [[^leak two (\w+)$]], body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            laterId = tempRegexTrigger("^leak later$", function()
+                seen.later = #multimatches
+            end)
+
+            feedTriggers("leak one aaa\n")
+            feedTriggers("leak two bbb\n")
+            feedTriggers("leak later\n")
+
+            assert.are.equal(2, seen.multiline, "the multiline state should have completed with both lines")
+            assert.are.equal(0, seen.later, "a later single-line trigger saw the multiline trigger's multimatches")
+        end)
+
     end)
 
     -- A colour-pattern trigger that is the child of a filter parent ("only pass

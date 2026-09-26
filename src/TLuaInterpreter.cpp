@@ -4377,8 +4377,9 @@ void TLuaInterpreter::setMatches(lua_State* L)
 
 // Shared by every path that runs a multiline trigger's body - script or Lua
 // function, with or without an expiry count - so they cannot drift apart again.
-// Leaves multimatches alone when there are no captures, i.e. outside a
-// multiline trigger firing.
+// Leaves multimatches alone when there are no captures: clearCaptureGroups()
+// empties them once a multiline trigger's body has run, but they stay set for
+// anything that body dispatches in turn (expandAlias() and the like).
 static void setMultimatches(lua_State* L, const std::list<std::list<std::string>>& captureGroups, const QVector<QVector<QPair<QString, QString>>>& nameGroups)
 {
     if (captureGroups.empty()) {
