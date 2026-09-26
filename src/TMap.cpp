@@ -1763,18 +1763,25 @@ bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
         return false;
     }
     QIODevice* pDevice = ifs.device();
-    // bytesAvailable() is only the rest of the file on a random access device
-    Q_ASSERT(pDevice && !pDevice->isSequential());
+    // bytesAvailable() is only the rest of the file on a random access device,
+    // so on anything else there is nothing to check against
+    if (!pDevice || pDevice->isSequential()) {
+        return true;
+    }
     // A four byte length is only right while the stream stays at Qt_5_12:
     // from Qt_6_7 a larger one can follow it
+    Q_ASSERT(ifs.version() < QDataStream::Qt_6_7);
     constexpr qint64 lengthSize = sizeof(quint32);
     const QByteArray lengthBytes = pDevice->peek(lengthSize);
-    bool fits = lengthBytes.size() == lengthSize;
-    if (fits) {
-        const quint32 length = qFromBigEndian<quint32>(lengthBytes.constData());
-        fits = length <= (pDevice->bytesAvailable() - lengthSize) / minBytesPerElement;
+    if (lengthBytes.size() != lengthSize) {
+        ifs.setStatus(QDataStream::ReadPastEnd);
+        return false;
     }
-    if (!fits) {
+    const quint32 length = qFromBigEndian<quint32>(lengthBytes.constData());
+    const qint64 bytesLeft = pDevice->bytesAvailable() - lengthSize;
+    if (length > bytesLeft / minBytesPerElement) {
+        qWarning().nospace() << "TMap::listLengthFits() WARNING - the list at byte " << pDevice->pos() << " of the map file claims " << length << " entries, more than the " << bytesLeft
+                             << " bytes left could hold; reading stops here.";
         ifs.setStatus(QDataStream::ReadCorruptData);
         return false;
     }

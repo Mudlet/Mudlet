@@ -3291,8 +3291,8 @@ describe("Tests saveMap and loadMap", function()
       return string.char(math.floor(n / 16777216) % 256, math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256)
     end
 
-    -- Saves the map and writes a copy with the length the marker starts with
-    -- raised by `highByte` * 2^24; the marker has to occur exactly once
+    -- Saves the map and writes a copy with the top byte of the length the
+    -- marker starts with set to `highByte`; the marker has to occur exactly once
     local function writeCorruptCopy(marker, highByte, version)
       if version then
         assert.is_true(saveMap(savePath, version))
@@ -3308,7 +3308,6 @@ describe("Tests saveMap and loadMap", function()
       file = assert(io.open(corruptPath, "wb"))
       file:write(data:sub(1, at - 1) .. string.char(highByte) .. data:sub(at + 1))
       file:close()
-      return data, at
     end
 
     -- Loads the corrupt copy, asserting that VmPeak did not rise by anything
@@ -3407,6 +3406,12 @@ describe("Tests saveMap and loadMap", function()
       assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "n", "solid line", {255, 0, 0}, false))
       -- one point, whose x is the double 4321.25; 0x07000001 points of sixteen bytes each
       assertCorruptLengthIsNotReserved(int32(1) .. "\64\176\225\64\0\0\0\0", 0x07, 1.6 * gibibyteKiB)
+    end)
+
+    it("does not reserve memory for a custom line's points in an older format", function()
+      local room = roomWithExitNorth()
+      assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "n", "solid line", {255, 0, 0}, false))
+      assertCorruptLengthIsNotReserved(int32(1) .. "\64\176\225\64\0\0\0\0", 0x07, 1.6 * gibibyteKiB, 19)
     end)
 
     it("does not reserve memory for a custom line's colour in an older format on a length alone", function()
