@@ -1109,6 +1109,13 @@ expectRefusal('scrollingActive', scrollingActive())
 expectRefusal('getScroll', getScroll())
 expectRefusal('scrollTo', scrollTo(1))
 expectRefusal('scrollTo end', scrollTo())
+expectRefusal('enableTimeStamps', enableTimeStamps())
+expectRefusal('disableTimeStamps', disableTimeStamps())
+expectRefusal('timeStampsEnabled', timeStampsEnabled())
+expectRefusal('getWindowWrap', getWindowWrap())
+expectRefusal('setWindowWrap', setWindowWrap(80))
+expectRefusal('setWindowWrapIndent', setWindowWrapIndent('main', 1))
+expectRefusal('setWindowWrapHangingIndent', setWindowWrapHangingIndent('main', 1))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1116,6 +1123,8 @@ expectValue('raiseWindow', false, raiseWindow('noViewUw'))
 -- both of these answer for "main" before they look for any console
 expectValue('scrollingActive main', true, scrollingActive('main'))
 expectValue('enableScrolling main', "scrolling cannot be enabled/disabled for the 'main' window", select(2, enableScrolling('main')))
+-- whereas the wrap width is only checked once the console is found
+expectValue('setWindowWrap 0', 'window "" not found', select(2, setWindowWrap(0)))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())
@@ -1124,6 +1133,40 @@ noViewReport = table.concat(noViewProblems, '; ')
 )LUA"));
 
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+    }
+
+    // The main console's wrap width and indents are also the profile's, which
+    // the preferences dialog shows and saves, so setting them by either name of
+    // the main console has to reach the profile, and setting another's must not.
+    void test_theMainConsoleWrapIsTheProfiles()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const int wrapAt = host->mWrapAt;
+        const int indent = host->mWrapIndentCount;
+        const int hangingIndent = host->mWrapHangingIndentCount;
+        const QString setAll = qsl("setWindowWrap('%1', %2)\nsetWindowWrapIndent('%1', %3)\nsetWindowWrapHangingIndent('%1', %4)\n");
+
+        const QString miniConsole = qsl("wrapSpy");
+        runLua(host, qsl("createMiniConsole('%1', 0, 0, 100, 100)\n").arg(miniConsole));
+        runLua(host, setAll.arg(miniConsole).arg(wrapAt + 1).arg(indent + 1).arg(hangingIndent + 1));
+        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        QVERIFY2(pMiniConsole, "The mini console was not created.");
+        QCOMPARE(pMiniConsole->getWrapAt(), wrapAt + 1);
+        QCOMPARE(host->mWrapAt, wrapAt);
+        QCOMPARE(host->mWrapIndentCount, indent);
+        QCOMPARE(host->mWrapHangingIndentCount, hangingIndent);
+
+        for (const auto& [name, offset] : {std::pair{QString(), 2}, std::pair{qsl("main"), 3}}) {
+            runLua(host, setAll.arg(name).arg(wrapAt + offset).arg(indent + offset).arg(hangingIndent + offset));
+            QCOMPARE(host->mpConsole->getWrapAt(), wrapAt + offset);
+            QCOMPARE(host->mWrapAt, wrapAt + offset);
+            QCOMPARE(host->mWrapIndentCount, indent + offset);
+            QCOMPARE(host->mWrapHangingIndentCount, hangingIndent + offset);
+        }
     }
 
     // A profile with no view owns its Hunspell handles and word set, so every
