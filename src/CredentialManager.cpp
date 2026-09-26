@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #include "CredentialManager.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "SecureStringUtils.h"
 #include "utils.h"
 
@@ -302,8 +302,9 @@ bool CredentialManager::isOperationValid() const
 
 bool CredentialManager::isPortableModeActive() const
 {
-    // Hot path: stat for the marker instead of resolving the whole root, which reads it and walks config dirs
-    return !MudletPaths::portableMarkerPath(MudletPaths::executableDir()).isEmpty();
+    // The settled answer, not a marker stat: a portable.txt naming a refused root leaves the marker while the
+    // config root is the ordinary one, and treating that as portable would move credentials out of the keychain.
+    return MudletApp::portableRootInUse();
 }
 
 bool CredentialManager::shouldUseKeychain(const QString& profileName) const
@@ -776,14 +777,9 @@ void CredentialManager::migrateCollidingEntry(const QString& profileName, const 
         const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
 
         // Dev/test/PTB builds represent the "next release", so bump version for comparison
-        QFile buildFile(qsl(":/app-build.txt"));
-
-        if (buildFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            const QString buildSuffix = QString::fromUtf8(buildFile.readAll()).trimmed();
-
-            if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
-                appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
-            }
+        const QString buildSuffix = MudletApp::buildSuffix();
+        if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
+            appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
         }
 
         if (appVersion <= collidingFormatVersion) {
@@ -1500,7 +1496,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         return QString();
     }
 
-    return credentialFilePath(MudletPaths::sanitizeForPath(profileName), MudletPaths::sanitizeForPath(key));
+    return credentialFilePath(MudletApp::sanitizeForPath(profileName), MudletApp::sanitizeForPath(key));
 }
 
 // Path under the old truncate-to-50 scheme, or empty when it can't safely be claimed: it is the current

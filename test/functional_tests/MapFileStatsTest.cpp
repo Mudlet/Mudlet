@@ -43,7 +43,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mudlet.h"
@@ -72,7 +72,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName) const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -80,7 +80,7 @@ private:
 
     TMap* map() const { return mpHost->mpMap.data(); }
 
-    QString otherProfileMapDir() const { return MudletPaths::getMudletPath(enums::profileMapsPath, mOtherProfileName); }
+    QString otherProfileMapDir() const { return MudletApp::getMudletPath(enums::profileMapsPath, mOtherProfileName); }
 
     // The player room has to be recorded against the profile the file will
     // claim to belong to, since that is the entry the read looks up.
@@ -106,7 +106,7 @@ private:
         map()->mRoomIdHash[mProfileName] = 1;
     }
 
-    // The same QDataStream setup TMainConsole::saveMap uses. saveVersion 0 means
+    // The same QDataStream setup Host::saveMapFile uses. saveVersion 0 means
     // the map's own; anything else has to be within mMinVersion..mMaxVersion.
     bool writeMapFile(const QString& pathFileName, const int saveVersion = 0) const
     {
@@ -139,7 +139,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
