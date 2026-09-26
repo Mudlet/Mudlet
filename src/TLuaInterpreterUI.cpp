@@ -951,8 +951,10 @@ int TLuaInterpreter::deleteScrollBox(lua_State* L)
 int TLuaInterpreter::deleteLine(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->skipLine();
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->deleteWindowCurrentLine(windowName)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
@@ -1485,24 +1487,25 @@ int TLuaInterpreter::getClipboardText(lua_State* L)
 int TLuaInterpreter::getColumnCount(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-
-    int columns;
-    auto console = CONSOLE(L, windowName);
-    columns = console->mUpperPane->getColumnCount();
-    lua_pushnumber(L, columns);
+    const Host& host = getHostFromLua(L);
+    const auto columns = host.mpConsole ? host.mpConsole->getWindowColumnCount(windowName) : std::nullopt;
+    if (!columns) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushnumber(L, *columns);
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnNumber
 int TLuaInterpreter::getColumnNumber(lua_State* L)
 {
-    QString windowName;
-    if (lua_gettop(L) > 0) {
-        windowName = WINDOW_NAME(L, 1);
+    const QString windowName{WINDOW_NAME(L, 1)};
+    const Host& host = getHostFromLua(L);
+    const auto columnNumber = host.mpConsole ? host.mpConsole->getWindowColumnNumber(windowName) : std::nullopt;
+    if (!columnNumber) {
+        return windowNotFound(L, windowName);
     }
-
-    auto console = CONSOLE(L, windowName);
-    lua_pushnumber(L, console->getColumnNumber());
+    lua_pushnumber(L, *columnNumber);
     return 1;
 }
 
@@ -1510,15 +1513,15 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = getHostFromLua(L).findConsole(windowName);
-    if (!console) {
+    const Host& host = getHostFromLua(L);
+    const auto line = host.mpConsole ? host.mpConsole->getWindowCurrentLine(windowName) : std::nullopt;
+    if (!line) {
         // the next line should be "pushnil"; compatibility with old bugs and all that
         lua_pushstring(L, "ERROR: mini console does not exist");
         lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
         return 2;
     }
-    const QString line = console->getCurrentLine();
-    lua_pushstring(L, line.toUtf8().constData());
+    lua_pushstring(L, line->toUtf8().constData());
     return 1;
 }
 
@@ -1646,22 +1649,22 @@ int TLuaInterpreter::getLabelStyleSheet(lua_State* L)
 int TLuaInterpreter::getLastLineNumber(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE_NIL(L, windowName);
-    const int number = console ? console->getLastLineNumber() : -1;
-    lua_pushnumber(L, number);
+    const Host& host = getHostFromLua(L);
+    const auto lastLine = host.mpConsole ? host.mpConsole->getWindowLastLineNumber(windowName) : std::nullopt;
+    lua_pushnumber(L, lastLine.value_or(-1));
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLineCount
 int TLuaInterpreter::getLineCount(lua_State* L)
 {
-    QString windowName;
-    if (lua_gettop(L) > 0) {
-        windowName = WINDOW_NAME(L, 1);
+    const QString windowName{WINDOW_NAME(L, 1)};
+    const Host& host = getHostFromLua(L);
+    const auto lineCount = host.mpConsole ? host.mpConsole->getWindowLineCount(windowName) : std::nullopt;
+    if (!lineCount) {
+        return windowNotFound(L, windowName);
     }
-
-    auto console = CONSOLE(L, windowName);
-    lua_pushnumber(L, console->getLineCount());
+    lua_pushnumber(L, *lineCount);
     return 1;
 }
 
@@ -1700,15 +1703,13 @@ int TLuaInterpreter::getLines(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLineNumber
 int TLuaInterpreter::getLineNumber(lua_State* L)
 {
-    QString windowName;
-    int s = 0;
-
-    if (lua_gettop(L) > 0) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+    const QString windowName{WINDOW_NAME(L, 1)};
+    const Host& host = getHostFromLua(L);
+    const auto lineNumber = host.mpConsole ? host.mpConsole->getWindowLineNumber(windowName) : std::nullopt;
+    if (!lineNumber) {
+        return windowNotFound(L, windowName);
     }
-
-    auto console = CONSOLE(L, windowName);
-    lua_pushnumber(L, console->getLineNumber());
+    lua_pushnumber(L, *lineNumber);
     return 1;
 }
 
@@ -1795,11 +1796,12 @@ int TLuaInterpreter::getMainWindowSize(lua_State* L)
 int TLuaInterpreter::getRowCount(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-
-    int rows;
-    auto console = CONSOLE(L, windowName);
-    rows = console->mUpperPane->getRowCount();
-    lua_pushnumber(L, rows);
+    const Host& host = getHostFromLua(L);
+    const auto rows = host.mpConsole ? host.mpConsole->getWindowRowCount(windowName) : std::nullopt;
+    if (!rows) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushnumber(L, *rows);
     return 1;
 }
 
@@ -2456,8 +2458,13 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, s++, "x");
     const int luaTo = getVerifiedInt(L, __func__, s, "y");
 
-    auto console = CONSOLE(L, QString{windowName});
-    lua_pushboolean(L, console->moveCursor(luaFrom, luaTo));
+    const QString consoleName{windowName};
+    const Host& host = getHostFromLua(L);
+    const auto moved = host.mpConsole ? host.mpConsole->moveWindowCursor(consoleName, luaFrom, luaTo) : std::nullopt;
+    if (!moved) {
+        return windowNotFound(L, consoleName);
+    }
+    lua_pushboolean(L, *moved);
     return 1;
 }
 
@@ -2465,8 +2472,10 @@ int TLuaInterpreter::moveCursor(lua_State* L)
 int TLuaInterpreter::moveCursorEnd(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->moveCursorEnd();
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->moveWindowCursorEnd(windowName)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
