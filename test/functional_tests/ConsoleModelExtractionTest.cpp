@@ -22,6 +22,7 @@
 #include <QMovie>
 #include <QPointer>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -2250,6 +2251,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         // The profile's stylesheet reaches every dock by way of the console
         const QString styleSheet = qsl("QDockWidget { border: 2px solid #123456; }");
         QVERIFY2(host->setProfileStyleSheet(styleSheet), "setProfileStyleSheet() was refused.");
+        QCOMPARE(host->mpConsole->styleSheet(), styleSheet);
         QCOMPARE(dockWidget->styleSheet(), styleSheet);
 
         // and the layout-changed flag is raised and cleared on the dock, by name.
@@ -2260,6 +2262,45 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QVERIFY2(dockWidget->property("layoutChanged").toBool(), "setDockLayoutUpdated() did not reach the dock widget.");
         QVERIFY2(host->commitLayoutUpdates(), "commitLayoutUpdates() did not report the dock's raised flag.");
         QVERIFY2(!dockWidget->property("layoutChanged").toBool(), "commitLayoutUpdates() left the dock's flag raised.");
+    }
+
+    // mudlet::slot_tabMoved() pairs each tab with its console by the console's
+    // HostName property, so renaming a profile has to rename that too.
+    void test_renamingAProfileRenamesItsConsoleWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QCOMPARE(host->mpConsole->property("HostName").toString(), mHostname);
+
+        const QString newName = qsl("Test-ConsoleModelRenamed");
+        auto restoreName = qScopeGuard([host, this]() {
+            host->setName(mHostname);
+        });
+        host->setName(newName);
+        QCOMPARE(host->mpConsole->property("HostName").toString(), newName);
+    }
+
+    // New borders lay the main console out again, and scripts hear the room
+    // they leave: the console's own size less the borders and the command line.
+    void test_newBordersRaiseTheResizeEventForTheRoomTheyLeave()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        const QSize consoleSize = host->mpConsole->size();
+        QVERIFY2(consoleSize.width() != consoleSize.height(), "The console is square, so a width and height swapped over would go unnoticed.");
+
+        runLua(host,
+               qsl("borderResizeWidth, borderResizeHeight = -1, -1\n"
+                   "registerAnonymousEventHandler('sysWindowResizeEvent', function(_, w, h) borderResizeWidth, borderResizeHeight = w, h end)\n"));
+        host->setUserBorders(QMargins(30, 20, 10, 5));
+
+        QCOMPARE(host->mpConsole->size(), consoleSize);
+        QCOMPARE(luaGlobalNumber(host, "borderResizeWidth"), consoleSize.width() - 30 - 10);
+        QCOMPARE(luaGlobalNumber(host, "borderResizeHeight"), consoleSize.height() - 20 - 5 - host->mpConsole->mpCommandLine->height());
     }
 
     // Every profile's sub-consoles are restyled when the application palette
