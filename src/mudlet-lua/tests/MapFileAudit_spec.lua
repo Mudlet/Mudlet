@@ -74,9 +74,11 @@ describe("Tests the audit of a damaged binary map file", function()
   end
 
   -- saves the map as it stands, hands the file's bytes to plantFault, which
-  -- returns them altered, and loads the result back over a wiped map
-  local function reloadWith(plantFault)
-    assert.is_true(saveMap(damagedPath))
+  -- returns them altered, and loads the result back over a wiped map; a test
+  -- whose fault depends on how one format version lays the data out names
+  -- that version, so a change of the default format cannot move it
+  local function reloadWith(plantFault, version)
+    assert.is_true(saveMap(damagedPath, version or 0))
     writeFile(damagedPath, plantFault(readFile(damagedPath)))
     deleteMap()
     assert.is_true(loadMap(damagedPath))
@@ -117,6 +119,8 @@ describe("Tests the audit of a damaged binary map file", function()
     assert.is_true(saveMap(backupPath), "the map to be replaced could not be saved first")
   end)
 
+  -- saveMap() leaves temporary map labels out, so any the map had when this
+  -- file started are gone once it is put back; nothing after it relies on one
   teardown(function()
     assert.is_true(loadMap(backupPath), "the map this file replaced could not be put back")
     -- loadMap shows the mapper wherever it last was, and the specs that run
@@ -174,7 +178,7 @@ describe("Tests the audit of a damaged binary map file", function()
         -- each special exit is its destination followed by its command, with
         -- a "0" in front of the command for an unlocked exit
         return planted(data, int32(to) .. qstring("0zqc"), int32(-4) .. qstring("0zqc"), 1)
-      end)
+      end, 20)
 
       local specials = getSpecialExitsSwap(from)
       assert.is_nil(specials["zqc"])
@@ -195,7 +199,7 @@ describe("Tests the audit of a damaged binary map file", function()
 
       reloadWith(function(data)
         return planted(data, int32(to) .. qstring("0zqd"), int32(to) .. qstring("0"), 1)
-      end)
+      end, 20)
 
       local specials = getSpecialExitsSwap(from)
       assert.is_nil(specials[""])
@@ -217,7 +221,7 @@ describe("Tests the audit of a damaged binary map file", function()
         -- state, so this renames the exit and leaves the rest keyed by the
         -- old command
         return planted(data, qstring("0zqa"), qstring("0zqb"), 1)
-      end)
+      end, 20)
 
       assert.are.equal(to, getSpecialExitsSwap(from)["zqb"])
       assert.is_nil(getDoors(from)["zqa"])
@@ -311,15 +315,21 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.equal("MapFileAuditSpecDup_001", names[second])
     end)
 
+    -- the name the audit gives is translated, so these check what it has to
+    -- be rather than the English text of it
     it("names an area whose name is empty", function()
       local nameless = newArea("MapFileAuditSpecNoName")
-      assert.is_nil(getAreaTable()["Unnamed Area"])
+      local namesBefore = getAreaTable()
 
       reloadWith(function(data)
         return planted(data, qstring("MapFileAuditSpecNoName"), qstring(""), 1)
       end)
 
-      assert.are.equal("Unnamed Area", getAreaTableSwap()[nameless])
+      local name = getAreaTableSwap()[nameless]
+      assert.is_string(name)
+      assert.are_not.equal("", name)
+      assert.are_not.equal("MapFileAuditSpecNoName", name)
+      assert.is_nil(namesBefore[name], "the audit gave the area a name another area already had")
     end)
 
     it("numbers the second of two areas that both have an empty name", function()
@@ -333,8 +343,9 @@ describe("Tests the audit of a damaged binary map file", function()
       end)
 
       local names = getAreaTableSwap()
-      assert.are.equal("Unnamed Area", names[first])
-      assert.are.equal("Unnamed Area_001", names[second])
+      assert.is_string(names[first])
+      assert.are_not.equal("", names[first])
+      assert.are.equal(names[first] .. "_001", names[second])
     end)
   end)
 end)

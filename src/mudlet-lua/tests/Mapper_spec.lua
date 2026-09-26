@@ -4215,6 +4215,37 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_false(line.attributes.arrow)
       assert.are.same({7, 8, 9}, line.attributes.color)
       assert.are.same({1.5, 2.5}, {line.points[1][1], line.points[1][2]})
+
+      -- getCustomLines1() answers "solid line" and false for a line with no
+      -- style or arrow stored at all, which the 2D map would draw with no pen,
+      -- so look for the stored values where format 19 writes them: the arrow
+      -- (a zero byte) just before the colour map, and the style as a string
+      local function int32(value)
+        return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256,
+                           math.floor(value / 256) % 256, value % 256)
+      end
+      local function qstring(text)
+        return int32(#text * 2) .. text:gsub(".", "\0%0")
+      end
+      local function occurrences(data, wanted)
+        local count, position = 0, 1
+        while true do
+          local first, last = data:find(wanted, position, true)
+          if not first then
+            return count
+          end
+          count, position = count + 1, last + 1
+        end
+      end
+      local binaryPath = getMudletHomeDir() .. "/map/mapper_spec_line_v19.dat"
+      finally(function() os.remove(binaryPath) end)
+      assert.is_true(saveMap(binaryPath, 19))
+      local file = assert(io.open(binaryPath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      -- older formats upper-case the normal exit keys
+      assert.are.equal(1, occurrences(data, qstring("E") .. "\0" .. int32(1) .. qstring("E") .. int32(3) .. int32(7) .. int32(8) .. int32(9)))
+      assert.are.equal(1, occurrences(data, qstring("E") .. qstring("solid line")))
     end)
 
     it("drops a stub that stands in the same direction as a real exit", function()
