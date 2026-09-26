@@ -258,12 +258,9 @@ void CustomLineSession::restoreOriginalLineIfNeeded()
         return;
     }
 
-    // Only the points snapping moved go back, and only while they are still
-    // where it put them: a point added or dragged since then is where the
-    // user wanted it. Adding or removing a point shifts the ones after it
-    // along, so the points are paired up by position rather than by index.
-    // The points snapping left alone claim their originals first, so a point
-    // it moved onto one of them is not mistaken for it.
+    // Revert only points snapping moved and that are still where it put them; later edits are the user's.
+    // Pair by position, not index, as adding/removing a point shifts the rest. Points snapping left alone
+    // claim their originals first, so a point it moved onto one of them is not mistaken for it.
     QList<QPointF> unclaimed = mOriginalLine->points;
     QList<qsizetype> moved;
     for (qsizetype index = 0; index < points->size(); ++index) {
