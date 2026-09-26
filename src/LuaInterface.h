@@ -70,7 +70,6 @@ public:
     // walk reaching them at all - they are in no profile save taken from that
     // tree, which is the caller's to tell the user about
     QStringList unreadableSavedRoots() const { return mUnreadableSavedRoots; }
-    QStringList varName(TVar* var);
     QList<TVar*> varOrder(TVar* var);
     // leaves the Lua stack as it found it, whatever the outcome
     QString getValue(TVar*);
@@ -90,10 +89,7 @@ public:
     // Anything that builds a variable tree and throws it away owes this call:
     // ~LuaInterface cannot make it, see there.
     void releaseVariableReferences();
-    bool loadVar(TVar* var);
-    bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
     std::pair<bool, QString> validMove(TVar* pNewParent) const;
-    void getAllChildren(TVar* var, QList<TVar*>* list);
     lua_State* getState() const;
     static int onPanic(lua_State*);
 

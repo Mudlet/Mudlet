@@ -342,22 +342,6 @@ void TAlias::compileAll()
     }
 }
 
-void TAlias::compile()
-{
-    if (mNeedsToBeCompiled) {
-        if (!compileScript()) {
-            if (TDebug::wants(TDebug::Category::Error)) {
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
-            }
-            mOK_code = false;
-        }
-    }
-    for (auto* aliasNode : *mpMyChildrenList) {
-        auto* alias = static_cast<TAlias*>(aliasNode);
-        alias->compile();
-    }
-}
-
 bool TAlias::setScript(const QString& script)
 {
     // Switching from a registered anonymous Lua function (set up by tempAlias with a
@@ -429,23 +413,6 @@ QString TAlias::packageName(TAlias* pAlias)
 
     if (pAlias->getParent()) {
         return packageName(pAlias->getParent());
-    }
-
-    return QString();
-}
-
-QString TAlias::moduleName(TAlias* pAlias)
-{
-    if (!pAlias) {
-        return QString();
-    }
-
-    if (!pAlias->mPackageName.isEmpty()) {
-        return mpHost->mInstalledModules.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
-    }
-
-    if (pAlias->getParent()) {
-        return moduleName(pAlias->getParent());
     }
 
     return QString();
