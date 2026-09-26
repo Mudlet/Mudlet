@@ -7044,7 +7044,6 @@ mudlet::~mudlet()
     disconnect(qGuiApp, nullptr, this, nullptr);
     // Likewise the map docks: ~QWidget hides them as it closes the window, and
     // their visibilityChanged handlers read members that are gone by then.
-    // Named rather than a wildcard, which would also cut Qt's own hooks.
     for (auto* pDockWidget : findChildren<QDockWidget*>()) {
         disconnect(pDockWidget, &QDockWidget::visibilityChanged, this, nullptr);
     }
