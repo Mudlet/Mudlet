@@ -172,33 +172,52 @@ const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers m
     return nullptr;
 }
 
-void KeyUnit::warnIfAddonCommandHoldsKey(const TKey* pKey) const
+QString KeyUnit::takenKeyWarning(const TKey* pKey) const
 {
     auto* pMudlet = mudlet::self();
     if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
-        return;
+        return {};
     }
     // A keypad or group-switch binding cannot be written as a key sequence, so
-    // no command's shortcut can be the one holding it
+    // no shortcut can be the one holding it
     constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
     if (pKey->getKeyModifiers() & ~sequenceModifiers) {
-        return;
+        return {};
     }
 
     const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
-    const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost);
-    if (holders.isEmpty()) {
-        return;
+    const QString keyText = sequence.toString(QKeySequence::NativeText);
+    // Not either/or: addCommand() refuses a key Mudlet holds, but the preferences can move a
+    // Mudlet shortcut onto a command's key
+    QStringList warnings;
+    if (const QString action = pMudlet->ownShortcutUsingKey(pKey->getKeyCode(), pKey->getKeyModifiers()); !action.isEmpty()) {
+        // "while that is available": a greyed-out menu item doesn't get the key, so the binding fires then
+        //: Warning shown in the editor when a key binding is given a key one of Mudlet's own shortcuts already uses. %1 is a key such as "Alt+M", %2 the name of the Mudlet action holding it, as the Shortcuts tab of the preferences shows it.
+        warnings.append(tr("%1 is already used by Mudlet for \"%2\", which will get the key first, so this key binding will not fire while that is available. "
+                           "Mudlet's own shortcuts can be changed in the preferences, under Shortcuts.")
+                                .arg(keyText, action));
     }
+    if (const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost); !holders.isEmpty()) {
+        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
+        warnings.append(tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
+    }
+    return warnings.join(QChar::Space);
+}
+
+void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
+{
     // Shown in the editor rather than on the main screen, for the reason
     // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
     // bindings at profile load would repeat this at every startup, and a line
     // the player learns to ignore is worse than no line. The editor is where
     // the binding is, and where it gets changed.
-    if (mpHost->mpEditorDialog) {
-        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
-        mpHost->mpEditorDialog->showWarning(
-                tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(sequence.toString(QKeySequence::NativeText), holders.join(qsl(", "))));
+    if (mpHost.isNull() || !mpHost->mpEditorDialog) {
+        return;
+    }
+    if (const QString warning = takenKeyWarning(pKey); !warning.isEmpty()) {
+        // Announce only when visible, else a script binding keys on connect is read out at every
+        // connect; a closed editor replaces the warning on opening, and selecting the binding reshows it.
+        mpHost->mpEditorDialog->showWarning(warning, mpHost->mpEditorDialog->isVisible());
     }
 }
 
@@ -556,8 +575,7 @@ void KeyUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
+    // Runs per unit on every line of game text and next to never has work queued.
     if (!hasPendingDeletes()) {
         return;
     }
@@ -570,9 +588,8 @@ void KeyUnit::doCleanup()
         deletedKeys.insert(pKey);
         delete pKey;
     }
-    // Not a no-op: the drain above frees no buckets, so without this every later
-    // flush re-scans an array sized for the largest batch the set has ever held.
-    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
     mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting

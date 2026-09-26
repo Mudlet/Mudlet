@@ -1744,6 +1744,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Updating themes from colorsublime.github.io...</string>
             </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
            </widget>
           </item>
          </layout>

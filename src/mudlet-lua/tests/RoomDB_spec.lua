@@ -95,9 +95,11 @@ describe("Tests the room and area database behind the map", function()
       assert.are.same({}, getAreaRooms1(area))
     end)
 
-    it("deleting an area hands its ID back to the next area created", function()
-      -- an area above the freed one, or handing out one past the highest ID in
-      -- use would answer this just as well as reusing the hole
+    it("deleting an area does not block the next one from getting a fresh ID", function()
+      -- Area IDs resume from just past the last one handed out rather than
+      -- reusing a hole left by a deleted area, since rescanning for the
+      -- lowest free ID from scratch on every creation made bulk area
+      -- creation quadratic in the area count.
       local recycled = addAreaName("RoomDBSpecRecycled")
       local above = addAreaName("RoomDBSpecAbove")
       finally(function()
@@ -108,7 +110,26 @@ describe("Tests the room and area database behind the map", function()
       assert.is_true(above > recycled)
 
       assert.is_true(deleteArea(recycled))
-      assert.are.equal(recycled, addAreaName("RoomDBSpecReused"))
+      local reused = addAreaName("RoomDBSpecReused")
+      assert.is_true(reused > above)
+    end)
+
+    it("deleting the area that was just handed the newest ID still gets a fresh one next time", function()
+      -- Creating "above" before deleting "recycled" in the case above moves
+      -- the hint past recycled's ID regardless of whether createNewAreaID()
+      -- advances the hint itself or only the while loop does - so it can't
+      -- tell the two apart. Deleting the just-made area before anything else
+      -- is created can: nothing else has moved the hint down, so the next ID
+      -- is only fresh if createNewAreaID() advanced past its own return value.
+      local first = addAreaName("RoomDBSpecJustMade")
+      finally(function()
+        deleteArea("RoomDBSpecJustMade")
+        deleteArea("RoomDBSpecMadeAfter")
+      end)
+
+      assert.is_true(deleteArea(first))
+      local second = addAreaName("RoomDBSpecMadeAfter")
+      assert.is_true(second > first)
     end)
   end)
 

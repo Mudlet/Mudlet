@@ -136,14 +136,10 @@ void TimerUnit::compileAll()
 void TimerUnit::reenableAllTriggers()
 {
     for (auto timer : mTimerRootNodeList) {
-        // The same skip enableTimer(name) makes: a timer queued for deletion stays
-        // in this list until doCleanup() frees it, and killTimer() leaves it
-        // wanting to be active - as does a spent one-shot - so the resume would
-        // otherwise re-arm the corpse and it would fire again (#9887). The
-        // uninstallList half of the test is unreachable today, since uninstall()
-        // deactivates what it defers, and is kept in step with the by-name guard.
-        // Only temporary root timers are ever queued on their own and _uninstall()
-        // queues whole subtrees, so no child needs testing here.
+        // As in enableTimer(name): a killed timer stays in this list until doCleanup() and, like a spent
+        // one-shot, still wants to be active, so resuming would re-arm and fire it (#9887). The uninstallList
+        // test is unreachable today but mirrors the by-name guard. Only roots or whole subtrees are queued,
+        // so children need no test.
         if (mCleanupSet.contains(timer) || uninstallList.contains(timer)) {
             continue;
         }
@@ -204,6 +200,9 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
         addTimerRootNode(pChild, parentPosition, childPosition);
     }
 
+    // enableTimer() skips a timer that is switched off, and whether a zero time
+    // is allowed depends on the parent
+    pChild->validateTime();
     pChild->enableTimer(childID);
 }
 
@@ -281,8 +280,7 @@ bool TimerUnit::registerTimer(TTimer* pT)
     return true;
 }
 
-// Resolves the TTimer by the id stored on the QTimer rather than a captured
-// pointer: it may have been deleted since the timeout was queued
+// By the id on the QTimer, not a captured pointer: the TTimer may be gone since the timeout was queued
 void TimerUnit::timerFired(QTimer* pQTimer)
 {
     const int id = pQTimer->property(TTimer::scmProperty_TTimerId).toInt();
@@ -294,24 +292,19 @@ void TimerUnit::timerFired(QTimer* pQTimer)
     TTimer* pTT = getTimer(id);
     if (Q_LIKELY(pTT)) {
         pTT->execute();
-        // Re-verify timer still exists after execute (script may have killed it)
+        // The script may have killed it
         pTT = getTimer(id);
         if (pTT && pTT->checkRestart()) {
             pTT->start();
         }
 
-        // Flush any deletes uninstall() deferred whilst execute() was on the
-        // stack (a timer script uninstalling its own package). Doing it here -
-        // after the last use of pTT - keeps the window in which the
-        // "uninstalled" timers linger down to this event loop iteration, before
-        // the profile save that Host::uninstallPackage() queues for the next
-        // event loop pass can serialize them back into the profile:
+        // Flush deletes deferred during execute() now, after the last use of pTT: the profile save
+        // Host::uninstallPackage() queues for the next pass would otherwise serialize them back.
         doCleanup();
         return;
     }
 
     qWarning().nospace().noquote() << "TimerUnit::timerFired() ERROR - Timer not registered, it seems to have been called: \"" << pQTimer->objectName() << "\" - automatically deleting it!";
-    // Clean up any bogus ones:
     pQTimer->stop();
     pQTimer->deleteLater();
 }
@@ -525,8 +518,7 @@ void TimerUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
+    // Runs per unit on every line of game text and next to never has work queued.
     if (!hasPendingDeletes()) {
         return;
     }
@@ -541,9 +533,8 @@ void TimerUnit::doCleanup()
         deletedTimers.insert(pTimer);
         delete pTimer;
     }
-    // Not a no-op: the drain above frees no buckets, so without this every later
-    // flush re-scans an array sized for the largest batch the set has ever held.
-    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
     mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting

@@ -35,6 +35,7 @@
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
+#include "TSpellChecker.h"
 #include "TWindowRegistry.h"
 #include "TriggerUnit.h"
 #include "ctelnet.h"
@@ -72,6 +73,7 @@ class LuaInterface;
 class XMLexport;
 class TMedia;
 class GMCPAuthenticator;
+class CredentialManager;
 class TRoom;
 class TConsole;
 class TMainConsole;
@@ -91,15 +93,9 @@ class stopWatch
     friend class XMLimport;
 
 public:
-    // A stopwatch keeps its time as a count of milliseconds and, while it runs,
-    // as an effective start time that many milliseconds back from now. Both are
-    // bounded to this in either direction - a little under 31,700 years, which
-    // is past any use a stopwatch has while still leaving four orders of
-    // magnitude of what a qint64 of milliseconds holds spare - so that no
-    // arithmetic on a stopwatch's time can run out of that range and wrap
-    // around onto a time of the opposite sign. Time reaching the bound is
-    // clamped to it; a script asking for more than the whole range outright is
-    // told so instead:
+    // Bound, in either direction, on a stopwatch's elapsed ms and on its effective start time's offset
+    // from now (~31,700 years), leaving qint64 headroom so no arithmetic on them can wrap sign. Time
+    // reaching it is clamped; a script asking for more than the whole range gets an error:
     static constexpr qint64 csmMaximumMilliSeconds = 1'000'000'000'000'000;
 
     stopWatch();
@@ -174,6 +170,8 @@ class Host : public QObject
     friend class TDiscordModeTest;
     // Allows the functional test to call closeChildren() on its own:
     friend class HostWidgetDecouplingTest;
+    // Allows the functional test to answer the keychain lookup in place of a keychain:
+    friend class TelnetLatePasswordTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -212,7 +210,10 @@ public:
     void setLogin(const QString& login) { mLogin = login; }
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
-    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
+    // A password still being fetched from the keychain counts: the auto-login is timer based, so
+    // the password step has to be armed before the read that answers it comes back, or there is
+    // no prompt left for a late answer to be typed at.
+    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || mSecuredPasswordPending); }
     // True once the user has sent any command to the game on the current connection. It gates whether
     // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
     // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
@@ -246,6 +247,7 @@ public:
     void setEnableSpellCheck(const bool enable);
     bool getEnableSpellCheck() const { return mEnableSpellCheck; }
     QString getSpellDic() const;
+    TSpellChecker& spellChecker() { return mSpellChecker; }
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
     {
@@ -304,9 +306,8 @@ public:
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
-    // How a colorizer trigger recolors the line it matched: select a run of
-    // the current line, paint it, then put the format back. All of that is
-    // model state, so these run with no view; the two colour ones repaint the
+    // Colorizer triggers: select a run of the current line, paint it, restore the format. Model state
+    // only, so these run with no view; the two colour ones repaint the
     // lines they touched when there is one.
     void deselectMainConsole();
     bool selectMainConsoleSection(int from, int length);
@@ -393,6 +394,10 @@ public:
 
     void updateDisplayDimensions();
 
+    // false: the string is why the install was refused. true: installed, or queued if a profile save was
+    // running, and the string lists "<item name>: <error>" per item whose Lua failed. Empty with true is
+    // not "all well": a queued install, an unreadable config.lua and an
+    // XML that stopped part-way report themselves on the console instead.
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
@@ -522,10 +527,9 @@ public:
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
-    // Whether windowname can hold a new mini console, scroll box, command line,
-    // text edit or label: an empty name or "main" (in any case) is the main
-    // console, anything else has to be a registered user window or scroll box.
-    // Not a general "can this contain an element" test - createMapper() takes a
+    // Whether windowname can hold a new mini console, scroll box, command line, text edit or label:
+    // "" or "main" (any case) is the main console, else it must be a registered user window or scroll box.
+    // Not a general container test - createMapper() takes a
     // user window only.
     bool parentWindowMissing(const QString& windowname) const;
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
@@ -608,6 +612,9 @@ public:
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
     void loadMap();
+    bool saveMapFile(const QString& location, int saveVersion = 0);
+    bool loadMapFile(const QString& location);
+    bool importMapFile(const QString& location, QString* errMsg = nullptr);
     std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
     void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
@@ -990,8 +997,6 @@ public:
 
     std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
 
-    bool mTutorialForCompactLineAlreadyShown = false;
-
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
     bool mEnableClosedCaption = false;
@@ -1074,6 +1079,11 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void loadSecuredPassword();
+    // The lookup loadSecuredPassword() starts, on a manager of its own that this deletes once the
+    // lookup has answered. Apart so that a test can hand in a manager that stands in for the keychain.
+    void lookUpSecuredPassword(CredentialManager* credManager);
+    // What that lookup answers, first and, after a timeout, late
+    void securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut);
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
     void thankForUsingPTB();
@@ -1085,9 +1095,8 @@ private:
     struct DeferredUninstall
     {
         QString packageName;
-        // The kind of removal that was asked for: it decides which events the
-        // removal raises and which of mInstalledPackages/mInstalledModules the
-        // name comes out of, so it travels with the name rather than being
+        // Decides which events the removal raises and whether mInstalledPackages or mInstalledModules
+        // loses the name, so it travels with the name rather than being
         // assumed when the removal is finally carried out.
         enums::PackageModuleType thing;
         bool operator==(const DeferredUninstall&) const = default;
@@ -1136,13 +1145,9 @@ private:
 
     QStringList mModulesToSync;
 
-    // The packages and modules whose install is still reading their XML in. A
-    // package's own scripts run during that read, and one of them can ask for the
-    // package being read in to be taken away again, or to be installed a second
-    // time: neither may be done to it while the importer is still holding its
-    // items. A stack because an install-time script can install something else,
-    // and because one name can be on it twice - a module that reloads itself is
-    // installed again from inside its own install - so what comes off has to be
+    // Packages and modules whose XML is still being read in. Their scripts may ask to remove or reinstall
+    // them during that read: removal is deferred until import finishes, while reinstallation is refused.
+    // A stack because installs nest and a self-reloading module is on it twice, so what comes off has to be
     // what this call put on rather than whatever carries the name.
     QStack<QString> mPackagesBeingInstalled;
     // What those scripts asked for, carried out by
@@ -1180,18 +1185,21 @@ private:
 
     int mHostID;
     QString mHostName;
+    // Declared after mHostName because ~TSpellChecker() saves the profile's own
+    // dictionary to a path built from getName(), and members are destroyed in
+    // reverse declaration order.
+    TSpellChecker mSpellChecker{this};
     QString mDiscordGameName; // Discord self-reported game name
 
     QString mLine;
-    // Storage runTriggers() lends out for the line it hands the trigger system,
-    // kept between lines for its capacity alone - it holds nothing meaningful
-    // outside that call. Past this length the capacity is dropped instead of
-    // kept, so one outsized line cannot hold its allocation for the rest of the
+    // Buffer runTriggers() lends to the trigger system, kept between lines only for its capacity. Past
+    // this length it is dropped, so one outsized line can't hold its allocation for the rest of the
     // session; no game line comes close to it.
     static constexpr qsizetype scmMaxRetainedHaystack = 8192;
     QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
+    bool mSecuredPasswordPending = false;
 
     int mPort;
 
@@ -1265,11 +1273,11 @@ private:
     // Empty until a dictionary is chosen: getSpellDic() substitutes the
     // platform's starting one, so reading this member directly under-reports
     // what the profile is using. Private so that setSpellDic() can push the
-    // change into a live console:
+    // change into the profile's spell checker:
     QString mSpellDic;
-    // These are hidden to prevent them being changed directly, they are also
-    // mirrored/cached in the main TConsole's instance so they do not need to be
-    // looked up directly by that class:
+    // Hidden to prevent them being changed directly - setEnableSpellCheck() and
+    // setUserDictionaryOptions() are what push a change into the profile's
+    // spell checker:
     bool mEnableSpellCheck = true;
     bool mEnableUserDictionary = true;
     bool mUseSharedDictionary = false;

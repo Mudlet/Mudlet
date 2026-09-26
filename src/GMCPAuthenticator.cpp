@@ -215,14 +215,38 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     }
     auto jsonObj = jsonDoc.object();
 
-    // The server reports the negotiated Char.Login version here; treat a missing, non-numeric, or
-    // non-positive value as version 1 (per the spec, the version is a positive, non-zero integer). A
-    // value above what this client implements is clamped down by the qBound below, not treated as 1.
+    // The server reports the negotiated Char.Login version here. A missing, unreadable or non-positive
+    // value acts as version 1 (per the spec, the version is a positive, non-zero integer); an unreadable
+    // one is reported, a non-positive one is not. A value above what this client implements is clamped
+    // down by the qBound below, not treated as 1.
     if (jsonObj.contains(qsl("version"))) {
-        const int reportedVersion = jsonObj[qsl("version")].toInt(1);
-        // Clamp to the highest version this client implements: the negotiated version is
-        // min(client, server), so we never act on - or echo back - a version we do not understand.
-        mNegotiatedVersion = qBound(1, reportedVersion, 2);
+        const QJsonValue declaredVersion = jsonObj[qsl("version")];
+        // The string form is read too: a driver with no JSON number type sends "2", and the standard
+        // asks servers to accept that shape from a client, so a client answers it symmetrically. Read
+        // as a plain int it yielded the default, which answered a version 2 server as version 1 for
+        // the whole session.
+        bool readable = false;
+        int reportedVersion = 1;
+        if (declaredVersion.isString()) {
+            reportedVersion = declaredVersion.toString().trimmed().toInt(&readable);
+        } else if (declaredVersion.isDouble()) {
+            const double asNumber = declaredVersion.toDouble();
+            reportedVersion = static_cast<int>(asNumber);
+            // A version is a whole number; 2.5 names no version this client could act on.
+            readable = (static_cast<double>(reportedVersion) == asNumber);
+        }
+        if (readable) {
+            // Clamp to the highest version this client implements: the negotiated version is
+            // min(client, server), so we never act on - or echo back - a version we do not understand.
+            mNegotiatedVersion = qBound(1, reportedVersion, 2);
+        } else {
+            // Acting as version 1 changes the hand-off - it carries a bare {} with no token_storage - so
+            // a server whose version this client could not read may conclude it cannot offer the player
+            // "remember me", with nothing anywhere recording why. The neighbouring fields report their
+            // malformed values; this one did not.
+            qWarning().noquote().nospace() << "GMCP " << packageMessage << " - a 'version' value of type " << declaredVersion.type()
+                                           << " could not be read as a whole number, so this connection is acting as version 1.";
+        }
     }
 
     if (jsonObj.contains(qsl("type"))) {
@@ -262,7 +286,10 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
         // conformant server's nonce_required was ignored and its authorization request went out with no
         // nonce for the server to check the ID token against. The old key is still accepted when the
         // standard's is absent, so a server written against the previous behaviour keeps working.
-        const auto declaredNonceRequired = jsonObj[qsl("nonce_required")];
+        // value() rather than operator[]: jsonObj is not const, and that overload INSERTS a Null for a
+        // key the server never sent instead of answering Undefined - so the absent-field guard below
+        // never fired and a conformant server that simply omits this was told its value was malformed.
+        const auto declaredNonceRequired = jsonObj.value(qsl("nonce_required"));
         auto nonceRequired = decodeWireBool(declaredNonceRequired);
         if (!nonceRequired.has_value()) {
             nonceRequired = decodeWireBool(jsonObj[qsl("nonce")]);
@@ -934,6 +961,7 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                     mConn.reconnectingWithToken = true;
                     mConn.forgetAtReplay = mForgetGeneration;
                     mConn.awaitingReconnectResult = true;
+                    armReconnectResultDeadline();
                     mConn.reconnectAccount = entry.account;
                     // This attempt is replaying a live token rather than recovering from a dead one, so
                     // release the latch: the next Char.Login.Default is an ordinary sign-in again.
@@ -993,6 +1021,23 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
     });
 }
 
+void GMCPAuthenticator::armReconnectResultDeadline()
+{
+    const QPointer<Host> safeHost(mpHost);
+    const auto attemptGeneration = mAuthAttemptGeneration;
+    QTimer::singleShot(mReconnectResultTimeout, mpHost, [this, safeHost, attemptGeneration]() {
+        // A result that arrived, a later attempt, or a connection that has gone away all make this
+        // deadline somebody else's business.
+        if (!safeHost || !mConn.awaitingReconnectResult || attemptGeneration != mAuthAttemptGeneration) {
+            return;
+        }
+        mConn.awaitingReconnectResult = false;
+        qWarning().noquote().nospace() << "GMCP Char.Login - the game did not answer the replayed sign-in token within " << mReconnectResultTimeout.count()
+                                       << "ms, so it is being treated as a game that does not support Char.Login.Reconnect; falling through to the sign-in hand-off.";
+        selectAuthMethod();
+    });
+}
+
 void GMCPAuthenticator::dropTokenKeepResumeHint(const QString& account, const QString& provider)
 {
     // Without a remembered provider there is nothing to resume, so remove the whole entry.
@@ -1009,14 +1054,12 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
     if (packageMessage == qsl("Char.Login.Default")) {
         saveSupportsSet(packageMessage, data);
 
-        // Every rung of the sign-in needs a type to act on, so a frame naming none can only reach the
-        // interactive hand-off - and getting there cancels the timer-driven username/password
-        // auto-login, the only thing that can sign such a game in. Returning above the reset leaves an
-        // attempt already running on this connection to finish.
+        // With no auth type we could only reach the interactive hand-off, which cancels the timer-driven
+        // username/password auto-login - the only way such a game signs in. Returning before the reset
+        // lets an attempt already running on this connection finish.
         if (mSupportedAuthTypes.isEmpty()) {
-            // A throttled burst is served by one attempt using the capabilities the last frame left
-            // behind, and this frame leaves none - so drop an attempt the burst already armed rather
-            // than let it cancel the timers a second later.
+            // An attempt a throttled burst already armed would use the previous frame's capabilities
+            // and cancel the auto-login timers a second later, so drop it.
             ++mSignInScheduleGeneration;
             mSignInAttemptPending = false;
 #if defined(DEBUG_GMCP_AUTHENTICATION)
@@ -1168,14 +1211,14 @@ void GMCPAuthenticator::attemptReconnect()
         return;
     }
 
-    // Reconnect tokens and the provider resume are part of the version 2 OAuth capability; if the
-    // server is not offering oauth there is nothing to replay or resume against, so go straight to the
-    // normal method selection.
-    if (!mSupportedAuthTypes.contains(qsl("oauth"))) {
-        selectAuthMethod();
-        return;
-    }
-
+    // Deliberately not gated on the server advertising oauth: the standard verifies a reconnect token
+    // ahead of the advertised methods rather than as one of them, and Char.Login.Token is not scoped to
+    // OAuth, so a password-credentials-only game may mint one and honour it. Gating this left that
+    // player's saved token unused and downgraded them to typing a password on every connect. A store
+    // holding nothing replayable falls to readStoredSignIn()'s remaining rungs - the provider resume,
+    // which needs a stored account and provider as well as a game offering oauth, otherwise whatever
+    // selectAuthMethod() settles on, which for an empty store can be the client-driven OAuth flow as
+    // readily as the interactive hand-off.
     readStoredSignIn(true);
 }
 
@@ -1299,9 +1342,6 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
             selectAuthMethod();
             return;
         }
-        if (!entry.provider.isEmpty()) {
-            mConn.accountProvider = entry.provider;
-        }
         if (allowToken && !entry.account.isEmpty() && !entry.token.isEmpty()) {
             // Remember only a hash of what we send: if the reconnect is rejected, comparing it against a
             // fresh read tells a dead token apart from one another running instance (sharing this
@@ -1314,8 +1354,13 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                 // This connection is logging in by replaying a saved token, so a Char.Login.Token that
                 // comes back is a silent rotation rather than a first-time save to announce.
                 mConn.reconnectingWithToken = true;
+                // Carried onto the connection only where it is used: a rotation stores it again, and a
+                // rejection keeps it as the resume hint. Copying it before knowing which rung answers
+                // would file it with a token earned by a sign-in that never involved this provider.
+                mConn.accountProvider = entry.provider;
                 mConn.forgetAtReplay = mForgetGeneration;
                 mConn.awaitingReconnectResult = true;
+                armReconnectResultDeadline();
                 mConn.reconnectAccount = entry.account;
                 mConn.sentReconnectTokenHash = sentHash;
                 return;
@@ -1325,9 +1370,16 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
         // Scrub on every remaining path: the token is still live here whenever sendReconnect was not
         // reached or refused.
         SecureStringUtils::secureStringClear(entry.token);
-        if (!entry.account.isEmpty() && !entry.provider.isEmpty()) {
+        // Gated on oauth where the token rung above deliberately is not: a token is verified ahead of
+        // the advertised methods and is not OAuth-scoped, but a resume asks the game to restart a
+        // provider's browser sign-in, which a game offering only password-credentials cannot do.
+        // Sending it there spends this connection's one sign-in attempt - attemptReconnect() has
+        // already cancelled the login timers - on a frame the game cannot answer, and tells the player
+        // a browser sign-in is resuming that never will.
+        if (!entry.account.isEmpty() && !entry.provider.isEmpty() && mSupportedAuthTypes.contains(qsl("oauth"))) {
             // No usable token, but we remember how this account signs in: ask the game to restart that
             // provider's browser sign-in rather than fall to a provider menu.
+            mConn.accountProvider = entry.provider;
             sendResume(entry.account, entry.provider);
             return;
         }

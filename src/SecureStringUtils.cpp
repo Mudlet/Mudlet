@@ -44,9 +44,8 @@
 #endif
 
 namespace {
-// Reported once per path per session rather than on every read and write of the same
-// credential, which would train a reader to skip the line, and kept for the connection dialog
-// to tell the user about - a warning on stderr is not something they will ever see
+// Warned once per path per session, so repeats don't train readers to skip it; kept for the
+// connection dialog, since users never see stderr
 QSet<QString> gPathsWarnedAbout;
 QString gUnprotectedSecretPath;
 
@@ -58,9 +57,8 @@ bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPe
 
     QFile::setPermissions(path, ownerPermissions);
 
-    // Read back rather than trusted: chmod reports success on a file system that cannot store
-    // permission bits - a FAT stick, or a Windows drive mounted into WSL without metadata -
-    // and leaves the secret as readable as it was
+    // Read back: chmod reports success on a file system that can't store permission bits (FAT, or a
+    // Windows drive mounted into WSL without metadata)
     const QFileDevice::Permissions applied = QFileInfo(path).permissions();
 
     if (applied.testFlag(QFileDevice::ReadOwner) && !applied.testAnyFlags(reachableByOthers)) {
@@ -77,10 +75,8 @@ bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPe
 
     return false;
 #else
-    // Windows has no POSIX permission bits, and QFile::setPermissions() there only toggles the
-    // read-only attribute, so there is nothing useful to set. Whatever the secret inherits from
-    // the directory it is written into is all that protects it, which for a portable install on
-    // removable media may be nothing.
+    // No POSIX permission bits here (setPermissions() only toggles read-only), so the secret is only as
+    // protected as its directory - which for a portable install on removable media may be not at all.
     Q_UNUSED(ownerPermissions)
     static bool warnedAboutTheAbsenceOfPermissionBits = false;
 
@@ -432,8 +428,7 @@ QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileNa
     }
 
     restrictFileToOwner(keyFilePath);
-    // Nothing but this key and the passwords directory beside it lives under
-    // AppConfigLocation, so that directory is the owner's as well
+    // Only this key and the passwords directory live under AppConfigLocation, so it is owner-only too
     restrictDirectoryToOwner(QFileInfo(keyFilePath).absolutePath());
 
     QDataStream ifs(&file);
@@ -473,9 +468,8 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
         return false;
     }
 
-    // Narrowed before the key is written, not after: QSaveFile commits by renaming its
-    // temporary over the target, so a key narrowed only afterwards is there for the taking for
-    // the moment in between. Nothing but credentials lives in this directory.
+    // Before writing, not after: QSaveFile renames its temporary over the target, so the key would be
+    // exposed in between. Nothing but credentials lives in this directory.
     restrictDirectoryToOwner(profileDir);
 
     QSaveFile file(keyFilePath);

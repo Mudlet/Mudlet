@@ -33,16 +33,10 @@
 #include <QVector>
 
 
-// Trigger captures are built and thrown away again on every fire, which costs
-// a list node per capture plus a buffer for any capture the small string
-// optimisation cannot hold. The nodes of a finished fire, and of a multiline
-// state that has closed, are parked here rather than freed: splice() moves a
-// node between lists without going near the allocator, and assigning a capture
-// into a recycled string reuses the buffer it already has, so a fire that
-// follows one of the same shape allocates nothing at all.
+// Recycles capture list nodes between trigger fires: splice() moves nodes without the allocator and
+// assigning into a recycled string reuses its buffer, so a fire shaped like the last allocates nothing.
 //
-// No lock is needed because Mudlet runs every profile's triggers, and the Lua
-// engine they call into, on the main thread; nothing else reaches this pool.
+// No lock: triggers and the Lua engine run on the main thread, and nothing else may reach this pool.
 class TCaptureNodePool
 {
 public:
@@ -68,8 +62,7 @@ public:
 
     static void park(std::list<std::string>& used)
     {
-        // A capture as big as a whole line would otherwise hold its buffer in
-        // the pool for the rest of the session
+        // Else a line-sized capture would hold its buffer in the pool for the rest of the session
         for (auto it = used.begin(); it != used.end();) {
             if (it->capacity() > scmMaxPooledCapture) {
                 it = used.erase(it);
@@ -102,18 +95,12 @@ public:
 private:
     static size_t roomFor(const size_t held) { return (held >= scmMaxPooledNodes) ? 0 : (scmMaxPooledNodes - held); }
 
-    // The pool only ever reaches the most nodes that were in use at once, but
-    // one match-all pattern over a hostile line would set that high water mark
-    // for the rest of the session. Hold enough for any ordinary fire, the
-    // nested ones a filter trigger makes and any multiline state still open
-    // included, and free the rest. Past the cap the cost is the allocation
-    // this pool exists to save, never unbounded memory.
+    // Caps the high-water mark one match-all pattern over a hostile line would otherwise set for the
+    // session; enough for any ordinary fire, including nested filter fires and open multiline states.
     static constexpr size_t scmMaxPooledNodes = 512;
     static constexpr std::string::size_type scmMaxPooledCapture = 1024;
-    // Destroyed at static teardown, by which point Mudlet has taken every Host
-    // down inside the event loop. A TMatchState that outlived these - one owned
-    // by a namespace-scope object in a test binary that links mudlet_core -
-    // would park into destroyed lists.
+    // Destroyed at static teardown, after every Host; a TMatchState outliving them (e.g. a
+    // namespace-scope object in a test binary) would park into destroyed lists.
     inline static std::list<std::string> smSpareCaptures;
     inline static std::list<int> smSparePositions;
 };
@@ -128,16 +115,12 @@ public:
     {
     }
 
-    // Copying is deleted rather than defined now that the destructor hands the
-    // capture containers back to the pool: a copy would take nodes out of
-    // circulation without ever parking them. States are held by unique_ptr and
-    // moved, so nothing copies one.
+    // A copy would take nodes out of circulation without parking them; states are moved in unique_ptrs.
     TMatchState(const TMatchState&) = delete;
     TMatchState& operator=(const TMatchState&) = delete;
 
-    // A state is only ever destroyed once nothing reads its captures any more:
-    // TTrigger takes a completed one out of its condition map before running
-    // any script, and drops an expired one before that
+    // Destroyed only once nothing reads its captures: TTrigger removes a completed or expired
+    // state from its condition map before running any script.
     ~TMatchState()
     {
         for (auto& captures : multiCaptureList) {
@@ -148,9 +131,7 @@ public:
         }
     }
 
-    // Takes recycled nodes rather than copy-constructing the lists, which
-    // would allocate one per capture on every condition a still-open trigger
-    // matches
+    // Recycled nodes: copying the lists would allocate per capture on every condition an open trigger matches
     void addCaptures(const std::list<std::string>& captures, const std::list<int>& positions)
     {
         auto& targetCaptures = multiCaptureList.emplace_back();

@@ -56,7 +56,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
@@ -209,13 +209,13 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
         for (const QString& name : {mHostname, mOtherHostname}) {
-            QDir(MudletPaths::getMudletPath(enums::profileHomePath, name)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, name)).removeRecursively();
         }
 
         mpHost = startProfile(mHostname);
@@ -488,7 +488,7 @@ private slots:
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             for (const QString& name : {mHostname, mOtherHostname}) {
-                QDir(MudletPaths::getMudletPath(enums::profileHomePath, name)).removeRecursively();
+                QDir(MudletApp::getMudletPath(enums::profileHomePath, name)).removeRecursively();
             }
             delete mudlet::self();
         }

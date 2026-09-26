@@ -561,3 +561,16 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)    
 end)
+
+describe("the bundled PCRE binding", function()
+
+    -- Mudlet moved to lrexlib-pcre2, whose module is rex_pcre2; a script written
+    -- against the older binding still finds one because the same module is also
+    -- bound to the rex_pcre name
+    it("is reachable under the old rex_pcre name (#8599)", function()
+        assert.are.equal("table", type(rex_pcre))
+        assert.are.equal(package.loaded["rex_pcre2"], rex_pcre)
+        assert.are.equal("b", rex_pcre.match("abc", "b"))
+    end)
+
+end)

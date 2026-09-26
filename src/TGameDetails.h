@@ -597,12 +597,17 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "and change through the coming years and those players who seek challenge and "
                  "possess imagination will come in search of what the 3D world fails to offer them.")},
 
+            // Deliberately without artwork: the connection dialog draws an entry only as its artwork, so this
+            // testing aid (it needs Busted, which players lack) is listed and selectable yet invisible, while a
+            // developer can reach it with --profile="Mudlet self-test" or from "My games" in a debug build.
+            // An icon or a generated name plate would show it to everybody.
+            // See https://github.com/Mudlet/Mudlet/issues/6443
             {qsl("Mudlet self-test"),
              qsl("mudlet.org"),
              23,
              false,
              qsl("<a href='https://www.mudlet.org'>www.mudlet.org"),
-             QString(), // TODO: https://github.com/Mudlet/Mudlet/issues/6443
+             QString(), // empty on purpose - see the note above
              qsl("This isn't a game profile, but a special one for testing Mudlet itself using "
                  "Busted. You can also use it as a starting point to create automated tests for your "
                  "own profiles!")},

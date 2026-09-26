@@ -28,7 +28,7 @@
 // mudlet-object specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TLuaInterpreter.h"
 
 #include "EAction.h"
@@ -133,16 +133,9 @@ static bool timerDelayFits(const double time)
     return msec >= 0 && msec < 86400000;
 }
 
-// A stopwatch holds stopWatch::csmMaximumMilliSeconds of time in either
-// direction and clamps to that end of its range whatever accumulates past it,
-// but an adjustment asking outright for more than the whole range is a mistake
-// worth reporting rather than quietly flattening. It is the milliseconds the
-// adjustment rounds to that have to be bounded, as the stopwatch keeps its time
-// in those, and repeating that rounding here in the double domain keeps an
-// enormous adjustment from being converted to an integer it does not fit, which
-// is undefined behaviour. The comparison is written so that a NaN or infinite
-// adjustment fails it as well. Handing the rounded value back saves the caller
-// rounding the same product a second time:
+// A stopwatch clamps accumulated time, but a single adjustment beyond its whole range is reported as
+// an error. Bounded in the double domain: casting an out-of-range double to qint64 is undefined
+// behaviour. The negated comparison also rejects NaN and infinity.
 static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double adjustment)
 {
     constexpr double limit = static_cast<double>(stopWatch::csmMaximumMilliSeconds);
@@ -726,9 +719,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     lua_settable(L, -3); // patterns
 
-    // No documentation available in wiki - internal, test-only fields. They
-    // describe the engine rather than the profile, and a burst only reaches the
-    // parallel prescan under conditions a spec has to be able to confirm it met.
+    // No documentation available in wiki - test-only, so a spec can confirm a burst reached the parallel prescan
     if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
         lua_pushstring(L, "prescanWorkers");
         lua_pushnumber(L, TriggerMatchPool::instance().workerCount());
@@ -3080,7 +3071,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
     auto* hostManager = HostManager::self();
-    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
 
@@ -3088,9 +3079,9 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_pushstring(L, profile.toUtf8().constData());
         lua_newtable(L);
 
-        QString url = MudletPaths::readProfileData(profile, qsl("url"));
-        QString port = MudletPaths::readProfileData(profile, qsl("port"));
-        QString description = MudletPaths::readProfileData(profile, qsl("description"));
+        QString url = MudletApp::readProfileData(profile, qsl("url"));
+        QString port = MudletApp::readProfileData(profile, qsl("port"));
+        QString description = MudletApp::readProfileData(profile, qsl("description"));
 
         // if url/port haven't been written to disk yet (which is what happens
         // when a default profile is opened for the first time), fetch this data from game details
@@ -3163,7 +3154,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
+    const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
@@ -3203,7 +3194,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         requestedName = getVerifiedString(L, __func__, 1, "profile name");
     }
 
-    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
+    const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "closeProfile: profile '%s' does not exist", requestedName.toUtf8().constData());

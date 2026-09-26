@@ -37,6 +37,7 @@
 #include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
+#include "MudletApp.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -932,7 +933,14 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QS
             // Invert background: use white for dark colors, black for light colors
             run.bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
         } else {
-            run.fgColor = charStyle.background();
+            // A transparent cell (e.g. a system message) has no colour of its own
+            // to swap in as the text pen - painting with alpha 0 would make the
+            // glyph invisible - so fall back to the console's real background.
+            QColor background = charStyle.background();
+            if (background.alpha() == 0) {
+                background = mpConsole->getConsoleBgColor();
+            }
+            run.fgColor = background;
             run.bgColor = charStyle.foreground();
         }
     } else {
@@ -1907,15 +1915,11 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
         return;
     }
 
-    // Turning the line you are already looking at into a filter beats typing it
-    // into the box, so the selection drives most of this menu. establishSelectedText()
-    // is what actually decides whether there IS a selection - mPA and mPB keep
-    // their old values after one is dropped, so without it the menu offers text
-    // the user can no longer see highlighted:
+    // mPA and mPB keep their old values after a selection is dropped, so establishSelectedText() decides
+    // whether there IS one; otherwise the menu offers text no longer highlighted:
     QString selection = establishSelectedText() ? getSelectedText(QChar::Space).simplified() : QString();
-    // The profile marking is added after the filters have run, so a selection
-    // that starts at the beginning of a line would otherwise contain a prefix
-    // that no message can ever match:
+    // The profile marking is added after filters run, so a selection from a line start would carry a
+    // prefix no message can match:
     static const QRegularExpression profileTag(qsl("^\\[(?:[A-Z]|\\?|\\x{2731})\\]\\s*"));
     selection.remove(profileTag);
 
@@ -1947,8 +1951,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
     }
 
     menu.addSeparator();
-    // The search strip is hidden until asked for, so this is where people find
-    // out it exists at all:
+    // The search strip is hidden until asked for, so this is how people discover it:
     //: Central Debug Console right-click action that reveals its search box
     auto* pActionFind = menu.addAction(tr("Find..."));
     pActionFind->setShortcut(QKeySequence::Find);
@@ -2047,7 +2050,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         if (mCtrlSelecting) {
             expandSelectionToLine(y);
-            highlightSelection();
             event->accept();
             return;
         }
@@ -2151,8 +2153,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             forceUpdate();
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
-        // Invalid until the first click, so a click soon after the console
-        // appears does not count as the second half of a double-click:
+        // Invalid until the first click, so an early click isn't taken as a double-click's second half:
         if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
             mMouseTracking = true;
             mMouseTrackLevel++;
@@ -2291,7 +2292,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // switches away from the ASCII default
     text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
     text.append(APP_VERSION);
-    text.append(mudlet::self()->mAppBuild);
+    text.append(MudletApp::buildSuffix());
     text.append("'>\n");
     // Nice to identify what made the file!
     text.append("  <title>");
@@ -2331,7 +2332,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
     // Is this a single line then we do NOT need to pad the first (and thus
     // only) line to the right:
-    bool isSingleLine = (mDragStart.y() == mDragSelectionEnd.y());
+    bool isSingleLine = (mPA.y() == mPB.y());
     for (int y = mPA.y(), total = mPB.y(); y <= total; ++y) {
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             return;
@@ -2364,17 +2365,21 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 // size) hold for any console the user can right-click on.
 bool TTextEdit::hasSelectedText() const
 {
-    return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty();
+    // A double-click on a word separator highlights nothing, yet leaves a
+    // region behind and mPA one cell past mPB
+    const bool endpointsCrossed = mPA.y() > mPB.y() || (mPA.y() == mPB.y() && mPA.x() > mPB.x());
+    return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty() && !endpointsCrossed;
 }
 
+// Only checks that there is a selection to read. mPA and mPB stay as the
+// highlight set them: mDragSelectionEnd is just the pointer's cell, which word
+// and line selection widen past.
 bool TTextEdit::establishSelectedText()
 {
     if (!hasSelectedText()) {
         return false;
     }
 
-    // if selection was made backwards swap
-    // right to left
     if (mFontWidth <= 0 || mFontHeight <= 0) {
         qWarning().nospace() << "TTextEdit::establishSelectedText() ERROR - font is " << mFontWidth << "x" << mFontHeight << " so the selection cannot be worked out";
         return false;
@@ -2392,10 +2397,6 @@ bool TTextEdit::establishSelectedText()
         }
     }
 
-    normaliseSelection();
-    if (mMouseTrackLevel == 2) {
-        expandSelectionToWords();
-    }
     return true;
 }
 
@@ -3341,7 +3342,6 @@ void TTextEdit::slot_analyseSelection()
     }
     // If we get here we must at least have a line 0!
 
-    normaliseSelection();
     // Get the smallest of the two lines in the range, but clamp it to the first
     // line which is zero and then the maximum line in existence:
     int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size() - 1));

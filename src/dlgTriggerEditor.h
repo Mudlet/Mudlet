@@ -110,6 +110,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     // Allow QTest-based test classes to access private members
     friend class AddonControlsTest;
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
     friend class EditorSearchTest;
@@ -117,6 +118,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class ScriptEventHandlerLifetimeTest;
     friend class TreeWidgetItemMoveTest;
     friend class TriggerEditorDisclosureTest;
+    friend class TriggerEditorTest;
     friend class TriggerPatternListLayoutTest;
     friend class VariableEditorWriteBackTest;
 
@@ -458,6 +460,7 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
+    void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
 
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -691,13 +694,10 @@ private:
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
-    // How many trigger pattern rows fit in the pattern list in full, however
-    // the splitter and the advanced options are arranged - see issue #2548
+    // Pattern rows the list shows in full however the splitter and advanced options are arranged (#2548)
     static constexpr int csmMinimumVisiblePatternRows = 5;
 
-    // The height a trigger pattern row is laid out at when the list is longer
-    // than it can show, taken from the tallest control any pattern type can
-    // put in a row - see createPatternItem()
+    // Row height once the list overflows: the tallest control any pattern type puts in a row (see createPatternItem())
     int mPatternRowHeight = 0;
 
     QAction* mAddItem = nullptr;
@@ -755,11 +755,47 @@ private:
     QSet<int> mPendingTriggerIconRefresh;
     bool mTriggerIconRefreshQueued = false;
     void flushPendingTriggerIconRefresh();
-    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
-    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT);
+    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bool touchNotification);
 
-    // One QIcon per resource path: a tree of thousands of items would otherwise
-    // decode the same handful of PNGs once per item, every time it is rebuilt
+    // Same coalescing as mPendingTriggerIconRefresh, for the other four unit
+    // types refreshXIcon() covers. The Flush/Paint counters exist only for
+    // TriggerEditorTest, to prove the queue collapses N pending toggles into
+    // one flush and that paintXItem() skips a setIcon() the cacheKey() guard
+    // finds unchanged, rather than just the end state those produce either way.
+    QSet<int> mPendingAliasIconRefresh;
+    bool mAliasIconRefreshQueued = false;
+    int mAliasIconFlushCount = 0;
+    int mAliasIconPaintCount = 0;
+    void flushPendingAliasIconRefresh();
+    void refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification);
+
+    QSet<int> mPendingTimerIconRefresh;
+    bool mTimerIconRefreshQueued = false;
+    int mTimerIconFlushCount = 0;
+    int mTimerIconPaintCount = 0;
+    void flushPendingTimerIconRefresh();
+    void refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT, bool touchNotification);
+
+    QSet<int> mPendingScriptIconRefresh;
+    bool mScriptIconRefreshQueued = false;
+    int mScriptIconFlushCount = 0;
+    int mScriptIconPaintCount = 0;
+    void flushPendingScriptIconRefresh();
+    void refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintScriptItem(QTreeWidgetItem* pItem, TScript* pT, bool touchNotification);
+
+    QSet<int> mPendingKeyIconRefresh;
+    bool mKeyIconRefreshQueued = false;
+    int mKeyIconFlushCount = 0;
+    int mKeyIconPaintCount = 0;
+    void flushPendingKeyIconRefresh();
+    void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touchNotification);
+
+    // A tree of thousands of items would otherwise decode the same few PNGs per item on every rebuild
     const QIcon& cachedIcon(const QString& path) const;
     mutable QHash<QString, QIcon> mIconCache;
 
@@ -783,8 +819,8 @@ private:
     // space-driven auto-collapse:
     bool mShowAllTriggerControls = false;
 
-    // Every profile builds an editor when it loads but they share one saved
-    // window position, so one that was never opened must not write over it:
+    // Every profile builds an editor on load but all share one saved window position, so one never
+    // opened must not overwrite it:
     bool mHasBeenShown = false;
 
     // tracks location of the splitter in the trigger editor for each tab
@@ -865,6 +901,7 @@ private:
     QString descNewFolder;
     QString descNewItem;
     QString descPackageItem;
+    QString descKeyTaken;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

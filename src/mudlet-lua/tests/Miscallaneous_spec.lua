@@ -1096,6 +1096,48 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
           assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
         end)
+
+        it("gives text with a transparent background the console's colour (#10592)", function()
+          local logPath, triggerId, selectedAt
+          local htmlLogging = getConfig("logInHTML")
+          local red, green, blue, alpha = getBackgroundColor()
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            setConfig("logInHTML", htmlLogging)
+            setBackgroundColor(red, green, blue, alpha)
+            resetFormat()
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+          setBackgroundColor(12, 34, 56)
+
+          local started, _, path = startLogging(true)
+          assert.is_true(started, "the test did not open a log of its own")
+          logPath = path
+
+          -- the line's markup is rendered the moment the line commits, so only a
+          -- trigger on the line itself can recolour it in time
+          triggerId = tempTrigger("SpecHtmlTransparent", function()
+            selectedAt = selectString("SpecHtmlTransparent", 1)
+            setBgColor(0, 0, 0, 0)
+            deselect()
+          end)
+          feedTriggers("SpecHtmlTransparent\n")
+          -- ordinary text carries the console's background colour anyway, so
+          -- without the recolouring the assertions below prove nothing
+          assert.is_true((selectedAt or -1) >= 0, "the trigger did not select the text it had to make transparent")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+          assert.is_true(contains(contents, "background: rgb(12,34,56)"), "the transparent text did not take the console's background colour in the log")
+          assert.is_false(contains(contents, "background: rgb(0,0,0)"), "the transparent text was logged as black")
+        end)
       end)
 
       -- A received line is held back from the log until the next one commits.
@@ -1204,6 +1246,40 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(log, "Before the gag."), "the line before the gagged one is missing from the log")
           assert.is_false(contains(log, "Top secret plans"), "the gagged line leaked into the log")
           assert.is_true(contains(log, "After the gag."), "the line after the gagged one is missing from the log")
+        end)
+
+        it("keeps the pending line when a trigger deletes an older one (#9429)", function()
+          local logPath, triggerId, deletedLine
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            moveCursorEnd()
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          local started, _, path = startLogging(true)
+          assert.is_true(started, "the test did not open a log of its own")
+          logPath = path
+
+          feedTriggers("First of three.\n")
+          feedTriggers("Second of three.\n")
+          triggerId = tempTrigger("Third of three.", function()
+            moveCursor(0, getLineNumber() - 2)
+            deletedLine = getCurrentLine()
+            deleteLine()
+          end)
+          feedTriggers("Third of three.\n")
+          assert.are.equal("First of three.", deletedLine, "the trigger deleted a line other than the one two above it")
+
+          startLogging(false)
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.equals(1, occurrences(log, "First of three."), "the line that was written before it was deleted is not in the log exactly once")
+          assert.equals(1, occurrences(log, "Second of three."), "deleting an older line dropped the line that was still pending for logging")
+          assert.equals(1, occurrences(log, "Third of three."), "the line the deleting trigger fired on is missing from the log")
         end)
 
         it("does not replay the last line of one session into the next", function()

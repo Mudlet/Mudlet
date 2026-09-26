@@ -3,6 +3,11 @@
 # its newlines into CRLF.
 CI/http-fixtures/** -text
 
+# Published to the package repository and compared byte for byte against the
+# copy served from there, so a Windows checkout must not turn its newlines into
+# CRLF.
+CI/linux-packages/mudlet.asc -text
+
 # Each .mpackage archive stores a copy of the sources beside it, byte for byte,
 # so a Windows checkout must not rewrite the newlines of one and not the other.
 src/packages/** -text

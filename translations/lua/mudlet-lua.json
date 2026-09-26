@@ -71,6 +71,10 @@
     "message":"Package '%s' installed successfully.",
     "description":"Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
+  "Mudlet.packageInstallPartial": {
+    "message":"Package '%s' was installed, but not everything in it is working - see above.",
+    "description":"Message after drag&drop of a package file onto Mudlet whose triggers or scripts have errors in them - %s is the file name"
+  },
   "Mudlet.packageInstallFail": {
     "message":"Installing '%s' failed: %s",
     "description":"Failure message after drag&drop of package file onto Mudlet - %s is the file name"
@@ -78,6 +82,10 @@
   "Mudlet.moduleInstallSuccess": {
     "message":"Module '%s' installed successfully.",
     "description":"Success message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallPartial": {
+    "message":"Module '%s' was installed, but not everything in it is working - see above.",
+    "description":"Message after drag&drop of a module file onto Mudlet whose triggers or scripts have errors in them - %s is the file name"
   },
   "Mudlet.moduleInstallFail": {
     "message":"Installing '%s' failed: %s",

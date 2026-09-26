@@ -409,6 +409,14 @@ private slots:
 
     void aliases_cp869_listsTheIanaNames() { QVERIFY(TEncodingHelper::aliases("CP869").contains(QByteArrayLiteral("IBM869"))); }
 
+    // An empty alias list makes the preferences dropdown show an error (#8608)
+    void aliases_medievia_listsMudletsOwnName()
+    {
+        const QList<QByteArray> expected{"M_MEDIEVIA"};
+        QCOMPARE(TEncodingHelper::aliases("MEDIEVIA"), expected);
+        QCOMPARE(TEncodingHelper::aliases("M_MEDIEVIA"), expected);
+    }
+
     void aliases_nonCustomEncoding_isEmpty() { QVERIFY(TEncodingHelper::aliases("UTF-8").isEmpty()); }
 
     // -------------------------------------------------------------------------

@@ -32,7 +32,10 @@
 // history list is private and has no reset, so a shared command line would
 // make each test's history depend on the ones that ran before it.
 
+#include <QClipboard>
 #include <QFileInfo>
+#include <QLineEdit>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -40,14 +43,16 @@
 #include <chrono>
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "KeyUnit.h"
 #include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
+#include "TUiTour.h"
 #include "ctelnet.h"
 #include "mudlet.h"
 #include "utils.h"
@@ -198,11 +203,21 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        // A config dir of this test's own reads as a brand new installation, so
+        // the first-run interface tour would open a second after the profile
+        // loads and its application-wide event filter would swallow every key
+        // aimed at the main window - silently, for as many slots as the tour
+        // stays up. Written before init(), which is what stamps an untouched
+        // config as a first launch: a settings file that already holds
+        // something is how mudletUsedBefore() recognises an existing player,
+        // which keeps the rest of the first-run interface away as well.
+        TUiTour::rememberShown();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests and eat their key presses");
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -220,7 +235,7 @@ private slots:
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -523,6 +538,28 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("greet qzxquinquagenarian"));
     }
 
+    // The word boundaries the completion works out, both in the game's output and
+    // in what has been typed, have to be the Unicode ones, or a player of a game
+    // that is not in English gets no completion past the first accented letter
+    // (#1954)
+    void test_tabCompletesPastANonAsciiLetter()
+    {
+        mpHost->mpConsole->print(qsl("qzvbjörnsson waves\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("qzvbj"));
+        // QTest's key helpers assert on anything outside ASCII, so the letter this
+        // test is about has to be sent as the event a real keyboard produces
+        QKeyEvent accentedLetter(QEvent::KeyPress, Qt::Key_Odiaeresis, Qt::NoModifier, qsl("ö"));
+        QApplication::sendEvent(pCommandLine, &accentedLetter);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzvbjö"));
+
+        press(pCommandLine, Qt::Key_Tab);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzvbjörnsson"));
+    }
+
     // There is no part-word to complete after a space, and guessing one from the
     // word before it would overwrite what was already accepted.
     void test_tabDoesNothingAfterASpace()
@@ -667,6 +704,30 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("b"));
     }
 
+    // A key the switch names but no binding matches has to fall through to
+    // QPlainTextEdit rather than be swallowed as handled, or the editing shortcuts
+    // the editor brings with it - Ctrl+Delete among them - stop working (#2755)
+    void test_ctrlDeleteStillDeletesTheWordAhead()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        // which modifier deletes a word is the platform's to say, and macOS has no
+        // binding for it at all, so ask rather than assume
+        const QList<QKeySequence> deleteWordBindings = QKeySequence::keyBindings(QKeySequence::DeleteEndOfWord);
+        if (deleteWordBindings.isEmpty()) {
+            QSKIP("this platform binds no key to delete-end-of-word, so there is nothing to fall through to");
+        }
+        const QKeyCombination deleteWord = deleteWordBindings.first()[0];
+
+        type(pCommandLine, qsl("keep this"));
+        pCommandLine->moveCursor(QTextCursor::Start);
+
+        press(pCommandLine, static_cast<Qt::Key>(deleteWord.key()), deleteWord.keyboardModifiers());
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("this"));
+    }
+
     // Ctrl+Up and Ctrl+Down move the caret inside a multi-line command instead
     // of walking the history away from under it.
     void test_ctrlUpAndDownMoveTheCaretRatherThanTheHistory()
@@ -690,6 +751,65 @@ private slots:
         press(pCommandLine, Qt::Key_Down, Qt::ControlModifier);
         QCOMPARE(pCommandLine->textCursor().blockNumber(), 1);
     }
+
+    // Ctrl+C copies what is selected in the game window rather than what is on
+    // the line, and the split-screen scrollback pane is as much the game window
+    // as the pane above it - selecting there and pressing Ctrl+C used to copy
+    // the command line instead (#8551)
+    void test_copyTakesTheScrollbackPanesSelectionOverTheLine()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mpConsole;
+        const QString sentinel = qsl("qzxscrollbackline");
+        for (int line = 0; line < 60; ++line) {
+            pConsole->print(qsl("%1 %2\n").arg(sentinel, QString::number(line)));
+        }
+
+        QClipboard* pClipboard = QApplication::clipboard();
+        QVERIFY(pClipboard);
+        pClipboard->setText(qsl("nothing has been copied yet"));
+        // Selecting in the command line drops the console's selection, so the
+        // contest has to be set up in this order to exist at all.
+        type(pCommandLine, qsl("a command in the way"));
+        pCommandLine->selectAll();
+
+        // Scrolling back is what opens the lower pane; without it there is no
+        // second pane to select in. A selection in a pane of no height cannot be
+        // worked out, and the panes are only laid out once the window they are in
+        // is up, so it has to be shown and sized first.
+        const QSize windowSize = mudlet::self()->size();
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        const auto restoreTheWindow = qScopeGuard([pConsole, windowSize]() {
+            pConsole->scrollDown(100);
+            // scrolling back down hides the lower pane but leaves it selected, for
+            // the next test that presses Ctrl+C to copy; blanking mSelectedRegion
+            // is not enough, the buffer cells stay flagged until unHighlight()
+            pConsole->clearSelection();
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+        });
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        pConsole->scrollUp(30);
+        // the upper pane's half of the scroll runs on a 0ms timer, and the lower
+        // pane only gets a height once the layout has run, so neither is true yet
+        QTRY_VERIFY2(!pConsole->mUpperPane->mIsTailMode, "the console never actually scrolled back");
+        QTRY_VERIFY2(pConsole->mLowerPane->isVisible() && pConsole->mLowerPane->height() > 0, "scrolling back did not open the split-screen scrollback");
+
+        pConsole->mLowerPane->slot_selectAll();
+        // the upper pane is asked first, so it has to be out of the running for
+        // this to be about the lower one at all
+        QVERIFY2(pConsole->mUpperPane->mSelectedRegion.isEmpty(), "the upper pane holds a selection, so a copy from it would prove nothing about the lower one");
+        QVERIFY2(!pConsole->mLowerPane->mSelectedRegion.isEmpty(), "select-all put no selection on the scrollback pane");
+        QVERIFY2(pCommandLine->textCursor().hasSelection(), "the command line lost the selection it is meant to lose the contest with");
+
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(pClipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the scrollback pane's selection").arg(pClipboard->text().left(60))));
+    }
+
     // #10764: a key put in a group made by permGroup(name, "key") reported
     // itself active and still never fired, because the group above it was
     // created switched off and KeyUnit never descends into an inactive folder.
@@ -758,6 +878,36 @@ private slots:
         QCOMPARE(luaGlobal("keyGroupFired"), QString());
         // nothing claimed the press, so it is the command line's again
         QCOMPARE(pCommandLine->toPlainText(), qsl("k"));
+    }
+
+    // Ctrl+F opens the console's search bar, but a player who had already bound
+    // it themselves keeps their binding - it is asked first (#6694)
+    void test_aCtrlFBindingRunsInsteadOfOpeningTheSearchBar()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("ctrlFKeyFired = ''")));
+        QString key = qsl("ctrlFSpecKey");
+        QString noParent;
+        QString keyScript = qsl("ctrlFKeyFired = 'yes'");
+        int letterF = Qt::Key_F;
+        int controlModifier = Qt::ControlModifier;
+
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, noParent, letterF, controlModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key});
+
+        // opening the search bar selects whatever is in it, so a search bar that
+        // was left deselected and comes back selected is one that opened
+        QLineEdit* pSearchBox = mpHost->mpConsole->mpBufferSearchBox;
+        QVERIFY(pSearchBox);
+        pSearchBox->setText(qsl("a search that was already there"));
+        pSearchBox->deselect();
+
+        press(pCommandLine, Qt::Key_F, Qt::ControlModifier);
+
+        QCOMPARE(luaGlobal("ctrlFKeyFired"), qsl("yes"));
+        QVERIFY2(!pSearchBox->hasSelectedText(), "the search bar opened as well as the binding running");
     }
 };
 

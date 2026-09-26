@@ -151,6 +151,16 @@ void TMapViewManager::updateAllViews()
     }
 }
 
+void TMapViewManager::switchViewsShowingArea(int areaId)
+{
+    for (const auto& [viewId, view] : mViews.asKeyValueRange()) {
+        Q_UNUSED(viewId)
+        if (view && view->getCurrentAreaId() == areaId) {
+            view->switchToAnotherArea();
+        }
+    }
+}
+
 void TMapViewManager::slot_viewClosed()
 {
     auto* dockWidget = qobject_cast<QDockWidget*>(sender());

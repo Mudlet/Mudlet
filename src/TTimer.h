@@ -59,6 +59,9 @@ public:
     bool compileScript();
     void execute();
     void setTime(QTime time);
+    // Not part of setTime(): a new timer has no time yet, and whether it needs one depends on its
+    // parent, which drag and drop can change
+    void validateTime();
     const QString& getCommand() const { return mCommand; }
     void setCommand(const QString& cmd) { mCommand = cmd; }
     const QString& getScript() const { return mScript; }
@@ -120,10 +123,11 @@ public:
 
 private:
     TTimer() = default;
-    // Whether this timer firing would do anything: run a script, send a command,
-    // or call the Lua function tempTimer() registered for it - that one lives in
-    // the Lua registry, so such a timer's script stays empty
+    // A tempTimer() Lua function lives in the Lua registry, so such a timer's script is empty
     bool hasPayload() const { return !mScript.isEmpty() || !mCommand.isEmpty() || mRegisteredAnonymousLuaFunction; }
+    // Hides the non-virtual Tree<TTimer>::activate(); Tree's call in setIsActive() skips the time
+    // validation, so setIsActive() validates for itself
+    bool activate();
 
     QString mName;
     QString mScript;
