@@ -4173,6 +4173,32 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(roomB, getSpecialExitsSwap(roomA)["squeeze through"])
     end)
 
+    it("drops a door of a type it does not know and keeps the exit", function()
+      buildMap()
+      assert.is_true(addSpecialExit(roomA, roomB, "crawl under"))
+      reimportWith(function(document)
+        local room = findRoom(document, roomA)
+        -- a normal exit, a special exit and a stub each read their door
+        -- through the same code
+        findExit(room, "east").door = "ajar"
+        findExit(room, "squeeze through").door = "ajar"
+        room.stubExits[1].door = "ajar"
+        -- the controls, read from the same file
+        findExit(room, "west").door = "closed"
+        findExit(room, "crawl under").door = "open"
+      end)
+
+      assert.are.equal(roomB, getRoomExits(roomA)["east"])
+      assert.are.equal(roomB, getSpecialExitsSwap(roomA)["squeeze through"])
+      assert.are.same({1}, getExitStubs1(roomA))
+      local doors = getDoors(roomA)
+      assert.is_nil(doors["e"])
+      assert.is_nil(doors["squeeze through"])
+      assert.is_nil(doors["n"])
+      assert.are.equal(2, doors["w"])
+      assert.are.equal(1, doors["crawl under"])
+    end)
+
     it("keeps a door and a lock that a stub exit carries", function()
       buildMap()
       reimportWith(function(document)
