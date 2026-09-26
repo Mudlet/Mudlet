@@ -28,9 +28,8 @@ void TAreaLodExitIndex::beginRebuild()
     ++mRebuildCount;
 }
 
-// Buckets hold a handful of rooms even on a map where the rebuild had to look
-// at a million, so sorting them here costs far less than keeping a million ids
-// in order just to have them arrive that way.
+// Buckets stay small even when a rebuild sees a million rooms, so sorting each here is cheaper
+// than feeding the ids in order.
 void TAreaLodExitIndex::endRebuild()
 {
     for (auto& bySpan : mIndex) {
@@ -64,8 +63,7 @@ void TAreaLodExitIndex::eraseEntry(const int id, const Entry& entry)
     if (itRoom != itBucket->end() && *itRoom == id) {
         itBucket->erase(itRoom);
     }
-    // Buckets and Z levels are iterated wholesale by the queries, so an empty
-    // one left behind would be walked on every frame:
+    // Queries walk every bucket and Z level each frame, so don't leave empty ones behind:
     if (itBucket->isEmpty()) {
         itZ->erase(itBucket);
         if (itZ->isEmpty()) {
@@ -102,8 +100,7 @@ void TAreaLodExitIndex::removeRoom(const int id)
     mEntries.erase(itEntry);
 }
 
-// Thresholds at or above the always-visible bucket would step past it, and
-// the rooms in there may never be skipped:
+// Clamp below the always-visible bucket, whose rooms may never be skipped:
 qsizetype TAreaLodExitIndex::roomCountSpanningBeyond(const int z, const int span) const
 {
     Q_ASSERT_X(span >= cMinStoredSpan - 1, "TAreaLodExitIndex", "a threshold this low would miss rooms that are not stored");

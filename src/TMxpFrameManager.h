@@ -104,11 +104,8 @@ public:
     void clearDestination();
     QString getCurrentDestination() const { return mCurrentDestination; }
     QWidget* getCurrentDestinationWidget() const;
-    // Where <DEST> is redirecting output to, as a write-only sink so that the
-    // buffer translation never gets a view pointer back. Null unless a
-    // redirect is really in force: no destination set, a frame that has since
-    // gone, or a destination that resolves back to the main console - which
-    // would recurse into the very buffer being translated.
+    // Write-only so buffer translation never gets a view pointer back. Null when no destination
+    // is set, its frame has gone, or it resolves to the main console (which would recurse).
     TPrintSink* currentDestinationSink() const;
     bool hasActiveDestination() const { return !mCurrentDestination.isEmpty(); }
     

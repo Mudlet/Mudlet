@@ -122,8 +122,7 @@ void ScriptUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
+    // Runs per unit on every line of game text and next to never has work queued.
     if (!hasPendingDeletes()) {
         return;
     }
