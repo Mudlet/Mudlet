@@ -1587,6 +1587,44 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(mmcp.allowSnoop(PEER_NAME))
     end)
 
+    it("keeps a 0xff byte in the game text from ending a snooper's frame early", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      finally(function()
+        if mmcp.getClientFlags(PEER_NAME) == "      N " then
+          peerSends(30, "")
+          waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+        end
+        mmcp.allowSnoop(PEER_NAME)
+      end)
+      local mark = captureSeq()
+      peerSends(30, "")
+      -- the "begun snooping" notice has to land before the mark below
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "command" and contains(event.text, "begun snooping")
+      end, 2000))
+      assert.equals("      N ", mmcp.getClientFlags(PEER_NAME))
+
+      mark = captureSeq()
+      -- IAC IAC is how a server sends a literal 0xff (a Latin-1 y-diaeresis).
+      -- Sent on as it is, it closed the frame, and the byte after it reached
+      -- the snooper as a command of its own: 0x05 is a private chat.
+      feedTelnet("abc\255\255\5Mallory chats to you, 'hi'\r\ndone\r\n")
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and event.text == "done"
+      end, 2000))
+      local injected = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name ~= "SnoopData"
+      end, 0)
+      assert.is_nil(injected, injected and ("peer saw a " .. injected.name .. " command: " .. injected.text))
+      local line = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and contains(event.text, "abc")
+      end, 0)
+      assert.is_table(line)
+      assert.equals("abc\5Mallory chats to you, 'hi'", line.text, "payload bytes: " .. line.hex)
+    end)
+
     it("raises sysMMCPIncomingSnoopMessage for snooped output", function()
       if peerUnavailable() then return end
       ensurePeer()

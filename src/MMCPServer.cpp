@@ -89,14 +89,14 @@ void MMCPServer::sendSnoopData(std::string& lines)
         snprintf(colorBuf, sizeof(colorBuf), "%02d%02d\n", 15, 0);
         outData1.append(colorBuf);
 
+        // MMCP has no way to escape the frame terminator, so a 0xff in the game
+        // text (a Latin-1 y-diaeresis) would end the frame early and have the
+        // snooper read the bytes after it as a command of their own
+        std::erase(line, static_cast<char>(End));
         outData1.append(line.data(), line.size());
         outData2.append(line.data(), line.size());
-
-        // If line already had an 0xff at the end, don't bother adding one back here
-        if (!line.empty() && static_cast<unsigned char>(line.back()) != static_cast<unsigned char>(End)) {
-            outData1.append(static_cast<char>(End));
-            outData2.append(static_cast<char>(End));
-        }
+        outData1.append(static_cast<char>(End));
+        outData2.append(static_cast<char>(End));
 
         QListIterator<QPointer<MMCPClient>> it(mPeersList);
         while (it.hasNext()) {
