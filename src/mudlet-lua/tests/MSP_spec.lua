@@ -515,7 +515,7 @@ describe("Tests the sound and music MSP asks for", function()
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(err))
   end
 
-  it("plays what a !!SOUND or !!MUSIC subnegotiation names, with its options", function()
+  it("plays what a !!SOUND or !!MUSIC subnegotiation names, with its type as the tag", function()
     if mediaPlaybackUnavailable() then
       return
     end
@@ -524,7 +524,9 @@ describe("Tests the sound and music MSP asks for", function()
     local started = watchStarts()
 
     -- T= is the MSP type, which is reported as the tag and lowercased, the
-    -- same as the MXP attribute is; unknown options are passed over
+    -- same as the MXP attribute is; unknown options are passed over. V= rides
+    -- along unobserved: what MSP starts is kept out of the Lua queries, and no
+    -- media event carries a volume.
     feedMsp(("!!SOUND(%s V=60 L=1 P=40 C=1 T=Combat X=ignored)"):format(sound))
     waitForCount("sysMediaStarted", started, 1)
     assert.equals(1, #started, names(started))
@@ -532,11 +534,77 @@ describe("Tests the sound and music MSP asks for", function()
     assert.equals("sound", started[1].mediaType)
     assert.equals("combat", started[1].tag)
 
-    feedMsp(("!!MUSIC(%s V=40 L=1 C=0)"):format(music))
+    feedMsp(("!!MUSIC(%s V=40 L=1)"):format(music))
     waitForCount("sysMediaStarted", started, 2)
     assert.equals(2, #started, names(started))
     assert.equals(music, started[2].file)
     assert.equals("music", started[2].mediaType)
+  end)
+
+  it("plays every pass of the L= loop count a subnegotiation gives", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local file = brief("telnet-loops")
+    local started = watchStarts()
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    feedMsp(("!!SOUND(%s L=2)"):format(file))
+    waitForCount("sysMediaFinished", finished, 2)
+    pumpEvents(300)
+    assert.equals(2, #started, names(started))
+    assert.equals(2, #finished)
+  end)
+
+  it("refuses a subnegotiation whose P= does not outrank what is already playing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local playing = hold("telnet-ranking")
+    local lower = brief("telnet-ranking-lower")
+    local higher = brief("telnet-ranking-higher")
+    local started = watchStarts()
+
+    feedMsp(("!!SOUND(%s P=75)"):format(playing))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+
+    feedMsp(("!!SOUND(%s P=40)"):format(lower))
+    pump()
+    assert.equals(1, #started, names(started))
+
+    -- a higher priority does take over, so it was the P= that held the other back
+    feedMsp(("!!SOUND(%s P=90)"):format(higher))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, names(started))
+    assert.equals(higher, started[2].file)
+  end)
+
+  it("restarts music already playing only when the subnegotiation gives C=0", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local music = hold("telnet-continue")
+    local started = watchStarts()
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    feedMsp(("!!MUSIC(%s)"):format(music))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+
+    -- C=1, the default, lets the track play on
+    feedMsp(("!!MUSIC(%s C=1)"):format(music))
+    pump()
+    assert.equals(1, #started, names(started))
+    assert.equals(0, #finished)
+
+    feedMsp(("!!MUSIC(%s C=0)"):format(music))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, names(started))
+    assert.equals(1, #finished)
+    assert.equals(music, finished[1].file)
   end)
 
   it("stops the sound a !!SOUND(Off) subnegotiation names", function()
@@ -566,9 +634,11 @@ describe("Tests the sound and music MSP asks for", function()
     local started = watchStarts()
 
     -- an option without its =, a request without its closing parenthesis, and
-    -- one that is neither !!SOUND nor !!MUSIC
+    -- one that is neither !!SOUND nor !!MUSIC. The unclosed one ends in an
+    -- option, so a parser that dropped its last character regardless would be
+    -- left with a request that plays.
     feedMsp(("!!SOUND(%s V60)"):format(file))
-    feedMsp(("!!SOUND(%s"):format(file))
+    feedMsp(("!!SOUND(%s V=50"):format(file))
     feedMsp(("!!NOISE(%s)"):format(file))
     pump(2)
     assert.equals(0, #started, names(started))

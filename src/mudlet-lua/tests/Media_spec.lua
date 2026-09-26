@@ -2695,10 +2695,11 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    -- the four parsers clamp on their own, so each is asked for a volume above
-    -- the range and one below it; the query reports the value the player got
+    -- the four parsers clamp on their own, so each is asked for a volume
+    -- outside the range - sound below it in one form and above it in the
+    -- other, music on both sides in both; the query reports what the player got
     local cases = {
-      {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "table", volume = 150, expected = 100},
+      {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "table", volume = -20, expected = 1},
       {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "ordered", volume = 150, expected = 100},
       {play = playMusicFile, query = getPlayingMusic, stop = stopMusic, form = "table", volume = 150, expected = 100},
       {play = playMusicFile, query = getPlayingMusic, stop = stopMusic, form = "table", volume = -20, expected = 1},
@@ -2732,6 +2733,8 @@ describe("Media playback effects with a generated sound file", function()
     writeSoundFiles()
     assert.is_true(playMusicFile({name = soundFile, key = "busted-music-loops", loops = 3}))
     waitForCount("sysMediaFinished", finished, 3)
+    -- time for a fourth pass to begin, were the count not honoured
+    pumpEvents(300)
     assert.equals(3, #started)
     assert.equals(3, #finished)
   end)
@@ -2754,11 +2757,13 @@ describe("Media playback effects with a generated sound file", function()
     -- printed as the track starts.
     local caption = "Busted music caption"
     local mark = getLastLineNumber("main")
+    local began = getEpoch()
     assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-finish-table", fadein = 200, fadeout = 100, start = 0,
       finish = 400, caption = caption}))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished, "a finish of 400 did not end the ten second track early")
+    assert.is_true(getEpoch() - began < 2, "the ten second track ran on well past a finish of 400")
     assert.equals("busted-music-finish-table", finished[1].key)
     local captioned = false
     for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
@@ -2769,10 +2774,12 @@ describe("Media playback effects with a generated sound file", function()
     -- name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
     -- the url is never fetched from, as the file is already there, and it names
     -- a closed local port so nothing could leave the machine if it were
+    began = getEpoch()
     assert.is_true(playMusicFile(longSoundFile, 50, nil, nil, nil, nil, "busted-music-finish-ordered", "busted-tag", true, "http://127.0.0.1:1/media", 300))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     waitForCount("sysMediaFinished", finished, 2)
     assert.equals(2, #finished, "a finish of 300 did not end the ten second track early")
+    assert.is_true(getEpoch() - began < 2, "the ten second track ran on well past a finish of 300")
     assert.equals("busted-music-finish-ordered", finished[2].key)
     assert.equals(0, #getPlayingMusic())
   end)
@@ -2801,7 +2808,7 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
-  it("a Client.Media.Play message reads its numeric fields given as JSON numbers", function()
+  it("a Client.Media.Play message reads a loop count and a finish given as JSON numbers", function()
     if mediaPlaybackUnavailable() then
       return
     end
@@ -2812,18 +2819,22 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaFinished", finished)
     collect("sysMediaStarted", started)
 
-    -- the same fields the string spec above reads, as the numbers most servers
-    -- send: the loop count is what makes two playbacks of the short file
+    -- the loop count and finish the string spec above reads, as the numbers
+    -- most servers send. Volume and the fades ride along so a number there does
+    -- not trip the parse, but no query reports what a GMCP playback got of
+    -- them. The loop count is what makes two playbacks of the short file.
     feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-numbers", "volume": 70, "loops": 2, "fadein": 50, "fadeout": 50}')
     waitForCount("sysMediaFinished", finished, 2)
     assert.equals(2, #started, gmcpRefused)
     assert.equals(2, #finished)
 
     -- and the finish, which cuts the ten second file off after 300ms
+    local began = getEpoch()
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-number-finish", "finish": 300}')
     waitForCount("sysMediaFinished", finished, 3)
     assert.equals(3, #started)
     assert.equals(3, #finished, "a finish of 300 did not end the ten second file early")
+    assert.is_true(getEpoch() - began < 2, "the ten second file ran on well past a finish of 300")
     assert.equals("busted-gmcp-number-finish", finished[3].key)
   end)
 
@@ -2931,6 +2942,18 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-object"}')
     waitForCount("sysMediaStarted", started, 1)
     assert.equals(1, #started, gmcpRefused)
+
+    -- a stop is read before the check for an empty message, so the shape check
+    -- is all that keeps an array naming the file from stopping everything
+    local finished = {}
+    collect("sysMediaFinished", finished)
+    feedGmcp('Client.Media.Stop ["' .. longSoundFile .. '"]')
+    pumpEvents(500)
+    assert.equals(0, #finished, "a JSON array was read as a stop")
+
+    feedGmcp('Client.Media.Stop {}')
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
   end)
 end)
 
