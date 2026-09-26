@@ -1728,7 +1728,15 @@ end)
 -- character name does not. What it did not withhold was the password the player
 -- types at the game's own prompt: that goes through Host::send(), and it reached
 -- every handler in cleartext. Masking did not help - it is painted over the
--- widget, not applied to what is sent. These cases hold that shut.
+-- widget, not applied to what is sent.
+--
+-- That is held shut now, but not from here. What is withheld is text that came
+-- from a command line, and Lua cannot produce any: send() and expandAlias() are
+-- script sends by definition, however they are dressed up. So the typed case
+-- lives in CommandLineKeyHandlingTest, which can press Return, and these two pin
+-- the half that must keep working - a script's send and a script's alias are not
+-- a password being hidden, and treating them as one took denyCurrentSend() and
+-- every vault-lookup alias with it.
 describe("Tests what sysDataSendRequest carries at a server password prompt", function()
   -- Password mode cannot be turned on from Lua; the server takes the ECHO option,
   -- so the real parser has to be fed. cTelnet stops answering ECHO after five
@@ -1763,7 +1771,7 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
     clearCmdLine("main")
   end)
 
-  it("does not hand the password to a sysDataSendRequest handler", function()
+  it("still raises sysDataSendRequest for a script's send at a prompt", function()
     local seen = {}
     local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, data)
       seen[#seen + 1] = data
@@ -1791,14 +1799,17 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
     serverEcho(true)
     assert.are.equal("", getCmdLine("main"), "echo suppression did not engage, so this case proves nothing")
 
-    send("specPasswordAtThePrompt", false)
+    send("specScriptSendAtThePrompt", false)
     serverEcho(false)
 
-    -- Pins that the event is withheld, not that the password still reaches the
-    -- game: feedTelnet() needs an unconnected socket, so nothing here can watch
-    -- the wire. A fix that dropped the send entirely would also pass this.
-    assert.is_false(table.contains(seen, "specPasswordAtThePrompt"),
-                    "the password typed at the game's prompt was handed to a sysDataSendRequest handler")
+    -- A script's send is not a password being typed, and the event still carries
+    -- it. Withholding it here as well cost the profile denyCurrentSend() - a
+    -- package could no longer turn a send down at a prompt, which
+    -- TelnetLatePasswordTest pins from the other side. What a PLAYER types is
+    -- withheld, and that cannot be said from here: Lua has no way to type into a
+    -- command line, so CommandLineKeyHandlingTest makes that claim instead.
+    assert.is_true(table.contains(seen, "specScriptSendAtThePrompt"),
+                   "a script's send at a password prompt no longer raises sysDataSendRequest, so denyCurrentSend() cannot act on it")
 
     -- And the event comes back once the prompt is over, so the guard is scoped to
     -- the prompt rather than latching off for the rest of the session.
@@ -1807,14 +1818,15 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
                    "sysDataSendRequest stopped firing after the password prompt ended")
   end)
 
-  -- The case above drives send(), which is sendRaw and passes dontExpandAliases
-  -- true, so it never reaches the alias pass and would stay green if the
-  -- Host::send() guard were removed. expandAlias() is the Lua way in: it calls
-  -- Host::send(..., false), the same third argument the command line uses, so the
-  -- alias pass really runs. That pass is the worse of the two leaks - it writes
-  -- what it is given to the global `command` before matching anything, and runs
-  -- the script of every alias whose pattern matches.
-  it("does not hand the password to an alias or to the command global", function()
+  -- expandAlias() leaves dontExpandAliases at its default, as the command line
+  -- does, so the alias pass really runs - but that default is also what a trigger
+  -- or timer command field, a key, a button and a label callback leave alone.
+  -- Holding the pass back for all of them at a prompt meant an alias like ^pw$
+  -- that looks a password up in a vault simply stopped running, and the literal
+  -- text went to the game as the password. Only what came from a command line is
+  -- held back now, which Lua cannot produce - so this pins the other half: a
+  -- script asking for an alias to be expanded at a prompt still gets it.
+  it("still expands an alias asked for by a script at a prompt", function()
     local aliasSaw = {}
     local commandSaw = {}
     -- Matches only the sentinel, so it cannot swallow anything else a spec sends.
@@ -1848,11 +1860,11 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
     expandAlias("specAliasSentinelAtThePrompt", false)
     serverEcho(false)
 
-    -- One assertion rather than two: the guard skips the whole alias pass, so the
-    -- script not running and `command` not being set are one event seen from Lua.
-    -- Nothing observes `command` without an alias having matched it first, which
-    -- is why the control above is where the `command` half is pinned.
-    assert.are.equal(1, #aliasSaw,
-                     "the password typed at the game's prompt was matched by an alias, and the Lua global `command` held it")
+    -- Two now, the control and this one: the pass ran and the alias fired, which
+    -- is what a vault-lookup alias at a login prompt depends on.
+    assert.are.equal(2, #aliasSaw,
+                     "an alias a script asked to expand at a password prompt did not run, so its own name would go to the game as the password")
+    assert.are.equal("specAliasSentinelAtThePrompt", commandSaw[2],
+                     "the alias pass ran without setting the command global")
   end)
 end)

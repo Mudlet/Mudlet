@@ -528,6 +528,63 @@ private slots:
         QVERIFY2(!received.contains(asSent({qsl("pw")})), qPrintable(qsl("the alias's own name was sent as the password: %1").arg(QString::fromUtf8(received))));
     }
 
+    // What Telnet_spec.lua cannot say any more. Withholding sysDataSendRequest is
+    // now keyed on the text having come from a command line, and Lua has no way to
+    // type into one - send() and expandAlias() are script sends by definition. So
+    // the claim "a typed password is not handed to a handler" can only be made
+    // here, where Return can actually be pressed.
+    void test_aTypedPasswordIsWithheldFromSysDataSendRequest()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY2(runLua(qsl("_sentRequests = {}\n_sendRequestHandler = registerAnonymousEventHandler('sysDataSendRequest', function(_, data)\n"
+                            "  _sentRequests[#_sentRequests + 1] = data\nend)")),
+                 "the sysDataSendRequest handler could not be registered");
+
+        // The control: outside a prompt the event carries what was sent, so a pass
+        // below cannot come from the handler never firing at all.
+        sendCommand(pCommandLine, qsl("ordinarybeforetheprompt"));
+
+        mpHost->setRemoteEchoingActive(true);
+        sendCommand(pCommandLine, qsl("typedpasswordatprompt"));
+        mpHost->setRemoteEchoingActive(false);
+
+        // And it comes back afterwards, so the guard is scoped to the prompt rather
+        // than latching off for the rest of the session.
+        sendCommand(pCommandLine, qsl("ordinaryaftertheprompt"));
+
+        QVERIFY(runLua(qsl("_sentSaw = table.concat(_sentRequests, '|')")));
+        const QString saw = luaGlobal("_sentSaw");
+        runLua(qsl("killAnonymousEventHandler(_sendRequestHandler)"));
+
+        QVERIFY2(saw.contains(qsl("ordinarybeforetheprompt")), qPrintable(qsl("an ordinary command raised no sysDataSendRequest, so this case proves nothing: \"%1\"").arg(saw)));
+        QVERIFY2(!saw.contains(qsl("typedpasswordatprompt")), qPrintable(qsl("the typed password was handed to a sysDataSendRequest handler: \"%1\"").arg(saw)));
+        QVERIFY2(saw.contains(qsl("ordinaryaftertheprompt")), qPrintable(qsl("sysDataSendRequest stopped firing after the prompt ended: \"%1\"").arg(saw)));
+    }
+
+    // The other side of the same guard, and the reason it had to be narrowed: a
+    // script's send at a prompt still raises the event. Withholding it there cost
+    // the profile denyCurrentSend(), which is how a package turns a send down -
+    // TelnetLatePasswordTest covers what that breaks.
+    void test_aScriptsSendStillRaisesSysDataSendRequestAtAPrompt()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY2(runLua(qsl("_scriptRequests = {}\n_scriptRequestHandler = registerAnonymousEventHandler('sysDataSendRequest', function(_, data)\n"
+                            "  _scriptRequests[#_scriptRequests + 1] = data\nend)")),
+                 "the sysDataSendRequest handler could not be registered");
+
+        mpHost->setRemoteEchoingActive(true);
+        QVERIFY(runLua(qsl("send('scriptsentatprompt', false)")));
+        mpHost->setRemoteEchoingActive(false);
+
+        QVERIFY(runLua(qsl("_scriptSaw = table.concat(_scriptRequests, '|')")));
+        const QString saw = luaGlobal("_scriptSaw");
+        runLua(qsl("killAnonymousEventHandler(_scriptRequestHandler)"));
+
+        QVERIFY2(saw.contains(qsl("scriptsentatprompt")), qPrintable(qsl("a script's send at a prompt raised no sysDataSendRequest, so denyCurrentSend() cannot act on it: \"%1\"").arg(saw)));
+    }
+
     // The masking-off exception, which nothing covered: with the preference set, a
     // prompt is not treated as a password prompt at all, so typed input goes
     // through aliases as usual. That is the supported way to keep using an alias -
