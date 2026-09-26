@@ -31,6 +31,7 @@ class TMxpLinkTagHandler : public TMxpSingleTagHandler
 
     QString getHref(const MxpStartTag* tag);
     static QString actionFor(const QString& href);
+    static bool opensSafely(const QString& href);
 
     inline static const QString TAG_CONTENT_PLACEHOLDER = qsl("&text;");
 

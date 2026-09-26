@@ -23,6 +23,8 @@
 #include "TMxpClient.h"
 #include "UntrustedText.h"
 
+#include <QUrl>
+
 // <A href=URL [hint=text] [expire=name]>
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
@@ -41,6 +43,10 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         return MXP_TAG_NOT_HANDLED;
     }
     mIsHrefInContent = mHref.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive);
+    if (!mIsHrefInContent && !opensSafely(mHref)) {
+        // shown as plain text rather than as a link that opens nothing
+        return MXP_TAG_HANDLED;
+    }
 
     // Server-supplied, and lands in the same tooltip as an OSC 8 hint. An
     // explicit hint is prose written to be read; falling back to the href makes
@@ -72,7 +78,15 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
     // written to close the Lua string stays inside it
     if (links != nullptr && mIsHrefInContent && !links->isEmpty()) {
         const QString href = QString(mHref).replace(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
-        links->first() = actionFor(href);
+        if (opensSafely(href)) {
+            links->first() = actionFor(href);
+        } else {
+            // The link is already drawn, so leave it with nothing to run
+            links->clear();
+            if (hints != nullptr) {
+                hints->clear();
+            }
+        }
     }
 
     mIsHrefInContent = false;
@@ -84,6 +98,16 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 QString TMxpLinkTagHandler::actionFor(const QString& href)
 {
     return qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
+}
+
+// openUrl() hands the address to the desktop, which opens a file: or bare path
+// as a local file and passes any other scheme to whatever application claimed
+// it, so a game only gets to point at a remote page or a mail address. The same
+// schemes as an OSC 8 link, plus mailto.
+bool TMxpLinkTagHandler::opensSafely(const QString& href)
+{
+    const QString scheme = QUrl(href).scheme().toLower();
+    return scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp") || scheme == qsl("mailto");
 }
 
 QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)

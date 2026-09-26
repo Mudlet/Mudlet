@@ -155,11 +155,11 @@ describe("Tests the Lua an MXP link runs", function()
       end)
 
       it("opens an A href as it was given", function()
-        assertRunsOnly(actionsAfter(("<A %s>go</A>"):format(attribute("href", payload))), "openUrl", payload)
+        assertRunsOnly(actionsAfter(("<A %s>go</A>"):format(attribute("href", "https://page.example/" .. payload))), "openUrl", "https://page.example/" .. payload)
       end)
 
       it("opens the text a bare A wraps as it was given", function()
-        assertRunsOnly(actionsAfter(("<A>%s</A>"):format(payload)), "openUrl", payload)
+        assertRunsOnly(actionsAfter(("<A>https://page.example/%s</A>"):format(payload)), "openUrl", "https://page.example/" .. payload)
       end)
     end)
   end
@@ -170,6 +170,58 @@ describe("Tests the Lua an MXP link runs", function()
       {"send", "look"},
       {"send", "say hi there"},
     })
+  end)
+
+  -- openUrl() hands whatever it is given to the desktop, which opens a local
+  -- file for a file: address or a bare path, and passes any other scheme to the
+  -- application that registered it
+  describe("Tests which addresses an A may open", function()
+    -- the link the tags leave behind, if any, reaches for nothing but send()
+    local function assertOpensNothing(data)
+      feed("<SEND>mxpLinksMarker</SEND>")
+      local actions = actionsAfter(data)
+      assert.is_table(actions)
+      for _, action in ipairs(actions) do
+        for _, call in ipairs(run(action)) do
+          assert.are_not.equal("openUrl", call[1], action)
+        end
+      end
+    end
+
+    for _, address in ipairs({"http://page.example/", "https://page.example/a?b=c", "HTTPS://page.example/", "ftp://files.example/f.txt", "mailto:admin@game.example"}) do
+      it(("opens %s from an A href"):format(address), function()
+        assertRunsOnly(actionsAfter(("<A href=\"%s\">go</A>"):format(address)), "openUrl", address)
+      end)
+
+      it(("opens %s from the text a bare A wraps"):format(address), function()
+        assertRunsOnly(actionsAfter(("<A>%s</A>"):format(address)), "openUrl", address)
+      end)
+    end
+
+    for _, address in ipairs({"file:///etc/passwd", "/etc/passwd", "C:\\Windows\\System32\\calc.exe", "notes.txt", "smb://host/share", "javascript:alert(1)", "steam://run/1", " file:///etc/passwd"}) do
+      it(("does not open %q from an A href"):format(address), function()
+        assertOpensNothing(("<A href=\"%s\">go</A>"):format(address))
+      end)
+
+      it(("does not open %q from the text a bare A wraps"):format(address), function()
+        assertOpensNothing(("<A>%s</A>"):format(address))
+      end)
+
+      it(("does not open %q when &text; in an A href makes it"):format(address), function()
+        assertOpensNothing(("<A href=\"&text;\">%s</A>"):format(address))
+      end)
+    end
+
+    it("shows the text of an A it will not open as plain text", function()
+      feed([[<A href="file:///etc/passwd">mxpLinksRefusedWord</A>]])
+      local lineNumber = getLastLineNumber("main") - 1
+      assert.are.equal("mxpLinksRefusedWord", getLines("main", lineNumber, lineNumber + 1)[1])
+      moveCursor("main", 0, lineNumber)
+      selectSection("main", 0, 1)
+      local format = getTextFormat("main")
+      deselect("main")
+      assert.is_false(format.underline)
+    end)
   end)
 
   -- a bare <A> takes its address from the text it wraps; none of that text may
