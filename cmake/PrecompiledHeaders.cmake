@@ -12,8 +12,8 @@
 # header would otherwise supply.
 
 if(ENABLE_STATIC_ANALYSIS)
-  # clang-tidy cannot read a GCC precompiled header, and should see each file's
-  # own includes anyway
+  # clang-tidy would warn about, and then ignore, a GCC precompiled header - and
+  # it should judge each file by its own includes anyway
   set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
 endif()
 
