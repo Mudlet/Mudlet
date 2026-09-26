@@ -188,8 +188,8 @@ private slots:
         QVERIFY(!mpHost->mEventHandlerMap.value(qsl("eixhGainedEvent")).contains(script));
     }
 
-    // A push-down button is saved up or down, and comes back the way it was.
-    void test_pushDownButtonIsRestoredInTheStateItWasIn()
+    // A deleted push-down button comes back up or down, the way it was.
+    void test_pushDownButtonIsRecreatedInTheStateItWasIn()
     {
         TAction* action = newAction(qsl("eixh push-down button"));
         action->setIsPushDownButton(true);
@@ -200,9 +200,23 @@ private slots:
 
         QVERIFY(restored);
         QVERIFY(restored->mButtonState);
+    }
 
+    // Whether a push-down button is down is the player's doing, not the
+    // editor's: no edit changes it, so undoing one must not put it back to how
+    // it was when the edit was made.
+    void test_undoingAnEditLeavesAPushDownButtonAsItIs()
+    {
+        TAction* action = newAction(qsl("eixh clicked push-down button"));
+        action->setIsPushDownButton(true);
         action->mButtonState = false;
-        QVERIFY(updateActionFromXML(action, down));
+        const QString before = exportActionToXML(action);
+        action->setName(qsl("eixh clicked push-down button renamed"));
+        action->mButtonState = true;
+
+        QVERIFY(updateActionFromXML(action, before));
+
+        QCOMPARE(action->getName(), qsl("eixh clicked push-down button"));
         QVERIFY(action->mButtonState);
     }
 };
