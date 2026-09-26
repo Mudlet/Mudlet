@@ -135,6 +135,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
+    static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
@@ -240,7 +241,6 @@ public:
 
     static void writeJsonColor(QJsonObject&, const QColor&);
     static QColor readJsonColor(const QJsonObject&);
-    static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     void restore16ColorSet();
 
     // These trivial methods are to prevent casual modification to the

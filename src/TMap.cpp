@@ -1749,6 +1749,38 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     return true;
 }
 
+// QDataStream hands a list's length prefix straight to QList::reserve(), so a
+// corrupt one in a map file asks for gigabytes (#10689). Call this before
+// every QList read from a binary map - QSet and QMap readers do not reserve -
+// and read a QMap holding QLists an entry at a time, as TRoom::restore() does.
+// A length the rest of the file could not hold fails the stream. Reads carry
+// on after that, out of step, so the loops over areas, labels and rooms check
+// the status and stop at the end of the record being read.
+bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
+{
+    Q_ASSERT(minBytesPerElement > 0);
+    if (ifs.status() != QDataStream::Ok) {
+        return false;
+    }
+    QIODevice* pDevice = ifs.device();
+    // bytesAvailable() is only the rest of the file on a random access device
+    Q_ASSERT(pDevice && !pDevice->isSequential());
+    // A four byte length is only right while the stream stays at Qt_5_12:
+    // from Qt_6_7 a larger one can follow it
+    constexpr qint64 lengthSize = sizeof(quint32);
+    const QByteArray lengthBytes = pDevice->peek(lengthSize);
+    bool fits = lengthBytes.size() == lengthSize;
+    if (fits) {
+        const quint32 length = qFromBigEndian<quint32>(lengthBytes.constData());
+        fits = length <= (pDevice->bytesAvailable() - lengthSize) / minBytesPerElement;
+    }
+    if (!fits) {
+        ifs.setStatus(QDataStream::ReadCorruptData);
+        return false;
+    }
+    return true;
+}
+
 bool TMap::restore(QString location)
 {
     const MapOperationScope operationScope(this);
@@ -3803,29 +3835,6 @@ void TMap::readJsonUserData(const QJsonObject& obj)
 
 // Inserts a color as an array of 3 or 4 ints (cast to doubles) into the
 // supplied object.
-// QDataStream hands a list's length prefix straight to QList::reserve(), so a
-// corrupt one in a map file asks for gigabytes (#10689). Asked before every
-// list read from a binary map: refuses a length the rest of the file could not
-// hold, and marks the stream corrupt so that the read stops there.
-bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
-{
-    if (ifs.status() != QDataStream::Ok) {
-        return false;
-    }
-    QIODevice* pDevice = ifs.device();
-    const QByteArray lengthBytes = pDevice->peek(sizeof(quint32));
-    if (lengthBytes.size() != sizeof(quint32)) {
-        ifs.setStatus(QDataStream::ReadPastEnd);
-        return false;
-    }
-    const quint32 length = ifs.byteOrder() == QDataStream::BigEndian ? qFromBigEndian<quint32>(lengthBytes.constData()) : qFromLittleEndian<quint32>(lengthBytes.constData());
-    if (length > (pDevice->bytesAvailable() - lengthBytes.size()) / minBytesPerElement) {
-        ifs.setStatus(QDataStream::ReadCorruptData);
-        return false;
-    }
-    return true;
-}
-
 void TMap::writeJsonColor(QJsonObject& obj, const QColor& color)
 {
     QJsonArray colorRGBAArray;

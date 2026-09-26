@@ -35,6 +35,7 @@
  */
 
 #include <QDataStream>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QTemporaryDir>
@@ -227,6 +228,38 @@ private slots:
         QCOMPARE(map()->mRoomIdHash.value(mProfileName), 99);
         QCOMPARE(map()->mRoomIdHash.value(mOtherProfileName), 99);
         QCOMPARE(map()->mVersion, map()->mDefaultVersion);
+    }
+
+    // The area count drives the read's loop, which kept making areas after the
+    // file had run out: a count of 16 million never finished (#10689)
+    void test_aCorruptAreaCountDoesNotKeepTheReadGoing()
+    {
+        buildMapToSave();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(QDir().mkpath(otherProfileMapDir()));
+        const QString pathFileName = qsl("%1/20260927-01-01-01map").arg(otherProfileMapDir());
+        QVERIFY(writeMapFile(pathFileName));
+
+        QFile file(pathFileName);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QByteArray data = file.readAll();
+        file.close();
+        // The count of the three areas, then the default area's id and its empty room list
+        const QByteArray marker = QByteArray::fromHex("00000003ffffffff00000000");
+        const qsizetype at = data.indexOf(marker);
+        QVERIFY2(at >= 0, "the area count is not where this test expects it");
+        QCOMPARE(data.indexOf(marker, at + 1), -1);
+        data[at] = '\x01';
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QCOMPARE(file.write(data), data.size());
+        file.close();
+
+        QElapsedTimer timer;
+        timer.start();
+        map()->retrieveMapFileStats(mOtherProfileName, nullptr, nullptr, nullptr, nullptr, nullptr);
+        QVERIFY2(timer.elapsed() < 5000, qPrintable(qsl("reading the stats took %1 ms").arg(timer.elapsed())));
     }
 
     // The pick is by modification time. The names deliberately sort the other
