@@ -485,7 +485,9 @@ private:
         }
         QDropEvent dropEvent(QPointF(pWindow->rect().center()), Qt::MoveAction, &mime, Qt::LeftButton, Qt::NoModifier);
         QCoreApplication::sendEvent(pWindow, &dropEvent);
-        return dropEvent.isAccepted();
+        // The window accepts any Mudlet tab, so acceptance alone says nothing
+        // about whether the profile actually arrived
+        return dropEvent.isAccepted() && pWindow->getProfileNames().contains(profileName);
     }
 
     void reattachAndWait(const QString& profileName)
