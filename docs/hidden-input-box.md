@@ -5,6 +5,8 @@ dedicated box over the main command line instead of masking the command line's o
 text. This records the design so that its rules are not rediscovered one bug report at
 a time; issue #11024 lists what the earlier approach cost.
 
+![Before: the password is typed into the masked command line and Ctrl+A, Ctrl+C, Ctrl+V pastes it back in the clear. After: it is typed into a dedicated box and the same keys paste nothing.](images/hidden-input-box-before-after.gif)
+
 ## The one idea
 
 **The password never enters `TCommandLine`.** While the game holds ECHO, a separate
