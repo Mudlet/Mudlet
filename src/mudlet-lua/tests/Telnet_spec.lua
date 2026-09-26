@@ -1358,8 +1358,8 @@ describe("Tests MCCP compressed streams", function()
   -- zlib.compress("MCCPVERSIONONEOK MCCPVERSIONONEOK\r\n")
   local COMPRESSED_V1 = "\120\156\243\117\118\14\8\115\13\10\246\244\247\243\247\115\245\247\86\240\69\19\224\229\2\0\183\122\9\194"
 
-  -- neither the end of a stream nor a broken one clears the WILL, so without this
-  -- every later spec's IAC SB is still a candidate MCCP start sequence
+  -- the end of a stream does not clear the WILL, so without this every later
+  -- spec's IAC SB is still a candidate MCCP start sequence
   after_each(function()
     feed("<T_IAC><T_WONT><O_MCCP2>")
     feed("<T_IAC><T_WONT><O_MCCP>")
