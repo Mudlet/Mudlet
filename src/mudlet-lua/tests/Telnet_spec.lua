@@ -1358,8 +1358,8 @@ describe("Tests MCCP compressed streams", function()
   -- zlib.compress("MCCPVERSIONONEOK MCCPVERSIONONEOK\r\n")
   local COMPRESSED_V1 = "\120\156\243\117\118\14\8\115\13\10\246\244\247\243\247\115\245\247\86\240\69\19\224\229\2\0\183\122\9\194"
 
-  -- neither the end of a stream nor a broken one clears the WILL, so without this
-  -- every later spec's IAC SB is still a candidate MCCP start sequence
+  -- the end of a stream does not clear the WILL, so without this every later
+  -- spec's IAC SB is still a candidate MCCP start sequence
   after_each(function()
     feed("<T_IAC><T_WONT><O_MCCP2>")
     feed("<T_IAC><T_WONT><O_MCCP>")
@@ -1411,6 +1411,24 @@ describe("Tests MCCP compressed streams", function()
     feed("MCCPLATERBROKEN\r\n")
     local shown = linesSince(mark)
     assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+  end)
+
+  -- a broken stream is refused on the wire, so a start sequence the game sends
+  -- after that is not the start of a stream until it offers MCCP again
+  it("stops decompressing after a broken stream until the game offers MCCP again", function()
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>MCCPNOTCOMPRESSED\r\n")
+
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED) .. "\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCPDECOMPRESSEDOK", 1, true), "a refused stream was decompressed: " .. shown)
+
+    mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
   end)
 
   it("shows the text a server sends once it switches to MCCP v1", function()
