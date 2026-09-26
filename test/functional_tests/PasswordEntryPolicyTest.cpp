@@ -303,6 +303,25 @@ private slots:
         QCOMPARE(wanted.count(), 5);
     }
 
+    // The game's answer to the player's line is most often the WONT that ends
+    // the hold, and that must end it without the box coming back for an
+    // instant on the way. Red with gameDataArrived() called before the read is
+    // parsed rather than after. Toggles spent: 2.
+    void test_aWontAsTheGamesAnswerEndsTheHoldWithoutABoxOnTheWay()
+    {
+        serverSaysEcho(TN_WILL);
+        mpHost->dismissPasswordEntry();
+        QVERIFY(!mpHost->passwordEntryWanted());
+        QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
+
+        mpHost->playerSentLineFromCommandLine();
+        serverSaysEcho(TN_WONT);
+
+        QVERIFY(!mpHost->isRemoteEchoingActive());
+        QVERIFY(!mpHost->passwordEntryWanted());
+        QCOMPARE(wanted.count(), 0);
+    }
+
     // cTelnet::reset() releases ECHO while it is already off, and that must still
     // end whatever the hold left behind, or it would outlive the connection.
     // Toggles spent: 0.

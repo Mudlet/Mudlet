@@ -6462,8 +6462,9 @@ void Host::passwordEntryEdited()
     mTelnet.cancelLoginTimers();
 }
 
-bool Host::sendPasswordEntry(QString&& line)
+bool Host::sendPasswordEntry(QString&& text)
 {
+    QString line = std::move(text);
     // As send() does, for the GMCP sign-in path:
     mUserSentInputThisConnection = true;
     // No event was raised for this line, so nothing could have denied it. A

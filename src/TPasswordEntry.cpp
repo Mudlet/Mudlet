@@ -141,15 +141,16 @@ void TPasswordEntry::slot_adjustAccessibleNames()
 
 void TPasswordEntry::submit()
 {
+    // Hidden again before the text goes, so that VoiceOver does not read the
+    // removed text aloud and a later destruction zero-fills the buffer - and
+    // before the text is read, since changing the echo mode makes Qt copy it
+    setRevealed(false);
     // The one place the text leaves the box
     QString line = text();
     // A pasted line break must never make a second line: sendData() strips only
     // the line feed
     line.remove(QChar::CarriageReturn);
     line.remove(QChar::LineFeed);
-    // Hidden again before the text goes, so that VoiceOver does not read the
-    // removed text aloud and a later destruction zero-fills the buffer
-    setRevealed(false);
     // Also clears the undo history, and leaves `line` the last holder of the
     // buffer the keystrokes went into, for the send path to zero
     setText(QString());

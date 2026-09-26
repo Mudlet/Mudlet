@@ -40,6 +40,7 @@
 #include <QContextMenuEvent>
 #include <QFileInfo>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -55,6 +56,7 @@
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "TCommandLine.h"
+#include "TLabel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TPasswordEntry.h"
@@ -557,6 +559,131 @@ private slots:
         serverSaysEcho(TN_WILL);
         QVERIFY2(box(), "the next hold got no box");
         QVERIFY2(!box()->placeholderText().contains(qsl("Esc again")), "the next hold's box thinks it follows an Esc");
+    }
+
+    // After an Esc the player answers from the command line, and the game's
+    // WONT is the answer to that: no box on the way, and a command typed ahead
+    // of the WONT survives. Red with gameDataArrived() called before the read is
+    // parsed rather than after. Then a re-prompt that does bring the box back
+    // leaves text in the command line alone. Red with openPasswordEntry()
+    // moving typed-ahead text into a box that follows an Esc.
+    void test_afterAnEscTheGamesAnswerDecidesAndTypedAheadTextSurvives()
+    {
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        pressInWindow(Qt::Key_Escape);
+        runDeferredDeletes();
+        QVERIFY(!box());
+        QTRY_COMPARE(focusWidget(), commandLine());
+
+        typeIntoWindow(qsl("hunter2"));
+        pressInWindow(Qt::Key_Return);
+        QVERIFY(waitForServerToReceive(asSent({qsl("hunter2")})));
+        typeIntoWindow(qsl("look"));
+        serverSends(QByteArrayLiteral("Wrong.\r\nPassword: "));
+        QVERIFY2(box(), "the game's re-prompt did not bring the box back");
+        QCOMPARE(box()->text(), QString());
+        QCOMPARE(commandLine()->toPlainText(), qsl("look"));
+
+        serverSaysEcho(TN_WONT);
+        QTRY_VERIFY(!box());
+        QCOMPARE(commandLine()->toPlainText(), qsl("look"));
+        QTRY_COMPARE(focusWidget(), commandLine());
+
+        // A fresh hold, with nothing typed ahead this time
+        commandLine()->clear();
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        pressInWindow(Qt::Key_Escape);
+        runDeferredDeletes();
+        QVERIFY(!box());
+        typeIntoWindow(qsl("pw2"));
+        pressInWindow(Qt::Key_Return);
+        QVERIFY(waitForServerToReceive(asSent({qsl("hunter2"), qsl("pw2")})));
+        typeIntoWindow(qsl("next"));
+        serverSaysEcho(TN_WONT);
+        QVERIFY2(!box(), "the WONT that answered the player's line let a box open on the way");
+        QCOMPARE(commandLine()->toPlainText(), qsl("next"));
+    }
+
+    // Red without the QSignalBlocker in TMainConsole::appendToCommandLine().
+    void test_aScriptAppendingToMainDoesNotCancelTheAutoLogin()
+    {
+        mpHost->setLogin(qsl("morquin"));
+        mpHost->mTelnet.mTimerLogin->start(60000ms);
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QVERIFY(runLua(qsl("appendCmdLine('main', 'x')")));
+        QCOMPARE(box()->text(), qsl("x"));
+        QVERIFY2(mpHost->mTelnet.mTimerLogin->isActive(), "a script's appendCmdLine() counted as the player's edit and cancelled the auto-login");
+    }
+
+    // Red without the postMessage in cTelnet::slot_passwordMaskTimeout().
+    void test_theLoginPhaseTimeoutClosesTheBoxAndSaysSo()
+    {
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        typeIntoWindow(qsl("half"));
+        const int linesBefore = mpHost->mpConsole->buffer.lineBuffer.size();
+
+        mpHost->mTelnet.slot_passwordMaskTimeout();
+
+        QTRY_VERIFY(!box());
+        QVERIFY(!mpHost->isRemoteEchoingActive());
+        QTRY_VERIFY2(mpHost->mpConsole->buffer.lineBuffer.mid(qMax(0, linesBefore - 1)).join(QChar::LineFeed).contains(qsl("stopped hiding")),
+                     "the timeout closed the box and dropped its text without a word");
+        QCOMPARE(commandLine()->toPlainText(), QString());
+    }
+
+    // Red with TLabel writing a prompt: link's text to the command line directly.
+    void test_aLabelPromptLinkFollowsTheKeyboardIntoTheBox()
+    {
+        QVERIFY(mpHost->mpConsole->createLabel(QString(), qsl("passwordEntryLabel"), 0, 0, 60, 20, false));
+        TLabel* pLabel = mpHost->mpConsole->labelWidget(qsl("passwordEntryLabel"));
+        QVERIFY(pLabel);
+        const auto tidy = qScopeGuard([this]() {
+            mpHost->mpConsole->deleteLabel(qsl("passwordEntryLabel"));
+        });
+
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        emit pLabel->linkActivated(qsl("prompt:say hi"));
+        QCOMPARE(box()->text(), qsl("say hi"));
+        QCOMPARE(commandLine()->toPlainText(), QString());
+    }
+
+    // Red without TPasswordEntry::copyConsoleSelection().
+    void test_ctrlCInTheBoxCopiesAnOutputPaneSelection()
+    {
+        // Enough text that a drag across the middle of the pane crosses some of it
+        for (int i = 0; i < 80; ++i) {
+            mpHost->mpConsole->print(qsl("qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx\n"));
+        }
+        TTextEdit* pPane = mpHost->mpConsole->mUpperPane;
+        pPane->mSelectedRegion = QRegion();
+        QGuiApplication::clipboard()->setText(qsl("before"));
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+
+        const auto sendMouse = [pPane](const QEvent::Type type, const Qt::MouseButton button, const Qt::MouseButtons buttons, const QPointF& pos) {
+            QMouseEvent event(type, pos, pPane->mapToGlobal(pos.toPoint()), button, buttons, Qt::NoModifier);
+            QApplication::sendEvent(pPane, &event);
+        };
+        const QPointF middle = QRectF(pPane->rect()).center();
+        sendMouse(QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, middle - QPointF(60, 0));
+        sendMouse(QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, middle + QPointF(60, 0));
+        sendMouse(QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, middle + QPointF(60, 0));
+        if (pPane->mSelectedRegion.isEmpty()) {
+            QSKIP("the drag made no selection on this platform, so there is nothing to copy");
+        }
+        QCOMPARE(focusWidget(), box());
+
+        pressInWindow(Qt::Key_C, Qt::ControlModifier);
+        QVERIFY2(QGuiApplication::clipboard()->text().contains(qsl("qzx")), "Ctrl+C in the box did not copy the output pane's selection");
     }
 
     // Red with Host::recomputePasswordEntryWanted() ignoring the preference.
@@ -1078,6 +1205,29 @@ private slots:
         mudlet::self()->activateWindow();
         QVERIFY(QTest::qWaitForWindowActive(mudlet::self()));
         QTRY_COMPARE(focusWidget(), commandLine());
+    }
+
+    // Red with submit() claiming "Sent" whatever sendPasswordEntry() returned.
+    // Last, because it takes the connection down.
+    void test_enterWhileNotConnectedSaysSo()
+    {
+        mpHost->mTelnet.disconnectIt();
+        QTRY_COMPARE(mpHost->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
+        // The disconnect's reset() runs from the socket's signal a moment later
+        // and would release ECHO under a box opened before it
+        QTest::qWait(200);
+        mpHost->setRemoteEchoingActive(true);
+        QTRY_VERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        const int linesBefore = mpHost->mpConsole->buffer.lineBuffer.size();
+
+        typeIntoWindow(qsl("pw"));
+        pressInWindow(Qt::Key_Return);
+
+        QVERIFY(box());
+        QCOMPARE(box()->text(), QString());
+        QVERIFY2(box()->placeholderText().contains(qsl("Not sent")), "the box claimed the line was sent to a game it is not connected to");
+        QTRY_VERIFY2(mpHost->mpConsole->buffer.lineBuffer.mid(qMax(0, linesBefore - 1)).join(QChar::LineFeed).contains(qsl("not connected")), "nothing said the line was dropped");
     }
 };
 

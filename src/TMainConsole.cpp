@@ -1198,7 +1198,8 @@ void TMainConsole::printToCommandLine(const QString& text)
     mpCommandLine->setPlainText(text);
     QTextCursor cursor = mpCommandLine->textCursor();
     cursor.clearSelection();
-    cursor.movePosition(QTextCursor::EndOfLine);
+    // End, not EndOfLine: the latter stops at the end of the first wrapped line
+    cursor.movePosition(QTextCursor::End);
     mpCommandLine->setTextCursor(cursor);
     mpCommandLine->adjustHeight();
 }
@@ -1269,8 +1270,11 @@ void TMainConsole::openPasswordEntry()
     // answer: it goes into the box, so a fast typist's password is not split
     // between the two. A command left selected, recalled or written by a script
     // stays where it is, behind the box. Text that moved counts as the player's
-    // first edit, which setText() does not report on its own.
-    if (mpCommandLine->playerTypedLine()) {
+    // first edit, which setText() does not report on its own. Not on a box that
+    // comes back after an Esc: the player chose the command line, and a game
+    // that sends its text and its WONT in separate reads would otherwise open
+    // this box on the first, move the text in, and drop it on the second.
+    if (mpCommandLine->playerTypedLine() && !mpHost->passwordEntryReopened()) {
         QString typedAhead = mpCommandLine->toPlainText();
         typedAhead.remove(QChar::CarriageReturn);
         typedAhead.remove(QChar::LineFeed);

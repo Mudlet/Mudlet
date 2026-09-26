@@ -1280,8 +1280,9 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
-    // DOWN at position 0 with text: save to history and clear input
-    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty()) {
+    // DOWN at position 0 with text: save to history and clear input - unless
+    // the game hides input, as enterCommand() rules
+    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         mHistoryList.removeAll(toPlainText());
         if (!mHistoryList.isEmpty()) {
             mHistoryList[0] = toPlainText();

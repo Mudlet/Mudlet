@@ -6553,8 +6553,13 @@ void cTelnet::slot_passwordMaskTimeout()
     qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
     // The release below closes the hidden-input box and drops what was in it,
     // which must not happen without a word
-    //: Shown when the game has hidden input for a minute after the last line without saying it had stopped, so Mudlet stops hiding input itself
-    postMessage(tr("[ WARN ]  - The game did not say it had stopped hiding input, so Mudlet stopped hiding it. Anything left in the hidden-input box was dropped."));
+    if (mpHost->passwordEntryWanted()) {
+        //: Shown when the game has hidden input for a minute after the last line without saying it had stopped, so Mudlet stops hiding input itself and closes the hidden-input box
+        postMessage(tr("[ WARN ]  - The game did not say it had stopped hiding input, so Mudlet stopped hiding it. Anything left in the hidden-input box was dropped."));
+    } else {
+        //: Shown when the game has hidden input for a minute after the last line without saying it had stopped, so Mudlet stops hiding input itself
+        postMessage(tr("[ WARN ]  - The game did not say it had stopped hiding input, so Mudlet stopped hiding it."));
+    }
     // Told to the game as well, so that its next WILL ECHO is a fresh request
     // and not a repeat of one Mudlet still has on the books:
     sendTelnetOption(TN_DONT, OPT_ECHO);
