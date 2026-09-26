@@ -171,9 +171,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
         return;
     }
 
-    // Moving a trigger changes which lineages the flattened prescan list should
-    // hold - a trigger under a chain is matched against its parent's capture
-    // rather than the line, so it must not be judged against the line.
+    // Changes the prescan list: a trigger under a chain matches its parent's capture, not the line
     TTrigger::bumpStructureGeneration();
 
     if (pOldParent) {
@@ -410,16 +408,10 @@ void TriggerUnit::stopSameLineCreationLoop(const int chainId)
                                 .arg(triggerName, created));
 }
 
-// Flattens out the triggers the match pool can take real work off the main
-// thread for: those with a Perl regex pattern, the one kind whose evaluation
-// costs a search. A substring pattern is dismissed by the bigram filter in a
-// few instructions on the main thread, and a begin-of-line or exact pattern by
-// one comparison, so handing those over would cost more in traffic between the
-// threads than it could save. The walk stops at any trigger that has both
-// patterns and children: ruling such a parent out already rules out everything
-// beneath it, and its children are matched against one of its captures rather
-// than against the line, so a verdict reached against the line would not apply
-// to them.
+// Only Perl regex triggers are worth sending to the pool: the bigram filter dismisses a substring
+// pattern in a few instructions and a begin-of-line or exact pattern takes one comparison, cheaper
+// than the cross-thread traffic. The walk stops at a filter chain: ruling it out rules out its
+// children, which match against its captures, so a verdict against the line would not apply to them.
 void TriggerUnit::collectPrescanTasks(TTrigger* pT)
 {
     if (pT->getRegexCodePropertyList().contains(REGEX_PERL)) {
@@ -433,8 +425,7 @@ void TriggerUnit::collectPrescanTasks(TTrigger* pT)
     }
 }
 
-// Rebuilt only when the tree changed shape or a pattern was recompiled - a
-// stale entry could otherwise name a trigger that has since been freed.
+// Must rebuild when the tree changed shape or a pattern was recompiled, or an entry could name a freed trigger
 void TriggerUnit::rebuildPrescanTasksIfStale()
 {
     const quint64 generation = TTrigger::structureGeneration();
@@ -454,9 +445,8 @@ void TriggerUnit::markPrescanStale(TTrigger* pT)
     if (mRootNodeSnapshotNeedsRebuild || !pT) {
         return;
     }
-    // A trigger with no position is either a child, which the index never files,
-    // or a root node still queued for appending, which will be filed from its
-    // current state anyway.
+    // No position: a child, which the index never files, or a root queued for appending, which will be
+    // filed from its current state anyway
     const int position = pT->rootSnapshotPosition();
     if (position >= 0) {
         mRootNodesRefiled.push_back(position);
@@ -475,9 +465,8 @@ void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
 {
     mRootNodeSnapshotStale = true;
     const int position = pT->rootSnapshotPosition();
-    // Cleared even when the snapshot is being rebuilt anyway: a stale position
-    // left on a trigger that is registered again later would have the next
-    // removal empty somebody else's slot.
+    // Even when rebuilding: a stale position on a trigger registered again later would make its next
+    // removal empty another trigger's slot.
     pT->setRootSnapshotPosition(-1);
     if (mRootNodeSnapshotNeedsRebuild) {
         return;
@@ -486,33 +475,28 @@ void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
         mRootNodesRemoved.push_back(position);
         return;
     }
-    // No position and nothing queued means it was never in the root list, so
-    // the removal below it is a no-op and the snapshot already agrees.
+    // Not filed yet, so at most queued for appending; if not queued either, it was never a root node
     const auto queued = std::find(mRootNodesAppended.begin(), mRootNodesAppended.end(), pT);
     if (queued != mRootNodesAppended.end()) {
         mRootNodesAppended.erase(queued);
     }
 }
 
-// Brings the snapshot the next pass will pin back in step with the root list.
-// Arming or killing a trigger only ever appends or empties a position, so that
-// is patched in place; a rebuild is for the changes that move existing triggers,
-// and to reclaim the holes the removals leave behind.
+// Arming or killing a trigger only appends or empties a position, so is patched in place; a rebuild
+// is for changes that move existing triggers, and to reclaim the holes removals leave.
 void TriggerUnit::refreshRootNodeSnapshot()
 {
     const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild && !mpRootNodeSnapshot->mPrescan.shouldRebuild();
     if (canPatch) {
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
-        // Removals first: a refile can be queued for a position whose trigger
-        // is freed before this runs, and emptying the slot here is what turns
-        // that into a skip below rather than a dangling dereference.
+        // Removals first, so a refile queued for a since-freed trigger finds an empty slot and is skipped
+        // rather than dereferencing it
         for (const int position : mRootNodesRemoved) {
             snapshot.mNodes[position] = nullptr;
             snapshot.mPrescan.removeSlot(position);
         }
         if (mRootNodesRefiled.size() > 1) {
-            // One slot queued twice refiles to the same state twice, and the
-            // index counts both towards the mutations that buy a rebuild.
+            // The index counts every refile, duplicates included, towards the mutations that force a rebuild
             std::sort(mRootNodesRefiled.begin(), mRootNodesRefiled.end());
             mRootNodesRefiled.erase(std::unique(mRootNodesRefiled.begin(), mRootNodesRefiled.end()), mRootNodesRefiled.end());
         }
@@ -527,9 +511,7 @@ void TriggerUnit::refreshRootNodeSnapshot()
             snapshot.mPrescan.appendSlot(pT->prescanGrams());
         }
     } else {
-        // Only a snapshot an outer pass has pinned has to be left alone and
-        // replaced; refilling the vector an earlier pass built keeps a rebuild
-        // down to no allocation.
+        // Replace only a snapshot an outer pass has pinned; refilling an unpinned one avoids allocating
         if (mpRootNodeSnapshot.use_count() != 1) {
             mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
         }
@@ -555,11 +537,8 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
-    // Encoded into storage borrowed from the unit, so the capacity outlives the
-    // line and only a line longer than any before it allocates. Moving the buffer
-    // out rather than writing into the member is what makes that safe under
-    // nesting: a pass a trigger script starts finds the member empty and grows
-    // its own, so it cannot resize the one an outer pass is still matching.
+    // Borrowed from the unit so only a line longer than any before allocates. Moved out rather than
+    // written in place, so a nested pass finds the member empty and cannot resize the outer pass's buffer.
     QByteArray utf8Data = std::move(mUtf8Scratch);
     const auto utf8Guard = qScopeGuard([this, &utf8Data] {
         if (utf8Data.capacity() > scmMaxRetainedUtf8Scratch) {
@@ -567,17 +546,14 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         }
         mUtf8Scratch = std::move(utf8Data);
     });
-    // Stateless so that an unpaired surrogate at the end of the line is reported
-    // here rather than held back as state for a following call.
+    // Stateless, so an unpaired trailing surrogate is reported here rather than held for a following call
     QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
     utf8Data.resizeForOverwrite(toUtf8.requiredSpace(data.size()));
     char* const encodedBegin = utf8Data.data();
     const char* const encodedEnd = toUtf8.appendToBuffer(encodedBegin, data);
     if (Q_UNLIKELY(toUtf8.hasError())) {
-        // The encoder writes a replacement character where an unpaired surrogate
-        // was, while toUtf8() drops it, and the difference would move every byte
-        // offset a capture is reported at. No decoder Mudlet has puts an unpaired
-        // surrogate on a line, so that path can afford the copy and stay exact.
+        // The encoder writes U+FFFD for an unpaired surrogate but toUtf8() drops it, which would shift
+        // capture byte offsets. No Mudlet decoder emits one, so this path can afford the copy.
         utf8Data = data.toUtf8();
     } else {
         utf8Data.truncate(encodedEnd - encodedBegin);
@@ -613,8 +589,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // mid-iteration (the underlying std::list::remove frees the iterator's
     // current node → use-after-free on the next ++). AliasUnit dodges the
     // same hazard for the same reason — see Mudlet issue #4297.
-    // Pinned for the length of this pass rather than copied: a mutation
-    // replaces the shared snapshot instead of editing the pinned one.
+    // Pinned, not copied: a mutation replaces the shared snapshot rather than editing the pinned one.
     if (mRootNodeSnapshotStale) {
         refreshRootNodeSnapshot();
     }
@@ -629,26 +604,15 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
     const TBigramFilter lineBigrams(data, mSubstringQuestionsOnTheLastLine);
-    // Ask a few threads which of these can do anything on this line, so the walk
-    // below only stops at the ones that can. Nothing else changes hands: every
-    // match that fires is still found, run and ordered by that loop, on this
-    // thread, exactly as it was.
+    // Helper threads only rule triggers out; every match is still found, run and ordered by the loop
+    // below, on this thread.
     const quint32 previousPrescanPassId = TTrigger::prescanPassId();
     TTrigger::setPrescanPassId(0);
     const auto prescanGuard = qScopeGuard([previousPrescanPassId] {
         TTrigger::setPrescanPassId(previousPrescanPassId);
     });
-    // Only while the client is behind, which a chunk carrying many lines at once
-    // is what looks like from here. Handing one line's matching to other cores
-    // costs a wake-up that is repaid only when the next line is already waiting;
-    // at the speed a game sends text the threads would wake, find half a
-    // microsecond of work and sleep again, spending CPU to save nothing anyone
-    // could perceive. With the pool off none of this runs, not even the list
-    // rebuild, so the line takes exactly the path it took before the pool
-    // existed.
-    // Whether the last line ran enough regex searches to be worth sharing out
-    // is judged from the searches themselves rather than from the list, whose
-    // entries may mostly be disabled or settled before their regex is reached.
+    // Only while behind, i.e. a chunk carries many lines: a wake-up is repaid only when the next line is
+    // already waiting, so at normal game speed it would spend CPU to save nothing perceptible.
     TriggerMatchPool& pool = TriggerMatchPool::instance();
     const bool inFlood = pool.workerCount() > 0 && mpHost && mpHost->mainConsoleModelOrNull() && mpHost->mainConsoleModel().buffer.pendingChunkLines() >= pool.floodChunkLines();
     const quint64 regexSearchesBefore = TTrigger::regexSearches();
@@ -672,10 +636,8 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             mCandidates = std::move(candidates);
         });
         pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
-        // A firing script can make a later trigger fire without matching -
-        // setTriggerStayOpen() is the reachable way - and the candidate list was
-        // settled before that happened. So from the moment one does, the rest of
-        // the line goes to every remaining trigger, as an unfiltered pass would.
+        // A script can make a later trigger fire without matching (setTriggerStayOpen()) after the
+        // candidate list was settled; from then on the rest of the line goes to every remaining trigger.
         const quint32 epochAtStart = mUnfilterableEpoch;
         const int rootCount = static_cast<int>(pinnedNodeList.size());
         size_t nextCandidate = 0;
@@ -728,8 +690,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
     }
     mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
-    // A nested pass's searches land in here too; its lines are as real as
-    // this one and the count only steers the next line
+    // Includes nested passes' searches, which is fine: the count only steers the next line
     mRegexSearchesOnTheLastLine = prescanRegexSearches + static_cast<int>(TTrigger::regexSearches() - regexSearchesBefore);
 }
 
@@ -836,21 +797,16 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
         pT->mKeepFiring = lines;
         const bool nowOpen = pT->mKeepFiring > 0;
         if (wasOpen == nowOpen) {
-            // A script that sets the same count every line is the common shape,
-            // and a window that stays open or stays shut changes nothing the
-            // trigger is filed or filtered by - refiling anyway would spend a
-            // mutation per call and buy a rebuild with them. The grams are no
-            // guide: a regex or color trigger has none either way, yet can be
-            // ruled out of a line while it is shut.
+            // Staying open or shut changes nothing the trigger is filtered by, and scripts often set the
+            // same count every line: refiling would spend a mutation per call towards a rebuild. Not keyed
+            // on grams: a regex or colour trigger has none, yet can be ruled out of a line while shut.
             continue;
         }
         if (nowOpen) {
-            // it now fires without matching, so it can no longer be filtered out
-            // of a line - including the one being processed right now
+            // It now fires without matching, so can't be filtered out of any line, this one included
             markPrescanStaleForLineInFlight(pT);
         } else {
-            // closing the window only makes it filterable again, which the line
-            // in flight can ignore: it was already being offered the trigger.
+            // Filterable again; the line in flight can ignore that, as it was already offered the trigger
             markPrescanStale(pT);
         }
     }
@@ -933,8 +889,7 @@ void TriggerUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
+    // Runs per unit on every line of game text and next to never has work queued.
     if (!hasPendingDeletes()) {
         return;
     }
@@ -947,9 +902,8 @@ void TriggerUnit::doCleanup()
         deletedTriggers.insert(pTrigger);
         delete pTrigger;
     }
-    // Not a no-op: the drain above frees no buckets, so without this every later
-    // flush re-scans an array sized for the largest batch the set has ever held.
-    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
     mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
