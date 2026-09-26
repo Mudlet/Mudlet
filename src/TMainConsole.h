@@ -183,6 +183,28 @@ public:
     void updateCommandLineSpellCheck(bool enabled);
     void setCommandLineText(const QString& text);
     TCommandLine* raiseCommandLine();
+    // The command line operations the core forwards to this view by name, never
+    // by widget. An empty name or "main" is this console's own command line, any
+    // other one made by createCommandLine() or a mini console's; each reports
+    // failure for a name that is none of those.
+    std::optional<QString> getCommandLineText(const QString& name) const;
+    bool replaceCommandLineText(const QString& name, const QString& text);
+    bool appendCommandLineText(const QString& name, const QString& text);
+    bool clearCommandLine(const QString& name);
+    bool selectCommandLineText(const QString& name);
+    bool addCommandLineSuggestion(const QString& name, const QString& word);
+    bool removeCommandLineSuggestion(const QString& name, const QString& word);
+    bool clearCommandLineSuggestions(const QString& name);
+    bool addCommandLineBlacklistWord(const QString& name, const QString& word);
+    bool removeCommandLineBlacklistWord(const QString& name, const QString& word);
+    bool clearCommandLineBlacklist(const QString& name);
+    bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName);
+    // No value for a name that is not a command line's, false for a command line
+    // with no such item.
+    std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label);
+    std::optional<bool> getCommandLineSavesHistory(const QString& name) const;
+    bool setCommandLineSavesHistory(const QString& name, bool savesHistory);
+    bool setCommandLineVisible(const QString& name, bool visible);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.
@@ -305,6 +327,7 @@ private:
     // Where the three by-name-alone kinds are resolved to a widget, in the one
     // order the core resolves a name that is more than one of them in.
     QWidget* plainWindowWidget(const QString& name) const;
+    TCommandLine* commandLineNamed(const QString& name) const;
     // The single answer to "does this profile have a map widget on screen right
     // now" - null for a profile that never opened one, for one that put it away
     // again, and for one whose closed widget createMapper() took over, none of

@@ -37,7 +37,6 @@
 #include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
-#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -103,18 +102,6 @@ static const char* bad_cmdline_type = "%s: bad argument #%d type (command line n
 static const char* bad_window_value = "window \"%s\" not found";
 static const char* bad_cmdline_value = "command line \"%s\" not found";
 // Not used: static const char *bad_label_value = "label \"%s\" not found";
-
-// No documentation available in wiki - internal function
-static bool isMain(const QString& name)
-{
-    if (name.isEmpty()) {
-        return true;
-    }
-    if (!name.compare(qsl("main"))) {
-        return true;
-    }
-    return false;
-}
 
 // Both timer creators turn the delay into the timer's interval with
 // QTime(0, 0, 0, 0).addMSecs(qRound(time * 1000)), which wraps around the 24
@@ -197,18 +184,12 @@ static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double ad
         console_;                                                                                                                                                                                      \
     })
 
-#define COMMANDLINE(ARG_L, ARG_name)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        const QString& name_ = (ARG_name);                                                                                                                                                             \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->subCommandLineWidget(name_));                                                                     \
-        if (!cmdLine_) {                                                                                                                                                                               \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        cmdLine_;                                                                                                                                                                                      \
-    })
+static int commandLineNotFound(lua_State* L, const QString& name)
+{
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_cmdline_value, name.toUtf8().constData());
+    return 2;
+}
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
 int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
@@ -223,8 +204,11 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->addSuggestion(text);
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->addCommandLineSuggestion(commandLineName, text)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -273,15 +257,11 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
-    auto pN = COMMANDLINE(L, QString{name});
-
-    const QString curText = pN->toPlainText();
-    pN->setPlainText(curText + text);
-    QTextCursor cur = pN->textCursor();
-    cur.clearSelection();
-    cur.movePosition(QTextCursor::EndOfLine);
-    pN->setTextCursor(cur);
-    pN->adjustHeight();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->appendCommandLineText(commandLineName, text)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -293,9 +273,11 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->clear();
-    pN->adjustHeight();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->clearCommandLine(commandLineName)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -307,8 +289,11 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->clearSuggestions();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->clearCommandLineSuggestions(commandLineName)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -389,8 +374,11 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->removeSuggestion(text);
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->removeCommandLineSuggestion(commandLineName, text)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -645,9 +633,13 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto commandline = COMMANDLINE(L, QString{name});
-    const QString text = commandline->toPlainText();
-    lua_pushstring(L, text.toUtf8().constData());
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    const auto text = host.mpConsole ? host.mpConsole->getCommandLineText(commandLineName) : std::nullopt;
+    if (!text) {
+        return commandLineNotFound(L, commandLineName);
+    }
+    lua_pushstring(L, text->toUtf8().constData());
     return 1;
 }
 
@@ -1473,14 +1465,11 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
-
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->setPlainText(text);
-    QTextCursor cur = pN->textCursor();
-    cur.clearSelection();
-    cur.movePosition(QTextCursor::EndOfLine);
-    pN->setTextCursor(cur);
-    pN->adjustHeight();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->replaceCommandLineText(commandLineName, text)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
