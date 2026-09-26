@@ -762,8 +762,17 @@ void TRoom::clearSpecialExits()
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
         customLinesArrow.remove(itSpecialExit.key());
+        const QString exitName = itSpecialExit.key();
         // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
+        // A special exit named like a normal one ("n", "up"...) shares that
+        // exit's weight, which has to stay while the normal exit does:
+        if (!hasExitOrSpecialExit(exitName)) {
+            exitWeights.remove(exitName);
+        }
+    }
+    if (TArea* pA = mpRoomDB->getArea(area)) {
+        pA->determineAreaExitsOfRoom(id);
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
@@ -788,8 +797,14 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
         customLinesArrow.remove(itSpecialExit.key());
+        const QString exitName = itSpecialExit.key();
         // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
+        // A special exit named like a normal one ("n", "up"...) shares that
+        // exit's weight, which has to stay while the normal exit does:
+        if (!hasExitOrSpecialExit(exitName)) {
+            exitWeights.remove(exitName);
+        }
     }
 
     if (exitFound) {
@@ -1396,6 +1411,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                     // TODO: Add additional warnings if we ARE deleting any data in following
                     exitWeights.remove(exitName);
                     doors.remove(exitName);
+                    mSpecialExitLocks.remove(exitName);
                     customLines.remove(exitName);
                     customLinesColor.remove(exitName);
                     customLinesStyle.remove(exitName);
@@ -1436,6 +1452,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 // We cannot have a door or anything else on a non-existent special exit
                 doors.remove(exitName);
                 exitWeights.remove(exitName);
+                mSpecialExitLocks.remove(exitName);
                 customLines.remove(exitName);
                 customLinesColor.remove(exitName);
                 customLinesStyle.remove(exitName);
