@@ -645,6 +645,9 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         mudlet::self()->show();
         buildMapWithPlayerArea(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
         QVERIFY2(host->saveMapFile(QString()), "The map could not be saved for the mapper to restore.");
         host->mpMap->mapClear();
         QVERIFY2(host->mpMap->mpRoomDB->isEmpty(), "SETUP: the map was not cleared, so nothing would be restored.");
@@ -674,6 +677,9 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         buildMapWithPlayerArea(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         host->showHideOrCreateMapper(true);
 
@@ -760,6 +766,9 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         const QString mapFileName = qsl("hostWidgetDecoupling.dat");
         buildMapWithPlayerArea(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
         QVERIFY2(host->saveMapFile(mapFileName), "The map could not be saved under a name.");
         QVERIFY2(host->saveMapFile(QString()), "The map could not be saved as the profile's latest.");
         host->mpMap->mapClear();
@@ -884,6 +893,8 @@ private slots:
 private:
     // The player's area sorts after the other one, which is what the mapper
     // lists first, so showing it is a choice the mapper had to make.
+    // A failed check here returns only from this helper, so callers must stop
+    // on QTest::currentTestFailed() before using the map.
     void buildMapWithPlayerArea(Host* host) const
     {
         TMap* map = host->mpMap.data();
