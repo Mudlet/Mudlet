@@ -38,7 +38,6 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
-#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -197,9 +196,6 @@ private slots:
         mOpenedUrls.clear();
         if (mpHost && mpHost->mpDlgIRC) {
             delete mpHost->mpDlgIRC;
-            // ~dlgIRC() sends a QUIT and drops the socket, which the stub has to
-            // notice before the next test looks for a connection of its own
-            QTest::qWait(100);
         }
     }
 
@@ -246,6 +242,7 @@ private slots:
         QVERIFY2(client, "the IRC client could not be opened");
         QVERIFY(mpIrcServer->sendLine(qsl(":irc.test 433 * %1 :Nickname is already in use").arg(mMarkupNick).toUtf8()));
         QVERIFY2(waitForShownText(client, qsl("The Nickname %1 is reserved").arg(mMarkupNick)), qPrintable(shownText(client)));
+        QVERIFY2(waitForShownText(client, qsl("Automatically changing Nickname to: %1_").arg(mMarkupNick)), qPrintable(shownText(client)));
     }
 
     void test_refusedMessageReasonIsText()
