@@ -1565,6 +1565,89 @@ bool TMainConsole::setLabelFont(const QString& name, const QFont& font)
     return true;
 }
 
+std::optional<QString> TMainConsole::getLabelText(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    return {pL->text()};
+}
+
+// QLabel's movie rather than TLabel::mpMovie: setting a label's text drops the
+// movie from the QLabel while the label keeps it for reuse.
+std::optional<bool> TMainConsole::labelShowsMovie(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    return {pL->movie() != nullptr};
+}
+
+bool TMainConsole::startLabelMovie(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    movie->start();
+    return true;
+}
+
+bool TMainConsole::pauseLabelMovie(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    movie->setPaused(true);
+    return true;
+}
+
+bool TMainConsole::setLabelMovieFrame(const QString& name, int frame)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    return movie->jumpToFrame(frame);
+}
+
+bool TMainConsole::setLabelMovieSpeed(const QString& name, int percent)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    movie->setSpeed(percent);
+    return true;
+}
+
+bool TMainConsole::scaleLabelMovie(const QString& name, bool followLabelSize)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    movie->setScaledSize(pL->size());
+    if (followLabelSize) {
+        connect(pL, &TLabel::resized, movie, [=] {
+            movie->setScaledSize(pL->size());
+        });
+    } else {
+        // only drop the movie-scaling connection(s); other consumers of
+        // the label's resized signal must stay connected
+        QObject::disconnect(pL, &TLabel::resized, movie, nullptr);
+    }
+    return true;
+}
+
 void TMainConsole::closeSubConsole(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);

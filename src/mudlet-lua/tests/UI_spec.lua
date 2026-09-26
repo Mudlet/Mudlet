@@ -3609,14 +3609,22 @@ describe("Window state getters", function()
     it("returns nil and a message naming an unknown label", function()
       local result, err = getLabelText("wdgNoSuchLabel")
       assert.is_nil(result)
-      assert.are.equal("string", type(err))
-      assert.is_truthy(err:find("wdgNoSuchLabel", 1, true))
+      assert.are.equal('label "wdgNoSuchLabel" not found', err)
     end)
 
-    it("returns nil and a message for a non-label window", function()
-      local result, err = getLabelText(consoleName)
-      assert.is_nil(result)
-      assert.are.equal("string", type(err))
+    -- every kind of window shares the one name space, so a name that is some
+    -- other kind of window must not be taken for a label
+    it("returns nil and a message for every kind of window that is not a label", function()
+      for _, otherName in ipairs({consoleName, scrollBoxName, cmdLineName, textEditName, userWindowName}) do
+        local result, err = getLabelText(otherName)
+        assert.is_nil(result, otherName)
+        assert.are.equal(('label "%s" not found'):format(otherName), err)
+      end
+    end)
+
+    it("reads a label that sits inside a user window", function()
+      echo(childLabelName, "inside the user window")
+      assert.are.equal("inside the user window", getLabelText(childLabelName))
     end)
 
     it("errors when called without a label name", function()
@@ -5835,6 +5843,76 @@ describe("Label movies", function()
         end)
       end
     end
+
+    -- a label's text takes the place of its movie, although the label keeps
+    -- the movie itself and the profile goes on counting it
+    it("text echoed onto a label leaves the movie functions nothing to drive", function()
+      local totalBefore = gifStats()
+      echo(label, "text instead")
+      assert.are.equal(totalBefore, gifStats())
+      for _, movieFunction in ipairs(movieFunctions) do
+        local functionName, call = movieFunction[1], movieFunction[2]
+        if functionName ~= "setMovie" then
+          local ok, err = call(label)
+          assert.is_nil(ok, functionName)
+          assert.are.equal(("no movie found at label '%s'"):format(label), err, functionName)
+        end
+      end
+    end)
+
+    -- the label and its movie are looked up before the rest of the arguments
+    -- are, so a missing one is reported rather than a bad argument raised
+    local badSecondArgument = {
+      {"setMovieSpeed", function(labelName) return setMovieSpeed(labelName, "fast") end},
+      {"setMovieFrame", function(labelName) return setMovieFrame(labelName, "second") end},
+      {"scaleMovie", function(labelName) return scaleMovie(labelName, "yes") end},
+    }
+    for _, movieFunction in ipairs(badSecondArgument) do
+      local functionName, call = movieFunction[1], movieFunction[2]
+
+      it(functionName .. " reports an unknown label before a bad second argument", function()
+        local unknown = "movieNoSuchLabel" .. suffix
+        local ok, err = call(unknown)
+        assert.is_nil(ok)
+        assert.are.equal(('label "%s" not found'):format(unknown), err)
+      end)
+
+      it(functionName .. " reports a missing movie before a bad second argument", function()
+        local ok, err = call(labelWithoutMovie)
+        assert.is_nil(ok)
+        assert.are.equal(("no movie found at label '%s'"):format(labelWithoutMovie), err)
+      end)
+    end
+
+    describe("with the name of another kind of window", function()
+      local otherName = "movieOtherKindOfWindow" .. suffix
+
+      after_each(function()
+        deleteScrollBox(otherName)
+        deleteCommandLine(otherName)
+        deleteTextEdit(otherName)
+      end)
+
+      local kinds = {
+        {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end},
+        {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end},
+        {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end},
+      }
+
+      for _, kind in ipairs(kinds) do
+        it("refuses every movie function for a " .. kind[1], function()
+          assert.is_true(kind[2]())
+          for _, movieFunction in ipairs(movieFunctions) do
+            local functionName, call = movieFunction[1], movieFunction[2]
+            if functionName ~= "setMovie" then
+              local ok, err = call(otherName)
+              assert.is_nil(ok, functionName)
+              assert.are.equal(('label "%s" not found'):format(otherName), err, functionName)
+            end
+          end
+        end)
+      end
+    end)
   end)
 end)
 
