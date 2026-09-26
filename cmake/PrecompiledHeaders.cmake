@@ -67,6 +67,9 @@ function(mudlet_use_pch_compiler_launcher target)
 endfunction()
 
 function(mudlet_precompile_headers target)
+  if(CMAKE_DISABLE_PRECOMPILE_HEADERS)
+    return()
+  endif()
   target_precompile_headers(${target} PRIVATE ${MUDLET_PRECOMPILED_HEADERS} ${ARGN})
   # Clang otherwise records each header's mtime in the precompiled header and
   # rejects it from ccache once a fresh checkout has given the headers new ones
