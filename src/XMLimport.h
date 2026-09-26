@@ -66,6 +66,9 @@ public:
     // package are not working without the Lua error text, which is written for
     // whoever wrote the item rather than for whoever installed it.
     const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
+    // A save file numbers the sixteen basic colours of a colour pattern its own
+    // way (see XMLexport::remapAnsiToColorNumber()), this turns them back.
+    static void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
 private:
     const QString YES = qsl("yes");
@@ -116,8 +119,6 @@ private:
     void readModulesDetailsMap(QMap<QString, QStringList>&);
     void getVersionString(QString&);
     QString readScriptElement();
-
-    void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
     bool readDefaultTrueBool(QString name);
 
