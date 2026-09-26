@@ -207,8 +207,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // Starts a profile the way a user would via the GUI.
@@ -243,12 +243,7 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

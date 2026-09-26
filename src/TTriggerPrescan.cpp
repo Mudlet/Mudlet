@@ -24,9 +24,8 @@
 #include <algorithm>
 #include <limits>
 
-// The length rides in the high half, both so that the same characters read at
-// two lengths are two different grams and so that 0 stays free to mean "no gram"
-// - a real one always carries a length of at least scmMinGramLength.
+// Length in the high half, so the same characters at two lengths are different grams and 0 stays
+// free for "no gram" (a real one's length is at least scmMinGramLength).
 static inline quint64 gramHash(const QChar* p, const int length)
 {
     quint64 v = 0;
@@ -39,9 +38,8 @@ static inline quint64 gramHash(const QChar* p, const int length)
     return (static_cast<quint64>(length) << 32) | static_cast<quint32>(v);
 }
 
-// Letter frequencies in English text, with a space scored as commoner than any
-// letter. The scale does not have to be right - it only has to make different
-// patterns prefer different n-grams.
+// English letter frequencies, space commonest. Need not be accurate, only make different patterns
+// prefer different n-grams.
 static inline double characterScore(const QChar c)
 {
     static constexpr double letters[26] = {8.2, 1.5, 2.8, 4.3, 12.7, 2.2, 2.0, 6.1, 7.0, 0.15, 0.77, 4.0, 2.4, 6.7, 7.5, 1.9, 0.095, 6.0, 6.3, 9.1, 2.8, 0.98, 2.4, 0.15, 2.0, 0.074};
@@ -58,8 +56,7 @@ static inline double characterScore(const QChar c)
 
 quint32 TTriggerPrescan::gramBit(const quint64 gram)
 {
-    // The length has to reach the bit too, or a short gram and a long one that
-    // hashed alike would share it and each keep the other's bucket warm.
+    // Fold the length in too, or a short and a long gram that hashed alike would share a bit.
     const quint32 folded = static_cast<quint32>(gram ^ (gram >> 32));
     return (folded ^ (folded >> 16)) & scmGramBitsMask;
 }
@@ -136,9 +133,8 @@ void TTriggerPrescan::unfileSlot(const int position)
         }
     }
     --mIndexedSlots;
-    // The gram's bit stays set: bits are shared between grams, so clearing one
-    // could hide another gram that is still filed. A bit left set only costs a
-    // map lookup that finds an empty bucket, and the next rebuild clears it.
+    // Bits are shared between grams, so the bit stays set; that costs only an empty-bucket lookup
+    // until the next rebuild.
 }
 
 void TTriggerPrescan::rebuild(const std::vector<TTrigger*>& roots)
@@ -194,7 +190,7 @@ void TTriggerPrescan::candidates(const QString& line, std::vector<int>& scratch,
     scratch.clear();
     out.clear();
     if (++mGeneration == 0) {
-        // Wrapped, so every stamp left behind now reads as "this line"
+        // Wrapped: old stamps would otherwise read as "this line"
         std::fill(mSeen.begin(), mSeen.end(), 0);
         mGeneration = 1;
     }
