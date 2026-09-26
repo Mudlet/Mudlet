@@ -48,6 +48,7 @@
 #include <clocale>
 #include <cstdio>
 #include <limits>
+#include <set>
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -559,6 +560,467 @@ private slots:
                 emitMetric(qsl("%1_touched_total").arg(p), touched[m]);
                 emitMetric(qsl("%1_touched_max").arg(p), maxTouched[m]);
             }
+        }
+        gHeuristicMode = 0;
+    }
+
+    // EXPERIMENT (#3334) verification pass: shuffled mode order, best-of-N timing,
+    // h(start)/optimum, tie-plateau counts, equal-cost route differences, scenarios.
+    Host* openBenchHost()
+    {
+        mudlet::self()->mSkipDefaultPackageInstall = true;
+        Host* host = TestProfile::create(mHostname, mLocalhost, QString::number(mPort));
+        if (!host) {
+            return nullptr;
+        }
+        QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
+        connected.wait(3000);
+        host->showHideOrCreateMapper(false);
+        return host;
+    }
+
+    static QList<int> modesFromEnv()
+    {
+        QList<int> modes;
+        const QString spec = qEnvironmentVariable("MUDLET_BENCH_MODES", qsl("0,1,4,5"));
+        for (const QString& part : spec.split(QChar(','), Qt::SkipEmptyParts)) {
+            modes.append(part.toInt());
+        }
+        return modes;
+    }
+
+    void verifyHeuristics()
+    {
+        Host* host = openBenchHost();
+        QVERIFY(host);
+        TMap* pMap = host->mpMap.data();
+        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        const QList<int> modes = modesFromEnv();
+        const int reps = qEnvironmentVariableIsSet("MUDLET_BENCH_REPS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_REPS") : 5;
+        const int pairCount = qEnvironmentVariableIsSet("MUDLET_BENCH_PAIRS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_PAIRS") : 300;
+        const QString mutate = qEnvironmentVariable("MUDLET_BENCH_MUTATE");
+        const QHash<int, QString> names{{0, qsl("current")}, {1, qsl("zero")}, {2, qsl("scaled")}, {3, qsl("cheb")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}};
+
+        const int areaId = chooseArea(pMap);
+        TArea* pArea = pMap->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        const int zLevel = chooseZLevel(pArea);
+        const QSet<int> roomsOnLevel = pArea->getRoomsForZ(zLevel);
+        QHash<QPair<int, int>, int> byCoordinate;
+        int minX = std::numeric_limits<int>::max(), maxX = std::numeric_limits<int>::min();
+        int minY = std::numeric_limits<int>::max(), maxY = std::numeric_limits<int>::min();
+        for (const int roomId : roomsOnLevel) {
+            TRoom* pRoom = pMap->mpRoomDB->getRoom(roomId);
+            if (!pRoom) {
+                continue;
+            }
+            const QPair<int, int> key{pRoom->x(), pRoom->y()};
+            const auto it = byCoordinate.constFind(key);
+            if (it == byCoordinate.constEnd() || roomId < it.value()) {
+                byCoordinate.insert(key, roomId);
+            }
+            minX = std::min(minX, pRoom->x());
+            maxX = std::max(maxX, pRoom->x());
+            minY = std::min(minY, pRoom->y());
+            maxY = std::max(maxY, pRoom->y());
+        }
+        const int centreX = (minX + maxX) / 2;
+        const int centreY = (minY + maxY) / 2;
+        const int scenarioStart = nearestTo(byCoordinate, centreX, centreY, maxX - minX);
+        const int cornerRoom = nearestTo(byCoordinate, maxX, maxY, maxX - minX);
+
+        if (mutate == qsl("teleport")) {
+            TRoom* pStart = pMap->mpRoomDB->getRoom(scenarioStart);
+            QVERIFY(pStart);
+            pStart->setSpecialExit(cornerRoom, qsl("experimentTeleport"));
+            pMap->mMapGraphNeedsUpdate = true;
+            emitMetric("mutate_teleport_from", static_cast<qint64>(scenarioStart));
+            emitMetric("mutate_teleport_to", static_cast<qint64>(cornerRoom));
+        }
+
+        gHeuristicMode = 0;
+        QElapsedTimer timer;
+        timer.start();
+        pMap->initGraph();
+        emitMetric("init_graph_ms", timer.nsecsElapsed() / 1.0e6);
+        emitMetric("scale_pass_ms", gScalePassMs);
+        emitMetric("cheb_pass_ms", gChebPassMs);
+        const int n = static_cast<int>(pMap->locations.size());
+        emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));
+        emitMetric("graph_vertices", static_cast<qint64>(n));
+        emitMetric("chebyshev_scale_global", static_cast<double>(gChebyshevScale));
+        emitMetric("bench_area_id", static_cast<qint64>(areaId));
+        for (const location& l : pMap->locations) {
+            if (l.pR->getArea() == areaId) {
+                emitMetric("bench_area_chebyshev_scale", static_cast<double>(l.areaChebyshevScale));
+                break;
+            }
+        }
+
+        {
+            qint64 edges = 0, special = 0, crossArea = 0, diagonal = 0, costAboveOne = 0;
+            for (auto it = pMap->edgeHash.cbegin(); it != pMap->edgeHash.cend(); ++it) {
+                ++edges;
+                const quint8 dir = it.value().direction;
+                if (dir == DIR_OTHER) {
+                    ++special;
+                }
+                if (dir == DIR_NORTHEAST || dir == DIR_NORTHWEST || dir == DIR_SOUTHEAST || dir == DIR_SOUTHWEST) {
+                    ++diagonal;
+                }
+                if (it.value().cost > 1) {
+                    ++costAboveOne;
+                }
+                TRoom* a = pMap->mpRoomDB->getRoom(it.key().first);
+                TRoom* b = pMap->mpRoomDB->getRoom(it.key().second);
+                if (a && b && a->getArea() != b->getArea()) {
+                    ++crossArea;
+                }
+            }
+            emitMetric("edges_total", edges);
+            emitMetric("edges_special", special);
+            emitMetric("edges_cross_area", crossArea);
+            emitMetric("edges_diagonal", diagonal);
+            emitMetric("edges_cost_above_1", costAboveOne);
+            QHash<QPair<int, int>, int> spacing;
+            for (auto it = pMap->edgeHash.cbegin(); it != pMap->edgeHash.cend(); ++it) {
+                const quint8 dir = it.value().direction;
+                if (dir != DIR_EAST && dir != DIR_NORTH) {
+                    continue;
+                }
+                TRoom* a = pMap->mpRoomDB->getRoom(it.key().first);
+                TRoom* b = pMap->mpRoomDB->getRoom(it.key().second);
+                if (a && b && a->getArea() == b->getArea()) {
+                    spacing[{std::abs(a->x() - b->x()), std::abs(a->y() - b->y())}]++;
+                }
+            }
+            QList<QPair<int, QPair<int, int>>> ranked;
+            for (auto it = spacing.cbegin(); it != spacing.cend(); ++it) {
+                ranked.append({it.value(), it.key()});
+            }
+            std::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+            for (int i = 0; i < std::min<int>(3, ranked.size()); ++i) {
+                emitMetric(qsl("ns_ew_spacing_rank%1_dx%2_dy%3_count").arg(i).arg(ranked[i].second.first).arg(ranked[i].second.second), static_cast<qint64>(ranked[i].first));
+            }
+        }
+
+        QHash<int, std::vector<int>> byArea;
+        for (int i = 0; i < n; ++i) {
+            byArea[pMap->locations[i].pR->getArea()].push_back(pMap->locations[i].id);
+        }
+        auto pathCost = [pMap](int from) {
+            double total = 0;
+            unsigned int previous = from;
+            for (const int roomId : std::as_const(pMap->mPathList)) {
+                total += pMap->edgeHash.value(qMakePair(previous, static_cast<unsigned int>(roomId))).cost;
+                previous = roomId;
+            }
+            return total;
+        };
+        auto sameCost = [](double a, double b) { return std::abs(a - b) <= 1e-5 * std::max(1.0, std::abs(b)) + 1e-3; };
+        QRandomGenerator orderRng(99);
+
+        struct Stats
+        {
+            std::vector<double> best;
+            qint64 touched = 0;
+            qint64 expanded = 0;
+            qint64 expandedAtFinalF = 0;
+            int suboptimal = 0;
+            double worstRatio = 1;
+            int failed = 0;
+            std::vector<double> hRatio;
+            int tieRouteDiffers = 0;
+            int tieComparable = 0;
+        };
+
+        auto runPairs = [&](const QString& cls, const std::vector<std::pair<int, int>>& pairs, const std::vector<double>& optimum) {
+            QHash<int, Stats> stats;
+            for (std::size_t i = 0; i < pairs.size(); ++i) {
+                QList<int> order = modes;
+                for (int k = order.size() - 1; k > 0; --k) {
+                    order.swapItemsAt(k, orderRng.bounded(k + 1));
+                }
+                QHash<int, double> best;
+                for (int rep = 0; rep < reps; ++rep) {
+                    for (const int m : std::as_const(order)) {
+                        gHeuristicMode = m;
+                        // untimed warm-up: the timed search then only pays for resetting its own
+                        // previous state, not whatever another mode left behind
+                        pMap->findPath(pairs[i].first, pairs[i].second);
+                        timer.restart();
+                        pMap->findPath(pairs[i].first, pairs[i].second);
+                        const double ms = timer.nsecsElapsed() / 1.0e6;
+                        best[m] = best.contains(m) ? std::min(best[m], ms) : ms;
+                    }
+                }
+                QList<int> currentPath;
+                bool currentOptimal = false;
+                for (const int m : modes) {
+                    Stats& st = stats[m];
+                    st.best.push_back(best[m]);
+                    gHeuristicMode = m;
+                    gRecordF = true;
+                    const bool found = pMap->findPath(pairs[i].first, pairs[i].second);
+                    gRecordF = false;
+                    st.touched += static_cast<qint64>(pMap->mLastSearchTouched);
+                    st.expanded += static_cast<qint64>(gExpandedF.size());
+                    if (!found) {
+                        ++st.failed;
+                        continue;
+                    }
+                    const double c = pathCost(pairs[i].first);
+                    for (const float f : gExpandedF) {
+                        if (sameCost(f, c)) {
+                            ++st.expandedAtFinalF;
+                        }
+                    }
+                    if (!sameCost(c, optimum[i]) && c > optimum[i]) {
+                        ++st.suboptimal;
+                        st.worstRatio = std::max(st.worstRatio, c / optimum[i]);
+                    }
+                    const TMap::vertex sv = pMap->roomidToIndex.value(pairs[i].first);
+                    const TMap::vertex gv = pMap->roomidToIndex.value(pairs[i].second);
+                    distance_heuristic<TMap::mygraph_t, cost, std::vector<location>> h(pMap->locations, gv);
+                    if (optimum[i] > 0) {
+                        st.hRatio.push_back(h(sv) / optimum[i]);
+                    }
+                    if (m == 0) {
+                        currentPath = pMap->mPathList;
+                        currentOptimal = sameCost(c, optimum[i]);
+                    }
+                }
+                if (modes.contains(0) && currentOptimal) {
+                    for (const int m : modes) {
+                        if (m == 0 || m == 1) {
+                            continue;
+                        }
+                        gHeuristicMode = m;
+                        pMap->findPath(pairs[i].first, pairs[i].second);
+                        stats[m].tieComparable++;
+                        if (pMap->mPathList != currentPath) {
+                            stats[m].tieRouteDiffers++;
+                        }
+                    }
+                }
+            }
+            for (const int m : modes) {
+                Stats& st = stats[m];
+                const QString p = qsl("%1_%2").arg(cls, names.value(m));
+                std::sort(st.best.begin(), st.best.end());
+                std::sort(st.hRatio.begin(), st.hRatio.end());
+                double sum = 0;
+                for (const double v : st.best) {
+                    sum += v;
+                }
+                emitMetric(qsl("%1_suboptimal").arg(p), static_cast<qint64>(st.suboptimal));
+                emitMetric(qsl("%1_worst_ratio").arg(p), st.worstRatio);
+                emitMetric(qsl("%1_failed").arg(p), static_cast<qint64>(st.failed));
+                emitMetric(qsl("%1_best_total_ms").arg(p), sum);
+                if (!st.best.empty()) {
+                    emitMetric(qsl("%1_best_median_ms").arg(p), st.best[st.best.size() / 2]);
+                    emitMetric(qsl("%1_best_p95_ms").arg(p), st.best[st.best.size() * 95 / 100]);
+                    emitMetric(qsl("%1_best_max_ms").arg(p), st.best.back());
+                }
+                emitMetric(qsl("%1_touched_total").arg(p), st.touched);
+                emitMetric(qsl("%1_expanded_total").arg(p), st.expanded);
+                emitMetric(qsl("%1_expanded_at_final_f").arg(p), st.expandedAtFinalF);
+                if (!st.hRatio.empty()) {
+                    emitMetric(qsl("%1_hstart_ratio_median").arg(p), st.hRatio[st.hRatio.size() / 2]);
+                    emitMetric(qsl("%1_hstart_ratio_max").arg(p), st.hRatio.back());
+                    qint64 over = 0;
+                    for (const double r : st.hRatio) {
+                        if (r > 1 + 1e-5) {
+                            ++over;
+                        }
+                    }
+                    emitMetric(qsl("%1_hstart_over_1").arg(p), over);
+                }
+                if (m != 0 && m != 1) {
+                    emitMetric(qsl("%1_tie_comparable").arg(p), static_cast<qint64>(st.tieComparable));
+                    emitMetric(qsl("%1_tie_route_differs").arg(p), static_cast<qint64>(st.tieRouteDiffers));
+                }
+            }
+        };
+
+        for (const char* cls : {"uniform", "samearea"}) {
+            QRandomGenerator rng(3334);
+            std::vector<std::pair<int, int>> pairs;
+            std::vector<double> optimum;
+            int unreachable = 0;
+            gHeuristicMode = 1;
+            for (int attempt = 0; attempt < pairCount * 50 && static_cast<int>(pairs.size()) < pairCount; ++attempt) {
+                const int from = pMap->locations[rng.bounded(n)].id;
+                int to;
+                if (qstrcmp(cls, "uniform") == 0) {
+                    to = pMap->locations[rng.bounded(n)].id;
+                } else {
+                    const std::vector<int>& area = byArea[pMap->mpRoomDB->getRoom(from)->getArea()];
+                    if (area.size() < 2) {
+                        continue;
+                    }
+                    to = area[rng.bounded(static_cast<int>(area.size()))];
+                }
+                if (to == from) {
+                    continue;
+                }
+                if (!pMap->findPath(from, to)) {
+                    ++unreachable;
+                    continue;
+                }
+                pairs.emplace_back(from, to);
+                optimum.push_back(pathCost(from));
+            }
+            std::set<std::pair<int, int>> distinct(pairs.begin(), pairs.end());
+            emitMetric(qsl("%1_pairs").arg(cls), static_cast<qint64>(pairs.size()));
+            emitMetric(qsl("%1_pairs_distinct").arg(cls), static_cast<qint64>(distinct.size()));
+            emitMetric(qsl("%1_unreachable_skipped").arg(cls), static_cast<qint64>(unreachable));
+            runPairs(QString::fromLatin1(cls), pairs, optimum);
+        }
+
+        if (qEnvironmentVariableIntValue("MUDLET_BENCH_SCENARIOS") == 1 && scenarioStart > 0) {
+            for (const Scenario& scenario : kScenarios) {
+                const int targetId = (scenario.offset == 0) ? cornerRoom : nearestTo(byCoordinate, centreX + scenario.offset, centreY + scenario.offset, maxX - minX);
+                if (targetId <= 0 || targetId == scenarioStart) {
+                    continue;
+                }
+                gHeuristicMode = 1;
+                QVERIFY(pMap->findPath(scenarioStart, targetId));
+                const std::vector<std::pair<int, int>> one{{scenarioStart, targetId}};
+                const std::vector<double> opt{pathCost(scenarioStart)};
+                emitMetric(qsl("scen_%1_optimum").arg(QString::fromLatin1(scenario.name)), opt[0]);
+                runPairs(qsl("scen_%1").arg(QString::fromLatin1(scenario.name)), one, opt);
+            }
+        }
+        gHeuristicMode = 0;
+        if (const qint64 peakRssKb = readPeakRssKb(); peakRssKb > 0) {
+            emitMetric("peak_rss_kb", peakRssKb);
+        }
+    }
+
+    // A cheap round trip out of the goal's area defeats an area-local lower bound;
+    // also checks that the API cannot produce a step cost below 1.
+    void adversarial()
+    {
+        Host* host = openBenchHost();
+        QVERIFY(host);
+        TMap* pMap = host->mpMap.data();
+        const QString script = qsl(R"LUA(
+local A = addAreaName("advA"); local B = addAreaName("advB"); local C = addAreaName("advC")
+local function mk(id, area, x, y) addRoom(id); setRoomArea(id, area); setRoomCoordinates(id, x, y, 0) end
+for i = 0, 10 do mk(100 + i, A, i * 10, 0) end
+for i = 0, 9 do setExit(100 + i, 101 + i, "east"); setExit(101 + i, 100 + i, "west") end
+mk(200, C, 0, 50)
+mk(300, B, 0, 0)
+setExit(200, 100, "south")
+addSpecialExit(100, 300, "jump")
+addSpecialExit(300, 110, "land")
+addSpecialExit(200, 109, "long"); setExitWeight(200, "long", 5)
+mk(400, A, 0, -10); mk(401, A, 10, -10)
+setExit(400, 401, "east")
+setExitWeight(400, "e", 0)
+setRoomWeight(401, 0)
+local ew = getExitWeights(400)
+advResult = string.format("exitWeightAfterSet0=%s roomWeightAfterSet0=%s", tostring(ew and ew["e"]), tostring(getRoomWeight(401)))
+)LUA");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), "adversarial map script failed");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("local f = io.open(os.getenv('ADV_OUT'), 'w'); f:write(advResult); f:close()")));
+        {
+            QFile out(qEnvironmentVariable("ADV_OUT"));
+            QVERIFY(out.open(QIODevice::ReadOnly));
+            std::printf("ADV api %s\n", out.readAll().constData());
+        }
+        pMap->mMapGraphNeedsUpdate = true;
+        for (const int m : {0, 1, 4, 5}) {
+            gHeuristicMode = m;
+            const bool found = pMap->findPath(200, 110);
+            double total = 0;
+            unsigned int previous = 200;
+            QStringList steps;
+            for (const int roomId : std::as_const(pMap->mPathList)) {
+                total += pMap->edgeHash.value(qMakePair(previous, static_cast<unsigned int>(roomId))).cost;
+                previous = roomId;
+                steps << QString::number(roomId);
+            }
+            std::printf("ADV mode %d found %d cost %.1f path 200,%s\n", m, found, total, qPrintable(steps.join(QChar(','))));
+        }
+        {
+            const unsigned int a = 400, b = 401;
+            emitMetric("adv_edge_400_401_cost", static_cast<double>(pMap->edgeHash.value(qMakePair(a, b)).cost));
+        }
+        gHeuristicMode = 0;
+    }
+
+    // Do rooms of weight INT_MAX mislead the float search? Independent double Dijkstra in Lua.
+    void floatCheck()
+    {
+        Host* host = openBenchHost();
+        QVERIFY(host);
+        TMap* pMap = host->mpMap.data();
+        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        pMap->mMapGraphNeedsUpdate = true;
+        const QString script = qsl(R"LUA(
+local ids = {}
+for id in pairs(getRooms()) do ids[#ids + 1] = id end
+table.sort(ids)
+local heavy = 0
+for _, id in ipairs(ids) do if getRoomWeight(id) > 1 then heavy = heavy + 1 end end
+local adj = {}
+for _, id in ipairs(ids) do
+  local n, ew = {}, getExitWeights(id) or {}
+  local function add(dir, to) if roomExists(to) and not roomLocked(to) then local c = ew[dir] or getRoomWeight(to); if not n[to] or c < n[to] then n[to] = c end end end
+  for dir, to in pairs(getRoomExits(id) or {}) do add(dir, to) end
+  for cmd, to in pairs(getSpecialExitsSwap(id) or {}) do add(cmd, to) end
+  adj[id] = n
+end
+local function exactCost(from)
+  local total, prev = 0, from
+  for _, rawId in ipairs(speedWalkPath) do
+    local id = tonumber(rawId)
+    local c = adj[prev][id]
+    if not c then return nil end
+    total = total + c; prev = id
+  end
+  return total
+end
+local total, mismatch, viaHeavy, example = 0, 0, 0, ""
+for _, from in ipairs(ids) do
+  local dist, done = {[from] = 0}, {}
+  while true do
+    local best, bd
+    for id, d in pairs(dist) do if not done[id] and (not bd or d < bd) then best, bd = id, d end end
+    if not best then break end
+    done[best] = true
+    for to, c in pairs(adj[best]) do if not dist[to] or bd + c < dist[to] then dist[to] = bd + c end end
+  end
+  for _, to in ipairs(ids) do
+    if to ~= from and dist[to] then
+      total = total + 1
+      if dist[to] >= 2147483647 then viaHeavy = viaHeavy + 1 end
+      if getPath(from, to) then
+        local c = exactCost(from)
+        if c ~= dist[to] then
+          mismatch = mismatch + 1
+          if dist[to] >= 2147483647 then mismatchHeavy = (mismatchHeavy or 0) + 1; maxExtra = math.max(maxExtra or 0, (c or 0) - dist[to]) end
+          if example == "" then example = string.format("%d->%d got %.0f optimum %.0f", from, to, c or -1, dist[to]) end
+        end
+      else
+        mismatch = mismatch + 1
+      end
+    end
+  end
+end
+local f = io.open(os.getenv("ADV_OUT"), "w")
+f:write(string.format("heavyRooms=%d pairs=%d pairsWhoseOptimumCrossesHeavy=%d mismatches=%d ofWhichOptimumCrossesHeavy=%d maxExtraCostWhenHeavy=%.0f firstMismatch=%s", heavy, total, viaHeavy, mismatch, mismatchHeavy or 0, maxExtra or 0, example))
+mismatchHeavy, maxExtra = nil, nil
+f:close()
+)LUA");
+        for (const int m : {1, 0}) {
+            gHeuristicMode = m;
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), "float check script failed");
+            QFile out(qEnvironmentVariable("ADV_OUT"));
+            QVERIFY(out.open(QIODevice::ReadOnly));
+            std::printf("FLOATCHECK mode %d %s\n", m, out.readAll().constData());
         }
         gHeuristicMode = 0;
     }

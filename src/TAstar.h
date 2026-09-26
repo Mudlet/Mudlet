@@ -56,6 +56,10 @@ inline int gHeuristicMode = 0;
 inline float gHeuristicScale = 1.0f;
 // 3 = chebyshev scaled by gChebyshevScale (global), 4 = chebyshev scaled per area; both 0 across areas
 inline float gChebyshevScale = 1.0f;
+inline bool gRecordF = false;
+inline std::vector<float> gExpandedF;
+inline double gScalePassMs = 0;
+inline double gChebPassMs = 0;
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route

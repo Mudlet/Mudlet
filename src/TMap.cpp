@@ -973,6 +973,8 @@ void TMap::initGraph()
     } // End of foreach(location l, locations)
 
     // EXPERIMENT: largest k with k * euclidean(u, v) <= cost(u, v) for every same-area edge
+    QElapsedTimer scalePass;
+    scalePass.start();
     {
         float k = std::numeric_limits<float>::max();
         for (auto it = edgeHash.cbegin(); it != edgeHash.cend(); ++it) {
@@ -989,6 +991,8 @@ void TMap::initGraph()
         }
         gHeuristicScale = (k == std::numeric_limits<float>::max()) ? 0.0f : k;
 
+        QElapsedTimer chebPass;
+        chebPass.start();
         QHash<int, float> areaScale;
         for (auto it = edgeHash.cbegin(); it != edgeHash.cend(); ++it) {
             TRoom* a = mpRoomDB->getRoom(it.key().first);
@@ -1015,7 +1019,9 @@ void TMap::initGraph()
         for (location& l : locations) {
             l.areaChebyshevScale = areaScale.value(l.pR->getArea(), 0.0f);
         }
+        gChebPassMs = chebPass.nsecsElapsed() / 1.0e6;
     }
+    gScalePassMs = scalePass.nsecsElapsed() / 1.0e6;
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
@@ -1064,6 +1070,7 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
     typedef std::tuple<cost, cost, vertex> frontierEntry;
     std::priority_queue<frontierEntry, std::vector<frontierEntry>, std::greater<frontierEntry>> frontier;
 
+    gExpandedF.clear();
     mSearchDistance[start] = 0;
     mSearchState[start] = stateFrontier;
     mSearchTouched.push_back(start);
@@ -1071,12 +1078,16 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
 
     while (!frontier.empty()) {
         const vertex current = std::get<2>(frontier.top());
+        const cost poppedF = std::get<0>(frontier.top());
         frontier.pop();
         if (mSearchState[current] == stateExpanded) {
             // Stale duplicate: a cheaper route was queued later.
             continue;
         }
         mSearchState[current] = stateExpanded;
+        if (gRecordF) {
+            gExpandedF.push_back(poppedF);
+        }
         if (current == goal) {
             mLastSearchTouched = mSearchTouched.size();
             return true;
