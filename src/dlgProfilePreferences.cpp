@@ -67,8 +67,8 @@
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
-#include <QFutureWatcher>
 #include <QFontDialog>
+#include <QFutureWatcher>
 #include <QIcon>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -4274,7 +4274,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }

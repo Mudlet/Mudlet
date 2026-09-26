@@ -23,7 +23,8 @@
  * arrowhead that stand for an exit leading out of the area among them.
  *
  * Why not a spec: Lua can ask for the export, but nothing in the API reads a
- * pixel back out of the file it wrote.
+ * pixel back out of the file it wrote, holds the saves back until both have
+ * finished, or keeps a map view alive after its profile has closed.
  *
  * Run with: ctest -R MapAreaImageExportTest -V
  */
@@ -74,15 +75,15 @@ private:
 
     // Every export parents a watcher of its own to the map and deletes it once
     // the save has reported back, so none left means the pool threads are done
-    static bool exportsInFlight(const T2DMap* pMap) { return !pMap->findChildren<QFutureWatcherBase*>().isEmpty(); }
+    static bool exportsInFlight(const T2DMap* pMap) { return !pMap->findChildren<QFutureWatcherBase*>(QString(), Qt::FindDirectChildrenOnly).isEmpty(); }
 
-    int addOneRoomArea(const QString& areaName, const int roomId) const
+    static void addOneRoomArea(TMap* pMap, const QString& areaName, int& areaId)
     {
-        const int areaId = roomDB()->addArea(areaName);
-        if (areaId <= 0 || !map()->addRoom(roomId) || !map()->setRoomArea(roomId, areaId) || !map()->setRoomCoordinates(roomId, 0, 0, 0)) {
-            return -1;
-        }
-        return areaId;
+        areaId = pMap->mpRoomDB->addArea(areaName);
+        QVERIFY(areaId > 0);
+        QVERIFY(pMap->addRoom(scmRoomInArea));
+        QVERIFY(pMap->setRoomArea(scmRoomInArea, areaId));
+        QVERIFY(pMap->setRoomCoordinates(scmRoomInArea, 0, 0, 0));
     }
 
     static int countPixels(const QImage& image, const QColor& colour)
@@ -201,13 +202,17 @@ private slots:
         QCOMPARE(countPixels(exportedImage, QColor(Qt::black)) + outlinePixels, exportedImage.width() * exportedImage.height());
     }
 
-    // Every export used to share one watcher, so the first to finish reported
-    // and deleted the second's, which then crashed on the null left behind (#10393)
+    // Every export used to share one watcher, so the first watcher's handler
+    // reported the second export's result, deleted that watcher and left a
+    // null for the second handler to crash on (#10393)
     void twoExportsInQuickSuccessionBothFinish()
     {
         map()->mapClear();
-        const int areaId = addOneRoomArea(qsl("Exported twice"), scmRoomInArea);
-        QVERIFY(areaId > 0);
+        int areaId = 0;
+        addOneRoomArea(map(), qsl("Exported twice"), areaId);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         const QString exportDir = qsl("%1/exports-twice").arg(mConfigDir.path());
         QVERIFY(QDir().mkpath(exportDir));
@@ -223,8 +228,8 @@ private slots:
         QVERIFY(QThreadPool::globalInstance()->waitForDone(10000));
 
         QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10000);
-        QVERIFY(QImage(firstPath).width() > 0);
-        QVERIFY(QImage(secondPath).width() > 0);
+        QVERIFY(!QImage(firstPath).isNull());
+        QVERIFY(!QImage(secondPath).isNull());
     }
 
     // A map view can outlive its profile - closeHost() only deleteLater()s the
@@ -238,11 +243,12 @@ private slots:
         QPointer<Host> pClosingHost = hostManager->getHost(closingProfile);
         QVERIFY(pClosingHost);
         TMap* pClosingMap = pClosingHost->mpMap.data();
-        const int areaId = pClosingMap->mpRoomDB->addArea(qsl("Closing area"));
-        QVERIFY(areaId > 0);
-        QVERIFY(pClosingMap->addRoom(scmRoomInArea));
-        QVERIFY(pClosingMap->setRoomArea(scmRoomInArea, areaId));
-        QVERIFY(pClosingMap->setRoomCoordinates(scmRoomInArea, 0, 0, 0));
+        int areaId = 0;
+        addOneRoomArea(pClosingMap, qsl("Closing area"), areaId);
+        if (QTest::currentTestFailed()) {
+            hostManager->deleteHost(closingProfile);
+            return;
+        }
 
         auto survivingView = std::make_unique<T2DMap>();
         survivingView->mpMap = pClosingMap;
@@ -253,9 +259,10 @@ private slots:
 
         hostManager->deleteHost(closingProfile);
         QVERIFY(pClosingHost.isNull());
+        survivingView->mpMap = nullptr;
 
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("the profile closed before this export finished: Failed to save image to .*closing\\.png")));
         QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(survivingView.get()), 10000);
-        QVERIFY(!QFileInfo::exists(unwritablePath));
     }
 };
 
