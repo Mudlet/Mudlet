@@ -295,7 +295,7 @@ private slots:
         });
         mpHost->setEnableSpellCheck(false);
         mpHost->setUserDictionaryOptions(true, false);
-        pCommandLine->setPlainText(qsl("qzxfirst, qzxsecond qzxthird"));
+        pCommandLine->setPlainText(qsl("qzxfirst qzxsecond qzxthird"));
         QVERIFY(unmarked(pCommandLine, qsl("qzxfirst")));
         QVERIFY(unmarked(pCommandLine, qsl("qzxthird")));
 
