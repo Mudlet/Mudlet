@@ -162,7 +162,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceParentDir}/b/ninja",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "$env{CMAKE_BUILD_TYPE}"
+        "CMAKE_BUILD_TYPE": "$env{CMAKE_BUILD_TYPE}",
+        "CMAKE_DISABLE_PRECOMPILE_HEADERS": "$env{CMAKE_DISABLE_PRECOMPILE_HEADERS}"
       }
     },
     {
@@ -237,7 +238,8 @@
       "displayName": "CI: CodeQL analysis build (no test tree)",
       "inherits": "ci",
       "cacheVariables": {
-        "BUILD_TESTING": "OFF"
+        "BUILD_TESTING": "OFF",
+        "CMAKE_DISABLE_PRECOMPILE_HEADERS": "ON"
       }
     }
   ],

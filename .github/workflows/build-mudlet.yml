@@ -344,6 +344,8 @@ jobs:
          echo "WITH_UPDATER=no" >> $GITHUB_ENV
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
+         # The one job that builds without precompiled headers, so a missing #include still fails somewhere
+         echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
 
     # Saves are keyed per commit, so the primary key deliberately matches no entry
     # and every restore prefix-matches the newest. On a tagged release the
