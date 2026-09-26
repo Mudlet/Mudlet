@@ -1487,6 +1487,16 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(hasExitLock(missingRoomId, "east"))
     end)
 
+    -- The message used to have no argument for its %s, so it read whatever
+    -- was in the register: "(null)" if lucky, a crash under ASan (#10670)
+    it("hasExitLock names the type of a direction it cannot use", function()
+      for _, bad in ipairs({ {}, true, print, 0 }) do
+        local ok, err = pcall(hasExitLock, rSandA, bad)
+        assert.is_false(ok)
+        assert.is_truthy(err:find("got " .. type(bad) .. "!", 1, true), err)
+      end
+    end)
+
     it("lockSpecialExit is read back by hasSpecialExitLock", function()
       assert.is_true(lockSpecialExit(rB2, 0, "enter gate", true))
       assert.is_true(hasSpecialExitLock(rB2, 0, "enter gate"))

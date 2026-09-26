@@ -2617,7 +2617,7 @@ int TLuaInterpreter::hasExitLock(lua_State* L)
 
     const int dir = dirToNumber(L, 2);
     if (!dir) {
-        lua_pushfstring(L, "hasExitLock: bad argument #2 type (direction as number or string expected, got %s!)");
+        lua_pushfstring(L, "hasExitLock: bad argument #2 type (direction as number or string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
