@@ -156,6 +156,10 @@ describe("Tests that the scroll bar and scrolling functions find their console b
             assert.are.equal(0, select("#", scrollTo(window, 1)))
             assert.are.equal(0, select("#", scrollTo(window)))
           end)
+        elseif not os.getenv("MUDLET_TEST_MODE") then
+          -- parkAt() waits on waitForEvent, which only pumps the event loop in
+          -- test mode, so this cannot run when the suite is started with runTests
+          pending("reports and moves that console's scroll position - needs MUDLET_TEST_MODE for waitForEvent")
         else
           it("reports and moves that console's scroll position", function()
             clearWindow(window)
