@@ -1,7 +1,5 @@
 #!/bin/bash
-# Prints the per-line hit counts gcovr recorded for a file's line range, so a
-# specific code path can be checked rather than a whole-file percentage.
-#
+# Prints gcovr's per-line hit counts for a line range of one file.
 # Usage: check-lines.sh <coverage.json> <src/File.cpp> <firstLine> <lastLine>
 set -euo pipefail
 

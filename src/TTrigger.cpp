@@ -61,11 +61,8 @@
 #include <vector>
 
 namespace {
-// The UTF-16 code units the bytes in [from, to) decode to: a continuation byte
-// belongs to the character before it, and anything outside the basic
-// multilingual plane needs a surrogate pair. Counting a byte at a time is exact
-// even when an end lands inside a character, which a start offset stepped after
-// an empty match does.
+// UTF-16 code units the bytes in [from, to) decode to. Counting bytewise stays exact when an end lands
+// inside a character, as a start offset stepped past an empty match does.
 int utf16UnitsIn(const char* utf8, const PCRE2_SIZE from, const PCRE2_SIZE to)
 {
     int codeUnits = 0;
@@ -78,23 +75,13 @@ int utf16UnitsIn(const char* utf8, const PCRE2_SIZE from, const PCRE2_SIZE to)
     return codeUnits;
 }
 
-// The UTF-8 handed to a pattern is the encoding of the same text the QString
-// holds, so the UTF-16 index a byte offset stands at is just the number of code
-// units the bytes before it decode to. Counting those beats decoding the prefix
-// into a QString that is thrown away once its length has been read.
+// Counting code units beats decoding the prefix into a throwaway QString. The caller-held cursor
+// means each call walks only the bytes since the last one; counting from the line start made a
+// match-all trigger's positions O(n^2).
 //
-// Counting them from the start of the line each time costs the offset itself,
-// and a match-all trigger asks for one position per capture at offsets that
-// march along the line - so reporting the positions of a line of n bytes cost
-// n squared. The caller carries the offset and count of the answer before, and
-// each further one walks only the bytes between the two.
-//
-// The walk goes either way, because the offsets do not arrive in order. PCRE2
-// hands back the name table in alphabetical order, so the named-group loop asks
-// for offsets in an order unrelated to their place in the line; a lookbehind or
-// \K capture can also put a later group before an earlier one. The cursor pair
-// must describe this same buffer and start at (0, 0) - one carried over from
-// another line reports nonsense rather than failing.
+// The walk goes either way, as offsets arrive unordered: PCRE2's name table is alphabetical, and a
+// lookbehind or \K can put a later group first. The cursor must start at (0, 0) for this buffer;
+// one carried over from another line reports nonsense rather than failing.
 int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset, PCRE2_SIZE& cursorByteOffset, int& cursorCodeUnits)
 {
     if (byteOffset >= cursorByteOffset) {
@@ -384,13 +371,9 @@ QString requiredLiteral(const QString& pattern)
     return best.front();
 }
 
-// The /g loop's search for the next occurrence. The first search of a line
-// goes through the pattern's prepared QStringMatcher, whose skip table pays
-// for itself over every line the pattern is tried against; here the remainders
-// are short and mostly end in a hit, where a matcher measured slower than
-// scanning for the needle's first code unit and comparing the rest only where
-// it occurs. Searching the QString and not the UTF-8 keeps the handling of a
-// line with a NUL in it, whose UTF-8 form the caller has already cut short.
+// The /g loop's later searches: the remainders are short and mostly hit, where a QStringMatcher
+// measured slower than scanning for the first code unit. Searches the QString, not the UTF-8, which
+// the caller has cut short at any NUL.
 int indexOfNeedle(const QString& haystack, const QString& needle, const int from)
 {
     const qsizetype needleLength = needle.size();
@@ -416,13 +399,8 @@ int indexOfNeedle(const QString& haystack, const QString& needle, const int from
     return -1;
 }
 
-// Holds the capture list and position list of one fire, taking their nodes
-// from TCaptureNodePool and handing them back when the fire is over.
-//
-// The lists belong to the caller rather than to the trigger because a script
-// can feed text back through the pipeline and re-enter matching on the very
-// trigger that is still running; each level of that gets its own lists, and
-// only the emptied nodes are shared.
+// The lists belong to the caller, not the trigger, because a script can feed text back and re-enter
+// matching on the still-running trigger; each level gets its own lists, sharing only pooled nodes.
 class CaptureLists
 {
 public:
@@ -469,11 +447,8 @@ public:
     std::list<int> mPositions;
 
 private:
-    // UTF-8 is the identity over ASCII, so an ASCII run can be built straight
-    // into the recycled buffer with no QByteArray in between. Stops at the
-    // first NUL, as std::string(const char*) does, which is the same byte the
-    // long way round would stop at. Answers false with the target clobbered if
-    // the run holds anything above ASCII, leaving the caller to overwrite it.
+    // Skips the QByteArray for ASCII. Stops at the first NUL, as the caller's std::string(const char*)
+    // fallback does. Returns false, with target clobbered, on anything above ASCII.
     static bool assignAscii(std::string& target, const QStringView capture)
     {
         target.clear();
@@ -567,8 +542,7 @@ static void pcre2_code_deleter(pcre2_code* pointer)
     pcre2_code_free(pointer);
 }
 
-// A pattern of fewer than two characters sets no bits, so it is never filtered
-// out.
+// A pattern of fewer than two characters sets no bits, so it is never filtered out.
 TBigramFilter::Bits TBigramFilter::bitsFor(const QString& text)
 {
     static_assert(Bits::scmWords * 64 == 256, "the hash below yields a bit number of 0-255, which has to be exactly the number of bits Bits holds");
@@ -598,8 +572,7 @@ quint32 TTrigger::smPrescanPassIdCounter = 0;
 bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger)
 {
     ++smStructureGeneration;
-    // A verdict reached against the old patterns says nothing about the new
-    // ones, and this can happen in the middle of the line it was reached for
+    // A verdict on the old patterns says nothing about the new ones, and this can run mid-line
     mPrescanPassId = 0;
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
@@ -638,7 +611,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     if (existingTrigger && (patternKinds.empty()) && (!isFolder()) && (!mColorTrigger)) {
         setError(tr("error: this trigger has no patterns defined"));
         mOK_init = false;
-        // the patterns the grams were taken from are gone, so they have to go too
+        // The old patterns' grams must go too
         rebuildPrescanGrams();
         return false;
     }
@@ -661,8 +634,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mRegexJitCompiled.push_back(false);
 
             if (patternKinds.at(i) == REGEX_SUBSTRING) {
-                // Qt::CaseSensitive is the default, spelt out because bitsFor() summarises
-                // this same string case-sensitively: change one and the other has to follow
+                // Spelt out because bitsFor() is case-sensitive too: change one and the other must follow
                 mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<QStringMatcher>(patterns.at(i), Qt::CaseSensitive), TBigramFilter::bitsFor(patterns.at(i))});
             } else {
                 mSubstringPatterns.emplace_back();
@@ -708,8 +680,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                     state = false;
                 } else {
                     mRegexJitCompiled[patternIndex] = (pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0);
-                    // One of these per pattern of every trigger created, so it
-                    // belongs with the other high volume trigger detail:
+                    // Once per pattern of every trigger created, so it is high-volume trigger detail
                     if (TDebug::wants(TDebug::Category::TriggerDetail)) {
                         TDebug(Qt::white, Qt::darkGreen, TDebug::Category::TriggerDetail, mName) << "[OK]: REGEX_COMPILE OK\n" >> mpHost;
                     }
@@ -771,11 +742,8 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     return state;
 }
 
-// A pattern that matches by containment cannot match a line that lacks the
-// pattern's own characters, so one n-gram per pattern is enough for
-// TTriggerPrescan to rule the whole trigger out. Any other pattern kind - a
-// regex, a colour, a Lua condition - is not decidable from the line's text, so
-// one of those leaves the trigger unfilterable and it keeps seeing every line.
+// One n-gram per containment pattern lets TTriggerPrescan rule the trigger out. Any other kind (regex,
+// colour, Lua) is not decidable from the line's text, so leaves the whole trigger unfilterable.
 void TTrigger::rebuildPrescanGrams()
 {
     std::vector<quint64> grams;
@@ -827,8 +795,8 @@ void TTrigger::rebuildPrescanGrams()
     invalidatePrescan();
 }
 
-// The index is rebuilt from the trigger's current state, so anything that
-// changes whether or how it can be filtered has to reach the unit that holds it.
+// Call on anything that changes whether or how the trigger can be filtered; the unit refiles it from
+// its current state.
 void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
 {
     if (mpHost) {
@@ -845,9 +813,8 @@ void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
 const std::vector<quint64>& TTrigger::prescanGrams() const
 {
     static const std::vector<quint64> unfilterable;
-    // A line trigger fires on a line count rather than on text, a multiline one
-    // has to see every line to advance its state, and a trigger still counting
-    // down its stay-open fires without matching at all.
+    // A line trigger fires on a count, a multiline one must see every line to advance, and one still
+    // staying open fires without matching.
     if (mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
         return unfilterable;
     }
@@ -934,11 +901,8 @@ bool TTrigger::match_perl(const TUtf8Subject& subject, const QString& haystack, 
         return false;
     }
 
-    // A reference rather than a copy, which means it stops being valid the
-    // moment setRegexCodeList() clears the vector. Nothing between here and
-    // END: runs Lua - the capture loops all finish before the first execute()
-    // - so that cannot happen mid-call. Moving a script-invoking call above
-    // END:, or reading re or ovector after one, would break that.
+    // A reference, invalidated if setRegexCodeList() clears the vector. Safe because nothing before END:
+    // runs Lua; don't move a script-invoking call above END:, or read re or ovector after one.
     const QSharedPointer<pcre2_code>& re = mRegexes[patternNumber];
 
     if (!re) {
@@ -976,17 +940,14 @@ bool TTrigger::match_perl(const TUtf8Subject& subject, const QString& haystack, 
     }
     pcre2_match_data* match_data = matchData.data();
 
-    // A search the prescan could have run instead; what it does not count is
-    // exactly what the prescan answers without searching
+    // Counts only searches a prescan could have run instead
     if (!mIsMultiline) {
         ++smRegexSearches;
     }
-    // Asked for only now, past the pre-check, which is what leaves most lines
-    // never encoded
+    // Asked for only now, past the pre-check, which is what leaves most lines never encoded
     const char* const haystackC = subject.data();
     const int haystackCLength = subject.length();
-    // pcre2_match() finds the JIT code by itself, but only after a preamble of
-    // option and argument checks that a matching run repeats for every line
+    // pcre2_match() finds the JIT code itself, but only after option and argument checks repeated every line
     const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr)
                                                     : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
 
@@ -1017,8 +978,7 @@ void TTrigger::processRegexMatch(const char* haystackC,
 
     int i = 0;
     int numberOfCaptureGroups = 0;
-    // One cursor per pattern match, so that the match-all loop's matches walk
-    // the line once between them instead of rescanning it for each
+    // One cursor for the whole call, so the match-all loop walks the line once rather than once per match
     PCRE2_SIZE cursorByteOffset = 0;
     int cursorCodeUnits = 0;
     CaptureLists lists;
@@ -1196,8 +1156,8 @@ bool TTrigger::match_begin_of_line_substring(const QString& haystack, const QStr
     return false;
 }
 
-// The pattern of a substring, start of line or exact match is also its capture,
-// so it is converted once when the trigger is compiled rather than on each match
+// A substring, start of line or exact match pattern is also its capture, so it is converted at compile
+// time rather than on each match
 const std::string& TTrigger::patternUtf8(const int patternNumber) const
 {
     static const std::string empty;
@@ -1325,9 +1285,7 @@ bool TTrigger::match_substring(const QString& haystack, const QString& needle, i
 {
     const TSubstringPattern& pattern = mSubstringPatterns[patternNumber];
     if (pLineBigrams && !pLineBigrams->couldContain(haystack, pattern.bigrams)) {
-        // A pattern that occurs in the line contributes only pairs the line already has, so
-        // it can never be dismissed - unless the filter and the matcher have stopped
-        // comparing the same way, which nothing else would notice
+        // Fails only if the filter and matcher stopped comparing the same way, which nothing else would notice
         Q_ASSERT_X(pattern.matcher->indexIn(haystack) == -1, "TTrigger::match_substring", "the bigram filter dismissed a pattern the matcher does find in the line");
         return false;
     }
@@ -1436,11 +1394,9 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
 
     const int ansiFg = pCT->ansiFg;
     const int ansiBg = pCT->ansiBg;
-    // Compared in the form the characters store their colors in, so that a
-    // line's worth of comparisons converts nothing. A pattern color the table
-    // has no color for (an ignored aspect, or an ANSI code outside the table)
-    // is an invalid QColor, which would convert to opaque black and match
-    // black text - it matches nothing instead, as it always has:
+    // Compared in the form TChar stores, so a line's comparisons convert nothing. A pattern color the
+    // table lacks (ignored, or an ANSI code outside it) is an invalid QColor, which would convert to
+    // opaque black and match black text, so it matches nothing:
     const bool patternFgValid = pCT->mFgValid;
     const bool patternBgValid = pCT->mBgValid;
     const QRgb patternFg = pCT->mFgRgba;
@@ -1691,10 +1647,8 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 bool TTrigger::prescanMayFire(
         const char* haystackC, const int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, const bool lineDropsText, pcre2_match_data* scratch, int& regexSearches) const
 {
-    // Everything below decides "this trigger cannot possibly do anything on
-    // this line". Anything whose outcome depends on more than the line text -
-    // multiline state, a line counter, a colour scan of the buffer, Lua - is
-    // not decidable here and gets a yes.
+    // False means "cannot possibly do anything on this line". Anything depending on more than the line
+    // text (multiline state, a line counter, a colour scan of the buffer, Lua) gets a yes.
     if (!isActive() || !mpMyChildrenList) {
         return true;
     }
@@ -1717,14 +1671,12 @@ bool TTrigger::prescanMayFire(
                 return true;
             }
             const TSubstringPattern& pattern = mSubstringPatterns[patternNumber];
-            // The same dismissal match_substring() makes, so a pattern the line
-            // cannot hold is never searched for on any thread
+            // As in match_substring(), so a pattern the line cannot hold is never searched for on any thread
             if (!lineBigrams.couldContainShared(haystack, pattern.bigrams)) {
                 break;
             }
-            // unique_ptr's operator-> hands out a non-const matcher even from a
-            // const member, so bind a const reference to keep the compiler
-            // checking that this helper-thread path stays read-only.
+            // unique_ptr's operator-> yields a non-const matcher even here; the const reference keeps the
+            // compiler checking that this helper-thread path stays read-only.
             const QStringMatcher& matcher = *pattern.matcher;
             if (matcher.indexIn(haystack) != -1) {
                 return true;
@@ -1738,10 +1690,8 @@ bool TTrigger::prescanMayFire(
             }
             const QSharedPointer<pcre2_code>& re = mRegexes[patternNumber];
             if (!re) {
-                // A pattern that does not compile never matches, but match_perl()
-                // tells the user so every time it is asked. Ruling the trigger out
-                // here would silence that warning for exactly as long as the text
-                // keeps flooding.
+                // match_perl() warns about the broken pattern each time it is asked; ruling the trigger out
+                // here would silence that for as long as the text keeps flooding.
                 return true;
             }
             // The same dismissal match_perl() makes, so a line without the text
@@ -1809,11 +1759,8 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
 
     bool ret = false;
     if (isActive()) {
-        // The prescan ran every pattern this trigger could match the line with
-        // and none did, so there is nothing here for the line to trip. Only ever
-        // reached for a trigger whose patterns are a pure function of the line.
-        // mKeepFiring is re-read rather than taken from the verdict because an
-        // earlier trigger's script can have opened this one since.
+        // The prescan ran every pattern and none matched; only reached for a trigger whose patterns are a
+        // pure function of the line. mKeepFiring is re-read as an earlier script may have opened it since.
         if (mPrescanPassId == smPrescanPassId && !mPrescanMayFire && mKeepFiring <= 0) {
             return false;
         }
@@ -1895,8 +1842,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                     const bool wasFilterable = !mKeepFiring;
                     mKeepFiring = mStayOpen;
                     if (wasFilterable != !mKeepFiring) {
-                        // whether it fires without matching just changed, so
-                        // whether it can be filtered out of a line changed too
+                        // It now does or no longer fires without matching, which changes its filterability
                         invalidatePrescan();
                     }
                     break;
@@ -2133,9 +2079,8 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     const QString patternText = createColorPatternText(ansiFg, ansiBg);
     mPatterns << patternText;
     mPatternKinds << REGEX_COLOR_PATTERN;
-    // Everything setRegexCodeList() fills is indexed by pattern number, so a
-    // pattern added here has to extend all of it - even though a colour
-    // pattern is matched out of mColorPatternList and compiles no regex.
+    // Every per-pattern vector setRegexCodeList() fills must grow in step, though a colour pattern
+    // is matched from mColorPatternList and compiles no regex.
     mSubstringPatterns.emplace_back();
     mRegexLiterals.emplace_back();
     mPatternsUtf8.emplace_back(patternText.toUtf8().constData());
