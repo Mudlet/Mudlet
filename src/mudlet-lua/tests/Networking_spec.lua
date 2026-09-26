@@ -1153,6 +1153,30 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(contains(echoes[1][2], "You chat to " .. PEER_NAME .. ", 'just for you'"), tostring(echoes[1][2]))
     end)
 
+    it("chatTo keeps a y-diaeresis in the message from ending the frame early", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      -- U+00FF goes out as the 0xff terminator in Latin-1, whatever encoding
+      -- it came from, so a script relaying game text let the game inject
+      -- commands - here a second personal chat from nobody
+      assert.is_true(mmcp.chatTo(PEER_NAME, "a\195\191\5INJECTED"))
+      assert.is_true(mmcp.chatTo(PEER_NAME, "done"))
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "command" and contains(event.text, "'done'")
+      end, 2000))
+      local sent = {}
+      for _, event in ipairs(capture().events) do
+        if event.seq > mark and event.type == "command" then
+          sent[#sent + 1] = event.name .. ":" .. event.text
+        end
+      end
+      assert.same({
+        "TextPersonal:" .. CHAT_NAME .. " chats to you, 'a?\5INJECTED'\n",
+        "TextPersonal:" .. CHAT_NAME .. " chats to you, 'done'\n",
+      }, sent)
+    end)
+
     it("emoteAll sends an unquoted emote to everyone", function()
       if peerUnavailable() then return end
       ensurePeer()
@@ -1587,6 +1611,44 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(mmcp.allowSnoop(PEER_NAME))
     end)
 
+    it("keeps a 0xff byte in the game text from ending a snooper's frame early", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      finally(function()
+        if mmcp.getClientFlags(PEER_NAME) == "      N " then
+          peerSends(30, "")
+          waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+        end
+        mmcp.allowSnoop(PEER_NAME)
+      end)
+      local mark = captureSeq()
+      peerSends(30, "")
+      -- the "begun snooping" notice has to land before the mark below
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "command" and contains(event.text, "begun snooping")
+      end, 2000))
+      assert.equals("      N ", mmcp.getClientFlags(PEER_NAME))
+
+      mark = captureSeq()
+      -- IAC IAC is how a server sends a literal 0xff (a Latin-1 y-diaeresis).
+      -- Sent on as it is, it closed the frame, and the byte after it reached
+      -- the snooper as a command of its own: 0x05 is a private chat.
+      feedTelnet("abc\255\255\5Mallory chats to you, 'hi'\r\ndone\r\n")
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and event.text == "done"
+      end, 2000))
+      local injected = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name ~= "SnoopData"
+      end, 0)
+      assert.is_nil(injected, injected and ("peer saw a " .. injected.name .. " command: " .. injected.text))
+      local line = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and contains(event.text, "abc")
+      end, 0)
+      assert.is_table(line)
+      assert.equals("abc?\5Mallory chats to you, 'hi'", line.text, "payload bytes: " .. line.hex)
+    end)
+
     it("sends a blank game line to a snooper as a frame of its own", function()
       if peerUnavailable() then return end
       ensurePeer()
@@ -1677,6 +1739,25 @@ describe("MMCP effects against a scripted chat peer", function()
       local restored = waitForCommand("NameChange", mark)
       assert.is_table(restored)
       assert.equals(CHAT_NAME, restored.text)
+    end)
+
+    it("keeps a y-diaeresis in a new name from ending the frame early", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      finally(function() mmcp.chatName(CHAT_NAME) end)
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatName("n\195\191\5INJ"))
+      assert.is_true(mmcp.chatName(CHAT_NAME))
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.text == CHAT_NAME
+      end, 2000))
+      local sent = {}
+      for _, event in ipairs(capture().events) do
+        if event.seq > mark and event.type == "command" then
+          sent[#sent + 1] = event.name .. ":" .. event.text
+        end
+      end
+      assert.same({"NameChange:n?\5INJ", "NameChange:" .. CHAT_NAME}, sent)
     end)
 
     it("does not announce a name that has not changed", function()

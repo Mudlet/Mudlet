@@ -534,20 +534,25 @@ bool MMCPClient::setGroup(const QString& group)
  */
 void MMCPClient::writeData(const QString& data)
 {
-    qint64 bytesWritten = mTcpSocket.write(data.toLatin1());
-    if (bytesWritten <= 0) {
-        const QString identifier = mPeerName.isEmpty() ? convertToIPv4(mTcpSocket.peerAddress()) : mPeerName;
-        if (bytesWritten == 0) {
-            qWarning() << "MMCPClient::writeData(QString&) Failed to write data to socket for client " << identifier;
-        } else if (bytesWritten == -1) {
-            qWarning() << "MMCPClient::writeData(QString&) - Failed to write data to socket:" << mTcpSocket.errorString() << " for client " << identifier;
-        }
-    }
+    writeData(data.toLatin1());
 }
 
 void MMCPClient::writeData(const QByteArray& data)
 {
-    qint64 bytesWritten = mTcpSocket.write(data);
+    // MMCP has no way to escape its 0xff terminator, so one inside the payload
+    // would end the frame early and have the peer read what follows as a
+    // command of its own. Text reaches here as Latin-1, where a U+00FF from
+    // any source - game text, a script, a peer's name - becomes 0xff. Only
+    // the last byte may be the terminator; any other 0xff is shown as '?'
+    // rather than dropped, so the loss is visible - in CP1251 that byte is a common Cyrillic letter.
+    QByteArray frame = data;
+    const qsizetype payloadEnd = frame.endsWith(static_cast<char>(End)) ? frame.size() - 1 : frame.size();
+    for (qsizetype i = 0; i < payloadEnd; ++i) {
+        if (frame.at(i) == static_cast<char>(End)) {
+            frame[i] = '?';
+        }
+    }
+    qint64 bytesWritten = mTcpSocket.write(frame);
     if (bytesWritten <= 0) {
         const QString identifier = mPeerName.isEmpty() ? convertToIPv4(mTcpSocket.peerAddress()) : mPeerName;
         if (bytesWritten == 0) {
