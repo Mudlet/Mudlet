@@ -351,6 +351,61 @@ describe("Tests the room and area database behind the map", function()
       assert.is_false(setExit(a, missingRoomId, "east"))
       assert.is_nil(getRoomExits(a)["east"])
     end)
+
+    local function dressExit(from, to, direction, short)
+      assert.is_true(setExit(from, to, direction))
+      assert.is_true(setExitWeight(from, direction, 5))
+      assert.is_true(setDoor(from, short, 2))
+      lockExit(from, direction, true)
+      assert.is_true(addCustomLine(from, {{0.5, 0.5, 0}}, short, "dot line", {1, 2, 3}, false))
+      assert.is_true(hasExitLock(from, direction))
+    end
+
+    local function assertUndressed(from, short, direction)
+      assert.is_nil(getExitWeights(from)[short])
+      assert.is_nil(getDoors(from)[short])
+      assert.is_false(hasExitLock(from, direction))
+      assert.is_nil((getCustomLines1(from) or {})[short])
+    end
+
+    it("setExit with a roomID below one takes the exit's weight, door, lock and custom line with it", function()
+      local a = makeRoom(areaHome, 10, 2, 0)
+      local b = makeRoom(areaHome, 11, 2, 0)
+      finally(function() deleteRoom(a); deleteRoom(b) end)
+      dressExit(a, b, "east", "e")
+      -- the control: an exit that stays
+      dressExit(a, b, "west", "w")
+
+      assert.is_true(setExit(a, -1, "east"))
+
+      assertUndressed(a, "e", "east")
+      assert.are.equal(5, getExitWeights(a)["w"])
+      assert.are.equal(2, getDoors(a)["w"])
+      assert.is_true(hasExitLock(a, "west"))
+      -- so an exit made there again starts out bare, and can be walked
+      assert.is_true(setExit(a, b, "east"))
+      assertUndressed(a, "e", "east")
+      assert.is_true(getPath(a, b))
+    end)
+
+    it("deleting the room an exit leads to takes the exit's weight, door, lock and custom line with it", function()
+      local a = makeRoom(areaHome, 12, 2, 0)
+      local gone = makeRoom(areaHome, 13, 2, 0)
+      local other = makeRoom(areaHome, 14, 2, 0)
+      finally(function()
+        deleteRoom(a); deleteRoom(other)
+        if roomExists(gone) then deleteRoom(gone) end
+      end)
+      dressExit(a, gone, "east", "e")
+      dressExit(a, other, "west", "w")
+
+      assert.is_true(deleteRoom(gone))
+
+      assert.is_nil(getRoomExits(a)["east"])
+      assertUndressed(a, "e", "east")
+      assert.are.equal(5, getExitWeights(a)["w"])
+      assert.is_true(hasExitLock(a, "west"))
+    end)
   end)
 
   describe("Tests special exit bookkeeping", function()
