@@ -6181,7 +6181,12 @@ void Host::setRemoteEchoingActive(bool active)
         mPasswordEntryDismissalEnding = false;
     }
     mIsRemoteEchoingActive = active;
+    // A box that opens from this call is the prompt arriving, the one opening
+    // that takes text being typed in the command line; a recompute from anywhere
+    // else is a box coming back later in the hold
+    mPasswordEntryOpensWithThePrompt = active;
     recomputePasswordEntryWanted();
+    mPasswordEntryOpensWithThePrompt = false;
 }
 
 void Host::recomputePasswordEntryWanted()
@@ -6235,15 +6240,18 @@ void Host::gameDataArrived()
 
 void Host::autoLoginPasswordSent()
 {
-    // Only under a mask: with ECHO off there would be no WONT to end the
-    // suppression, and a prompt an hour later must still get its box.
+    // Held back as after the player's own line past an Esc: until the game
+    // answers. A WONT ends the hold; text under the held ECHO means the game
+    // rejected the password and asks again, and the retry must be hidden too -
+    // a suppression for the rest of the hold would leave it in the clear. Only
+    // under a mask: with ECHO off there is no answer to wait for, and a prompt
+    // an hour later must still get its box.
     if (mIsRemoteEchoingActive) {
-        mPasswordEntrySuppressed = true;
+        mPasswordEntryDismissed = true;
+        mPasswordEntryDismissalEnding = true;
     }
-    // The suppression is written before the pending flag falls, as that
-    // recomputes: the other way round would open a box for an instant, move
-    // text the player had typed ahead into it and destroy that text when the
-    // suppression closed it again.
+    // Written before the pending flag falls, as that recomputes: the other way
+    // round would open a box for an instant and close it again.
     mTelnet.setAutoLoginPending(false);
 }
 

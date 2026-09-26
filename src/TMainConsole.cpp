@@ -1231,11 +1231,13 @@ void TMainConsole::openPasswordEntry()
     // answer: it goes into the box, so a fast typist's password is not split
     // between the two. A command left selected, recalled or written by a script
     // stays where it is, behind the box. Text that moved counts as the player's
-    // first edit, which setText() does not report on its own. Not on a box that
-    // comes back after an Esc: the player chose the command line, and a game
-    // that sends its text and its WONT in separate reads would otherwise open
-    // this box on the first, move the text in, and drop it on the second.
-    if (mpCommandLine->playerTypedLine() && !mpHost->passwordEntryReopened()) {
+    // first edit, which setText() does not report on its own. Only on the box
+    // the prompt itself opens: one that comes back later in the hold - after an
+    // Esc, or once the auto-login's password was rejected - finds text the
+    // player typed into the command line on purpose, and a game that sends its
+    // text and its WONT in separate reads would otherwise open this box on the
+    // first, move the text in, and drop it on the second.
+    if (mpHost->passwordEntryOpensWithThePrompt() && mpCommandLine->playerTypedLine()) {
         QString typedAhead = mpCommandLine->toPlainText();
         typedAhead.remove(QChar::CarriageReturn);
         typedAhead.remove(QChar::LineFeed);

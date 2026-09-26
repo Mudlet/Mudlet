@@ -61,7 +61,7 @@ must see the result the moment `feedTelnet` returns; nothing is deferred.
    Qt zero-fills what it still holds.
 5. Everything else about the command line behaves exactly as with no prompt open, with one
    exception: while the game hides input and the preference is off, a line typed into the
-   command line - past the box, after an Esc or under the auto-login's suppression - stays
+   command line - past the box, after an Esc or while the auto-login holds it back - stays
    out of the history, which is written to disk.
 
 ## What the player sees
@@ -73,11 +73,11 @@ must see the result the moment `feedTelnet` returns; nothing is deferred.
 | Enter | sent by the one path; the box empties, says "Sent - waiting for the game" and stays up until the game releases ECHO, so a rejected password is retried inside it |
 | WONT ECHO | the box closes, text in it discarded, focus back on the command line if the box had it |
 | Esc with text | the box empties (start over) |
-| Esc on an empty box, first time in the hold | the box closes; after the player's next Enter on a command line (a trigger's, timer's or key binding's send does not count) the game's next data ends the dismissal: a WONT ends the hold, anything else means the game has answered and still hides input, so the box comes back saying "Still hidden - Esc again...". A box that comes back this way leaves text in the command line where it is |
+| Esc on an empty box, first time in the hold | the box closes; after the player's next Enter on a command line (a trigger's, timer's or key binding's send does not count) the game's next text ends the dismissal (its negotiation or an out-of-band message alone answers nothing): a WONT ends the hold, text under the held ECHO means the game has answered and still hides input, so the box comes back saying "Still hidden - Esc again...". Only the box the prompt itself opens takes text being typed in the command line; one that comes back later in the hold leaves it where it is |
 | Esc on an empty box, second time in the hold | no box until the game releases ECHO |
 | A game that hides everything | two Escs per hold, or the profile preference "Do not open a hidden-input box when the game asks for hidden input" |
 | GoMud (its #633 and later) | a box per password step, closed by its WONT; a rejected password re-prompts under the held ECHO and is retried inside the box |
-| Auto-login with stored credentials | no box while the auto-login still intends to send the password (a command typed ahead stays in the command line); once it has sent under the game's mask, no box until the game releases ECHO; a late keychain password sent under ECHO suppresses the same way. Costs: a wrong stored password on a game that holds ECHO is retried in the clear; and on a link slow enough that the password goes out before the game's WILL ECHO arrives, that late WILL opens a box, text typed ahead moves into it and the WONT that follows drops it (raise the auto-login password delay for such a game) |
+| Auto-login with stored credentials | no box while the auto-login still intends to send the password (a command typed ahead stays in the command line); once it has sent under the game's mask, no box until the game answers: a WONT ends the hold, text under the held ECHO (a rejected password's re-prompt, or a forgotten WONT) opens a box for the retry with the typed-ahead command left in the command line; a late keychain password sent under ECHO waits the same way. Cost: on a link slow enough that the password goes out before the game's WILL ECHO arrives, that late WILL opens a box, text typed ahead moves into it and the WONT that follows drops it (raise the auto-login password delay for such a game) |
 | Keychain prompt unanswered or refused | a box opens; its first edit cancels the auto-login |
 | A script, trigger or key binding sends the password | goes through `Host::send()` as before, aliases and all |
 | Enter in the box while not connected (or during a replay) | the text is dropped, the box says "Not sent" and a warning line says why |
@@ -85,7 +85,7 @@ must see the result the moment `feedTelnet` returns; nothing is deferred.
 | A label's `prompt:` link clicked while a box is up | the text lands in the box for Enter to send; a script's write, so it does not count as the player's first edit and cancels no auto-login |
 | The ECHO anomaly latch (five WILL/WONT toggles inside five seconds) | cTelnet refuses ECHO for the rest of the connection, as before: no box, input in the clear |
 | The login-phase timeout fires (a game that forgot its WONT) | the box closes and drops its text, and a warning line says so |
-| F-key or Ctrl+letter binding pressed in the box | offered to the key bindings; a plain printable key is typed, never offered |
+| F-key, Ctrl+letter or Alt+arrow binding pressed in the box | offered to the key bindings; a plain printable key is typed, never offered; Tab, Shift+Tab, Up and Down with no other modifier stay in the box, as in the command line |
 | `printCmdLine("main", ...)`, `sendCmdLine()`, an MXP `prompt:` link during a prompt | the text goes into the box; `getCmdLine("main")` still reads the command line |
 | Sub command line during a prompt | untouched, and its Lua action runs |
 | Caret mode's shortcut | leaves for the output pane; a printable key typed there comes back to the box |

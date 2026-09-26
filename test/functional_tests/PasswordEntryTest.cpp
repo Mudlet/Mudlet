@@ -812,7 +812,14 @@ private slots:
     // with Host::autoLoginPasswordSent() writing its two inputs through two
     // recomputes (the typed-ahead "look" would then move into a box for an
     // instant and be destroyed with it).
-    void test_autoLoginKeepsTheBoxAwayAndTypedAheadTextInTheCommandLine()
+    // Once the auto-login has sent the password under the game's mask, the
+    // game's answer decides: a rejected password's re-prompt under the held ECHO
+    // gets a box for the retry, with the command typed ahead left in the command
+    // line - a game that sends its text and its WONT in separate reads would
+    // otherwise move that command into the box on the first read and drop it
+    // on the second. Red with the send suppressing the box for the rest of the
+    // hold, or with the typed-ahead move made on a box the prompt did not open.
+    void test_autoLoginKeepsTheBoxAwayUntilTheGameAnswersAndTypedAheadTextStaysPut()
     {
         mpHost->setLogin(qsl("morquin"));
         mpHost->setPass(qsl("hunter2"));
@@ -830,13 +837,22 @@ private slots:
         mpHost->mTelnet.mTimerPass->start(0ms);
         QVERIFY(waitForServerToReceive(asSent({qsl("hunter2")})));
         QTRY_VERIFY(!mpHost->mTelnet.autoLoginPending());
-        QVERIFY2(!box(), "a box opened after the auto-login had answered under the game's mask");
+        QVERIFY2(!box(), "a box opened the moment the auto-login had answered under the game's mask");
         QCOMPARE(commandLine()->toPlainText(), qsl("look"));
 
+        serverSends(QByteArrayLiteral("\r\nWrong password.\r\nPassword: "));
+        QVERIFY2(box(), "the game rejecting the stored password under the held ECHO got no box for the retry");
+        QCOMPARE(box()->text(), QString());
+        QCOMPARE(commandLine()->toPlainText(), qsl("look"));
+        QVERIFY2(!box()->placeholderText().contains(qsl("Esc again")), "the retry's box is worded as if the player had pressed Esc");
+        QTRY_COMPARE(focusWidget(), box());
+        typeIntoWindow(qsl("hunter3"));
+        pressInWindow(Qt::Key_Return);
+        QVERIFY2(waitForServerToReceive(asSent({qsl("hunter2"), qsl("hunter3")})), "the retry did not go out from the box");
+
         serverSaysEcho(TN_WONT);
-        commandLine()->clear();
-        serverSaysEcho(TN_WILL);
-        QVERIFY2(box(), "the suppression outlived the hold it was set in");
+        QTRY_VERIFY(!box());
+        QCOMPARE(commandLine()->toPlainText(), qsl("look"));
     }
 
     // Red with Host::autoLoginPasswordSent() suppressing whether or not ECHO was up.
@@ -911,14 +927,20 @@ private slots:
         QVERIFY2(!mpHost->mTelnet.mTimerLogin->isActive(), "text moved into the box from the command line did not count as the player's first edit");
     }
 
-    // Red with the box offering every key to the bindings, or none.
+    // Red with the box offering every key to the bindings, or none, or
+    // swallowing the arrow keys whatever their modifiers.
     void test_keyBindingsRunFromTheBoxOnlyForKeysThatDoNotType()
     {
         QVERIFY(runLua(qsl("permKey('passwordEntryF7', '', 0, %1, [[send('frombinding')]])\n"
-                           "permKey('passwordEntryLetterA', '', 0, %2, [[send('fromletter')]])\n")
+                           "permKey('passwordEntryLetterA', '', 0, %2, [[send('fromletter')]])\n"
+                           "permKey('passwordEntryAltUp', '', %3, %4, [[send('frommodifiedup')]])\n"
+                           "permKey('passwordEntryPlainDown', '', 0, %5, [[send('fromplaindown')]])\n")
                                .arg(static_cast<int>(Qt::Key_F7))
-                               .arg(static_cast<int>(Qt::Key_A))));
-        switchOffAfterwards({qsl("passwordEntryF7"), qsl("passwordEntryLetterA")});
+                               .arg(static_cast<int>(Qt::Key_A))
+                               .arg(static_cast<int>(Qt::AltModifier))
+                               .arg(static_cast<int>(Qt::Key_Up))
+                               .arg(static_cast<int>(Qt::Key_Down))));
+        switchOffAfterwards({qsl("passwordEntryF7"), qsl("passwordEntryLetterA"), qsl("passwordEntryAltUp"), qsl("passwordEntryPlainDown")});
 
         serverSaysEcho(TN_WILL);
         const QPointer<TPasswordEntry> pBox = box();
@@ -934,6 +956,16 @@ private slots:
         QCOMPARE(pBox->text(), qsl("a"));
         QTest::qWait(50);
         QVERIFY2(!wireText().contains("fromletter"), "a binding on a plain letter ate a character of the password");
+
+        // As in the command line: a plain arrow key is the history's and never a
+        // binding's, one with a modifier is a binding's
+        pressInWindow(Qt::Key_Up, Qt::AltModifier);
+        QVERIFY2(waitForServerToReceive(asSent({qsl("frommodifiedup")})), "a binding on a modified arrow key did not run from the box");
+        QCOMPARE(focusWidget(), pBox.data());
+        pressInWindow(Qt::Key_Down);
+        QTest::qWait(50);
+        QVERIFY2(!wireText().contains("fromplaindown"), "a binding on a plain arrow key ran from the box");
+        QCOMPARE(pBox->text(), qsl("a"));
     }
 
     // Belt and brace: two layers, no single line.
@@ -996,6 +1028,10 @@ private slots:
         pressInWindow(Qt::Key_Tab);
         pressInWindow(Qt::Key_Up);
         pressInWindow(Qt::Key_Down);
+        // With a modifier and no binding on it, a Tab is still no way out
+        pressInWindow(Qt::Key_Backtab, Qt::ShiftModifier);
+        pressInWindow(Qt::Key_Tab, Qt::ControlModifier);
+        pressInWindow(Qt::Key_Tab, Qt::MetaModifier);
         QCOMPARE(box()->text(), qsl("ab"));
         QCOMPARE(focusWidget(), box());
 

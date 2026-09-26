@@ -251,11 +251,20 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
         }
         break;
     case Qt::Key_Tab:
-    case Qt::Key_Backtab:
     case Qt::Key_Up:
     case Qt::Key_Down:
-        // No focus change, no history, no completion
-        return;
+        // No focus change, no history, no completion; with a modifier they are
+        // a key binding's, as in the command line
+        if (modifiers == Qt::NoModifier) {
+            return;
+        }
+        break;
+    case Qt::Key_Backtab:
+        // Shift+Tab, with the Shift still reported
+        if (modifiers == Qt::NoModifier || modifiers == Qt::ShiftModifier) {
+            return;
+        }
+        break;
     case Qt::Key_PageUp:
     case Qt::Key_PageDown:
         if (modifiers == Qt::NoModifier) {
@@ -311,6 +320,12 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
             mudlet::self()->slot_tabChanged(tabNumber - 1);
             return;
         }
+    }
+
+    // Whatever its modifiers, a Tab that no binding took is still no way out of
+    // the box: QWidget::event() would move the focus on for some of them
+    if (ke->key() == Qt::Key_Tab || ke->key() == Qt::Key_Backtab) {
+        return;
     }
 
     QLineEdit::event(ke);

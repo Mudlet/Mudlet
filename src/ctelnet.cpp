@@ -5797,10 +5797,14 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (amount <= 0) {
         return;
     }
-    // Whatever this read turns out to hold, it is the game speaking, which is
-    // what ends a hidden-input box's one-line dismissal
-    const auto dataArrivedGuard = qScopeGuard([this] {
-        if (mpHost) {
+    // Text in this read is the game speaking, which is what ends a hidden-input
+    // box's one-line dismissal or its wait after the auto-login's password.
+    // Negotiation and out-of-band data alone - a NOP, a GMCP message - answer
+    // nothing and must not bring the box back early. After the read is parsed,
+    // so that a WONT in it ends the hold instead.
+    bool gameSpoke = false;
+    const auto dataArrivedGuard = qScopeGuard([this, &gameSpoke] {
+        if (mpHost && gameSpoke) {
             mpHost->gameDataArrived();
         }
     });
@@ -5945,6 +5949,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                         if (_compress) {
                             mNeedDecompression = true;
                             // from this position in stream onwards, data will be compressed by zlib
+                            gameSpoke = gameSpoke || !cleandata.empty();
                             gotRest(cleandata);
                             cleandata = "";
                             initStreamDecompressor();
@@ -6051,6 +6056,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
 
                 cleandata.push_back('\xff');
                 recvdGA = false;
+                gameSpoke = true;
                 gotPrompt(cleandata);
                 cleandata = "";
             } else {
@@ -6061,6 +6067,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
     } //for
 
     if (!cleandata.empty()) {
+        gameSpoke = true;
         gotRest(cleandata);
     }
 

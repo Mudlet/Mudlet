@@ -86,6 +86,10 @@ private:
         mpHost->mTelnet.loopbackTest(data);
     }
 
+    // Two reads that carry no text: a telnet NOP, and a GMCP message.
+    static QByteArray telnetNop() { return QByteArray().append(TN_IAC).append(TN_NOP); }
+    static QByteArray gmcpMessage() { return QByteArray().append(TN_IAC).append(TN_SB).append(static_cast<char>(OPT_GMCP)).append("Char.Vitals {\"hp\":1}").append(TN_IAC).append(TN_SE); }
+
     bool echoNegotiatedByServer() const { return mpHost->mTelnet.hisOptionState.test(static_cast<size_t>(OPT_ECHO)); }
 
     bool runLua(const QString& script) { return mpHost->mLuaInterpreter.compileAndExecuteScript(script); }
@@ -255,9 +259,10 @@ private slots:
 
     // The first Esc on an empty box hides it until the game next answers a line
     // the player sent; the second within the same hold hides it until the game
-    // releases ECHO. A script's send() is not the player's line, and the game
-    // saying something before the player has sent one ends nothing.
-    // Toggles spent: 3.
+    // releases ECHO. A script's send() is not the player's line, the game
+    // saying something before the player has sent one ends nothing, and its
+    // negotiation or an out-of-band message alone is no answer. Red with any
+    // read at all ending the dismissal. Toggles spent: 3.
     void test_escStepsPastOneLineThenLastsUntilTheGameReleasesEcho()
     {
         QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
@@ -280,6 +285,10 @@ private slots:
 
         mpHost->playerSentLineFromCommandLine();
         QVERIFY2(!mpHost->passwordEntryWanted(), "the box came back the moment the player's line went out, before the game could answer it with a WONT");
+        serverSays(telnetNop());
+        serverSays(gmcpMessage());
+        QVERIFY2(!mpHost->passwordEntryWanted(), "the game's negotiation or an out-of-band message, which answers nothing, brought the box back");
+        QCOMPARE(wanted.count(), 2);
         serverSays(QByteArrayLiteral("Invalid password.\r\nPassword: "));
         QVERIFY2(mpHost->passwordEntryWanted(), "the game answering the player's line while still hiding input did not bring the box back");
         QVERIFY2(mpHost->passwordEntryReopened(), "the box that came back does not know it follows an Esc");
@@ -367,9 +376,11 @@ private slots:
 
     // While the auto-login still intends to send the stored password no box
     // opens, so a command typed ahead stays in the command line; once it has sent
-    // it under the game's mask, none opens until the game releases ECHO.
-    // Toggles spent: 3, plus the cleanup WONT.
-    void test_autoLoginHoldsTheBoxBackAndItsSendSuppressesTheHold()
+    // it under the game's mask, none opens until the game answers: a WONT ends
+    // the hold, and text under the held ECHO is a rejected password's re-prompt,
+    // whose retry must be hidden too. Red with the send suppressing the box for
+    // the rest of the hold. Toggles spent: 3, plus the cleanup WONT.
+    void test_autoLoginHoldsTheBoxBackAndItsSendWaitsForTheGamesAnswer()
     {
         QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
         mpHost->setLogin(qsl("morquin"));
@@ -385,15 +396,32 @@ private slots:
         mpHost->mTelnet.mTimerPass->start(0ms);
         QVERIFY(waitForServerToReceive(asSent(qsl("hunter2"))));
         QTRY_VERIFY2(!mpHost->mTelnet.autoLoginPending(), "the auto-login sent the password but still says it intends to");
-        QVERIFY2(mpHost->mPasswordEntrySuppressed, "the password sent under the game's mask did not suppress the box for the rest of the hold");
-        QVERIFY2(!mpHost->passwordEntryWanted(), "a box opened after the auto-login had answered under the mask");
+        QVERIFY2(!mpHost->passwordEntryWanted(), "a box opened the moment the auto-login had answered under the mask, before the game could answer with a WONT");
+        QVERIFY2(!mpHost->mPasswordEntrySuppressed, "the password sent under the game's mask suppressed the box for the rest of the hold, leaving a rejected password's retry in the clear");
         QCOMPARE(wanted.count(), 0);
 
-        serverSaysEcho(TN_WONT);
-        QVERIFY(!mpHost->mPasswordEntrySuppressed);
-        serverSaysEcho(TN_WILL);
-        QVERIFY2(mpHost->passwordEntryWanted(), "the suppression outlived the hold it was set in");
+        serverSays(telnetNop());
+        serverSays(gmcpMessage());
+        QVERIFY2(!mpHost->passwordEntryWanted(), "the game's negotiation or an out-of-band message, not its answer, brought the box back");
+        QCOMPARE(wanted.count(), 0);
+
+        serverSays(QByteArrayLiteral("\r\nWrong password.\r\nPassword: "));
+        QVERIFY2(mpHost->passwordEntryWanted(), "the game rejecting the stored password under the held ECHO got no box for the retry");
+        QVERIFY2(!mpHost->passwordEntryReopened(), "the retry's box thinks it follows an Esc");
         QCOMPARE(wanted.count(), 1);
+
+        // The player's first Esc on that box is the first of this hold, not the
+        // second
+        mpHost->dismissPasswordEntry();
+        QVERIFY(!mpHost->passwordEntryWanted());
+        QVERIFY2(!mpHost->mPasswordEntrySuppressed, "the first Esc on the retry's box counted as the hold's second");
+        QCOMPARE(wanted.count(), 2);
+
+        serverSaysEcho(TN_WONT);
+        QVERIFY(!mpHost->mPasswordEntryDismissed && !mpHost->mPasswordEntryDismissedOnce);
+        serverSaysEcho(TN_WILL);
+        QVERIFY2(mpHost->passwordEntryWanted(), "the wait outlived the hold it was set in");
+        QCOMPARE(wanted.count(), 3);
     }
 
     // With ECHO off at the send there is no WONT to end a suppression, so none is
@@ -438,8 +466,8 @@ private slots:
     // A keychain password that arrives after the password step has passed is
     // typed for the player only while the game provably still masks input, and
     // once it has gone out under that mask no box may open until the game
-    // releases ECHO. Toggles spent: 2.
-    void test_aLateKeychainPasswordSentUnderTheMaskSuppressesTheHold()
+    // answers. Toggles spent: 2.
+    void test_aLateKeychainPasswordSentUnderTheMaskWaitsForTheGamesAnswer()
     {
         mpHost->setLogin(qsl("morquin"));
         mpHost->mTelnet.mAutoLoginPasswordOutstanding = true;
@@ -450,8 +478,10 @@ private slots:
 
         mpHost->securedPasswordAnswered(true, qsl("secret"), QString(), false);
         QVERIFY(waitForServerToReceive(asSent(qsl("secret"))));
-        QVERIFY2(mpHost->mPasswordEntrySuppressed, "the late password sent under the mask did not suppress the box");
         QVERIFY2(!mpHost->passwordEntryWanted(), "a box stayed open after the late password answered the prompt under the mask");
+        QVERIFY2(!mpHost->mPasswordEntrySuppressed, "the late password sent under the mask suppressed the box for the rest of the hold");
+        serverSays(QByteArrayLiteral("Password: "));
+        QVERIFY2(mpHost->passwordEntryWanted(), "the game rejecting the late password under the held ECHO got no box for the retry");
     }
 
     // The auto-login's name answers a prompt the player may have stepped past, so

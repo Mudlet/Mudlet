@@ -806,18 +806,24 @@ public:
     // The player pressed Enter on a command line with no Lua action (whether or
     // not an alias swallowed the line), or the auto-login sent the name. Not a
     // script's, trigger's or timer's send. A dismissal then ends with the
-    // game's next data: a WONT ends the hold, and anything else means the game
-    // has answered and still hides input, so the box comes back.
+    // game's next text: a WONT ends the hold, and text under the held ECHO
+    // means the game has answered and still hides input, so the box comes back.
     void playerSentLineFromCommandLine();
-    // cTelnet's report that data arrived from the game.
+    // cTelnet's report that text arrived from the game - its negotiation or an
+    // out-of-band message alone answers nothing and is not reported.
     void gameDataArrived();
     // Whether a box opening now follows a dismissal in this hold, for the
     // wording that tells the player Esc a second time lasts until the game
     // releases ECHO.
     bool passwordEntryReopened() const { return mPasswordEntryDismissedOnce; }
+    // Whether a box opening now is the one the prompt itself opens, as opposed
+    // to one that comes back later in the hold: only the former takes text the
+    // player was typing in the command line as the start of its answer.
+    bool passwordEntryOpensWithThePrompt() const { return mPasswordEntryOpensWithThePrompt; }
     // cTelnet's one call for the auto-login sending the stored password: no box
-    // until the game releases the ECHO that masked the send, and the auto-login
-    // no longer intends to send one.
+    // until the game answers the send it masked - a WONT ends the hold, text
+    // under the held ECHO is a rejected password's re-prompt and gets a box for
+    // the retry - and the auto-login no longer intends to send one.
     void autoLoginPasswordSent();
     // The player started answering in the box, or text they had typed ahead was
     // moved into it, so no auto-login timer or late keychain password may answer
@@ -1383,15 +1389,17 @@ private:
     // The last value passwordEntryWanted() answered and the signal carried.
     bool mPasswordEntryWanted = false;
     // Per ECHO hold, cleared by setRemoteEchoingActive(false): no box until the
-    // game releases ECHO (a second Esc, or the auto-login answered under the
-    // mask); no box until the player's next line goes to the game (a first Esc);
-    // and whether a first Esc has happened in this hold.
+    // game releases ECHO (a second Esc); no box until the game next answers (a
+    // first Esc, or the auto-login answered under the mask); and whether a first
+    // Esc has happened in this hold.
     bool mPasswordEntrySuppressed = false;
     bool mPasswordEntryDismissed = false;
     bool mPasswordEntryDismissedOnce = false;
-    // The player has sent a line since the dismissal, so the game's next data
-    // ends it.
+    // A line has gone to the game since the dismissal - the player's, or the
+    // auto-login's password - so the game's next text ends it.
     bool mPasswordEntryDismissalEnding = false;
+    // Set around the recompute a WILL ECHO makes, see passwordEntryOpensWithThePrompt().
+    bool mPasswordEntryOpensWithThePrompt = false;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple
