@@ -27,20 +27,14 @@ class Host;
 class QAction;
 class TCommandLine;
 
-// The box the game's request for hidden input (IAC WILL ECHO) is answered
-// with. It sits over the main command line and takes its keyboard while the
-// game holds ECHO, so that what is typed there never enters the command line:
-// no history, no completion, no aliases, no sysDataSendRequest, nothing for a
-// script to read. Enter hands its text to Host::sendPasswordEntry(), the one
-// path to the wire; Esc empties it, and Esc on an empty box steps past it.
+// Answers the game's request for hidden input (IAC WILL ECHO) over the main
+// command line, so what is typed never enters the command line, its history,
+// completion, aliases or anything a script can read.
 //
-// The text is sent from exactly one place, submit(), and nothing else in Mudlet
-// reads it for any purpose beyond asking whether it is empty. That is a
-// convention QLineEdit's public text() cannot enforce, so TMainConsole hands
-// the widget to nothing but its tests. TMainConsole creates one when
-// Host::passwordEntryWanted() turns true and deletes it when that turns false,
-// so nothing carries over from one prompt to the next, and Qt zero-fills the
-// text a password-mode line edit still holds when it is destroyed.
+// Only submit() may read the text, beyond asking whether it is empty. QLineEdit's
+// public text() cannot enforce that, so TMainConsole hands the widget to nothing
+// but its tests, and deletes it at the end of each prompt so Qt zero-fills what
+// it still holds.
 class TPasswordEntry : public QLineEdit
 {
     Q_OBJECT
@@ -49,15 +43,11 @@ public:
     Q_DISABLE_COPY(TPasswordEntry)
     explicit TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget* parent);
 
-    // Switches the wording to that of a box which follows an Esc in the same
-    // ECHO hold, so the player learns that a second Esc lasts until the game
-    // releases ECHO.
+    // For a box that follows an Esc in the same ECHO hold
     void setReopened();
 
 signals:
-    // Enter was pressed and the text handed to the send path. No text rides on it.
     void submitted();
-    // Esc was pressed on an empty box.
     void dismissed();
 
 public slots:

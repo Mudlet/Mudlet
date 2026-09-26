@@ -77,14 +77,10 @@ public:
     void adjustHeight();
     TConsole* console() const;
     // Whether everything on the line was typed or pasted by the player, starting
-    // from an empty or wholly selected line, and nothing else has changed it
-    // since. A fact about how the text got there, not a guess about history or
-    // timing: a command recalled with Up, left selected by auto-clear-off or
-    // written by a script is not the player's typing.
+    // from an empty or wholly selected line. A recalled, left-selected or
+    // script-written command is not.
     bool playerTypedLine() const { return mPlayerTypedLine; }
-    // The two ShortcutOverride claims this widget makes - the caret-mode
-    // shortcut and a user binding on a profile-switch shortcut - so that the
-    // hidden-input box standing in for it can make the same two.
+    // So the hidden-input box can make the same claims
     bool claimsShortcutOverride(const QKeyEvent*) const;
 
     int mActionFunction = 0;
@@ -158,15 +154,12 @@ private:
     // The file used to store the command history between sessions:
     QString mBackingFileName;
 
-    // Raised only around the code that turns a key or a paste into text, never
-    // around anything that can run Lua, so that slot_contentsChange() can tell
-    // the player's edits from everything else's. See playerTypedLine().
+    // Never raised around anything that can run Lua
     bool mUserEditInProgress = false;
     bool mEditStartedOnBlankLine = false;
     bool mPlayerTypedLine = false;
     QString mLastPlainText;
 
-    // Raises mUserEditInProgress for the scope of one key or paste.
     class UserEditScope
     {
     public:

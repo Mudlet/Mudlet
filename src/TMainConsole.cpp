@@ -129,8 +129,6 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
             },
             Qt::QueuedConnection);
 
-    // The hidden-input box is a view of the Host's policy: it opens and closes
-    // on the one signal, and syncs with whatever the policy already says.
     connect(pH, &Host::signal_passwordEntryWantedChanged, this, &TMainConsole::slot_passwordEntryWanted, Qt::UniqueConnection);
     slot_passwordEntryWanted(pH->passwordEntryWanted());
 
@@ -1168,8 +1166,7 @@ void TMainConsole::printToCommandLine(const QString& text)
 void TMainConsole::appendToCommandLine(const QString& text)
 {
     if (mpPasswordEntry) {
-        // A script's write is not the player's first edit, which insert() would
-        // otherwise report through textEdited and cancel the auto-login with
+        // A script's write is not the player's first edit, which would cancel the auto-login
         const QSignalBlocker blocker(mpPasswordEntry);
         mpPasswordEntry->end(false);
         mpPasswordEntry->insert(text);
@@ -1216,27 +1213,17 @@ void TMainConsole::slot_passwordEntryWanted(const bool wanted)
 
 void TMainConsole::openPasswordEntry()
 {
-    // A sibling of the command line, not a child: an ignored key event bubbles
-    // from a child into TCommandLine::event(), and a sibling shares its
-    // parent's coordinates, so the command line's geometry is directly usable
+    // A sibling, not a child: an ignored key event would bubble from a child
+    // into TCommandLine::event()
     mpPasswordEntry = new TPasswordEntry(mpHost, mpCommandLine, layerCommandLine);
     mpPasswordEntry->setGeometry(mpCommandLine->geometry());
     mpPasswordEntry->raise();
     mpPasswordEntry->show();
-    // Window resizes, font changes and a label's prompt: link growing the line
-    // all move the command line under the box; see eventFilter()
     mpCommandLine->installEventFilter(this);
 
-    // Text the player was typing when the prompt arrived is the start of their
-    // answer: it goes into the box, so a fast typist's password is not split
-    // between the two. A command left selected, recalled or written by a script
-    // stays where it is, behind the box. Text that moved counts as the player's
-    // first edit, which setText() does not report on its own. Only on the box
-    // the prompt itself opens: one that comes back later in the hold - after an
-    // Esc, or once the auto-login's password was rejected - finds text the
-    // player typed into the command line on purpose, and a game that sends its
-    // text and its WONT in separate reads would otherwise open this box on the
-    // first, move the text in, and drop it on the second.
+    // So a fast typist's password is not split between the two. A box that comes
+    // back later in the hold finds text typed into the command line on purpose.
+    // setText() does not report the move as the player's first edit on its own.
     if (mpHost->passwordEntryOpensWithThePrompt() && mpCommandLine->playerTypedLine()) {
         QString typedAhead = mpCommandLine->toPlainText();
         typedAhead.remove(QChar::CarriageReturn);
@@ -1248,30 +1235,22 @@ void TMainConsole::openPasswordEntry()
         }
     }
 
-    // Before the box takes focus, so that a screen reader's focus announcement
-    // reads the wording of a box that follows an Esc
+    // Before the box takes focus, so a screen reader announces this wording
     if (mpHost->passwordEntryReopened()) {
         mpPasswordEntry->setReopened();
     }
 
-    // The window's focus child, which is valid while Mudlet is not the active
-    // application too - QApplication::focusWidget() is null then. Read before
-    // the proxy is set, since setting it moves focus to the box if the command
-    // line had it.
+    // QApplication::focusWidget() is null while Mudlet is not the active
+    // application. Read before setting the proxy, which moves focus to the box.
     QWidget* pFocused = window()->focusWidget();
     mpCommandLine->setFocusProxy(mpPasswordEntry);
 
-    // Steal focus only from this profile's own command lines, or from nothing:
-    // never from the editor, a dialog, another profile's widgets in multi-view
-    // or an output pane in caret mode - a printable key typed there reaches the
-    // box through the proxy anyway
+    // A printable key typed anywhere else reaches the box through the proxy anyway
     auto* pCommandLineFocused = qobject_cast<TCommandLine*>(pFocused);
     const bool fromOwnCommandLine = !pFocused || pFocused == mpCommandLine || (pCommandLineFocused && pCommandLineFocused->console() && pCommandLineFocused->console()->getHost() == mpHost);
     if (fromOwnCommandLine) {
         mpPasswordEntry->setFocus(Qt::OtherFocusReason);
     } else {
-        // The focus event would have spoken for a box that took focus; one that
-        // did not still has to be announced to a screen-reader user
         //: Spoken by a screen reader when the game asks for hidden input while the keyboard focus is somewhere the hidden-input box does not take it from
         mudlet::self()->announce(tr("The game asks for hidden input."), QString(), true);
     }
@@ -1283,19 +1262,15 @@ void TMainConsole::closePasswordEntry()
 {
     TPasswordEntry* pEntry = mpPasswordEntry;
     mpPasswordEntry = nullptr;
-    // The proxy is cleared and focus moved before the box hides, or hide()
-    // runs focusNextPrevChild() itself and focus lands somewhere else
+    // Before the box hides, or hide() runs focusNextPrevChild() itself
     const bool hadFocus = window()->focusWidget() == pEntry;
     mpCommandLine->setFocusProxy(nullptr);
     if (hadFocus) {
-        // Sets the window's focus child even while Mudlet is not the active
-        // application, so reactivation lands on the command line
         mpCommandLine->setFocus(Qt::OtherFocusReason);
     }
     mpCommandLine->removeEventFilter(this);
-    // Hidden, and in password mode, before the deferred delete: a WONT and a
-    // WILL in one read would otherwise leave two boxes alive, one dying; and
-    // Qt zero-fills only the text a password-mode line edit still holds
+    // Hidden before the deferred delete, or a WONT and a WILL in one read leave
+    // two boxes alive. Qt zero-fills only a password-mode line edit's text.
     pEntry->setEchoMode(QLineEdit::Password);
     pEntry->hide();
     pEntry->deleteLater();

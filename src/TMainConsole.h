@@ -50,8 +50,6 @@ class TMainConsole : public TConsole
 {
     Q_OBJECT
 
-    // The only way to the hidden-input box widget: its tests, so that nothing
-    // else in the tree can read what is typed into it
     friend class PasswordEntryTest;
     friend class HostChildTeardownTest;
 
@@ -166,10 +164,8 @@ public:
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
     void setCommandLinePlaceholderText(const QString& text);
     void updateCommandLineSpellCheck(bool enabled);
-    // Writes to the main command line follow the keyboard: while the
-    // hidden-input box is up they go into it, so a script pre-filling the line
-    // for the player to press Enter puts the text where Enter is. Reads never
-    // see the box.
+    // While the hidden-input box is up these write into it, so a script
+    // pre-filling a password lands it masked. Reads never see the box.
     void setCommandLineText(const QString& text);
     void printToCommandLine(const QString& text);
     void appendToCommandLine(const QString& text);
@@ -274,8 +270,6 @@ private:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void openPasswordEntry();
     void closePasswordEntry();
-    // The box the game's request for hidden input is answered with, while one
-    // is up.
     TPasswordEntry* passwordEntry() const;
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     // Shared by reparentLabel() and reparentWindow() so they agree on what "main" means.
@@ -310,8 +304,6 @@ private:
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
 
-    // Created when Host::passwordEntryWanted() turns true and deleted when it
-    // turns false: a fresh widget per prompt, so nothing carries over.
     QPointer<TPasswordEntry> mpPasswordEntry;
 
     bool mEnableClose = false;

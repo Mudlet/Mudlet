@@ -172,7 +172,6 @@ class Host : public QObject
     friend class HostWidgetDecouplingTest;
     // Allows the functional test to answer the keychain lookup in place of a keychain:
     friend class TelnetLatePasswordTest;
-    // Allow the functional tests to read and reset the hidden-input flags:
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
 
@@ -783,56 +782,35 @@ public:
     void setPrintCommand(bool print) { mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; }
 
 public:
-    // On false: clears every per-hold hidden-input flag, whether or not the
-    // value changes - cTelnet::reset() releases ECHO while it is already off -
-    // so that nothing outlives an ECHO hold or a connection.
+    // On false, clears the per-hold hidden-input flags even when the value does
+    // not change: cTelnet::reset() releases ECHO while it is already off
     void setRemoteEchoingActive(bool active);
     bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
-    // Whether the game's request for hidden input (IAC WILL ECHO) should be
-    // answered with a hidden-input box. The inputs are combined in
-    // recomputePasswordEntryWanted() and nowhere else; everything else reads
-    // this and signal_passwordEntryWantedChanged(). Answers with no view, so a
-    // front-end that is not Qt Widgets renders its own box against these calls.
+    // The inputs are combined in recomputePasswordEntryWanted() and nowhere else
     bool passwordEntryWanted() const { return mPasswordEntryWanted; }
     void recomputePasswordEntryWanted();
-    // The profile's "hide nothing" preference, the only write path to it.
     void setDisablePasswordMasking(const bool disable);
     bool disablePasswordMasking() const { return mDisablePasswordMasking; }
-    // Esc on an empty box. The first time within one ECHO hold hides the box
-    // until the game next says something after the player's next line; the
-    // second time hides it until the game releases ECHO.
+    // The first Esc in an ECHO hold hides the box until the game answers the
+    // player's next line; the second until the game releases ECHO
     void dismissPasswordEntry();
-    // The player pressed Enter on a command line with no Lua action (whether or
-    // not an alias swallowed the line), or the auto-login sent the name. Not a
-    // script's, trigger's or timer's send. A dismissal then ends with the
-    // game's next text: a WONT ends the hold, and text under the held ECHO
-    // means the game has answered and still hides input, so the box comes back.
+    // Enter on a command line with no Lua action, or the auto-login's name - not
+    // a script's, trigger's or timer's send. The game's next text then ends a dismissal.
     void playerSentLineFromCommandLine();
-    // cTelnet's report that text arrived from the game - its negotiation or an
-    // out-of-band message alone answers nothing and is not reported.
+    // Not for negotiation or out-of-band messages, which answer nothing
     void gameDataArrived();
-    // Whether a box opening now follows a dismissal in this hold, for the
-    // wording that tells the player Esc a second time lasts until the game
-    // releases ECHO.
     bool passwordEntryReopened() const { return mPasswordEntryDismissedOnce; }
-    // Whether a box opening now is the one the prompt itself opens, as opposed
-    // to one that comes back later in the hold: only the former takes text the
-    // player was typing in the command line as the start of its answer.
+    // Only the box the prompt itself opens takes text the player was typing in
+    // the command line, not one that comes back later in the hold
     bool passwordEntryOpensWithThePrompt() const { return mPasswordEntryOpensWithThePrompt; }
-    // cTelnet's one call for the auto-login sending the stored password: no box
-    // until the game answers the send it masked - a WONT ends the hold, text
-    // under the held ECHO is a rejected password's re-prompt and gets a box for
-    // the retry - and the auto-login no longer intends to send one.
+    // No box until the game answers the masked send; a re-prompt under the held
+    // ECHO then gets one for the retry
     void autoLoginPasswordSent();
-    // The player started answering in the box, or text they had typed ahead was
-    // moved into it, so no auto-login timer or late keychain password may answer
-    // for them.
+    // Stops any auto-login timer or late keychain password answering for the player
     void passwordEntryEdited();
-    // The only way text leaves the box: straight to cTelnet::sendData() with the
-    // sysDataSendRequest event withheld - no alias pass, no command-separator
-    // split, no local echo, no history. Empty sends an empty line. Taken by
-    // rvalue so that the caller's copy is the one zeroed afterwards.
+    // No sysDataSendRequest, aliases, command separator, local echo or history.
+    // Taken by rvalue so that the caller's copy is the one zeroed afterwards.
     bool sendPasswordEntry(QString&& text);
 
     // To cover the corner case of the user changing the mode
@@ -1093,7 +1071,6 @@ signals:
     void signal_saveCommandLinesHistory();
     void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
-    // Emitted only when passwordEntryWanted() changes.
     void signal_passwordEntryWantedChanged(bool wanted);
     void signal_forceMXPProcessorOnChanged(bool enabled);
     // The frontend (TMainConsole) owns the dialogs these drive; the strings are
@@ -1386,17 +1363,13 @@ private:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
 
     bool mDisablePasswordMasking = false;
-    // The last value passwordEntryWanted() answered and the signal carried.
     bool mPasswordEntryWanted = false;
-    // Per ECHO hold, cleared by setRemoteEchoingActive(false): no box until the
-    // game releases ECHO (a second Esc); no box until the game next answers (a
-    // first Esc, or the auto-login answered under the mask); and whether a first
-    // Esc has happened in this hold.
+    // Per ECHO hold: a second Esc, a first Esc or masked auto-login send, and
+    // whether a first Esc has happened
     bool mPasswordEntrySuppressed = false;
     bool mPasswordEntryDismissed = false;
     bool mPasswordEntryDismissedOnce = false;
-    // A line has gone to the game since the dismissal - the player's, or the
-    // auto-login's password - so the game's next text ends it.
+    // A line has gone to the game since the dismissal, so its next text ends it
     bool mPasswordEntryDismissalEnding = false;
     // Set around the recompute a WILL ECHO makes, see passwordEntryOpensWithThePrompt().
     bool mPasswordEntryOpensWithThePrompt = false;

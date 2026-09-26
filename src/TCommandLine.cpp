@@ -139,8 +139,7 @@ void TCommandLine::slot_contentsChange()
     }
     mLastPlainText = text;
     if (!mUserEditInProgress || text.isEmpty()) {
-        // A script's setPlainText(), a clear(), a history recall, Tab completion;
-        // and an emptied line is nobody's typing
+        // A script, clear(), history recall or Tab completion
         mPlayerTypedLine = false;
     } else if (mEditStartedOnBlankLine) {
         mPlayerTypedLine = true;
@@ -160,17 +159,13 @@ bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
     if (!mpHost || mpHost->isClosingDown()) {
         return false;
     }
-    // The accessibility caret-mode shortcut (Tab, Ctrl+Tab or F6) must beat any
-    // application-wide QShortcut - the profile-switching ones use Ctrl+Tab by
-    // default and all of them can be remapped onto these keys - so it is
-    // claimed here to arrive as a KeyPress for the caret-toggling code.
+    // The caret-mode shortcut must beat application-wide QShortcuts, such as
+    // the profile-switching ones on Ctrl+Tab
     if (mpHost->caretShortcutMatches(ke)) {
         return true;
     }
-    // QShortcutMap consumes a key matching one of the profile switching
-    // shortcuts before the KeyPress ever arrives, so a user binding on one has
-    // to be spotted now - and only spotted, since the binding runs off the
-    // KeyPress this claim lets through:
+    // QShortcutMap consumes a profile-switching shortcut before the KeyPress
+    // arrives, so a user binding on one is claimed here and runs off that KeyPress
     return keybindingWouldMatchProfileSwitchShortcut(ke);
 }
 
@@ -229,12 +224,9 @@ bool TCommandLine::keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent* ke
 // event propagation to the parent widget stops.
 bool TCommandLine::event(QEvent* event)
 {
-    // A widget with a focus proxy is not the keyboard target; Qt routes real
-    // key presses to the proxy. Synthetic ones - the caret-mode forwarder in
-    // TTextEdit::keyPressEvent() sends straight to this widget - must go the
-    // same way, or the first character of a password typed from the output
-    // pane lands here in the clear. The proxy is set only while the
-    // hidden-input box is up.
+    // Qt routes real key presses to the focus proxy but not synthetic ones, such
+    // as TTextEdit's caret-mode forwarder, which would put the first character
+    // of a password here in the clear
     if (QWidget* proxy = focusProxy(); proxy && event->type() == QEvent::KeyPress) {
         return QApplication::sendEvent(proxy, event);
     }
@@ -673,8 +665,7 @@ bool TCommandLine::event(QEvent* event)
     }
 
     if (event->type() == QEvent::KeyPress || event->type() == QEvent::InputMethod) {
-        // The keys that fell through the switch - Space among them - and the
-        // input-method composition of dead keys and IMEs edit the text here
+        // Keys that fell through the switch, Space among them, and dead-key and IME composition
         const UserEditScope userEdit(*this);
         return QPlainTextEdit::event(event);
     }
@@ -1066,8 +1057,7 @@ void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
     Q_UNUSED(event)
-    // Whatever is on the line once this returns, the aliases and event handlers
-    // run below may have put there
+    // The aliases and event handlers run below may write to the line
     mPlayerTypedLine = false;
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
@@ -1085,8 +1075,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
             mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
             mpHost->send(command);
-            // A hidden-input box's one-line dismissal ends with the game's
-            // answer to this; a line handed to a Lua action is not the game's
+            // A line handed to a Lua action is not the game's to answer
             mpHost->playerSentLineFromCommandLine();
         }
         // send command to your MiniConsole
@@ -1096,9 +1085,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    // While the game hides input and the profile wants that respected, a line
-    // typed here - past the hidden-input box, by Esc or by the auto-login's
-    // suppression - stays out of the history, which is written to disk
+    // A line typed past the hidden-input box stays out of the on-disk history
     if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
@@ -1275,8 +1262,7 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
-    // DOWN at position 0 with text: save to history and clear input - unless
-    // the game hides input, as enterCommand() rules
+    // DOWN at position 0 with text: save to history and clear input
     if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         mHistoryList.removeAll(toPlainText());
         if (!mHistoryList.isEmpty()) {

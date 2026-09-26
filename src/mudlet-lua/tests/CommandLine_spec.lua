@@ -4,7 +4,7 @@
 
 -- Hidden input cannot be asked for from Lua: the game server takes the ECHO
 -- option, so the real telnet parser is what has to be fed to reach it. It can be
--- turned off, by the profile's "do not open a hidden-input box" preference,
+-- turned off, by the profile's "Show passwords as you type them" preference,
 -- which the self-test profile leaves alone.
 local echoActive = false
 local function serverEcho(takesEcho)
@@ -13,10 +13,7 @@ local function serverEcho(takesEcho)
   echoActive = takesEcho
 end
 
--- These pin what becomes of the command line while the game asks for hidden
--- input: a separate box takes the keyboard, and the command line is left
--- alone. The box itself cannot be seen from Lua - getCmdLine reads the command
--- line and never the box - which is the point of it.
+-- getCmdLine reads the command line and never the hidden-input box over it
 describe("Tests the functionality of the main command line while the server asks for hidden input", function()
   -- cTelnet stops answering ECHO once five negotiations arrive with less than
   -- five seconds between consecutive ones, and it restarts that window on every
@@ -35,9 +32,7 @@ describe("Tests the functionality of the main command line while the server asks
 
   it("keeps a left-over command in the command line while the game asks for hidden input", function()
     -- what the profile does at a password prompt when auto-clear is off: the
-    -- command that was just sent is still there, selected. A selected left-over
-    -- is not the player's typing in progress, so it is not moved into the box
-    -- (a script's write never is anyway)
+    -- command that was just sent is still there, selected
     printCmdLine("main", "specCommandUnderPassword")
     selectCmdLineText("main")
     assert.are.equal("specCommandUnderPassword", getCmdLine("main"))
@@ -61,9 +56,7 @@ describe("Tests the functionality of the main command line while the server asks
     clearCmdLine("main")
     serverEcho(true)
 
-    -- a write to "main" while the box is up goes into the box, so the command
-    -- line stays empty; this says nothing about the box's contents, which Lua
-    -- cannot see by design
+    -- goes into the hidden-input box
     printCmdLine("main", "specSecretPassword")
     assert.are.equal("", getCmdLine("main"), "text written to the main command line during a prompt for hidden input was readable from the command line")
 
@@ -72,9 +65,6 @@ describe("Tests the functionality of the main command line while the server asks
   end)
 end)
 
--- The writers of the main command line take a route of their own so that they
--- can follow the keyboard into the hidden-input box while one is up; with no
--- prompt open they still reach the command line.
 describe("Tests the functionality of the main command line writers with no prompt open", function()
   after_each(function()
     clearCmdLine("main")

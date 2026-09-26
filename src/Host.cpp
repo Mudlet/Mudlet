@@ -1925,7 +1925,6 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         break;
     }
 
-    // A profile whose view is gone still sends; it just has nowhere to echo.
     if (shouldPrint && !mIsRemoteEchoingActive && mpConsole) {
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
@@ -4566,9 +4565,7 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
     } else if (!success && !errorMessage.isEmpty()) {
         qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
     }
-    // Every outcome that ends the lookup - answered, denied, timed out, empty -
-    // can change whether the auto-login still intends to send a password, and a
-    // refused keychain must not go on holding the hidden-input box back.
+    // A refused or empty keychain must not go on holding the hidden-input box back
     mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning());
 }
 
@@ -6172,18 +6169,12 @@ void Host::sendCmdLine(const QString& cmd)
 void Host::setRemoteEchoingActive(bool active)
 {
     if (!active) {
-        // Whether or not the value changes: cTelnet::reset() makes this call
-        // while ECHO is already off, and that must still end a hold's dismissal
-        // or suppression, or it would outlive the connection.
         mPasswordEntrySuppressed = false;
         mPasswordEntryDismissed = false;
         mPasswordEntryDismissedOnce = false;
         mPasswordEntryDismissalEnding = false;
     }
     mIsRemoteEchoingActive = active;
-    // A box that opens from this call is the prompt arriving, the one opening
-    // that takes text being typed in the command line; a recompute from anywhere
-    // else is a box coming back later in the hold
     mPasswordEntryOpensWithThePrompt = active;
     recomputePasswordEntryWanted();
     mPasswordEntryOpensWithThePrompt = false;
@@ -6226,10 +6217,8 @@ void Host::playerSentLineFromCommandLine()
 
 void Host::gameDataArrived()
 {
-    // Ended by the game's answer rather than by the line itself: a box that
-    // came back the moment Enter was pressed would flicker up and be closed
-    // again by the WONT that follows an accepted password a round trip later,
-    // and would eat whatever was typed meanwhile.
+    // Not on Enter itself: the box would flicker up, eat what is typed meanwhile
+    // and be closed by the WONT that follows an accepted password
     if (!mPasswordEntryDismissalEnding) {
         return;
     }
@@ -6240,18 +6229,14 @@ void Host::gameDataArrived()
 
 void Host::autoLoginPasswordSent()
 {
-    // Held back as after the player's own line past an Esc: until the game
-    // answers. A WONT ends the hold; text under the held ECHO means the game
-    // rejected the password and asks again, and the retry must be hidden too -
-    // a suppression for the rest of the hold would leave it in the clear. Only
-    // under a mask: with ECHO off there is no answer to wait for, and a prompt
-    // an hour later must still get its box.
+    // Only under a mask: with ECHO off there is no answer to wait for, and a
+    // prompt an hour later must still get its box
     if (mIsRemoteEchoingActive) {
         mPasswordEntryDismissed = true;
         mPasswordEntryDismissalEnding = true;
     }
-    // Written before the pending flag falls, as that recomputes: the other way
-    // round would open a box for an instant and close it again.
+    // Before the pending flag falls, as that recomputes: the other way round
+    // would open a box for an instant
     mTelnet.setAutoLoginPending(false);
 }
 
@@ -6263,22 +6248,16 @@ void Host::passwordEntryEdited()
 bool Host::sendPasswordEntry(QString&& text)
 {
     QString line = std::move(text);
-    // As send() does, for the GMCP sign-in path:
+    // For the GMCP sign-in path, as send() does
     mUserSentInputThisConnection = true;
-    // No event was raised for this line, so nothing could have denied it. A
-    // denyCurrentSend() made outside a handler leaves a stale refusal that
-    // sendData() would otherwise apply here and drop the password without a word.
+    // A denyCurrentSend() made outside a handler leaves a stale refusal that
+    // would drop the password without a word
     mAllowToSendCommand = true;
-    // A game command on purpose: a typed password must keep arming
-    // character-at-a-time detection and the mask safety timeout, and keep
-    // cancelling a late keychain password, exactly as a line from the command
-    // line did.
+    // A game command, so it arms character-at-a-time detection and the mask
+    // safety timeout as a command line's line does
     const bool sent = mTelnet.sendData(line, false, true);
-    // The player answered; no timer or late keychain password may answer too.
     mTelnet.cancelLoginTimers();
-    // The box has already dropped its copy and the caller moved its own in, so
-    // this is the last owner of the buffer the keystrokes went into. Best effort
-    // only: the encoder and the socket have made their own copies.
+    // Best effort: the encoder and the socket have made their own copies
     line.fill(QChar());
     return sent;
 }

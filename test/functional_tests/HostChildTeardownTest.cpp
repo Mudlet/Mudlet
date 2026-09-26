@@ -244,9 +244,7 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // The hidden-input box is a child of the main console's command-line layer
-    // with a focus proxy pointing at it, and its close path is refused once the
-    // Host is closing down: both orderings of a close have to survive it. Smoke.
+    // Its close path is refused once the Host is closing down
     void test_closingTheProfileWithTheHiddenInputBoxOpenIsSafe()
     {
         const QString profileName = qsl("HostChildTeardown-HiddenInputBox");

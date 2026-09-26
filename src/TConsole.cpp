@@ -3138,9 +3138,7 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
         setFocusProxy(pCommandLine);
         mUpperPane->setFocusProxy(pCommandLine);
         mLowerPane->setFocusProxy(pCommandLine);
-        // For the deepest proxy: while the hidden-input box stands in for the
-        // command line, a screen reader told that the command line has focus
-        // may treat its typed-character echo as unprotected
+        // The hidden-input box when it stands in, or a screen reader may speak typed characters
         QWidget* pFocusTarget = (pCommandLine && pCommandLine->focusProxy()) ? pCommandLine->focusProxy() : pCommandLine;
         QAccessibleEvent event(pFocusTarget, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);

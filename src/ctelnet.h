@@ -280,11 +280,8 @@ public:
     // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
-    // Whether the auto-login still intends to send the stored password: from the
-    // connection being made until the password step has run, been cancelled or
-    // reset. An explicit flag rather than a timer query, so that every one of its
-    // transitions is a call that tells the Host to recompute its hidden-input
-    // policy - which is why only this class and the Host may write it.
+    // A flag rather than a timer query, so every transition makes the Host
+    // recompute its hidden-input policy
     bool autoLoginPending() const { return mAutoLoginPending; }
     bool autoLoginTimersRunning() const;
     // Called when a password turns up after the auto-login already reached the password step -
@@ -384,7 +381,6 @@ private:
     // character-at-a-time detection timer and flags, which have no public face,
     // and fires those timers early rather than waiting them out.
     friend class TelnetPasswordMaskTimeoutTest;
-    // Allow the functional tests to drive the auto-login and ECHO state directly:
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
 

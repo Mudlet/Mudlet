@@ -255,8 +255,7 @@ void cTelnet::reset()
     }
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
-    // After the ECHO state has gone, not before: a disconnect during the
-    // auto-login would otherwise open a hidden-input box on a dead connection.
+    // After ECHO is released, or a disconnect during the auto-login opens a box
     setAutoLoginPending(false);
     mGA_Driver = false;
     // An outstanding measurement belongs to the connection being reset, so the
@@ -908,8 +907,7 @@ void cTelnet::slot_send_login()
 {
     if (!mpHost->getLogin().isEmpty()) {
         sendData(mpHost->getLogin());
-        // The name answered a prompt the player may have stepped past with Esc,
-        // so the password prompt that follows gets its hidden-input box.
+        // So a password prompt after an Esc-dismissed name prompt gets its box
         mpHost->playerSentLineFromCommandLine();
     }
     const bool passwordStepArmed = mpHost->hasAutoLoginCredentials();
@@ -946,9 +944,7 @@ void cTelnet::slot_send_pass()
     mAutoLoginPasswordOutstanding = true;
     mAutoLoginPasswordMaskWithdrawn = false;
     mAutoLoginPasswordOutstandingSince.start();
-    // Nothing is going to be typed for the player unless a password arrives
-    // inside the window, so the box may open for them to type it themselves; the
-    // first character they type cancels the late send.
+    // The box may open for the player; their first character cancels a late send
     setAutoLoginPending(false);
     qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
 }
@@ -1713,8 +1709,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
-        // The event is withheld only for the auto-login password and the
-        // hidden-input box, so a line it was withheld for is never quoted.
+        // The event is withheld only for passwords
         const auto encodingWarning = [&]() {
             if (permitDataSendRequestEvent) {
                 //: Shown when a line typed or sent by a script cannot be encoded for the game; %1 is that line
@@ -5797,11 +5792,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (amount <= 0) {
         return;
     }
-    // Text in this read is the game speaking, which is what ends a hidden-input
-    // box's one-line dismissal or its wait after the auto-login's password.
-    // Negotiation and out-of-band data alone - a NOP, a GMCP message - answer
-    // nothing and must not bring the box back early. After the read is parsed,
-    // so that a WONT in it ends the hold instead.
+    // Negotiation and out-of-band data alone answer nothing. Reported after the
+    // read is parsed, so a WONT in it ends the hold instead.
     bool gameSpoke = false;
     const auto dataArrivedGuard = qScopeGuard([this, &gameSpoke] {
         if (mpHost && gameSpoke) {
@@ -6525,8 +6517,6 @@ void cTelnet::slot_passwordMaskTimeout()
         return;
     }
     qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
-    // The release below closes the hidden-input box and drops what was in it,
-    // which must not happen without a word
     if (mpHost->passwordEntryWanted()) {
         //: Shown when the game has hidden input for a minute after the last line without saying it had stopped, so Mudlet stops hiding input itself and closes the hidden-input box
         postMessage(tr("[ WARN ]  - The game did not say it had stopped hiding input, so Mudlet stopped hiding it. Anything left in the hidden-input box was dropped."));

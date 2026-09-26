@@ -661,8 +661,6 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    // For "main", always the command line's own text: a hidden-input box
-    // standing over it is not readable from Lua, by design
     auto commandline = COMMANDLINE(L, QString{name});
     const QString text = commandline->toPlainText();
     lua_pushstring(L, text.toUtf8().constData());

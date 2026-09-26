@@ -45,9 +45,8 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
     setObjectName(qsl("passwordEntry_%1").arg(pHost->getName()));
     setFont(pCommandLine->font());
     // The command line's palette sets its text colour after construction, so
-    // its placeholder colour is still derived from the default text colour -
-    // black on a black command line - so it is derived from the text colour
-    // that is actually in use.
+    // its placeholder colour is still derived from the default - black on a
+    // black command line
     QPalette palette = pCommandLine->mRegularPalette;
     QColor placeholderColor = palette.color(QPalette::Text);
     placeholderColor.setAlpha(128);
@@ -65,8 +64,7 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
     //: Tooltip of the box the game's request for hidden input is answered with; Esc closes it so the command line can be used instead
     setToolTip(tr("Enter password or press Esc"));
 
-    // So that a keychain password arriving late cannot be typed over a player
-    // who has started answering
+    // A late keychain password must not overwrite what the player has started typing
     connect(this, &QLineEdit::textEdited, pHost, &Host::passwordEntryEdited);
 
     // A revealed password is still not for the selection clipboard: QLineEdit
@@ -86,9 +84,7 @@ void TPasswordEntry::slot_selectionClipboardChanged()
     if (echoMode() != QLineEdit::Normal || !pClipboard->ownsSelection()) {
         return;
     }
-    // Only what came from this box: a selection made in an output pane
-    // meanwhile is left alone. Cleared before any other application can ask
-    // for it, since requests are served by this event loop.
+    // A selection made meanwhile in an output pane is left alone
     if (pClipboard->text(QClipboard::Selection) == selectedText()) {
         pClipboard->clear(QClipboard::Selection);
     }
@@ -147,22 +143,17 @@ void TPasswordEntry::submit()
     // removed text aloud and a later destruction zero-fills the buffer - and
     // before the text is read, since changing the echo mode makes Qt copy it
     setRevealed(false);
-    // The one place the text leaves the box
     QString line = text();
-    // Also clears the undo history, and leaves `line` the last holder of the
-    // buffer the keystrokes went into, for the send path to zero - before any
-    // edit to `line`, which on a shared buffer would copy it and leave the
-    // original to be freed unzeroed
+    // Before any edit to `line`: that leaves it the only holder of the buffer
+    // the keystrokes went into, for the send path to zero, rather than a copy
+    // that leaves the original to be freed unzeroed. Also clears the undo history.
     setText(QString());
-    // A pasted line break must never make a second line: sendData() strips only
-    // the line feed
+    // A pasted line break must not make a second line; sendData() strips only the line feed
     line.remove(QChar::CarriageReturn);
     line.remove(QChar::LineFeed);
     if (mpHost->sendPasswordEntry(std::move(line))) {
         setPlaceholderText(QString());
     } else {
-        // Nothing to write to - the connection is gone, or this is a replay -
-        // and the text is already dropped, so say so rather than claim a send
         //: Placeholder text of the hidden-input box after Enter when the line could not be sent because Mudlet is not connected to the game
         setPlaceholderText(tr("Not sent - not connected to the game"));
         //: Shown in the game window when Enter in the hidden-input box could not send the line because Mudlet is not connected to the game
@@ -171,8 +162,6 @@ void TPasswordEntry::submit()
     emit submitted();
 }
 
-// What Ctrl+C means from the command line when an output pane holds a
-// selection: that selection, never the command line's own text.
 bool TPasswordEntry::copyConsoleSelection()
 {
     TConsole* pConsole = mpCommandLine->console();
@@ -195,10 +184,8 @@ bool TPasswordEntry::event(QEvent* event)
     }
 
     if (event->type() == QEvent::ShortcutOverride) {
-        // The two claims the command line makes, so that the caret-mode shortcut
-        // and a user binding on a profile-switch shortcut arrive here as key
-        // presses. Every other ShortcutOverride is QLineEdit's to claim or not:
-        // accepting them wholesale would kill every application shortcut.
+        // Only the command line's own claims: accepting every ShortcutOverride
+        // would disable all application shortcuts
         if (mpCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
             event->accept();
             return true;
@@ -209,9 +196,7 @@ bool TPasswordEntry::event(QEvent* event)
     if (event->type() == QEvent::KeyPress) {
         auto* ke = static_cast<QKeyEvent*>(event);
         handleKeyPress(ke);
-        // Handled or not: a key press that is not both accepted and reported
-        // handled propagates up the parent chain, and while no ancestor handles
-        // keys, this is the belt to that brace.
+        // Accepted even when unhandled, so it never propagates up the parent chain
         ke->accept();
         return true;
     }
@@ -225,8 +210,6 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
     // count as one - as TCommandLine treats them
     const Qt::KeyboardModifiers modifiers = ke->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::GroupSwitchModifier);
 
-    // A screen-reader user must be able to leave for the output pane to re-read
-    // the prompt without losing the box
     if (mpHost->caretShortcutMatches(ke)) {
         mpHost->setCaretEnabled(true);
         return;
@@ -245,7 +228,7 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
             if (text().isEmpty()) {
                 emit dismissed();
             } else {
-                // Start over; also clears the undo history
+                // Also clears the undo history
                 setText(QString());
             }
             return;
@@ -254,8 +237,6 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
     case Qt::Key_Tab:
     case Qt::Key_Up:
     case Qt::Key_Down:
-        // No focus change, no history, no completion; with a modifier they are
-        // a key binding's, as in the command line
         if (modifiers == Qt::NoModifier) {
             return;
         }
@@ -281,19 +262,15 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
         copyConsoleSelection();
         return;
     }
-    // In both echo modes: a revealed password is still not for the clipboard.
-    // setText() after a submit or an Esc already clears the undo history, so
-    // the undo swallow is defence in depth.
+    // In both echo modes: a revealed password is still not for the clipboard
     if (ke->matches(QKeySequence::Cut) || ke->matches(QKeySequence::Undo) || ke->matches(QKeySequence::Redo)) {
         return;
     }
 
     // A printable key with no modifier, or with the ones a keyboard layout uses
     // to reach characters - AltGr arrives as Ctrl+Alt on Windows, Option as Alt
-    // on macOS - is typed. Everything else is offered to the key bindings first,
-    // so an F-key bound to a login alias runs and a Ctrl+letter binding runs,
-    // while a numpad digit bound to a direction still types a digit of the
-    // password. Stricter than the command line, which offers every key.
+    // on macOS - is typed, so a numpad digit bound to a direction still types a
+    // digit of the password. Everything else is offered to the key bindings first.
     const QString text = ke->text();
     const bool printable = !text.isEmpty() && text.front().isPrint();
     const Qt::KeyboardModifiers modifierKeys = ke->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier);
@@ -312,8 +289,6 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
         return;
     }
 
-    // Ctrl+digit switches profile tabs from the command line; a user binding on
-    // the same key has already had its turn above, as it has there
     if ((ke->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier)) == Qt::ControlModifier && ke->key() >= Qt::Key_0
         && ke->key() <= Qt::Key_9) {
         const int tabNumber = ke->key() == Qt::Key_0 ? 10 : (ke->key() - Qt::Key_0);
@@ -352,10 +327,8 @@ void TPasswordEntry::scrollConsole(const bool up)
 
 void TPasswordEntry::focusInEvent(QFocusEvent* event)
 {
-    // Keeps Host::setFocusOnHostActiveCommandLine() and the caret-mode key
-    // forwarder landing here through the command line's focus proxy - but not
-    // for a switch away from and back to the application, which would mess up
-    // the record just as it would for the command line itself
+    // Not on a switch back to the application, which would overwrite the
+    // record just as it would for the command line itself
     if (event->reason() != Qt::ActiveWindowFocusReason && mpHost && mpCommandLine) {
         mpHost->recordActiveCommandLine(mpCommandLine);
     }
