@@ -98,9 +98,7 @@ public:
         UnderlineWavy = 0x400000,     // 0000 0000 0100 0000 0000 0000 0000 0000
         UnderlineDotted = 0x800000,   // 0000 0000 1000 0000 0000 0000 0000 0000
         UnderlineDashed = 0x1000000,  // 0000 0001 0000 0000 0000 0000 0000 0000
-        // NOT a replacement for TCHAR_INVERSE, that is now the Selected flag
-        // below, but they must be EX-ORed at the point of painting the
-        // Character
+        // NOT TCHAR_INVERSE (now Selected, below), but the two are EX-ORed when painting the character
         Reverse = 0x20,               // 0000 0000 0000 0000 0000 0000 0010 0000
         // Flashing less than 150 times a minute:
         Blink = 0x40,                 // 0000 0000 0000 0000 0000 0000 0100 0000
@@ -140,9 +138,7 @@ public:
         Found = 0x100000,             // 0000 0000 0001 0000 0000 0000 0000 0000
         // Replaces TCHAR_ECHO 16
         Echo = 0x200000,              // 0000 0000 0010 0000 0000 0000 0000 0000
-        // Part of the text selection in the console showing it. Not a display
-        // attribute (it is outside TestMask) and it does not survive copying
-        // the character - see the copy constructor:
+        // In the showing console's selection. Not a display attribute (outside TestMask); dropped by the copy constructor:
         Selected = 0x2000000          // 0000 0010 0000 0000 0000 0000 0000 0000
     };
     // clang-format on
@@ -154,9 +150,7 @@ public:
     explicit TChar(TConsole* pC = nullptr);
     // Another non-default constructor:
     TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
-    // User defined copy-constructor, defined here because filling a run of
-    // text with its format and copying out a finished line both go through it
-    // once per character:
+    // Inline because filling a run's format and copying out a finished line call it per character:
     TChar(const TChar& copy)
     : mFgColor(copy.mFgColor)
     , mBgColor(copy.mBgColor)
@@ -196,8 +190,7 @@ public:
 
     QColor foreground() const { return QColor::fromRgba(mFgColor); }
     QColor background() const { return QColor::fromRgba(mBgColor); }
-    // The stored form of the colors, for comparing against another color
-    // without building a QColor to do it:
+    // For comparing colors without building a QColor:
     QRgb foregroundRgba() const { return mFgColor; }
     QRgb backgroundRgba() const { return mBgColor; }
     AttributeFlags allDisplayAttributes() const { return mFlags & TestMask; }
@@ -302,9 +295,8 @@ public:
     }
 
 private:
-    // Every line of scrollback holds one of these per character, so the colors
-    // are kept as ARGB values rather than as a pair of 16-byte QColors. The
-    // colors the text pipeline sees are all 8-bit RGB, which QRgb holds exactly.
+    // One per scrollback character, so QRgb rather than 16-byte QColors; the text pipeline's colors are
+    // all 8-bit RGB, which QRgb holds exactly.
     QRgb mFgColor = 0;
     QRgb mBgColor = 0;
     AttributeFlags mFlags = None;
@@ -336,16 +328,12 @@ public:
     // limit on how many characters a single echo can accept for performance reasons
     static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
-    // The format of the per-line timestamp, as per QDateTime::toString(). It is
-    // translatable, so it is overwritten once at startup and fixed thereafter:
+    // As per QDateTime::toString(). Translatable, so overwritten once at startup and fixed thereafter:
     static inline QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
 
-    // Stamped on lines that continue an earlier one, and compared against to
-    // decide whether a line starts a paragraph, so it has to stay distinct from
-    // anything smTimeStampFormat can produce. It also has to render to the same
-    // width: layoutLine() paints whatever string the time buffer holds, then
-    // advances its column accounting by smTimeStampFormat.size(), so a stamp of
-    // another width shifts the text origin and the mouse-to-column mapping:
+    // Marks continuation lines and detects paragraph starts, so must differ from any smTimeStampFormat
+    // output yet match its width: layoutLine() advances columns by smTimeStampFormat.size() whatever it
+    // paints, so another width shifts the text origin and the mouse-to-column mapping:
     static inline QString smBlankTimeStamp = qsl("------------ ");
 
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
@@ -422,8 +410,7 @@ public:
     // packets relies on that state surviving between calls to
     // translateToPlainText():
     void resetSequenceParserState();
-    // timeStampOverride lets a caller replaying held-back content stamp it with
-    // the time it arrived rather than the time it is being shown:
+    // timeStampOverride keeps the arrival time for held-back content being replayed:
     void append(const QString& chunk,
                 int sub_start,
                 int sub_end,
@@ -463,8 +450,7 @@ public:
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
 
-    // The decoder incoming text bytes go through, resolved from the encoding
-    // name when it changes instead of in the per-byte loop:
+    // Resolved from the encoding name when it changes, not in the per-byte loop:
     enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, Utf8 };
     static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
@@ -632,8 +618,7 @@ private:
     QString mMudLine;
     std::vector<TChar> mMudBuffer;
     std::vector<TChar> mPreTriggerPassLine;
-    // Parked between lines so that the trigger-pass snapshot can reuse an
-    // allocation instead of making a fresh one for each committed line:
+    // Parked between lines so the trigger-pass snapshot reuses its allocation:
     std::vector<TChar> mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
     // Meaningful only inside a trigger pass: false until something overwrites
@@ -762,10 +747,8 @@ private:
     // A longer number opening a line is likelier a year or a price ending a
     // wrapped sentence than a list number; only "[...]" is trusted past it:
     static constexpr qsizetype csmMaxListNumberDigits = 3;
-    // Past this a per-line accumulator's allocation is released rather than
-    // kept for the next line: one very long line - a game dumping a help file,
-    // or a pasted log - would otherwise park its capacity for the rest of the
-    // session, and a TChar costs tens of bytes where a character costs two:
+    // Past this a per-line accumulator's allocation is released, or one very long line (a help file dump,
+    // a pasted log) would park its capacity all session, and a TChar is far bigger than a QChar:
     static constexpr size_t csmMaxRetainedLineCapacity = 8192;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection

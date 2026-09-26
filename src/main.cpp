@@ -156,10 +156,8 @@ void removeOldNoteColorEmojiFonts()
 
 QTranslator* loadTranslationsForCommandLine()
 {
-    // Not MudletApp::getQSettings(): that stays null until mudlet::setupConfig()
-    // has settled the config root, and a run which only prints --help or
-    // --version calls neither mudlet::start() nor setupConfig(). Same file,
-    // same format as setupConfig() opens - keep the spellings in step.
+    // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
+    // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
     QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
@@ -168,9 +166,8 @@ QTranslator* loadTranslationsForCommandLine()
         return nullptr;
     }
     // We only need the Mudlet translations for the Command Line texts, no need
-    // for any Qt ones. The parent is QCoreApplication::instance(), not qApp -
-    // qApp static-casts to QApplication, which a print-and-exit run has not
-    // created.
+    // for any Qt ones. Parented to QCoreApplication::instance(), not qApp, which static-casts
+    // to a QApplication that a print-and-exit run has not created.
     QTranslator* pMudletTranslator = new QTranslator(QCoreApplication::instance());
     // If we allow the translations to be outside of the resource file inside
     // the application executable then this will have to be revised to handle
@@ -344,12 +341,9 @@ int main(int argc, char* argv[])
 
     parser.addPositionalArgument(qsl("package"), qsl("Path to .mpackage file"));
 
-    // A run that only prints text and exits is read before there is an
-    // application object to take Qt's own options out of the list, so this
-    // parser meets them. The ones the help text further down promises are
-    // declared here - hidden, as that text is written out by hand - so that
-    // `mudlet --reverse --version` answers rather than first calling a
-    // documented option unknown. Keep the two lists in step.
+    // A print-and-exit run is parsed before an application object strips Qt's own options, so this parser
+    // meets them. Those the hand-written help text promises are declared here, hidden, so that
+    // `mudlet --reverse --version` answers rather than calling a documented option unknown. Keep in step.
     for (const QString& inheritedName : {qsl("dograb"), qsl("nograb"), qsl("reverse"), qsl("sync"), qsl("widgetcount")}) {
         QCommandLineOption inheritedOption(inheritedName);
         inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
@@ -361,24 +355,18 @@ int main(int argc, char* argv[])
         parser.addOption(inheritedOption);
     }
 
-    // Raw argv, deliberately: the application object that would hand out a
-    // tidied list is the very thing this list decides the kind of. Only ASCII
-    // option spellings are read from it, so the local 8-bit conversion cannot
-    // lose anything that is looked at here.
+    // Raw argv: the application object that would tidy it is what this list decides the kind of. Only
+    // ASCII option spellings are read, so the local 8-bit conversion loses nothing looked at here.
     QStringList commandLineArguments;
     commandLineArguments.reserve(argc);
     for (int i = 0; i < argc; ++i) {
         commandLineArguments << QString::fromLocal8Bit(argv[i]);
     }
 
-    // Which kind of application object this run needs is decided here, before
-    // there is one: --help and --version print and exit, and have to do so
-    // where there is no display. This pass reads a single-dash word whole
-    // rather than as compacted short options, since Qt's own options are still
-    // in the list and compacting them would find an 'h' in -stylesheet or a 'v'
-    // in -reverse and answer a normal launch with a page of help. Known gap:
-    // -h or -v compacted into a group of short options (-qv, -fh) is not seen
-    // here, so such a run builds a QApplication and still needs a display.
+    // Decides the kind of application object before there is one: --help and --version must work with no
+    // display. Single-dash words are read whole, as Qt's own options are still in the list and compacting
+    // would find an 'h' in -stylesheet or a 'v' in -reverse. Known gap: -h/-v in a compacted group (-qv,
+    // -fh) isn't seen here, so such a run builds a QApplication and still needs a display.
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
     const bool commandLineReadOk = parser.parse(commandLineArguments);
     const bool printAndExitOption = parser.isSet(showHelp) || parser.isSet(showVersion);
@@ -401,11 +389,9 @@ int main(int argc, char* argv[])
 #endif // INCLUDE_3DMAPPER
 #endif
 
-    // A QApplication needs a platform plugin, and on a machine with no display
-    // server loading one aborts the process - so the options that only print
-    // text and exit get an application that asks for no display at all. The GUI
-    // one stays a raw pointer because its delete at the end of main() is
-    // deliberately ordered against static destruction, see there.
+    // Loading a platform plugin with no display server aborts, so print-and-exit options get an
+    // application that needs no display. The GUI one stays a raw pointer: its delete at the end of main()
+    // is deliberately ordered against static destruction.
     std::unique_ptr<QCoreApplication> consoleApp;
     QApplication* app = nullptr;
     if (printAndExitOption) {
@@ -435,20 +421,12 @@ int main(int argc, char* argv[])
         QCoreApplication::setApplicationVersion(QString(APP_VERSION) + MudletApp::buildSuffix());
     }
 
-    // The first QSslSocket in the process - every profile's cTelnet holds two -
-    // has Qt parse every system CA certificate on the constructing thread,
-    // which lands squarely inside profile load. Doing the same initialisation
-    // on a pool thread now means the parse is normally over before a profile
-    // opens.
-    // The pool is a local so that every early return from main() joins the
-    // thread on the way out: the warm-up holds Qt's TLS backend mutex while it
-    // loads the backend plugin, and static destruction pulls that mutex and the
-    // plugin machinery out from under it. The global pool cannot serve here -
-    // waiting on it would also wait for whatever QtConcurrent work a profile
-    // left running.
-    // It runs on every path, a print-and-exit one included: the warm-up needs
-    // no GUI, and --version is the shortest way through main() that still
-    // starts it, which is how AppStartupTeardownTest drives that race.
+    // The first QSslSocket (each cTelnet holds two) makes Qt parse every system CA certificate on the
+    // constructing thread, inside profile load; warming up on a pool thread now usually finishes first.
+    // A local pool, so every early return joins it: the warm-up holds Qt's TLS backend mutex while loading
+    // the plugin, and static destruction tears those down. Not the global pool: waiting on it would also
+    // wait for QtConcurrent work a profile left running. Runs on print-and-exit paths too, which is how
+    // AppStartupTeardownTest drives that race via --version.
     QThreadPool sslWarmupPool;
     sslWarmupPool.start([]() {
         QSslConfiguration::defaultConfiguration();
@@ -470,13 +448,10 @@ int main(int argc, char* argv[])
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
 
-    // A print-and-exit run keeps the verdict of the pass above: reading the
-    // same words a second way can reach a different one, and such a run has no
-    // QApplication for the rest of main() to dereference if it does. Any other
-    // run is read again from the application's own list, in the compacted mode
-    // Mudlet has always used - Qt has taken the options it handles itself out
-    // of that list by then, so no letter of one of them can be mistaken for a
-    // Mudlet option.
+    // A print-and-exit run keeps the verdict above: a second reading may differ, and such a run has no
+    // QApplication for the rest of main() to dereference. Other runs are reparsed from the application's
+    // own list in the usual compacted mode - Qt has removed its own options by then, so none of their
+    // letters can pass for a Mudlet option.
     bool parsedCommandLineOk = commandLineReadOk;
     if (!printAndExitOption) {
         parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsCompactedShortOptions);
