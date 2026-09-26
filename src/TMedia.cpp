@@ -296,9 +296,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         return;
     }
 
-    // A pause or stop asked for by a script or the game leaves the input unset, and names a file
-    // unless it says it is a stream - so an unset input has its path trimmed as a file's is.
-    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() != TMediaData::MediaInputStream) {
+    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
@@ -311,6 +309,8 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
@@ -320,7 +320,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
@@ -354,7 +354,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
         return;
     }
 
-    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() != TMediaData::MediaInputStream) {
+    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
@@ -367,12 +367,14 @@ void TMedia::stopMedia(TMediaData& mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (auto& pPlayer : mediaPlayerList) {
         if (!pPlayer) {
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
@@ -594,6 +596,27 @@ QList<std::shared_ptr<TMediaPlayer>> TMedia::findMediaPlayersByCriteria(const TM
     return {}; // Default empty list fallback
 }
 
+// A pause, stop or resume carries no input type of its own. An absolute path an API call names plays
+// from the copy transitionNonRelativeFile() made under its bare name, so that is what a player of a
+// file is matched against; a stream keeps the name it was given and is matched against it as asked.
+TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData)
+{
+    TMediaData fileRequest = mediaData;
+
+    if (mediaData.mediaProtocol() != TMediaData::MediaProtocolAPI || mediaData.mediaInput() == TMediaData::MediaInputStream) {
+        return fileRequest;
+    }
+
+    // playMedia() swaps the separators before it copies the file, so a Windows path trims the same way.
+    const QString fileName = QString(mediaData.mediaFileName()).replace(QLatin1Char('\\'), QLatin1Char('/'));
+
+    if (!fileName.isEmpty() && !QFileInfo(fileName).isRelative()) {
+        fileRequest.setMediaFileName(fileName.section(QLatin1Char('/'), -1));
+    }
+
+    return fileRequest;
+}
+
 bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData)
 {
     if (!player) {
@@ -629,7 +652,7 @@ bool TMedia::resume(TMediaData mediaData)
         return resumed;
     }
 
-    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() != TMediaData::MediaInputStream) {
+    if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
@@ -642,6 +665,8 @@ bool TMedia::resume(TMediaData mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
@@ -651,7 +676,7 @@ bool TMedia::resume(TMediaData mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
