@@ -2,22 +2,27 @@
 -- edits made from inside a trigger, and the refusals for bad or clashing names.
 describe("Console edges", function()
   local function name(base)
-    return "ce" .. base .. tostring(math.random(100000, 999999))
+    return "ce" .. base
   end
 
   describe("editing the line a trigger matched keeps later capture groups aligned", function()
     -- Group 1 is the whole match, so "beta" is group 3. Each edit shifts where
     -- "beta" sits in the line; unless the capture positions shift with it,
-    -- selectCaptureGroup(3) selects the wrong characters afterwards.
+    -- selectCaptureGroup(3) selects the wrong characters afterwards. A failed
+    -- selection leaves the previous one in place, hence the check on what
+    -- selectCaptureGroup() returned.
     local function inTrigger(edit)
       local result = {}
       local id = tempRegexTrigger("^ceTrig (\\w+) (\\w+)$", function()
         result.before = getCurrentLine()
         edit(result)
-        selectCaptureGroup(3)
+        result.selected3 = selectCaptureGroup(3)
         result.group3 = getSelection()
-        result.after = getCurrentLine()
         deselect()
+        result.selected1 = selectCaptureGroup(1)
+        result.group1 = getSelection()
+        deselect()
+        result.after = getCurrentLine()
       end, 1)
       finally(function() killTrigger(id) end)
       feedTriggers("\nceTrig alpha beta\n")
@@ -31,6 +36,7 @@ describe("Console edges", function()
       end)
       assert.are.equal("ceTrig alpha beta", result.before)
       assert.are.equal("ceTrig x beta", result.after)
+      assert.are.equal(1, result.selected3)
       -- where "beta" was before the edit no longer holds it
       assert.are_not.equal("beta", result.after:sub(14, 17))
       assert.are.equal("beta", result.group3)
@@ -42,6 +48,7 @@ describe("Console edges", function()
         replace("alphabetical")
       end)
       assert.are.equal("ceTrig alphabetical beta", result.after)
+      assert.are.equal(1, result.selected3)
       assert.are_not.equal("beta", result.after:sub(14, 17))
       assert.are.equal("beta", result.group3)
     end)
@@ -53,7 +60,42 @@ describe("Console edges", function()
       end)
       assert.are.equal("[L]ceTrig alpha beta", result.after)
       assert.are_not.equal("beta", result.after:sub(14, 17))
+      assert.are.equal(1, result.selected3)
       assert.are.equal("beta", result.group3)
+      -- the whole match starts exactly where the link went in, so it moves too
+      assert.are.equal(1, result.selected1)
+      assert.are.equal("ceTrig alpha beta", result.group1)
+    end)
+
+    it("after insertText() puts text in front of it", function()
+      local result = inTrigger(function()
+        moveCursor(0, getLineNumber())
+        insertText("[T]")
+      end)
+      assert.are.equal("[T]ceTrig alpha beta", result.after)
+      assert.are_not.equal("beta", result.after:sub(14, 17))
+      assert.are.equal(1, result.selected3)
+      assert.are.equal("beta", result.group3)
+      assert.are.equal(1, result.selected1)
+      assert.are.equal("ceTrig alpha beta", result.group1)
+    end)
+
+    it("after replace() shortens an earlier named group", function()
+      local selected, selection, line
+      local id = tempRegexTrigger("^ceNamed (?<a>\\w+) (?<b>\\w+)$", function()
+        selectCaptureGroup("a")
+        replace("x")
+        selected = selectCaptureGroup("b")
+        selection = getSelection()
+        line = getCurrentLine()
+        deselect()
+      end, 1)
+      finally(function() killTrigger(id) end)
+      feedTriggers("\nceNamed alpha beta\n")
+      assert.are.equal("ceNamed x beta", line)
+      assert.are_not.equal("beta", line:sub(15, 18))
+      assert.are.equal(1, selected)
+      assert.are.equal("beta", selection)
     end)
   end)
 
@@ -104,10 +146,22 @@ describe("Console edges", function()
       local fgBefore = echoedColours()
       assert.are_not.same({40, 50, 60}, fgBefore)
 
-      assert.is_true(setTextFormat("main", 1, 2, 3, 40, 50, 60, false, false, false))
+      assert.is_true(setTextFormat("main", 1, 2, 3, 40, 50, 60, true, true, true))
       local fg, bg = echoedColours()
       assert.are.same({40, 50, 60}, fg)
       assert.are.same({1, 2, 3}, bg)
+      selectString(getCurrentLine(), 1)
+      local format = getTextFormat()
+      deselect()
+      assert.is_true(format.bold)
+      assert.is_true(format.underline)
+      assert.is_true(format.italic)
+    end)
+
+    it("reports a window it cannot find", function()
+      local ok, err = setTextFormat("ceNoSuchWindow", 1, 2, 3, 40, 50, 60, false, false, false)
+      assert.is_false(ok)
+      assert.are.equal("window 'ceNoSuchWindow' does not exist", err)
     end)
   end)
 
@@ -120,6 +174,10 @@ describe("Console edges", function()
 
     teardown(function()
       deleteLabel(label)
+    end)
+
+    it("sets a cursor image it can load", function()
+      assert.is_true(setLabelCustomCursor(label, ":/icons/mudlet.png"))
     end)
 
     it("reports an empty label name", function()
@@ -188,15 +246,18 @@ describe("Console edges", function()
       deleteScrollBox(target)
     end)
 
-    it("can be raised and lowered", function()
+    -- Lua has no getter for stacking order or parent, so what these pin is that
+    -- each kind of element is found by name
+    it("are found by name by raiseWindow() and lowerWindow()", function()
       assert.is_false(raiseWindow(name("NoSuchElement")))
+      assert.is_false(lowerWindow(name("NoSuchElement")))
       for _, element in ipairs({scrollBox, cmdLine, textEdit, mini}) do
         assert.is_true(raiseWindow(element), element)
         assert.is_true(lowerWindow(element), element)
       end
     end)
 
-    it("can be moved into a scroll box with setWindow()", function()
+    it("are found by name by setWindow()", function()
       local unknown = name("NoSuchElement")
       local ok, err = setWindow(target, unknown, 5, 5, true)
       assert.is_nil(ok)
@@ -221,12 +282,12 @@ describe("Console edges", function()
     it("a command line or a text edit that already exists", function()
       local cmdLine = name("DupCmdLine")
       local textEdit = name("DupTextEdit")
-      assert.is_true(createCommandLine(cmdLine, 0, 0, 100, 20))
-      assert.is_true(createTextEdit(textEdit, 0, 30, 100, 20))
       finally(function()
         deleteCommandLine(cmdLine)
         deleteTextEdit(textEdit)
       end)
+      assert.is_true(createCommandLine(cmdLine, 0, 0, 100, 20))
+      assert.is_true(createTextEdit(textEdit, 0, 30, 100, 20))
 
       local ok, err = createCommandLine(cmdLine, 0, 0, 100, 20)
       assert.is_nil(ok)
@@ -237,6 +298,8 @@ describe("Console edges", function()
       assert.are.equal("couldn't create text edit", err)
     end)
 
+    -- these two answer false rather than the nil the others give, which is the
+    -- API as it stands - change the API, not just this test
     it("an empty name to delete a miniconsole or a label", function()
       local ok, err = deleteMiniConsole("")
       assert.is_false(ok)
