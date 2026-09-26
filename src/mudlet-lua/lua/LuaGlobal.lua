@@ -43,6 +43,12 @@ function unzip( what, dest )
     dest = dest .. "/"
   end
 
+  local failures = {}
+  local function fail( message )
+    cecho( "<red>ERROR: " .. message .. "\n" )
+    failures[#failures + 1] = message
+  end
+
   -- Two different libraries answer to the global `zip`: Mudlet loads lua-zip
   -- (brimworks) first and only falls back to luazip (Kepler) where brimworks is
   -- missing (see TLuaInterpreter.cpp). brimworks counts entries with
@@ -52,12 +58,15 @@ function unzip( what, dest )
     if type( z.get_num_files ) == "function" then
       local index, count = 0, z:get_num_files()
       return function()
-        index = index + 1
-        if index > count then
-          return nil
+        while index < count do
+          index = index + 1
+          local info, statErr = z:stat( index )
+          if info then
+            return { filename = info.name, uncompressed_size = info.size, index = index }
+          end
+          fail( "can't read archive entry #" .. index .. " (" .. tostring( statErr ) .. ")" )
         end
-        local info = z:stat( index )
-        return { filename = info.name, uncompressed_size = info.size, index = index }
+        return nil
       end
     end
     return z:files()
@@ -121,19 +130,17 @@ function unzip( what, dest )
     return parts
   end
 
-  local failures = {}
-  local function fail( message )
-    cecho( "<red>ERROR: " .. message .. "\n" )
-    failures[#failures + 1] = message
-  end
-
   -- Remembers failures as well as successes, so a folder that cannot be made is
   -- reported once rather than once for every entry inside it
   local madeDirs = {}
   local function makeDirectory( path )
     if madeDirs[path] == nil then
       local made, mkdirErr = true, nil
-      if lfs.attributes( path, "mode" ) ~= "directory" then
+      -- a symlinked folder already in dest would carry its entries outside dest
+      local mode = lfs.symlinkattributes( path, "mode" )
+      if mode == "link" then
+        made, mkdirErr = nil, "a symbolic link is in the way"
+      elseif mode ~= "directory" then
         made, mkdirErr = lfs.mkdir( path )
       end
       madeDirs[path] = made and true or false
@@ -144,19 +151,35 @@ function unzip( what, dest )
     return madeDirs[path]
   end
 
-  -- Lua buffers writes, so a full disk usually only shows up at close()
+  -- Written beside its target and renamed over it, so a failed write leaves a
+  -- file already there untouched, and a symlink already there is replaced rather
+  -- than written through to wherever it points. Lua buffers writes, so a full
+  -- disk usually only shows up at close().
   local function writeFile( path, data )
-    local out, openErr = io.open( path, "wb" )
+    local partial = path .. ".unzip-partial"
+    os.remove( partial )
+    local out, openErr = io.open( partial, "wb" )
     if not out then
       return nil, openErr
     end
     local written, writeErr = out:write( data )
     local closed, closeErr = out:close()
-    if written and closed then
-      return true
+    if not ( written and closed ) then
+      os.remove( partial )
+      return nil, writeErr or closeErr
     end
-    os.remove( path )
-    return nil, writeErr or closeErr
+    local renamed, renameErr = os.rename( partial, path )
+    -- Windows will not rename over an existing file
+    local existing = lfs.symlinkattributes( path, "mode" )
+    if not renamed and existing and existing ~= "directory" then
+      os.remove( path )
+      renamed, renameErr = os.rename( partial, path )
+    end
+    if not renamed then
+      os.remove( partial )
+      return nil, renameErr
+    end
+    return true
   end
 
   for file in entries() do

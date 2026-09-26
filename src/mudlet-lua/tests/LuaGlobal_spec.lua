@@ -64,8 +64,10 @@ describe("Tests LuaGlobal.lua functions", function()
     -- where the teardown finds it
     local dest = root .. "/dest/a/"
     -- where unzip() used to put a folder for the archive's top-level empty file
-    -- (#10382); every spec extracting unzip-empty.zip can make it on a regression
+    -- (#10382); every spec extracting unzip-empty.zip can make it on a regression.
+    -- It is outside root, so it is only removed when a spec made it.
     local strayFolder = lfs.currentdir() .. "/unzip-spec-empty-top.txt"
+    local strayFolderExisted
     local echoed
     local originalCecho
 
@@ -112,7 +114,7 @@ describe("Tests LuaGlobal.lua functions", function()
 
     before_each(function()
       removeTree(root)
-      lfs.rmdir(strayFolder)
+      strayFolderExisted = lfs.attributes(strayFolder) ~= nil
       lfs.mkdir(root)
       lfs.mkdir(root .. "/dest")
       lfs.mkdir(root .. "/dest/a")
@@ -126,7 +128,9 @@ describe("Tests LuaGlobal.lua functions", function()
     after_each(function()
       _G.cecho = originalCecho
       removeTree(root)
-      lfs.rmdir(strayFolder)
+      if not strayFolderExisted then
+        lfs.rmdir(strayFolder)
+      end
     end)
 
     it("Should report a missing archive rather than raising", function()
@@ -179,7 +183,9 @@ describe("Tests LuaGlobal.lua functions", function()
       assert.equals("", contents(dest .. "resources/empty-inside.txt"))
       assert.equals("note\n", contents(dest .. "resources/note.txt"))
       assert.equals("directory", lfs.attributes(dest .. "resources/nested", "mode"))
-      assert.is_nil(lfs.attributes(strayFolder))
+      if not strayFolderExisted then
+        assert.is_nil(lfs.attributes(strayFolder))
+      end
       assert.is_true(result, table.concat(echoed))
     end)
 
@@ -198,17 +204,90 @@ describe("Tests LuaGlobal.lua functions", function()
       assert.is_string(err)
     end)
 
-    it("Should report a full disk instead of succeeding silently (#10383)", function()
-      if not lfs.link or not lfs.attributes("/dev/full") then
-        pending("needs /dev/full to stand in for a full disk")
-        return
+    it("Should report a full disk and keep the file it would have replaced (#10383)", function()
+      local original = io.open(dest .. "config.lua", "wb")
+      original:write("original\n")
+      original:close()
+      -- Lua buffers the write, so a full disk only shows up when the file is closed
+      local realOpen = io.open
+      io.open = function(path, mode)
+        if mode == "wb" and path:find(dest .. "config.lua", 1, true) == 1 then
+          return {
+            write = function(self) return self end,
+            close = function() return nil, "No space left on device" end,
+          }
+        end
+        return realOpen(path, mode)
       end
-      -- Lua buffers the write, so this only fails when the file is closed
-      assert.is_true(lfs.link("/dev/full", dest .. "config.lua", true))
-      local result, err = unzip(archiveDirectory .. "/unzip-empty.zip", dest)
-      assert.equals(1, echoedCount("can't write file:" .. dest .. "config.lua ("))
+      local ok, result, err = pcall(unzip, archiveDirectory .. "/unzip-empty.zip", dest)
+      io.open = realOpen
+      assert.is_true(ok, tostring(result))
+      assert.equals(1, echoedCount("can't write file:" .. dest .. "config.lua (No space left on device)"))
+      assert.equals("original\n", contents(dest .. "config.lua"))
+      local names = {}
+      for name in lfs.dir(dest) do
+        if name ~= "." and name ~= ".." then
+          names[#names + 1] = name
+        end
+      end
+      table.sort(names)
+      assert.same({ "config.lua", "resources", "unzip-spec-empty-top.txt" }, names)
       assert.is_nil(result)
       assert.is_truthy(err:find("can't write file:" .. dest .. "config.lua", 1, true), err)
+    end)
+
+    it("Should report an entry the archive cannot describe and carry on", function()
+      local realOpen = zip.open
+      zip.open = function()
+        return {
+          get_num_files = function() return 2 end,
+          stat = function(_, index)
+            if index == 1 then
+              return nil, "Read error"
+            end
+            return { name = "folder/", size = 0 }
+          end,
+          close = function() end,
+        }
+      end
+      local ok, result, err = pcall(unzip, root .. "/stub.zip", dest)
+      zip.open = realOpen
+      assert.is_true(ok, tostring(result))
+      assert.equals(1, echoedCount("can't read archive entry #1 (Read error)"))
+      assert.equals("directory", lfs.attributes(dest .. "folder", "mode"))
+      assert.is_nil(result)
+      assert.is_string(err)
+    end)
+
+    it("Should not follow a symlinked folder in dest out of it", function()
+      lfs.mkdir(root .. "/outside")
+      if not lfs.link or not lfs.link(root .. "/outside", dest .. "resources", true) then
+        pending("needs symbolic links")
+        return
+      end
+      local result, err = unzip(archiveDirectory .. "/unzip-empty.zip", dest)
+      assert.is_nil(lfs.attributes(root .. "/outside/note.txt"))
+      assert.is_nil(lfs.attributes(root .. "/outside/empty-inside.txt"))
+      assert.is_nil(lfs.attributes(root .. "/outside/nested"))
+      assert.equals(1, echoedCount("can't create directory:" .. dest .. "resources (a symbolic link is in the way)"))
+      assert.equals("x\n", contents(dest .. "config.lua"))
+      assert.is_nil(result)
+      assert.is_string(err)
+    end)
+
+    it("Should replace a symlinked file in dest rather than write through it", function()
+      local outside = io.open(root .. "/outside.txt", "wb")
+      outside:write("untouched\n")
+      outside:close()
+      if not lfs.link or not lfs.link(root .. "/outside.txt", dest .. "config.lua", true) then
+        pending("needs symbolic links")
+        return
+      end
+      local result = unzip(archiveDirectory .. "/unzip-empty.zip", dest)
+      assert.equals("untouched\n", contents(root .. "/outside.txt"))
+      assert.equals("file", lfs.symlinkattributes(dest .. "config.lua", "mode"))
+      assert.equals("x\n", contents(dest .. "config.lua"))
+      assert.is_true(result, table.concat(echoed))
     end)
   end)
 

@@ -44,7 +44,6 @@ def build(path, entries):
                 info.external_attr = 0o644 << 16
                 info.compress_type = zipfile.ZIP_DEFLATED
                 archive.writestr(info, data)
-    print("built " + os.path.basename(path))
 
 
 here = os.path.dirname(os.path.abspath(__file__))
