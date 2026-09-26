@@ -4375,6 +4375,39 @@ void TLuaInterpreter::setMatches(lua_State* L)
     lua_setglobal(L, "matches");
 }
 
+// Shared by every path that runs a multiline trigger's body - script or Lua
+// function, with or without an expiry count - so they cannot drift apart again.
+// Leaves multimatches alone when there are no captures, i.e. outside a
+// multiline trigger firing.
+static void setMultimatches(lua_State* L, const std::list<std::list<std::string>>& captureGroups, const QVector<QVector<QPair<QString, QString>>>& nameGroups)
+{
+    if (captureGroups.empty()) {
+        return;
+    }
+
+    int k = 1; // Lua indexes start with 1 as a general convention
+    lua_newtable(L);
+    for (const auto& captures : captureGroups) {
+        // multimatches{ trigger_idx{ table_matches{ ... } } }
+        lua_pushnumber(L, k);
+        lua_newtable(L);
+        int i = 1;
+        for (const auto& capture : captures) {
+            lua_pushnumber(L, i++);
+            lua_pushstring(L, capture.c_str());
+            lua_settable(L, -3);
+        }
+        for (const auto& [name, capture] : nameGroups.value(k - 1)) {
+            lua_pushstring(L, name.toUtf8().constData());
+            lua_pushstring(L, capture.toUtf8().constData());
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+        ++k;
+    }
+    lua_setglobal(L, "multimatches");
+}
+
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName)
 {
@@ -4390,6 +4423,7 @@ bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName)
     lua_gettable(L, LUA_REGISTRYINDEX);
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        setMultimatches(L, mMultiCaptureGroupList, mMultiCaptureNameGroups);
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
             std::string e = "";
@@ -4468,6 +4502,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const
 
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        setMultimatches(L, mMultiCaptureGroupList, mMultiCaptureNameGroups);
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
             std::string e = "";
@@ -4693,37 +4728,6 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     }
     lua_settop(L, callerStackTop);
     return ((!error) && (ret > 0));
-}
-
-// Shared by callMulti() and callMultiReturnBool() so the two cannot drift apart
-// again - the latter once built this without the named captures (issue #10403)
-static void setMultimatches(lua_State* L, const std::list<std::list<std::string>>& captureGroups, const QVector<QVector<QPair<QString, QString>>>& nameGroups)
-{
-    if (captureGroups.empty()) {
-        return;
-    }
-
-    int k = 1; // Lua indexes start with 1 as a general convention
-    lua_newtable(L);
-    for (const auto& captures : captureGroups) {
-        // multimatches{ trigger_idx{ table_matches{ ... } } }
-        lua_pushnumber(L, k);
-        lua_newtable(L);
-        int i = 1;
-        for (const auto& capture : captures) {
-            lua_pushnumber(L, i++);
-            lua_pushstring(L, capture.c_str());
-            lua_settable(L, -3);
-        }
-        for (const auto& [name, capture] : nameGroups.value(k - 1)) {
-            lua_pushstring(L, name.toUtf8().constData());
-            lua_pushstring(L, capture.toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        lua_settable(L, -3);
-        ++k;
-    }
-    lua_setglobal(L, "multimatches");
 }
 
 // No documentation available in wiki - internal function

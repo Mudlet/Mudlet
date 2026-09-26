@@ -2400,6 +2400,39 @@ describe("Trigger processing", function()
             assert.is_nil(named.absent, "each line only carries the names its own pattern defined")
         end)
 
+        -- a Lua function as the body runs through yet another call path, which
+        -- used to set matches but never multimatches
+        for _, expiry in ipairs({0, 5}) do
+            it("gives a Lua function body multimatches" .. (expiry > 0 and " with an expiry count" or ""), function()
+                local name = "SpecMLFunction" .. expiry
+                local seen = {}
+                finally(function()
+                    killTrigger(name)
+                end)
+                local body = function()
+                    seen.fired = (seen.fired or 0) + 1
+                    seen.count = #multimatches
+                    seen.positional = multimatches[1][2]
+                    seen.first = multimatches[1]["alpha"]
+                    seen.second = multimatches[2]["beta"]
+                end
+                for _, pattern in ipairs({[[^function one (?<alpha>\w+)$]], [[^function two (?<beta>\w+)$]]}) do
+                    if expiry > 0 then
+                        tempComplexRegexTrigger(name, pattern, body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, expiry)
+                    else
+                        tempComplexRegexTrigger(name, pattern, body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                    end
+                end
+
+                feedTriggers("function one aaa\n")
+                feedTriggers("function two bbb\n")
+
+                assert.are.equal(1, seen.fired, "the state should have completed and run the function once")
+                assert.are.same({count = 2, positional = "aaa", first = "aaa", second = "bbb"},
+                    {count = seen.count, positional = seen.positional, first = seen.first, second = seen.second})
+            end)
+        end
+
     end)
 
     -- A colour-pattern trigger that is the child of a filter parent ("only pass
