@@ -200,8 +200,10 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
         }
 
         // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
-        if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section('/', -1));
+        // A name ending in a separator has no file name to trim to, and an empty one would match every player, so it is left as given.
+        const QString bareName = mediaData.mediaFileName().section('/', -1);
+        if (!fileRelative && !bareName.isEmpty()) {
+            mediaData.setMediaFileName(bareName);
         }
     }
 
@@ -250,9 +252,10 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
             return matchingMediaDataList; // MSP and GMCP files should not have absolute paths.
         }
 
-        // API files may start as absolute but get copied into the media folder. Trim the path.
-        if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section('/', -1));
+        // API files may start as absolute but get copied into the media folder. Trim the path, unless that leaves no name at all.
+        const QString bareName = mediaData.mediaFileName().section('/', -1);
+        if (!fileRelative && !bareName.isEmpty()) {
+            mediaData.setMediaFileName(bareName);
         }
     }
 

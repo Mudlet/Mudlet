@@ -920,6 +920,32 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("a query naming an absolute path that ends in a separator lists nothing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    onCleanup(function() stopSounds() stopMusic() end)
+
+    -- such a path has no bare file name to trim to, and an empty name would
+    -- match every playback there is
+    local directory = getMudletHomeDir() .. "/busted-media-no-such-dir/"
+    local cases = {
+      {play = playSoundFile, pause = pauseSounds, playing = getPlayingSounds, paused = getPausedSounds, key = "busted-directory-query-sound"},
+      {play = playMusicFile, pause = pauseMusic, playing = getPlayingMusic, paused = getPausedMusic, key = "busted-directory-query-music"},
+    }
+    for _, case in ipairs(cases) do
+      assert.is_true(case.play({name = longSoundFile, key = case.key}))
+      assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+      assert.equals(1, #case.playing())
+      assert.equals(0, #case.playing({name = directory}), case.key .. ": a playing query naming a directory listed a playback")
+
+      assert.is_true(case.pause({key = case.key}))
+      assert.equals(1, #case.paused())
+      assert.equals(0, #case.paused({name = directory}), case.key .. ": a paused query naming a directory listed a playback")
+    end
+  end)
+
   it("playMusicFile reports the music type and stopMusic ends it", function()
     if mediaPlaybackUnavailable() then
       return
