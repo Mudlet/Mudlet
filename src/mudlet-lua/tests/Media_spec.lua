@@ -1858,12 +1858,13 @@ describe("Media playback effects with a generated sound file", function()
     end
   end)
 
-  it("an absolute path written with backslashes is stopped under that same path", function()
+  it("an absolute path given with a backslash separator is stopped under that same path", function()
     if mediaPlaybackUnavailable() then
       return
     end
-    -- the play swaps a backslash for a slash before it copies the file, as a
-    -- Windows path needs, so the stop has to trim at a backslash as well
+    -- the Lua functions turn a backslash into a slash before the media engine
+    -- sees the name, so play and stop both get the plain absolute path and the
+    -- stop has to trim it to the copy's bare name as the one above does
     local outsideName = "busted-media-outside-backslash.wav"
     local outside = writeOutsideFile(outsideName, "busted-media-outside-dir")
     local asWritten = outside:gsub("/(busted%-media%-outside%-backslash%.wav)$", "\\%1")
@@ -1877,7 +1878,39 @@ describe("Media playback effects with a generated sound file", function()
 
     assert.is_true(stopSounds({name = asWritten}))
     waitForCount("sysMediaFinished", finished, 1)
-    assert.equals(1, #finished, "stopping by the backslashed path left the copy playing")
+    assert.equals(1, #finished, "stopping by the path given with a backslash left the copy playing")
+  end)
+
+  it("an absolute path that ends in a separator names no file and matches none", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    onCleanup(function() stopSounds() end)
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    -- such a path has no bare file name to trim to, and an empty name would
+    -- match every playback there is
+    local directory = getMudletHomeDir() .. "/busted-media-no-such-dir/"
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-directory-one"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-directory-two"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    assert.is_true(stopSounds({name = directory}))
+    pumpEvents(300)
+    assert.equals(0, #finished, "a stop naming a directory ended " .. #finished .. " sounds")
+
+    assert.is_true(pauseSounds({name = directory}))
+    pumpEvents(200)
+    assert.equals(0, #getPausedSounds(), "a pause naming a directory paused a sound")
+
+    assert.is_true(pauseSounds({key = "busted-directory-one"}))
+    assert.equals(1, #getPausedSounds())
+    playSoundFile({name = directory})
+    pumpEvents(250)
+    assert.equals(1, #getPausedSounds(), "playing a directory resumed the paused sound")
   end)
 
   it("a wildcard in the file name is resolved against the media directory", function()

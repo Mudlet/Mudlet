@@ -597,21 +597,24 @@ QList<std::shared_ptr<TMediaPlayer>> TMedia::findMediaPlayersByCriteria(const TM
 }
 
 // A pause, stop or resume carries no input type of its own. An absolute path an API call names plays
-// from the copy transitionNonRelativeFile() made under its bare name, so that is what a player of a
-// file is matched against; a stream keeps the name it was given and is matched against it as asked.
+// from the copy transitionNonRelativeFile() made under its bare file name, its directories dropped,
+// so that is what a player of a file is matched against; a stream keeps the name it was given and
+// is matched against it as asked.
 TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData)
 {
     TMediaData fileRequest = mediaData;
+    const QString& fileName = mediaData.mediaFileName();
 
-    if (mediaData.mediaProtocol() != TMediaData::MediaProtocolAPI || mediaData.mediaInput() == TMediaData::MediaInputStream) {
+    if (mediaData.mediaProtocol() != TMediaData::MediaProtocolAPI || mediaData.mediaInput() == TMediaData::MediaInputStream || fileName.isEmpty() || QFileInfo(fileName).isRelative()) {
         return fileRequest;
     }
 
-    // playMedia() swaps the separators before it copies the file, so a Windows path trims the same way.
-    const QString fileName = QString(mediaData.mediaFileName()).replace(QLatin1Char('\\'), QLatin1Char('/'));
+    // A name ending in a separator has no file name to trim to, and an empty one would match every
+    // player, so it is left as given to match none.
+    const QString bareName = fileName.section(QLatin1Char('/'), -1);
 
-    if (!fileName.isEmpty() && !QFileInfo(fileName).isRelative()) {
-        fileRequest.setMediaFileName(fileName.section(QLatin1Char('/'), -1));
+    if (!bareName.isEmpty()) {
+        fileRequest.setMediaFileName(bareName);
     }
 
     return fileRequest;
