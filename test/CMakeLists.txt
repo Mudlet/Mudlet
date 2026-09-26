@@ -44,7 +44,7 @@ cmake_language(DEFER CALL restore_windows_test_output)
 # directory outlives the run, where a test's own QTemporaryDir does not - so a test
 # still has to redirect for itself to get a config root that is empty at the start
 # of every run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet
-# only when that directory holds profiles/ (see MudletPaths::xdgConfigDir()), which this does
+# only when that directory holds profiles/ (see MudletApp::xdgConfigDir()), which this does
 # not create - deliberately, since seeding the opt-in here would give a test that
 # forgets a config root that accumulates profiles between runs, which is the
 # collision #9999 was about.
@@ -59,6 +59,12 @@ function(sandbox_test_config_dirs)
             # CoreFoundation is handed a home directory rather than a config root,
             # and one that has to exist - Qt creates a config root on the way to
             # writing into it, and no one creates a home
+            #
+            # The Security framework reads this home too, so a test run has no login
+            # keychain to reach: reads answer "not found", but a write asks the person
+            # who ran the suite whether to reset their keychain to defaults. A test that
+            # writes to the store has to leave that alone on macOS - see
+            # CredentialManagerKeychainTest::initTestCase().
             file(MAKE_DIRECTORY "${testConfigDir}")
             set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "CFFIXED_USER_HOME=${testConfigDir}")
         endif()

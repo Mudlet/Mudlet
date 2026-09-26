@@ -50,13 +50,9 @@
 
 #include <memory>
 
-// A compile error is marked up for the editor's rich-text view (see
-// TLuaInterpreter::compile(), which is where this has to be kept in step by
-// hand), and everything else that shows it - the console line the install
-// writes, the reason installPackage() hands back - wants the text it was made
-// from. The escaping is undone in the reverse of the order it was applied, the
-// ampersand last of all, so that a script whose own text says "&amp;lt;b&amp;gt;" comes
-// back as itself rather than as markup.
+// Undoes the rich-text markup TLuaInterpreter::compile() adds (kept in step by hand), for the
+// console line and installPackage()'s reason. Unescaped in reverse order, ampersand last, so a
+// script whose own text says "&amp;lt;b&amp;gt;" comes back as itself rather than as markup.
 static QString compileErrorAsPlainText(const QString& error)
 {
     QString plainText = error;
@@ -804,10 +800,8 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
-    // Through the setter rather than at the field, so that turning spell check
-    // on always queues the dictionary read. Nothing is queued here: the whole
-    // import runs inside the profile loading sequence, which the setter skips,
-    // and the warm that follows the load covers whatever was read in.
+    // Via the setter, so enabling spell check always queues the dictionary read. Nothing is queued
+    // here: the import runs inside profile loading, which the setter skips, and the post-load warm covers it.
     bool enableSpellCheck = false;
     setBoolAttribute(qsl("mEnableSpellCheck"), enableSpellCheck);
     pHost->setEnableSpellCheck(enableSpellCheck);
@@ -1988,10 +1982,8 @@ QString XMLimport::readScriptElement()
         qDebug() << "XMLimport::readScriptElement() ERROR:" << errorString();
     }
 
-    // From format 1.001 on, control characters are stored as U+FFFC (Object
-    // Replacement) followed by the matching Control Picture. Hardly any script
-    // holds a U+FFFC, so one contains() spares every script the 29 full-text
-    // replace() scans below:
+    // From format 1.001, control characters are stored as U+FFFC then the matching Control Picture.
+    // Few scripts hold a U+FFFC, so one contains() spares most scripts the 29 replace() scans below:
     if ((mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0)) && localScript.contains(QChar(0xFFFC))) {
         localScript.replace(qsl("\xFFFC\x2401"), QChar('\x01')); // SOH
         localScript.replace(qsl("\xFFFC\x2402"), QChar('\x02')); // STX
@@ -2139,18 +2131,14 @@ void XMLimport::readStopWatchMap()
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;
                 pStopWatch->mIsInitialised = true;
-                // Both of the stored times come straight out of the profile
-                // file, so they are clamped to the range a stopwatch holds the
-                // same way its own operations are - otherwise an edited or
-                // damaged profile could load one whose time no longer fits:
+                // Clamp both stored times as the stopwatch's own operations do, so an edited or damaged
+                // profile cannot load a time that no longer fits:
                 if (attributes().value(qsl("running")) == YES) {
                     pStopWatch->mIsRunning = true;
                     // The stored value is the point in epoch time that the
                     // stopwatch appears to have been started so we need to
                     // make that into a QDateTime that is the equivalent.
-                    // Bounding that instant rather than the elapsed time it
-                    // implies keeps the subtraction which would work that time
-                    // out from overflowing on a wild value:
+                    // Bounding the instant, not the elapsed time, keeps that subtraction from overflowing:
                     const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
                     pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(qBound(
                             nowMSecs - stopWatch::csmMaximumMilliSeconds, attributes().value(qsl("effectiveStartDateTimeEpochMSecs")).toLongLong(), nowMSecs + stopWatch::csmMaximumMilliSeconds));

@@ -76,6 +76,9 @@ class THyperlinkVisibilityManager : public QObject
     // announcement is otherwise only observable through a screen reader, and a
     // line number only through the side effect of revealing the link.
     friend class TrackedLinkTrimTest;
+    // Brings a tracked link's delay forward, so a reveal that has to outlast a
+    // profile closing is not then waited out in full.
+    friend class HyperlinkModelSplitTest;
 
 public:
     explicit THyperlinkVisibilityManager(TConsoleModel& model);

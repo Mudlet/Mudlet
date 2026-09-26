@@ -156,12 +156,8 @@ int64_t physicalMemoryTotal()
 #endif
 }
 
-// Every line appended to a buffer is stamped with the time it arrived, and
-// QTime::currentTime() consults the timezone database on each call - which on
-// glibc means a stat() of /etc/localtime per line. The stamp has millisecond
-// resolution at best, so a burst of lines arriving within the same millisecond
-// all get the same string: work it out once and hand out copies until either
-// the millisecond or the (translated, so changeable) format moves on.
+// QTime::currentTime() consults the timezone database per call (on glibc a stat() of /etc/localtime), so
+// reuse the stamp until the millisecond or the (translatable) format changes.
 QString currentTimeStamp()
 {
     static qint64 cachedMSecs = 0;
@@ -169,10 +165,8 @@ QString currentTimeStamp()
     static QString cachedStamp;
 
     if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat != TBuffer::smTimeStampFormat) {
-        // The stamp is filed under the millisecond it was read in rather than
-        // the one the check above read, which can be the one before it if the
-        // clock ticks between the two. Filing it under the earlier one would
-        // stamp the rest of that millisecond's lines a millisecond early.
+        // Filed under the millisecond it was read in, which the clock may have moved past since the check
+        // above; the earlier one would stamp the rest of this millisecond's lines a millisecond early.
         const QDateTime now = QDateTime::currentDateTime();
         cachedMSecs = now.toMSecsSinceEpoch();
         cachedFormat = TBuffer::smTimeStampFormat;
@@ -202,17 +196,10 @@ bool endsStringSequence(const char byte)
     return byte != CHAR_CARRIAGE_RETURN && CHAR_IS_COMMIT_CHAR(byte);
 }
 
-// How much of a chunk of game data the multi-byte decoders may look at. cTelnet
-// strips every carriage return the game itself sends (cTelnet::readPipe()) and,
-// once the game has fallen quiet part way through a line, appends one of its own
-// as the last byte of the chunk to flush what has arrived so far
-// (cTelnet::slot_timerPosting()). So a carriage return reaching here is Mudlet's
-// own marker rather than data, and a multi-byte sequence must not be decoded
-// against it: it fails the continuation byte test, which loses the character to a
-// replacement mark and, in Big5 and the GB encodings, eats the byte that follows
-// it as well. Held out of the decoders' reach the marker behaves like any other
-// chunk boundary - the unfinished sequence waits for the rest of its bytes - and
-// it still commits the line it came to flush
+// How much of a chunk the multi-byte decoders may see. cTelnet strips the game's carriage returns
+// (readPipe()) and appends one as a flush marker when the game pauses mid-line (slot_timerPosting()).
+// Decoding a sequence against it loses the character (in Big5 and GB also the next byte); held back,
+// it acts as a chunk boundary and still commits the line it came to flush.
 size_t decodableLength(const std::string& data, const size_t length, const bool isFromServer)
 {
     if (isFromServer && length && data[length - 1] == CHAR_CARRIAGE_RETURN) {
@@ -221,14 +208,9 @@ size_t decodableLength(const std::string& data, const size_t length, const bool 
     return length;
 }
 
-// A byte the decoder's main loop would turn into exactly one QChar of the same
-// value whatever the session's encoding, so runs of them can be copied in one
-// go. That is every 7-bit byte except the four the loop acts on itself: the
-// two line endings, End of Transmission and ESC. The remaining C0 controls are
-// deliberately included - none of them is special-cased on the text path, so
-// each decodes to itself like any printable character. DEL is excluded because
-// EUC-KR alone treats it as an invalid first byte and renders it as the
-// replacement character.
+// Decodes to one QChar of the same value in every encoding, so runs can be bulk-copied: every 7-bit byte
+// but the line endings, EOT and ESC, which the loop acts on. Other C0 controls decode to themselves.
+// Not DEL: EUC-KR renders it as the replacement character.
 bool bulkCopyableTextByte(const char byte)
 {
     return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
@@ -239,8 +221,7 @@ bool bulkCopyableTextByte(const char byte)
 // hostile sequence that never sends a final byte (defense against a server
 // growing mIncompleteSequenceBytes without bound across packets)
 constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
-// Enough inline room for any SGR parameter string a game actually sends,
-// so the common case is handed over without touching the heap:
+// Inline room for any SGR parameter string a game actually sends, avoiding the heap:
 constexpr qsizetype SGR_INLINE_CHARS = 64;
 
 // Helper to interpret JSON values as boolean
@@ -963,23 +944,18 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
-    // How much text this call has to get through, so the trigger engine can tell
-    // a flood from a line trickling in - see TriggerUnit::processDataStream().
-    // Restored rather than cleared on the way out because a nested feed re-enters
-    // here and the outer chunk is still being decoded.
+    // Lets the trigger engine tell a flood from a trickle (TriggerUnit::processDataStream()). Restored,
+    // not cleared, on exit: a nested feed re-enters here while the outer chunk is still being decoded.
     const int previousPendingLines = mPendingChunkLines;
     mPendingChunkLines = static_cast<int>(std::count(incoming.cbegin(), incoming.cend(), '\n'));
     const auto pendingLinesGuard = qScopeGuard([this, previousPendingLines] {
         mPendingChunkLines = previousPendingLines;
     });
 
-    // What can appear anywhere in a CSI Parameter String (Ps): ECMA-48 5.4
-    // puts every byte of one in the range 0x30 to 0x3F, so '<', '=', '>' and
-    // '?' do not end the parameter string when they turn up after the first
-    // byte - games do emit them there and every other terminal consumes them:
+    // CSI Parameter String (Ps) bytes: ECMA-48 5.4 puts them all in 0x30-0x3F, so '<', '=', '>' and '?'
+    // after the first byte don't end it - games emit them there and other terminals consume them:
     const QByteArray cParameter = QByteArrayLiteral("0123456789;:<=>?");
-    // Which of those, in the FIRST position only, marks the whole sequence as
-    // private/reserved and so not something Mudlet can interpret:
+    // In the FIRST position only, these mark the sequence private/reserved, which Mudlet can't interpret:
     const QByteArray cParameterPrivateIntroducer = QByteArrayLiteral("<=>?");
     // What can appear in a CSI Intermediate byte (includes a quote character in
     // the middle of the text here which has to be escaped with a backslash):
@@ -1127,20 +1103,10 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if ((mGotESC || mGotEscCharset) && localBufferPosition >= localBufferDecodableLength) {
-            // Part way through an escape sequence and the only byte left is
-            // Mudlet's own flush marker rather than the game's next one
-            // (decodableLength()): the loop head has already returned for a
-            // chunk with nothing left in it, so this position can only be that
-            // marker. Tested against it an escape names no sequence and is
-            // dropped as a stray one, and a character set designation is
-            // abandoned - either way the rest of the sequence arrives with its
-            // opening gone and prints as text: the colour code the game asked
-            // for, the payload of an OSC or a string sequence, or the byte that
-            // would have named the set. Leave the latch set for the chunk that
-            // carries the rest, and commit the line the marker came to flush.
-            // The CSI scan below commits the same way, but has to test for the
-            // marker first because it is also reached when a chunk merely ran
-            // out part way through a sequence, which this cannot be:
+            // Mid escape sequence and only the flush marker is left (decodableLength()) - the loop head already
+            // returned for an empty chunk. Tested against it, the sequence would be abandoned and its rest print
+            // as text, so keep the latch for the next chunk and commit the line the marker came to flush. The
+            // CSI scan below tests for the marker first, as it is also reached when a chunk merely ran out:
             commitLine(CHAR_CARRIAGE_RETURN, localBufferPosition, isFromServer, false);
             return;
         }
@@ -1189,11 +1155,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (mGotCSI) {
-            // Lookahead and try and see what we are processing. The parameter
-            // string runs over "0-9:;<=>?" - if its FIRST byte is one of '<',
-            // '=', '>' or '?' the whole sequence is private/experimental and
-            // not covered by the ECMA-48 specifications, but those same bytes
-            // later on are just parameter bytes to be consumed.
+            // Lookahead over the parameter string - see cParameter and cParameterPrivateIntroducer.
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength && cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
@@ -1217,19 +1179,13 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // We ran to the end of the buffer while still inside a CSI
                 // sequence - therefore we have got a split between data packets
                 // and are not in a position to process the current line further.
-                // A flush marker is not part of the sequence and is not held
-                // with it (decodableLength()), the same way the OSC path below
-                // drops one out of its own payload: kept, it would never match
-                // a parameter byte when the rest of the sequence arrives, and
-                // the colour or cursor move the game asked for would be thrown
-                // away and the rest of its sequence printed as text.
+                // A flush marker is not held with it (decodableLength()), as the OSC path below drops
+                // one from its payload: it would never match a parameter byte, so the rest would print as text.
 
                 mIncompleteSequenceBytes = localBuffer.substr(spanStart, localBufferDecodableLength - spanStart);
                 if (localBufferDecodableLength < localBufferLength) {
-                    // The text ahead of the sequence is still a line the marker
-                    // came to flush. It cannot be left to the loop to notice:
-                    // this pass is inside a CSI, so going round again would
-                    // feed the marker back into the scan above:
+                    // The marker still has to commit the text ahead of the sequence, and going round
+                    // again inside a CSI would feed it back into the scan above:
                     size_t markerPosition = localBufferDecodableLength;
                     commitLine(CHAR_CARRIAGE_RETURN, markerPosition, isFromServer, false);
                 }
@@ -1294,11 +1250,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 #if defined(DEBUG_SGR_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    // Only bytes from cParameter can be here - the four that
-                    // may open a private sequence were turned away above - so
-                    // each one widens to a single UTF-16 code unit and the
-                    // parameter string can be handed over without building a
-                    // QString for it:
+                    // Only non-private cParameter bytes get here, each a single UTF-16 unit, so no QString is needed:
                     QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
                     for (size_t i = spanStart; i < spanEnd; ++i) {
                         sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
@@ -1389,10 +1341,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } // End of the isAValidFinalByte test
 
             mGotCSI = false;
-            // Step over the parameter string and the byte that ended it, unless
-            // that byte is a control one - a sequence with no final byte at all
-            // never owned the newline or escape that stopped the scan, and
-            // eating it would join two lines or drop the sequence after it:
+            // Step over the parameter string and final byte, unless that is a control byte: a sequence with no
+            // final byte doesn't own the newline or escape that stopped the scan, and eating it would join two
+            // lines or drop the next sequence:
             localBufferPosition += spanEnd - spanStart + (static_cast<unsigned char>(localBuffer[spanEnd]) < ' ' ? 0 : 1);
             // Go around while loop again:
             continue;
@@ -1664,8 +1615,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         // Used to double up the TChars for Utf-8 byte sequences that produce
         // a surrogate pair (non-BMP):
         bool isTwoTCharsNeeded = false;
-        // Set when a decoder has run out of bytes part way through a sequence
-        // and stored the ones it had for the next chunk to complete:
+        // A decoder ran out mid-sequence and stored its bytes for the next chunk:
         bool heldIncompleteSequence = false;
 
         if (!encodingLookupTable.isEmpty()) {
@@ -1703,10 +1653,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (heldIncompleteSequence) {
-            // Nothing more can be decoded from this chunk - the rest of the
-            // sequence is in the next one. A flush marker kept out of the
-            // decoder's reach still has this line to commit though, so go round
-            // once more for it rather than bailing out with it unread:
+            // The rest of the sequence is in the next chunk, but a withheld flush marker still has
+            // this line to commit, so go round once more for it:
             if (localBufferDecodableLength < localBufferLength) {
                 localBufferPosition = localBufferDecodableLength;
                 continue;
@@ -1858,11 +1806,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 }
                 mCurrentHyperlinkText += QString(QChar(ch));
             } else if (!(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
-                // A plain text byte only ever decodes to itself and takes the
-                // format just computed, so the whole run of them can be copied
-                // in one append and one fill. MXP has to see every byte, and a
-                // hyperlink's text is accumulated a character at a time, so
-                // neither takes this path.
+                // Plain text bytes decode to themselves with the format just computed, so a run takes one
+                // append and one fill. Not for MXP, which must see every byte, nor hyperlink text, built per character.
                 size_t runEnd = localBufferPosition + 1;
                 while (runEnd < localBufferLength && bulkCopyableTextByte(localBuffer[runEnd])) {
                     ++runEnd;
@@ -1996,19 +1941,10 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         flushPendingServerWrapJoin();
     }
 
-    // Copy out and empty rather than swap, so that both accumulators keep
-    // their allocation for the next line. Swapping leaves them empty, and
-    // grown back from empty they reallocate several times per line - which
-    // costs more than the single copy each of these makes. The copies are also
-    // exactly the size of the line, where the accumulators have grown to fit
-    // the longest line ever seen, so this is what keeps the stored lines from
-    // each holding a worst-case block - and past csmMaxRetainedLineCapacity
-    // the accumulator itself is let go rather than kept. Emptying them before
-    // the commit rather than after leaves them usable by any nested pass that
-    // the trigger engine starts from within commitLineData().
-    // The characters are moved out rather than copied: nothing still in the
-    // accumulator can be selected, so the copy constructor's clearing of that
-    // flag on every character would be wasted work.
+    // Copy out and clear rather than swap: the accumulators keep their allocation (regrowing costs more than
+    // the copy) and stored lines are exactly sized, not worst-case; past csmMaxRetainedLineCapacity the
+    // accumulator is released instead. Emptied before the commit so nested passes from commitLineData() can
+    // use them. Characters are moved: none can be selected, so the copy constructor's flag clearing is wasted.
     QString line;
     if (!mMudLine.isEmpty()) {
         line = QString(mMudLine.constData(), mMudLine.size());
@@ -2075,9 +2011,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             }
             lineBuffer.back().append(QString());
         }
-        // A commit re-entered from inside a pass - feedTriggers(), MXP - fills
-        // the empty last line, which can be the one the enclosing pass is still
-        // running over:
+        // A commit re-entered from a pass (feedTriggers(), MXP) fills the empty last line, which may be
+        // the one the enclosing pass is still running over:
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
         timeBuffer.back() = currentTimeStamp();
@@ -2087,15 +2022,10 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             promptBuffer.back() = false;
         }
     }
-    // commitLineData() is the one point every line the main console takes from
-    // the game passes through; TConsole::print() only ever sees what the client
-    // itself writes. Copying here, before runTriggers(), keeps --mirror's stream
-    // in arrival order - a line is copied when it arrives, so whatever a script
-    // writes to a console in response is copied after it. The cost is fidelity:
-    // a line a trigger then gags with deleteLine(), or rewrites, is still copied
-    // as the game sent it. Copying next to the log() call below would make the
-    // opposite trade, and would copy the wrapped fragments wrapLine() leaves
-    // behind rather than the line the game sent.
+    // Every game line passes here (TConsole::print() sees only client output). Mirroring before runTriggers()
+    // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
+    // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
+    // fragments instead of the line as sent.
     if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
         if (Q_LIKELY(!mpConsole.isNull())) {
             mpConsole->mirrorLineToStdOut(line);
@@ -2110,18 +2040,12 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
     if (!mSkipTriggerProcessing) {
-        // Color triggers match against the colors as received from the game, so
-        // a line an earlier trigger in this pass recolored has to keep its
-        // originals somewhere. materialisePreTriggerPassLine() copies them out
-        // when something first overwrites them rather than up front, because
-        // most lines are never touched and the copy is a whole line of TChars.
-        // Any pass already running is about to lose the pass state to this one,
-        // so its line has to be copied out now - a recolor made from inside this
-        // pass would aim the barrier at this line instead:
+        // Color triggers match the colors as received, so a line recolored earlier in the pass keeps its
+        // originals; materialisePreTriggerPassLine() copies them lazily as most lines are never touched.
+        // An enclosing pass is about to lose its state to this one, so snapshot its line now - a recolor
+        // from inside this pass would aim at this line instead:
         materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
-        // The save/restore gives each nested pass its own snapshot; the spare
-        // member keeps that snapshot's allocation in circulation instead of one
-        // being made and freed for every line:
+        // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
         std::vector<TChar> savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
@@ -2137,10 +2061,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
 #endif
         mpHost->runTriggers(lineIndex);
 #ifndef QT_NO_DEBUG
-        // A write that reaches the committed line without passing
-        // materialisePreTriggerPassLine() leaves no trace at runtime - color
-        // triggers just quietly match the recolored text - so catch it here
-        // instead of in a bug report:
+        // A write bypassing materialisePreTriggerPassLine() fails silently (color triggers match the
+        // recolored text), so catch it here:
         if (!mPreTriggerPassSnapshotTaken && mPreTriggerPassLineNumber == lineIndex && lineIndex < static_cast<int>(buffer.size())) {
             Q_ASSERT_X(colorFingerprint(buffer[lineIndex]) == committedColors, "TBuffer::commitLineData", "a trigger recolored the line without going through materialisePreTriggerPassLine()");
         }
@@ -2466,16 +2388,14 @@ const TChar* TBuffer::preTriggerPassLineUniformColors(int lineNumber)
     if (lineNumber < 0 || lineNumber != mPreTriggerPassLineNumber || lineNumber >= static_cast<int>(buffer.size())) {
         return nullptr;
     }
-    // Until a write materialises the snapshot the line still holds the colors
-    // the game sent, so it answers for them itself - which is most lines:
+    // Until a write materialises the snapshot, the line still holds the game's colors - most lines do:
     const std::vector<TChar>& passLine = mPreTriggerPassSnapshotTaken ? mPreTriggerPassLine : buffer[lineNumber];
     if (passLine.empty()) {
         return nullptr;
     }
     const TChar& first = passLine.front();
     if (mPreTriggerPassLineUniformity == PassLineUniformity::Unknown) {
-        // The first character only stands in for the rest of them while this
-        // compares colors the same way the trigger it answers for does
+        // The first character stands for the rest only while this compares colors as the trigger does.
         const bool uniform = std::all_of(passLine.cbegin() + 1, passLine.cend(), [&first](const TChar& character) {
             return first.foregroundRgba() == character.foregroundRgba() && first.backgroundRgba() == character.backgroundRgba();
         });
@@ -3767,10 +3687,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (isValid) {
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
-                        // changed by this method. With no console there is
-                        // nothing to restyle, but this buffer's own copy of the
-                        // palette still has to be refreshed - it is what stamps
-                        // the text, not the Host's:
+                        // changed by this method. With no console, this buffer's own
+                        // palette, which stamps the text, must still be refreshed:
                         if (pHost->mpConsole) {
                             pHost->mpConsole->changeColors();
                         } else {
@@ -5182,9 +5100,8 @@ void TBuffer::resetColors()
 
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
-    // decodeOSC(...) method. With no console there is nothing to restyle, but
-    // this buffer's own copy of the palette still has to be refreshed - it is
-    // what stamps the text, not the Host's:
+    // decodeOSC(...) method. With no console, this buffer's own palette,
+    // which stamps the text, must still be refreshed:
     if (pHost->mpConsole) {
         pHost->mpConsole->changeColors();
     } else {
@@ -5408,8 +5325,7 @@ void TBuffer::appendLine(const QString& text,
         // before JSON styling is applied
 
         if (firstChar) {
-            // A caller replaying held-back content supplies the time the text
-            // actually arrived, rather than the time it is being shown:
+            // Replayed held-back content supplies its arrival time:
             timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
             firstChar = false;
         }
@@ -5589,13 +5505,9 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    // Building the boundary finders below runs a full Unicode analysis over the
-    // line, which is the single most expensive part of appending one. Most game
-    // output cannot wrap at all and needs none of it: every printable ASCII
-    // character is its own grapheme cluster exactly one column wide, so such a
-    // line's width is its length, and a line no wider than the wrap column has
-    // no break point to find. LineFeed and Tab are outside that range, so a
-    // line needing an embedded break never takes this path.
+    // The boundary finders below run a full Unicode analysis, the costliest part of appending a line. Printable
+    // ASCII is one column per QChar, so such a line no wider than the wrap column has no break to find.
+    // LineFeed and Tab are outside that range, so embedded breaks never take this path.
     const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
     if (lineText.size() <= widthAvailable) {
         bool plainAscii = true;
@@ -5609,11 +5521,8 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             return output;
         }
     }
-    // No grapheme cluster renders wider than graphemeInfo::maxWidth columns -
-    // graphemeInfo::getWidth() in TTextProperties.h holds its return to that -
-    // and none is shorter than one QChar, so a line with at most that fraction
-    // of the width in QChars cannot reach the wrap column whatever it holds.
-    // Only an embedded line feed can still break it.
+    // No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, so this line
+    // can't reach the wrap column; only an embedded line feed can break it.
     if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable && !lineText.contains(QChar::LineFeed)) {
         return output;
     }
@@ -6443,10 +6352,8 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
          * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
          */
 
-        // Deliberately no materialisePreTriggerPassLine() here: color matching
-        // reads only foreground()/background(), so a display attribute leaves the
-        // retained colors valid, and snapshotting would put a copy back on every
-        // line for a script that styles all of them.
+        // No materialisePreTriggerPassLine(): color matching reads only foreground()/background(), and
+        // snapshotting would copy every line for a script that styles all of them.
         for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
@@ -6796,22 +6703,48 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             utf8SequenceLength = 6;
         }
 
+        // A byte that is not a continuation byte cannot be part of this
+        // sequence, so the sequence ends malformed just before it - and that
+        // byte, which may be a line ending or the ESC opening a control
+        // sequence, is left for the caller to handle rather than taken with it:
+        const size_t available = std::min(utf8SequenceLength, len - pos);
+        for (size_t i = 1; i < available; ++i) {
+            if ((static_cast<quint8>(bufferData[pos + i]) & 0xC0) != 0x80) {
+#if defined(DEBUG_UTF8_PROCESSING)
+                qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence cut short after " << i << " byte(s) by <" << Qt::hex
+                                   << static_cast<int>(static_cast<quint8>(bufferData.at(pos + i))) << Qt::dec << ">, rejected!";
+#endif
+                mMudLine.append(QChar::ReplacementCharacter);
+                pos += i - 1;
+                return true;
+            }
+        }
+
         if ((pos + utf8SequenceLength) > len) {
             // Not enough bytes left in bufferData to complete the utf-8
-            // sequence - need to save and prepend onto incoming data next
-            // time around.
-            // Everything the decoder was allowed to look at is taken - see
-            // decodableLength() for why that can stop short of the end of
-            // bufferData. This is only for data from the Server NOT from
-            // locally generated material from Lua feedTriggers(...)
+            // sequence. Everything the decoder was allowed to look at is taken
+            // - see decodableLength() for why that can stop short of the end of
+            // bufferData.
             if (isFromServer) {
+                // Save it to prepend onto the next packet:
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) Insufficient bytes in buffer to complete UTF-8 sequence, need:" << utf8SequenceLength
                          << " but we currently only have: " << bufferData.substr(pos, len - pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                 mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
+                return false; // Bail out
             }
-            return false; // Bail out
+
+            // Locally generated text, such as from Lua feedTriggers(...), is
+            // never continued by the next call, so this is the end of its
+            // input and the unfinished sequence is malformed:
+#if defined(DEBUG_UTF8_PROCESSING)
+            qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence cut short after " << len - pos
+                               << " byte(s) by the end of locally generated text, rejected!";
+#endif
+            mMudLine.append(QChar::ReplacementCharacter);
+            pos = len - 1;
+            return true;
         }
 
         // If we have got here we have enough bytes to work with:
@@ -6820,14 +6753,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
         bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
         switch (utf8SequenceLength) {
         case 4:
-            // Check the 4th byte is a valid continuation byte (2 MS-Bits are 10)
-            if ((bufferData.at(pos + 3) & 0xC0) != 0x80) {
-#if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) 4th byte in UTF-8 sequence is invalid!";
-#endif
-                isValid = false;
-                isToUseReplacementMark = true;
-            } else if (((bufferData.at(pos) & 0x07) > 0x04) || (((bufferData.at(pos) & 0x07) == 0x04) && ((bufferData.at(pos + 1) & 0x3F) > 0x0F))) {
+            if (((bufferData.at(pos) & 0x07) > 0x04) || (((bufferData.at(pos) & 0x07) == 0x04) && ((bufferData.at(pos + 1) & 0x3F) > 0x0F))) {
                 // For 4 byte values the bits are distributed:
                 //  Byte 1    Byte 2    Byte 3    Byte 4
                 // 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
@@ -6852,14 +6778,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // Fall-through
             [[fallthrough]];
         case 3:
-            // Check the 3rd byte is a valid continuation byte (2 MS-Bits are 10)
-            if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
-#if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) 3rd byte in UTF-8 sequence is invalid!";
-#endif
-                isValid = false;
-                isToUseReplacementMark = true;
-            } else if ((bufferData.at(pos) & 0x0F) == 0x0D && (bufferData.at(pos + 1) & 0x20) == 0x20) {
+            if ((bufferData.at(pos) & 0x0F) == 0x0D && (bufferData.at(pos + 1) & 0x20) == 0x20) {
 // For 3 byte values the bits are distributed:
 //  Byte 1    Byte 2    Byte 3
 // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
@@ -6914,21 +6833,12 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // Fall-through
             [[fallthrough]];
         case 2: {
-            // Check the 2nd byte is a valid continuation byte (2 MS-Bits are 10)
-            if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
-#if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) 2nd byte in UTF-8 sequence is invalid!";
-#endif
-                isValid = false;
-                isToUseReplacementMark = true;
-            }
-
-            // Also test for (and reject) overlong sequences - don't need to check
-            // 5 or 6 byte ones as those are already rejected above
+            // Test for (and reject) overlong sequences - 5 and 6 byte ones do
+            // not get here, the default case rejects them
             const auto firstByte = static_cast<quint8>(bufferData.at(pos));
             const auto secondByte = static_cast<quint8>(bufferData.at(pos + 1));
             // Overlong 2-byte: C0/C1 xx (could be encoded in 1 byte)
-            const bool twoByteOverlong = ((firstByte & 0xFE) == 0xC0) && ((secondByte & 0xC0) == 0x80);
+            const bool twoByteOverlong = (firstByte & 0xFE) == 0xC0;
             // Overlong 3-byte: E0 80-9F xx (could be encoded in 2 bytes)
             const bool threeByteOverlong = (firstByte == 0xE0) && ((secondByte & 0xE0) == 0x80);
             // Overlong 4-byte: F0 80-8F xx xx (could be encoded in 3 bytes)
@@ -6954,11 +6864,8 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
         // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
         if (isValid) {
-            // Every way of being malformed - a bad continuation byte, an
-            // overlong form, a surrogate, a codepoint past U+10FFFF, a 5 or 6
-            // byte sequence and the BOM - has already been rejected above, so
-            // the bits can be gathered here rather than paying for a QString
-            // per character:
+            // Every malformation (bad continuation, overlong, surrogate, past U+10FFFF, 5/6 bytes, BOM) was
+            // rejected above, so gather the bits directly rather than build a QString per character:
             char32_t codePoint = static_cast<quint8>(bufferData.at(pos)) & (utf8SequenceLength == 2 ? 0x1F : (utf8SequenceLength == 3 ? 0x0F : 0x07));
             for (size_t i = 1; i < utf8SequenceLength; ++i) {
                 codePoint = (codePoint << 6) | (static_cast<quint8>(bufferData.at(pos + i)) & 0x3F);

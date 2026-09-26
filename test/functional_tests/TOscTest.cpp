@@ -35,7 +35,7 @@
 
 #include "LuaLiteral.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
@@ -214,7 +214,7 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
-    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
              qsl("%1/mudlet").arg(mConfigDir.path()));
     // A config dir of this test's own reads as a brand new installation, so the
     // first-run interface tour would open over the profile a second after it
@@ -235,7 +235,7 @@ private slots:
              "window's keyboard");
 
     const QString path =
-        MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        MudletApp::getMudletPath(enums::profileHomePath, mHostname);
     QDir(path).removeRecursively();
 
     mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -1693,7 +1693,7 @@ private slots:
     // Null when initTestCase skipped or failed ahead of mudlet::start()
     if (mudlet::self()) {
       const QString path =
-          MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+          MudletApp::getMudletPath(enums::profileHomePath, mHostname);
       QDir(path).removeRecursively();
       delete mudlet::self();
     }

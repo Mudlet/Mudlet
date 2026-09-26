@@ -25,7 +25,7 @@
  * custom exit lines, doors, exit weights, room/area/map-level userData, room
  * environments, non-ASCII names/symbols, negative coordinates and z-levels
  * plus an area map label. It is saved with TMap::serialize (the same
- * QDataStream setup TMainConsole::saveMap uses), loaded into a fresh Host's
+ * QDataStream setup Host::saveMapFile uses), loaded into a fresh Host's
  * map via TMap::restore + audit (the production load path minus the mapper
  * UI) and compared field by field.
  *
@@ -44,7 +44,7 @@
 #include <QSaveFile>
 #include <QTemporaryDir>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -472,7 +472,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -499,7 +499,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

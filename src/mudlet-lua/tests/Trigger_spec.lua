@@ -1190,6 +1190,122 @@ describe("Trigger processing", function()
             assert.are.equal(2, _G.TrigSpecExpire.count, "a callback body should renew the expiry count the same way a script one does")
         end)
 
+        -- tempComplexRegexTrigger's arguments after the script: multiline flag,
+        -- fg and bg colour, filter, match all, highlight fg and bg, sound, fire
+        -- length, line delta and then the expiry count
+        local function expiringMultiline(name, pattern, script, expireAfter)
+            return tempComplexRegexTrigger(name, pattern, script, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, expireAfter)
+        end
+
+        it("renews an expiring multi-line trigger while its script returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = expiringMultiline("SpecExpireMulti", [[^expire_multi_renewed$]], [[
+                _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                return _G.TrigSpecExpire.count < 3
+            ]], 1)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecExpireMulti") end)
+
+            for _ = 1, 5 do
+                feedTriggers("\nexpire_multi_renewed\n")
+            end
+
+            assert.are.equal(3, _G.TrigSpecExpire.count, "a multi-line trigger should be renewed for as long as its script returns true")
+        end)
+
+        it("hands an expiring multi-line trigger's script the lines it matched", function()
+            _G.TrigSpecExpire = {}
+            local id = expiringMultiline("SpecExpireMultimatches", [[^expire_multi_(\w+)$]], [[
+                _G.TrigSpecExpire.whole = multimatches[1][1]
+                _G.TrigSpecExpire.capture = multimatches[1][2]
+            ]], 1)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecExpireMultimatches") end)
+
+            feedTriggers("\nexpire_multi_wombat\n")
+
+            assert.are.equal("expire_multi_wombat", _G.TrigSpecExpire.whole)
+            assert.are.equal("wombat", _G.TrigSpecExpire.capture)
+        end)
+
+        -- A script that raises has returned nothing, so it has not asked to be
+        -- renewed - the trigger has to count down as if it had returned false,
+        -- rather than either living forever or taking the triggers after it down.
+        describe("with a script that raises an error", function()
+            local function feedAndCount(line, times)
+                for _ = 1, times do
+                    assert.is_true(feedTriggers("\n" .. line .. "\n"))
+                end
+                -- without this a script that just returned would count the same
+                assert.is_nil(_G.TrigSpecExpire.pastError, "the script ran on past the error it raised")
+                return _G.TrigSpecExpire.count
+            end
+
+            local function watchLine(line)
+                _G.TrigSpecExpire.after = 0
+                local watcher = tempExactMatchTrigger(line, [[_G.TrigSpecExpire.after = _G.TrigSpecExpire.after + 1]])
+                return watcher
+            end
+
+            it("still expires a script body", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempTrigger("expire_raises_script", [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 2)
+                local watcher = watchLine("expire_raises_script")
+                finally(function() killTrigger(id); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_script", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("still expires a function body", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempTrigger("expire_raises_fn", function()
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                end, 2)
+                local watcher = watchLine("expire_raises_fn")
+                finally(function() killTrigger(id); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_fn", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("still expires a multi-line script", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = expiringMultiline("SpecExpireMultiRaises", [[^expire_raises_multi$]], [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 2)
+                assert.is_number(id)
+                local watcher = watchLine("expire_raises_multi")
+                finally(function() killTrigger("SpecExpireMultiRaises"); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_multi", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("keeps firing a multi-line trigger that never expires", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempComplexRegexTrigger("SpecMultiRaises", [[^multi_raises$]], [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+                assert.is_number(id)
+                local watcher = watchLine("multi_raises")
+                finally(function() killTrigger("SpecMultiRaises"); killTrigger(watcher) end)
+
+                assert.are.equal(3, feedAndCount("multi_raises", 3))
+                assert.are.equal(3, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+        end)
+
     end)
 
     describe("tempColorTrigger legacy colour remap", function()
@@ -3639,6 +3755,105 @@ describe("Trigger processing", function()
             track(tempTrigger("ordersecond_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "second" end))
             feedTriggers("\nordersecond_pattern then orderfirst_pattern\n")
             assert.are.same({"first", "second"}, _G.TrigSpec.seen, "a gap left by a killed trigger reordered the ones around it")
+        end)
+
+        -- A stay-open window makes a trigger fire on lines it never matches, so
+        -- it has to keep reaching the trigger while the window is open and hand
+        -- it back to the index once it shuts. Each target below carries a
+        -- pattern its lines never contain, so every fire it records can only
+        -- have come from the window, and a setTriggerStayOpen() that quietly
+        -- did nothing at all could not pass.
+        describe("stay-open windows set from a script", function()
+            it("keeps firing a trigger a script holds open on every line", function()
+                local lines = 20
+                trackPerm("SpecStayOpenSteady",
+                    permSubstringTrigger("SpecStayOpenSteady", "", {"qqneverinalineqq"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                -- The same count every line, which is the shape a script that
+                -- re-holds a trigger open produces, and the one where the
+                -- engine has nothing to change: the window is reopened at 3
+                -- before it can ever count down to 0, so the trigger is open on
+                -- every line fed below. Each feed carries the empty line ahead
+                -- of the text as well, and an open window fires on both.
+                track(tempTrigger("steady_probe_line", function()
+                    setTriggerStayOpen("SpecStayOpenSteady", 3)
+                end))
+
+                -- One feed first, so the window is already open when the
+                -- counting starts: on the feed that opens it the trigger fires
+                -- on the text line only, having missed the blank line ahead of
+                -- it, and would count differently from every later one.
+                feedTriggers("\nsteady_probe_line warmup\n")
+                _G.TrigSpec.count = 0
+
+                for i = 1, lines do
+                    feedTriggers("\nsteady_probe_line " .. i .. "\n")
+                end
+
+                assert.are.equal(2 * lines, _G.TrigSpec.count,
+                    "a trigger held open by a repeated setTriggerStayOpen() stopped firing")
+            end)
+
+            it("files a trigger back into the index once its window closes", function()
+                trackPerm("SpecStayOpenClosed",
+                    permSubstringTrigger("SpecStayOpenClosed", "", {"closedstayopen_pattern"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                setTriggerStayOpen("SpecStayOpenClosed", 5)
+                feedTriggers("\nwhile the window is open\n")
+                assert.is_true(_G.TrigSpec.count > 0, "an opened stay-open window did not fire")
+
+                setTriggerStayOpen("SpecStayOpenClosed", 0)
+                _G.TrigSpec.count = 0
+                feedTriggers("\nafter the window was closed\n")
+                assert.are.equal(0, _G.TrigSpec.count, "a closed stay-open window went on firing")
+
+                -- Closing it hands the trigger back to the index, and a filing
+                -- that went wrong there leaves it unreachable by its own line
+                -- rather than merely firing at the wrong time.
+                feedTriggers("\nthis line has closedstayopen_pattern in it\n")
+                assert.are.equal(1, _G.TrigSpec.count,
+                    "a trigger whose stay-open window closed was not filed back into the index, so its own line never reached it")
+            end)
+
+            -- A regex or color trigger has nothing in the index to change when
+            -- its window opens, but it still has to stop being dismissed by its
+            -- pattern. These lines are fed without a leading blank line, which
+            -- an open window fires on too and which has no one color to rule a
+            -- color trigger out by, so it would hide a miss.
+            it("keeps firing a regex trigger opened between lines", function()
+                trackPerm("SpecStayOpenRegex",
+                    permRegexTrigger("SpecStayOpenRegex", "", {"^regexstayopen (\\w+) marker$"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                -- filed while closed, so opening it has a copy to go stale
+                feedTriggers("before the window opens\n")
+                setTriggerStayOpen("SpecStayOpenRegex", 3)
+                for i = 1, 3 do
+                    feedTriggers("unrelated window line " .. i .. "\n")
+                end
+                assert.are.equal(3, _G.TrigSpec.count, "a regex trigger opened between lines did not fire on the lines after")
+            end)
+
+            it("fires a regex trigger opened by an earlier trigger on the same line", function()
+                track(tempTrigger("samelineopener_probe", function()
+                    setTriggerStayOpen("SpecStayOpenRegexSameLine", 1)
+                end))
+                trackPerm("SpecStayOpenRegexSameLine",
+                    permRegexTrigger("SpecStayOpenRegexSameLine", "", {"^regexsameline (\\w+) marker$"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                feedTriggers("samelineopener_probe on this line\n")
+                assert.are.equal(1, _G.TrigSpec.count, "a regex trigger opened earlier on the line did not fire on it")
+            end)
+
+            it("keeps firing a color trigger opened between lines", function()
+                -- 4, 2 remaps to red on black
+                local id = track(tempColorTrigger(4, 2, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+                feedTriggers("\27[32;40mbefore the window opens\27[0m\n")
+                setTriggerStayOpen(tostring(id), 3)
+                for i = 1, 3 do
+                    feedTriggers("\27[32;40mgreen window line " .. i .. "\27[0m\n")
+                end
+                assert.are.equal(3, _G.TrigSpec.count, "a color trigger opened between lines did not fire on lines of another color")
+            end)
         end)
     end)
 end)

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Builds a Mudlet .deb or .rpm in Docker and leaves the install-tested package in
-# the output directory. Nothing is installed on the host.
+# Builds and install-tests a Mudlet .deb or .rpm in Docker; nothing is installed on the host.
 set -euo pipefail
 
 HERE="$(dirname "$(readlink -f "$0")")"

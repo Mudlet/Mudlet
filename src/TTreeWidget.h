@@ -65,8 +65,7 @@ public:
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
 
-    // The Variables view's rows and the variables behind them. The rows are
-    // this widget's own children, so the bookkeeping dies with them.
+    // Variables view rows. They are this widget's children, so the bookkeeping dies with them.
     void buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden);
     void clearVariableRows();
     TVar* variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;

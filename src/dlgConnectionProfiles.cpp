@@ -29,7 +29,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TGameDetails.h"
 #include "XMLimport.h"
 #include "discord.h"
@@ -79,7 +79,7 @@ QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
 }
 
 // Characters that make a name unusable no matter where it came from:
-// MudletPaths::sanitizeForPath() silently rewrites them out of any path built from
+// MudletApp::sanitizeForPath() silently rewrites them out of any path built from
 // the profile name, and CredentialManager::generateFilePath() refuses to
 // produce a path at all - so a profile named this way could never store or
 // retrieve its password. Mirrors the pattern used there:
@@ -174,9 +174,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mpTabBar->setAccessibleDescription(tr("Switch between showing only your own games and all of the games Mudlet knows about."));
     verticalLayout_gamesList->insertWidget(0, mpTabBar);
     setTabOrder(mpTabBar, listWidget_profiles);
-    // that also takes the games list out of the head of the focus chain, so
-    // without this the profile name field opens focused - where typing a game's
-    // name renames a profile instead of picking that game
+    // setTabOrder() drops the games list from the head of the focus chain; without this the name
+    // field opens focused, where typing a game's name renames a profile instead of picking that game
     listWidget_profiles->setFocus();
 
     if (!mudlet::self()->mOnlyShownPredefinedProfiles.isEmpty()) {
@@ -184,7 +183,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // there is nothing to switch between
         mpTabBar->hide();
     } else {
-        auto& settings = *mudlet::self()->mpSettings;
+        auto& settings = *MudletApp::getQSettings();
         int initialTab = scmMyGamesTab;
         if (settings.contains(qsl("connectionDialogActiveTab"))) {
             initialTab = settings.value(qsl("connectionDialogActiveTab")).toInt() == scmAllGamesTab ? scmAllGamesTab : scmMyGamesTab;
@@ -193,7 +192,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
             // which the "My games" tab replaces
             initialTab = scmMyGamesTab;
             settings.setValue(qsl("connectionDialogActiveTab"), initialTab);
-        } else if (QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty()) {
+        } else if (QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty()) {
             // a newcomer has no profiles yet, so show them the catalog
             initialTab = scmAllGamesTab;
         }
@@ -484,8 +483,7 @@ void dlgConnectionProfiles::slot_skipToGamesList()
     if (!items.isEmpty()) {
         listWidget_profiles->setCurrentItem(items.first());
     }
-    // dismissTutorialInvitation() hides whichever widget the invitation left
-    // holding the focus, which hands it on down the chain to the name field
+    // Hiding the invitation passed the focus down the chain to the name field
     listWidget_profiles->setFocus();
 }
 
@@ -674,7 +672,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
             writeSecurePassword(profileName, pass);
         }
     } else {
-        auto result = MudletPaths::writeProfileData(profileName, qsl("password"), pass);
+        auto result = MudletApp::writeProfileData(profileName, qsl("password"), pass);
         if (!result.first) {
             qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updatePassword() ERROR - failed to save password for profile \"" << profileName << "\": " << result.second;
         }
@@ -696,10 +694,8 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     credManager->storePassword(profile, "character", pass, [credManager, profile, safeThis](bool success, const QString& errorMessage) {
         if (success) {
             qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
-            // Saving it and keeping it to ourselves are two different things, and the store
-            // reports only the first: without this the user is told the password was saved
-            // while it sits there for every account on the machine to read. Asked of the
-            // manager that did this store, so that the answer is about this password.
+            // The store reports success even if other accounts can still read the file, so check separately,
+            // asking the manager that did this store so the answer is about this password.
             const QString unprotectedPath = credManager->unprotectedSecretPath();
 
             if (!unprotectedPath.isEmpty() && safeThis) {
@@ -737,7 +733,7 @@ void dlgConnectionProfiles::slot_updateLogin(const QString& login)
     QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (pItem) {
         const QString profileName = pItem->data(csmNameRole).toString();
-        auto result = MudletPaths::writeProfileData(profileName, qsl("login"), login);
+        auto result = MudletApp::writeProfileData(profileName, qsl("login"), login);
         if (!result.first) {
             qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updateLogin() ERROR - failed to save character name for profile \"" << profileName << "\": " << result.second;
             // Could optionally show user notification here
@@ -839,7 +835,7 @@ void dlgConnectionProfiles::slot_saveName()
     // Check for orphaned keychain entries when creating a new profile with a name
     // that doesn't exist as a directory but might have keychain entries from
     // a previously deleted profile (deleted outside Mudlet interface)
-    if (mudlet::self()->storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(MudletPaths::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
+    if (mudlet::self()->storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(MudletApp::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
         // Check if there are orphaned keychain entries for this profile name
         // Use QPointer to safely detect if dialog or credManager is destroyed during async operations
         // Create CredentialManager without a parent to avoid destruction when dialog closes
@@ -971,12 +967,12 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
     const QString currentProfileEditName = pItem->data(csmNameRole).toString();
     setItemName(pItem, newProfileName);
 
-    const QDir currentPath(MudletPaths::getMudletPath(enums::profileHomePath, currentProfileEditName));
+    const QDir currentPath(MudletApp::getMudletPath(enums::profileHomePath, currentProfileEditName));
     const QDir dir;
 
     if (currentPath.exists()) {
         // CHECKME: previous code specified a path ending in a '/'
-        QDir parentpath(MudletPaths::getMudletPath(enums::profilesPath));
+        QDir parentpath(MudletApp::getMudletPath(enums::profilesPath));
         if (!parentpath.rename(currentProfileEditName, newProfileName)) {
             notificationArea->show();
             notificationAreaIconLabelWarning->show();
@@ -985,7 +981,7 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
             notificationAreaMessageBox->show();
             notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
         }
-    } else if (!dir.mkpath(MudletPaths::getMudletPath(enums::profileHomePath, newProfileName))) {
+    } else if (!dir.mkpath(MudletApp::getMudletPath(enums::profileHomePath, newProfileName))) {
         notificationArea->show();
         notificationAreaIconLabelWarning->show();
         notificationAreaIconLabelError->hide();
@@ -1005,7 +1001,7 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
     slot_updateSslTslPort(newProfileSslTsl);
 
     // if this was a previously deleted profile, restore it
-    auto& settings = *mudlet::self()->mpSettings;
+    auto& settings = *MudletApp::getQSettings();
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (deletedDefaultMuds.contains(newProfileName)) {
         deletedDefaultMuds.removeOne(newProfileName);
@@ -1035,7 +1031,7 @@ bool dlgConnectionProfiles::showingOnlyMyProfiles() const
 
 void dlgConnectionProfiles::slot_activeTabChanged(const int index)
 {
-    mudlet::self()->mpSettings->setValue(qsl("connectionDialogActiveTab"), index);
+    MudletApp::getQSettings()->setValue(qsl("connectionDialogActiveTab"), index);
 
     const auto* pCurrentItem = listWidget_profiles->currentItem();
     const QString previousSelection = pCurrentItem ? pCurrentItem->data(csmNameRole).toString() : QString();
@@ -1165,7 +1161,7 @@ void dlgConnectionProfiles::updateRemoveButtonState(const QString& profile)
 // entry, which is listed without data of its own and removed to dismiss it.
 bool dlgConnectionProfiles::profileRemovable(const QString& profile) const
 {
-    const QString profileFolder = profileFolderPath(MudletPaths::getMudletPath(enums::profilesPath), profile);
+    const QString profileFolder = profileFolderPath(MudletApp::getMudletPath(enums::profilesPath), profile);
     if (!profileFolder.isEmpty() && QDir(profileFolder).exists()) {
         return true;
     }
@@ -1174,7 +1170,7 @@ bool dlgConnectionProfiles::profileRemovable(const QString& profile) const
 
 void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 {
-    const QString profilesPath = MudletPaths::getMudletPath(enums::profilesPath);
+    const QString profilesPath = MudletApp::getMudletPath(enums::profilesPath);
     const QString profileFolder = profileFolderPath(profilesPath, profile);
     if (profileFolder.isEmpty()) {
         qWarning().nospace() << "dlgConnectionProfiles::reallyDeleteProfile(\"" << profile << "\") ERROR - refusing to delete: that name does not address a folder inside \"" << profilesPath << "\".";
@@ -1240,7 +1236,7 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     // it without profile data of its own, so nothing else would keep it away.
     // continueProfileSave() clears the entry on profile re-creation
     if (profile == scmSelfTestProfile) {
-        auto& settings = *mudlet::self()->mpSettings;
+        auto& settings = *MudletApp::getQSettings();
         auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
         if (!deletedDefaultMuds.contains(profile)) {
             deletedDefaultMuds.append(profile);
@@ -1281,7 +1277,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    const QDir profileDir(MudletPaths::getMudletPath(enums::profileHomePath, profile));
+    const QDir profileDir(MudletApp::getMudletPath(enums::profileHomePath, profile));
     bool nothingToLose = !profileDir.exists() || profileDir.entryList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot).isEmpty();
     if (nothingToLose) {
         for (const QString& fileName : profileDir.entryList(QDir::Files | QDir::Hidden)) {
@@ -1349,7 +1345,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
-    QFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item));
+    QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
@@ -1363,11 +1359,11 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 }
 
 // A new item here may need adding to scmConnectionDetailFiles above. Unlike
-// MudletPaths::writeProfileData() this does not create the profile's folder, so a
+// MudletApp::writeProfileData() this does not create the profile's folder, so a
 // write before there is one is quietly dropped.
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QSaveFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item));
+    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs.setVersion(QDataStream::Qt_5_12);
@@ -1417,9 +1413,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     static QString lastProfileClicked;
     static QTime lastClickTime;
 
-    // a selection the dialog makes for itself has to fill the details even when
-    // it repeats the last one: fillout_form() blanks them first, so debouncing
-    // it would leave them empty with a profile highlighted
+    // Never debounce the dialog's own selection: fillout_form() blanks the details first, so skipping
+    // a repeat would leave them empty with a profile highlighted
     if (!mProgrammaticProfileSelection && profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
         return;
     }
@@ -1523,7 +1518,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     profile_history->clear();
 
-    QDir dir(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profile_name));
+    QDir dir(MudletApp::getMudletPath(enums::profileXmlFilesPath, profile_name));
     dir.setSorting(QDir::Time);
     // Only offer real profile saves (*.xml) as history entries; leftover QSaveFile
     // temporaries from an interrupted save (e.g. "....xml.AbCdEf") must not be loadable
@@ -1620,7 +1615,7 @@ void dlgConnectionProfiles::fillout_form()
     host_name_entry->clear();
     port_entry->clear();
 
-    mProfileList = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    mProfileList = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     // mProfileList gains non-disk entries (e.g. the QT_DEBUG-only self-test
     // profile) further down, so capture whether the user has any saved
     // profiles while it still only holds the on-disk ones:
@@ -1650,7 +1645,7 @@ void dlgConnectionProfiles::fillout_form()
 
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     const bool showOnlyMyProfiles = showingOnlyMyProfiles();
-    const auto deletedDefaultMuds = mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
+    const auto deletedDefaultMuds = MudletApp::getQSettings()->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         // "My games" only lists games with profile data on disk; "All games"
@@ -1706,12 +1701,11 @@ void dlgConnectionProfiles::fillout_form()
         if (profileName == scmSelfTestProfile) {
             test_profile_row = i;
         }
-        // the self-test entry is the one name mProfileList can hold without a
-        // folder on disk, and it is excluded from the pick below anyway
+        // The self-test entry can be in mProfileList without a folder on disk
         if (firstOnDiskProfileRow == -1 && profileName != scmSelfTestProfile && mProfileList.contains(profileName, Qt::CaseInsensitive)) {
             firstOnDiskProfileRow = i;
         }
-        const auto fileinfo = QFileInfo(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName));
+        const auto fileinfo = QFileInfo(MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName));
         if (fileinfo.exists()) {
             firstMudletLaunch = false;
             const QDateTime profile_lastRead = fileinfo.lastModified();
@@ -1751,17 +1745,10 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     if (toselectRow == -1 && firstOnDiskProfileRow != -1) {
-        // Profiles that were made but never connected carry no dated save for
-        // the loop above to pick the most recent of, and the fallbacks above
-        // only cover the tutorial, a lone row or a dedicated build's own game -
-        // so someone whose profiles are all like that gets here with nothing
-        // picked. QAbstractItemView then makes its own first row current, but
-        // not selected, when the games list takes the keyboard focus, and the
-        // connection details fill themselves in from that row - describing a
-        // game nothing in the list shows as picked, with Connect enabled.
-        // Picking the first listed row that has a profile folder keeps the two
-        // in step. The self-test entry is passed over for the same reason the
-        // lone-row fallback passes over it: it is a testing aid, not a game
+        // Profiles never connected have no dated save to pick from, and the fallbacks above cover only
+        // the tutorial, a lone row or a dedicated build's game. With nothing picked, QAbstractItemView makes
+        // its first row current but not selected on focus, and the details fill from it with Connect
+        // enabled while nothing looks picked. So pick the first row with a profile folder (never self-test).
         toselectRow = firstOnDiskProfileRow;
     }
 
@@ -1846,7 +1833,7 @@ void dlgConnectionProfiles::setProfileIcon() const
 
 bool dlgConnectionProfiles::hasCustomIcon(const QString& profileName) const
 {
-    return QFileInfo::exists(MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon")));
+    return QFileInfo::exists(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon")));
 }
 
 void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
@@ -1859,11 +1846,10 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
     listWidget_profiles->addItem(pItem);
 }
 
-// hasCustomIcon() can only tell that the file is there, so one that is empty or
-// not an image still reaches here and would leave the entry with nothing drawn
+// hasCustomIcon() only checks the file exists, so an empty or non-image one still reaches here
 bool dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
 {
-    const auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
+    const auto profileIconPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
     const QPixmap pixmap(profileIconPath);
     if (pixmap.isNull()) {
         qWarning() << profileName << "has an icon file that could not be read:" << profileIconPath;
@@ -1875,16 +1861,14 @@ bool dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidge
     return true;
 }
 
-// The list draws an entry as its icon and nothing else, so an entry whose icon
-// could not be read is given a name plate instead of being left as an
-// invisible, though still selectable, row - and says so where the user is
+// The list draws an entry as its icon alone, so one whose icon failed gets a name plate instead
+// of an invisible row, and its tooltip says why
 void dlgConnectionProfiles::setItemTooltip(QListWidgetItem* pItem, const QString& description, const bool iconLoaded) const
 {
     QStringList lines;
     if (!description.isEmpty()) {
-        // a description is plain text - the profile owner's own words, or the
-        // catalog's - and the tooltip is rich text, so markup left in one would
-        // otherwise be acted on and could swallow the warning line below
+        // Plain text going into a rich-text tooltip: unescaped markup would be acted on and could
+        // swallow the warning line below
         lines << description.toHtmlEscaped();
     }
     if (!iconLoaded) {
@@ -1892,8 +1876,7 @@ void dlgConnectionProfiles::setItemTooltip(QListWidgetItem* pItem, const QString
         lines << tr("This entry's artwork could not be read, so its name is shown instead.");
     }
     if (!lines.isEmpty()) {
-        // the wrapper is what Qt::mightBeRichText() settles the mode on, so this
-        // is read as rich text whatever the description turned out to be
+        // The wrapper makes Qt::mightBeRichText() pick rich text whatever the description holds
         pItem->setToolTip(utils::richText(lines.join(qsl("<br>"))));
     }
 }
@@ -1913,7 +1896,7 @@ void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, co
 
 std::optional<QColor> getCustomColor(const QString& profileName)
 {
-    auto profileColorPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
+    auto profileColorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
     if (QFileInfo::exists(profileColorPath)) {
         QFile file(profileColorPath);
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -1997,7 +1980,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     const QString imageLocation = QFileDialog::getOpenFileName(this, tr("Select custom image for profile (should be 120x30)"), lastDir, tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
@@ -2025,7 +2008,7 @@ void dlgConnectionProfiles::slot_setCustomColor()
     }
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
-        auto profileColorPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
+        auto profileColorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
         QSaveFile file(profileColorPath);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             qWarning() << "dlgConnectionProfiles: failed to open profile color file for writing:" << file.errorString();
@@ -2081,7 +2064,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     // A default profile (one of the predefined games) only exists in memory, so
     // there is no folder to copy on-disk. Persist the displayed connection data
     // into the new profile the same way saving a profile does, so the copy is
-    const QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, oldname));
+    const QDir dir(MudletApp::getMudletPath(enums::profileHomePath, oldname));
     if (!dir.exists()) {
         saveDefaultProfileCopy(profile_name, data, oldPassword);
         return;
@@ -2090,7 +2073,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     QApplication::setOverrideCursor(Qt::BusyCursor);
     mpCopyProfile->setText(tr("Copying..."));
     mpCopyProfile->setEnabled(false);
-    auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, MudletPaths::getMudletPath(enums::profileHomePath, oldname), MudletPaths::getMudletPath(enums::profileHomePath, profile_name));
+    auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, MudletApp::getMudletPath(enums::profileHomePath, oldname), MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>(this);
     connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
         if (!mProfileList.contains(profile_name)) {
@@ -2151,7 +2134,7 @@ dlgConnectionProfiles::CopiedProfileData dlgConnectionProfiles::captureProfileDa
 void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, const CopiedProfileData& data, const QString& oldPassword)
 {
     const QDir dir;
-    if (!dir.mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName))) {
+    if (!dir.mkpath(MudletApp::getMudletPath(enums::profileHomePath, profileName))) {
         notificationArea->show();
         notificationAreaIconLabelWarning->show();
         notificationAreaIconLabelError->hide();
@@ -2226,13 +2209,13 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
         return;
     }
-    const QDir oldProfileDir(MudletPaths::getMudletPath(enums::profileHomePath, oldname));
+    const QDir oldProfileDir(MudletApp::getMudletPath(enums::profileHomePath, oldname));
     if (!oldProfileDir.exists()) {
         saveDefaultProfileCopy(profile_name, data, oldPassword);
         return;
     }
 
-    const QDir newProfileDir(MudletPaths::getMudletPath(enums::profileHomePath, profile_name));
+    const QDir newProfileDir(MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
         return;
@@ -2240,8 +2223,8 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 
     // copy relevant profile files
     for (const QString& file : {qsl("url"), qsl("port"), qsl("password"), qsl("login"), qsl("description")}) {
-        auto filePath = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileHomePath, oldname), file);
-        auto newFilePath = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileHomePath, profile_name), file);
+        auto filePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileHomePath, oldname), file);
+        auto newFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
     }
 
@@ -2297,8 +2280,8 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 
 void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
 {
-    const QDir oldProfiledir(MudletPaths::getMudletPath(enums::profileXmlFilesPath, oldname));
-    const QDir newProfiledir(MudletPaths::getMudletPath(enums::profileXmlFilesPath, newname));
+    const QDir oldProfiledir(MudletApp::getMudletPath(enums::profileXmlFilesPath, oldname));
+    const QDir newProfiledir(MudletApp::getMudletPath(enums::profileXmlFilesPath, newname));
     newProfiledir.mkpath(newProfiledir.absolutePath());
     // Only copy from a real profile save (*.xml): the newest file of any name could
     // be a leftover QSaveFile temporary from an interrupted save (e.g. "....xml.AbCdEf")
@@ -2490,7 +2473,7 @@ bool dlgConnectionProfiles::validateProfile()
         // "." and ".." name something that exists without being a profile, so
         // the exemption needs a folder that is genuinely the profile's own.
         const QString selectedName = pItem->data(csmNameRole).toString();
-        const QString selectedFolder = profileFolderPath(MudletPaths::getMudletPath(enums::profilesPath), selectedName);
+        const QString selectedFolder = profileFolderPath(MudletApp::getMudletPath(enums::profilesPath), selectedName);
         const bool nameIsFolderOnDisk = (name == selectedName.trimmed()) && !selectedFolder.isEmpty() && QDir(selectedFolder).exists();
         const bool nameUnchangedAndOnDisk = nameIsFolderOnDisk && profileNameUsableAsIs(name);
         const QChar invalidChar = nameUnchangedAndOnDisk ? QChar() : firstInvalidProfileNameChar(name);
@@ -2755,13 +2738,9 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     setItemName(pItem, mudServer);
 
     listWidget_profiles->addItem(pItem);
-    // An entry the catalog names no artwork for keeps a blank row, which is
-    // neither a failure nor worth warning about: the "Mudlet self-test" entry
-    // is the only one, and it is a testing aid that is deliberately left where
-    // players do not run into it (https://github.com/Mudlet/Mudlet/issues/6443).
-    // Artwork that was named but would not load is a fault, so that entry gets
-    // a name plate to be seen by and a warning - nothing else would show that
-    // its icon is broken rather than absent
+    // Only the "Mudlet self-test" entry has no catalog artwork, and it is deliberately kept out of
+    // players' way (https://github.com/Mudlet/Mudlet/issues/6443), so a blank row is fine. Named
+    // artwork that won't load gets a name plate and a warning, as nothing else would show it is broken
     bool iconLoaded = true;
     if (hasCustomIcon(mudServer)) {
         iconLoaded = setCustomIcon(mudServer, pItem);
@@ -3035,10 +3014,8 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
             if (password.isEmpty()) {
                 qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profileName;
             } else {
-                // The password can come from any stage of CredentialManager's lookup -
-                // several keychain formats, or the encrypted file - and this callback is
-                // told only that one of them answered. Each stage logs where it found the
-                // password, so this line names no source.
+                // Any lookup stage (keychain formats or the encrypted file) may have answered, and each logs
+                // where it found the password, so this line names no source.
                 qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profileName;
             }
         } else {
@@ -3076,7 +3053,7 @@ void dlgConnectionProfiles::passwordArrivedLate(const QString& profileName, bool
 
 void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name)
 {
-    auto& settings = *mudlet::self()->mpSettings;
+    auto& settings = *MudletApp::getQSettings();
     settings.beginGroup(qsl("profiles/%1").arg(profile_name));
 
     // Get password and handle migration

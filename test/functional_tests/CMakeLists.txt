@@ -102,6 +102,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     DictionaryRoundTripTest.cpp
     ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
+    PortableRootNoticeTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileDictionaryTest.cpp
     ProfileFolderNameTest.cpp
@@ -113,11 +114,12 @@ set(PROFILE_GROUP_TEST_SOURCES
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp
     SelfTestProfileIconTest.cpp
+    SpellDictionaryFailureTest.cpp
     XMLexportVariablesTest.cpp
 )
 
-# Telnet and the other network protocols Mudlet speaks, and the escape sequences
-# carried over them
+# Telnet and the other network protocols Mudlet speaks, the escape sequences
+# carried over them, and the version identity Mudlet announces over them
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
@@ -144,6 +146,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TOscTest.cpp
     MirrorToStdOutTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    MudletAppVersionTest.cpp
     IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
 )
@@ -155,6 +158,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
+    PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp

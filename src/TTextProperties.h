@@ -34,11 +34,8 @@
 
 namespace graphemeInfo {
 
-// The most columns a single grapheme cluster can take. Callers rely on this
-// ceiling to avoid measuring text they do not have to: TBuffer::getWrapInfo()
-// multiplies a line's QChar count by it to rule the line out of wrapping
-// without running the Unicode analysis, so a wider value here would silently
-// stop short lines of wide characters from wrapping.
+// Most columns one grapheme cluster can take. TBuffer::getWrapInfo() multiplies a line's QChar count by
+// this to rule out wrapping without Unicode analysis, so a wider value would silently stop short lines of wide characters wrapping.
 inline constexpr int maxWidth = 2;
 
 inline int codepointWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
@@ -81,9 +78,6 @@ inline int codepointWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
 inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
 {
     const int width = codepointWidth(unicode, mWideAmbigousWidthGlyphs);
-    // Kept to maxWidth here rather than at each caller, since a wider value
-    // would not be visibly wrong - it would just stop TBuffer::getWrapInfo()
-    // wrapping lines that do reach the wrap column.
     Q_ASSERT_X(width <= maxWidth, "graphemeInfo::getWidth", "a grapheme wider than graphemeInfo::maxWidth breaks TBuffer::getWrapInfo()'s short-line shortcut");
     return width > maxWidth ? maxWidth : width;
 }

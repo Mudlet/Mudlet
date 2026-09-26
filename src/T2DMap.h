@@ -80,8 +80,7 @@ public:
     ~T2DMap() override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
-    // Public only so that MapRenderBenchmark can say how many rooms a frame
-    // could have drawn without hand-copying the arithmetic that decides it.
+    // Public so MapRenderBenchmark need not copy the arithmetic.
     static QRect viewportRoomBounds(float rx0, float ry0, float roomWidth, float roomHeight, float widgetWidth, float widgetHeight);
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
@@ -280,16 +279,11 @@ public:
     // centered on mRoomID - it seems to be needed if the room concerned
     // is being moved by the mouse as part of a selection:
     bool mShiftMode = false;
-    // How many rooms the area's exit index handed paintRoomExits() for the
-    // last frame, or -1 where the index was not used. Only the tests read it:
-    // a test that means to exercise the index would otherwise pass just as
-    // happily on the loop over every room that it falls back to.
+    // Rooms the exit index handed paintRoomExits() last frame, -1 if unused. For tests, which would
+    // otherwise pass just as well on the every-room fallback.
     int mLodExitIndexRoomsHandedOver = -1;
-    // Forces the reduced tier onto the loop over every room, so a test can
-    // require that the index path draws the very same frame. The index is
-    // only ever allowed to hand over too many rooms, never too few, and
-    // comparing the two frames is the only check of that which does not have
-    // to know which rooms those should be. Never set outside the tests.
+    // Test-only: forces the every-room loop so a test can check the index path draws the same frame,
+    // i.e. never hands over too few rooms.
     bool mLodExitIndexDisabled = false;
     QPointer<QComboBox> arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
@@ -472,21 +466,14 @@ private:
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
     QSize lodRoomBlobSize() const;
-    // One exit line waiting to be drawn. The destination room is carried
-    // rather than just its id because the drawing pass needs its coordinates,
-    // and looking it up again there costs a second room-database probe for
-    // every exit of every room in the viewport. It is only good for the one
-    // paintRoomExits() room iteration that gathered it, which clears and
-    // refills the list before moving on to the next room.
+    // Carries the room to save the drawing pass a second room-database probe per exit.
+    // Valid only within the paintRoomExits() room iteration that gathered it.
     struct ExitToPaint
     {
         const TRoom* destination = nullptr;
         int destinationId = 0;
-        // Set when the destination's exit in the opposite direction does not
-        // come back here. This alone does not decide whether an arrow is drawn:
-        // the drawing pass looks at every exit to the same destination, so an
-        // exit that is not one-way still gets an arrow when a sibling exit to
-        // that same room is.
+        // The destination's reverse exit doesn't lead back. Not the sole arrow test: an exit also gets
+        // an arrow when a sibling exit to the same room is one-way.
         bool oneWay = false;
     };
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);

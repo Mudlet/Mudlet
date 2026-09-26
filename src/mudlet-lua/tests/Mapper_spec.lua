@@ -2790,6 +2790,12 @@ describe("Tests the open and closed states of the map widget", function()
     openMapWidget()
   end)
 
+  it("refuses a docking area it does not know, naming the ones it does", function()
+    local ok, message = openMapWidget("middle")
+    assert.is_nil(ok)
+    assert.are.equal([[docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating]], message)
+  end)
+
   -- companion guard rather than a guard for the bug: closeMapWidget() reported
   -- "already closed" before this was fixed too. It is here so that a fix which
   -- stopped distinguishing the two calls would be caught.
@@ -3064,7 +3070,7 @@ describe("Tests saveMap and loadMap", function()
 
   -- Careful with the order of anything added here: a load that fails can still
   -- have emptied the map first, both for a missing binary file
-  -- (TMainConsole::loadMap clears before it restores) and for a map document
+  -- (Host::loadMapFile clears before it restores) and for a map document
   -- that will not parse (TMap::readXmlMapFile clears before it parses), so most
   -- of these leave no map behind for the next spec. A file that is not a map
   -- document at all is the exception: it is refused before the clear.
@@ -3114,6 +3120,21 @@ describe("Tests saveMap and loadMap", function()
       assert.is_string(message)
       assert.is_truthy(message:find("was not found", 1, true))
       assert.is_truthy(message:find("nosuchmapfile.xml", 1, true))
+    end)
+
+    -- the XML import resolves a bare name against the profile directory the
+    -- same way saveMap and loadMap do, so the message has to name where it
+    -- really looked and not the directory Mudlet happens to have been started
+    -- in, which for a spec run is the build or source tree
+    it("resolves a bare XML name against the profile directory", function()
+      local bare = "mapper_spec_norelative.xml"
+      local resolved = getMudletHomeDir() .. "/" .. bare
+      assert.is_false(io.exists(resolved), "the spec needs a name nothing has written")
+
+      local ok, message = loadMap(bare)
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find(resolved, 1, true), message)
     end)
 
     it("returns nil and a message for an XML file it cannot parse", function()
@@ -4109,6 +4130,23 @@ describe("Tests saveJsonMap and loadJsonMap", function()
                        getRoomUserData(roomA, "audit.removed_valid_but_missing_special_exit.squeeze through"))
     end)
 
+    it("does not leave the lock of a special exit it removes behind", function()
+      buildMap()
+      addSpecialExit(roomA, roomB, "crawl under")
+      assert.is_true(lockSpecialExit(roomA, roomB, "squeeze through", true))
+      -- the control: a locked special exit that stays
+      assert.is_true(lockSpecialExit(roomA, roomB, "crawl under", true))
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "squeeze through").exitId = missingRoomId
+      end)
+
+      assert.is_nil(getSpecialExitsSwap(roomA)["squeeze through"])
+      assert.is_true(hasSpecialExitLock(roomA, roomB, "crawl under"))
+      -- a new exit that reuses the command starts out unlocked
+      assert.is_true(addSpecialExit(roomA, roomB, "squeeze through"))
+      assert.is_false(hasSpecialExitLock(roomA, roomB, "squeeze through"))
+    end)
+
     it("rebuilds an area whose name is empty in the file around the rooms that claim it", function()
       -- driving this path leaks the rejected TArea, which turns the leak
       -- detection half of the Linux CI job red (#10396)
@@ -4156,6 +4194,32 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       -- stored as DIR_OTHER
       assert.are.same({1}, getExitStubs1(roomA))
       assert.are.equal(roomB, getSpecialExitsSwap(roomA)["squeeze through"])
+    end)
+
+    it("drops a door of a type it does not know and keeps the exit", function()
+      buildMap()
+      assert.is_true(addSpecialExit(roomA, roomB, "crawl under"))
+      reimportWith(function(document)
+        local room = findRoom(document, roomA)
+        -- a normal exit, a special exit and a stub each read their door
+        -- through the same code
+        findExit(room, "east").door = "ajar"
+        findExit(room, "squeeze through").door = "ajar"
+        room.stubExits[1].door = "ajar"
+        -- the controls, read from the same file
+        findExit(room, "west").door = "closed"
+        findExit(room, "crawl under").door = "open"
+      end)
+
+      assert.are.equal(roomB, getRoomExits(roomA)["east"])
+      assert.are.equal(roomB, getSpecialExitsSwap(roomA)["squeeze through"])
+      assert.are.same({1}, getExitStubs1(roomA))
+      local doors = getDoors(roomA)
+      assert.is_nil(doors["e"])
+      assert.is_nil(doors["squeeze through"])
+      assert.is_nil(doors["n"])
+      assert.are.equal(2, doors["w"])
+      assert.are.equal(1, doors["crawl under"])
     end)
 
     it("keeps a door and a lock that a stub exit carries", function()
