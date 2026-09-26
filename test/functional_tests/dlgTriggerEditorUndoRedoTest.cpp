@@ -44,6 +44,10 @@
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
+#include "widgetutils.h"
+
+#include <QAccessible>
+#include <QTextDocument>
 
 #include "GroupedTest.h"
 
@@ -115,6 +119,8 @@ private:
 
 private slots:
   void initTestCase() {
+    widgetutils::syncAccessibleDescriptionsWithToolTips();
+
     if (portableMarkerPresent()) {
       QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
             "so the config dir cannot be redirected");
@@ -1972,6 +1978,36 @@ private slots:
 
     QVERIFY2(!canUndoBefore || countAfterUndo == initialCount,
              "No items should disappear when undo clicked without changes");
+  }
+
+  // Each view relabels the toolbar actions and changes their tooltips, and a
+  // widget with no description of its own reports its tooltip, markup
+  // included, through the accessible interface a screen reader reads.
+  void testAccessibleDescriptionsHaveNoMarkup() {
+    static const QRegularExpression htmlTag(qsl(R"(<[/A-Za-z][^>]*>)"));
+    for (const auto &itemType : mItemTypes) {
+      itemType.showView();
+      int richToolTips = 0;
+      const auto widgets = mpEditor->findChildren<QWidget *>();
+      for (auto *widget : widgets) {
+        if (!Qt::mightBeRichText(widget->toolTip())) {
+          continue;
+        }
+        ++richToolTips;
+        QAccessibleInterface *pInterface =
+            QAccessible::queryAccessibleInterface(widget);
+        QVERIFY(pInterface);
+        const QString description = pInterface->text(QAccessible::Description);
+        QVERIFY2(!description.contains(htmlTag),
+                 qPrintable(qsl("%1 in the %2 view has the description \"%3\"")
+                                .arg(widget->objectName(), itemType.name,
+                                     description)));
+      }
+      QVERIFY2(richToolTips > 20,
+               qPrintable(qsl("Only %1 rich tooltips in the %2 view")
+                              .arg(richToolTips)
+                              .arg(itemType.name)));
+    }
   }
 
   void testTriggerNameWiped() {
