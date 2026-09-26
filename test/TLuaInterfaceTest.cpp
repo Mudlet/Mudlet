@@ -1424,9 +1424,11 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     }
 
     // The walk of the whole of _G the Variables view makes: a panic inside it
-    // has to give the caller back the stack it found, rather than strand the
-    // walk's working values on the profile's live interpreter, and the next
-    // walk has to read everything again.
+    // has to give the caller back a stack of the height it found, rather than
+    // strand the walk's working values on the profile's live interpreter, and
+    // the next walk has to read everything again. Only the height: Lua's own
+    // panic handling writes its error message over the bottom of the stack
+    // before the panic function is called, so what was in those slots is gone.
     void testAPanicInTheVariablesWalkLeavesTheStackAsItFoundIt()
     {
         AllocationBudget budget;
@@ -1446,8 +1448,6 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
             budget.failAt = -1;
 
             QCOMPARE(lua_gettop(state), topBefore);
-            QCOMPARE(lua_tonumber(state, -1), 42.0);
-            QCOMPARE(QString::fromUtf8(lua_tostring(state, -2)), qsl("sentinel one"));
 
             luaInterface.getVars(false);
             bool found = false;
