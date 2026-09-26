@@ -22,6 +22,7 @@
 
 #include "Host.h"
 #include "CredentialManager.h"
+#include "MudletApp.h"
 #include "OAuthClientFlow.h"
 #include "SecureStringUtils.h"
 #include "UntrustedText.h"
@@ -31,6 +32,8 @@
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDesktopServices>
+#include <QFile>
+#include <QFileInfo>
 #include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -133,6 +136,73 @@ bool readStoredTransportRequirement(const QJsonObject& entry)
 QString metadataKey()
 {
     return qsl("reconnect");
+}
+
+// The metadata is the profile's own data rather than a credential: an account name, the provider
+// that issued the sign-in, and whether the token may only travel over a secure transport.
+// metadataPayload() keeps the secret out of it deliberately, so the credential store buys it
+// nothing - and costs something real. macOS prompts to update an item whose access list does not
+// name the running build, which every development build is, so writing this alongside the token
+// asked the player twice per sign-in for one secret; reading it back asked again.
+//
+// The token stays where it was. Only this half moves - and it is a trade rather than a free win:
+// the credential store keeps its contents encrypted at rest behind a per-application access list,
+// while this is a file in the profile. No secret is in it, but the account identifier and the
+// provider are, so the file is narrowed to its owner rather than left at the default.
+QString metadataPathInProfile(const QString& profileName)
+{
+    return MudletApp::getMudletPath(enums::profileDataItemPath, profileName, metadataKey());
+}
+
+QString readMetadataFromProfile(const QString& profileName)
+{
+    return MudletApp::readProfileData(profileName, metadataKey());
+}
+
+QPair<bool, QString> writeMetadataToProfile(const QString& profileName, const QString& payload)
+{
+    const auto written = MudletApp::writeProfileData(profileName, metadataKey(), payload);
+    if (written.first) {
+        // Who the player signs in as is nobody else's business on a shared machine
+        QFile::setPermissions(metadataPathInProfile(profileName), QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    }
+    return written;
+}
+
+QPair<bool, QString> removeMetadataFromProfile(const QString& profileName)
+{
+    // Written as a file of its own by writeProfileData(), so removing it is removing that file.
+    // Absent is the answer the caller wanted, so it counts as done.
+    const QString path = metadataPathInProfile(profileName);
+    if (!QFileInfo::exists(path)) {
+        return qMakePair(true, QString());
+    }
+    QFile file(path);
+    if (file.remove()) {
+        return qMakePair(true, QString());
+    }
+    return qMakePair(false, file.errorString());
+}
+
+// Clears a record the credential store still holds from before it moved into the profile. A free
+// function rather than a member, so the read callback that calls it captures no authenticator:
+// GMCPAuthenticator is not a QObject, nothing can track its lifetime, and a read outstanding while
+// a Host is torn down would otherwise answer into a destroyed one - Host's QPointer only clears in
+// ~QObject, after the authenticator it owns has gone.
+//
+// Unwaited here: this is the tidying half of a move, and the caller has the record either way. The
+// forget path does wait for it, because there the whole point is that it is gone.
+void forgetMetadataTheStoreStillHolds(const QString& profileName)
+{
+    QPointer<CredentialManager> remover = new CredentialManager();
+    remover->removePassword(profileName, metadataKey(), [remover, profileName](bool removed, const QString& error) {
+        if (remover) {
+            remover->deleteLater();
+        }
+        if (!removed) {
+            qWarning().noquote() << "GMCP Char.Login - the saved sign-in's older credential-store entry for profile" << profileName << "was not removed, so the next read finds it again:" << error;
+        }
+    });
 }
 
 // Holds the raw token and nothing else, so the *stored* token never passes through a QJsonDocument -
@@ -446,7 +516,42 @@ void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation o
 {
     using Operation = SignInStoreReconciler::Operation;
     const bool onMetadata = (op == Operation::WriteMetadata || op == Operation::RemoveMetadata);
-    const QString key = onMetadata ? metadataKey() : tokenKey();
+
+    if (onMetadata) {
+        // The profile's own data, and synchronous: no job, no prompt, and the done() the reconciler
+        // sequences on is called before this returns, exactly as a store callback would have been.
+        const QString profileName = mpHost->getName();
+        if (op == Operation::WriteMetadata) {
+            const auto written = writeMetadataToProfile(profileName, payload);
+            done(written.first, written.first ? QString() : qsl("Could not write the saved sign-in to the profile: %1").arg(written.second));
+            return;
+        }
+
+        const auto removed = removeMetadataFromProfile(profileName);
+        if (!removed.first) {
+            done(false, qsl("Could not remove the saved sign-in from the profile: %1").arg(removed.second));
+            return;
+        }
+
+        // A copy the credential store still holds from before this moved has to go as well, and the
+        // answer is waited for: a forget that reported success while that copy survived would be
+        // undone by the next connect, which reads the store when the profile has nothing and moves
+        // what it finds back in. The player would be told the sign-in was forgotten and then watch
+        // Mudlet offer it again.
+        QPointer<CredentialManager> remover = new CredentialManager();
+        remover->removePassword(profileName, metadataKey(), [remover, profileName, done = std::move(done)](bool storeCleared, const QString& error) mutable {
+            if (remover) {
+                remover->deleteLater();
+            }
+            if (!storeCleared) {
+                qWarning().noquote() << "GMCP Char.Login - the saved sign-in is gone from the profile, but the credential store still holds the copy written before it moved there:" << error;
+            }
+            done(storeCleared, storeCleared ? QString() : qsl("Removed from the profile, but the credential store's older copy remains: %1").arg(error));
+        });
+        return;
+    }
+
+    const QString key = tokenKey();
 
     QPointer<CredentialManager> credentialManager = new CredentialManager();
     auto onDone = [credentialManager, done = std::move(done)](bool ok, const QString& error) {
@@ -1179,8 +1284,67 @@ void GMCPAuthenticator::attemptReconnect()
     readStoredSignIn(true);
 }
 
+// Clears a metadata entry the credential store still holds from before this moved into the profile.
+// Best effort and unwaited: it is not a secret, the profile's copy is what is read now, and a store
+// that refuses has nothing here worth holding a forget open for.
+/*static*/ QString GMCPAuthenticator::savedSignInRecordPath(const QString& profileName)
+{
+    return metadataPathInProfile(profileName);
+}
+
 void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
 {
+    if (key == metadataKey()) {
+        const QString profileName = mpHost->getName();
+        const QString fromProfile = readMetadataFromProfile(profileName);
+        if (!fromProfile.isEmpty()) {
+            done(true, fromProfile, QString());
+            return;
+        }
+
+        // Nothing in the profile: this sign-in was saved before the metadata moved there, so it is
+        // read from the credential store once and written where it belongs. The player pays the
+        // store's prompt for that one read rather than for every sign-in from here on.
+        QPointer<CredentialManager> reader = new CredentialManager();
+        QPointer<Host> safeHost = mpHost;
+        reader->retrievePassword(profileName, key, [reader, safeHost, profileName, done = std::move(done)](bool success, QString value, const QString& errorMessage) mutable {
+            if (reader) {
+                reader->deleteLater();
+            }
+            // Only a record this can read and prove holds no token moves. A sign-in saved before
+            // the token had a key of its own carries it inside this JSON, and the profile is no
+            // place for a secret; so does anything that will not parse, because "no token member"
+            // is not something an empty parse result can be trusted to say - a truncated entry
+            // would answer it the same way. Either stays exactly where it is.
+            if (success && !value.isEmpty() && safeHost) {
+                QByteArray recordBytes = value.toUtf8();
+                QJsonParseError parseError{};
+                const QJsonDocument record = QJsonDocument::fromJson(recordBytes, &parseError);
+                SecureStringUtils::secureByteArrayClear(recordBytes);
+                const bool readable = parseError.error == QJsonParseError::NoError && record.isObject();
+                const bool holdsNoToken = readable && !record.object().contains(qsl("token"));
+
+                if (!holdsNoToken) {
+                    qDebug().noquote() << "GMCP Char.Login - the saved sign-in for profile" << profileName
+                                       << "stays in the credential store:" << (readable ? "it carries its token inline" : qPrintable(qsl("it does not parse - %1").arg(parseError.errorString())));
+                } else {
+                    const auto written = writeMetadataToProfile(profileName, value);
+                    if (written.first) {
+                        qDebug().noquote() << "GMCP Char.Login - moved the saved sign-in for profile" << profileName << "out of the credential store and into the profile";
+                        forgetMetadataTheStoreStillHolds(profileName);
+                    } else {
+                        // Said out loud: the alternative is the store being read, and prompted for,
+                        // on every connect from here on with nothing to say why
+                        qWarning().noquote() << "GMCP Char.Login - could not move the saved sign-in for profile" << profileName
+                                             << "into the profile, so it stays in the credential store and is read from there again:" << written.second;
+                    }
+                }
+            }
+            done(success, std::move(value), errorMessage);
+        });
+        return;
+    }
+
     QPointer<CredentialManager> reader = new CredentialManager();
     reader->retrievePassword(mpHost->getName(), key, [reader, done = std::move(done)](bool success, QString value, const QString& errorMessage) mutable {
         if (reader) {
