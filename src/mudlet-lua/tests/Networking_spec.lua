@@ -1597,6 +1597,16 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(contains(message, "a snooped line of game output"), tostring(message))
     end)
 
+    it("keeps the lines of a snooped frame apart", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSendsRaw(string.char(31) .. "one\r\ntwo" .. string.char(255))
+      local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
+      assert.is_string(message)
+      -- the colour carried over onto each line is not what is under test
+      assert.equals("one\ntwo", (message:gsub("\27%[[%d;]*m", "")))
+    end)
+
     it("keeps the colour of a snooped line", function()
       if peerUnavailable() then return end
       ensurePeer()

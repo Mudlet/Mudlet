@@ -1024,7 +1024,11 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
                 line = mLastSgrState + line;
             }
 
-            // Append the processed line
+            // Lines are joined back with the newline between them, which a
+            // leading blank line (the one after MudMaster's colour prefix) does not need
+            if (!outputMessage.empty()) {
+                outputMessage += '\n';
+            }
             outputMessage += line;
 
             ss.str("");
@@ -1069,11 +1073,15 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
 
     // Process any remaining data that didn't end with a newline
     std::string remaining = ss.str();
-    if (!remaining.empty() && mNeedsColorTracking) {
-        remaining = mLastSgrState + remaining;
+    if (!remaining.empty()) {
+        if (mNeedsColorTracking) {
+            remaining = mLastSgrState + remaining;
+        }
+        if (!outputMessage.empty()) {
+            outputMessage += '\n';
+        }
+        outputMessage += remaining;
     }
-
-    outputMessage += remaining;
 
     if (!outputMessage.empty()) {
 
