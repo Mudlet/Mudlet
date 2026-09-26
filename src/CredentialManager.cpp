@@ -151,6 +151,14 @@ bool readFoundNothing(QKeychain::Error error)
     return error == QKeychain::EntryNotFound || error == QKeychain::NoBackendAvailable || error == QKeychain::NotImplemented;
 }
 
+// The store saying no rather than a particular entry doing so: a locked keychain, or a prompt the
+// player dismissed. Every read behind one of these gets the same answer, and on a desktop store
+// each of them costs another prompt to ask.
+bool readWasRefusedOutright(QKeychain::Error error)
+{
+    return error == QKeychain::AccessDenied || error == QKeychain::AccessDeniedByUser;
+}
+
 // Starts a job nobody waits on, detached from the start. It is never abandoned, for the reason
 // detachJob() gives, so the one thing to do about a job that stops answering is to say so.
 void startUnattendedJob(QKeychain::Job* job, const std::function<bool(QKeychain::Job*)>& hook, int timeoutMs, const QString& description)
@@ -455,6 +463,16 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         // that holds it. Whatever is recovered from an older layout is re-filed under the current
         // name, so once that succeeds the next lookup finds it sooner.
         auto& stages = lookup->stages;
+        // The sign-in keys cannot be in a layout that predates them. The colliding format was
+        // written by 4.20.0 and 4.20.1 alone - February 2026 - and the key=account layout by builds
+        // before the Windows keychain fix; saved sign-ins arrived months after both. Reading those
+        // layouts for one can never find anything, and on a keychain that asks per item - as macOS
+        // does for a build not named in an item's own access list - each read costs the player
+        // another prompt: two per profile, on the two keys the profile preferences ask about.
+        //
+        // Named rather than inferred from the age of the key, because a key this does not know
+        // about may well be in an older layout, and missing a password is worse than a prompt.
+        const bool keyPredatesTheOlderLayouts = key.compare(qsl("reconnect")) && key.compare(qsl("reconnect-token"));
         // Use service as the key - on Windows with qtkeychain before 0.17, only setKey() value is used as
         // the credential target, so using account ("character") would make all profiles share one
         stages.push_back({qsl("current format"), service, service, false, nullptr});
@@ -469,9 +487,11 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
 #endif
         // Before the Windows keychain fix, credentials were stored with key=account, so on Windows
         // every profile shared one "character" entry
-        stages.push_back({qsl("old key=account format"), oldFormatService, key, false, [this, service, oldFormatService, key](const QString& password) {
-                              migrateOldFormatEntry(service, oldFormatService, key, password);
-                          }});
+        if (keyPredatesTheOlderLayouts) {
+            stages.push_back({qsl("old key=account format"), oldFormatService, key, false, [this, service, oldFormatService, key](const QString& password) {
+                                  migrateOldFormatEntry(service, oldFormatService, key, password);
+                              }});
+        }
         // The pre-4.20.0 keychain format, only ever used for these two keys
         if (!key.compare(qsl("password")) || !key.compare(qsl("character"))) {
             stages.push_back({qsl("pre-4.20.0 format"), qsl("Mudlet profile"), profileName, false, [this, profileName, key](const QString& password) {
@@ -484,12 +504,30 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         const auto recoverColliding = [this, profileName, key, legacyService](const QString& password) {
             migrateCollidingEntry(profileName, key, legacyService, password);
         };
-        stages.push_back({qsl("colliding format"), legacyService, legacyService, false, recoverColliding});
+        if (keyPredatesTheOlderLayouts) {
+            stages.push_back({qsl("colliding format"), legacyService, legacyService, false, recoverColliding});
 #if defined(Q_OS_WIN)
-        stages.push_back({qsl("colliding format under pre-0.17 qtkeychain naming"), QString(), legacyService, false, recoverColliding});
+            stages.push_back({qsl("colliding format under pre-0.17 qtkeychain naming"), QString(), legacyService, false, recoverColliding});
 #else
-        stages.push_back({qsl("colliding format with key=account"), legacyService, key, false, recoverColliding});
+            stages.push_back({qsl("colliding format with key=account"), legacyService, key, false, recoverColliding});
 #endif
+        }
+
+        // A refusal the store gave moments ago is the answer it will give again, so the chain is
+        // trimmed to the file for as long as that holds. This is what spares the player a second
+        // round of prompts when a caller asks about two keys in a row, as the profile preferences do
+        // with "reconnect" and "reconnect-token".
+        if (storeRefusedRecently()) {
+            qDebug() << "CredentialManager: the keychain refused a read within the last" << scmStoreRefusalCooldownMs << "ms, so only the encrypted file is read for profile" << profileName;
+            std::vector<LookupStage> fileOnly;
+            for (const LookupStage& stage : stages) {
+                if (stage.fromFile) {
+                    fileOnly.push_back(stage);
+                }
+            }
+            stages.swap(fileOnly);
+            lookup->keychainError = qsl("the keychain refused a read moments ago, so it was not asked again");
+        }
 
         // One deadline for the whole chain rather than one per read. The chain is several keychain
         // jobs deep and QtKeychain runs one job at a time for the whole process, so any read - or a
@@ -568,6 +606,28 @@ void CredentialManager::finishLookup(const LookupPtr& lookup, bool success, QStr
     }
 }
 
+/*static*/ QElapsedTimer& CredentialManager::storeRefusalTimer()
+{
+    static QElapsedTimer timer;
+    return timer;
+}
+
+/*static*/ bool CredentialManager::storeRefusedRecently()
+{
+    const QElapsedTimer& timer = storeRefusalTimer();
+    return timer.isValid() && timer.elapsed() < scmStoreRefusalCooldownMs;
+}
+
+/*static*/ void CredentialManager::noteStoreRefusal()
+{
+    storeRefusalTimer().restart();
+}
+
+/*static*/ void CredentialManager::forgetStoreRefusal()
+{
+    storeRefusalTimer().invalidate();
+}
+
 void CredentialManager::awaitLateAnswer(const LookupPtr& lookup)
 {
     QKeychain::ReadPasswordJob* read = lookup->currentRead;
@@ -622,6 +682,13 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
 
     lookup->currentStage = index;
     const LookupStage& stage = lookup->stages[index];
+    if (lookup->storeRefused && !stage.fromFile) {
+        // The store has already refused this lookup, so this read would only ask it again - and, on
+        // a desktop keychain, prompt the player again - for the answer it has given. The file is not
+        // the store's to refuse, so the chain still reads that.
+        runLookupStage(lookup, index + 1);
+        return;
+    }
     if (stage.fromFile) {
         QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key);
         if (password.isEmpty()) {
@@ -655,6 +722,9 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         const LookupStage& finishedStage = lookup->stages[index];
         if (error == QKeychain::NoError && !password.isEmpty()) {
             qDebug() << "CredentialManager: Found the password for profile" << lookup->profileName << "in the" << finishedStage.description;
+            // The clearest proof there is that the store is reachable, and this path returns before
+            // the one below: a refusal window opened while this read was in flight is over.
+            forgetStoreRefusal();
             if (finishedStage.recover && lookup->keychainError.isEmpty()) {
                 finishedStage.recover(password);
             } else if (finishedStage.recover) {
@@ -666,12 +736,34 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
             finishLookup(lookup, true, std::move(password), QString());
             return;
         }
-        if (error != QKeychain::NoError && !readFoundNothing(error)) {
+        if (error == QKeychain::NoError || readFoundNothing(error)) {
+            // The store answered, even if this entry held nothing, so a refusal further down the
+            // chain starts counting again - and anything waiting on the refusal window can stop.
+            lookup->storeHasAnswered = true;
+            lookup->consecutiveRefusals = 0;
+            forgetStoreRefusal();
+        } else {
             // A hard keychain error is distinct from "no such entry" and is the likely reason a saved
             // password appears to have vanished - surface it rather than treating it as not found
             qWarning() << "CredentialManager: Keychain read of the" << finishedStage.description << "failed for profile" << lookup->profileName << "-" << errorString;
             if (lookup->keychainError.isEmpty()) {
                 lookup->keychainError = errorString;
+            }
+            if (readWasRefusedOutright(error)) {
+                ++lookup->consecutiveRefusals;
+                // One refusal can be this entry's own - a per-item ACL, or a keychain item another
+                // build saved under terms this one cannot meet - and an older layout behind it may
+                // still hold the password, so the next layout is read to find out which this is. A
+                // second refusal with nothing answered in between is the store itself: locked, or a
+                // prompt the player dismissed. Everything behind it would be refused the same way,
+                // at the cost of another prompt each, so the chain stops asking. The file is still
+                // read, and the refusal is still what the lookup reports if nothing turns up.
+                if (!lookup->storeHasAnswered && lookup->consecutiveRefusals >= scmRefusalsBeforeGivingUpOnTheStore) {
+                    qWarning() << "CredentialManager: the keychain refused" << lookup->consecutiveRefusals << "reads in a row for profile" << lookup->profileName
+                               << "- not asking it for the remaining formats";
+                    lookup->storeRefused = true;
+                    noteStoreRefusal();
+                }
             }
         }
         runLookupStage(lookup, index + 1);
@@ -996,6 +1088,11 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
                     }
                 } else {
                     qDebug() << "CredentialManager: Password stored to keychain service:" << service;
+                    // Deliberately not clearing the refusal window: on macOS an item this
+                    // application owns is written without a prompt while reading an existing one
+                    // whose ACL does not name this binary still prompts, so a write says nothing
+                    // about read access. Clearing it here would put the prompt the window exists to
+                    // spare the player straight back in front of them.
                 }
 
                 // Final validity check before calling callback
