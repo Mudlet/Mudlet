@@ -18,12 +18,13 @@
  ***************************************************************************/
 
 /*
- * The notepad, the IRC client and the toolbars an action puts on the main
- * window are created without a Host parent, so nothing disposes of them along
- * with the profile unless the teardown does it by hand. Each test takes one of
- * the three orderings a Host goes away in and asserts the same thing: once the
- * Host is gone, so are its windows. The QPointers make a leak provable in any
- * build; an AddressSanitizer build additionally catches a double delete.
+ * The trigger editor, the notepad, the IRC client and the toolbars an action
+ * puts on the main window are created without a Host parent, so nothing
+ * disposes of them along with the profile unless the teardown does it by hand.
+ * Each test takes one of the three orderings a Host goes away in and asserts
+ * the same thing: once the Host is gone, so are its windows. The QPointers
+ * make a leak provable in any build; an AddressSanitizer build additionally
+ * catches a double delete.
  *
  * Run with: ctest -R HostChildTeardownTest -V
  */
@@ -52,6 +53,7 @@
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
 #include "dlgNotepad.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -104,6 +106,7 @@ private:
 
     struct OpenWindows
     {
+        QPointer<dlgTriggerEditor> editor;
         QPointer<dlgNotepad> notePad;
         QPointer<dlgIRC> dlgIrc;
         // two of them, so that the loop in ~Host() is made to iterate
@@ -113,6 +116,9 @@ private:
     OpenWindows openEveryChildWindow(Host* pHost)
     {
         OpenWindows windows;
+
+        // loading the profile opened this one already
+        windows.editor = pHost->mpEditorDialog;
 
         mudlet::self()->slot_notes();
         windows.notePad = pHost->mpNotePad;
@@ -140,6 +146,9 @@ private:
     static QStringList windowsLeftBehind(const OpenWindows& windows)
     {
         QStringList leftBehind;
+        if (windows.editor) {
+            leftBehind << qsl("the trigger editor");
+        }
         if (windows.notePad) {
             leftBehind << qsl("the notepad");
         }
@@ -154,7 +163,10 @@ private:
         return leftBehind;
     }
 
-    static bool everyWindowWasOpened(const OpenWindows& windows) { return windows.notePad && windows.dlgIrc && windows.toolBars.size() == 2 && windows.toolBars.at(0) && windows.toolBars.at(1); }
+    static bool everyWindowWasOpened(const OpenWindows& windows)
+    {
+        return windows.editor && windows.notePad && windows.dlgIrc && windows.toolBars.size() == 2 && windows.toolBars.at(0) && windows.toolBars.at(1);
+    }
 
     static inline const QString csmNoteText = qsl("HostChildTeardown note text");
 
@@ -232,10 +244,11 @@ private slots:
 
             // The third ordering: a profile still loaded when the main window goes,
             // so the Host is destroyed with no close of any kind asked for.
-            QVERIFY2(mLeftOpenProfileWasSetUp, "The profile this checks on was never opened, so the check below would pass on three null pointers");
+            QVERIFY2(mLeftOpenProfileWasSetUp, "The profile this checks on was never opened, so the check below would pass on null pointers");
             delete mudlet::self();
-            // Only the notepad and the IRC client carry weight here: the toolbars
-            // are children of the main window, so ~QWidget frees them either way.
+            // Only the editor, the notepad and the IRC client carry weight here:
+            // the toolbars are children of the main window, so ~QWidget frees
+            // them either way.
             const QStringList leftBehind = windowsLeftBehind(mWindowsLeftOpenAtTheEnd);
             QVERIFY2(leftBehind.isEmpty(), qPrintable(qsl("Destroying the main window left %1 of the profile that was still loaded behind").arg(leftBehind.join(qsl(" and ")))));
 

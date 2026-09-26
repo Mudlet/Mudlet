@@ -1063,6 +1063,12 @@ signals:
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
+    // The frontend owns the editor, notepad and IRC client it opens for a
+    // profile. On close it closes them and lets go of them; on destruction it
+    // deletes them there and then, while the units the editor references still
+    // exist, so both need a direct connection.
+    void signal_closeProfileDialogs();
+    void signal_destroyProfileDialogs();
 
 public slots:
     void slot_timerFires();

@@ -27,10 +27,7 @@
 
 #include "discord.h"
 #include "MudletApp.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
-#include "dlgNotepad.h"
-#include "dlgTriggerEditor.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "HostManager.h"
@@ -484,30 +481,7 @@ Host::~Host()
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
 
-    // The editor is a parentless top-level window, so delete it here while the
-    // units it references are still alive. Null the QPointer first: it only
-    // clears itself once ~QObject is reached, so anything looking at
-    // mpEditorDialog mid-teardown would find a half-destroyed widget:
-    if (auto* pEditor = mpEditorDialog.data()) {
-        mpEditorDialog = nullptr;
-        disconnect(this, nullptr, pEditor, nullptr);
-        delete pEditor;
-    }
-
-    if (auto* pNotePad = mpNotePad.data()) {
-        if (mudlet::self()) {
-            pNotePad->save();
-            pNotePad->close();
-        }
-        mpNotePad = nullptr;
-        disconnect(this, nullptr, pNotePad, nullptr);
-        delete pNotePad;
-    }
-
-    if (auto* pDlgIRC = mpDlgIRC.data()) {
-        mpDlgIRC = nullptr;
-        delete pDlgIRC;
-    }
+    emit signal_destroyProfileDialogs();
 
     for (const auto& pToolBar : mActionUnit.getToolBarList()) {
         delete pToolBar.data();
@@ -592,25 +566,11 @@ void Host::closeChildren()
 
     stopAllTriggers();
 
-    if (mpEditorDialog) {
-        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-        mpEditorDialog->close();
-        // close() only posts the deletion; disconnect so no emit reaches the released editor:
-        disconnect(this, nullptr, mpEditorDialog, nullptr);
-        mpEditorDialog = nullptr;
-    }
+    emit signal_closeProfileDialogs();
 
     // A snapshot: closing one removes it (and a user window's dock) from the registry.
     for (const QString& consoleName : mWindowRegistry.subConsoleNames()) {
         mpConsole->closeSubConsole(consoleName);
-    }
-
-    if (mpNotePad) {
-        mpNotePad->save();
-        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-        mpNotePad->close();
-        disconnect(this, nullptr, mpNotePad, nullptr);
-        mpNotePad = nullptr;
     }
 
     for (TToolBar* pTB : hostToolBarMap) {
@@ -618,13 +578,6 @@ void Host::closeChildren()
             pTB->setAttribute(Qt::WA_DeleteOnClose);
             pTB->deleteLater();
         }
-    }
-
-    // close IRC client window if it is open.
-    if (mpDlgIRC) {
-        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        mpDlgIRC->deleteLater();
-        mpDlgIRC = nullptr;
     }
 }
 
