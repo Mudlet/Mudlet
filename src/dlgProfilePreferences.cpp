@@ -45,7 +45,6 @@
 #include "TTrigger.h"
 #include "ctelnet.h"
 #include "discord.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
