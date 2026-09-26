@@ -34,12 +34,13 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         expireName = tag->getAttributeValue(qsl("expire"));
     }
 
-    mCurrentTagContent.clear();
-    mHref = getHref(tag);
-    if (mHref.isEmpty()) {
-        mIsHrefInContent = false;
+    // An A that is not handled leaves the one it is nested in untouched
+    const QString href = getHref(tag);
+    if (href.isEmpty()) {
         return MXP_TAG_NOT_HANDLED;
     }
+    mCurrentTagContent.clear();
+    mHref = href;
     mIsHrefInContent = mHref.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive);
 
     // Server-supplied, and lands in the same tooltip as an OSC 8 hint. An
