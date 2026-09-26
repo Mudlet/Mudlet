@@ -72,7 +72,19 @@ ExternalProject_Add(
 
 add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
 
-target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -g)
+# Full debug info is only needed where the symbols are uploaded to Sentry, or
+# where the build type asks for it. Every other build - pull requests and pushes
+# to development - gets line tables only, which still gives sanitizer and crash
+# backtraces their file:line frames at a fraction of the compile, link and
+# ccache cost.
+if(SENTRY_SEND_DEBUG OR CMAKE_BUILD_TYPE MATCHES "^(Debug|RelWithDebInfo)$")
+  set(SENTRY_DEBUG_INFO_FLAG -g)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(SENTRY_DEBUG_INFO_FLAG -gline-tables-only)
+else()
+  set(SENTRY_DEBUG_INFO_FLAG -g1)
+endif()
+target_compile_options(${LIB_MUDLET_TARGET} PRIVATE ${SENTRY_DEBUG_INFO_FLAG})
 
 if(WIN32)
     # On Windows the debug information must be emitted as CodeView (not DWARF) so
