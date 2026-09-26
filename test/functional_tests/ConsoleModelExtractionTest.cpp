@@ -978,10 +978,10 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
+        delete mudlet::self();
         deleteProfileDirectory(mHostname);
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
-        delete mudlet::self();
     }
 
     // Every one of these Lua functions used to reach through Host::mpConsole
@@ -2983,12 +2983,7 @@ private:
     // Utility function
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 
