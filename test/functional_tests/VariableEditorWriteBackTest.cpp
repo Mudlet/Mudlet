@@ -509,6 +509,33 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // The view walks the globals table with lua_next() rather than reading a
+    // name out of it, and Mudlet leaves "line" and "multimatches" out of that
+    // table until a script reads them. So the walk has to ask for what is still
+    // owed before it starts, or the first thing anyone debugging a trigger
+    // looks for is not on the list.
+    void test_variablesViewShowsTheCaptureGlobalsNoScriptHasRead()
+    {
+        QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
+        // The generic mapper reads "line" on every line, which would leave
+        // nothing owed to ask for. It is not in this profile, but say so rather
+        // than depend on that.
+        execLua(qsl("disableTrigger('onNewLine Trigger')"));
+        execLua(qsl("local id = tempRegexTrigger([[^VariablesViewLine (\\w+)$]], function() end) "
+                    "feedTriggers('\\nVariablesViewLine word\\n') killTrigger(id) "
+                    "variablesViewOwed = tostring(rawget(_G, 'line') == nil and rawget(_G, 'multimatches') == nil)"));
+        QVERIFY2(luaHolds(qsl("variablesViewOwed"), qsl("true")), "nothing was left owed, so this cannot tell whether the walk asks for it");
+
+        mpEditor->repopulateVars();
+
+        QVERIFY2(findVariableItem({qsl("line")}), "the Variables view did not show the line the deferral was holding");
+        QVERIFY2(findVariableItem({qsl("multimatches")}), "the Variables view did not show the multimatches the deferral was holding");
+        QVERIFY2(luaHolds(qsl("line"), qsl("VariablesViewLine word")), "the walk put something other than the line that was owed into the globals table");
+
+        execLua(qsl("variablesViewOwed = nil enableTrigger('onNewLine Trigger')"));
+        mpEditor->repopulateVars();
+    }
+
     // The type a typed value is written back as was decided with toInt(), which
     // reads "2.71" as no number at all, so editing a decimal turned it into a
     // string (#9422).

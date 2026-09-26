@@ -22,6 +22,7 @@
 #include <QDebug>
 
 #include "LuaInterface.h"
+#include "Host.h"
 #include "VarUnit.h"
 #include "utils.h"
 
@@ -839,6 +840,14 @@ static bool serializableValueType(const int valueType)
 
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 {
+    if (index == LUA_GLOBALSINDEX) {
+        // "line" and "multimatches" are left out of the globals table until a
+        // script reads them, and this walk is lua_next() rather than a read, so
+        // without this the Variables view would stop showing them
+        if (Host* host = findHostFromLua(L)) {
+            host->getLuaInterpreter()->flushDeferredGlobals();
+        }
+    }
     depth++;
     while (lua_next(L, index)) {
         const int vType = lua_type(L, -1);
