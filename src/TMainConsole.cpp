@@ -1859,6 +1859,137 @@ std::optional<bool> TMainConsole::setWindowTimeStamps(const QString& name, bool 
     return {wasShown};
 }
 
+std::optional<int> TMainConsole::getWindowWrapAt(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getWrapAt()};
+}
+
+bool TMainConsole::setWindowWrapAt(const QString& name, int wrapAt)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setWrapAt(wrapAt);
+    return true;
+}
+
+bool TMainConsole::setWindowWrapIndent(const QString& name, int indent)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setIndentCount(indent);
+    return true;
+}
+
+bool TMainConsole::setWindowWrapHangingIndent(const QString& name, int indent)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setHangingIndentCount(indent);
+    return true;
+}
+
+std::optional<bool> TMainConsole::moveWindowCursor(const QString& name, int x, int y)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->moveCursor(x, y)};
+}
+
+bool TMainConsole::moveWindowCursorEnd(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->moveCursorEnd();
+    return true;
+}
+
+std::optional<int> TMainConsole::getWindowLineNumber(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getLineNumber()};
+}
+
+std::optional<int> TMainConsole::getWindowColumnNumber(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getColumnNumber()};
+}
+
+std::optional<int> TMainConsole::getWindowLineCount(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getLineCount()};
+}
+
+std::optional<int> TMainConsole::getWindowLastLineNumber(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getLastLineNumber()};
+}
+
+std::optional<QString> TMainConsole::getWindowCurrentLine(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getCurrentLine()};
+}
+
+std::optional<int> TMainConsole::getWindowColumnCount(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->mUpperPane->getColumnCount()};
+}
+
+std::optional<int> TMainConsole::getWindowRowCount(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->mUpperPane->getRowCount()};
+}
+
+bool TMainConsole::deleteWindowCurrentLine(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->skipLine();
+    return true;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
