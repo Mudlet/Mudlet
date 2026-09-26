@@ -232,6 +232,145 @@ describe("Tests the tags MXP handles", function()
     end)
   end)
 
+  -- An <A> link opens a URL rather than sending a command. What it would run is
+  -- only handed to Lua through a custom element: an element's event carries
+  -- the actions of the most recent link, so a plain one fed after the link
+  -- reports what that link would run.
+  local function currentActions()
+    feed("<!ELEMENT mxpTagsSpecProbe FLAG='mxpTagsSpecProbe'>")
+    if type(mxp) == "table" then
+      mxp.mxptagsspecprobe = nil
+    end
+    feed("<mxpTagsSpecProbe>mxpTagsSpecProbeText</mxpTagsSpecProbe>")
+    return mxp and mxp.mxptagsspecprobe and mxp.mxptagsspecprobe.actions
+  end
+
+  -- the address a link's action would open. The action is Lua, and the address
+  -- in it is the game's, so it is run with nothing in reach: a regression then
+  -- fails here rather than running whatever the game wrote
+  local function openedAddress(actions)
+    assert.is_table(actions)
+    assert.are.equal(1, #actions)
+    local quoted = actions[1]:match("^openUrl%((.*)%)$")
+    assert.is_not_nil(quoted, actions[1])
+    local compiled = loadstring("return " .. quoted)
+    assert.is_function(compiled, actions[1])
+    setfenv(compiled, {})
+    local ran, value = pcall(compiled)
+    assert.is_true(ran, tostring(value))
+    return value
+  end
+
+  describe("Tests the links an A tag makes", function()
+    local function underlined(word)
+      return formatOf(word).underline
+    end
+
+    it("underlines the text it wraps and nothing around it", function()
+      local joined = table.concat(linesFor([[mxpLinkBefore<A href="https://example.com/a">mxpLinkInside</A>mxpLinkAfter]]), "\n")
+      assert.is_truthy(joined:find("mxpLinkBeforemxpLinkInsidemxpLinkAfter", 1, true), joined)
+      assert.is_false(underlined("mxpLinkBefore"))
+      assert.is_true(underlined("mxpLinkInside"))
+      assert.is_false(underlined("mxpLinkAfter"))
+    end)
+
+    it("opens the address in the browser when clicked", function()
+      feed([[<A href="https://example.com/d">mxpLinkWebText</A>]])
+      assert.are.equal("https://example.com/d", openedAddress(currentActions()))
+    end)
+
+    it("takes the address as the first word when it is not named", function()
+      feed([[<A "https://example.com/b">mxpLinkPositional</A>mxpLinkPositionalAfter]])
+      assert.is_true(underlined("mxpLinkPositional"))
+      assert.is_false(underlined("mxpLinkPositionalAfter"))
+      assert.are.equal("https://example.com/b", openedAddress(currentActions()))
+    end)
+
+    -- only the underline is pinned here: the address a bare <A> takes from its
+    -- text still carries the text of every bare <A> before it, and that is
+    -- pinned with the fix, in MXPLinks_spec.lua
+    it("makes a link of the text itself when the tag has no attributes", function()
+      local joined = table.concat(linesFor("<A>https://example.com/c</A>mxpLinkBareAfter"), "\n")
+      assert.is_truthy(joined:find("https://example.com/cmxpLinkBareAfter", 1, true), joined)
+      assert.is_true(underlined("https://example.com/c"))
+      assert.is_false(underlined("mxpLinkBareAfter"))
+    end)
+
+    -- a tag with attributes but none that is an address is not a link, and is
+    -- left in the text the way any other tag Mudlet cannot act on is
+    it("shows the tag as text when it names no address", function()
+      local joined = table.concat(linesFor([[<A hint="nowhere">mxpLinkNoHref</A>]]), "\n")
+      assert.is_truthy(joined:find([[<A hint="nowhere">mxpLinkNoHref]], 1, true), joined)
+      assert.is_false(underlined("mxpLinkNoHref"))
+    end)
+
+    -- an address written to end the string it is quoted in, whatever its
+    -- level of = signs, or to merge with the closing bracket, or to open a
+    -- nested one, or to end a "" string instead, must stay a plain address
+    local hostileAddresses = {
+      [===[https://example.com/]]..os.exit()--]===],
+      [===[https://example.com/]=]..os.exit()--]===],
+      [===[https://example.com/]==]..os.exit()..[==[]===],
+      [===[https://example.com/")..os.exit()..("]===],
+      [===[https://example.com/a]]===],
+      [===[https://example.com/a]]]===],
+      [===[https://example.com/[[a]===],
+    }
+    for _, address in ipairs(hostileAddresses) do
+      it(("keeps the address %q inside its quotes"):format(address), function()
+        local quote = address:find('"', 1, true) and "'" or '"'
+        feed(("<A href=%s%s%s>mxpLinkInjectText</A>"):format(quote, address, quote))
+        assert.are.equal(address, openedAddress(currentActions()))
+      end)
+    end
+  end)
+
+  -- EXPIRE retires the links an earlier tag tagged with the same name, so a
+  -- game can take back a menu once it no longer applies: the link keeps its
+  -- underline, but has nothing left to run.
+  describe("Tests the EXPIRE tag", function()
+    it("takes an EXPIRE that names links out of the text", function()
+      local joined = table.concat(linesFor([[<A href="https://example.com/e" expire=mxpExpireGroup>mxpExpireLink</A> <EXPIRE mxpExpireGroup>mxpExpireAfter]]), "\n")
+      assert.is_truthy(joined:find("mxpExpireLink mxpExpireAfter", 1, true), joined)
+    end)
+
+    it("retires the links tagged with the name it gives, and only those", function()
+      feed([[<A href="https://example.com/f" expire=mxpExpireKept>mxpExpireKeptLink</A>]])
+      assert.are.equal("https://example.com/f", openedAddress(currentActions()))
+      feed("<EXPIRE mxpExpireOther>")
+      assert.are.equal("https://example.com/f", openedAddress(currentActions()))
+      feed("<EXPIRE mxpExpireKept>")
+      assert.are.same({}, currentActions())
+    end)
+
+    it("reads the name from a NAME attribute as well", function()
+      feed([[<A href="https://example.com/g" expire=mxpExpireNamed>mxpExpireNamedLink</A>]])
+      assert.are.equal("https://example.com/g", openedAddress(currentActions()))
+      local joined = table.concat(linesFor([[mxpExpireNamedBefore<EXPIRE name="mxpExpireNamed">mxpExpireNamedAfter]]), "\n")
+      assert.is_truthy(joined:find("mxpExpireNamedBeforemxpExpireNamedAfter", 1, true), joined)
+      assert.are.same({}, currentActions())
+    end)
+
+    it("shows an EXPIRE that names nothing as text", function()
+      local joined = table.concat(linesFor("<EXPIRE>mxpExpireNothing"), "\n")
+      assert.is_truthy(joined:find("<EXPIRE>mxpExpireNothing", 1, true), joined)
+    end)
+  end)
+
+  -- Mudlet keeps no MXP variables, but the value a VAR tag wraps is still text
+  -- the game meant to be read
+  describe("Tests the VAR tag", function()
+    it("shows the value a VAR tag wraps without the tags", function()
+      local joined = table.concat(linesFor("mxpVarHp: <VAR hp>120</VAR> mxpVarMp: <V mp>80</V>"), "\n")
+      assert.is_truthy(joined:find("mxpVarHp: 120 mxpVarMp: 80", 1, true), joined)
+    end)
+
+    it("shows the value of a VAR that is being deleted too", function()
+      local joined = table.concat(linesFor("mxpVarDelete<VAR hp DELETE>0</VAR>mxpVarDeleteAfter"), "\n")
+      assert.is_truthy(joined:find("mxpVarDelete0mxpVarDeleteAfter", 1, true), joined)
+    end)
+  end)
+
   -- The two tags a game uses to ask what it is talking to. Both answer over the
   -- connection rather than on screen, which is what sysDataSendRequest reports.
   describe("Tests what MXP tells the game about the client", function()

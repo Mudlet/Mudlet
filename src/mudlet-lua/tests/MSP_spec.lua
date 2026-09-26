@@ -222,6 +222,62 @@ describe("Tests the sound and music MSP asks for", function()
     assert.equals("weather", started[1].tag)
   end)
 
+  it("reports a MUSIC tag's type as the media tag, lowercased", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local file = hold("musictagged")
+    local started = watchStarts()
+
+    feed(('<MUSIC FName="%s" V=50 T="Battle">'):format(file))
+
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+    assert.equals("music", started[1].mediaType)
+    assert.equals("battle", started[1].tag)
+  end)
+
+  it("plays every pass of a music loop count", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local file = brief("musicloops")
+    local started = watchStarts()
+
+    feed(('<MUSIC FName="%s" L=2>'):format(file))
+
+    waitForCount("sysMediaStarted", started, 2)
+    pump()
+    assert.equals(2, #started, names(started))
+    assert.equals(file, started[2].file)
+  end)
+
+  -- MSP music continues by default: asking again for what is already playing
+  -- leaves it be, where C=0 starts it over from the beginning
+  it("leaves music that is already playing alone, by default and for C=1, until C=0 asks for a restart", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local file = hold("musiccontinue")
+    local started = watchStarts()
+
+    feed(('<MUSIC FName="%s">'):format(file))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+
+    feed(('<MUSIC FName="%s">'):format(file))
+    pump()
+    assert.equals(1, #started, names(started))
+
+    feed(('<MUSIC FName="%s" C=1>'):format(file))
+    pump()
+    assert.equals(1, #started, names(started))
+
+    feed(('<MUSIC FName="%s" C=0>'):format(file))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, names(started))
+  end)
+
   -- FName, V, L, P, T and U in that order, which is how a game that writes
   -- !!SOUND(door.wav 100 1 50 misc) spells the same request
   it("reads the attributes given by position rather than by name", function()
