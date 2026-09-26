@@ -1569,14 +1569,7 @@ void TConsole::replace(const QString& text)
 
     if (mTriggerEngineMode) {
         if (hasSelection()) {
-            if (r < o) {
-                const int a = -1 * (o - r);
-                mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
-            }
-            if (r > o) {
-                const int a = r - o;
-                mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
-            }
+            mpHost->getLuaInterpreter()->adjustCaptureGroupsForReplace(x, o, text);
         } else {
             mpHost->getLuaInterpreter()->adjustCaptureGroups(x, r);
         }
