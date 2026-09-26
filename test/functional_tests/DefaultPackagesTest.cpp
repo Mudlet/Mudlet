@@ -155,8 +155,8 @@ private slots:
         QVERIFY(!preinstallsFor(qsl("localhost"), qsl("some other profile")).contains(qsl(":/packages/mudlet-tutorial/mudlet-tutorial.mpackage")));
     }
 
-    // Games that install an interface of their own get a loader instead of the
-    // starter UI, which would otherwise fight it for the same screen space.
+    // Games that install an interface of their own, by a loader or by Client.GUI,
+    // skip the starter UI, which would otherwise fight it for the same screen space.
     void test_gamesWithTheirOwnUiSkipTheStarterUi()
     {
         QVERIFY(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
@@ -165,6 +165,9 @@ private slots:
         QVERIFY(!preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mg-loader/mg-loader.mpackage")));
         QVERIFY(!preinstallsFor(qsl("icesus.org")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+        // StickMUD has no loader - its Client.GUI only arrives after login, too
+        // late for the starter UI to stand aside before building itself
+        QVERIFY(!preinstallsFor(qsl("stickmud.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
     }
 
     // Why mpkg cannot be in a test profile: see setupPreInstallPackages() in
