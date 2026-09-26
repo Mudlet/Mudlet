@@ -2724,13 +2724,33 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
-    -- A second exportAreaImage() in the same session segfaults Mudlet (#10393),
-    -- so the one above is all this file can afford.
-    pending("exportAreaImage without an areaID takes the area the player is in")
+    it("exportAreaImage without an areaID takes the area the player is in", function()
+      assert.is_true(centerview(rA1))
+      assert.is_true(exportAreaImage(nil, getMudletHomeDir() .. "/mapper_spec_export_player.png"))
+    end)
 
-    pending("exportAreaImage takes a single z level")
+    it("exportAreaImage takes a single z level", function()
+      assert.is_true(exportAreaImage(areaAlpha, getMudletHomeDir() .. "/mapper_spec_export_z0.png", 0))
+    end)
 
-    pending("exportAreaImage takes true for every z level at once")
+    -- One export per level, all in flight at once
+    it("exportAreaImage takes true for every z level at once", function()
+      local area = addAreaName("MapperSpecExportLevels")
+      finally(function() deleteArea(area) end)
+      for z = 0, 2 do
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, area)
+        setRoomCoordinates(id, 0, 0, z)
+      end
+      assert.is_true(exportAreaImage(area, getMudletHomeDir() .. "/mapper_spec_export_levels.png", true))
+    end)
+
+    -- A second export before the first had saved used to crash Mudlet (#10393)
+    it("exportAreaImage can be called again before the previous export has saved", function()
+      assert.is_true(exportAreaImage(areaAlpha, getMudletHomeDir() .. "/mapper_spec_export_a.png"))
+      assert.is_true(exportAreaImage(areaAlpha, getMudletHomeDir() .. "/mapper_spec_export_b.png"))
+    end)
 
     it("exportAreaImage rejects false where a z level or true is wanted", function()
       local ok, err = exportAreaImage(areaAlpha, getMudletHomeDir() .. "/unused.png", false)

@@ -59,6 +59,7 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QCursor>
+#include <QFutureWatcher>
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
 /* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
  * Debian and Ubuntu are missing the
@@ -7288,26 +7289,22 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         format = qsl("png");
     }
 
-    // Clean up any existing export watcher
-    if (mpExportWatcher) {
-        mpExportWatcher->deleteLater();
-    }
-
-    // Create new watcher for this export task
-    mpExportWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
-    connect(mpExportWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this]() {
-        auto result = mpExportWatcher->result();
-        if (!result.first) {
-            // Only show errors, no success messages
+    // Each export has a watcher of its own: several can be in flight at once,
+    // one per z level when exporting them all
+    auto* pWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
+    connect(pWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this, pWatcher]() {
+        const auto result = pWatcher->result();
+        // Only show errors, no success messages; the profile may have closed
+        // while the save ran, as this view can outlive it
+        if (!result.first && mpHost) {
             mpHost->postMessage(tr("[MAP]: %1").arg(result.second));
         }
-        mpExportWatcher->deleteLater();
-        mpExportWatcher = nullptr;
+        pWatcher->deleteLater();
     });
 
     // Start async save task - fire & forget
     auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, format).spawn();
-    mpExportWatcher->setFuture(future);
+    pWatcher->setFuture(future);
 
     return {true, {}};
 }

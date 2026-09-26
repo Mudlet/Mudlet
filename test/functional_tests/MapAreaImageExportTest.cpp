@@ -28,8 +28,10 @@
  * Run with: ctest -R MapAreaImageExportTest -V
  */
 
+#include <QFutureWatcher>
 #include <QImage>
 #include <QTemporaryDir>
+#include <QThreadPool>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -68,6 +70,19 @@ private:
         if (dir.exists()) {
             dir.removeRecursively();
         }
+    }
+
+    // Every export parents a watcher of its own to the map and deletes it once
+    // the save has reported back, so none left means the pool threads are done
+    static bool exportsInFlight(const T2DMap* pMap) { return !pMap->findChildren<QFutureWatcherBase*>().isEmpty(); }
+
+    int addOneRoomArea(const QString& areaName, const int roomId) const
+    {
+        const int areaId = roomDB()->addArea(areaName);
+        if (areaId <= 0 || !map()->addRoom(roomId) || !map()->setRoomArea(roomId, areaId) || !map()->setRoomCoordinates(roomId, 0, 0, 0)) {
+            return -1;
+        }
+        return areaId;
     }
 
     static int countPixels(const QImage& image, const QColor& colour)
@@ -174,9 +189,9 @@ private slots:
         QImage exportedImage;
         QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10000);
         // The file lands inside QPixmap::save(), before the task reports back,
-        // and the watcher is only cleared once it has - so this is what says the
+        // and the watcher is only deleted once it has - so this is what says the
         // pool thread has let go of the widget the fixture is about to delete
-        QTRY_VERIFY_WITH_TIMEOUT(!mp2dMap->mpExportWatcher, 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10000);
 
         // Both halves of the outline - the stub's and the arrowhead's - are
         // white, so this covers the pair jointly rather than either alone
@@ -184,6 +199,63 @@ private slots:
         QVERIFY2(outlinePixels > 0, "the area exit marker was drawn with no outline, so nothing of it is visible against a background of its own colour");
         // The setup above only arranges that; this is what checks it held
         QCOMPARE(countPixels(exportedImage, QColor(Qt::black)) + outlinePixels, exportedImage.width() * exportedImage.height());
+    }
+
+    // Every export used to share one watcher, so the first to finish reported
+    // and deleted the second's, which then crashed on the null left behind (#10393)
+    void twoExportsInQuickSuccessionBothFinish()
+    {
+        map()->mapClear();
+        const int areaId = addOneRoomArea(qsl("Exported twice"), scmRoomInArea);
+        QVERIFY(areaId > 0);
+
+        const QString exportDir = qsl("%1/exports-twice").arg(mConfigDir.path());
+        QVERIFY(QDir().mkpath(exportDir));
+        const QString firstPath = qsl("%1/first.png").arg(exportDir);
+        const QString secondPath = qsl("%1/second.png").arg(exportDir);
+        const auto [firstExported, firstMessage] = mp2dMap->exportAreaToImage(areaId, firstPath);
+        QVERIFY2(firstExported, qPrintable(firstMessage));
+        // Both saves finish before either reports back, as when a script
+        // exports twice in one go and the event loop only runs once it returns
+        QVERIFY(QThreadPool::globalInstance()->waitForDone(10000));
+        const auto [secondExported, secondMessage] = mp2dMap->exportAreaToImage(areaId, secondPath);
+        QVERIFY2(secondExported, qPrintable(secondMessage));
+        QVERIFY(QThreadPool::globalInstance()->waitForDone(10000));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10000);
+        QVERIFY(QImage(firstPath).width() > 0);
+        QVERIFY(QImage(secondPath).width() > 0);
+    }
+
+    // A map view can outlive its profile - closeHost() only deleteLater()s the
+    // main window's map dock - and a failed save used to report to the Host
+    // it no longer had (#11019)
+    void aFailedExportThatFinishesAfterItsProfileClosedIsDropped()
+    {
+        const QString closingProfile = qsl("MapAreaImageExport-Closing");
+        auto* hostManager = HostManager::self();
+        QVERIFY(hostManager->addHost(closingProfile, qsl("23"), QString(), QString()));
+        QPointer<Host> pClosingHost = hostManager->getHost(closingProfile);
+        QVERIFY(pClosingHost);
+        TMap* pClosingMap = pClosingHost->mpMap.data();
+        const int areaId = pClosingMap->mpRoomDB->addArea(qsl("Closing area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(pClosingMap->addRoom(scmRoomInArea));
+        QVERIFY(pClosingMap->setRoomArea(scmRoomInArea, areaId));
+        QVERIFY(pClosingMap->setRoomCoordinates(scmRoomInArea, 0, 0, 0));
+
+        auto survivingView = std::make_unique<T2DMap>();
+        survivingView->mpMap = pClosingMap;
+        survivingView->mpHost = pClosingHost;
+        const QString unwritablePath = qsl("%1/no-such-directory/closing.png").arg(mConfigDir.path());
+        const auto [exported, message] = survivingView->exportAreaToImage(areaId, unwritablePath);
+        QVERIFY2(exported, qPrintable(message));
+
+        hostManager->deleteHost(closingProfile);
+        QVERIFY(pClosingHost.isNull());
+
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(survivingView.get()), 10000);
+        QVERIFY(!QFileInfo::exists(unwritablePath));
     }
 };
 

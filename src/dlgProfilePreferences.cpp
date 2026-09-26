@@ -67,6 +67,7 @@
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
+#include <QFutureWatcher>
 #include <QFontDialog>
 #include <QIcon>
 #include <QJsonArray>
