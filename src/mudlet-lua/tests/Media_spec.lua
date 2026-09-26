@@ -337,6 +337,92 @@ describe("Media query and stop functions validate their parameters", function()
   end)
 end)
 
+describe("Media functions refuse a wrongly typed value in every position", function()
+  -- The specs above spot-check a few arguments each. Every parser here checks
+  -- each position and field on its own, so the exhaustive pass is cheap: each
+  -- call below is refused before the media engine is touched, and the message
+  -- has to name the position or field that was wrong - a check that went
+  -- missing would let the call through, and one that named the wrong field
+  -- would be caught by the substring.
+  local wrongValue = {string = true, number = "busted", boolean = "busted"}
+  local gotType = {string = "boolean", number = "string", boolean = "string"}
+
+  -- ordered forms: the arguments by position, as name = expected type
+  local ordered = {
+    playSoundFile = {"string", "number", "number", "number", "number", "number", "string", "string", "number", "string", "number",
+      names = {"name", "volume", "fadein", "fadeout", "start", "loops", "key", "tag", "priority", "url", "finish"}},
+    playMusicFile = {"string", "number", "number", "number", "number", "number", "string", "string", "boolean", "string", "number",
+      names = {"name", "volume", "fadein", "fadeout", "start", "loops", "key", "tag", "continue", "url", "finish"}},
+    loadSoundFile = {"string", "string", names = {"name", "url"}},
+    loadMusicFile = {"string", "string", names = {"name", "url"}},
+    getPlayingSounds = {"string", "string", "string", "number", names = {"name", "key", "tag", "priority"}},
+    getPlayingMusic = {"string", "string", "string", names = {"name", "key", "tag"}},
+    stopSounds = {"string", "string", "string", "number", "boolean", "number", names = {"name", "key", "tag", "priority", "fadeaway", "fadeout"}},
+    stopMusic = {"string", "string", "string", "boolean", "number", names = {"name", "key", "tag", "fadeaway", "fadeout"}},
+  }
+
+  for fnName, positions in pairs(ordered) do
+    it(fnName .. " names the ordered argument that has the wrong type", function()
+      for position, expectedType in ipairs(positions) do
+        -- the positions before it are left nil, which every ordered parser
+        -- skips, so the only value it sees is the wrong one
+        local args = {}
+        args[position] = wrongValue[expectedType]
+        local ok, err = pcall(_G[fnName], unpack(args, 1, position))
+        assert.is_false(ok, fnName .. " accepted a " .. gotType[expectedType] .. " for argument " .. position)
+        local expected = ("bad argument #%d type (%s as %s expected, got %s!)"):format(position, positions.names[position], expectedType, gotType[expectedType])
+        assert.is_true(contains(err, expected), fnName .. ": " .. tostring(err))
+      end
+    end)
+  end
+
+  local text, number, flag = "string", "number", "boolean"
+  local tableForms = {
+    playSoundFile = {name = text, url = text, key = text, tag = text, caption = text, volume = number, fadein = number, fadeout = number,
+      start = number, finish = number, loops = number, priority = number},
+    playMusicFile = {name = text, url = text, key = text, tag = text, caption = text, volume = number, fadein = number, fadeout = number,
+      start = number, finish = number, loops = number, continue = flag},
+    playVideoFile = {name = text, url = text, key = text, tag = text, volume = number, start = number, finish = number, loops = number,
+      continue = flag, stream = flag, close = flag},
+    loadSoundFile = {name = text, url = text},
+    loadMusicFile = {name = text, url = text},
+    loadVideoFile = {name = text, url = text},
+    getPlayingSounds = {name = text, key = text, tag = text, priority = number},
+    getPlayingMusic = {name = text, key = text, tag = text},
+    getPlayingVideos = {name = text, key = text, tag = text},
+    getPausedSounds = {name = text, key = text, tag = text},
+    getPausedMusic = {name = text, key = text, tag = text},
+    getPausedVideos = {name = text, key = text, tag = text},
+    pauseSounds = {name = text, key = text, tag = text},
+    pauseMusic = {name = text, key = text, tag = text},
+    pauseVideos = {name = text, key = text, tag = text},
+    stopSounds = {name = text, key = text, tag = text, priority = number, fadeaway = flag, fadeout = number},
+    stopMusic = {name = text, key = text, tag = text, fadeaway = flag, fadeout = number},
+    stopVideos = {name = text, key = text, tag = text, fadeaway = flag, fadeout = number},
+  }
+
+  for fnName, fields in pairs(tableForms) do
+    it(fnName .. " names the table field that has the wrong type", function()
+      for field, expectedType in pairs(fields) do
+        local ok, err = pcall(_G[fnName], {[field] = wrongValue[expectedType]})
+        assert.is_false(ok, fnName .. " accepted a " .. gotType[expectedType] .. " for " .. field)
+        local expected = ("value for %s as %s expected, got %s!"):format(field, expectedType, gotType[expectedType])
+        assert.is_true(contains(err, expected), fnName .. ": " .. tostring(err))
+      end
+
+      -- a key that is neither a name nor a number cannot be read at all
+      local ok, err = pcall(_G[fnName], {[true] = "busted"})
+      assert.is_false(ok, fnName .. " accepted a boolean table key")
+      assert.is_true(contains(err, "table keys as string expected, got boolean!"), fnName .. ": " .. tostring(err))
+    end)
+  end
+
+  it("playVideoFile raises a Lua error when called with nothing or with something other than a table", function()
+    assertArgError(function() playVideoFile() end, "playVideoFile: need at least one argument")
+    assertArgError(function() playVideoFile("busted-media-absent.mp4") end, "playVideoFile: needs to be a table")
+  end)
+end)
+
 describe("Media playback effects with a generated sound file", function()
   -- The API media functions play files out of the profile's own media
   -- directory, so instead of shipping a binary fixture these specs write a
@@ -2602,6 +2688,249 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysDownloadDone", done, 1)
     assert.equals(1, #done)
     assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  it("both play calls clamp a volume outside 1 to 100 in both argument forms", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    -- the four parsers clamp on their own, so each is asked for a volume above
+    -- the range and one below it; the query reports the value the player got
+    local cases = {
+      {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "table", volume = 150, expected = 100},
+      {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "ordered", volume = 150, expected = 100},
+      {play = playMusicFile, query = getPlayingMusic, stop = stopMusic, form = "table", volume = 150, expected = 100},
+      {play = playMusicFile, query = getPlayingMusic, stop = stopMusic, form = "table", volume = -20, expected = 1},
+      {play = playMusicFile, query = getPlayingMusic, stop = stopMusic, form = "ordered", volume = 150, expected = 100},
+      {play = playMusicFile, query = getPlayingMusic, stop = stopMusic, form = "ordered", volume = -20, expected = 1},
+    }
+    for index, case in ipairs(cases) do
+      local key = "busted-clamp-" .. index
+      if case.form == "table" then
+        assert.is_true(case.play({name = longSoundFile, key = key, volume = case.volume}))
+      else
+        assert.is_true(case.play(longSoundFile, case.volume, nil, nil, nil, nil, key))
+      end
+      assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+      local playing = case.query({key = key})
+      assert.equals(1, #playing, key)
+      assert.equals(case.expected, playing[1].volume, key)
+      assert.is_true(case.stop())
+      assert.equals(0, #case.query())
+    end
+  end)
+
+  it("playMusicFile plays every pass of a loop count in the table form", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = soundFile, key = "busted-music-loops", loops = 3}))
+    waitForCount("sysMediaFinished", finished, 3)
+    assert.equals(3, #started)
+    assert.equals(3, #finished)
+  end)
+
+  it("playMusicFile ends the track at a finish position in both argument forms", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    -- the ten second file cut off after 400ms. The fades, the start and the
+    -- caption ride along so the table parser reads each of them; a fade ramps
+    -- the player's own volume, which nothing a spec can see reports, so what is
+    -- pinned of them is that they leave the finish working. The caption is
+    -- printed as the track starts.
+    local caption = "Busted music caption"
+    local mark = getLastLineNumber("main")
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-finish-table", fadein = 200, fadeout = 100, start = 0,
+      finish = 400, caption = caption}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "a finish of 400 did not end the ten second track early")
+    assert.equals("busted-music-finish-table", finished[1].key)
+    local captioned = false
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      captioned = captioned or line:find(caption, 1, true) ~= nil
+    end
+    assert.is_true(captioned, "the caption the table form gave never reached the console")
+
+    -- name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
+    -- the url is never fetched from, as the file is already there, and it names
+    -- a closed local port so nothing could leave the machine if it were
+    assert.is_true(playMusicFile(longSoundFile, 50, nil, nil, nil, nil, "busted-music-finish-ordered", "busted-tag", true, "http://127.0.0.1:1/media", 300))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(2, #finished, "a finish of 300 did not end the ten second track early")
+    assert.equals("busted-music-finish-ordered", finished[2].key)
+    assert.equals(0, #getPlayingMusic())
+  end)
+
+  it("a loop count of -1 repeats the sound until it is stopped", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- a finite count is a playlist with that many entries; an endless one is a
+    -- single entry the player goes back to each time it runs out
+    assert.is_true(playSoundFile({name = soundFile, key = "busted-loops-forever", loops = -1}))
+    waitForCount("sysMediaStarted", started, 3)
+    assert.is_true(#started >= 3, "an endless loop stopped after " .. #started .. " passes")
+    assert.equals(1, #getPlayingSounds({key = "busted-loops-forever"}))
+
+    assert.is_true(stopSounds({key = "busted-loops-forever"}))
+    pumpEvents(500)
+    local passes = #started
+    pumpEvents(500)
+    assert.equals(passes, #started, "the endless loop went on playing after it was stopped")
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a Client.Media.Play message reads its numeric fields given as JSON numbers", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    -- the same fields the string spec above reads, as the numbers most servers
+    -- send: the loop count is what makes two playbacks of the short file
+    feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-numbers", "volume": 70, "loops": 2, "fadein": 50, "fadeout": 50}')
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(2, #started, gmcpRefused)
+    assert.equals(2, #finished)
+
+    -- and the finish, which cuts the ten second file off after 300ms
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-number-finish", "finish": 300}')
+    waitForCount("sysMediaFinished", finished, 3)
+    assert.equals(3, #started)
+    assert.equals(3, #finished, "a finish of 300 did not end the ten second file early")
+    assert.equals("busted-gmcp-number-finish", finished[3].key)
+  end)
+
+  it("a Client.Media.Play message restarts music already playing only when continue is false", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    local play = 'Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "music", "key": "busted-gmcp-continue"%s}'
+    feedGmcp(play:format(""))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+
+    -- continue defaults to true, as the string "true" asks for too: the track
+    -- goes on as it was
+    feedGmcp(play:format(', "continue": "true"'))
+    waitForEvent("sysMediaStarted", 1000)
+    assert.equals(1, #started)
+    assert.equals(0, #finished)
+
+    -- false, as a JSON boolean and as the string a server may send instead,
+    -- ends the track and starts it again
+    local expected = 1
+    for _, continueField in ipairs({', "continue": false', ', "continue": "false"'}) do
+      feedGmcp(play:format(continueField))
+      expected = expected + 1
+      waitForCount("sysMediaStarted", started, expected)
+      assert.equals(expected, #started, "continue" .. continueField .. " did not restart the track")
+      assert.equals(expected - 1, #finished)
+      assert.equals(longSoundFile, finished[expected - 1].file)
+    end
+  end)
+
+  it("a Client.Media.Stop message reads fadeaway given as a string", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    -- No fadeout rides along, as one would start a fade by itself. "false"
+    -- asks for the plain stop, which ends the playback there and then...
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-fadeaway"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+    feedGmcp('Client.Media.Stop {"key": "busted-gmcp-fadeaway", "fadeaway": "false"}')
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "a stop with fadeaway \"false\" did not end the playback")
+
+    -- ...and "true" fades it out over the default five seconds instead
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-fadeaway"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    feedGmcp('Client.Media.Stop {"key": "busted-gmcp-fadeaway", "fadeaway": "true"}')
+    pumpEvents(1000)
+    assert.equals(1, #finished, "a stop with fadeaway \"true\" ended the playback outright instead of fading it out")
+  end)
+
+  it("a Client.Media.Pause message with a priority pauses only what plays below it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-pause-priority", "priority": 60}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+
+    -- a playback of the same or a higher priority than the pause is left alone
+    feedGmcp('Client.Media.Pause {"key": "busted-gmcp-pause-priority", "priority": 60}')
+    pumpEvents(250)
+    assert.equals(0, #paused, "a pause of priority 60 paused a playback of priority 60")
+
+    feedGmcp('Client.Media.Pause {"key": "busted-gmcp-pause-priority", "priority": 61}')
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #paused)
+    assert.equals("busted-gmcp-pause-priority", paused[1].key)
+  end)
+
+  it("a Client.Media message that is not a JSON object is ignored", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play ["' .. longSoundFile .. '"]')
+    pumpEvents(500)
+    assert.equals(0, #started, "a JSON array was read as a request")
+
+    -- the same file in an object does play, so it was the shape that was refused
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-object"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
   end)
 end)
 

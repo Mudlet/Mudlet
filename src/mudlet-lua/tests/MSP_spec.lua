@@ -506,4 +506,115 @@ describe("Tests the sound and music MSP asks for", function()
     assert.equals(0, #getPlayingSounds())
     assert.equals(0, #getPlayingMusic())
   end)
+
+  -- A game that negotiated MSP sends its requests as telnet subnegotiation
+  -- rather than as MXP tags, in the !!SOUND(...) and !!MUSIC(...) form the MSP
+  -- specification gives.
+  local function feedMsp(request)
+    local ok, err = feedTelnet("<T_IAC><T_SB><O_MSP>" .. request .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(err))
+  end
+
+  it("plays what a !!SOUND or !!MUSIC subnegotiation names, with its options", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local sound = hold("telnet-sound")
+    local music = hold("telnet-music")
+    local started = watchStarts()
+
+    -- T= is the MSP type, which is reported as the tag and lowercased, the
+    -- same as the MXP attribute is; unknown options are passed over
+    feedMsp(("!!SOUND(%s V=60 L=1 P=40 C=1 T=Combat X=ignored)"):format(sound))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+    assert.equals(sound, started[1].file)
+    assert.equals("sound", started[1].mediaType)
+    assert.equals("combat", started[1].tag)
+
+    feedMsp(("!!MUSIC(%s V=40 L=1 C=0)"):format(music))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, names(started))
+    assert.equals(music, started[2].file)
+    assert.equals("music", started[2].mediaType)
+  end)
+
+  it("stops the sound a !!SOUND(Off) subnegotiation names", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local file = hold("telnet-off")
+    local started = watchStarts()
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    feedMsp(("!!SOUND(%s)"):format(file))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+
+    feedMsp("!!SOUND(Off)")
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals(file, finished[1].file)
+  end)
+
+  it("refuses a !!SOUND subnegotiation whose options do not parse", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local file = hold("telnet-malformed")
+    local started = watchStarts()
+
+    -- an option without its =, a request without its closing parenthesis, and
+    -- one that is neither !!SOUND nor !!MUSIC
+    feedMsp(("!!SOUND(%s V60)"):format(file))
+    feedMsp(("!!SOUND(%s"):format(file))
+    feedMsp(("!!NOISE(%s)"):format(file))
+    pump(2)
+    assert.equals(0, #started, names(started))
+
+    -- the same file asked for properly does play, so it was the form refused
+    feedMsp(("!!SOUND(%s)"):format(file))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+  end)
+
+  it("takes the url an Off request carries as where later requests fetch from", function()
+    local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
+    if not httpPort then
+      if os.getenv("MUDLET_TEST_REQUIRE_HTTP_FIXTURE") then
+        assert.is_true(false, "MUDLET_TEST_REQUIRE_HTTP_FIXTURE is set but MUDLET_TEST_HTTP_PORT is not")
+      end
+      pending("no local HTTP fixture server (set MUDLET_TEST_HTTP_PORT)")
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- MSP lets a game send !!SOUND(Off U=...) to set the location its later
+    -- requests are fetched from, without a url of their own. The location is
+    -- kept for the session and no Lua call reads or clears it, so it is pointed
+    -- at a closed local port afterwards: a later request for a missing file
+    -- then fails to fetch instead of playing whatever the fixture serves.
+    onCleanup(function() feedTelnet("<T_IAC><T_SB><O_MSP>!!SOUND(Off U=http://127.0.0.1:1/media)<T_IAC><T_SE>") end)
+    local remote = "busted-msp-remote.wav"
+    local downloaded = mediaDirectory .. "/" .. remote
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    writtenFiles[remote] = true
+
+    local done = {}
+    collect("sysDownloadDone", done)
+    local started = watchStarts()
+
+    feedMsp(("!!SOUND(Off U=http://127.0.0.1:%s/media)"):format(httpPort))
+    feedMsp(("!!SOUND(%s)"):format(remote))
+
+    waitForCount("sysDownloadDone", done, 1)
+    assert.equals(1, #done, "the request was not fetched from the location the Off set")
+    assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the fetched file was not kept in the media directory")
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+    assert.equals(remote, started[1].file)
+  end)
 end)
