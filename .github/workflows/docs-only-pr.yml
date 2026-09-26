@@ -1,0 +1,57 @@
+# The PR build workflows skip pull requests that change nothing but documentation
+# (their paths-ignore), which would leave the checks branch protection requires
+# waiting forever. This reports those checks instead, for exactly those pull requests.
+name: 🔨 Build Mudlet - PR (documentation only)
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '**.md'
+
+permissions:
+  pull-requests: read
+
+jobs:
+  changes:
+    name: detect documentation-only changes
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{steps.filter.outputs.docs_only}}
+    steps:
+    - name: Check whether only documentation changed
+      id: filter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # A renamed file counts under its old name too, so moving code into docs/
+        # still reads as a code change
+        files=$(gh api --paginate \
+          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
+          -q '.[] | .filename, (.previous_filename // empty)')
+        echo "Changed files:"
+        printf '%s\n' "$files"
+
+        if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
+          echo "docs_only=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "docs_only=false" >> "$GITHUB_OUTPUT"
+        fi
+
+  report:
+    # A skipped matrix job reports under its unexpanded name, so these only take the
+    # build checks' names when they run, and cannot stand in for a real build.
+    name: ${{matrix.buildname}}
+    needs: changes
+    if: needs.changes.outputs.docs_only == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Every buildname in build-mudlet-pr.yml and build-mudlet-win-pr.yml
+        buildname:
+          - 'ubuntu / gcc / lua tests + leak detection'
+          - 'macos (x86_64)'
+          - 'macos (arm64) / c++, lua tests'
+          - 'windows64'
+    steps:
+    - run: echo "::notice::Documentation-only change - nothing to build"
