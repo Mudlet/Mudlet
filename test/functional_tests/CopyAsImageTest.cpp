@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QClipboard>
+#include <QScopeGuard>
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -172,6 +173,34 @@ private:
     // Text drawn normally leaves most of the cell as background; a line drawn
     // with its selection still on has the two swapped over.
     static bool invertedImage(const QImage& image, const QColor& backgroundColour) { return backgroundPixels(image, backgroundColour) * 2 < image.width() * image.height(); }
+
+    // Every C0 control that can reach the buffer - LF cannot, it ends the line
+    // - and DEL, which is the other character the glyph tables replace.
+    static QList<char16_t> controlCharacters()
+    {
+        QList<char16_t> result;
+        for (char16_t c = 1; c < 0x20; ++c) {
+            if (c != '\n') {
+                result.append(c);
+            }
+        }
+        result.append(0x7F);
+        return result;
+    }
+
+    // Both the screen and "Copy as image" draw a line from layoutLine(), so what
+    // it lays out for a control character is what either of them shows.
+    static QString glyphsLaidOut(TTextEdit* pane, int line, std::vector<TTextEdit::GraphemeRun>& layout)
+    {
+        pane->layoutLine(line, 0, pane->timeStampCharStyle(), layout);
+        QString glyphs;
+        for (const auto& run : layout) {
+            if (run.style) {
+                glyphs.append(run.grapheme);
+            }
+        }
+        return glyphs;
+    }
 
     // Mimics TBuffer::shrinkBuffer() dropping the oldest lines once the buffer
     // reaches its size limit, which shifts every remaining line's index down.
@@ -333,6 +362,84 @@ private slots:
         QVERIFY2(!image.isNull(), "\"Copy as image\" put nothing on the clipboard (regression of #9715)");
         QCOMPARE(image.height(), expectedLines * pane->mFontHeight);
         QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
+    }
+
+    void test_controlCharactersAreDrawnAsTheGlyphsTheProfileChose_data()
+    {
+        QTest::addColumn<int>("mode");
+        QTest::addColumn<QString>("expectedGlyphs");
+        QTest::addColumn<bool>("tabAdvancesToATabStop");
+
+        // The Unicode "Control Pictures" block puts each C0 control at
+        // U+2400 plus its value, and DEL at U+2421
+        QString pictures;
+        for (const char16_t c : controlCharacters()) {
+            pictures.append(QChar(c == 0x7F ? 0x2421 : 0x2400 + c));
+        }
+        // Code page 437, as the IBM PC's OEM font drew these bytes
+        const QString oem = QString::fromUtf16(u"☺☻♥♦♣♠•◘○♂♀♪♫☼"
+                                               u"►◄↕‼¶§▬↨↑↓→←∟↔▲▼⌂");
+        QCOMPARE(oem.size(), controlCharacters().size());
+
+        // A tab still moves on to the next tab stop under its picture, whereas
+        // the OEM font drew it as a single-cell circle
+        QTest::newRow("picture") << static_cast<int>(ControlCharacterMode::Picture) << pictures << true;
+        QTest::newRow("oem") << static_cast<int>(ControlCharacterMode::OEM) << oem << false;
+    }
+
+    void test_controlCharactersAreDrawnAsTheGlyphsTheProfileChose()
+    {
+        QFETCH(int, mode);
+        QFETCH(QString, expectedGlyphs);
+        QFETCH(bool, tabAdvancesToATabStop);
+
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        Host* host = mudlet::self()->getActiveHost();
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(!console->showTimeStamps());
+        QCOMPARE(host->getControlCharacterMode(), ControlCharacterMode::AsIs);
+        auto restoreMode = qScopeGuard([host] {
+            host->setControlCharacterMode(ControlCharacterMode::AsIs);
+        });
+
+        // The printable prefix moves the tab off a tab stop, so a tab that
+        // always took a whole stop's width would land in the wrong place
+        const QString prefix = qsl("abc");
+        QString text = prefix;
+        for (const char16_t c : controlCharacters()) {
+            text.append(QChar(c));
+        }
+        console->print(text + QChar::LineFeed);
+        const int line = console->buffer.getLastLineNumber() - 1;
+        QCOMPARE(console->buffer.line(line), text);
+        const int tabPosition = static_cast<int>(text.indexOf(QChar::Tabulation));
+        QVERIFY2(tabPosition % pane->mTabStopwidth != 0, "the tab starts on a tab stop, so its width cannot tell a stop's width from the rest of one");
+
+        // As is, a control character takes no room and draws nothing, except the tab
+        std::vector<TTextEdit::GraphemeRun> layout;
+        QCOMPARE(glyphsLaidOut(pane, line, layout), prefix + QChar(QChar::Tabulation));
+
+        host->setControlCharacterMode(static_cast<ControlCharacterMode>(mode));
+        QCOMPARE(glyphsLaidOut(pane, line, layout), prefix + expectedGlyphs);
+        QCOMPARE(static_cast<int>(layout.size()), static_cast<int>(text.size()));
+
+        // Every replacement glyph takes one cell; the tab either runs on to the
+        // next tab stop or, like the OEM font's circle, takes one cell too
+        int cell = 0;
+        for (int i = 0; i < static_cast<int>(layout.size()); ++i) {
+            const int cells = (i == tabPosition && tabAdvancesToATabStop) ? pane->mTabStopwidth - cell % pane->mTabStopwidth : 1;
+            const QRect& rect = layout.at(i).textRect;
+            QVERIFY2(rect.left() == cell * pane->mFontWidth && rect.width() == cells * pane->mFontWidth,
+                     qPrintable(qsl("character %1 (U+%2) was laid out at x=%3, %4px wide, rather than in cell %5, %6 cells wide")
+                                        .arg(i)
+                                        .arg(static_cast<int>(text.at(i).unicode()), 4, 16, QLatin1Char('0'))
+                                        .arg(rect.left())
+                                        .arg(rect.width())
+                                        .arg(cell)
+                                        .arg(cells)));
+            cell += cells;
+        }
     }
 
     void test_repeatedCopyKeepsWorking()
