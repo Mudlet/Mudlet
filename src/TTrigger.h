@@ -307,7 +307,7 @@ public:
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
-    bool match(const TUtf8Subject& subject, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr);
+    bool match(const TUtf8Subject& subject, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr, bool haystackIsCapture = false);
     // Runs only the patterns that are a pure function of the line, just far enough for yes or no.
     // Called from helper threads, so it writes nothing shared: PCRE2 match data and the regexSearches
     // tally are the caller's own. Answers yes to anything it cannot decide, so false is a promise and
@@ -368,7 +368,7 @@ public:
     TRootTriggerFilter rootFilter() const;
     // The one color pair a root trigger's color pattern would find across the whole line, as
     // match_color_pattern() reads it; false when the line has more than one, or cannot be answered for.
-    static bool uniformLineColors(Host* pHost, int line, int length, QRgb& foreground, QRgb& background);
+    static bool uniformLineColors(Host* pHost, int line, QRgb& foreground, QRgb& background);
     // Never filed by a snapshot: a child, which the index never files, or a root still queued for
     // appending. No pinned pass can hold a filter copy of it.
     static constexpr int scmNeverSnapshotted = -1;
@@ -405,7 +405,7 @@ public:
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);
     bool match_line_spacer(int patternNumber);
-    bool match_color_pattern(int line, int patternNumber, int posOffset, int length);
+    bool match_color_pattern(int line, int patternNumber, int posOffset, int length, bool haystackIsCapture);
     bool match_prompt(int patternNumber);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
     int getConditionLineDelta() const { return mConditionLineDelta; }

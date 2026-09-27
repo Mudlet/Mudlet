@@ -685,7 +685,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
                     textDecided = true;
                 } else if (filter.mKind == TRootTriggerFilter::Kind::Color) {
                     if (!lineColorsKnown) {
-                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, static_cast<int>(data.length()), lineForeground, lineBackground);
+                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, lineForeground, lineBackground);
                         lineColorsKnown = true;
                     }
                     if (lineColorsUniform && filter.lacksColors(lineForeground, lineBackground)) {
