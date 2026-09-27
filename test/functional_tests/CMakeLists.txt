@@ -137,6 +137,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
+    MMCPIncomingCallTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
     TelnetOptionsReportTest.cpp
