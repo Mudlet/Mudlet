@@ -654,13 +654,14 @@ mudlet_precompile_headers(${LIB_MUDLET_TARGET})
 # Objective-C++ would need a precompiled header of its own for three files
 set_source_files_properties(AppleSpeechRecognizer.mm MacMicrophonePermission.mm sparkleupdater.mm
   PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
-if(MUDLET_PCH_COMPILER_LAUNCHER AND USE_UPDATER)
-  # Release.cpp embeds __DATE__ and __TIME__ to order test builds, which the
-  # launcher above tells ccache to ignore - so give it a definition that differs
-  # at every configure, and ccache never serves it a stale build time
-  string(TIMESTAMP releaseCppConfigureTime "%Y%m%d%H%M%S" UTC)
-  set_source_files_properties(updater/Release.cpp PROPERTIES
-    COMPILE_DEFINITIONS "MUDLET_CONFIGURE_TIME=${releaseCppConfigureTime}")
+if(USE_UPDATER)
+  # Its own target, so it keeps plain ccache: the precompiled-header launcher
+  # tells ccache to ignore __DATE__ and __TIME__, which this file embeds to order
+  # test builds
+  add_library(mudlet_build_time OBJECT updater/ReleaseBuildTime.cpp)
+  set_target_properties(mudlet_build_time PROPERTIES AUTOMOC OFF)
+  target_link_libraries(mudlet_build_time PRIVATE Qt6::Gui)
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE $<TARGET_OBJECTS:mudlet_build_time>)
 endif()
 
 ########################### Debugging code inclusions ##########################
