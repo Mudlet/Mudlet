@@ -171,13 +171,6 @@ static QColor colorFromColorTable(lua_State* L, const QString& name)
         lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
     })
 
-#define CONSOLE_NIL(ARG_L, ARG_name)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        auto name_ = (ARG_name);                                                                                                                                                                       \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
-        console_;                                                                                                                                                                                      \
-    })
-
 #define CONSOLE(ARG_L, ARG_name)                                                                                                                                                                       \
     ({                                                                                                                                                                                                 \
         auto name_ = (ARG_name);                                                                                                                                                                       \
@@ -984,19 +977,10 @@ int TLuaInterpreter::disableCommandLine(lua_State* L)
     if (isMain(commandLineName)) {
         return warnArgumentValue(L, __func__, "this function is not permitted on the main command line");
     }
-    auto console = CONSOLE_NIL(L, commandLineName);
-    if (console) {
-        // This name matches a TConsole instance so we are referring to a
-        // TCommandLine at the bottom of it - so need to call the original
-        // function:
-        console->setCmdVisible(false);
-        lua_pushboolean(L, true);
-        return 1;
-    }
-
-    // Else this might refer to an additional command line, which must exist:
+    // A console's name means the command line at its foot, else this might
+    // refer to an additional command line, which must exist:
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setCommandLineVisible(commandLineName, false)) {
+    if (!host.mpConsole || (!host.mpConsole->setWindowCommandLineVisible(commandLineName, false) && !host.mpConsole->setCommandLineVisible(commandLineName, false))) {
         return commandLineNotFound(L, commandLineName);
     }
     lua_pushboolean(L, true);
@@ -1269,19 +1253,11 @@ int TLuaInterpreter::enableCommandLine(lua_State* L)
     if (isMain(commandLineName)) {
         return warnArgumentValue(L, __func__, "this function is not permitted on the main command line");
     }
-    auto console = CONSOLE_NIL(L, commandLineName);
-    if (console) {
-        // This name matches a TConsole instance so we are referring to a
-        // TCommandLine at the bottom of it - so need to call the original
-        // function that creates the latter if needed:
-        console->setCmdVisible(true);
-        lua_pushboolean(L, true);
-        return 1;
-    }
-
-    // Else this might refer to an additional command line, which must exist:
+    // A console's name means the command line at its foot, which is created
+    // if needed, else this might refer to an additional command line, which
+    // must exist:
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setCommandLineVisible(commandLineName, true)) {
+    if (!host.mpConsole || (!host.mpConsole->setWindowCommandLineVisible(commandLineName, true) && !host.mpConsole->setCommandLineVisible(commandLineName, true))) {
         return commandLineNotFound(L, commandLineName);
     }
     lua_pushboolean(L, true);
@@ -1535,52 +1511,40 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 int TLuaInterpreter::getFont(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    Host& host = getHostFromLua(L);
+    const Host& host = getHostFromLua(L);
 
-    auto actualFontFamily = [](const QFont& font) -> QString {
-        return QFontInfo(font).family();
-    };
-
-    // A console wins a name a label also carries, the way it does for every other
-    // window function. Labels are not in the map CONSOLE() searches, so a name no
-    // console answers to is tried as a label before that macro gets to refuse it:
-    auto console = CONSOLE_NIL(L, windowName);
-    if (!console) {
-        if (host.mpConsole) {
-            if (const auto labelFont = host.mpConsole->getLabelFont(windowName)) {
-                lua_pushstring(L, actualFontFamily(*labelFont).toUtf8().constData());
-                return 1;
-            }
+    // A console wins a name a label also carries, the way it does for every
+    // other window function, so a name no console answers to is only then
+    // tried as a label:
+    std::optional<QFont> font;
+    if (host.mpConsole) {
+        font = host.mpConsole->getWindowFont(windowName);
+        if (!font) {
+            font = host.mpConsole->getLabelFont(windowName);
         }
-        console = CONSOLE(L, windowName);
+    }
+    if (!font) {
+        return windowNotFound(L, windowName);
     }
 
-    QString fontName;
-
-    if (console == host.mpConsole) {
-        fontName = actualFontFamily(host.getDisplayFont());
-    } else if (console->mUpperPane) {
-        fontName = actualFontFamily(console->mUpperPane->font());
-    } else {
-        fontName = actualFontFamily(console->font());
-    }
-
-    lua_pushstring(L, fontName.toUtf8().constData());
+    lua_pushstring(L, QFontInfo(*font).family().toUtf8().constData());
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFontSize
 int TLuaInterpreter::getFontSize(lua_State* L)
 {
-    int rval = -1;
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    rval = console->mUpperPane->font().pointSize();
+    const Host& host = getHostFromLua(L);
+    const auto size = host.mpConsole ? host.mpConsole->getWindowFontSize(windowName) : std::nullopt;
+    if (!size) {
+        return windowNotFound(L, windowName);
+    }
 
-    if (rval <= -1) {
+    if (*size <= -1) {
         lua_pushnil(L);
     } else {
-        lua_pushnumber(L, rval);
+        lua_pushnumber(L, *size);
     }
     return 1;
 }
@@ -3352,7 +3316,7 @@ int TLuaInterpreter::getCmdLineStyleSheet(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFont
 int TLuaInterpreter::setFont(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
+    const Host& host = getHostFromLua(L);
 
     const char* windowName = "";
     int s = 1;
@@ -3385,50 +3349,28 @@ int TLuaInterpreter::setFont(lua_State* L)
 #endif
 
     // A console wins a name a label also carries - nothing stops a label being
-    // called "main". Labels are not in the map CONSOLE() searches, so a name no
-    // console answers to is tried as a label before that macro gets to refuse it:
+    // called "main" - so a name no console answers to is only then tried as a
+    // label:
     const QString targetName{windowName};
-    auto console = CONSOLE_NIL(L, targetName);
-    if (!console) {
-        if (host.mpConsole) {
-            if (const auto currentLabelFont = host.mpConsole->getLabelFont(targetName)) {
-                QFont labelFont = host.createFontWithSettings(effectiveFontName, currentLabelFont->pointSize());
-                if (fontWeight != QFont::Normal) {
-                    labelFont.setWeight(fontWeight);
-                }
-                host.mpConsole->setLabelFont(targetName, labelFont);
-                lua_pushboolean(L, true);
-                return 1;
-            }
-        }
-        console = CONSOLE(L, targetName);
+    if (!host.mpConsole) {
+        return windowNotFound(L, targetName);
     }
-
-    if (console == host.mpConsole) {
-        // apply changes to main console and its while-scrolling component too.
-        QFont newFont = host.createFontWithSettings(effectiveFontName, host.getDisplayFont().pointSize());
-
-        if (fontWeight != QFont::Normal) {
-            newFont.setWeight(fontWeight);
+    if (const auto result = host.mpConsole->setWindowFontFamily(targetName, effectiveFontName, fontWeight)) {
+        if (!result->first) {
+            return warnArgumentValue(L, __func__, result->second);
         }
-
-        auto result = host.setDisplayFont(newFont, Host::DisplayFontChange::UserChoice);
-
-        if (!result.first) {
-            return warnArgumentValue(L, __func__, result.second);
-        }
-
-        console->refreshView();
-    } else {
-        QFont newFont = host.createFontWithSettings(effectiveFontName, console->font().pointSize());
-
-        if (fontWeight != QFont::Normal) {
-            newFont.setWeight(fontWeight);
-        }
-
-        console->setFont(newFont);
+        lua_pushboolean(L, true);
+        return 1;
     }
-
+    const auto currentLabelFont = host.mpConsole->getLabelFont(targetName);
+    if (!currentLabelFont) {
+        return windowNotFound(L, targetName);
+    }
+    QFont labelFont = host.createFontWithSettings(effectiveFontName, currentLabelFont->pointSize());
+    if (fontWeight != QFont::Normal) {
+        labelFont.setWeight(fontWeight);
+    }
+    host.mpConsole->setLabelFont(targetName, labelFont);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3436,8 +3378,6 @@ int TLuaInterpreter::setFont(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFontSize
 int TLuaInterpreter::setFontSize(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
     const char* windowName = "";
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
@@ -3450,12 +3390,10 @@ int TLuaInterpreter::setFontSize(lua_State* L)
         return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
     }
 
-    auto console = CONSOLE(L, QString{windowName});
-    if (console == host.mpConsole) {
-        // get host profile display font and alter it, since that is how it's done in Settings.
-        host.setDisplayFontSize(size);
-    } else {
-        console->setFontSize(size);
+    const QString consoleName{windowName};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setWindowFontSize(consoleName, size)) {
+        return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
     return 1;
