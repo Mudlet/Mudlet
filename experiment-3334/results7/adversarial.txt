@@ -1,0 +1,14 @@
+METRIC gate_waited_s 13
+METRIC machine_busy_pct_before 5
+METRIC loadavg_before 1.79
+METRIC build_asan 0
+ADV api exitWeightAfterSet0=nil roomWeightAfterSet0=1
+ADV mode 0 found 1 cost 6.0 path 200,109,110
+ADV mode 1 found 1 cost 3.0 path 200,100,300,110
+ADV mode 4 found 1 cost 6.0 path 200,109,110
+ADV mode 5 found 1 cost 6.0 path 200,109,110
+ADV mode 6 found 1 cost 3.0 path 200,100,300,110
+METRIC adv_edge_400_401_cost 1.000
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 419ms
+METRIC machine_busy_pct_after 5
+METRIC loadavg_after 1.72

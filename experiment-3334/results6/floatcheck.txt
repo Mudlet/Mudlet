@@ -1,0 +1,10 @@
+METRIC gate_waited_s 13
+METRIC machine_busy_pct_before 5
+METRIC loadavg_before 2.10
+METRIC build_asan 0
+FLOATCHECK mode 1 heavyRooms=12 pairs=30102 pairsWhoseOptimumCrossesHeavy=4365 mismatches=736 ofWhichOptimumCrossesHeavy=736 maxExtraCostWhenHeavy=31 firstMismatch=67->8 got 2147483657 optimum 2147483656
+FLOATCHECK mode 0 heavyRooms=12 pairs=30102 pairsWhoseOptimumCrossesHeavy=4365 mismatches=8398 ofWhichOptimumCrossesHeavy=736 maxExtraCostWhenHeavy=31 firstMismatch=1->8 got 6 optimum 4
+FLOATCHECK mode 6 heavyRooms=12 pairs=30102 pairsWhoseOptimumCrossesHeavy=4365 mismatches=2230 ofWhichOptimumCrossesHeavy=2230 maxExtraCostWhenHeavy=31 firstMismatch=1->61 got 2147483665 optimum 2147483656
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 2441ms
+METRIC machine_busy_pct_after 5
+METRIC loadavg_after 2.01

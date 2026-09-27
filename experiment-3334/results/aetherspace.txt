@@ -1,0 +1,8 @@
+METRIC machine_busy_pct_before 100
+METRIC build_asan 0
+METRIC map_rooms 2330079
+METRIC graph_vertices 2330079
+METRIC heuristic_scale 0.707
+FAIL!  : PathfindBenchmark::benchHeuristics() Received a fatal error.
+Totals: 1 passed, 1 failed, 0 skipped, 0 blacklisted, 313559ms
+METRIC machine_busy_pct_after 100
