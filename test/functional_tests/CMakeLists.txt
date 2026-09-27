@@ -43,6 +43,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     DockWidgetWithoutProfileTest.cpp
+    GlyphCacheTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp

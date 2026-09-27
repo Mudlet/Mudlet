@@ -150,6 +150,7 @@ set(mudlet_SRCS
     TFeatureCallout.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
+    TGlyphCache.cpp
     THyperlinkCompactManager.cpp
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
@@ -429,6 +430,7 @@ set(mudlet_HDRS
     TFlipButton.h
     TForkedProcess.h
     TGameDetails.h
+    TGlyphCache.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
     THyperlinkStyling.h
