@@ -71,6 +71,7 @@ describe("Tests how MXP reads the tags a game sends", function()
     end)
 
     it("fills a game's entity into an attribute value", function()
+      finally(function() feed("<!ENTITY mxpParseTarget DELETE>") end)
       feed([[<!ENTITY mxpParseTarget "orc">]])
       local event = sendEvent([[<SEND href="kill &mxpParseTarget;">mxpParseEntityAttr</SEND>]])
       assert.is_table(event)
@@ -80,6 +81,7 @@ describe("Tests how MXP reads the tags a game sends", function()
 
   describe("Tests the elements a game defines", function()
     it("forgets an element that is defined again with DELETE", function()
+      finally(function() feed("<!ELEMENT mxpParseGone DELETE>") end)
       feed([[<!ELEMENT mxpParseGone "<B>">]])
       assert.are.equal("mxpParseGoneBefore", shown("<mxpParseGone>mxpParseGoneBefore</mxpParseGone>"))
 
@@ -92,6 +94,12 @@ describe("Tests how MXP reads the tags a game sends", function()
     end)
 
     it("fills a declared attribute from its default when the tag leaves it out", function()
+      finally(function()
+        feed("<!ELEMENT mxpParseDefault DELETE>")
+        if type(mxp) == "table" then
+          mxp.mxpparsedefault = nil
+        end
+      end)
       feed([[<!ELEMENT mxpParseDefault FLAG="mxpParseDefault" ATT="where=north what">]])
       if type(mxp) == "table" then
         mxp.mxpparsedefault = nil
@@ -109,10 +117,12 @@ describe("Tests how MXP reads the tags a game sends", function()
     end)
 
     it("resolves an entity published without a value to nothing", function()
+      finally(function() feed("<!ENTITY mxpParseEmpty DELETE>") end)
       assert.are.equal("mxpParseEmpty[]", shown("<!ENTITY mxpParseEmpty PUBLISH>mxpParseEmpty[&mxpParseEmpty;]"))
     end)
 
     it("forgets an entity that is defined again with DELETE", function()
+      finally(function() feed("<!ENTITY mxpParseDel DELETE>") end)
       assert.are.equal("mxpParseDel[kept]", shown('<!ENTITY mxpParseDel "kept">mxpParseDel[&mxpParseDel;]'))
       assert.are.equal("mxpParseDel[&mxpParseDel;]", shown("<!ENTITY mxpParseDel DELETE>mxpParseDel[&mxpParseDel;]"))
     end)
