@@ -96,6 +96,38 @@ engine's installed models rather than picking one, since a downloaded model
 should stay visible whether or not its engine happens to be the one loaded
 right now.
 
+**Using the built-in macOS backend from a development build.** It asks macOS
+for speech-recognition permission, and macOS attributes that request to the
+*responsible process* - which, for anything started from a shell, is the
+application that owns the terminal, not Mudlet. Launched from a terminal
+embedded in an editor, the editor is asked for a usage description it has no
+reason to carry, and macOS used to kill the process outright: `Namespace TCC`,
+with a message naming `NSSpeechRecognitionUsageDescription` as missing from
+`Info.plist` even though Mudlet's own has carried it since the backend was
+added. Mudlet now notices that it is not its own responsible process and
+refuses the request instead, saying how to relaunch itself as an application,
+so a development build says why rather than disappearing.
+
+Launch the bundle rather than the binary, so Mudlet is its own responsible
+process:
+
+```bash
+open build/src/mudlet.app
+```
+
+Double-clicking it in Finder does the same. Running
+`build/src/mudlet.app/Contents/MacOS/mudlet` directly from a shell is what
+provokes it - which is also why it is worth knowing before reaching for
+`codesign`, since the bundle's signature is not what decides this.
+
+The other two engines avoid the *speech-recognition* request specifically: they
+do their own decoding, so nothing asks macOS for
+`NSSpeechRecognitionUsageDescription`. They are not free of the responsible
+process entirely - every engine here records through `SpeechAudioCapture`, and
+microphone access is its own TCC request, attributed to the terminal's owner
+the same way. What differs is only the `SFSpeechRecognizer` authorization call
+the built-in backend makes on top of it.
+
 ## `stt.getInfo()`
 
 | Key | Type | Meaning |
