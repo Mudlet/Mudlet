@@ -287,6 +287,9 @@ private slots:
     // Package fonts are installed and removed while consoles are showing text
     void reshapesWhenFontsAreInstalledOrRemoved()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so there is no bundled font to install");
+#else
         const QString family = qsl("Ubuntu Mono");
         if (QFontDatabase::hasFamily(family)) {
             QSKIP("Ubuntu Mono is already installed here, so registering it would change nothing");
@@ -312,6 +315,38 @@ private slots:
         QFontDatabase::removeApplicationFont(id);
         QCOMPARE(cache.size(), 0);
         QCOMPARE(differingPixels(render(font, 1.0, false, TGlyphCache::Plain, &cache), render(font, 1.0, false, TGlyphCache::Plain, nullptr)), 0);
+#endif
+    }
+
+    void drawsOverlongGraphemesWithoutKeepingThem()
+    {
+        QString grapheme = qsl("a");
+        while (grapheme.size() <= TGlyphCache::csmMaxCachedLength) {
+            grapheme += QChar(0x0301);
+        }
+        const QFont font = testFont(13);
+        const QFontMetrics metrics(font);
+        const QRect cell(0, metrics.height(), metrics.averageCharWidth(), metrics.height());
+        QImage expected(4 * metrics.averageCharWidth(), 3 * metrics.height(), QImage::Format_ARGB32_Premultiplied);
+        expected.fill(Qt::black);
+        QImage actual = expected;
+        {
+            QPainter painter(&expected);
+            painter.setFont(font);
+            painter.setPen(Qt::white);
+            painter.drawText(cell, csmTextFlags, grapheme);
+        }
+        TGlyphCache cache;
+        {
+            QPainter painter(&actual);
+            painter.setFont(font);
+            painter.setPen(Qt::white);
+            cache.setFont(painter.font(), *painter.device());
+            cache.drawCentered(painter, cell, grapheme, TGlyphCache::Plain);
+        }
+        QVERIFY(hasInk(expected));
+        QCOMPARE(differingPixels(actual, expected), 0);
+        QCOMPARE(cache.size(), 0);
     }
 
     void staysBounded()

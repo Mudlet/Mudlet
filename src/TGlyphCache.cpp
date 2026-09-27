@@ -66,7 +66,9 @@ void TGlyphCache::drawCentered(QPainter& painter, const QRect& cell, QStringView
     if (grapheme.isEmpty()) {
         return;
     }
-    const Entry& entry = lookup(grapheme, style);
+    const bool cacheable = grapheme.size() <= csmMaxCachedLength;
+    const Entry uncached = cacheable ? Entry() : shape(grapheme, style);
+    const Entry& entry = cacheable ? lookup(grapheme, style) : uncached;
     // The same centring qt_format_text() applies for Qt::AlignCenter, truncated
     // to the 1/64 pixel grid as QTextLine::draw() does before the painter's
     // scale is applied - otherwise glyphs land a device pixel away from where

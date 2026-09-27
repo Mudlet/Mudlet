@@ -61,6 +61,10 @@ public:
     // Large enough for any real game's repertoire, small enough that a flood
     // of distinct CJK or emoji cannot grow it without bound.
     static constexpr qsizetype csmMaxEntries = 4096;
+    // In UTF-16 code units. A grapheme can carry any number of combining marks,
+    // so without this a flood of distinct long ones would keep megabytes each;
+    // the longest real ones, such as a family emoji with skin tones, fit easily.
+    static constexpr qsizetype csmMaxCachedLength = 32;
 
 private:
     struct Key
