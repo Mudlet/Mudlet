@@ -161,8 +161,6 @@ class Host : public QObject
 
     friend class XMLexport;
     friend class XMLimport;
-    // Allows the functional test to set the Discord username restriction:
-    friend class TDiscordModeTest;
     // Allows the functional test to call closeChildren() on its own:
     friend class HostWidgetDecouplingTest;
     // Allows the functional test to answer the keychain lookup in place of a keychain:
