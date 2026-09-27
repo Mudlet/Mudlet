@@ -635,11 +635,11 @@ private slots:
         auto teardown = qScopeGuard([&widgets]() {
             widgets.destroyFrame(qsl("twice"));
         });
-        widgets.createInternalFrame(qsl("twice"), qsl("Twice"), QRect(0, 0, 200, 100), false, true);
+        widgets.createInternalFrame(qsl("twice"), QString(), qsl("Twice"), QRect(0, 0, 200, 100), false, true);
         QPointer<QWidget> first = frameWidget(qsl("twice"));
         QVERIFY(first);
 
-        widgets.createInternalFrame(qsl("twice"), qsl("Twice"), QRect(0, 0, 200, 100), false, true);
+        widgets.createInternalFrame(qsl("twice"), QString(), qsl("Twice"), QRect(0, 0, 200, 100), false, true);
         QVERIFY(frameWidget(qsl("twice")));
         QVERIFY2(first.isNull(), "Building the frame again left the first container orphaned.");
     }
@@ -755,6 +755,24 @@ private slots:
         settle();
         QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 300, 40));
         QCOMPARE(frameGeometry(qsl("deeper")), QRect(0, 0, 300, 20));
+    }
+
+    // The player sizes an EXTERNAL frame's window, so a frame opened inside it
+    // later fits the size it has by then rather than the one it opened at
+    void test_frameNestedInAResizedExternalFrameFitsItsNewSize()
+    {
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup && popup->isWindow());
+        popup->resize(500, 350);
+        settle();
+        QCOMPARE(popup->size(), QSize(500, 350));
+
+        mpHost->mMxpFrameManager.setDestination(qsl("popup"), false, false);
+        QVERIFY(createFrame(qsl("inpopup"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 500, 40));
     }
 
     // Inside a tab it is shown on the tab's page, against the space the header
