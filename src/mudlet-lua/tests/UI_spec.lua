@@ -5987,6 +5987,33 @@ describe("Console buffer size", function()
     assert.are.equal(savedText, getSelection(console))
   end)
 
+  -- The trim looks a few lines ahead of the one it is removing, and with the
+  -- biggest batch a buffer can have there are next to none left to look at by
+  -- the time it finishes.
+  it("a batch that takes all but a couple of lines leaves the newest ones in order", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 99))
+    assert.are.same({100, 99}, {getConsoleBufferSize(console)})
+    local removed = {}
+    local handlerId = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, windowName, removedLines)
+      if windowName == console then
+        removed[#removed + 1] = removedLines
+      end
+    end)
+    finally(function() killAnonymousEventHandler(handlerId) end)
+    for lineNumber = 1, 150 do
+      echo(console, ("nearly all line %d\n"):format(lineNumber))
+    end
+    killAnonymousEventHandler(handlerId)
+    assert.are.same({99}, removed)
+    local last = getLastLineNumber(console)
+    local lines = getLines(console, last - 3, last)
+    assert.are.same({"nearly all line 148", "nearly all line 149", "nearly all line 150"}, lines)
+    -- the count is the index of the open line at the end, so it is the number
+    -- of finished lines above it
+    assert.are.equal(150 - 99, getLineCount(console))
+  end)
+
   it("useMaximum raises the main console to the buffer maximum", function()
     -- the main console has to be named for this one: with three arguments the
     -- first is read as a window name, so the four argument form only lines up
@@ -6626,6 +6653,26 @@ describe("Toolbar buttons", function()
       local setOk, setErr = setButtonState(plainButton, true)
       assert.is_nil(setOk)
       assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), setErr)
+    end)
+
+    it("round-trips a button state by ID", function()
+      local id = findItems(pushDownButton, "button")[1]
+      assert.is_number(id, "the package did not install " .. pushDownButton)
+      assert.is_false(getButtonState(id))
+      assert.is_true(setButtonState(id, true))
+      assert.is_true(getButtonState(id))
+      assert.is_true(getButtonState(pushDownButton), "the ID and the name should be the same button")
+    end)
+
+    it("both refuse a button that is not a push-down one when it is given by ID", function()
+      local id = findItems(plainButton, "button")[1]
+      assert.is_number(id, "the package did not install " .. plainButton)
+      local getOk, getErr = getButtonState(id)
+      assert.is_nil(getOk)
+      assert.are.equal(("item ID with %d is not a push-down button"):format(id), getErr)
+      local setOk, setErr = setButtonState(id, true)
+      assert.is_nil(setOk)
+      assert.are.equal(("item ID with %d is not a push-down button"):format(id), setErr)
     end)
 
     it("both refuse a name that is no button at all", function()
@@ -7588,5 +7635,19 @@ describe("calcFontSize on the main window", function()
     assert.is_true(mainWidth > 0)
     assert.is_true(miniWidth > 0)
     assert.are_not.equal(mainWidth, miniWidth)
+  end)
+end)
+
+describe("openUserWindow docking areas", function()
+  local windowName = ("uiSpecDockNowhere%d%d"):format(os.time(), math.random(100000))
+
+  teardown(function()
+    hideWindow(windowName)
+  end)
+
+  it("refuses an area it does not know, naming the ones it does", function()
+    local ok, message = openUserWindow(windowName, false, true, "middle")
+    assert.is_nil(ok)
+    assert.are.equal([[docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating]], message)
   end)
 end)

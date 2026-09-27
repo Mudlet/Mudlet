@@ -823,7 +823,9 @@ void dlgProfilePreferences::buildShell()
 
     buildCategoryPage(scmCategory_shortcuts, {groupBox_main_window_shortcuts});
 
-    buildCategoryPage(scmCategory_advanced, {groupBox_debug});
+    auto* pCard_performance = createCard(qsl("card_performance"));
+    moveIntoCard(pCard_performance, {checkBox_lazyCaptureGlobals});
+    buildCategoryPage(scmCategory_advanced, {pCard_performance, groupBox_debug});
 
     buildSearchResultsPage();
 
@@ -1091,6 +1093,8 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_serverPermissions"), tr("Server permissions")});
     //: Card title on the Privacy and security settings page, above the crash report sending policy
     cardTitles.append({qsl("card_crashReports"), tr("Crash reports")});
+    //: Card title on the Advanced settings page, above options that trade compatibility for speed
+    cardTitles.append({qsl("card_performance"), tr("Performance")});
     //: Card title on the Chat and sharing settings page, above the row leading to the Discord Rich Presence settings
     cardTitles.append({qsl("card_discord"), tr("Discord Rich Presence")});
     //: Card title on the game protocols subpage, above the ten protocols Mudlet can offer the game
@@ -1189,6 +1193,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_ssl, tr("TLS, SSL, secure connection, encryption, certificate")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the reminder offered when the game supports a secure connection.
     synonyms.append({checkBox_askTlsAvailable, tr("TLS, SSL, secure connection, reminder")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for preparing the matches, multimatches and line trigger variables only when a script reads them.
+    synonyms.append({checkBox_lazyCaptureGlobals, tr("performance, speed, fast, slow, lag, lazy, matches, multimatches, line, _G, global variables")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the proxy server settings.
     synonyms.append({groupBox_proxy, tr("proxy, SOCKS, tunnel, firewall")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where game passwords are kept.
@@ -1573,6 +1579,8 @@ void dlgProfilePreferences::setCardDescriptions()
     //: Description line under the "Crash reports" card title on the Privacy and security settings page
     setCardDescription(findChild<QGroupBox*>(qsl("card_crashReports")),
                        tr("If Mudlet stops unexpectedly it can tell the developers what went wrong. A report says where Mudlet was in its own code - never what you typed or what the game sent."));
+    //: Description line under the "Performance" card title on the Advanced settings page
+    setCardDescription(findChild<QGroupBox*>(qsl("card_performance")), tr("Ways Mudlet speeds up your scripts. Leave these on unless a script or package misbehaves."));
     //: Description line under the "Developer" card title on the Advanced settings page
     setCardDescription(groupBox_debug, tr("Diagnostics for people writing packages and scripts. Leave these off for ordinary play."));
 }
@@ -3463,6 +3471,7 @@ void dlgProfilePreferences::disableHostDetails()
     slot_hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
+    checkBox_lazyCaptureGlobals->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
 }
@@ -3578,6 +3587,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
+    checkBox_lazyCaptureGlobals->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
 }
@@ -4350,6 +4360,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     lineEdit_proxyPassword->setText(pHost->mProxyPassword);
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
+    checkBox_lazyCaptureGlobals->setChecked(pHost->lazyCaptureGlobals());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
     {
@@ -4788,6 +4799,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_mmcpSnoopInMainConsole->setChecked(true);
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
+    checkBox_lazyCaptureGlobals->setChecked(true);
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
@@ -6659,6 +6671,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkBox_debugShowAllCodepointProblems)) {
             pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_lazyCaptureGlobals)) {
+            pHost->setLazyCaptureGlobals(checkBox_lazyCaptureGlobals->isChecked());
         }
         if (mSnapshot.dirty(comboBox_caretModeKey)) {
             pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());

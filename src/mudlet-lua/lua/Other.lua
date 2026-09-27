@@ -1314,6 +1314,7 @@ function getConfig(...)
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
+      "lazyCaptureGlobals",
       "logDirectory",                    -- read-only in getConfig
       "logInHTML",
       "mapExitSize",

@@ -24,6 +24,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "TBuffer.h"
 #include "TConsole.h"
 #include "TDebug.h"
@@ -732,8 +733,8 @@ private slots:
         delete mudlet::smpDebugArea.data();
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
 private:
@@ -777,12 +778,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 
     // Starts a profile by driving the connection dialog, as a user would.

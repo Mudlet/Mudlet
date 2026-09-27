@@ -160,8 +160,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
 private:
@@ -196,12 +196,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

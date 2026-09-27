@@ -162,22 +162,6 @@ void TTimer::stop()
     mpQTimer->stop();
 }
 
-void TTimer::compile()
-{
-    if (mNeedsToBeCompiled) {
-        if (!compileScript()) {
-            if (TDebug::wants(TDebug::Category::Error)) {
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
-            }
-            mOK_code = false;
-        }
-    }
-    for (auto* timerNode : *mpMyChildrenList) {
-        auto* timer = static_cast<TTimer*>(timerNode);
-        timer->compile();
-    }
-}
-
 void TTimer::compileAll()
 {
     mNeedsToBeCompiled = true;
@@ -402,41 +386,6 @@ void TTimer::disableTimer()
 }
 
 
-void TTimer::enableTimer(const QString& name)
-{
-    if (mName == name) {
-        if (canBeUnlocked()) {
-            if (activate()) {
-                mpQTimer->start();
-            } else {
-                deactivate();
-                mpQTimer->stop();
-            }
-        }
-    }
-
-    if (!isOffsetTimer()) {
-        for (auto* timerNode : *mpMyChildrenList) {
-            auto* timer = static_cast<TTimer*>(timerNode);
-            timer->enableTimer(timer->getName());
-        }
-    }
-}
-
-void TTimer::disableTimer(const QString& name)
-{
-    if (mName == name) {
-        deactivate();
-        mpQTimer->stop();
-    }
-
-    for (auto* timerNode : *mpMyChildrenList) {
-        auto* timer = static_cast<TTimer*>(timerNode);
-        timer->disableTimer(timer->getName());
-    }
-}
-
-
 void TTimer::killTimer()
 {
     deactivate();
@@ -466,23 +415,6 @@ QString TTimer::packageName(TTimer* pTimer)
 
     if (pTimer->getParent()) {
         return packageName(pTimer->getParent());
-    }
-
-    return QString();
-}
-
-QString TTimer::moduleName(TTimer* pTimer)
-{
-    if (!pTimer) {
-        return QString();
-    }
-
-    if (!pTimer->mPackageName.isEmpty()) {
-        return mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
-    }
-
-    if (pTimer->getParent()) {
-        return moduleName(pTimer->getParent());
     }
 
     return QString();
