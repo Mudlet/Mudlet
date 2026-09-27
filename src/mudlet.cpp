@@ -269,6 +269,25 @@ bool mudlet::claimMicrophoneFor(Host* pHost)
         if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting())) {
             mpSpeechRecognizer->stopListening();
         }
+
+        // Asked again, because the state to test is the one the stop left behind
+        // rather than the one before it. A backend that finalises the last phrase
+        // asynchronously - AppleSpeechRecognizer does - returns from the stop
+        // while still Processing, so the guard above saw only Listening and had
+        // nothing to catch. Moving the owner now would hand that phrase to the
+        // profile taking the microphone instead of the one that spoke it.
+        //
+        // The caller gets the same "try again in a moment" it gets above. The
+        // losing profile has already been told of the handover, and that stands:
+        // its session really has ended, and it keeps the microphone only until
+        // its phrase lands, when the session's end releases it. The retry then
+        // finds nobody holding it and announces nothing, so the handover is told
+        // once. Announcing it after the stop instead would put it behind the
+        // state change, and docs/stt-api.md tells a script the state change is
+        // what follows sysSTTHandover.
+        if (mpSpeechRecognizer && mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing) {
+            return false;
+        }
     }
 
     mpMicrophoneOwner = pHost;
