@@ -112,6 +112,11 @@ TGlyphCache::Entry TGlyphCache::shape(QStringView grapheme, const Style style) c
     if (font.italic() != style.testFlag(Italic)) {
         font.setItalic(style.testFlag(Italic));
     }
+    // Decorations belong to the drawText() path, even ones set on the display
+    // font itself, which the glyph runs would otherwise carry.
+    font.setUnderline(false);
+    font.setOverline(false);
+    font.setStrikeOut(false);
 
     QTextLayout layout(text, font);
     QTextOption option;

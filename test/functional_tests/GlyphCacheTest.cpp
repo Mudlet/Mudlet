@@ -69,18 +69,25 @@ private:
         };
     }
 
-    static QFont testFont(const int pointSize, const QFont::Weight weight = QFont::Normal, const QFont::StyleStrategy strategy = QFont::PreferDefault)
+    static QFont testFont(const int pointSize, const QFont::Weight weight = QFont::Normal, const QFont::StyleStrategy strategy = QFont::PreferDefault, const bool decorated = false)
     {
         QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
         font.setPointSize(pointSize);
         font.setWeight(weight);
         font.setStyleStrategy(strategy);
+        font.setUnderline(decorated);
+        font.setOverline(decorated);
+        font.setStrikeOut(decorated);
         return font;
     }
 
-    // What TTextEdit does to the painter's font before a drawText()
+    // What TTextEdit does to the painter's font before a drawText() of an
+    // undecorated cell
     static QFont styled(QFont font, const TGlyphCache::Style style)
     {
+        font.setUnderline(false);
+        font.setOverline(false);
+        font.setStrikeOut(false);
         if (font.bold() != style.testFlag(TGlyphCache::Bold)) {
             font.setBold(style.testFlag(TGlyphCache::Bold));
         }
@@ -168,6 +175,7 @@ private slots:
         QTest::addColumn<int>("xOffset");
         QTest::addColumn<int>("weight");
         QTest::addColumn<int>("strategy");
+        QTest::addColumn<bool>("decoratedFont");
 
         const QList<std::pair<const char*, TGlyphCache::Style>> styles = {
                 {"plain", TGlyphCache::Plain},
@@ -180,21 +188,26 @@ private slots:
         for (const int pointSize : {9, 10, 11, 13}) {
             for (const qreal ratio : {1.0, 1.25, 1.5, 2.0, 3.0}) {
                 for (const auto& [styleName, style] : styles) {
-                    QTest::addRow("%dpt, pixmap at %.2fx, %s", pointSize, ratio, styleName) << pointSize << ratio << true << int(style.toInt()) << 0 << int(QFont::Normal) << int(QFont::PreferDefault);
+                    QTest::addRow("%dpt, pixmap at %.2fx, %s", pointSize, ratio, styleName)
+                            << pointSize << ratio << true << int(style.toInt()) << 0 << int(QFont::Normal) << int(QFont::PreferDefault) << false;
                 }
             }
-            QTest::addRow("%dpt, image", pointSize) << pointSize << 1.0 << false << 0 << 0 << int(QFont::Normal) << int(QFont::PreferDefault);
+            QTest::addRow("%dpt, image", pointSize) << pointSize << 1.0 << false << 0 << 0 << int(QFont::Normal) << int(QFont::PreferDefault) << false;
             // A horizontally scrolled console starts its cells left of zero
-            QTest::addRow("%dpt, pixmap at 1.50x, scrolled", pointSize) << pointSize << 1.5 << true << 0 << -3 << int(QFont::Normal) << int(QFont::PreferDefault);
+            QTest::addRow("%dpt, pixmap at 1.50x, scrolled", pointSize) << pointSize << 1.5 << true << 0 << -3 << int(QFont::Normal) << int(QFont::PreferDefault) << false;
         }
         for (const auto& [styleName, style] : styles) {
             // A display font picked by style name, such as "Fira Code SemiBold",
             // keeps its own weight wherever it already counts as bold or not bold
-            QTest::addRow("demibold font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::DemiBold) << int(QFont::PreferDefault);
-            QTest::addRow("light font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::Light) << int(QFont::PreferDefault);
+            QTest::addRow("demibold font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::DemiBold) << int(QFont::PreferDefault) << false;
+            QTest::addRow("light font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::Light) << int(QFont::PreferDefault) << false;
+            // Decorations saved on the display font itself were never drawn on
+            // undecorated cells, as those forced them off
+            QTest::addRow("decorated font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::Normal) << int(QFont::PreferDefault) << true;
             // What every console other than the main one draws with
             for (const qreal ratio : {1.0, 1.5}) {
-                QTest::addRow("unantialiased at %.2fx, %s", ratio, styleName) << 10 << ratio << true << int(style.toInt()) << 0 << int(QFont::Normal) << int(QFont::NoAntialias | QFont::PreferQuality);
+                QTest::addRow("unantialiased at %.2fx, %s", ratio, styleName)
+                        << 10 << ratio << true << int(style.toInt()) << 0 << int(QFont::Normal) << int(QFont::NoAntialias | QFont::PreferQuality) << false;
             }
         }
     }
@@ -208,8 +221,9 @@ private slots:
         QFETCH(int, xOffset);
         QFETCH(int, weight);
         QFETCH(int, strategy);
+        QFETCH(bool, decoratedFont);
 
-        const QFont font = testFont(pointSize, QFont::Weight(weight), QFont::StyleStrategy(strategy));
+        const QFont font = testFont(pointSize, QFont::Weight(weight), QFont::StyleStrategy(strategy), decoratedFont);
         const auto cacheStyle = TGlyphCache::Style::fromInt(style);
         const QImage expected = render(font, devicePixelRatio, viaPixmap, cacheStyle, nullptr, xOffset);
         QVERIFY2(hasInk(expected), "drawText() drew nothing, so there is nothing to compare against");
