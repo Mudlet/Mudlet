@@ -13,6 +13,22 @@ describe("Tests that the font functions find their console by name", function()
     return current == families[1] and families[2] or families[1]
   end
 
+  -- every spec after this one lays itself out against the main console's font,
+  -- so it goes back exactly as it was even if a case fails before its own
+  -- finally() has restored it
+  local mainFont, mainFontSize
+  setup(function()
+    mainFont, mainFontSize = getFont("main"), getFontSize("main")
+  end)
+  teardown(function()
+    if getFont("main") ~= mainFont then
+      setFont("main", mainFont)
+    end
+    if getFontSize("main") ~= mainFontSize then
+      setFontSize("main", mainFontSize)
+    end
+  end)
+
   -- an array rather than a keyed table so the specs are always generated in
   -- the same order
   local consoleOnly = {
@@ -166,6 +182,7 @@ describe("Tests that the font functions find their console by name", function()
       it("gives a " .. kind[1] .. " a command line of its own and hides it again", function()
         assert.is_true(kind[2](window))
         finally(function()
+          disableCommandLine(window)
           kind[3](window)
         end)
         pumpEvents(100)
