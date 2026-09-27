@@ -93,6 +93,9 @@ public:
         static Intent hint(QString account, QString provider);
         // Nothing stored. Named rather than written as Intent{} so the destructive request says so.
         static Intent absent();
+        // Nothing stored anywhere a copy could be: absent(), asked for by the player rather than by the
+        // client, so its removals reach every copy instead of only the one the store would read.
+        static Intent forgotten();
 
         Shape shape = Shape::Absent;
         QString account;
@@ -101,6 +104,8 @@ public:
         // Full only. A bearer secret: moved into the store's write when that step runs, and scrubbed
         // on every path where the intent is dropped before then.
         QString token;
+        // forgotten() only; see Performer.
+        bool everyCopy = false;
     };
 
     enum class Operation { WriteMetadata, WriteToken, RemoveToken, RemoveMetadata };
@@ -114,12 +119,14 @@ public:
 
     using Done = std::function<void(bool ok, QString error)>;
     // Perform one operation. payload is the metadata JSON for WriteMetadata, the token for
-    // WriteToken, and empty for the removals. Must call done exactly once, and on the reconciler's own
+    // WriteToken, and empty for the removals. everyCopy is set for the removals of a forgotten()
+    // intent, which must reach every copy of the entry rather than only the one the store would read
+    // back. Must call done exactly once, and on the reconciler's own
     // thread - nothing here is synchronised, and Mudlet is single-threaded outside Qt's networking.
     // done may be called synchronously from inside the performer; one arriving after the reconciler is
     // destroyed is discarded, and logged if it reports a failure. A Performer that never calls done at all leaves the reconciler
     // permanently occupied - see setIntent().
-    using Performer = std::function<void(Operation op, QString payload, Done done)>;
+    using Performer = std::function<void(Operation op, QString payload, bool everyCopy, Done done)>;
     // failedAt is meaningful only when outcome is Failed.
     using Completion = std::function<void(Outcome outcome, Operation failedAt, QString error)>;
 
