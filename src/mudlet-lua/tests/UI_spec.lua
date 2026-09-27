@@ -4922,7 +4922,7 @@ describe("Window and label state", function()
   -- the main console has to pick them up at once: the next echo and the next
   -- echoed command are drawn with them.
   describe("main console colours", function()
-    local savedBg, savedCommand
+    local savedBg, savedCommand, savedEchoMode
 
     local function readFormatOf(text)
       local last = getLastLineNumber("main")
@@ -4943,6 +4943,10 @@ describe("Window and label state", function()
     end
 
     setup(function()
+      -- the command colours are read off an echoed command, which the profile's
+      -- own echo setting could otherwise hide
+      savedEchoMode = getConfig("showSentText", true)
+      setConfig("showSentText", "script")
       savedBg = {getBackgroundColor()}
       -- there is no Lua reader for the command colours, but an echoed command
       -- is drawn in them
@@ -4950,9 +4954,13 @@ describe("Window and label state", function()
     end)
 
     teardown(function()
+      setConfig("showSentText", savedEchoMode)
       setBackgroundColor(savedBg[1], savedBg[2], savedBg[3], savedBg[4])
-      setCommandForegroundColor(unpack(savedCommand.foreground))
-      setCommandBackgroundColor(unpack(savedCommand.background))
+      -- unset when setup failed, and that failure is the one worth reading
+      if savedCommand then
+        setCommandForegroundColor(unpack(savedCommand.foreground))
+        setCommandBackgroundColor(unpack(savedCommand.background))
+      end
       resetFormat()
     end)
 
