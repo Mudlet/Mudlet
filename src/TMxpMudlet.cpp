@@ -118,7 +118,7 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
             for (const auto& attrName : startTag->getAttributesNames()) {
                 event.attrs[attrName] = startTag->getAttributeValue(attrName);
             }
-            event.actions = getLinkStore().getCurrentLinks();
+            event.linkId = getLinkStore().getCurrentLinkID();
             event.caption.clear();
             mPendingSendEvents.push(event);
         }
@@ -158,9 +158,8 @@ void TMxpMudlet::setCaptionForSendEvent(const QString& caption)
     if (!mPendingSendEvents.isEmpty()) {
         TMxpEvent event = mPendingSendEvents.pop();
         event.caption = caption;
-        for (QString& act : event.actions) {
-            act.replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
-        }
+        // The handler has already quoted the wrapped text into these
+        event.actions = getLinkStore().getLinksConst(event.linkId);
         for (auto it = event.attrs.begin(); it != event.attrs.end(); ++it) {
             it.value().replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
         }

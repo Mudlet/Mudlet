@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "TMxpSendTagHandler.h"
+#include "LuaLiteral.h"
 #include "TMxpClient.h"
 #include "TStringUtils.h"
 
@@ -60,22 +61,27 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     // handle print to prompt feature PROMPT
     // <SEND "tell Zugg " PROMPT>Zugg</SEND>
-    QString command = tag->hasAttribute(ATTR_PROMPT) ? qsl("printCmdLine") : qsl("send");
+    mCommand = tag->hasAttribute(ATTR_PROMPT) ? qsl("printCmdLine") : qsl("send");
 
     for (int i = 0; i < hrefs.size(); i++) {
         hrefs[i] = ctx.getEntityResolver().interpolate(hrefs[i]);
-        hrefs[i] = qsl("%1([[%2]])").arg(command, hrefs[i]);
 
         if (i < hints.size()) {
             hints[i] = ctx.getEntityResolver().interpolate(hints[i]);
         }
     }
 
+    mHrefs = hrefs;
+    QStringList actions;
+    for (const QString& command : std::as_const(hrefs)) {
+        actions << actionFor(command);
+    }
+
     // Use the version of setLink that supports expire names
     if (!expireName.isEmpty()) {
-        mLinkId = client.setLink(hrefs, hints, expireName);
+        mLinkId = client.setLink(actions, hints, expireName);
     } else {
-        mLinkId = client.setLink(hrefs, hints);
+        mLinkId = client.setLink(actions, hints);
     }
 
     // Only set link mode if a link was actually created
@@ -149,12 +155,21 @@ void TMxpSendTagHandler::resetCurrentTagContent(TMxpClient& client)
     client.setLinkMode(false);
 }
 
+QString TMxpSendTagHandler::actionFor(const QString& command) const
+{
+    return qsl("%1(%2)").arg(mCommand, LuaLiteral::quote(command));
+}
+
 void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
 {
     QStringList *hrefs, *hints;
     if (client.getLink(mLinkId, &hrefs, &hints)) {
+        // The wrapped text goes into each command before it is quoted, so text
+        // written to close the Lua string stays inside it
         if (hrefs != nullptr) {
-            hrefs->replaceInStrings(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
+            for (int i = 0, total = qMin(hrefs->size(), mHrefs.size()); i < total; ++i) {
+                (*hrefs)[i] = actionFor(QString(mHrefs.at(i)).replace(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive));
+            }
         }
 
         if (hints != nullptr) {
