@@ -1356,6 +1356,37 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(getRoomExits(far)["west"])
     end)
 
+    it("connectExitStub given only up takes the room straight above that faces back", function()
+      local area = addAreaName("MapperSpecStubUpArea")
+      local rooms = {}
+      finally(function()
+        for _, id in ipairs(rooms) do deleteRoom(id) end
+        deleteArea(area)
+      end)
+      local function placed(x, z)
+        local id = createRoomID(); addRoom(id); setRoomArea(id, area)
+        setRoomCoordinates(id, x, 0, z)
+        rooms[#rooms + 1] = id
+        setExitStub(id, "down", true)
+        return id
+      end
+      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+      setRoomCoordinates(from, 0, 0, 0)
+      rooms[#rooms + 1] = from
+      setExitStub(from, "up", true)
+      -- a room below faces back but is the wrong way, one a level up is off
+      -- to the side, and the one to take is further up but directly above
+      local below = placed(0, -1)
+      local aside = placed(1, 1)
+      local above = placed(0, 3)
+
+      assert.is_true(connectExitStub(from, "up"))
+      assert.are.equal(above, getRoomExits(from)["up"])
+      assert.are.equal(from, getRoomExits(above)["down"])
+      assert.is_nil(getRoomExits(below)["down"])
+      assert.is_nil(getRoomExits(aside)["down"])
+    end)
+
     it("connectExitStub given only a direction reports when nothing faces back", function()
       local area = addAreaName("MapperSpecStubLonelyArea")
       local from = createRoomID(); addRoom(from); setRoomArea(from, area)
@@ -2790,6 +2821,12 @@ describe("Tests the open and closed states of the map widget", function()
     openMapWidget()
   end)
 
+  it("refuses a docking area it does not know, naming the ones it does", function()
+    local ok, message = openMapWidget("middle")
+    assert.is_nil(ok)
+    assert.are.equal([[docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating]], message)
+  end)
+
   -- companion guard rather than a guard for the bug: closeMapWidget() reported
   -- "already closed" before this was fixed too. It is here so that a fix which
   -- stopped distinguishing the two calls would be caught.
@@ -3803,6 +3840,19 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({10, 20, 30, 255}, getCustomEnvColorTable()[501])
     end)
 
+    it("puts the player's room back", function()
+      buildMap()
+      assert.is_true(centerview(roomB))
+      assert.is_true(saveJsonMap(jsonPath))
+      deleteMap()
+      -- so only the import can put the player back there
+      assert.are_not.equal(roomB, getPlayerRoom())
+
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.equal(roomB, getPlayerRoom())
+    end)
+
     it("puts a symbol font scaling below one back, rather than rounding it away", function()
       deleteMap()
       local area = addAreaName("MapperSpecJsonScalingArea")
@@ -4124,6 +4174,23 @@ describe("Tests saveJsonMap and loadJsonMap", function()
                        getRoomUserData(roomA, "audit.removed_valid_but_missing_special_exit.squeeze through"))
     end)
 
+    it("does not leave the lock of a special exit it removes behind", function()
+      buildMap()
+      addSpecialExit(roomA, roomB, "crawl under")
+      assert.is_true(lockSpecialExit(roomA, roomB, "squeeze through", true))
+      -- the control: a locked special exit that stays
+      assert.is_true(lockSpecialExit(roomA, roomB, "crawl under", true))
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "squeeze through").exitId = missingRoomId
+      end)
+
+      assert.is_nil(getSpecialExitsSwap(roomA)["squeeze through"])
+      assert.is_true(hasSpecialExitLock(roomA, roomB, "crawl under"))
+      -- a new exit that reuses the command starts out unlocked
+      assert.is_true(addSpecialExit(roomA, roomB, "squeeze through"))
+      assert.is_false(hasSpecialExitLock(roomA, roomB, "squeeze through"))
+    end)
+
     it("rebuilds an area whose name is empty in the file around the rooms that claim it", function()
       -- driving this path leaks the rejected TArea, which turns the leak
       -- detection half of the Linux CI job red (#10396)
@@ -4141,6 +4208,67 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       -- is merely absent the audit never runs and leaves no note behind
       assert.are.equal("", getRoomUserData(roomA, "audit.removed_valid_but_missing_special_exit.squeeze through"))
       assert.are.equal(roomB, getRoomExits(roomA)["east"])
+    end)
+
+    it("drops a normal exit whose target id is below one before the audit sees it", function()
+      buildMap()
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "east").exitId = 0
+      end)
+
+      assert.is_nil(getRoomExits(roomA)["east"])
+      -- unlike an exit to a room that is merely absent, the reader refuses
+      -- this one outright, so no stub is made and no note is left behind
+      assert.are.same({1}, getExitStubs1(roomA))
+      assert.are.equal("", getRoomUserData(roomA, "audit.made_stub_of_invalid_exit.4"))
+      assert.are.equal(roomB, getRoomExits(roomA)["west"])
+    end)
+
+    it("reads a custom line with no style or arrow as a plain solid line", function()
+      buildMap()
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "east").customLine = {
+          coordinates = {{1.5, 2.5}},
+          color24RGB = {7, 8, 9}
+        }
+      end)
+
+      local line = getCustomLines1(roomA)["e"]
+      assert.are.equal("solid line", line.attributes.style)
+      assert.is_false(line.attributes.arrow)
+      assert.are.same({7, 8, 9}, line.attributes.color)
+      assert.are.same({1.5, 2.5}, {line.points[1][1], line.points[1][2]})
+
+      -- getCustomLines1() answers "solid line" and false for a line with no
+      -- style or arrow stored at all, which the 2D map would draw with no pen,
+      -- so look for the stored values where format 19 writes them: the arrow
+      -- (a zero byte) just before the colour map, and the style as a string
+      local function int32(value)
+        return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256,
+                           math.floor(value / 256) % 256, value % 256)
+      end
+      local function qstring(text)
+        return int32(#text * 2) .. text:gsub(".", "\0%0")
+      end
+      local function occurrences(data, wanted)
+        local count, position = 0, 1
+        while true do
+          local first, last = data:find(wanted, position, true)
+          if not first then
+            return count
+          end
+          count, position = count + 1, last + 1
+        end
+      end
+      local binaryPath = getMudletHomeDir() .. "/map/mapper_spec_line_v19.dat"
+      finally(function() os.remove(binaryPath) end)
+      assert.is_true(saveMap(binaryPath, 19))
+      local file = assert(io.open(binaryPath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      -- older formats upper-case the normal exit keys
+      assert.are.equal(1, occurrences(data, qstring("E") .. "\0" .. int32(1) .. qstring("E") .. int32(3) .. int32(7) .. int32(8) .. int32(9)))
+      assert.are.equal(1, occurrences(data, qstring("E") .. qstring("solid line")))
     end)
 
     it("drops a stub that stands in the same direction as a real exit", function()
@@ -4171,6 +4299,32 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       -- stored as DIR_OTHER
       assert.are.same({1}, getExitStubs1(roomA))
       assert.are.equal(roomB, getSpecialExitsSwap(roomA)["squeeze through"])
+    end)
+
+    it("drops a door of a type it does not know and keeps the exit", function()
+      buildMap()
+      assert.is_true(addSpecialExit(roomA, roomB, "crawl under"))
+      reimportWith(function(document)
+        local room = findRoom(document, roomA)
+        -- a normal exit, a special exit and a stub each read their door
+        -- through the same code
+        findExit(room, "east").door = "ajar"
+        findExit(room, "squeeze through").door = "ajar"
+        room.stubExits[1].door = "ajar"
+        -- the controls, read from the same file
+        findExit(room, "west").door = "closed"
+        findExit(room, "crawl under").door = "open"
+      end)
+
+      assert.are.equal(roomB, getRoomExits(roomA)["east"])
+      assert.are.equal(roomB, getSpecialExitsSwap(roomA)["squeeze through"])
+      assert.are.same({1}, getExitStubs1(roomA))
+      local doors = getDoors(roomA)
+      assert.is_nil(doors["e"])
+      assert.is_nil(doors["squeeze through"])
+      assert.is_nil(doors["n"])
+      assert.are.equal(2, doors["w"])
+      assert.are.equal(1, doors["crawl under"])
     end)
 
     it("keeps a door and a lock that a stub exit carries", function()

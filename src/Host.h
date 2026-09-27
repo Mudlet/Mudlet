@@ -293,6 +293,8 @@ public:
     void setHostID(int id) { mHostID = id; }
 
     TLuaInterpreter* getLuaInterpreter() { return &mLuaInterpreter; }
+    void setLazyCaptureGlobals(const bool state) { mLuaInterpreter.setLazyCaptureGlobals(state); }
+    bool lazyCaptureGlobals() const { return mLuaInterpreter.lazyCaptureGlobals(); }
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);

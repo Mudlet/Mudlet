@@ -248,7 +248,7 @@ uint32_t TriggerMatchPool::runChunks(const int slot)
         int searches = 0;
         for (int i = begin; i < end; ++i) {
             TTrigger* trigger = mJob.triggers[i];
-            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, scratch, searches));
+            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, mJob.dropsText, scratch, searches));
         }
         mDone.fetch_add(packDone(searches), std::memory_order_release);
     }
@@ -285,7 +285,7 @@ void TriggerMatchPool::workerLoop(const int slot)
 }
 
 bool TriggerMatchPool::prescan(
-        TTrigger* const* triggers, const int count, const quint32 passId, const char* subject, const int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams)
+        TTrigger* const* triggers, const int count, const quint32 passId, const char* subject, const int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams, const bool dropsText)
 {
     if (mThreads.empty() || count <= 0) {
         return false;
@@ -303,6 +303,7 @@ bool TriggerMatchPool::prescan(
     mJob.subjectLength = subjectLength;
     mJob.haystack = &haystack;
     mJob.lineBigrams = &lineBigrams;
+    mJob.dropsText = dropsText;
 
     mDone.store(0, std::memory_order_relaxed);
     publish(chunkCount);

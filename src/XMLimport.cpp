@@ -1049,6 +1049,8 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
+    // On unless saved off, so a profile from before the setting existed gets it
+    pHost->setLazyCaptureGlobals(attributes().value(qsl("lazyCaptureGlobals")) != qsl("no"));
 
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);

@@ -762,8 +762,17 @@ void TRoom::clearSpecialExits()
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
         customLinesArrow.remove(itSpecialExit.key());
+        const QString exitName = itSpecialExit.key();
         // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
+        // A special exit named like a normal one ("n", "up"...) shares that
+        // exit's weight, which has to stay while the normal exit does:
+        if (!hasExitOrSpecialExit(exitName)) {
+            exitWeights.remove(exitName);
+        }
+    }
+    if (TArea* pA = mpRoomDB->getArea(area)) {
+        pA->determineAreaExitsOfRoom(id);
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
@@ -788,8 +797,14 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
         customLinesArrow.remove(itSpecialExit.key());
+        const QString exitName = itSpecialExit.key();
         // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
+        // A special exit named like a normal one ("n", "up"...) shares that
+        // exit's weight, which has to stay while the normal exit does:
+        if (!hasExitOrSpecialExit(exitName)) {
+            exitWeights.remove(exitName);
+        }
     }
 
     if (exitFound) {
@@ -1344,6 +1359,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 continue;
             }
 
+            // Unlike a normal exit, a special exit is only there when it leads
+            // somewhere, so one to -1 does follow that room to its new id:
             if (roomRemapping.contains(exitRoomId)) {
                 const QString auditKey = qsl("audit.remapped_special_exit.%1").arg(exitName);
                 userData.insert(auditKey, QString::number(exitRoomId));
@@ -1396,6 +1413,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                     // TODO: Add additional warnings if we ARE deleting any data in following
                     exitWeights.remove(exitName);
                     doors.remove(exitName);
+                    mSpecialExitLocks.remove(exitName);
                     customLines.remove(exitName);
                     customLinesColor.remove(exitName);
                     customLinesStyle.remove(exitName);
@@ -1436,6 +1454,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 // We cannot have a door or anything else on a non-existent special exit
                 doors.remove(exitName);
                 exitWeights.remove(exitName);
+                mSpecialExitLocks.remove(exitName);
                 customLines.remove(exitName);
                 customLinesColor.remove(exitName);
                 customLinesStyle.remove(exitName);
@@ -1618,7 +1637,9 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       QMap<QString, bool>& customLinesArrowPool,
                       const QHash<int, int> roomRemapping)
 {
-    if (roomRemapping.contains(exitRoomId)) {
+    // -1 is also what every absent exit holds, so a room renumbered from that
+    // id cannot take the exits that led to it without taking all the others:
+    if (exitRoomId != -1 && roomRemapping.contains(exitRoomId)) {
         const QString auditKey = qsl("audit.remapped_exit.%1").arg(dirCode);
         userData.insert(auditKey, QString::number(exitRoomId));
         //: %1 is the room ID, %2 is the exit direction, %3 is the old destination room ID, %4 is the new destination room ID
@@ -1864,9 +1885,10 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
 int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int areaId)
 {
     const QJsonObject roomObj{array.at(index).toObject()};
-    // This is not needed to be stored into id as that is done when the room is
-    // added to the TRoomDB via a TRoomDB::addRoom(...) call:
     const int roomId = roomObj.value(QLatin1String("id")).toInt();
+    // TRoomDB::addRoom(...) sets this again once the room is read, but the
+    // warnings about bad exit data read before then have to name the room:
+    id = roomId;
     name = roomObj.value(QLatin1String("name")).toString();
     area = areaId;
     readJsonUserData(roomObj.value(QLatin1String("userData")).toObject());
@@ -2218,11 +2240,12 @@ void TRoom::readJsonDoor(const QJsonObject& obj, const QString& dir)
         doors.insert(dir, 3);
         return;
     }
-    if (Q_UNLIKELY(doorString == QLatin1String("none"))) {
-        return;
+    if (doorString != QLatin1String("none")) {
+        // The file may have been edited by hand or written by another tool,
+        // so an unknown type is dropped rather than trusted to never occur:
+        qWarning().nospace().noquote() << "TRoom::readJsonDoor(...) WARNING - the door type: \"" << doorString << "\" on the exit: \"" << dir << "\" of room id: " << id
+                                       << " is not understood, ignoring it.";
     }
-    qCritical().nospace().noquote() << "TRoom::readJsonDoor(...) CRITICAL - a type of door: \"" << dir << "\" is not understood!";
-    Q_UNREACHABLE(); // No other string expected
 }
 
 // This tacks on extra details onto the calling exitObj if there IS a custom line:

@@ -230,8 +230,8 @@ private slots:
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // The exemption that lets a legacy profile finish loading is the only way
@@ -379,12 +379,7 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 
