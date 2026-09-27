@@ -26,8 +26,6 @@
 
 #include "Host.h"
 #include "TAction.h"
-#include "TEasyButtonBar.h"
-#include "TToolBar.h"
 #include "Tree.h"
 #include "mudlet.h"
 #include "TMainConsole.h"
@@ -213,12 +211,8 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
         pOldParent->popChild(pChild);
         pOldParent->setDataChanged();
 
-        // clear references to old parent toolbars and buttonbars.
-        if (pOldParent->mpToolBar == pChild->mpToolBar) {
-            pChild->mpToolBar = nullptr;
-        }
-        if (pOldParent->mpEasyButtonBar == pChild->mpEasyButtonBar) {
-            pChild->mpEasyButtonBar = nullptr;
+        if (mpHost->mpConsole) {
+            mpHost->mpConsole->releaseParentActionBars(pOldParent, pChild);
         }
     }
     if (!pOldParent) {
@@ -306,7 +300,7 @@ void ActionUnit::unregisterAction(TAction* pT)
         updateAllToolbars();
         return;
     }
-    if (mpHost->mpConsole && pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
+    if (mpHost->mpConsole && mpHost->mpConsole->hasEasyButtonBar(pT) && pT->mPackageName.isEmpty()) {
         mpHost->mpConsole->detachActionBars(pT);
     }
     removeAction(pT);
@@ -443,6 +437,6 @@ void ActionUnit::updateAllToolbars()
     if (!mpHost->mpConsole) {
         return;
     }
-    mpHost->mpConsole->regenerateToolBars(mActionRootNodeList, mToolBarList);
-    mpHost->mpConsole->regenerateEasyButtonBars(mActionRootNodeList, mEasyButtonBarList);
+    mpHost->mpConsole->regenerateToolBars(mActionRootNodeList);
+    mpHost->mpConsole->regenerateEasyButtonBars(mActionRootNodeList);
 }

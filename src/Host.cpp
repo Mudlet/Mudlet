@@ -488,8 +488,8 @@ Host::~Host()
 
     emit signal_destroyProfileDialogs();
 
-    for (const auto& pToolBar : mActionUnit.getToolBarList()) {
-        delete pToolBar.data();
+    if (mpConsole) {
+        mpConsole->deleteActionToolBars();
     }
 
     // This needs to be cleared here while the Host object is still valid,
@@ -565,7 +565,6 @@ void Host::closeChildren()
         qDebug().nospace().noquote() << "Host::closeChildren() INFO - dropping the profile save that a package change owed \"" << getName() << "\": the close saves the profile itself.";
         mDeferredSaveTimer.stop();
     }
-    const auto hostToolBarMap = getActionUnit()->getToolBarList();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     mTelnet.terminateConnection();
 
@@ -578,11 +577,8 @@ void Host::closeChildren()
         mpConsole->closeSubConsole(consoleName);
     }
 
-    for (TToolBar* pTB : hostToolBarMap) {
-        if (pTB) {
-            pTB->setAttribute(Qt::WA_DeleteOnClose);
-            pTB->deleteLater();
-        }
+    if (mpConsole) {
+        mpConsole->deleteActionToolBarsLater();
     }
 }
 

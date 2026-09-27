@@ -139,7 +139,7 @@ private:
         createToolBarAction(pHost, qsl("HostChildTeardown toolbar"));
         createToolBarAction(pHost, qsl("HostChildTeardown second toolbar"));
         pHost->getActionUnit()->updateAllToolbars();
-        for (const auto& pToolBar : pHost->getActionUnit()->getToolBarList()) {
+        for (const auto& pToolBar : pHost->mpConsole->actionToolBars()) {
             windows.toolBars.append(pToolBar);
         }
         return windows;

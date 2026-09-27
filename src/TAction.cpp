@@ -28,9 +28,8 @@
 #include "Host.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
-#include "TEasyButtonBar.h"
 #include "TLuaInterpreter.h"
-#include "TToolBar.h"
+#include "TMainConsole.h"
 #include "utils.h"
 
 #include <QColor>
@@ -67,16 +66,7 @@ TAction::~TAction()
         }
     }
 
-    // Ahead of hiding the bars, as each child unregistering itself regenerates the toolbars
     deleteChildren();
-
-    if (mpToolBar) {
-        mpToolBar->hide();
-    }
-
-    if (mpEasyButtonBar) {
-        mpEasyButtonBar->hide();
-    }
 }
 
 bool TAction::registerAction()
@@ -194,10 +184,8 @@ void TAction::setName(const QString& name)
     if (name != mName) {
         setDataChanged();
         mName = name;
-        if (mpToolBar) {
-            // Need to revise the objectName and displayed name in the titlebar
-            // if floating and the main window context menu:
-            mpToolBar->setName(name);
+        if (mpHost && mpHost->mpConsole) {
+            mpHost->mpConsole->renameActionToolBar(this, name);
         }
     }
 }
