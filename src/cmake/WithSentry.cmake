@@ -76,7 +76,9 @@ add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
 # where the build type asks for it. Every other build - pull requests and pushes
 # to development - gets line tables only, which still gives sanitizer and crash
 # backtraces their file:line frames at a fraction of the compile, link and
-# ccache cost.
+# ccache cost. The price is that builds which do upload - nightly PTBs and
+# tagged releases - no longer share mudlet_core's objects with the development
+# pushes whose ccache they start from, so they compile it afresh.
 if(SENTRY_SEND_DEBUG OR CMAKE_BUILD_TYPE MATCHES "^(Debug|RelWithDebInfo)$")
   set(SENTRY_DEBUG_INFO_FLAG -g)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
