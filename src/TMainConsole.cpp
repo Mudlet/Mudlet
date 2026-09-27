@@ -1340,6 +1340,13 @@ void TMainConsole::markWindowDirty(const QString& name, const int firstLine, con
     }
 }
 
+void TMainConsole::markWindowDirty(const TConsoleModel& model, const int firstLine, const int lastLine)
+{
+    if (auto pC = model.buffer.console()) {
+        pC->markLinesDirty(firstLine, lastLine);
+    }
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {

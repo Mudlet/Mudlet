@@ -354,6 +354,8 @@ public:
             mpConsole = nullptr;
         }
     }
+    // For the view side only: the core must not reach a widget through its model.
+    TConsole* console() const { return mpConsole.data(); }
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);

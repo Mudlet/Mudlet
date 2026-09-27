@@ -2328,10 +2328,10 @@ TConsoleModel* Host::consoleModelNamed(const QString& name)
     return mWindowRegistry.subConsoleModel(name);
 }
 
-void Host::markSelectionDirty(const QString& name, const TConsoleModel& model)
+void Host::markSelectionDirty(const TConsoleModel& model)
 {
     if (mpConsole) {
-        mpConsole->markWindowDirty(name, std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
+        mpConsole->markWindowDirty(model, std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
     }
 }
 
@@ -2342,7 +2342,7 @@ bool Host::setWindowFgColor(const QString& name, const QColor& color)
         return false;
     }
     if (pModel->setSelectionFgColor(color)) {
-        markSelectionDirty(name, *pModel);
+        markSelectionDirty(*pModel);
     }
     return true;
 }
@@ -2354,7 +2354,7 @@ bool Host::setWindowBgColor(const QString& name, const QColor& color)
         return false;
     }
     if (pModel->setSelectionBgColor(color)) {
-        markSelectionDirty(name, *pModel);
+        markSelectionDirty(*pModel);
     }
     return true;
 }
@@ -2366,7 +2366,7 @@ bool Host::setWindowDisplayAttributes(const QString& name, const TChar::Attribut
         return false;
     }
     if (pModel->setSelectionDisplayAttributes(attributes, enabled)) {
-        markSelectionDirty(name, *pModel);
+        markSelectionDirty(*pModel);
     }
     return true;
 }

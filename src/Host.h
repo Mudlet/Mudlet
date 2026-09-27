@@ -1081,8 +1081,8 @@ private slots:
     void slot_saveProfileAfterPackageChange();
 
 private:
-    // Repaints the lines holding the named console's selection, when it is on screen.
-    void markSelectionDirty(const QString& name, const TConsoleModel& model);
+    // Repaints the lines holding the console's selection, when it is on screen.
+    void markSelectionDirty(const TConsoleModel& model);
     // Stores a boolean setting and tells scripts about it.
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
