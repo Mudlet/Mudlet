@@ -598,7 +598,6 @@ void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
         return;
     }
     frame->shown = TMxpFrame::Shown::Window;
-    frame->geometry = shownGeometry(QRect(0, 0, frameWidth, frameHeight));
 }
 
 void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
@@ -781,8 +780,19 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
 {
     switch (frame.shown) {
     case TMxpFrame::Shown::Placed:
-    case TMxpFrame::Shown::Window:
         return frame.geometry;
+    case TMxpFrame::Shown::Window: {
+        // Asked each time, as the player sizes the window
+        const auto* widgets = frameWidgets();
+        if (!widgets) {
+            return std::nullopt;
+        }
+        const std::optional<QSize> size = widgets->windowAreaSize(frame.name);
+        if (!size) {
+            return std::nullopt;
+        }
+        return QRect(QPoint(0, 0), *size);
+    }
     case TMxpFrame::Shown::Tab: {
         // Asked each time, as the header's frame is moved by relayouts
         const auto* widgets = frameWidgets();
@@ -801,7 +811,7 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
     return std::nullopt;
 }
 
-TMxpFrameWidgets* TMxpFrameManager::frameWidgets() const
+TMxpFrameWidgets* TMxpFrameManager::frameWidgets()
 {
     if (!mpHost || !mpHost->mpConsole) {
         return nullptr;

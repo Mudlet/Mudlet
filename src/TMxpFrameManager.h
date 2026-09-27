@@ -75,10 +75,9 @@ struct TMxpFrame {
     };
     Shown shown = Shown::Not;
     QString hostFrame;
-    // What frames nested in this one are placed against, in the coordinates
-    // of the widget they are shown on: where a Placed frame was last put, or
-    // the inside of a Window frame. A Tab's inside is whatever its header
-    // gives it at the time.
+    // Where a Placed frame was last put, which frames nested in it are placed
+    // against. A Tab's or a Window's inside is whatever its header or the
+    // player gives it at the time.
     QRect geometry;
     
     // Hierarchy tracking (non-owning references - see ownership model above)

@@ -50,6 +50,9 @@ public:
     // The space a tab added to parentName's header has, or nothing when that
     // frame has no header to add one to
     std::optional<QSize> tabAreaSize(const QString& parentName) const;
+    // The inside of name's EXTERNAL window as the player has sized it, or
+    // nothing when name is not shown in a window of its own
+    std::optional<QSize> windowAreaSize(const QString& name) const;
     void createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select);
     // False, leaving everything alone, when name is not a tab in parentName's header
     bool removeFromParentTabs(const QString& name, const QString& parentName);

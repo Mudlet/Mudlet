@@ -208,6 +208,15 @@ std::optional<QSize> TMxpFrameWidgets::tabAreaSize(const QString& parentName) co
     return tabWidget->size();
 }
 
+std::optional<QSize> TMxpFrameWidgets::windowAreaSize(const QString& name) const
+{
+    const QWidget* window = frameWidget(name);
+    if (!window || !window->isWindow()) {
+        return std::nullopt;
+    }
+    return window->size();
+}
+
 void TMxpFrameWidgets::createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select)
 {
     QTabWidget* parentTabWidget = frameTabs(parentName);
