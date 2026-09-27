@@ -107,7 +107,14 @@ describe("Tests that the scroll bar and scrolling functions find their console b
   describe("with a sub-console's name", function()
     local kinds = {
       {"mini console", function(name) return createMiniConsole(name, 0, 0, 300, 100) end, deleteMiniConsole},
-      {"user window", function(name) return openUserWindow(name, false) end, deleteMiniConsole},
+      -- once a docked user window has been deleted, every one docked after it
+      -- opens with no height and never scrolls, so this one is floated at a
+      -- fixed size, and only closed so it cannot do the same to later specs
+      {"user window", function(name)
+        local opened = openUserWindow(name, false)
+        resizeWindow(name, 300, 400)
+        return opened
+      end, closeUserWindow},
       -- a buffer cannot be deleted, so it is left behind under its unique name
       {"buffer", function(name) createBuffer(name) return true end, function() end},
     }
