@@ -2344,6 +2344,18 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QCOMPARE(host->openWindow(name, false, true, qsl("b")), opened);
         QCOMPARE(host->openWindow(name, true, true, QString()), opened);
         QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::BottomDockWidgetArea);
+
+        // A miniconsole inside a user window is destroyed with it, later and
+        // without being deregistered, so its name is only free once that has run
+        const QString childName = qsl("openWindowChildConsole");
+        QVERIFY2(host->createMiniConsole(name, childName, 0, 0, 50, 50).first, "The miniconsole inside the user window was not created.");
+        const QPointer<TConsole> child = host->mpConsole->subConsoleWidget(childName);
+        QVERIFY2(host->mpConsole->deleteMiniConsole(name).first, "The user window was not deleted.");
+        QCOMPARE(host->openWindow(childName, false, true, QString()), std::make_pair(false, qsl("userwindow '%1' already exists").arg(childName)));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(child.isNull(), "The miniconsole inside the deleted user window was never destroyed.");
+        QCOMPARE(host->openWindow(childName, false, true, QString()), opened);
+        QCOMPARE(host->mpConsole->subConsoleWidget(childName)->getType(), TConsole::UserWindow);
     }
 
     // mudlet::slot_tabMoved() pairs each tab with its console by the console's
