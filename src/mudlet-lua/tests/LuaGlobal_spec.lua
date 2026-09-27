@@ -87,8 +87,9 @@ describe("Tests LuaGlobal.lua functions", function()
           removeTree(path .. "/" .. name)
         end
         lfs.rmdir(path)
-      else
-        os.remove(path)
+      elseif not os.remove(path) then
+        -- Windows reports a symlinked folder as a link, but only rmdir removes it
+        lfs.rmdir(path)
       end
     end
 
