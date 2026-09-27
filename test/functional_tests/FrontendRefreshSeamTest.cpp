@@ -459,6 +459,38 @@ private slots:
         QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyFirstLine == selectedLine, "restyling a mini console redrew it only while the main console had a view");
     }
 
+    void test_writingIntoANamedConsolesLineRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('seamWrite', 0, 0, 300, 200)\n"
+                                                                        "echo('seamWrite', 'first\\nsecond\\nthird\\n')\n"
+                                                                        "moveCursor('seamWrite', 2, 1)\n"
+                                                                        "selectString('seamWrite', 'second', 1)\n")),
+                 "the mini console could not be set up");
+        TConsole* mini = console->subConsoleWidget(qsl("seamWrite"));
+        QVERIFY(mini);
+        const int line = mini->model().mUserCursor.y();
+        QVERIFY2(line > 0 && mini->model().P_begin.y() == line, "the cursor and selection are not both below the first line, so a redraw of line 0 would pass");
+
+        const QStringList writes{qsl("setLink('seamWrite', 'cmd', 'hint')"), qsl("insertText('seamWrite', 'X')"), qsl("insertLink('seamWrite', 'Y', 'cmd', 'hint')")};
+        for (const QString& write : writes) {
+            for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane, console->mUpperPane, console->mLowerPane}) {
+                pane->mDirtyFirstLine = -1;
+                pane->mDirtyLastLine = -1;
+            }
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(write), qPrintable(write));
+            QVERIFY2(mini->mUpperPane->mDirtyFirstLine == line && mini->mUpperPane->mDirtyLastLine == line,
+                     qPrintable(qsl("%1 did not mark the line it changed for the mini console's upper pane to redraw").arg(write)));
+            QVERIFY2(mini->mLowerPane->mDirtyFirstLine == line && mini->mLowerPane->mDirtyLastLine == line,
+                     qPrintable(qsl("%1 did not mark the line it changed for the mini console's lower pane to redraw").arg(write)));
+            QVERIFY2(console->mUpperPane->mDirtyFirstLine < 0 && console->mLowerPane->mDirtyFirstLine < 0, qPrintable(qsl("%1 redrew the main console, which it did not change").arg(write)));
+        }
+        QCOMPARE(mini->model().buffer.line(line), qsl("seYXcond"));
+    }
+
 private:
     // Answers the link's index, or 0 when the link never landed.
     int feedSpoilerLink(Host* host, const QString& marker)
