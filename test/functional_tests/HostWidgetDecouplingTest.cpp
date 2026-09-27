@@ -32,6 +32,7 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "HostManager.h"
+#include "TTabBar.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "TelnetServerStub.h"
@@ -75,6 +76,7 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-Host-Widget-Decoupling";
+    const QString mSecondHostname = "Test-Host-Widget-Decoupling-Second";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QString mFirstAreaName = qsl("AAArea");
@@ -115,6 +117,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mSecondHostname);
     }
 
     // The dockable map widget used to be a QDockWidget member of Host; it now
@@ -499,6 +502,33 @@ private slots:
         QVERIFY(host->setProfileStyleSheet(styleSheet));
 
         QCOMPARE(mudlet::self()->menuBar()->styleSheet(), styleSheet);
+    }
+
+    // The main window's bars are shared by every profile, so only the active
+    // one may restyle them.
+    void test_onlyTheActiveProfileStyleSheetReachesTheMainWindow()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        Host* first = mudlet::self()->getActiveHost();
+        QVERIFY2(first, "No active host after starting the first profile.");
+        startProfile(mSecondHostname, mLocalhost, mPort);
+        Host* second = mudlet::self()->getActiveHost();
+        QVERIFY2(second && second != first, "Starting the second profile did not make it the active one.");
+        QMenuBar* menuBar = mudlet::self()->menuBar();
+
+        const QString firstStyleSheet = qsl("QMenuBar { color: #111111; }");
+        QVERIFY(first->setProfileStyleSheet(firstStyleSheet));
+        QVERIFY2(menuBar->styleSheet() != firstStyleSheet, "A profile that is not the active one restyled the main window.");
+
+        const QString secondStyleSheet = qsl("QMenuBar { color: #222222; }");
+        QVERIFY(second->setProfileStyleSheet(secondStyleSheet));
+        QCOMPARE(menuBar->styleSheet(), secondStyleSheet);
+
+        mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(first->getName()));
+        QCOMPARE(mudlet::self()->getActiveHost(), first);
+
+        QVERIFY(second->setProfileStyleSheet(qsl("QMenuBar { color: #333333; }")));
+        QCOMPARE(menuBar->styleSheet(), firstStyleSheet);
     }
 
     // The central debug console follows the display font of a profile that
@@ -886,6 +916,7 @@ private slots:
         mpServer = nullptr;
         delete mudlet::self();
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mSecondHostname);
     }
 
     // Utility function to manually start a profile like a user would do via the
