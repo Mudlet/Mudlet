@@ -1518,6 +1518,18 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(hasExitLock(missingRoomId, "east"))
     end)
 
+    it("hasExitLock names the type of a direction it cannot use (#10670)", function()
+      local function expected(typeName)
+        return "hasExitLock: bad argument #2 type (direction as number or string expected, got " .. typeName .. "!)"
+      end
+      for _, bad in ipairs({ {}, true, print }) do
+        assert.has_error(function() hasExitLock(rSandA, bad) end, expected(type(bad)))
+      end
+      assert.has_error(function() hasExitLock(rSandA, nil) end, expected("nil"))
+      -- 0 is a number but no direction, so it is refused on the same path
+      assert.has_error(function() hasExitLock(rSandA, 0) end)
+    end)
+
     it("lockSpecialExit is read back by hasSpecialExitLock", function()
       assert.is_true(lockSpecialExit(rB2, 0, "enter gate", true))
       assert.is_true(hasSpecialExitLock(rB2, 0, "enter gate"))
