@@ -2163,6 +2163,12 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
     // Process the event like other TConsoles
     TConsole::resizeEvent(event);
 
+    // MXP frames are positioned by hand against the space the borders leave, so
+    // they have to be moved whenever the window or those borders change. The
+    // zero width a tab switch gives the console it hides moves none of them,
+    // but is still reported, as EXTERNAL frames are sized against it.
+    mpMxpFrameWidgets->scheduleSizeReport(event->size().width() != 0);
+
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();
 }

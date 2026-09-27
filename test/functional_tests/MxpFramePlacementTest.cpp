@@ -29,12 +29,14 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TMxpFrameManager.h"
 #include "TMxpFrameWidgets.h"
 #include "TPrintSink.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -57,7 +59,9 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
+    QPointer<Host> mpSecondHost;
     const QString mHostname = "MxpFramePlacement-Test-Host";
+    const QString mSecondHostname = "MxpFramePlacement-Test-Second";
     QString mPort;
     const QString mLocalhost = "localhost";
 
@@ -97,6 +101,33 @@ private:
 
     // border changes and window resizes reposition frames from a zero timer
     void settle() { QTest::qWait(50ms); }
+
+    void showTab(const QString& hostname) const
+    {
+        mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(hostname));
+        QTest::qWait(500ms);
+    }
+
+    // Loaded offline and only by the case that needs it. Reports rather than
+    // asserts, as a QVERIFY here would return from this helper and leave that
+    // case running on a profile that is not there.
+    bool ensureSecondProfile()
+    {
+        if (mpSecondHost) {
+            return true;
+        }
+        if (!QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletApp::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
+            || !MudletApp::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
+            return false;
+        }
+        runLua(qsl("loadProfile('%1', true)").arg(mSecondHostname));
+        for (int attempt = 0; attempt < 20 && mpSecondHost.isNull(); ++attempt) {
+            QTest::qWait(300ms);
+            mpSecondHost = HostManager::self()->getHost(mSecondHostname);
+        }
+        QTest::qWait(600ms);
+        return !mpSecondHost.isNull();
+    }
 
 private slots:
     void initTestCase()
@@ -690,6 +721,63 @@ private slots:
             QVERIFY2(!mpHost->mpConsole->subConsoleWidget(name), qPrintable(qsl("%1 should no longer be registered").arg(name)));
             QVERIFY2(!mpHost->windowRegistry().hasSubConsole(name), qPrintable(qsl("%1 should no longer be in the window registry").arg(name)));
         }
+    }
+
+    // A frame at LEFT/TOP takes no border, so nothing relayouts between it
+    // opening and a frame opening inside it: that one has to go by where the
+    // first was put when it opened.
+    void test_frameNestedInAnAbsolutelyPlacedOneSitsInsideIt()
+    {
+        QVERIFY(createFrame(qsl("outer"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("LEFT"), qsl("100")}, {qsl("TOP"), qsl("50")}}));
+        QCOMPARE(mpHost->borders(), QMargins());
+        const QRect outer = frameGeometry(qsl("outer"));
+        QCOMPARE(outer, QRect(area().topLeft() + QPoint(100, 50), QSize(300, 200)));
+
+        mpHost->mMxpFrameManager.setDestination(qsl("outer"), false, false);
+        QVERIFY(createFrame(qsl("nested"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+
+        QCOMPARE(frameGeometry(qsl("nested")), QRect(outer.topLeft(), QSize(outer.width(), 40)));
+    }
+
+    void test_nestedFrameFollowsItsParentAcrossAResize()
+    {
+        QVERIFY(createFrame(qsl("outer"), qsl("right"), qsl("300px"), qsl("100%")));
+        mpHost->mMxpFrameManager.setDestination(qsl("outer"), false, false);
+        QVERIFY(createFrame(qsl("nested"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        const QRect outerBefore = frameGeometry(qsl("outer"));
+
+        mudlet::self()->resize(1000, 700);
+        settle();
+
+        const QRect outer = frameGeometry(qsl("outer"));
+        QVERIFY2(outer.x() != outerBefore.x(), "the resize did not move the parent");
+        QCOMPARE(frameGeometry(qsl("nested")), QRect(outer.topLeft(), QSize(outer.width(), 40)));
+    }
+
+    // A profile waiting in a background tab has no size of its own to measure,
+    // so a frame the game opens meanwhile goes in the window the profile will
+    // come back to, not the one it last had on screen
+    void test_frameOpenedInABackgroundTabIsPlacedInTheWindowItComesBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        const auto showThisProfile = qScopeGuard([this]() {
+            showTab(mHostname);
+        });
+        showTab(mSecondHostname);
+        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+
+        mudlet::self()->resize(1000, 700);
+        settle();
+        QVERIFY(createFrame(qsl("status"), qsl("right"), qsl("200px"), qsl("100%")));
+
+        const QRect whileHidden = frameGeometry(qsl("status"));
+        QCOMPARE(whileHidden.x(), area().right() + 1 - 200);
+        QCOMPARE(whileHidden.height(), area().height());
+
+        showTab(mHostname);
+        QCOMPARE(frameGeometry(qsl("status")), whileHidden);
     }
 
     // How the base UI reserves its space, so this is #9698 as reported. Declared

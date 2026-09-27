@@ -25,8 +25,16 @@
 
 #include <QDebug>
 #include <QFontMetrics>
-#include <QTimer>
 #include <optional>
+
+namespace {
+// What the view makes of a geometry: no widget is smaller than nothing, and a
+// frame nested in this one is placed against the size it really has
+QRect shownGeometry(const QRect& geometry)
+{
+    return {geometry.topLeft(), geometry.size().expandedTo(QSize(0, 0))};
+}
+} // namespace
 
 TMxpFrame::~TMxpFrame()
 {
@@ -309,18 +317,18 @@ QStringList TMxpFrameManager::getFrameNames() const
     return mFrames.keys();
 }
 
+void TMxpFrameManager::setMainConsoleSize(const QSize& mainWindowSize, const QSize& consoleSize)
+{
+    mMainWindowSize = mainWindowSize;
+    mMainConsoleSize = consoleSize;
+}
+
 QRect TMxpFrameManager::availableFrameArea() const
 {
-    if (!mpHost || mpHost->mpConsole.isNull()) {
-        return {};
-    }
-
-    // getMainWindowSize() rather than mpMainFrame's own geometry, which
-    // TConsole::resizeEvent() sets to the full console size until the layout
-    // corrects it. It is also the size Lua scripts lay themselves out against,
+    // The main window size is the one Lua scripts lay themselves out against,
     // so taking the user borders off it keeps frames out of the space a package
     // such as the base UI has reserved with setBorderRight() and friends.
-    QRect area = QRect(QPoint(0, 0), mpHost->mpConsole->getMainWindowSize()).marginsRemoved(mpHost->userBorders());
+    QRect area = QRect(QPoint(0, 0), mMainWindowSize).marginsRemoved(mpHost->userBorders());
     if (area.width() < 0) {
         area.setWidth(0);
     }
@@ -342,7 +350,10 @@ QRect TMxpFrameManager::calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* pare
     int containerY = 0;
     QRect area;
     std::optional<QRect> parentArea;
-    if (parentFrame) {
+    if (parentFrame && parentFrame->onMainWindow) {
+        parentArea = parentFrame->geometry;
+    } else if (parentFrame) {
+        // only the view knows where it put a tab or an EXTERNAL frame
         if (const auto* widgets = frameWidgets()) {
             parentArea = widgets->placementArea(parentFrame->name);
         }
@@ -551,6 +562,10 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         parentFrame->childFrames.append(frame);
     }
 
+    // Before the view builds it, as building it runs the event loop, and a
+    // relayout from there has to find this frame already on the main window
+    frame->onMainWindow = true;
+    frame->geometry = shownGeometry(geometry);
     widgets->createInternalFrame(frame->name, frame->title, geometry, showHeader, frame->scrolling);
 }
 
@@ -563,9 +578,8 @@ void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
     }
 
     // Calculate size
-    QSize mainSize = widgets->mainConsoleSize();
-    QSize widthSize = calculateFrameSize(frame->width, mainSize, false);
-    QSize heightSize = calculateFrameSize(frame->height, mainSize, true);
+    QSize widthSize = calculateFrameSize(frame->width, mMainConsoleSize, false);
+    QSize heightSize = calculateFrameSize(frame->height, mMainConsoleSize, true);
     int frameWidth = widthSize.width();
     int frameHeight = heightSize.height();
 
@@ -714,24 +728,6 @@ void TMxpFrameManager::removeFrameFromHierarchy(TMxpFrame* frame)
     frame->childFrames.clear();
 }
 
-void TMxpFrameManager::scheduleRelayout()
-{
-    if (mRelayoutPending || mFrames.isEmpty()) {
-        return;
-    }
-
-    // Deferred so that the layout of the widgets frames are placed against has
-    // settled, and so that pushing new borders from here cannot re-enter the
-    // resize handling that asked for the relayout. The push at the end of a
-    // relayout does schedule one more pass, which then finds the same borders
-    // and stops there because Host::setBorders() ignores an unchanged value.
-    mRelayoutPending = true;
-    QTimer::singleShot(0, mpHost, [this]() {
-        mRelayoutPending = false;
-        relayoutFrames();
-    });
-}
-
 void TMxpFrameManager::relayoutFrames()
 {
     if (!mpHost) {
@@ -755,13 +751,13 @@ void TMxpFrameManager::relayoutFrames()
     }
 
     for (auto* frame : std::as_const(mFrameOrder)) {
-        // Skip a frame whose layout never produced a widget, one docked as a tab
-        // and one in a window of its own
-        if (!widgets->placedOnMainWindow(frame->name)) {
+        if (!frame->onMainWindow) {
             continue;
         }
 
-        widgets->setGeometry(frame->name, calculateFrameGeometry(frame, frame->parentFrame));
+        const QRect geometry = calculateFrameGeometry(frame, frame->parentFrame);
+        frame->geometry = shownGeometry(geometry);
+        widgets->setGeometry(frame->name, geometry);
     }
 
     mpHost->setMxpBorders(mMxpBorders);

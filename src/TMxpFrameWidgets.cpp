@@ -28,7 +28,9 @@
 #include <QFrame>
 #include <QSizePolicy>
 #include <QTabWidget>
+#include <QTimer>
 #include <QVBoxLayout>
+#include <utility>
 
 TMxpFrameWidgets::TMxpFrameWidgets(TMainConsole* pMainConsole)
 : mpMainConsole(pMainConsole)
@@ -298,14 +300,6 @@ std::optional<QRect> TMxpFrameWidgets::placementArea(const QString& name) const
     return QRect(widget->pos(), widget->size());
 }
 
-bool TMxpFrameWidgets::placedOnMainWindow(const QString& name) const
-{
-    // An external frame keeps mpMainFrame as its parent even after Qt::Window
-    // is set on it, so isWindow() rather than the parent is what tells them apart
-    const QWidget* widget = frameWidget(name);
-    return widget && !widget->isWindow() && widget->parentWidget() == mpMainConsole->mpMainFrame;
-}
-
 void TMxpFrameWidgets::setGeometry(const QString& name, const QRect& geometry)
 {
     if (QWidget* widget = frameWidget(name)) {
@@ -313,9 +307,40 @@ void TMxpFrameWidgets::setGeometry(const QString& name, const QRect& geometry)
     }
 }
 
-QSize TMxpFrameWidgets::mainConsoleSize() const
+void TMxpFrameWidgets::scheduleSizeReport(bool relayout)
 {
-    return mpMainConsole->size();
+    if (relayout && mpMainConsole->mpHost->mMxpFrameManager.frameCount() > 0) {
+        mRelayoutPending = true;
+    }
+    if (mSizeReportPending) {
+        return;
+    }
+
+    // Deferred so that the layout of the widgets the size is measured from has
+    // settled, and so that the borders a relayout pushes cannot re-enter the
+    // resize handling that asked for it. That push does schedule one more pass,
+    // which then finds the same borders and stops there because
+    // Host::setBorders() ignores an unchanged value.
+    mSizeReportPending = true;
+    QTimer::singleShot(0, mpMainConsole, [this]() {
+        mSizeReportPending = false;
+        const bool relayout = std::exchange(mRelayoutPending, false);
+        if (!mpMainConsole->mpHost) {
+            return;
+        }
+        reportSize();
+        if (relayout) {
+            mpMainConsole->mpHost->mMxpFrameManager.relayoutFrames();
+        }
+    });
+}
+
+void TMxpFrameWidgets::reportSize()
+{
+    // getMainWindowSize() rather than mpMainFrame's own geometry, which
+    // TConsole::resizeEvent() sets to the full console size until the layout
+    // corrects it
+    mpMainConsole->mpHost->mMxpFrameManager.setMainConsoleSize(mpMainConsole->getMainWindowSize(), mpMainConsole->size());
 }
 
 TPrintSink* TMxpFrameWidgets::sink(const QString& name) const
