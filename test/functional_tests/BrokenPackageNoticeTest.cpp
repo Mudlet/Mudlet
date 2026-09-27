@@ -49,7 +49,6 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletApp.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "mudlet.h"
@@ -127,14 +126,6 @@ private:
         return text.simplified();
     }
 
-    static void deleteProfileDirectory(const QString& profileName)
-    {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
-
     Host* startProfile()
     {
         Host* host = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -172,13 +163,14 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        deleteProfileDirectory(mHostname);
+        QVERIFY2(TestProfile::removeProfileDirectory(mHostname), "the previous test's profile directory could not be removed");
     }
 
     void cleanup()
     {
-        deleteProfileDirectory(mHostname);
+        // the profile's files are only closed once mudlet, and so the Host, is gone
         delete mudlet::self();
+        TestProfile::removeProfileDirectory(mHostname);
     }
 
     // The install someone chose from the package manager, or dropped onto the

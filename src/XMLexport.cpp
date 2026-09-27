@@ -541,6 +541,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
+    host.append_attribute("lazyCaptureGlobals") = pHost->lazyCaptureGlobals() ? "yes" : "no";
     host.append_attribute("announceIncomingText") = pHost->mAnnounceIncomingText ? "yes" : "no";
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
     host.append_attribute("enableOSC8Hyperlinks") = pHost->mEnableOSC8Hyperlinks ? "yes" : "no";

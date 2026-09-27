@@ -145,8 +145,7 @@ void dlgIRC::startClient()
     mIrcStarted = true;
 }
 
-// A CR or an LF ends an IRC command and a NUL may not appear in one at all, so
-// text holding any of them cannot go on the wire as it stands.
+// CR or LF ends an IRC command; NUL is forbidden in one.
 static bool textBreaksIrcLine(const QString& text)
 {
     return std::any_of(text.cbegin(), text.cend(), [](const QChar character) {
@@ -154,8 +153,7 @@ static bool textBreaksIrcLine(const QString& text)
     });
 }
 
-// A nick and a channel name are each a single IRC parameter, and a parameter ends
-// at the first space.
+// A nick or channel is a single IRC parameter, which ends at the first space.
 static bool textHasSpace(const QString& text)
 {
     return std::any_of(text.cbegin(), text.cend(), [](const QChar character) {
@@ -163,8 +161,7 @@ static bool textHasSpace(const QString& text)
     });
 }
 
-// A refusal that quotes the text it is refusing must not break its own line doing
-// it, and a game server can make that text arbitrarily long.
+// Quoted text in a refusal must not break its line, and a game server can make it arbitrarily long.
 static QString escapedForError(const QString& text)
 {
     QString escaped = text;
@@ -176,19 +173,10 @@ static QString escapedForError(const QString& text)
     return escaped;
 }
 
-// What goes on the wire is one IRC command whose parameters are separated by
-// spaces and ended by a CR LF, so either argument carrying one of those
-// separators makes the server read a second, caller-chosen command - a QUIT, or a
-// PRIVMSG to somewhere else - out of a single send. The caller is often relaying
-// text that a game server chose, which would put those commands in the game's
-// hands.
-//
-// They are refused rather than stripped: a stripped message is not the one the
-// caller asked to send and nothing says so, whereas a refusal leaves the caller
-// with what it needs to split the text itself, which is what the protocol wants
-// anyway. The formatting codes an IRC message may legitimately carry (bold,
-// colour, the CTCP delimiter) are left alone - only what the line protocol itself
-// forbids is refused.
+// Parameters end at a space and commands at CR LF, so either in an argument would let the server read
+// a second command (a QUIT, a PRIVMSG elsewhere) out of one send - and callers often relay game text.
+// Refused rather than stripped, so the caller knows and can split the text itself. IRC formatting
+// codes (bold, colour, CTCP delimiter) are legitimate and left alone.
 QPair<bool, QString> dlgIRC::validateMsgArguments(const QString& target, const QString& message)
 {
     if (target.isEmpty()) {
@@ -197,8 +185,7 @@ QPair<bool, QString> dlgIRC::validateMsgArguments(const QString& target, const Q
     if (textBreaksIrcLine(target)) {
         return {false, qsl("target \"%1\" must not contain a line break or a null character").arg(escapedForError(target))};
     }
-    // a comma-separated list of targets is still one PRIVMSG in the protocol, so
-    // it is allowed - but every name in that list has to be a name
+    // a comma-separated target list is still one PRIVMSG, so allowed if each name is valid
     const QStringList names = target.split(QLatin1Char(','));
     for (const QString& name : names) {
         if (name.isEmpty()) {
@@ -220,13 +207,9 @@ QPair<bool, QString> dlgIRC::validateMsgArguments(const QString& target, const Q
     return {true, QString()};
 }
 
-// Where the Lua API's sendIrc() ends up, rather than in sendMsg(): what it is
-// given is text to send, never a command to run. sendMsg() hands the message to
-// the command parser, which turns a leading "/" into JOIN, NICK, QUIT or - by way
-// of QUOTE, and of the tolerant parser's raw relay of an unknown verb - any verb
-// at all. That is a second way for a caller relaying what a game server said to
-// hand the game the choice of command, needing no CR or LF to do it, so the path
-// a game's text reaches does not parse commands.
+// For Lua's sendIrc(): sends text, never parses commands. sendMsg()'s parser turns a leading "/"
+// into any verb at all (via QUOTE or raw relay of unknown verbs), which would let game text relayed
+// by a script pick the command without needing a CR or LF.
 QPair<bool, QString> dlgIRC::sendText(const QString& target, const QString& message)
 {
     const auto arguments = validateMsgArguments(target, message);
@@ -235,9 +218,8 @@ QPair<bool, QString> dlgIRC::sendText(const QString& target, const QString& mess
     }
 
     IrcCommand* command = IrcCommand::createMessage(target, message);
-    // the local echo (servers do not send our own messages back) is built before
-    // the command is handed over: sendCommand() takes ownership of a parentless
-    // command, and Communi states it is not safe to access one after that
+    // local echo, as servers don't send our messages back; built first because Communi says a
+    // parentless command is unsafe to touch once sendCommand() owns it
     IrcMessage* msg = command->toMessage(connection->nickName(), connection);
     connection->sendCommand(command);
     slot_receiveMessage(msg);
@@ -246,8 +228,7 @@ QPair<bool, QString> dlgIRC::sendText(const QString& target, const QString& mess
     return {true, QString()};
 }
 
-// The IRC window's own input, where a command the user typed is meant to be acted
-// on - see sendText() for the path that must not do that.
+// For the IRC window's input, where typed commands are meant to run; see sendText().
 QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
 {
     const auto arguments = validateMsgArguments(target, message);
@@ -266,19 +247,14 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         return {false, qsl("message could not be parsed")};
     }
 
-    // parse() hands back a command this function owns, and only sendCommand()
-    // takes that ownership on - so a path that returns before reaching it has to
-    // free the command itself
+    // we own the parsed command until sendCommand(), so early returns must free it
     const bool isCustomCommand = processCustomCommand(command);
     if (isCustomCommand) {
         delete command;
         return {true, QString()};
     }
 
-    // read once, and build the local echo (servers do not send our own messages
-    // back), before the command is handed over: sendCommand() takes ownership of
-    // a parentless command, and Communi states it is not safe to access one after
-    // that
+    // read, and local echo built, before sendCommand() takes ownership (see sendText())
     const IrcCommand::Type commandType = command->type();
     IrcMessage* msg = nullptr;
     if (commandType == IrcCommand::Message || commandType == IrcCommand::CtcpAction) {
@@ -473,8 +449,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
             msgText = QString(cmd->parameters().mid(2).join(" "));
         }
 
-        // the input line is cleared whatever this returns, so a refusal that went
-        // unreported would take the typed message away without a word
+        // the input line is cleared regardless, so a refusal must be reported
         const auto result = sendMsg(target, msgText);
         if (!result.first) {
             //: %1 is why the message could not be sent, e.g. 'no message given to send'
@@ -573,8 +548,7 @@ void dlgIRC::slot_onTextEntered()
 
     IrcCommand* command = commandParser->parse(input);
     if (command) {
-        // as in sendMsg(): the parsed command is owned here until sendCommand()
-        // takes it, so a custom command - which never gets there - is freed here
+        // owned here until sendCommand(), which a custom command never reaches
         const bool isCustomCommand = processCustomCommand(command);
         if (isCustomCommand) {
             delete command;
@@ -704,9 +678,7 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
     }
 }
 
-// The document on screen has to be written through the browser, which scrolls
-// and repaints as well as appending; one that is not on screen has no browser to
-// go through and is written directly.
+// The on-screen document goes through the browser so it scrolls and repaints.
 void dlgIRC::appendToDocument(QTextDocument* document, const QString& html)
 {
     if (document == ircBrowser->document()) {
@@ -752,16 +724,11 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
 
             appendToDocument(document, html);
 
-            // Being kicked ourselves makes IrcBufferModelPrivate::messageFilter()
-            // destroy the channel's buffer, and with it the document this line has
-            // just gone into, so the server buffer - which is never destroyed -
-            // keeps a copy the player can still read. The nick test is deliberately
-            // the same expression that filter's own destroy test uses, so the copy
-            // is made exactly when the buffer is taken away: keep the two in step.
+            // Being kicked makes IrcBufferModelPrivate::messageFilter() destroy the channel buffer,
+            // so copy the line to the never-destroyed server buffer. The nick test mirrors that
+            // filter's own destroy test: keep the two in step.
             const bool kickedUs = message->type() == IrcMessage::Kick && !static_cast<IrcKickMessage*>(message)->user().compare(connection->nickName(), Qt::CaseInsensitive);
-            // a kick naming us in a channel we have no buffer for arrives on the
-            // server buffer itself, via messageIgnored, and has already been
-            // appended above - copying it again would show it twice
+            // a kick from a channel with no buffer already arrived on the server buffer (messageIgnored)
             if (kickedUs && buffer != serverBuffer) {
                 if (QTextDocument* serverDocument = bufferTexts.value(serverBuffer)) {
                     appendToDocument(serverDocument, html);
@@ -977,11 +944,8 @@ QPair<bool, QString> dlgIRC::writeIrcHostSecure(Host* pH, bool secure)
 
 QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
 {
-    // What is stored here is put on the wire as "NICK <nickname>" at registration
-    // without passing through validateMsgArguments(), and IrcConnection only
-    // takes the first space-separated word of it - which leaves a line break
-    // inside that word to end the NICK and start a command of the storer's
-    // choosing.
+    // Sent as "NICK <nickname>" at registration, bypassing validateMsgArguments(); IrcConnection
+    // takes only the first word, but a line break within it would start an injected command.
     if (textBreaksIrcLine(nickname) || textHasSpace(nickname)) {
         return {false, qsl("nick name \"%1\" must be a single word, without a line break or a null character").arg(escapedForError(nickname))};
     }
@@ -994,9 +958,8 @@ QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
 
 QPair<bool, QString> dlgIRC::validateIrcPassword(const QString& password)
 {
-    // as for the nick name above, except that this goes out as the trailing
-    // parameter of "PASS :<password>", so an injected line could hold spaces too.
-    // The password itself is never quoted back.
+    // As for the nick, but as the trailing parameter of "PASS :<password>" spaces are fine.
+    // Never quote the password back.
     if (textBreaksIrcLine(password)) {
         return {false, qsl("password must not contain a line break or a null character")};
     }

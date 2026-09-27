@@ -209,8 +209,10 @@ private slots:
             QFAIL("No active host available for the test.");
         }
 
+        // The connection can complete before the spy exists, and on a loaded
+        // leak-detection runner it can take seconds
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
             QFAIL("Could not connect with the host.");
         }
 

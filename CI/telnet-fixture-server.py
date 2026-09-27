@@ -52,16 +52,13 @@ class TelnetServer:
         self.listener.setblocking(False)
         self.port = self.listener.getsockname()[1]
 
-    # -- capture ------------------------------------------------------------
-
     def write_capture(self):
         payload = {
             "port": self.port,
             "connections": self.connections,
             "connected": self.connection is not None,
             "peer": self.peer,
-            # Hex rather than raw text: this is a binary protocol, and JSON has
-            # no way to carry bytes that are not valid UTF-8.
+            # Hex: the protocol is binary and JSON can't carry non-UTF-8 bytes.
             "received": self.received.hex(),
             "bytes": len(self.received),
         }
@@ -77,8 +74,7 @@ class TelnetServer:
         connection.setblocking(False)
         connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         if self.connection is not None:
-            # One at a time: a stale connection would keep appending to the
-            # buffer a later spec is reading.
+            # One at a time: a stale connection would keep appending to a later spec's buffer.
             self.close_connection()
         self.connection = connection
         self.selector.register(connection, selectors.EVENT_READ)
@@ -117,8 +113,6 @@ class TelnetServer:
         del self.received[:-MAX_CAPTURE_BYTES]
         self.write_capture()
 
-    # -- main loop ----------------------------------------------------------
-
     def run(self):
         self.selector.register(self.listener, selectors.EVENT_READ)
         self.write_capture()
@@ -140,8 +134,7 @@ class TelnetServer:
         os.replace(tmp_path, self.port_path)
 
     def forget_port(self):
-        # A port file outliving the server sends the specs at a dead socket, so
-        # they fail with "never connected" instead of "no fixture running".
+        # A stale port file would make specs fail with "never connected" instead of "no fixture running".
         try:
             os.remove(self.port_path)
         except OSError:
@@ -154,8 +147,7 @@ def main():
         print("MUDLET_TEST_TELNET_DIR is not set", file=sys.stderr)
         return 1
     os.makedirs(directory, exist_ok=True)
-    # Both consumers stop the fixture with SIGTERM, whose default handler would
-    # skip the cleanup below.
+    # Both consumers stop the fixture with SIGTERM, whose default handler would skip the cleanup below.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     server = TelnetServer(directory)
     try:

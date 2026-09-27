@@ -55,15 +55,13 @@ jobs:
             gcc_compiler_version: 12
             qt: '6.11.1'
             ccache_id: ubuntu-gcc
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             buildname: 'ubuntu / clang'
             compiler: clang_64
             gcc_compiler_version: 14
             qt: '6.11.1'
             ccache_id: ubuntu-clang
-          # Ships the Intel binary only: no test here branches on the host
-          # architecture, so the arm64 job below is the same coverage, and this
-          # is the slower pool.
+          # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64
@@ -471,8 +469,7 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
-    # the full ctest run above already covers every functional-labelled test,
-    # and a BUILD_TESTING=OFF tree has no tests to find - bare ctest exits 8 there
+    # Skipped after the full ctest run, which covers these, and with BUILD_TESTING=OFF (bare ctest exits 8)
     - name: Run QTest
       if: matrix.run_tests != 'true' && matrix.build_tests != 'false'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
