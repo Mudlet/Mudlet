@@ -77,6 +77,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QKeyEvent>
+#include <QMetaMethod>
 #include <QNetworkProxy>
 #include <QRandomGenerator>
 #include <QRegularExpression>
@@ -2666,8 +2667,13 @@ TIrcClient* Host::getOrCreateIrcClient()
 
 void Host::showIrcClient()
 {
-    getOrCreateIrcClient();
-    emit signal_showIrcClient();
+    TIrcClient* client = getOrCreateIrcClient();
+    if (isSignalConnected(QMetaMethod::fromSignal(&Host::signal_showIrcClient))) {
+        emit signal_showIrcClient();
+        return;
+    }
+    // with no window to show it, the session runs without one
+    client->start();
 }
 
 void Host::enableTimer(const QString& name)
