@@ -1642,8 +1642,6 @@ expectRefusal('echoLink', echoLink('text', 'cmd', 'hint'))
 expectRefusal('echoPopup', echoPopup('text', {'cmd'}, {'hint'}))
 expectRefusal('insertLink', insertLink('text', 'cmd', 'hint'))
 expectRefusal('insertPopup', insertPopup('text', {'cmd'}, {'hint'}))
-expectRefusal('setLink', setLink('cmd', 'hint'))
-expectRefusal('setPopup', setPopup({'cmd'}, {'hint'}))
 expectRefusal('insertText', insertText('text'))
 expectRefusal('replace', rawReplace('text'))
 
@@ -1669,7 +1667,6 @@ expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
 expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
 -- a link handed a function for its command refuses in the same way
 expectValue('echoLink reason', 'window "main" not found', select(2, echoLink('text', function() end, 'hint')))
-expectValue('setPopup reason', 'window "main" not found', select(2, setPopup({function() end}, {'hint'})))
 expectValue('insertText reason', 'window "" not found', select(2, insertText('text')))
 expectValue('replace reason', 'window "" not found', select(2, rawReplace('text')))
 
@@ -1682,48 +1679,34 @@ noViewReport = table.concat(noViewProblems, '; ')
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
     }
 
-    // The cursor and line functions work on the console's model, so on the
-    // main console they answer for real with no view.
-    void test_cursorAndLineFunctionsWorkWithNoView()
+    // The link and text functions write the console's model, so the main
+    // console takes them with no view at all.
+    void test_linksAndTextReachTheMainModelWithNoView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
-
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
-        const int first = appendModelLine(model->buffer, qsl("NoViewCursor first"));
-        appendModelLine(model->buffer, qsl("NoViewCursor second"));
-        appendModelLine(model->buffer, qsl("NoViewCursor third"));
+        TConsoleModel& model = host->mainConsoleModel();
+        const int line = appendModelLine(model.buffer, qsl("link popup"));
+        model.P_begin = QPoint(0, line);
+        model.P_end = QPoint(4, line);
+        runLua(host, qsl("noViewSetLink = tostring(setLink('cmd', 'hint'))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewSetLink"), qsl("true"));
+        const int linkId = model.buffer.getLinkIndexAt(line, 0);
+        QVERIFY2(linkId > 0, "setLink() put no link on the main model's selection.");
+        QCOMPARE(model.buffer.getLinkIndexAt(line, 3), linkId);
+        QCOMPARE(model.buffer.getLinkIndexAt(line, 4), 0);
 
-        runLua(host,
-               qsl(R"LUA(
-local first = %1
-local results = {}
-local function add(value) results[#results + 1] = tostring(value) end
-add(moveCursor(4, first + 1))
-add(getLineNumber())
-add(getColumnNumber('main'))
-add(getCurrentLine())
-add(moveCursor('main', 0, first + 10))
-add(getLineNumber(''))
-add(getLastLineNumber())
-add(getLineCount())
-add(select('#', deleteLine()))
-add(getCurrentLine('main'))
-add(getLastLineNumber())
-add(select('#', moveCursorEnd()))
-add(getLineNumber())
-noViewCursor = table.concat(results, '|')
-)LUA")
-                       .arg(first));
-
-        const QString expected = qsl("true|%1|4|NoViewCursor second|false|%1|%2|%2|0|NoViewCursor third|%3|0|%3").arg(first + 1).arg(first + 3).arg(first + 2);
-        QCOMPARE(luaGlobalString(host, "noViewCursor"), expected);
-        QCOMPARE(model->mUserCursor, QPoint(0, first + 2));
-        QCOMPARE(model->buffer.line(first + 1), qsl("NoViewCursor third"));
+        model.P_begin = QPoint(5, line);
+        model.P_end = QPoint(10, line);
+        runLua(host, qsl("noViewSetPopup = tostring(setPopup('main', {'one', 'two'}, {'one', 'two'}))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewSetPopup"), qsl("true"));
+        const int popupId = model.buffer.getLinkIndexAt(line, 5);
+        QVERIFY2(popupId > 0 && popupId != linkId, "setPopup() put no link of its own on the main model's selection.");
+        QCOMPARE(model.buffer.mLinkStore.getLinksConst(popupId), QStringList({qsl("one"), qsl("two")}));
     }
 
     // The main console's wrap width and indents are also the profile's, which
@@ -4070,10 +4053,7 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()

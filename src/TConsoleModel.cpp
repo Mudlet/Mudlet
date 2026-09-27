@@ -347,6 +347,11 @@ bool TConsoleModel::setSelectionDisplayAttributes(const TChar::AttributeFlags at
     return buffer.applyAttribute(P_begin, P_end, attributes, enabled);
 }
 
+bool TConsoleModel::setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    return buffer.applyLink(P_begin, P_end, commands, hints, luaReferences);
+}
+
 // Two gotchas in here:
 //
 // - the strings destined for the log file itself are translated against the

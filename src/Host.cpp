@@ -5007,6 +5007,18 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
     return qMakePair(true, pModel->lines(lineFrom, lineTo));
 }
 
+bool Host::setWindowLink(const QString& name, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setLink(commands, hints, luaReferences) && mpConsole) {
+        mpConsole->markWindowDirty(name, std::min(pModel->P_begin.y(), pModel->P_end.y()), std::max(pModel->P_begin.y(), pModel->P_end.y()));
+    }
+    return true;
+}
+
 std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
     if (!mpConsole) {

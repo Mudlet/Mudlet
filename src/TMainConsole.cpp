@@ -1736,6 +1736,13 @@ TConsole* TMainConsole::consoleNamed(const QString& name)
     return mSubConsoleMap.value(name);
 }
 
+void TMainConsole::markWindowDirty(const QString& name, const int firstLine, const int lastLine)
+{
+    if (auto pC = consoleNamed(name)) {
+        pC->markLinesDirty(firstLine, lastLine);
+    }
+}
+
 bool TMainConsole::setWindowScrollBarVisible(const QString& name, bool visible)
 {
     auto pC = consoleNamed(name);
@@ -1936,11 +1943,6 @@ bool TMainConsole::setWindowCommandLineVisible(const QString& name, bool visible
     return true;
 }
 
-bool TMainConsole::hasWindow(const QString& name)
-{
-    return consoleNamed(name) != nullptr;
-}
-
 bool TMainConsole::echoWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences)
 {
     auto pC = consoleNamed(name);
@@ -1958,20 +1960,6 @@ bool TMainConsole::insertWindowLink(const QString& name, const QString& text, QS
         return false;
     }
     pC->insertLink(text, commands, hints, useCurrentFormat, luaReferences);
-    return true;
-}
-
-bool TMainConsole::setWindowLink(const QString& name, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->setLink(commands, hints, luaReferences);
-    if (pC != this) {
-        pC->mUpperPane->forceUpdate();
-        pC->mLowerPane->forceUpdate();
-    }
     return true;
 }
 

@@ -1974,7 +1974,7 @@ std::tuple<bool, QString, int, int> TConsole::getSelection()
     return mpModel->selection();
 }
 
-// The four callers below rewrite the text of an existing selection rather than
+// The callers below rewrite the text of an existing selection rather than
 // appending to the buffer, so the lines they touched are all that has to be
 // redrawn. They used to force a whole-screen repaint of both panes, which cost a
 // full relayout per coloured echo - see markLinesDirty().
@@ -1987,13 +1987,6 @@ void TConsole::markLinesDirty(const int firstLine, const int lastLine)
 {
     mUpperPane->markLinesDirty(firstLine, lastLine);
     mLowerPane->markLinesDirty(firstLine, lastLine);
-}
-
-void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference)
-{
-    if (buffer.applyLink(P_begin, P_end, linkFunction, linkHint, linkReference)) {
-        markSelectionDirty();
-    }
 }
 
 void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, const bool b)

@@ -102,7 +102,8 @@ struct TConsoleModel
     void resetFormat();
     bool setSelectionFgColor(const QColor& newColor);
     bool setSelectionBgColor(const QColor& newColor);
-    bool setSelectionDisplayAttributes(TChar::AttributeFlags attributes, bool enabled);
+    // Makes the selected run a link, taking over the commands' Lua registry references.
+    bool setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
 
     // Client output, appended at the end of the buffer and copied to --mirror. The view showing the
     // model brings the new lines into view (TConsole::showNewLines()).
