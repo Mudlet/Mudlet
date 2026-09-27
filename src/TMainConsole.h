@@ -230,8 +230,6 @@ public:
     // replaces is deleted later.
     void replaceActionButton(TAction* pAction, TFlipButton* pButton);
     void replaceActionMenuEntry(TAction* pAction, EAction* pEntry);
-    TFlipButton* actionButton(TAction* pAction) const;
-    EAction* actionMenuEntry(TAction* pAction) const;
     void setActionButtonChecked(TAction* pAction, bool checked);
     // Floating toolbars are the main window's children rather than this
     // console's, so the profile has to delete them itself.
@@ -315,6 +313,9 @@ private:
         QPointer<EAction> mpMenuEntry;
     };
     ActionBars& actionBarsFor(TAction* pAction);
+    TFlipButton* actionButton(TAction* pAction) const;
+    EAction* actionMenuEntry(TAction* pAction) const;
+
     // The latency box repaints on every setText(), so a flood of packets is
     // shown at most once per pace interval - the same cap the panes paint at.
     static constexpr int csmLatencyBoxPaceMs = 16;
