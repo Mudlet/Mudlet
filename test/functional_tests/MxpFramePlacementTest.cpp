@@ -775,6 +775,38 @@ private slots:
         QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 500, 40));
     }
 
+    // Frames already open inside an EXTERNAL frame follow its window when the
+    // player or a script resizes it, as frames on the main window follow that
+    void test_frameNestedInAnExternalFrameFollowsItsResize()
+    {
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup && popup->isWindow());
+
+        mpHost->mMxpFrameManager.setDestination(qsl("popup"), false, false);
+        QVERIFY(createFrame(qsl("inpopup"), qsl("top"), qsl("100%"), qsl("40px")));
+        QVERIFY(createFrame(qsl("footer"), qsl("bottom"), qsl("100%"), qsl("25%")));
+        mpHost->mMxpFrameManager.clearDestination();
+        // the footer takes a quarter of what the top frame leaves
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 300, 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, 160, 300, 40));
+
+        // as the player dragging the window's edge does
+        popup->resize(500, 360);
+        settle();
+        QCOMPARE(popup->size(), QSize(500, 360));
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 500, 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, 280, 500, 80));
+        QVERIFY(frameConsole(qsl("footer")));
+        QCOMPARE(frameConsole(qsl("footer"))->size(), frameWidget(qsl("footer"))->size());
+
+        runLua(qsl("resizeWindow('popup', 400, 240)"));
+        settle();
+        QCOMPARE(popup->size(), QSize(400, 240));
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 400, 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, 190, 400, 50));
+    }
+
     // Inside a tab it is shown on the tab's page, against the space the header
     // gives that page, which follows the header's frame across a relayout
     void test_frameNestedInATabIsShownInsideIt()
