@@ -652,6 +652,8 @@ private slots:
         emitMetric("alt_landmarks_built", static_cast<qint64>(gAltLandmarksBuilt));
         emitMetric("alt_use_to", static_cast<qint64>(gAltUseTo ? 1 : 0));
         emitMetric("alt_largest_scc", gAltLargestScc);
+        emitMetric("alt_components", gAltComponents);
+        emitMetric("alt_components_with_landmarks", gAltComponentsWithLandmarks);
         emitMetric("alt_select_random", static_cast<qint64>(qEnvironmentVariable("MUDLET_ALT_SELECT") == qsl("random") ? 1 : 0));
         const int n = static_cast<int>(pMap->locations.size());
         emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));
@@ -1069,7 +1071,7 @@ f:close()
         const int goals = qEnvironmentVariableIsSet("MUDLET_AUDIT_GOALS") ? qEnvironmentVariableIntValue("MUDLET_AUDIT_GOALS") : 30;
         const QList<int> modes = modesFromEnv();
         const QHash<int, QString> names{{0, qsl("current")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}, {6, qsl("alt")}, {7, qsl("altnotie")}, {1, qsl("zero")}};
-        QHash<int, qint64> admissibleChecked, admissibleViolations, consistencyChecked, consistencyViolations;
+        QHash<int, qint64> admissibleChecked, admissibleViolations, consistencyChecked, consistencyViolations, consistencyViolationsOnRoutes;
         QHash<int, double> worstExcess, worstInconsistency;
         QRandomGenerator rng(4242);
         constexpr float inf = std::numeric_limits<float>::infinity();
@@ -1097,6 +1099,8 @@ f:close()
             for (const int m : modes) {
                 gHeuristicMode = m;
                 if ((m == 6 || m == 7) && gAltK > 0) {
+                    gAltScc = pMap->mAltScc.data();
+                    gAltGoalScc = pMap->mAltScc[goal];
                     gAltFrom = pMap->mAltFrom.data();
                     gAltTo = pMap->mAltTo.empty() ? nullptr : pMap->mAltTo.data();
                     for (int k = 0; k < gAltK; ++k) {
@@ -1125,6 +1129,10 @@ f:close()
                         if (gap > 1e-4 * std::max(1.0f, hv[u]) + 1e-3) {
                             consistencyViolations[m]++;
                             worstInconsistency[m] = std::max(worstInconsistency.value(m, 0), gap);
+                            // an edge whose far end cannot reach the goal is never on a route to it
+                            if (dist[u] < inf && dist[v] < inf) {
+                                consistencyViolationsOnRoutes[m]++;
+                            }
                         }
                     }
                 }
@@ -1138,6 +1146,7 @@ f:close()
             emitMetric(qsl("%1_consistency_checked").arg(p), consistencyChecked.value(m));
             emitMetric(qsl("%1_consistency_violations").arg(p), consistencyViolations.value(m));
             emitMetric(qsl("%1_worst_inconsistency").arg(p), worstInconsistency.value(m, 0));
+            emitMetric(qsl("%1_consistency_violations_goal_reachable").arg(p), consistencyViolationsOnRoutes.value(m));
         }
         gHeuristicMode = 0;
     }

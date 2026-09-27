@@ -141,6 +141,7 @@ public:
     void computeLandmarks(); // EXPERIMENT
     std::vector<cost> mAltFrom; // EXPERIMENT
     std::vector<cost> mAltTo;   // EXPERIMENT
+    std::vector<qint32> mAltScc; // EXPERIMENT: strongly connected component of each vertex
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
     QString connectExitStubByToId(const int fromRoomId, const int toRoomId);
     QString connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId);

@@ -76,6 +76,10 @@ inline double gAltPassMs = 0;
 inline std::size_t gAltBytes = 0;
 inline int gAltLandmarksBuilt = 0;
 inline qint64 gAltLargestScc = 0;
+inline qint64 gAltComponents = 0;
+inline qint64 gAltComponentsWithLandmarks = 0;
+inline const qint32* gAltScc = nullptr;
+inline qint32 gAltGoalScc = -1;
 inline std::vector<int> gAltLandmarkRooms;
 
 // Used to record edge details and to deduplicate parallel ones:
@@ -113,7 +117,8 @@ public:
             return 0;
         }
         if (gHeuristicMode == 6 || gHeuristicMode == 7) {
-            if (gAltK == 0 || !gAltFrom) {
+            // slots name the room's own component's landmarks, so they only compare with the goal's
+            if (gAltK == 0 || !gAltFrom || !gAltScc || gAltScc[u] != gAltGoalScc) {
                 return 0;
             }
             constexpr cost inf = std::numeric_limits<cost>::infinity();
