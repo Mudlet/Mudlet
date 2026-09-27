@@ -62,6 +62,7 @@
 #include "SecureStringUtils.h"
 
 #include <chrono>
+#include <cstring>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
@@ -2397,7 +2398,10 @@ void Host::runTriggers(int line)
     const QPoint previousUserCursor = consoleModel.mUserCursor;
     const int previousEngineCursor = consoleModel.mEngineCursor;
     const bool previousIsPromptLine = consoleModel.mIsPromptLine;
-    const QString previousLine = consoleModel.mCurrentLine;
+    QString previousLine;
+    if (nested) {
+        previousLine = consoleModel.mCurrentLine;
+    }
 
     consoleModel.mUserCursor.setY(line);
     consoleModel.mIsPromptLine = consoleModel.buffer.promptBuffer.at(line);
@@ -2416,10 +2420,11 @@ void Host::runTriggers(int line)
         }
         mTriggerHaystack = std::move(haystack);
     });
-    haystack.resize(0);
-    haystack.reserve(consoleModel.mCurrentLine.size() + 1);
-    haystack.append(QStringView{consoleModel.mCurrentLine});
-    haystack.append(u'\n');
+    const qsizetype lineLength = consoleModel.mCurrentLine.size();
+    haystack.resize(lineLength + 1);
+    QChar* const haystackData = haystack.data();
+    memcpy(haystackData, consoleModel.mCurrentLine.constData(), lineLength * sizeof(QChar));
+    haystackData[lineLength] = u'\n';
 
     if (TDebug::wants(TDebug::Category::GameLine)) {
         TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
@@ -2450,14 +2455,28 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 {
     mTriggerUnit.processDataStream(data, line);
 
-    mAliasUnit.doCleanup();
-    mTimerUnit.doCleanup();
-    mTriggerUnit.doCleanup();
-    mKeyUnit.doCleanup();
-    mActionUnit.doCleanup();
+    // Every unit's doCleanup() starts by asking this, and on nearly every line
+    // all six answer no; asking here keeps the six calls off the per-line path.
     // ScriptUnit defers deletes too (a package script uninstalling its own package
     // mid-compile or mid-event-dispatch), so flush it here alongside the others:
-    mScriptUnit.doCleanup();
+    if (mAliasUnit.hasPendingDeletes()) {
+        mAliasUnit.doCleanup();
+    }
+    if (mTimerUnit.hasPendingDeletes()) {
+        mTimerUnit.doCleanup();
+    }
+    if (mTriggerUnit.hasPendingDeletes()) {
+        mTriggerUnit.doCleanup();
+    }
+    if (mKeyUnit.hasPendingDeletes()) {
+        mKeyUnit.doCleanup();
+    }
+    if (mActionUnit.hasPendingDeletes()) {
+        mActionUnit.doCleanup();
+    }
+    if (mScriptUnit.hasPendingDeletes()) {
+        mScriptUnit.doCleanup();
+    }
 }
 
 void Host::slot_timerFires()
