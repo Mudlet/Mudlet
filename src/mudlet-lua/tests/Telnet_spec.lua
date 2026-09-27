@@ -1425,7 +1425,9 @@ describe("Tests MCCP compressed streams", function()
     feed("CCPSPLIT\r\n")
     local shown = linesSince(mark)
     assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
-    assert.is_truthy(shown:find("MCCPSPLIT", 1, true), shown)
+    -- once, and whole: the byte zlib held back must not be lost or shown twice
+    local _, occurrences = shown:gsub("%f[%w]MCCPSPLIT", "")
+    assert.equals(1, occurrences, shown)
   end)
 
   -- zlib reports a header asking for a preset dictionary without counting the
