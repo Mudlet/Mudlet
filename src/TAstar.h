@@ -49,7 +49,11 @@ struct location
     float areaChebyshevScale = 0; // EXPERIMENT
 };
 
+#ifdef MUDLET_EXPERIMENT_DOUBLE_COST
+typedef double cost;
+#else
 typedef float cost;
+#endif
 
 // EXPERIMENT (#3334): 0 = euclidean (current), 1 = zero (Dijkstra), 2 = euclidean scaled by gHeuristicScale, 0 across areas
 inline int gHeuristicMode = 0;
@@ -60,11 +64,28 @@ inline bool gRecordF = false;
 inline std::vector<float> gExpandedF;
 inline double gScalePassMs = 0;
 inline double gChebPassMs = 0;
+// 6 = ALT (landmarks + triangle inequality) with tie-break on h, 7 = ALT without tie-break.
+// Landmark tables are vertex-major: [v * gAltK + k].
+inline int gAltK = 0;
+inline bool gAltUseTo = true;
+inline const cost* gAltFrom = nullptr; // d(L_k, v)
+inline const cost* gAltTo = nullptr;   // d(v, L_k)
+inline cost gAltGoalFrom[64];
+inline cost gAltGoalTo[64];
+inline double gAltPassMs = 0;
+inline std::size_t gAltBytes = 0;
+inline int gAltLandmarksBuilt = 0;
+inline qint64 gAltLargestScc = 0;
+inline std::vector<int> gAltLandmarkRooms;
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route
 {
+#ifdef MUDLET_EXPERIMENT_DOUBLE_COST
+    double cost;
+#else
     float cost;              // Needed during establishing the best parallel edge
+#endif
     quint8 direction;        // Use DIR_xxx values to code exit direction
     QString specialExitName; // If direction is DIR_OTHER then this is needed
 };
@@ -90,6 +111,26 @@ public:
     {
         if (gHeuristicMode == 1) {
             return 0;
+        }
+        if (gHeuristicMode == 6 || gHeuristicMode == 7) {
+            if (gAltK == 0 || !gAltFrom) {
+                return 0;
+            }
+            constexpr cost inf = std::numeric_limits<cost>::infinity();
+            const cost* fromLandmark = gAltFrom + static_cast<std::size_t>(u) * gAltK;
+            const cost* toLandmark = gAltUseTo ? gAltTo + static_cast<std::size_t>(u) * gAltK : nullptr;
+            CostType best = 0;
+            for (int k = 0; k < gAltK; ++k) {
+                // d(u, g) >= d(L, g) - d(L, u), valid only when L reaches u
+                if (fromLandmark[k] < inf && gAltGoalFrom[k] < inf) {
+                    best = std::max(best, gAltGoalFrom[k] - fromLandmark[k]);
+                }
+                // d(u, g) >= d(u, L) - d(g, L), valid only when g reaches L
+                if (toLandmark && toLandmark[k] < inf && gAltGoalTo[k] < inf) {
+                    best = std::max(best, toLandmark[k] - gAltGoalTo[k]);
+                }
+            }
+            return best;
         }
         if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea()) {
             return gHeuristicMode >= 2 ? 0 : 1;

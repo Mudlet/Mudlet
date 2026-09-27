@@ -42,6 +42,7 @@
 #include <QBuffer>
 #include <QDataStream>
 #include <QElapsedTimer>
+#include <QRandomGenerator>
 #include <QFontMetrics>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -986,7 +987,7 @@ void TMap::initGraph()
             const float dx = a->x() - b->x(), dy = a->y() - b->y(), dz = a->z() - b->z();
             const float len = std::sqrt(dx * dx + dy * dy + dz * dz);
             if (len > 0) {
-                k = std::min(k, it.value().cost / len);
+                k = std::min(k, static_cast<float>(it.value().cost / len));
             }
         }
         gHeuristicScale = (k == std::numeric_limits<float>::max()) ? 0.0f : k;
@@ -1022,6 +1023,7 @@ void TMap::initGraph()
         gChebPassMs = chebPass.nsecsElapsed() / 1.0e6;
     }
     gScalePassMs = scalePass.nsecsElapsed() / 1.0e6;
+    computeLandmarks();
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
@@ -1042,6 +1044,219 @@ void TMap::resetSearchState(const std::size_t roomCount)
 // Not boost::astar_search(): it resets four property maps for every room in the map before starting,
 // ~55ms on the 2.3M-room Aetherspace map, 10x an ordinary search. Here state persists across
 // searches and only the rooms the last one wrote are reset.
+// EXPERIMENT (#3334): ALT landmark tables. Landmarks by farthest-point selection
+// over forward distances; forward and (optionally) reverse Dijkstra per landmark.
+void TMap::computeLandmarks()
+{
+    QElapsedTimer timer;
+    timer.start();
+    const int wantK = qEnvironmentVariableIsSet("MUDLET_ALT_K") ? qEnvironmentVariableIntValue("MUDLET_ALT_K") : 0;
+    gAltUseTo = qEnvironmentVariableIntValue("MUDLET_ALT_FWD_ONLY") != 1;
+    std::vector<cost>().swap(mAltFrom);
+    std::vector<cost>().swap(mAltTo);
+    gAltK = 0;
+    gAltFrom = nullptr;
+    gAltTo = nullptr;
+    gAltLandmarksBuilt = 0;
+    gAltLandmarkRooms.clear();
+    const std::size_t n = boost::num_vertices(g);
+    if (wantK <= 0 || n == 0) {
+        gAltBytes = 0;
+        gAltPassMs = timer.nsecsElapsed() / 1.0e6;
+        return;
+    }
+    const int k = std::min(wantK, 64);
+    static constexpr cost inf = std::numeric_limits<cost>::infinity();
+
+    std::vector<quint32> fOff(n + 1, 0), rOff(n + 1, 0);
+    const WeightMap weights = boost::get(boost::edge_weight, g);
+    for (std::size_t v = 0; v < n; ++v) {
+        for (const auto& e : boost::make_iterator_range(boost::out_edges(v, g))) {
+            ++fOff[v + 1];
+            ++rOff[boost::target(e, g) + 1];
+        }
+    }
+    for (std::size_t v = 0; v < n; ++v) {
+        fOff[v + 1] += fOff[v];
+        rOff[v + 1] += rOff[v];
+    }
+    const std::size_t m = fOff[n];
+    std::vector<quint32> fTo(m), rTo(m);
+    std::vector<cost> fW(m), rW(m);
+    {
+        std::vector<quint32> fCur(fOff.begin(), fOff.end() - 1), rCur(rOff.begin(), rOff.end() - 1);
+        for (std::size_t v = 0; v < n; ++v) {
+            for (const auto& e : boost::make_iterator_range(boost::out_edges(v, g))) {
+                const std::size_t t = boost::target(e, g);
+                const cost w = boost::get(weights, e);
+                fTo[fCur[v]] = t;
+                fW[fCur[v]++] = w;
+                rTo[rCur[t]] = v;
+                rW[rCur[t]++] = w;
+            }
+        }
+    }
+    typedef std::pair<cost, quint32> entry;
+    auto dijkstra = [n](const std::vector<quint32>& off, const std::vector<quint32>& to, const std::vector<cost>& w, quint32 source, std::vector<cost>& dist) {
+        dist.assign(n, inf);
+        std::priority_queue<entry, std::vector<entry>, std::greater<entry>> queue;
+        dist[source] = 0;
+        queue.push({0, source});
+        while (!queue.empty()) {
+            const auto [d, v] = queue.top();
+            queue.pop();
+            if (d > dist[v]) {
+                continue;
+            }
+            for (quint32 i = off[v]; i < off[v + 1]; ++i) {
+                const cost nd = d + w[i];
+                if (nd < dist[to[i]]) {
+                    dist[to[i]] = nd;
+                    queue.push({nd, to[i]});
+                }
+            }
+        }
+    };
+
+    // Landmarks go inside the largest strongly connected component: there every room both
+    // reaches and is reached by every landmark, so both bounds are live for every pair in it.
+    std::vector<qint32> sccOf(n, -1);
+    qint32 largestScc = -1;
+    std::size_t largestSize = 0;
+    {
+        std::vector<qint32> index(n, -1), low(n, 0);
+        std::vector<char> onStack(n, 0);
+        std::vector<quint32> stack;
+        std::vector<std::pair<quint32, quint32>> call;
+        qint32 counter = 0, sccCount = 0;
+        for (std::size_t root = 0; root < n; ++root) {
+            if (index[root] != -1) {
+                continue;
+            }
+            call.push_back({static_cast<quint32>(root), fOff[root]});
+            index[root] = low[root] = counter++;
+            stack.push_back(root);
+            onStack[root] = 1;
+            while (!call.empty()) {
+                auto& [v, i] = call.back();
+                if (i < fOff[v + 1]) {
+                    const quint32 w = fTo[i++];
+                    if (index[w] == -1) {
+                        index[w] = low[w] = counter++;
+                        stack.push_back(w);
+                        onStack[w] = 1;
+                        call.push_back({w, fOff[w]});
+                    } else if (onStack[w]) {
+                        low[v] = std::min(low[v], index[w]);
+                    }
+                } else {
+                    const quint32 done = v;
+                    call.pop_back();
+                    if (!call.empty()) {
+                        low[call.back().first] = std::min(low[call.back().first], low[done]);
+                    }
+                    if (low[done] == index[done]) {
+                        std::size_t size = 0;
+                        quint32 w;
+                        do {
+                            w = stack.back();
+                            stack.pop_back();
+                            onStack[w] = 0;
+                            sccOf[w] = sccCount;
+                            ++size;
+                        } while (w != done);
+                        if (size > largestSize) {
+                            largestSize = size;
+                            largestScc = sccCount;
+                        }
+                        ++sccCount;
+                    }
+                }
+            }
+        }
+    }
+    gAltLargestScc = static_cast<qint64>(largestSize);
+
+    quint32 seed = 0;
+    int lowestId = std::numeric_limits<int>::max();
+    for (std::size_t v = 0; v < n; ++v) {
+        if (sccOf[v] == largestScc && locations[v].id < lowestId) {
+            lowestId = locations[v].id;
+            seed = v;
+        }
+    }
+    const bool randomSelection = qEnvironmentVariable("MUDLET_ALT_SELECT") == qsl("random");
+    std::vector<cost> dist, back;
+    // round trip to the nearest chosen landmark; the next landmark maximises it
+    std::vector<cost> nearestRoundTrip(n, inf);
+    quint32 next = seed;
+    {
+        dijkstra(fOff, fTo, fW, seed, dist);
+        dijkstra(rOff, rTo, rW, seed, back);
+        cost farthest = -1;
+        for (std::size_t v = 0; v < n; ++v) {
+            if (sccOf[v] == largestScc && dist[v] + back[v] > farthest) {
+                farthest = dist[v] + back[v];
+                next = v;
+            }
+        }
+    }
+    std::vector<quint32> sccMembers;
+    if (randomSelection) {
+        for (std::size_t v = 0; v < n; ++v) {
+            if (sccOf[v] == largestScc) {
+                sccMembers.push_back(v);
+            }
+        }
+    }
+    QRandomGenerator selectionRng(31337);
+
+    mAltFrom.assign(n * k, inf);
+    if (gAltUseTo) {
+        mAltTo.assign(n * k, inf);
+    }
+    std::vector<char> chosen(n, 0);
+    for (int landmark = 0; landmark < k; ++landmark) {
+        if (randomSelection) {
+            do {
+                next = sccMembers[selectionRng.bounded(static_cast<quint32>(sccMembers.size()))];
+            } while (chosen[next] && sccMembers.size() > static_cast<std::size_t>(landmark));
+        }
+        chosen[next] = 1;
+        gAltLandmarkRooms.push_back(locations[next].id);
+        dijkstra(fOff, fTo, fW, next, dist);
+        dijkstra(rOff, rTo, rW, next, back);
+        for (std::size_t v = 0; v < n; ++v) {
+            mAltFrom[v * k + landmark] = dist[v];
+            if (gAltUseTo) {
+                mAltTo[v * k + landmark] = back[v];
+            }
+            if (sccOf[v] == largestScc) {
+                nearestRoundTrip[v] = std::min(nearestRoundTrip[v], dist[v] + back[v]);
+            }
+        }
+        ++gAltLandmarksBuilt;
+        if (randomSelection) {
+            continue;
+        }
+        cost best = 0;
+        bool found = false;
+        for (std::size_t v = 0; v < n; ++v) {
+            if (!chosen[v] && sccOf[v] == largestScc && nearestRoundTrip[v] > best) {
+                best = nearestRoundTrip[v];
+                next = v;
+                found = true;
+            }
+        }
+        if (!found) {
+            break;
+        }
+    }
+    gAltK = k;
+    gAltBytes = (mAltFrom.capacity() + mAltTo.capacity()) * sizeof(cost);
+    gAltPassMs = timer.nsecsElapsed() / 1.0e6;
+}
+
 bool TMap::searchGraph(const vertex start, const vertex goal)
 {
     // 0 is unreached; a re-opened room drops back to stateFrontier. Only 0 and stateExpanded are tested:
@@ -1071,10 +1286,18 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
     std::priority_queue<frontierEntry, std::vector<frontierEntry>, std::greater<frontierEntry>> frontier;
 
     gExpandedF.clear();
+    if ((gHeuristicMode == 6 || gHeuristicMode == 7) && gAltK > 0 && !mAltFrom.empty()) {
+        gAltFrom = mAltFrom.data();
+        gAltTo = mAltTo.empty() ? nullptr : mAltTo.data();
+        for (int k = 0; k < gAltK; ++k) {
+            gAltGoalFrom[k] = mAltFrom[static_cast<std::size_t>(goal) * gAltK + k];
+            gAltGoalTo[k] = mAltTo.empty() ? std::numeric_limits<cost>::infinity() : mAltTo[static_cast<std::size_t>(goal) * gAltK + k];
+        }
+    }
     mSearchDistance[start] = 0;
     mSearchState[start] = stateFrontier;
     mSearchTouched.push_back(start);
-    frontier.push({heuristic(start), gHeuristicMode == 5 ? heuristic(start) : 0, start});
+    frontier.push({heuristic(start), (gHeuristicMode == 5 || gHeuristicMode == 6) ? heuristic(start) : 0, start});
 
     while (!frontier.empty()) {
         const vertex current = std::get<2>(frontier.top());
@@ -1108,7 +1331,7 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
             // disagree and a better route to an expanded room can appear (boost does the same).
             mSearchState[neighbour] = stateFrontier;
             const cost h = heuristic(neighbour);
-            frontier.push({throughCurrent + h, gHeuristicMode == 5 ? h : 0, neighbour});
+            frontier.push({throughCurrent + h, (gHeuristicMode == 5 || gHeuristicMode == 6) ? h : 0, neighbour});
         }
     }
 

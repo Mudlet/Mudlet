@@ -48,6 +48,7 @@
 #include <clocale>
 #include <cstdio>
 #include <limits>
+#include <queue>
 #include <set>
 
 #include "MudletApp.h"
@@ -599,7 +600,7 @@ private slots:
         const int reps = qEnvironmentVariableIsSet("MUDLET_BENCH_REPS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_REPS") : 5;
         const int pairCount = qEnvironmentVariableIsSet("MUDLET_BENCH_PAIRS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_PAIRS") : 300;
         const QString mutate = qEnvironmentVariable("MUDLET_BENCH_MUTATE");
-        const QHash<int, QString> names{{0, qsl("current")}, {1, qsl("zero")}, {2, qsl("scaled")}, {3, qsl("cheb")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}};
+        const QHash<int, QString> names{{0, qsl("current")}, {1, qsl("zero")}, {2, qsl("scaled")}, {3, qsl("cheb")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}, {6, qsl("alt")}, {7, qsl("altnotie")}};
 
         const int areaId = chooseArea(pMap);
         TArea* pArea = pMap->mpRoomDB->getArea(areaId);
@@ -645,6 +646,13 @@ private slots:
         emitMetric("init_graph_ms", timer.nsecsElapsed() / 1.0e6);
         emitMetric("scale_pass_ms", gScalePassMs);
         emitMetric("cheb_pass_ms", gChebPassMs);
+        emitMetric("alt_pass_ms", gAltPassMs);
+        emitMetric("alt_bytes", static_cast<qint64>(gAltBytes));
+        emitMetric("alt_k", static_cast<qint64>(gAltK));
+        emitMetric("alt_landmarks_built", static_cast<qint64>(gAltLandmarksBuilt));
+        emitMetric("alt_use_to", static_cast<qint64>(gAltUseTo ? 1 : 0));
+        emitMetric("alt_largest_scc", gAltLargestScc);
+        emitMetric("alt_select_random", static_cast<qint64>(qEnvironmentVariable("MUDLET_ALT_SELECT") == qsl("random") ? 1 : 0));
         const int n = static_cast<int>(pMap->locations.size());
         emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));
         emitMetric("graph_vertices", static_cast<qint64>(n));
@@ -931,7 +939,7 @@ advResult = string.format("exitWeightAfterSet0=%s roomWeightAfterSet0=%s", tostr
             std::printf("ADV api %s\n", out.readAll().constData());
         }
         pMap->mMapGraphNeedsUpdate = true;
-        for (const int m : {0, 1, 4, 5}) {
+        for (const int m : {0, 1, 4, 5, 6}) {
             gHeuristicMode = m;
             const bool found = pMap->findPath(200, 110);
             double total = 0;
@@ -1015,7 +1023,7 @@ f:write(string.format("heavyRooms=%d pairs=%d pairsWhoseOptimumCrossesHeavy=%d m
 mismatchHeavy, maxExtra = nil, nil
 f:close()
 )LUA");
-        for (const int m : {1, 0}) {
+        for (const int m : {1, 0, 6}) {
             gHeuristicMode = m;
             QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), "float check script failed");
             QFile out(qEnvironmentVariable("ADV_OUT"));
@@ -1023,6 +1031,283 @@ f:close()
             std::printf("FLOATCHECK mode %d %s\n", m, out.readAll().constData());
         }
         gHeuristicMode = 0;
+    }
+
+    // EXPERIMENT (#3334): exact admissibility and consistency audit. For sampled goals, exact
+    // d(u, goal) for every u by reverse Dijkstra; then h(u) <= d(u, goal) for all u, and
+    // h(u) <= c(u, v) + h(v) for every edge.
+    void auditHeuristic()
+    {
+        Host* host = openBenchHost();
+        QVERIFY(host);
+        TMap* pMap = host->mpMap.data();
+        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        if (qEnvironmentVariable("MUDLET_BENCH_MUTATE") == qsl("teleport")) {
+            const int areaId = chooseArea(pMap);
+            TArea* pArea = pMap->mpRoomDB->getArea(areaId);
+            QVERIFY(pArea);
+            const QSet<int> rooms = pArea->getRoomsForZ(chooseZLevel(pArea));
+            int lo = std::numeric_limits<int>::max(), hi = 0;
+            for (const int id : rooms) {
+                lo = std::min(lo, id);
+                hi = std::max(hi, id);
+            }
+            pMap->mpRoomDB->getRoom(lo)->setSpecialExit(hi, qsl("experimentTeleport"));
+            pMap->mMapGraphNeedsUpdate = true;
+        }
+        gHeuristicMode = 0;
+        pMap->initGraph();
+        emitMetric("alt_k", static_cast<qint64>(gAltK));
+        const std::size_t n = boost::num_vertices(pMap->g);
+        const TMap::WeightMap weights = boost::get(boost::edge_weight, pMap->g);
+        std::vector<std::vector<std::pair<quint32, float>>> reverse(n);
+        for (std::size_t v = 0; v < n; ++v) {
+            for (const auto& e : boost::make_iterator_range(boost::out_edges(v, pMap->g))) {
+                reverse[boost::target(e, pMap->g)].push_back({static_cast<quint32>(v), boost::get(weights, e)});
+            }
+        }
+        const int goals = qEnvironmentVariableIsSet("MUDLET_AUDIT_GOALS") ? qEnvironmentVariableIntValue("MUDLET_AUDIT_GOALS") : 30;
+        const QList<int> modes = modesFromEnv();
+        const QHash<int, QString> names{{0, qsl("current")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}, {6, qsl("alt")}, {7, qsl("altnotie")}, {1, qsl("zero")}};
+        QHash<int, qint64> admissibleChecked, admissibleViolations, consistencyChecked, consistencyViolations;
+        QHash<int, double> worstExcess, worstInconsistency;
+        QRandomGenerator rng(4242);
+        constexpr float inf = std::numeric_limits<float>::infinity();
+        std::vector<float> dist;
+        for (int gi = 0; gi < goals; ++gi) {
+            const quint32 goal = rng.bounded(static_cast<quint32>(n));
+            dist.assign(n, inf);
+            typedef std::pair<float, quint32> entry;
+            std::priority_queue<entry, std::vector<entry>, std::greater<entry>> queue;
+            dist[goal] = 0;
+            queue.push({0, goal});
+            while (!queue.empty()) {
+                const auto [d, v] = queue.top();
+                queue.pop();
+                if (d > dist[v]) {
+                    continue;
+                }
+                for (const auto& [u, w] : reverse[v]) {
+                    if (d + w < dist[u]) {
+                        dist[u] = d + w;
+                        queue.push({d + w, u});
+                    }
+                }
+            }
+            for (const int m : modes) {
+                gHeuristicMode = m;
+                if ((m == 6 || m == 7) && gAltK > 0) {
+                    gAltFrom = pMap->mAltFrom.data();
+                    gAltTo = pMap->mAltTo.empty() ? nullptr : pMap->mAltTo.data();
+                    for (int k = 0; k < gAltK; ++k) {
+                        gAltGoalFrom[k] = pMap->mAltFrom[static_cast<std::size_t>(goal) * gAltK + k];
+                        gAltGoalTo[k] = pMap->mAltTo.empty() ? inf : pMap->mAltTo[static_cast<std::size_t>(goal) * gAltK + k];
+                    }
+                }
+                distance_heuristic<TMap::mygraph_t, cost, std::vector<location>> h(pMap->locations, goal);
+                std::vector<float> hv(n);
+                for (std::size_t u = 0; u < n; ++u) {
+                    hv[u] = h(u);
+                }
+                for (std::size_t u = 0; u < n; ++u) {
+                    if (dist[u] < inf) {
+                        admissibleChecked[m]++;
+                        const double excess = hv[u] - dist[u];
+                        if (excess > 1e-4 * std::max(1.0f, dist[u]) + 1e-3) {
+                            admissibleViolations[m]++;
+                            worstExcess[m] = std::max(worstExcess.value(m, 0), excess);
+                        }
+                    }
+                    for (const auto& e : boost::make_iterator_range(boost::out_edges(u, pMap->g))) {
+                        const std::size_t v = boost::target(e, pMap->g);
+                        consistencyChecked[m]++;
+                        const double gap = hv[u] - (boost::get(weights, e) + hv[v]);
+                        if (gap > 1e-4 * std::max(1.0f, hv[u]) + 1e-3) {
+                            consistencyViolations[m]++;
+                            worstInconsistency[m] = std::max(worstInconsistency.value(m, 0), gap);
+                        }
+                    }
+                }
+            }
+        }
+        for (const int m : modes) {
+            const QString p = qsl("audit_%1").arg(names.value(m, QString::number(m)));
+            emitMetric(qsl("%1_admissible_checked").arg(p), admissibleChecked.value(m));
+            emitMetric(qsl("%1_admissible_violations").arg(p), admissibleViolations.value(m));
+            emitMetric(qsl("%1_worst_excess").arg(p), worstExcess.value(m, 0));
+            emitMetric(qsl("%1_consistency_checked").arg(p), consistencyChecked.value(m));
+            emitMetric(qsl("%1_consistency_violations").arg(p), consistencyViolations.value(m));
+            emitMetric(qsl("%1_worst_inconsistency").arg(p), worstInconsistency.value(m, 0));
+        }
+        gHeuristicMode = 0;
+    }
+
+    // EXPERIMENT (#3334): mapping workload - every edit invalidates the graph, so the next
+    // getPath() pays initGraph() (and, with ALT, the landmark rebuild).
+    void mappingLoop()
+    {
+        Host* host = openBenchHost();
+        QVERIFY(host);
+        TMap* pMap = host->mpMap.data();
+        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        const int cycles = qEnvironmentVariableIsSet("MUDLET_MAPPING_CYCLES") ? qEnvironmentVariableIntValue("MUDLET_MAPPING_CYCLES") : 10;
+        const QByteArray altK = qgetenv("MUDLET_ALT_K");
+        gHeuristicMode = 0;
+        pMap->initGraph();
+        const int n = static_cast<int>(pMap->locations.size());
+        QRandomGenerator rng(777);
+        QElapsedTimer timer;
+        for (const bool withAlt : {false, true}) {
+            qputenv("MUDLET_ALT_K", withAlt ? altK : QByteArray("0"));
+            gHeuristicMode = withAlt ? 6 : 0;
+            std::vector<double> times;
+            for (int c = 0; c < cycles; ++c) {
+                const int anchor = pMap->locations[rng.bounded(n)].id;
+                const int from = pMap->locations[rng.bounded(n)].id;
+                const QString script = qsl("local a = %1; local id = createRoomID(); addRoom(id); setRoomArea(id, getRoomArea(a)); "
+                                           "local x, y, z = getRoomCoordinates(a); setRoomCoordinates(id, x, y, z + 1); "
+                                           "setExit(a, id, 'up'); setExit(id, a, 'down'); mappingLoopRoom = id")
+                                               .arg(anchor);
+                QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), "mapping edit failed");
+                QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("local f = io.open(os.getenv('ADV_OUT'), 'w'); f:write(mappingLoopRoom); f:close()")));
+                QFile out(qEnvironmentVariable("ADV_OUT"));
+                QVERIFY(out.open(QIODevice::ReadOnly));
+                const int newRoom = out.readAll().toInt();
+                QVERIFY(pMap->mMapGraphNeedsUpdate);
+                timer.restart();
+                pMap->findPath(from, newRoom);
+                times.push_back(timer.nsecsElapsed() / 1.0e6);
+            }
+            std::sort(times.begin(), times.end());
+            const QString p = withAlt ? qsl("mapping_alt") : qsl("mapping_current");
+            emitMetric(qsl("%1_median_ms").arg(p), times[times.size() / 2]);
+            emitMetric(qsl("%1_max_ms").arg(p), times.back());
+        }
+        qputenv("MUDLET_ALT_K", altK);
+        gHeuristicMode = 0;
+    }
+
+    // EXPERIMENT (#3334): component structure - weakly connected components (union-find) and
+    // strongly connected components (Tarjan, iterative), with the share of rooms in the largest.
+    void mapStats()
+    {
+        Host* host = openBenchHost();
+        QVERIFY(host);
+        TMap* pMap = host->mpMap.data();
+        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        qputenv("MUDLET_ALT_K", "0");
+        pMap->initGraph();
+        const std::size_t n = boost::num_vertices(pMap->g);
+        std::vector<quint32> parent(n);
+        for (std::size_t v = 0; v < n; ++v) {
+            parent[v] = v;
+        }
+        auto find = [&parent](quint32 v) {
+            while (parent[v] != v) {
+                parent[v] = parent[parent[v]];
+                v = parent[v];
+            }
+            return v;
+        };
+        qint64 sinks = 0, sources = 0;
+        std::vector<quint32> inDegree(n, 0);
+        for (std::size_t v = 0; v < n; ++v) {
+            if (boost::out_degree(v, pMap->g) == 0) {
+                ++sinks;
+            }
+            for (const auto& e : boost::make_iterator_range(boost::out_edges(v, pMap->g))) {
+                const quint32 t = boost::target(e, pMap->g);
+                ++inDegree[t];
+                const quint32 a = find(v), b = find(t);
+                if (a != b) {
+                    parent[a] = b;
+                }
+            }
+        }
+        for (std::size_t v = 0; v < n; ++v) {
+            if (inDegree[v] == 0) {
+                ++sources;
+            }
+        }
+        QHash<quint32, qint64> sizes;
+        for (std::size_t v = 0; v < n; ++v) {
+            sizes[find(v)]++;
+        }
+        QList<qint64> sorted = sizes.values();
+        std::sort(sorted.begin(), sorted.end(), std::greater<qint64>());
+        emitMetric("stats_vertices", static_cast<qint64>(n));
+        emitMetric("stats_sinks_no_exit", sinks);
+        emitMetric("stats_sources_no_entrance", sources);
+        emitMetric("stats_wcc_count", static_cast<qint64>(sorted.size()));
+        for (int i = 0; i < std::min<int>(5, sorted.size()); ++i) {
+            emitMetric(qsl("stats_wcc_size_rank%1").arg(i), sorted[i]);
+        }
+        qint64 singletons = 0;
+        for (const qint64 size : sorted) {
+            if (size == 1) {
+                ++singletons;
+            }
+        }
+        emitMetric("stats_wcc_singletons", singletons);
+
+        // iterative Tarjan
+        std::vector<qint32> index(n, -1), low(n, 0);
+        std::vector<char> onStack(n, 0);
+        std::vector<quint32> stack;
+        std::vector<std::pair<quint32, std::size_t>> call;
+        std::vector<qint64> sccSizes;
+        qint32 counter = 0;
+        std::vector<std::vector<quint32>> adjacency(n);
+        for (std::size_t v = 0; v < n; ++v) {
+            for (const auto& e : boost::make_iterator_range(boost::out_edges(v, pMap->g))) {
+                adjacency[v].push_back(boost::target(e, pMap->g));
+            }
+        }
+        for (std::size_t root = 0; root < n; ++root) {
+            if (index[root] != -1) {
+                continue;
+            }
+            call.push_back({static_cast<quint32>(root), 0});
+            index[root] = low[root] = counter++;
+            stack.push_back(root);
+            onStack[root] = 1;
+            while (!call.empty()) {
+                auto& [v, i] = call.back();
+                if (i < adjacency[v].size()) {
+                    const quint32 w = adjacency[v][i++];
+                    if (index[w] == -1) {
+                        index[w] = low[w] = counter++;
+                        stack.push_back(w);
+                        onStack[w] = 1;
+                        call.push_back({w, 0});
+                    } else if (onStack[w]) {
+                        low[v] = std::min(low[v], index[w]);
+                    }
+                } else {
+                    const quint32 done = v;
+                    call.pop_back();
+                    if (!call.empty()) {
+                        low[call.back().first] = std::min(low[call.back().first], low[done]);
+                    }
+                    if (low[done] == index[done]) {
+                        qint64 size = 0;
+                        quint32 w;
+                        do {
+                            w = stack.back();
+                            stack.pop_back();
+                            onStack[w] = 0;
+                            ++size;
+                        } while (w != done);
+                        sccSizes.push_back(size);
+                    }
+                }
+            }
+        }
+        std::sort(sccSizes.begin(), sccSizes.end(), std::greater<qint64>());
+        emitMetric("stats_scc_count", static_cast<qint64>(sccSizes.size()));
+        for (int i = 0; i < std::min<int>(5, static_cast<int>(sccSizes.size())); ++i) {
+            emitMetric(qsl("stats_scc_size_rank%1").arg(i), sccSizes[i]);
+        }
     }
 
 private:

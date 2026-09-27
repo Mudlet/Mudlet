@@ -138,6 +138,9 @@ public:
     bool restore(QString location);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
+    void computeLandmarks(); // EXPERIMENT
+    std::vector<cost> mAltFrom; // EXPERIMENT
+    std::vector<cost> mAltTo;   // EXPERIMENT
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
     QString connectExitStubByToId(const int fromRoomId, const int toRoomId);
     QString connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId);
