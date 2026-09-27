@@ -597,9 +597,9 @@ private slots:
         TDebug::flushMessageQueue();
 
         QCOMPARE(sink.lines.size(), limit + 1);
-        QVERIFY2(sink.lines.at(0).text.contains(qsl("2 message(s) dropped")), qPrintable(sink.lines.at(0).text));
-        QVERIFY2(sink.lines.at(1).text.endsWith(qsl("backlog message 2\n")), qPrintable(sink.lines.at(1).text));
-        QVERIFY2(sink.lines.last().text.endsWith(qsl("backlog message %1\n").arg(limit + 1)), qPrintable(sink.lines.last().text));
+        QVERIFY2(sink.lines.at(0).text.endsWith(qsl("backlog message 2\n")), qPrintable(sink.lines.at(0).text));
+        QVERIFY2(sink.lines.at(limit - 1).text.endsWith(qsl("backlog message %1\n").arg(limit + 1)), qPrintable(sink.lines.at(limit - 1).text));
+        QVERIFY2(sink.lines.last().text.contains(qsl("2 older message(s) were dropped")), qPrintable(sink.lines.last().text));
 
         sink.lines.clear();
         TDebug::setSink(nullptr);
@@ -608,6 +608,27 @@ private slots:
         TDebug::flushMessageQueue();
         QCOMPARE(sink.lines.size(), 1);
         QVERIFY2(sink.lines.at(0).text.endsWith(qsl("later backlog\n")), qPrintable(sink.lines.at(0).text));
+    }
+
+    // The notice has to survive the console it is replayed into: a full backlog
+    // is as many lines as that console keeps, so it must not push the notice out.
+    void test_droppedBacklogNoticeSurvivesAFullReplayIntoTheConsole()
+    {
+        startDebuggingProfile();
+        auto* console = mudlet::smpDebugConsole.data();
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setSink(nullptr);
+
+        const int limit = TDebug::messageQueueLimit();
+        for (int i = 0; i < limit + 2; ++i) {
+            TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << qsl("backlog message %1\n").arg(i) >> nullptr;
+        }
+
+        TDebug::setSink(console);
+        TDebug::flushMessageQueue();
+
+        QVERIFY2(debugBufferContains(qsl("backlog message %1").arg(limit + 1)), "The newest backlog line did not reach the console");
+        QVERIFY2(debugBufferContains(qsl("2 older message(s) were dropped while the Central Debug Console was closed")), "The dropped-message notice was pushed out of the console by the backlog it introduces");
     }
 
     // Resuming hands each held line to the sink stamped with the time it

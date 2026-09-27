@@ -279,15 +279,17 @@ bool TDebug::passesFilters(const Host* pHost)
     if (Q_UNLIKELY(!smMessageQueue.isEmpty())) {
         // The sink must have just come on-line - so unload all the messages
         // stacked up while there was none:
-        if (smMessageQueueDroppedCount) {
-            // Ahead of the backlog, as the cap drops the OLDEST messages:
-            //: Shown in the Central Debug Console when it opens, if more messages arrived while it was closed than could be kept for it.
-            smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while the Central Debug Console was closed.\n", "", smMessageQueueDroppedCount), Qt::white, Qt::darkRed, QString());
-            smMessageQueueDroppedCount = 0;
-        }
         while (!smMessageQueue.isEmpty() && smpSink) {
             const auto message = smMessageQueue.dequeue();
             smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
+        }
+        if (smMessageQueueDroppedCount && smpSink) {
+            // After the backlog, not ahead of it: a full backlog is as many lines as the console
+            // keeps, so its own trimming would take a notice printed first straight back out:
+            //: Shown in the Central Debug Console when it opens, after the messages kept for it, if more arrived while it was closed than could be kept.
+            smpSink->printDebugLine(
+                    csmTagSystemMessage % tr("%n older message(s) were dropped while the Central Debug Console was closed.\n", "", smMessageQueueDroppedCount), Qt::white, Qt::darkRed, QString());
+            smMessageQueueDroppedCount = 0;
         }
     }
 
