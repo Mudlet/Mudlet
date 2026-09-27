@@ -475,6 +475,23 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
     mpMainConsoleModel->mConsoleName = qsl("main");
     mpMainConsoleModel->mScriptAddressable = true;
+
+    mServerWrapFlushTimer.setSingleShot(true);
+    mServerWrapFlushTimer.setInterval(TBuffer::csmServerWrapFlushDelayMs);
+    connect(&mpMainConsoleModel->mNotifier, &TConsoleModelNotifier::serverWrapLineHeld, &mServerWrapFlushTimer, qOverload<>(&QTimer::start));
+    connect(&mServerWrapFlushTimer, &QTimer::timeout, this, [this]() {
+        // The trigger-context flag still lives on the view, so with none the
+        // line stays held:
+        if (!mpConsole) {
+            return;
+        }
+        // Mimic TMainConsole::printOnDisplay() so that trigger-context
+        // functions behave the same as for any other committed line:
+        mpConsole->mTriggerEngineMode = true;
+        mpMainConsoleModel->buffer.flushPendingServerWrapJoin();
+        mpConsole->mTriggerEngineMode = false;
+        finalizeMainConsole();
+    });
 }
 
 Host::~Host()

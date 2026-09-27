@@ -854,6 +854,10 @@ public:
     // whole logical line and Mudlet's own wrapping (mWrapAt) handles display:
     bool mUndoServerWrap = false;
     int mUndoServerWrapWidth = 80;
+    // Commits a line held back for its continuation once the game has gone
+    // quiet without sending one. Here rather than on the view because the
+    // flush runs the trigger pipeline, which is the core's work.
+    QTimer mServerWrapFlushTimer;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;

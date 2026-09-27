@@ -382,9 +382,9 @@ public:
     // one - see translateToPlainTextInner().
     int pendingChunkLines() const { return mPendingChunkLines; }
     // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
-    // - public so that the connection teardown and the view's flush timer can
+    // - public so that the connection teardown and Host's flush timer can
     // flush it:
-    void flushPendingServerWrapJoin();
+    void flushPendingServerWrapJoin(const bool endsHyperlink = true);
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
     static constexpr int csmServerWrapFlushDelayMs = 300;

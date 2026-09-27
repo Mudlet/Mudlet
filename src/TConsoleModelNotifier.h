@@ -24,9 +24,9 @@
 #include <QObject>
 #include <QString>
 
-// What a console model's buffer tells the view showing it. The buffer only
-// emits; a model with no view has nobody listening, so the buffer needs no
-// view check of its own.
+// What a console model's buffer tells the view showing it, and for the main
+// console's model, Host. The buffer only emits, so it needs no view check of
+// its own.
 class TConsoleModelNotifier : public QObject
 {
     Q_OBJECT

@@ -606,6 +606,29 @@ private slots:
         QCOMPARE(QString::fromStdString(host->mMxpProcessor.getMxpTagBuilder().getRawTagContent()), qsl("send"));
     }
 
+    // Host hears that a line is being held back for its continuation straight
+    // from the model, so the flush timer starts whether or not a view is there.
+    void test_aHeldServerWrappedLineStartsTheFlushTimerWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        QVERIFY2(!host->mServerWrapFlushTimer.isActive(), "The flush timer was running before any line was held back.");
+
+        // 70 characters, inside the join band for a wrap column of 80
+        const QString heldLine = QString(64, QChar('z')) + qsl(" sigma");
+        std::string data = heldLine.toStdString() + "\n";
+        model->buffer.translateToPlainText(data, true);
+        QCOMPARE(model->buffer.mServerWrapPendingLine, heldLine);
+        QVERIFY2(host->mServerWrapFlushTimer.isActive(), "Holding a line back with no view did not start the flush timer.");
+    }
+
     // The OSC 8 documentation examples are injected into the main console's
     // buffer by the trigger phrase, which is swallowed rather than displayed.
     // None of that needs a view, and it must not reach for one.
