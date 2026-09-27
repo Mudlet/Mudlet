@@ -7671,7 +7671,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name);
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name, pHost->mAcceptServerGUI && pHost->mEnableGMCP);
         pHost->setupIreDriverBugfix();
     }
 
@@ -8451,7 +8451,7 @@ void mudlet::refreshTabBar()
 
 //NOLINT(readability-convert-member-functions-to-static)
 // doesn't make sense to make it static since it modifies a class variable
-void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName)
+void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName, const bool serverGuiAccepted)
 {
     if (mSkipDefaultPackageInstall) {
         return;
@@ -8515,12 +8515,17 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     }
 
     // A modest starter UI that adapts to whatever any game provides.
-    // Games whose bundled loader above fetches the game's own full interface
-    // (flagged in TGameDetails) are skipped: the starter UI would only fight
-    // it for the same screen space. Games that push a GUI via Client.GUI at
-    // connect time are handled at runtime instead - the starter UI stands
-    // aside when one installs.
-    if (!TGameDetails::gameProvidesOwnUi(gameUrl)) {
+    // Games known to install their own full interface, by a bundled loader
+    // above or by Client.GUI (flagged in TGameDetails), are skipped: the
+    // starter UI would only fight it for the same screen space, and would
+    // build and announce itself before a post-login Client.GUI package lands.
+    // Other games that push a GUI via Client.GUI are handled at runtime
+    // instead - the starter UI stands aside when one installs.
+    // A Client.GUI package only arrives if the profile lets it in, and a
+    // profile copied with its settings can already refuse it.
+    const auto ownUi = TGameDetails::gameOwnUi(gameUrl);
+    const bool ownUiArrives = ownUi == GameDetail::OwnUi::BundledLoader || (ownUi == GameDetail::OwnUi::ClientGui && serverGuiAccepted);
+    if (!ownUiArrives) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
     }
 
