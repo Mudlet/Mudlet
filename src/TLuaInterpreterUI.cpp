@@ -954,10 +954,11 @@ int TLuaInterpreter::deleteLine(lua_State* L)
 int TLuaInterpreter::deselect(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->clearWindowSelection(windowName)) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    pModel->deselect();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1838,13 +1839,12 @@ int TLuaInterpreter::getSelection(lua_State* L)
         name = WINDOW_NAME(L, 1);
     }
     const QString windowName{name};
-    const Host& host = getHostFromLua(L);
-    const auto selection = host.mpConsole ? host.mpConsole->getWindowSelection(windowName) : std::nullopt;
-    if (!selection) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
 
-    const auto& [valid, text, start, length] = *selection;
+    const auto [valid, text, start, length] = pModel->selection();
 
     if (!valid) {
         return warnArgumentValue(L, __func__, text);
@@ -1860,13 +1860,12 @@ int TLuaInterpreter::getSelection(lua_State* L)
 int TLuaInterpreter::getTextFormat(lua_State* L)
 {
     const QString windowName = lua_gettop(L) ? getVerifiedString(L, __func__, 1, "window name", true) : QString();
-    const Host& host = getHostFromLua(L);
-    const auto format = host.mpConsole ? host.mpConsole->getWindowTextFormat(windowName) : std::nullopt;
-    if (!format) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return warnArgumentValue(L, __func__, qsl("window '%1' not found").arg(windowName));
     }
 
-    const QPair<quint8, TChar>& result = *format;
+    const QPair<quint8, TChar> result = pModel->textAttributes();
 
     if (result.first == 2) {
         return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
@@ -2669,10 +2668,11 @@ int TLuaInterpreter::resetBackgroundImage(lua_State* L)
 int TLuaInterpreter::resetFormat(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->resetWindowFormat(windowName)) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    pModel->resetFormat();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2785,10 +2785,11 @@ int TLuaInterpreter::selectCurrentLine(lua_State* L)
     }
 
     const QString windowName{name};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->selectWindowCurrentLine(windowName)) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    pModel->selectCurrentLine();
     return 0;
 }
 
@@ -2805,12 +2806,11 @@ int TLuaInterpreter::selectSection(lua_State* L)
     const int to = getVerifiedInt(L, __func__, s, "length");
 
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    const auto selected = host.mpConsole ? host.mpConsole->selectWindowSection(consoleName, from, to) : std::nullopt;
-    if (!selected) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(consoleName);
+    if (!pModel) {
         return windowNotFound(L, consoleName);
     }
-    lua_pushboolean(L, *selected);
+    lua_pushboolean(L, pModel->selectSection(from, to));
     return 1;
 }
 
@@ -2833,12 +2833,11 @@ int TLuaInterpreter::selectString(lua_State* L)
     const QString searchText{lua_tostring(L, searchTextPos)};
 
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    const auto begin = host.mpConsole ? host.mpConsole->selectWindowString(consoleName, searchText, numOfMatch) : std::nullopt;
-    if (!begin) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(consoleName);
+    if (!pModel) {
         return windowNotFound(L, consoleName);
     }
-    lua_pushnumber(L, *begin);
+    lua_pushnumber(L, pModel->selectString(searchText, numOfMatch));
     return 1;
 }
 
@@ -3075,8 +3074,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     }
 
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowBgColor(consoleName, QColor(r, g, b, alpha))) {
+    if (!getHostFromLua(L).setWindowBgColor(consoleName, QColor(r, g, b, alpha))) {
         return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
@@ -3093,8 +3091,7 @@ int TLuaInterpreter::setBold(lua_State* L)
     }
     const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable bold attribute");
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowDisplayAttributes(consoleName, TChar::Bold, isAttributeEnabled)) {
+    if (!getHostFromLua(L).setWindowDisplayAttributes(consoleName, TChar::Bold, isAttributeEnabled)) {
         return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
@@ -3219,8 +3216,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
 
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowFgColor(consoleName, QColor(luaRed, luaGreen, luaBlue))) {
+    if (!getHostFromLua(L).setWindowFgColor(consoleName, QColor(luaRed, luaGreen, luaBlue))) {
         return windowNotFound(L, consoleName);
     }
     return 0;
@@ -3462,8 +3458,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     }
     const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable italic attribute");
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowDisplayAttributes(consoleName, TChar::Italic, isAttributeEnabled)) {
+    if (!getHostFromLua(L).setWindowDisplayAttributes(consoleName, TChar::Italic, isAttributeEnabled)) {
         return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
@@ -3910,8 +3905,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
     }
     const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable overline attribute");
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowDisplayAttributes(consoleName, TChar::Overline, isAttributeEnabled)) {
+    if (!getHostFromLua(L).setWindowDisplayAttributes(consoleName, TChar::Overline, isAttributeEnabled)) {
         return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
@@ -3983,8 +3977,7 @@ int TLuaInterpreter::setReverse(lua_State* L)
     }
     const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable reverse attribute");
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowDisplayAttributes(consoleName, TChar::Reverse, isAttributeEnabled)) {
+    if (!getHostFromLua(L).setWindowDisplayAttributes(consoleName, TChar::Reverse, isAttributeEnabled)) {
         return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
@@ -4044,8 +4037,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     }
     const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable strikeout attribute");
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowDisplayAttributes(consoleName, TChar::StrikeOut, isAttributeEnabled)) {
+    if (!getHostFromLua(L).setWindowDisplayAttributes(consoleName, TChar::StrikeOut, isAttributeEnabled)) {
         return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
@@ -4191,8 +4183,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     }
     const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable underline attribute");
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowDisplayAttributes(consoleName, TChar::Underline, isAttributeEnabled)) {
+    if (!getHostFromLua(L).setWindowDisplayAttributes(consoleName, TChar::Underline, isAttributeEnabled)) {
         return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
