@@ -367,7 +367,7 @@ private slots:
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY(host);
-        auto* console = host->mpConsole;
+        TMainConsole* console = host->mpConsole;
         QVERIFY(console);
 
         const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
