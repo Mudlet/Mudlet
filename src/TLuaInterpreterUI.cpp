@@ -2063,12 +2063,11 @@ int TLuaInterpreter::getLabelText(lua_State* L)
 int TLuaInterpreter::getWindowWrap(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto wrapAt = host.mpConsole ? host.mpConsole->getWindowWrapAt(windowName) : std::nullopt;
-    if (!wrapAt) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    lua_pushnumber(L, *wrapAt);
+    lua_pushnumber(L, pModel->buffer.mWrapAt);
     return 1;
 }
 
@@ -4327,8 +4326,8 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-    const auto type = host.mpConsole ? host.mpConsole->getWindowConsoleType(consoleName) : std::nullopt;
-    if (!type) {
+    auto pModel = host.consoleModelNamed(consoleName);
+    if (!pModel) {
         return windowNotFound(L, consoleName);
     }
     if (luaFrom < 1) {
@@ -4337,11 +4336,11 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
         // offer these values either
         return warnArgumentValue(L, __func__, qsl("wrapAt must be greater than zero, got %1").arg(luaFrom));
     }
-    host.mpConsole->setWindowWrapAt(consoleName, luaFrom);
+    pModel->setWrapAt(luaFrom);
     // only the main console's width belongs to the profile - it is what the
     // preferences dialog shows, what NEW-ENVIRON reports as WORD_WRAP and what
     // caps the width NAWS reports to the game
-    if (*type == TConsole::MainConsole) {
+    if (pModel == &host.mainConsoleModel()) {
         const int priorWrapAt = host.mWrapAt;
         host.mWrapAt = luaFrom;
         if (priorWrapAt != luaFrom) {
@@ -4360,15 +4359,15 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-    const auto type = host.mpConsole ? host.mpConsole->getWindowConsoleType(consoleName) : std::nullopt;
-    if (!type) {
+    auto pModel = host.consoleModelNamed(consoleName);
+    if (!pModel) {
         return windowNotFound(L, consoleName);
     }
     if (luaFrom < 0) {
         return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
     }
-    host.mpConsole->setWindowWrapIndent(consoleName, luaFrom);
-    if (*type == TConsole::MainConsole) {
+    pModel->setIndentCount(luaFrom);
+    if (pModel == &host.mainConsoleModel()) {
         host.mWrapIndentCount = luaFrom;
     }
     lua_pushboolean(L, true);
@@ -4382,15 +4381,15 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-    const auto type = host.mpConsole ? host.mpConsole->getWindowConsoleType(consoleName) : std::nullopt;
-    if (!type) {
+    auto pModel = host.consoleModelNamed(consoleName);
+    if (!pModel) {
         return windowNotFound(L, consoleName);
     }
     if (luaFrom < 0) {
         return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
     }
-    host.mpConsole->setWindowWrapHangingIndent(consoleName, luaFrom);
-    if (*type == TConsole::MainConsole) {
+    pModel->setHangingIndentCount(luaFrom);
+    if (pModel == &host.mainConsoleModel()) {
         host.mWrapHangingIndentCount = luaFrom;
     }
     lua_pushboolean(L, true);
