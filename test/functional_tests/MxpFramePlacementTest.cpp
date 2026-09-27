@@ -780,6 +780,22 @@ private slots:
         QCOMPARE(frameGeometry(qsl("status")), whileHidden);
     }
 
+    // The console reports its new size a turn after the resize, so a frame
+    // opened in between is placed against the old size until that report. One
+    // at LEFT/TOP takes no border, so nothing else moves it afterwards.
+    void test_frameOpenedStraightAfterAResizeIsPlacedInTheNewSize()
+    {
+        const QSize sizeBefore = mpHost->mpConsole->getMainWindowSize();
+        mudlet::self()->resize(1000, 700);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QVERIFY2(mpHost->mpConsole->getMainWindowSize() != sizeBefore, "the console did not see the resize");
+
+        QVERIFY(createFrame(qsl("status"), qsl("left"), qsl("200px"), qsl("100px"), {{qsl("LEFT"), qsl("50%")}, {qsl("TOP"), qsl("50%")}}));
+
+        const QRect expected(area().x() + area().width() / 2, area().y() + area().height() / 2, 200, 100);
+        QCOMPARE(frameGeometry(qsl("status")), expected);
+    }
+
     // How the base UI reserves its space, so this is #9698 as reported. Declared
     // last on purpose: an adjustable container leaves deferred timers of its own
     // behind that resize the main window out from under whatever runs next, so

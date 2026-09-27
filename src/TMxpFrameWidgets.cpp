@@ -309,7 +309,9 @@ void TMxpFrameWidgets::setGeometry(const QString& name, const QRect& geometry)
 
 void TMxpFrameWidgets::scheduleSizeReport(bool relayout)
 {
-    if (relayout && mpMainConsole->mpHost->mMxpFrameManager.frameCount() > 0) {
+    // Whether there are frames to move is only asked once the report runs, as
+    // one opened in between is placed against the size being replaced
+    if (relayout) {
         mRelayoutPending = true;
     }
     if (mSizeReportPending) {
@@ -329,7 +331,7 @@ void TMxpFrameWidgets::scheduleSizeReport(bool relayout)
             return;
         }
         reportSize();
-        if (relayout) {
+        if (relayout && mpMainConsole->mpHost->mMxpFrameManager.frameCount() > 0) {
             mpMainConsole->mpHost->mMxpFrameManager.relayoutFrames();
         }
     });
