@@ -102,6 +102,7 @@ struct TConsoleModel
     void resetFormat();
     bool setSelectionFgColor(const QColor& newColor);
     bool setSelectionBgColor(const QColor& newColor);
+    bool setSelectionDisplayAttributes(TChar::AttributeFlags attributes, bool enabled);
     // Makes the selected run a link, taking over the commands' Lua registry references.
     bool setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
 
@@ -144,9 +145,9 @@ struct TConsoleModel
         int firstLine = -1;
         int lastLine = -1;
     };
-    // Links and text go in at mUserCursor, and text in mFormatCurrent. While
-    // triggers run over this console's line, a write there shifts their
-    // capture groups to match.
+    // echoLink() appends; the inserts go in at mUserCursor, text in
+    // mFormatCurrent. While triggers run over this console's line, a write
+    // there shifts their capture groups to match.
     void echoLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
     WriteResult insertLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
     WriteResult insertText(const QString& text);
