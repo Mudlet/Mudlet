@@ -1713,7 +1713,8 @@ void TConsole::luaWrapLine(int line)
     if (!mpHost) {
         return;
     }
-    buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount);
+    // the profile's settings reach the main console's buffer without going through setWrapAt()
+    buffer.wrapLine(line, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
 }
 
 void TConsole::setFontSize(int size)
