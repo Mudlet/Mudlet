@@ -1589,11 +1589,9 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QCOMPARE(countLine.toInt(), lines.count());
     }
 
-    // selectCaptureGroup() only reaches the view from inside a trigger that
-    // captured something, and a selection needs a widget to live in - so with no
-    // window it has to answer the -1 it already answers for a group that is not
-    // there.
-    void test_selectCaptureGroupAnswersMinusOneWithNoView()
+    // A trigger's capture is a run of the main console's line, so a script
+    // selects it with no window at all.
+    void test_selectCaptureGroupSelectsWithNoView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
@@ -1601,15 +1599,18 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QVERIFY2(host->mpConsole, "The active host has no main console.");
         runLua(host,
                qsl("captureGroupResult = 'the trigger did not run'\n"
-                   "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(1))]], 10)\n"));
+                   "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(2)) .. ' ' .. tostring(getSelection())]], 10)\n"));
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         host->reenableAllTriggers();
 
-        host->runTriggers(appendModelLine(model->buffer, qsl("NoViewCapture alpha")));
+        const int line = appendModelLine(model->buffer, qsl("NoViewCapture alpha"));
+        host->runTriggers(line);
 
-        QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("-1"));
+        QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("1 alpha"));
+        QCOMPARE(model->P_begin, QPoint(14, line));
+        QCOMPARE(model->P_end, QPoint(19, line));
     }
 
     // Selection and format are the model's cursor, selection and characters, so
@@ -3533,10 +3534,7 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()

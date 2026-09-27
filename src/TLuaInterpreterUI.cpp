@@ -2757,9 +2757,8 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
             length = pL->mCapturedNameGroupsPosList.value(name).second;
         }
     }
-    if (length > 0 && host.mpConsole) {
-        const int pos = host.mpConsole->selectSection(begin, length);
-        lua_pushnumber(L, pos);
+    if (length > 0) {
+        lua_pushnumber(L, host.selectMainConsoleSection(begin, length));
     } else {
         lua_pushnumber(L, -1);
     }
