@@ -34,7 +34,7 @@
 #include <QMenu>
 #include <QScopeGuard>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
@@ -69,14 +69,14 @@ private:
     }
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
+    if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
       QFAIL("Could not connect with the host.");
     }
   }
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        MudletApp::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
     if (dir.exists()) {
       dir.removeRecursively();
@@ -106,7 +106,7 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
-    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
              qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
@@ -194,6 +194,21 @@ private slots:
     copyAction->trigger();
 
     QCOMPARE(clipboard->text(), qsl("^pattern$"));
+  }
+
+  // A pattern is one line, and the editor has no way to show a second one, so a
+  // multi-line paste has to be cut down to its first line rather than hiding the
+  // rest of what was pasted (#7633)
+  void test_pastingSeveralLinesIntoAPatternKeepsOnlyTheFirst() {
+    SingleLineTextEdit edit;
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("^first pattern$\n^second pattern$"));
+
+    QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(edit.toPlainText(), qsl("^first pattern$"));
   }
 
   // The deselect on focus-out exists so a pattern line does not keep showing a

@@ -977,6 +977,170 @@ describe("Tests how a GMCP message is split into name and data", function()
   end)
 end)
 
+describe("Tests the Client.GUI package offer", function()
+
+  -- A game may send Client.GUI as JSON, or as the raw telnet form of a version
+  -- and a URL on two lines. Either way the offer only has to reach the
+  -- downloader, so the URL is one nothing answers: the harness's fixture server
+  -- 404s it when it started one, a closed port refuses it when it did not.
+  local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
+
+  local function offerUrl(packageName)
+    local port = (httpPort and httpPort ~= "" and httpPort) or "1"
+    return "http://127.0.0.1:" .. port .. "/not-served/" .. packageName .. ".mpackage"
+  end
+
+  local function displayedSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  -- the console wraps a line wherever it runs out of width, and these URLs are
+  -- long enough to be split, so the whitespace comes out of both sides first
+  local function shownSince(mark, text)
+    return displayedSince(mark):gsub("%s+", ""):find((text:gsub("%s+", "")), 1, true)
+  end
+
+  local function downloadStarted(mark, packageName)
+    return shownSince(mark, "Downloading and installing package '" .. packageName .. "'")
+  end
+
+  -- sends a Client.GUI message carrying this payload, and waits out any
+  -- download it started for the named package
+  local function offerGui(payload, packageName)
+    local mark = getLastLineNumber("main")
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>Client.GUI " .. payload .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    if downloadStarted(mark, packageName) then
+      -- the download the offer started is this test's to finish: the next offer
+      -- aborts a reply still in flight, and the failure message would otherwise
+      -- land in a later test's window
+      local drained = false
+      for _ = 1, 150 do
+        if shownSince(mark, "Package download failed from '" .. offerUrl(packageName) .. "'") then
+          drained = true
+          break
+        end
+        local pumped, why = pumpEvents(20)
+        assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
+      end
+      assert.is_true(drained, "the download of '" .. packageName .. "' has not finished, so it will land in a later test: " .. displayedSince(mark))
+    end
+    return mark
+  end
+
+  local function offerRawTelnetGui(packageName, version)
+    return offerGui(version .. "\n" .. offerUrl(packageName), packageName)
+  end
+
+  it("acts on a Client.GUI offer sent as raw telnet rather than JSON (#7704)", function()
+    local mark = offerRawTelnetGui("RegressRawGui", "7704")
+    assert.is_truthy(downloadStarted(mark, "RegressRawGui"), "the raw telnet offer never reached the downloader: " .. displayedSince(mark))
+  end)
+
+  it("keeps a raw telnet Client.GUI out of the gmcp table (#7034)", function()
+    -- an earlier spec may have left a gmcp.Client of its own behind, which would
+    -- answer for this one
+    local previousClient = gmcp.Client
+    finally(function() gmcp.Client = previousClient end)
+    gmcp.Client = nil
+    local mark = offerRawTelnetGui("RegressRawGuiTable", "7034")
+    -- the gmcp.Client check below would be just as happy with an offer that was
+    -- ignored outright, so prove first that this one was acted on
+    assert.is_truthy(downloadStarted(mark, "RegressRawGuiTable"), "the offer never reached the downloader")
+    -- gmcp.Client.GUI stays nil either way, because parseJSON creates the parent
+    -- table before it fails on the payload - only the parent tells the two apart
+    assert.is_nil(gmcp.Client, "the raw telnet offer was pushed into the gmcp table")
+  end)
+
+  it("acts on a JSON Client.GUI offer whose version is a number", function()
+    local previousClient = gmcp.Client
+    finally(function() gmcp.Client = previousClient end)
+    local mark = offerGui('{"version": 39, "url": "' .. offerUrl("RegressNumericGui") .. '"}', "RegressNumericGui")
+    assert.is_truthy(downloadStarted(mark, "RegressNumericGui"), "an offer numbering its version was not acted on: " .. displayedSince(mark))
+  end)
+
+  it("ignores a Client.GUI offer that is missing its version or its URL", function()
+    local previousClient = gmcp.Client
+    finally(function() gmcp.Client = previousClient end)
+    local mark = offerGui('{"url": "' .. offerUrl("RegressNoVersionGui") .. '"}', "RegressNoVersionGui")
+    offerGui('{"version": "5"}', "RegressNoUrlGui")
+    -- and the raw telnet form, with a version but no URL line, or the other way round
+    offerGui("5", "RegressRawNoUrlGui")
+    offerGui("\n" .. offerUrl("RegressRawNoVersionGui"), "RegressRawNoVersionGui")
+    assert.is_falsy(shownSince(mark, "Downloading and installing package"), "an incomplete offer was acted on: " .. displayedSince(mark))
+
+    -- the same offer made complete, so the silence above is about what was missing
+    mark = offerGui('{"version": "5", "url": "' .. offerUrl("RegressCompleteGui") .. '"}', "RegressCompleteGui")
+    assert.is_truthy(downloadStarted(mark, "RegressCompleteGui"), "a complete offer was not acted on either: " .. displayedSince(mark))
+  end)
+
+  -- a game with an interface of its own can decline the built-in starter UI,
+  -- which Mudlet passes on as the event an installed interface raises
+  it("raises sysServerGuiInstalled when the game declines the starter UI", function()
+    local previousClient = gmcp.Client
+    -- the starter UI stands aside on that event and saves it in its settings,
+    -- which are not this spec's to change
+    local standAside = BaseUI and BaseUI.standAside
+    local seen = {}
+    local handler
+    finally(function()
+      if handler then
+        killAnonymousEventHandler(handler)
+      end
+      gmcp.Client = previousClient
+      if standAside then
+        BaseUI.standAside = standAside
+      end
+    end)
+    if standAside then
+      BaseUI.standAside = function() end
+    end
+    handler = registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
+      -- the gmcp table is already up to date by the time the event is raised
+      seen[#seen + 1] = {packageName, gmcp.Client and gmcp.Client.GUI and gmcp.Client.GUI.baseui}
+    end)
+
+    for _, keep in ipairs({'{"baseui": true}', '{"baseui": "no"}', '{"other": false}'}) do
+      offerGui(keep, "nothing")
+    end
+    assert.same({}, seen, "a game keeping the starter UI was taken to be declining it")
+
+    offerGui('{"baseui": false}', "nothing")
+    offerGui('{"baseui": " False "}', "nothing")
+    assert.same({{nil, false}, {nil, " False "}}, seen)
+  end)
+end)
+
+describe("Tests Discord GMCP routing", function()
+
+  -- getDiscordState() is denied when the bundled discord-rpc library is not on
+  -- the library search path, which the harness arranges, or when the profile has
+  -- Discord switched off. The state text read back is Mudlet's own, so nothing
+  -- has to be listening on Discord.
+  local requireDiscord = os.getenv("MUDLET_TEST_REQUIRE_DISCORD")
+
+  local function discordUnavailable()
+    local state, denial = getDiscordState()
+    if state ~= nil then
+      return false
+    end
+    if requireDiscord then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_DISCORD is set but the Discord API is unavailable: " .. tostring(denial))
+    end
+    pending("the Discord API is unavailable: " .. tostring(denial))
+    return true
+  end
+
+  it("hands a Discord GMCP message to Discord under the message name alone (#2284)", function()
+    if discordUnavailable() then return end
+    local previousState = getDiscordState()
+    finally(function() setDiscordState(previousState) end)
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>External.Discord.Status {\"state\": \"RegressDiscordState\"}<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.equals("RegressDiscordState", getDiscordState(), "is this profile still set to show game details in its Discord settings?")
+  end)
+end)
+
 describe("Tests addSupportedTelnetOption", function()
   -- Only the argument contract is reachable. What the call changes is the
   -- reply cTelnet writes back when the server offers that option - IAC DO
@@ -1164,6 +1328,19 @@ describe("Tests telnet option negotiation", function()
     assert.equals("part2", mssp.TELNETSPLITVAR)
   end)
 
+  -- a variable with no value used to abandon the whole subnegotiation, so every
+  -- variable a game sent behind a malformed one went missing
+  it("keeps reading MSSP variables past one that arrives without a value (#4233)", function()
+    finally(function()
+      mssp.TELNETMSSPNOVALUE = nil
+      mssp.TELNETMSSPAFTERBAD = nil
+    end)
+
+    feed("<T_IAC><T_SB><O_MSSP><01>TELNETMSSPNOVALUE<01>TELNETMSSPAFTERBAD<02>arrived<T_IAC><T_SE>")
+    assert.is_nil(mssp.TELNETMSSPNOVALUE, "a variable with no value should not be recorded")
+    assert.equals("arrived", mssp.TELNETMSSPAFTERBAD)
+  end)
+
   it("displays nothing for the commands it answers on the wire", function()
     -- AYT and NOP produce no text of their own; a parser that lost track of
     -- them would leak 0xff and the command byte into the line instead
@@ -1216,6 +1393,104 @@ describe("Tests telnet option negotiation", function()
     assert.same({"MXPSUBNEGOPEN"}, getLines("main", mark, getLastLineNumber("main")))
 
     assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
+  end)
+
+  it("drops each protocol again when the server withdraws it with WONT", function()
+    for _, option in ipairs(options) do
+      local token, protocol = option[1], option[2]
+      assert.same({"sysProtocolEnabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_WILL>" .. token))
+      assert.same({"sysProtocolDisabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_WONT>" .. token))
+    end
+  end)
+
+  it("stops acting on MSP and channel 102 once the server withdraws them with WONT", function()
+    feed("<T_IAC><T_WILL><O_MSP>")
+    assert.is_true(receiveMSP("!!SOUND(Off)"), "MSP messages were refused while the server had MSP enabled")
+    feed("<T_IAC><T_WONT><O_MSP>")
+    assert.is_nil(receiveMSP("!!SOUND(Off)"), "MSP messages were still accepted after the server's WONT")
+
+    feed("<T_IAC><T_WILL><O_AARDWULF>")
+    assert.is_true(sendTelnetChannel102("ab"), "the channel stayed shut while the server had it enabled")
+    feed("<T_IAC><T_WONT><O_AARDWULF>")
+    assert.is_nil(sendTelnetChannel102("ab"), "the channel stayed open after the server's WONT")
+  end)
+
+  -- A player can switch a protocol off while the game has it up. The next
+  -- offer, either way round, has to take it down rather than leave it running.
+  local switchable = {
+    {"<O_GMCP>", "GMCP", "enableGMCP"},
+    {"<O_MSSP>", "MSSP", "enableMSSP"},
+    {"<O_MSDP>", "MSDP", "enableMSDP"},
+    {"<O_MSP>", "MSP", "enableMSP"},
+    {"<O_MXP>", "MXP", "enableMXP"},
+    {"<O_NENV>", "NEW_ENVIRON", "enableNEWENVIRON"},
+    {"<O_CHARS>", "CHARSET", "enableCHARSET"},
+  }
+
+  for _, command in ipairs({{"WILL", "<T_WILL>"}, {"DO", "<T_DO>"}}) do
+    local name, token = command[1], command[2]
+    it("takes a protocol down on " .. name .. " once the profile has it switched off", function()
+      local originals = {}
+      for _, option in ipairs(switchable) do
+        originals[option[3]] = getConfig(option[3])
+      end
+      finally(function()
+        for key, value in pairs(originals) do
+          setConfig(key, value)
+        end
+      end)
+
+      for _, option in ipairs(switchable) do
+        local offer, protocol, key = "<T_IAC>" .. token .. option[1], option[2], option[3]
+        setConfig(key, true)
+        assert.same({"sysProtocolEnabled:" .. protocol}, protocolEventsFrom(offer))
+        setConfig(key, false)
+        assert.same({"sysProtocolDisabled:" .. protocol}, protocolEventsFrom(offer), protocol .. " was left up")
+        -- and only the once, as it is no longer up to be taken down
+        assert.same({}, protocolEventsFrom(offer), protocol .. " was taken down twice")
+      end
+    end)
+  end
+
+  -- ATCP is the protocol GMCP replaced, so it is only taken up while the
+  -- profile has GMCP switched off
+  it("takes up ATCP only while the profile has GMCP switched off", function()
+    local original = getConfig("enableGMCP")
+    finally(function()
+      feed("<T_IAC><T_DONT><O_ATCP>")
+      setConfig("enableGMCP", original)
+    end)
+
+    setConfig("enableGMCP", true)
+    assert.same({}, protocolEventsFrom("<T_IAC><T_DO><O_ATCP>"))
+    assert.same({}, protocolEventsFrom("<T_IAC><T_WILL><O_ATCP>"))
+
+    setConfig("enableGMCP", false)
+    assert.same({"sysProtocolEnabled:ATCP"}, protocolEventsFrom("<T_IAC><T_DO><O_ATCP>"))
+    assert.same({"sysProtocolDisabled:ATCP"}, protocolEventsFrom("<T_IAC><T_WONT><O_ATCP>"))
+    assert.same({"sysProtocolEnabled:ATCP"}, protocolEventsFrom("<T_IAC><T_WILL><O_ATCP>"))
+    assert.same({"sysProtocolDisabled:ATCP"}, protocolEventsFrom("<T_IAC><T_DONT><O_ATCP>"))
+
+    -- switching GMCP back on takes an ATCP that is still up down on the next offer
+    for _, offer in ipairs({"<T_IAC><T_DO><O_ATCP>", "<T_IAC><T_WILL><O_ATCP>"}) do
+      setConfig("enableGMCP", false)
+      assert.same({"sysProtocolEnabled:ATCP"}, protocolEventsFrom(offer))
+      setConfig("enableGMCP", true)
+      assert.same({"sysProtocolDisabled:ATCP"}, protocolEventsFrom(offer))
+    end
+  end)
+
+  -- a subnegotiation that runs straight into the next command has lost its
+  -- IAC SE, and both halves are acted on rather than one swallowing the other
+  -- (#4385)
+  it("recovers a subnegotiation that runs into the next command without its IAC SE", function()
+    finally(function() gmcp.SpecNoSE = nil end)
+    assert.is_nil(gmcp.SpecNoSE)
+    local mark = getLastLineNumber("main")
+    local events = protocolEventsFrom("<T_IAC><T_SB><O_GMCP>SpecNoSE.Vitals {\"hp\": 7}<T_IAC><T_DO><O_MSSP>NOSEAFTER\r\n")
+    assert.same({hp = 7}, gmcp.SpecNoSE and gmcp.SpecNoSE.Vitals)
+    assert.same({"sysProtocolEnabled:MSSP"}, events, "the command that cut the subnegotiation short was lost")
+    assert.same({"NOSEAFTER"}, getLines("main", mark, getLastLineNumber("main")))
   end)
 end)
 
@@ -1365,6 +1640,16 @@ describe("Tests CHARSET negotiation", function()
     assert.equals("UTF-8", getServerEncoding(), "a request was acted on after CHARSET was turned off")
     feed("<T_IAC><T_DO><O_CHARS>")
   end)
+
+  it("ignores a request once the server has said it WONT do CHARSET", function()
+    feed("<T_IAC><T_WONT><O_CHARS>")
+    request("CP437")
+    assert.equals("UTF-8", getServerEncoding(), "a request was acted on after the server's WONT")
+
+    feed("<T_IAC><T_DO><O_CHARS>")
+    request("CP437")
+    assert.equals("CP437", getServerEncoding(), "offering CHARSET again did not bring it back")
+  end)
 end)
 
 describe("Tests the encodings Mudlet carries its own tables for", function()
@@ -1435,6 +1720,14 @@ describe("Tests the encodings Mudlet carries its own tables for", function()
       assert.is_true(setServerEncoding(encoding))
       assert.equals(expected, msspValueOf(string.char(0xE3)), "byte 0xE3 came back wrong under " .. encoding)
     end
+  end)
+
+  -- ASCII is held as no encoding at all, and an out-of-band message is then
+  -- read as UTF-8, so a game that sends UTF-8 anyway still gets its text through
+  it("reads an out-of-band message as UTF-8 while the game encoding is ASCII", function()
+    assert.is_true(setServerEncoding("ASCII"))
+    assert.equals("ASCII", getServerEncoding())
+    assert.equals("π", msspValueOf("\207\128"))
   end)
 
   it("sends a character the encoding has and refuses one it does not", function()

@@ -3,9 +3,8 @@
 # compile Mudlet natively on the Ubuntu 24.04 session container.
 #
 # The container filesystem is cached after this hook completes, so the
-# expensive steps (apt, Qt download, luarocks) only run when the cache is
-# cold; on a warm container every step short-circuits and the hook finishes
-# in well under a minute.
+# expensive steps (apt, Qt download, luarocks) run only on a cold cache; every
+# step must short-circuit on a warm one.
 set -euo pipefail
 
 # Local checkouts (desktop/CLI) manage their own toolchain - do nothing there.
@@ -95,9 +94,8 @@ if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
     ffmpeg
 fi
 
-# Coverage tooling for the improve-test-coverage skill (gcovr for the report,
-# jq for its check-lines.sh helper). Separate guard: containers cached before
-# this block existed still pick it up.
+# gcovr and jq for the improve-test-coverage skill. Guarded separately so
+# containers cached before this block existed still get them.
 if ! command -v gcovr >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
   echo "Installing coverage tooling..."
   ${SUDO} apt-get update -qq
@@ -169,10 +167,7 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   git -C "${CLAUDE_PROJECT_DIR}" submodule update --init --recursive
 
   # Configure the default tree every session (cheap) so it already exists
-  # with Qt and the mold linker wired in - linking dominates a rebuild, and
-  # mold cuts the link tail dramatically (see PR #9927; until its top-level
-  # set_alternate_linker() move merges, the flag only reaches the main mudlet
-  # binary, afterwards every target).
+  # with Qt and the mold linker wired in - linking dominates a rebuild.
   cd "${CLAUDE_PROJECT_DIR}"
   cmake --preset linux-debug-nosan -DCMAKE_PREFIX_PATH="${QT_DIR}" -DUSE_ALTERNATE_LINKER=mold
 fi

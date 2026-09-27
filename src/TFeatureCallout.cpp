@@ -20,6 +20,7 @@
 #include "TFeatureCallout.h"
 
 #include "mudlet.h"
+#include "MudletApp.h"
 
 #include <QEvent>
 #include <QGuiApplication>
@@ -106,7 +107,7 @@ void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, cons
     if (!pAnchor) {
         return;
     }
-    auto* settings = mudlet::getQSettings();
+    auto* settings = MudletApp::getQSettings();
     // players installing today experience the current interface as the
     // baseline, so nothing in it is "new" to them
     if (mudlet::smFirstLaunch) {
@@ -161,7 +162,7 @@ void TFeatureCallout::place()
     if (!mAnnounced) {
         mAnnounced = true;
         // an appearance is only spent once the balloon is really on screen
-        auto* settings = mudlet::getQSettings();
+        auto* settings = MudletApp::getQSettings();
         settings->setValue(shownCountKey(mFeatureId), settings->value(shownCountKey(mFeatureId), 0).toInt() + 1);
         mudlet::self()->announce(mAnnouncement);
     }
@@ -195,7 +196,7 @@ void TFeatureCallout::slot_applicationStateChanged(const Qt::ApplicationState st
 
 void TFeatureCallout::markDismissed()
 {
-    mudlet::getQSettings()->setValue(dismissedKey(mFeatureId), true);
+    MudletApp::getQSettings()->setValue(dismissedKey(mFeatureId), true);
 }
 
 void TFeatureCallout::reposition()

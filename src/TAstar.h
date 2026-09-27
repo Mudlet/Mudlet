@@ -64,21 +64,15 @@ class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    // The location map is held by reference, not copied: it is one entry per
-    // room, so on a large map a copy per search costs more than the search does
-    // (35MB on the 2.3 million room map this was measured against). Every
-    // caller passes TMap::locations, which outlives any heuristic built from it
-    // and survives initGraph() - that only clear()s the vector, so the object
-    // itself is never destroyed. The hazard is therefore staleness rather than
-    // a dangling reference: a heuristic kept across an initGraph() would read
-    // coordinates for renumbered rooms, so do not store one.
+    // Held by reference: a per-search copy (35MB on a 2.3M-room map) costs more than the search.
+    // Callers pass TMap::locations, which initGraph() only clear()s: it can't dangle, but goes stale
+    // across initGraph() (rooms renumbered), so never store a heuristic.
     distance_heuristic(const LocMap& l, Vertex goal)
     : m_location(l)
     , m_goal(goal)
     {}
 
-    // Binding a temporary here would leave m_location dangling on the first
-    // call, so make it a compile error rather than something to remember.
+    // A temporary would leave m_location dangling.
     distance_heuristic(const LocMap&&, Vertex) = delete;
 
     CostType operator()(Vertex u)

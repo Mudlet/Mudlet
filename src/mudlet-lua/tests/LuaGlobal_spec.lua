@@ -70,6 +70,20 @@ describe("Tests LuaGlobal.lua functions", function()
     pending("unzip extracts an archive's files and directories - against the lua-zip binding it raises \"attempt to call method 'files'\" - issue #10184")
   end)
 
+  describe("Tests the Lua module search path", function()
+    -- toNativeSeparators() was once defined in LuaGlobal.lua, which loads long
+    -- after these search paths are built, so the assignment that uses it failed
+    -- and a module dropped into the profile directory was never found
+    it("Should carry the profile's own directory on package.path (#4051)", function()
+      -- compared with the separators flattened because package.path is built by
+      -- calling toNativeSeparators itself, so using it here too would let one
+      -- broken conversion agree with itself
+      local wanted = (getMudletHomeDir() .. "/?.lua"):gsub("\\", "/")
+      local havePath = package.path:gsub("\\", "/")
+      assert.is_truthy(havePath:find(wanted, 1, true), package.path)
+    end)
+  end)
+
   describe("Tests the globals LuaGlobal.lua seeds", function()
     it("Should still have gmcp and mssp as tables once every package has loaded", function()
       -- the protocol handlers index straight into these, so a package loaded

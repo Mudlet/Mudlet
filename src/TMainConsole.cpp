@@ -21,7 +21,7 @@
  ***************************************************************************/
 
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 
 
@@ -46,9 +46,7 @@
 
 #include <QDataStream>
 #include <QDialog>
-#include <QDir>
 #include <QDockWidget>
-#include <QFileInfo>
 #include <QIcon>
 #include <QLabel>
 #include <QLayout>
@@ -61,7 +59,6 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
-#include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QTimer>
 #include <QPainter>
@@ -83,33 +80,6 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
     }
 }
 
-// A ".dic" file holds one word per line, below a count of how many lines
-// follow, and hunspell reads a "/" on such a line as the start of that word's
-// affix flags and a tab as the start of its morphological description. So a
-// word can only be stored if the file gives it back as itself:
-//   - a blank word writes a line the next load skips;
-//   - a line feed writes two lines that come back as two separate words;
-//   - a carriage return is dropped by the QFile::Text reader, so "qa\rword"
-//     comes back as "qaword";
-//   - leading whitespace leaves hunspell not recognising the word at all, and a
-//     tab or a "/" leaves it knowing only the part in front - "TCP/IP" teaches
-//     the spell checker "TCP" instead - while the word list still reports the
-//     word that was added.
-// Hunspell does read "\/" as an escaped "/", but our own reader would then hand
-// the backslash back as part of the word, so escaping would mean changing both
-// halves of the format and misreading every ".dic" file already written.
-// A trailing space, and a word of nothing but spaces, do come back intact; the
-// same test refuses those because they are not words.
-bool storableWord(const QString& word)
-{
-    return !word.isEmpty() && word == word.trimmed() && !word.contains(QChar::LineFeed) && !word.contains(QChar::CarriageReturn) && !word.contains(QChar::Tabulation)
-           && !word.contains(QLatin1Char('/'));
-}
-
-QString unstorableWordMessage()
-{
-    return qsl("the word \"%1\" cannot be stored in the user dictionary, it must have some text in it, fit on a single line, not start or end with whitespace, and contain no tab or \"/\" character");
-}
 } // namespace
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
@@ -135,20 +105,33 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TMainConsole::slot_reloadMap, Qt::UniqueConnection);
     connect(this, &TMainConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
 
-    setSystemSpellDictionary(mpHost->getSpellDic());
-    // Reading it costs tens of milliseconds, so it is not read here - but
-    // leaving it for the first spell-check would put that wait in front of the
-    // first word typed, so a queued connection has the event loop do it once
-    // the profile has finished loading:
-    connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
-    // ...and turning spell check on mid-session is the other moment the
-    // dictionary goes from unwanted to wanted, so it is read the same way
-    connect(mpHost, &Host::signal_spellCheckEnabled, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
+    // Reading it takes tens of ms, so neither here nor at the first word typed, but once the profile has loaded:
+    connect(
+            mudlet::self(),
+            &mudlet::signal_profileLoaded,
+            this,
+            [this]() {
+                if (mpHost) {
+                    mpHost->spellChecker().warmDictionaries();
+                }
+            },
+            Qt::QueuedConnection);
+    // ...or when spell check is turned on mid-session:
+    connect(
+            mpHost,
+            &Host::signal_spellCheckEnabled,
+            this,
+            [this]() {
+                if (mpHost) {
+                    mpHost->spellChecker().warmDictionaries();
+                }
+            },
+            Qt::QueuedConnection);
 
-    // Load up the spelling dictionary for the profile - needs to handle the
-    // absence of files for the first run in a new profile or from an older
-    // Mudlet version:
-    setProfileSpellDictionary();
+    mpLatencyBoxPacer = new QTimer(this);
+    mpLatencyBoxPacer->setSingleShot(true);
+    mpLatencyBoxPacer->setInterval(csmLatencyBoxPaceMs);
+    connect(mpLatencyBoxPacer, &QTimer::timeout, this, &TMainConsole::slot_refreshLatencyBox);
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
@@ -156,15 +139,10 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
-    // There is one window in which these widgets' destroyed() handlers are unsafe:
-    // after this console's members - the maps they write to among them - have been
-    // destroyed, but before ~QObject severs incoming connections. The only ones that
-    // can be destroyed inside it are the ones QWidget::~QWidget deletes, i.e. this
-    // console's own children, so sweeping those is enough. One created into a user
-    // window belongs to a TDockWidget reparented onto the main window instead, and
-    // can only die after ~QObject has already dropped the connection. Children rather
-    // than map entries, because deleteCommandLine() and resetMainConsole() drop the
-    // entry while the widget lives on until its deferred delete is delivered.
+    // These widgets' destroyed() handlers would write to maps already destroyed if they ran after this
+    // console's members go but before ~QObject severs connections. Only our own children, deleted by
+    // ~QWidget, die in that window (a user window's belong to its TDockWidget), so sweep children - not map
+    // entries, as deleteCommandLine() and resetMainConsole() drop entries before the deferred delete.
     for (auto commandLine : findChildren<TCommandLine*>()) {
         disconnect(commandLine, &QObject::destroyed, this, nullptr);
     }
@@ -175,15 +153,10 @@ TMainConsole::~TMainConsole()
         disconnect(textBox, &QObject::destroyed, this, nullptr);
     }
 
-    // A label and a sub-console take themselves out of the registry from their own
-    // destructor; none of the three kinds here does. For the ones that are this
-    // console's own children the handler that would have done it was disconnected just
-    // above, and the rest die after ~QObject has dropped the connection. A dock
-    // widget has no destructor either but needs no sweep: one only ever exists beside a
-    // user window's sub-console, and closing the profile closes every sub-console before
-    // the console goes, which takes the dock out through TConsole::closeEvent(). Quitting
-    // destroys every Host before the console, so there is not always a registry left
-    // to clear.
+    // Unlike labels and sub-consoles, these kinds don't deregister in their destructors, and their
+    // destroyed() handlers are disconnected above or die with ~QObject. Docks need no sweep: closing the
+    // profile closes every sub-console first, taking its dock via TConsole::closeEvent(). Quitting destroys
+    // every Host before the console, so there may be no registry.
     if (mpHost) {
         const QStringList scrollBoxNames = mScrollBoxMap.keys();
         for (const QString& scrollBoxName : scrollBoxNames) {
@@ -201,8 +174,7 @@ TMainConsole::~TMainConsole()
 
     mSubCommandLineMap.clear();
 
-    // Labels carry a destroyed() handler of the same shape, so the same window is
-    // unsafe for them and the same sweep closes it.
+    // Labels' destroyed() handlers have the same unsafe window.
     for (auto label : findChildren<TLabel*>()) {
         disconnect(label, &QObject::destroyed, this, nullptr);
     }
@@ -215,19 +187,6 @@ TMainConsole::~TMainConsole()
     }
     if (mpUnpackingDialog) {
         mpUnpackingDialog->deleteLater();
-    }
-    if (mpHunspell_system) {
-        Hunspell_destroy(mpHunspell_system);
-        mpHunspell_system = nullptr;
-    }
-    if (mpHunspell_profile) {
-        Hunspell_destroy(mpHunspell_profile);
-        mpHunspell_profile = nullptr;
-        if (mudlet::self()) {
-            // Need to commit any changes to personal dictionary
-            qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
-        }
     }
 }
 
@@ -347,8 +306,7 @@ void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString&
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 {
-    // A click has flipped the checkable button already; this is for logging
-    // toggled from Lua, and for a start that failed
+    // A click has already flipped the button; this is for logging toggled from Lua, and failed starts.
     logButton->setChecked(isLogging);
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
 }
@@ -481,8 +439,7 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
     dockwidget->setContentsMargins(0, 0, 0, 0);
     dockwidget->setWindowTitle(name);
     registerDockWidget(name, dockwidget);
-    // It wasn't obvious but the parent passed to the TConsole constructor
-    // is sliced down to a QWidget and is NOT a TDockWidget pointer:
+    // The parent is the dock's inner QWidget, NOT the TDockWidget:
     auto console = new TConsole(mpHost, name, TConsole::UserWindow, dockwidget->widget());
     console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
     console->setContentsMargins(0, 0, 0, 0);
@@ -992,31 +949,21 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
-    // an embedded map can only be put in a user window, so - unlike
-    // Host::parentWindowMissing() - a scroll box is not a parent it can use
-    // either; without this the map goes on the main console over the game text
-    // and the caller is told it worked
+    // An embedded map can only go in a user window, so unlike Host::parentWindowMissing() a scroll box
+    // won't do; else the map lands on the main console over the game text while reporting success.
     const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
     if (!pW && !wantsMainConsole) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
-    // Only the profile's own map dock, and only while it is on screen, holds the
-    // mapper slot. One that is merely hidden - by closeMapWidget(), by the dock's
-    // own close button, by a restored layout, or by mudlet::slot_showMapperDialog()
-    // handing the map over to a main window dock - used to refuse an embedded mapper
-    // for the rest of the session, while the map window getters, setMapWindowTitle()
-    // and closeMapWidget() reported no map window at all. Asking mapWidget() rather
-    // than the raw pointer is what keeps those answers the same as this one.
+    // Only the profile's map dock, while on screen, holds the mapper slot; a hidden one does not. Ask
+    // mapWidget(), not the raw pointer, to agree with the map window getters and closeMapWidget().
     if (mpDockableMapWidget) {
         if (mapWidget()) {
             return {false, qsl("cannot create mapper. Do you already use a map window?")};
         }
-        // The dock is the dlgMapper's parent, so taking it away takes the mapper
-        // with it. deleteLater() leaves every QPointer to the pair set until the
-        // event loop gets to run, which the script that called this will not let
-        // it do, so drop ours now. Conditional because the map may be being drawn
-        // by a main window or detached window dock instead, which this leaves
-        // alone; when it is not, the mapper below takes TMap::mpMapper over.
+        // The dock parents the dlgMapper, so both go. deleteLater() leaves QPointers set until the event
+        // loop runs, which the calling script prevents, so drop ours now - unless a main window or detached
+        // window dock is drawing the map instead.
         if (mpHost->mpMap->mpMapper.data() == mpDockableMapWidget->widget()) {
             mpHost->mpMap->mpMapper = nullptr;
         }
@@ -1065,9 +1012,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
     } else if (!mpHost->mpMap->mpMapper) {
-        // Nothing is drawing the map: either the map widget taken away above was
-        // doing it, or a window that borrowed TMap::mpMapper went without handing
-        // it back. The mapper this console already has takes over.
+        // Nothing draws the map: the widget removed above did, or a borrower of TMap::mpMapper never gave it back.
         mpHost->restoreOwnMapper();
     }
     mpMapper->resize(width, height);
@@ -1097,8 +1042,7 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         return {false, QLatin1String("a commandLine cannot have an empty string as its name")};
     }
 
-    // there is no Host::createCommandLine() wrapper, so the refusal the other
-    // creators make in Host::create...() is made here
+    // No Host::createCommandLine() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -1141,11 +1085,8 @@ void TMainConsole::registerLabelWidget(const QString& name, TLabel* pLabel)
     mLabelMap[name] = pLabel;
     mpHost->windowRegistry().registerLabel(name, &pLabel->model());
 
-    // A label created into a user window or a scroll box is a child widget of it,
-    // so deleting that window destroys the label with deleteLabel() never called.
-    // ~TLabel takes the model out of the window registry; without this the map
-    // beside it, which holds no QPointers, keeps an entry that every by-name label
-    // call Host forwards through this class then reads as a live widget.
+    // A label in a user window or scroll box dies with it, without deleteLabel(). ~TLabel updates the
+    // registry, but this map holds no QPointers, so Host's by-name calls would read a dead widget.
     connect(pLabel, &QObject::destroyed, this, [this, pLabel]() {
         deregisterLabelWidget(pLabel);
     });
@@ -1153,14 +1094,10 @@ void TMainConsole::registerLabelWidget(const QString& name, TLabel* pLabel)
 
 void TMainConsole::deregisterLabelWidget(TLabel* pLabel)
 {
-    // Reached from destroyed() as well, by which point ~TLabel has run and the
-    // label's model has gone - so nothing here may read through pLabel.
-    //
-    // This is the only destroyed() connection made from a label to this console,
-    // so severing all of them is severing just that one.
+    // Also reached from destroyed(), after ~TLabel, so never read through pLabel.
+    // The only destroyed() connection from a label to this console, so severing all is safe.
     disconnect(pLabel, &QObject::destroyed, this, nullptr);
-    // Erase by value: destroyed() names the widget, not the name it was filed
-    // under, and a replacement filed under that name must be left in place.
+    // By value: destroyed() names the widget, and a replacement may hold the name.
     mLabelMap.removeIf([pLabel](const auto& it) {
         return it.value() == pLabel;
     });
@@ -1173,15 +1110,13 @@ void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
     disconnect(pCommandLine, &QObject::destroyed, this, nullptr);
     // Erase by value rather than by name: a replacement command line may have been
     // registered under the same name in the meantime and must be left in place.
-    // The window registry hears only about the names this erase actually took, so
-    // the replacement keeps its entry there too.
+    // Only names this erase took are deregistered, so the replacement keeps its registry entry too.
     mSubCommandLineMap.removeIf([this, pCommandLine](const auto& it) {
         if (it.value() != pCommandLine) {
             return false;
         }
-        // The destroyed() handler above can run once the Host is gone: quitting
-        // destroys every Host before the deferred deletes of the widgets a user
-        // window holds. There is no registry left to take the name out of then.
+        // Quitting destroys every Host before a user window's widgets' deferred deletes, so there
+        // may be no registry.
         if (mpHost) {
             mpHost->windowRegistry().deregisterCommandLine(it.key());
         }
@@ -1224,8 +1159,7 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
         return {false, QLatin1String("a text edit cannot have an empty string as its name")};
     }
 
-    // there is no Host::createTextEdit() wrapper, so the refusal the other
-    // creators make in Host::create...() is made here
+    // No Host::createTextEdit() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -1370,9 +1304,7 @@ std::pair<bool, QString> TMainConsole::setLabelMovie(const QString& name, const 
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
-    // The file is read through a throwaway QMovie: the label's own must not take
-    // the path, and the gif tracker must not be given a movie to count, before
-    // the file is known to be one
+    // Validate with a throwaway QMovie first, so neither the label's movie nor the gif tracker gets a non-movie.
     if (const QMovie candidate(moviePath); !candidate.isValid()) {
         return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
     }
@@ -1409,9 +1341,8 @@ std::optional<QColor> TMainConsole::getLabelBackgroundColor(const QString& name)
     if (!pL) {
         return {};
     }
-    // Answered from the palette, as this API always has; TLabel re-stamps it with
-    // the last set colour across restyles, so a caller's own background-color
-    // stylesheet can paint something this does not report
+    // From the palette, as always; TLabel re-stamps it with the last set colour, so a caller's own
+    // background-color stylesheet may paint something else.
     return {pL->palette().color(QPalette::Window)};
 }
 
@@ -1529,8 +1460,7 @@ void TMainConsole::closeSubConsole(const QString& name)
         return;
     }
 
-    // Only a user window has a dock, and it has to be undocked before it goes or
-    // the main window is left holding the space it occupied.
+    // Only a user window has a dock; remove it first or the main window keeps its space.
     if (auto pD = mDockWidgetMap.value(name)) {
         mudlet::self()->removeDockWidget(pD);
     }
@@ -1579,8 +1509,7 @@ bool TMainConsole::resizeSubConsole(const QString& name, int width, int height)
     }
     if (auto pD = mDockWidgetMap.value(name)) {
         if (!pD->isFloating()) {
-            // Docked, its size belongs to the main window's layout - only a
-            // floating one can be given one of its own
+            // A docked widget's size belongs to the main window's layout:
             pD->setFloating(true);
         }
         pD->resize(width, height);
@@ -1598,8 +1527,7 @@ bool TMainConsole::moveSubConsole(const QString& name, int x, int y)
     }
     if (auto pD = mDockWidgetMap.value(name)) {
         if (!pD->isFloating()) {
-            // Docked, its position belongs to the main window's layout - only a
-            // floating one can be given one of its own
+            // A docked widget's position belongs to the main window's layout:
             pD->setFloating(true);
         }
         pD->move(x, y);
@@ -1722,8 +1650,7 @@ std::optional<QRect> TMainConsole::getSubConsoleGeometry(const QString& name) co
     if (!pC) {
         return {};
     }
-    // A user window is moved and resized through its dock, so that is what its
-    // geometry has to be read back from
+    // A user window is moved and resized through its dock:
     if (auto pD = mDockWidgetMap.value(name)) {
         return {QRect(pD->pos(), pD->size())};
     }
@@ -1742,9 +1669,7 @@ std::optional<bool> TMainConsole::getSubConsoleVisible(const QString& name) cons
     return {pC->isVisibleTo(this)};
 }
 
-// Scroll box first, then command line, then text box: nothing stops one name
-// being more than one of the three, and this is the order the core has always
-// resolved such a name in.
+// A name can be several of these; this is the order the core has always resolved it in.
 QWidget* TMainConsole::plainWindowWidget(const QString& name) const
 {
     if (auto pS = mScrollBoxMap.value(name)) {
@@ -2024,208 +1949,6 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
     return getMainWindowSize();
 }
 
-QPair<bool, QString> TMainConsole::addWordToSet(const QString& word)
-{
-    const QString errMsg = qsl("the word \"%1\" already seems to be in the user dictionary");
-    QPair<bool, QString> result{};
-    if (!mEnableUserDictionary) {
-        return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
-    }
-
-    if (!storableWord(word)) {
-        return qMakePair(false, unstorableWordMessage().arg(word));
-    }
-
-    if (!mUseSharedDictionary) {
-        // The return value from this function is unclear - it does not seems to
-        // indicate anything useful
-        Hunspell_add(mpHunspell_profile, word.toUtf8().constData());
-        if (!mWordSet_profile.contains(word)) {
-            mWordSet_profile.insert(word);
-            qDebug().noquote().nospace() << "TConsole::addWordToSet(\"" << word << "\") INFO - word added to profile mWordSet.";
-            result.first = true;
-        } else {
-            result.second = errMsg.arg(word);
-        }
-
-    } else {
-        auto pMudlet = mudlet::self();
-        QPair<bool, bool> sharedDictionaryResult = pMudlet->addWordToSet(word);
-        while (!sharedDictionaryResult.first) {
-            qDebug() << "TConsole::addWordToSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
-            sharedDictionaryResult = pMudlet->addWordToSet(word);
-        }
-
-        if (sharedDictionaryResult.second) {
-            // Successfully added word:
-            result.first = true;
-        } else {
-            // Word already present
-            result.second = errMsg.arg(word);
-        }
-    }
-
-    return result;
-}
-
-QPair<bool, QString> TMainConsole::removeWordFromSet(const QString& word)
-{
-    // A word that could not have been written into the ".dic" file cannot have
-    // come back out of one either, so say why it can never be in there rather
-    // than merely that it is not. Removal is not refused outright, so that a
-    // word an older version stored can still be taken out again:
-    const QString errMsg = storableWord(word) ? qsl("the word \"%1\" does not seem to be in the user dictionary") : unstorableWordMessage();
-    QPair<bool, QString> result{};
-    if (!mEnableUserDictionary) {
-        return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
-    }
-
-    if (!mUseSharedDictionary) {
-        // The return value from this function is unclear - it does not seems to
-        // indicate anything useful
-        Hunspell_remove(mpHunspell_profile, word.toUtf8().constData());
-        if (mWordSet_profile.remove(word)) {
-            qDebug().noquote().nospace() << "TConsole::removeWordFromSet(\"" << word << "\") INFO - word removed from profile mWordSet.";
-            result.first = true;
-        } else {
-            result.second = errMsg.arg(word);
-        }
-
-    } else {
-        auto pMudlet = mudlet::self();
-        QPair<bool, bool> sharedDictionaryResult = pMudlet->removeWordFromSet(word);
-        while (!sharedDictionaryResult.first) {
-            qDebug() << "TConsole::removeWordFromSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
-            sharedDictionaryResult = pMudlet->removeWordFromSet(word);
-        }
-
-        if (sharedDictionaryResult.second) {
-            // Successfully added word:
-            result.first = true;
-        } else {
-            // Word already present
-            result.second = errMsg.arg(word);
-        }
-    }
-
-    return result;
-}
-
-void TMainConsole::setSystemSpellDictionary(const QString& newDict)
-{
-    if (newDict.isEmpty() || mSystemDictionary == newDict) {
-        return;
-    }
-
-    mSystemDictionary = newDict;
-
-    if (mpHunspell_system) {
-        Hunspell_destroy(mpHunspell_system);
-        mpHunspell_system = nullptr;
-        mHunspellCodecName_system.clear();
-    }
-
-    // A dictionary picked in the preferences leaves the handle cold, and only
-    // another profile being opened would emit signal_profileLoaded to warm it
-    // again - so read the new one here instead of in front of the next word
-    // typed. During a profile load the handle is warmed once at the end, after
-    // the profile's own choice of dictionary has been read from its XML.
-    if (!mpHost->mIsProfileLoadingSequence) {
-        QTimer::singleShot(0, this, &TMainConsole::slot_warmSystemSpellDictionary);
-    }
-}
-
-void TMainConsole::slot_warmSystemSpellDictionary()
-{
-    // spellCheck() and spellSuggestWord() do not consult this flag, so the
-    // lazy getter still serves a script in a profile that has spell check off:
-    if (mpHost && mpHost->getEnableSpellCheck()) {
-        getHunspellHandle_system();
-    }
-}
-
-Hunhandle* TMainConsole::getHunspellHandle_system()
-{
-    if (!mpHunspell_system && !mSystemDictionary.isEmpty()) {
-        loadSystemSpellDictionary();
-    }
-    return mpHunspell_system;
-}
-
-const QByteArray& TMainConsole::getHunspellCodecName_system()
-{
-    getHunspellHandle_system();
-    return mHunspellCodecName_system;
-}
-
-void TMainConsole::loadSystemSpellDictionary()
-{
-    // Everywhere but macOS getMudletPath() probes for "<name>.aff" to settle
-    // which directory wins, so it has to get the same name the files are then
-    // loaded by.
-    const QString path = MudletPaths::getMudletPath(enums::hunspellDictionaryPath, mSystemDictionary);
-    QString spell_aff = qsl("%1%2.aff").arg(path, mSystemDictionary);
-    QString spell_dic = qsl("%1%2.dic").arg(path, mSystemDictionary);
-
-#if defined(Q_OS_WINDOWS)
-    // strip non-ASCII characters from the path because hunspell can't handle them
-    // when compiled with MinGW 7.3.0
-    mudlet::self()->sanitizeUtf8Path(spell_aff, qsl("%1.aff").arg(mSystemDictionary));
-    mudlet::self()->sanitizeUtf8Path(spell_dic, qsl("%1.dic").arg(mSystemDictionary));
-#endif
-
-    mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
-    if (mpHunspell_system) {
-        mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
-        qDebug().noquote().nospace() << "TMainConsole::loadSystemSpellDictionary() INFO - System Hunspell dictionary \"" << mSystemDictionary << "\" loaded for profile, it uses a \""
-                                     << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
-    }
-}
-
-// NOTE: mEnabledUserDictionary has been wedged on (it will never be false)
-void TMainConsole::setProfileSpellDictionary()
-{
-    // Determine and copy the configuration settings from the Host instance:
-    mpHost->getUserDictionaryOptions(mEnableUserDictionary, mUseSharedDictionary);
-    if (!mEnableUserDictionary) {
-        if (mpHunspell_profile) {
-            Hunspell_destroy(mpHunspell_profile);
-            mpHunspell_profile = nullptr;
-            // Need to commit any changes to personal dictionary
-            qDebug() << "TMainConsole::setProfileSpellDictionary() INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
-        }
-        // Nothing else to do if not using the shared one
-
-    } else {
-        if (!mUseSharedDictionary) {
-            // Want to use per profile dictionary, is it loaded?
-            if (!mpHunspell_profile) {
-                // No - so load it
-                qDebug() << "TMainConsole::setProfileSpellDictionary() INFO - Preparing profile's own Hunspell dictionary...";
-                mpHunspell_profile = mudlet::self()->prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
-            }
-            // Else no need to load it
-
-        } else {
-            // Want to use the shared dictionary - this will open it if needed:
-            mpHunspell_shared = mudlet::self()->prepareSharedDictionary();
-        }
-    }
-}
-
-QSet<QString> TMainConsole::getWordSet() const
-{
-    if (!mEnableUserDictionary) {
-        return QSet<QString>();
-    }
-
-    if (!mUseSharedDictionary) {
-        return mWordSet_profile;
-    }
-    return mudlet::self()->getWordSet();
-}
-
 void TMainConsole::setProfileName(const QString& newName)
 {
     TConsole::setProfileName(newName);
@@ -2339,15 +2062,17 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
     // context away from the rest of that pass.
     const bool wasInTriggerEngineMode = mTriggerEngineMode;
     mTriggerEngineMode = true;
+    const bool alertWanted = mAlertOnNewData && isFromServer;
     const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
-    const auto beforeTranslateLastLine = buffer.line(beforeTranslateLastLineNumber - 1);
+    const QString beforeTranslateLastLine = alertWanted ? buffer.line(beforeTranslateLastLineNumber - 1) : QString();
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = wasInTriggerEngineMode;
 
-    const int lastLineNumber = buffer.getLastLineNumber();
-    const bool bufferChanged = lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine;
-    if (mAlertOnNewData && isFromServer && bufferChanged) {
-        QApplication::alert(mudlet::self(), 0);
+    if (alertWanted) {
+        const int lastLineNumber = buffer.getLastLineNumber();
+        if (lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine) {
+            QApplication::alert(mudlet::self(), 0);
+        }
     }
 
     // dequeues MXP events and raise them through the LuaInterpreter
@@ -2358,26 +2083,37 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions, event.caption);
     }
 
-    const double processT = mProcessingTimer.elapsed() / 1000.0;
-    if (mpHost->mTelnet.mGA_Driver) {
-        /*:
-        The first argument 'N' represents the 'N'etwork latency; the second 'S' the
-        'S'ystem (processing) time
-        */
-        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2").arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3).arg(processT, 0, 'f', 3));
-    } else {
-        /*:
-        The argument 'S' represents the 'S'ystem (processing) time, in this situation
-        the Game Server is not sending \"GoAhead\" signals so we cannot deduce the
-        network latency...
-        */
-        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1").arg(processT, 0, 'f', 3));
+    mLatencyProcessT = mProcessingTimer.elapsed() / 1000.0;
+    if (!mpLatencyBoxPacer->isActive()) {
+        mpLatencyBoxPacer->start();
     }
     // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending
     // on TConsole types:
 
     emit signal_newDataAlert(mProfileName);
+}
+
+void TMainConsole::slot_refreshLatencyBox()
+{
+    if (!mpHost || !mpLineEdit_networkLatency) {
+        return;
+    }
+
+    if (mpHost->mTelnet.mGA_Driver) {
+        /*:
+        The first argument 'N' represents the 'N'etwork latency; the second 'S' the
+        'S'ystem (processing) time
+        */
+        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2").arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3).arg(mLatencyProcessT, 0, 'f', 3));
+    } else {
+        /*:
+        The argument 'S' represents the 'S'ystem (processing) time, in this situation
+        the Game Server is not sending \"GoAhead\" signals so we cannot deduce the
+        network latency...
+        */
+        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1").arg(mLatencyProcessT, 0, 'f', 3));
+    }
 }
 
 void TMainConsole::finalize()
@@ -2388,212 +2124,6 @@ void TMainConsole::finalize()
     if (mLowerPane) {
         mLowerPane->showNewLines();
     }
-}
-
-// TODO: It may be worth considering moving the (now) three following methods
-// to the TMap class...?
-bool TMainConsole::saveMap(const QString& location, int saveVersion)
-{
-    QString filename_map = location;
-    if (filename_map.isEmpty()) {
-        filename_map = MudletPaths::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-    } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
-        // Resolve the name relative to the profile home directory the way
-        // TMainConsole::importMap does, rather than against whatever directory
-        // Mudlet happens to have been started in:
-        filename_map = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
-    }
-
-    const QDir dir_map(MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName));
-    if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
-        qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
-        return false;
-    }
-
-    QSaveFile file_map(filename_map);
-    if (!file_map.open(QIODevice::WriteOnly)) {
-        // Naming the file matters more than usual: a relative location is not
-        // the path the caller typed
-        qDebug().noquote() << "Error saving map to" << filename_map << ":" << file_map.errorString();
-        return false;
-    }
-
-    QDataStream out(&file_map);
-    out.setVersion(QDataStream::Qt_5_12);
-
-    bool saved = mpHost->mpMap->serialize(out, saveVersion);
-    if (saved && !file_map.commit()) {
-        qDebug() << "Error saving map: " << (file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString());
-        saved = false;
-    }
-
-    if (saved) {
-        mpHost->mpMap->resetUnsaved();
-        mpHost->mpMap->setSaveError(false);
-    } else {
-        mpHost->mpMap->setSaveError(true);
-    }
-
-    return saved;
-}
-
-bool TMainConsole::loadMap(const QString& location)
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
-        // in later software versions and is a weak pointer until used
-        // (I think - Slysven ?)
-        return false;
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // No map or map currently loaded - so try and created mapper
-        // but don't load a map here by default, we do that below and it may not
-        // be the default map anyhow
-        pHost->showHideOrCreateMapper(false);
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // And that failed so give up
-        return false;
-    }
-
-    pHost->mpMap->mapClear();
-
-    // The same resolution saveMap and importMap use, so that a map written
-    // under a bare name is looked for where it was written:
-    QString filePathName = location;
-    if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
-        filePathName = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
-    }
-
-    qDebug() << "TMainConsole::loadMap() - restore map case 1.";
-    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
-    const QDateTime now(QDateTime::currentDateTime());
-
-    bool result = false;
-    if (pHost->mpMap->restore(filePathName)) {
-        pHost->mpMap->audit();
-        pHost->mpMap->mpMapper->mp2dMap->init();
-        pHost->mpMap->mpMapper->updateAreaComboBox();
-        pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        pHost->mpMap->mpMapper->show();
-        result = true;
-    } else {
-        pHost->mpMap->mpMapper->mp2dMap->init();
-        pHost->mpMap->mpMapper->updateAreaComboBox();
-        pHost->mpMap->mpMapper->show();
-    }
-
-    if (filePathName.isEmpty()) {
-        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
-    } else {
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(filePathName, now.toString(Qt::ISODate)), true);
-    }
-
-    pHost->mpMap->updateArea(-1);
-
-    return result;
-}
-
-// Used by TLuaInterpreter::loadMap() and dlgProfilePreferences for import/load
-// of files ending in ".xml"
-// The TLuaInterpreter::loadMap() supplies a pointer to an error Message which
-// it requires in the event of an error (it should be written in a structure
-// to match "loadMap: XXXXX." format) - the presence of a non-null pointer here
-// should be used to suppress the writing of error messages direct to the
-// console - if possible!
-bool TMainConsole::importMap(const QString& location, QString* errMsg)
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
-        // in later software versions and is a weak pointer until used
-        // (I think - Slysven ?)
-        if (errMsg) {
-            *errMsg = qsl("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
-        }
-        return false;
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // No map or mapper currently loaded/present - so try and create mapper
-        pHost->showHideOrCreateMapper(false);
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // And that failed so give up
-        if (errMsg) {
-            *errMsg = qsl("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
-        }
-        return false;
-    }
-
-    // Dump any outstanding map errors from past activities that had not yet
-    // been logged...
-    qDebug() << "TMainConsole::importingMap() - importing map case 1.";
-    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map importing(1) report"), true);
-    const QDateTime now(QDateTime::currentDateTime());
-
-    bool result = false;
-
-    const QFileInfo fileInfo(location);
-    QString filePathNameString;
-    if (!fileInfo.filePath().isEmpty()) {
-        if (fileInfo.isRelative()) {
-            // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
-        } else {
-            if (fileInfo.exists()) {
-                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
-            } else {
-                filePathNameString = fileInfo.absoluteFilePath();
-            }
-        }
-    }
-
-    QFile file(filePathNameString);
-    if (!file.exists()) {
-        if (!errMsg) {
-            const QString infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
-                                       "%1.")
-                                            .arg(filePathNameString);
-            pHost->postMessage(infoMsg);
-        } else {
-            // error message for lua loadMap()
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" was not found).")
-                              .arg(filePathNameString);
-        }
-        return false;
-    }
-
-    if (file.open(QFile::ReadOnly | QFile::Text)) {
-        if (!errMsg) {
-            const QString infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
-            pHost->postMessage(infoMsg);
-        }
-
-        result = pHost->mpMap->importMap(file, errMsg);
-
-        file.close();
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Importing map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)));
-    } else {
-        if (!errMsg) {
-            const QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
-            pHost->postMessage(infoMsg);
-        } else {
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" could not be opened for reading).")
-                              .arg(filePathNameString);
-        }
-        return false;
-    }
-
-    pHost->mpMap->updateArea(-1);
-
-    return result;
 }
 
 void TMainConsole::slot_reloadMap(QList<QString> profilesList)
@@ -2612,7 +2142,7 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
     pHost->postMessage(infoMsg);
 
     QString outcomeMsg;
-    if (loadMap(QString())) {
+    if (pHost->loadMapFile(QString())) {
         outcomeMsg = tr("[  OK  ]  - ... System Map reload request completed.");
     } else {
         outcomeMsg = tr("[ WARN ]  - ... System Map reload request failed.");
@@ -2647,9 +2177,8 @@ void TMainConsole::showPackageDownloadProgress(const QString& title, const QStri
     // so closing the superseded dialog while it is still wired to
     // slot_cancelPackageDownload() would abort the download this new dialog is
     // about to track; detach that connection before closing. Only that one: a
-    // wildcard disconnect() also severs the destroyed() hook Qt's style sheet
-    // support uses to evict a widget from its caches, so the closed dialog stays
-    // cached and the next setAppStyleSheet() walks a freed widget.
+    // wildcard disconnect() also severs Qt's style sheet cache-eviction hook, and
+    // the next setAppStyleSheet() walks the freed dialog.
     if (mpPackageDownloadProgressDialog) {
         disconnect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
         mpPackageDownloadProgressDialog->close();
@@ -2877,7 +2406,6 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
 
     if (area == QLatin1String("f") || area == QLatin1String("floating")) {
         if (!pM->isFloating()) {
-            // Undock a docked window
             // Change of position or size is only possible when floating
             pM->setFloating(true);
         }
@@ -2914,7 +2442,7 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
         return {true, QString()};
     }
 
-    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+    return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
 }
 
 void TMainConsole::showMapperScriptReminder()
@@ -3201,7 +2729,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
-            if (!saveMap(QString())) {
+            if (!mpHost->saveMapFile(QString())) {
                 qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close map save failed";
             }
         }
@@ -3234,7 +2762,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
             if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!
             ASK_MAP:
-                if (!saveMap(QString())) {
+                if (!mpHost->saveMapFile(QString())) {
                     const int mapChoice = QMessageBox::warning(this,
                                                                tr("Could not save map"),
                                                                tr("Sorry, could not save the map. Would you like to retry or close without saving the map?"),

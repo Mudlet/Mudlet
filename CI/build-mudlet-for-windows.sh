@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 3.2.0    Configure from the ci-windows CMake preset
+# Version: 3.3.0    Fail the script when CMake configuration or build fails
+#          3.2.0    Configure from the ci-windows CMake preset
 #          3.1.0    Switch from MINGW64 to CLANG64
 #          3.0.0    Switch from qmake to CMake with Release builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
@@ -43,6 +44,8 @@
 # 1 - Failure to change to a directory
 # 2 - Unsupported MSYS2 shell type
 # 3 - Unsupported build type
+# 4 - CMake configuration failed
+# 5 - CMake build failed
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
@@ -138,7 +141,10 @@ fi
 
 # The flags live in CMakePresets.json, and the preset picks WITH_SENTRY,
 # SENTRY_DSN and SENTRY_SEND_DEBUG up out of the environment the workflow set
-cmake --preset ci-windows
+if ! cmake --preset ci-windows; then
+  echo "=== ERROR: CMake configuration failed ==="
+  exit 4
+fi
 
 echo " ... CMake configuration done."
 echo ""
@@ -151,6 +157,11 @@ if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
   cmake --build --preset ci-windows --parallel "${NUMBER_OF_PROCESSORS}"
 else
   cmake --build --preset ci-windows
+fi
+BUILD_STATUS=$?
+if [ "${BUILD_STATUS}" -ne 0 ]; then
+  echo "=== ERROR: CMake build failed with exit code ${BUILD_STATUS} ==="
+  exit 5
 fi
 
 echo " ... CMake build finished"

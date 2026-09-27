@@ -110,6 +110,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     // Allow QTest-based test classes to access private members
     friend class AddonControlsTest;
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
     friend class EditorSearchTest;
@@ -459,6 +460,7 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
+    void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
 
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -692,13 +694,10 @@ private:
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
-    // How many trigger pattern rows fit in the pattern list in full, however
-    // the splitter and the advanced options are arranged - see issue #2548
+    // Pattern rows the list shows in full however the splitter and advanced options are arranged (#2548)
     static constexpr int csmMinimumVisiblePatternRows = 5;
 
-    // The height a trigger pattern row is laid out at when the list is longer
-    // than it can show, taken from the tallest control any pattern type can
-    // put in a row - see createPatternItem()
+    // Row height once the list overflows: the tallest control any pattern type puts in a row (see createPatternItem())
     int mPatternRowHeight = 0;
 
     QAction* mAddItem = nullptr;
@@ -796,8 +795,7 @@ private:
     void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
     void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touchNotification);
 
-    // One QIcon per resource path: a tree of thousands of items would otherwise
-    // decode the same handful of PNGs once per item, every time it is rebuilt
+    // A tree of thousands of items would otherwise decode the same few PNGs per item on every rebuild
     const QIcon& cachedIcon(const QString& path) const;
     mutable QHash<QString, QIcon> mIconCache;
 
@@ -821,8 +819,8 @@ private:
     // space-driven auto-collapse:
     bool mShowAllTriggerControls = false;
 
-    // Every profile builds an editor when it loads but they share one saved
-    // window position, so one that was never opened must not write over it:
+    // Every profile builds an editor on load but all share one saved window position, so one never
+    // opened must not overwrite it:
     bool mHasBeenShown = false;
 
     // tracks location of the splitter in the trigger editor for each tab
@@ -903,6 +901,7 @@ private:
     QString descNewFolder;
     QString descNewItem;
     QString descPackageItem;
+    QString descKeyTaken;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

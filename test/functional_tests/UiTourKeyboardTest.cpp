@@ -29,7 +29,7 @@
  * Run with: ctest -R UiTourKeyboardTest -V
  */
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TUiTour.h"
 #include "mudlet.h"
@@ -89,7 +89,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
 
         mudlet::self()->show();
         QVERIFY(QTest::qWaitForWindowExposed(mudlet::self()));

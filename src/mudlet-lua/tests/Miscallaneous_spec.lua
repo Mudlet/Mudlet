@@ -1096,6 +1096,48 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
           assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
         end)
+
+        it("gives text with a transparent background the console's colour (#10592)", function()
+          local logPath, triggerId, selectedAt
+          local htmlLogging = getConfig("logInHTML")
+          local red, green, blue, alpha = getBackgroundColor()
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            setConfig("logInHTML", htmlLogging)
+            setBackgroundColor(red, green, blue, alpha)
+            resetFormat()
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+          setBackgroundColor(12, 34, 56)
+
+          local started, _, path = startLogging(true)
+          assert.is_true(started, "the test did not open a log of its own")
+          logPath = path
+
+          -- the line's markup is rendered the moment the line commits, so only a
+          -- trigger on the line itself can recolour it in time
+          triggerId = tempTrigger("SpecHtmlTransparent", function()
+            selectedAt = selectString("SpecHtmlTransparent", 1)
+            setBgColor(0, 0, 0, 0)
+            deselect()
+          end)
+          feedTriggers("SpecHtmlTransparent\n")
+          -- ordinary text carries the console's background colour anyway, so
+          -- without the recolouring the assertions below prove nothing
+          assert.is_true((selectedAt or -1) >= 0, "the trigger did not select the text it had to make transparent")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+          assert.is_true(contains(contents, "background: rgb(12,34,56)"), "the transparent text did not take the console's background colour in the log")
+          assert.is_false(contains(contents, "background: rgb(0,0,0)"), "the transparent text was logged as black")
+        end)
       end)
 
       -- A received line is held back from the log until the next one commits.
@@ -1204,6 +1246,40 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(log, "Before the gag."), "the line before the gagged one is missing from the log")
           assert.is_false(contains(log, "Top secret plans"), "the gagged line leaked into the log")
           assert.is_true(contains(log, "After the gag."), "the line after the gagged one is missing from the log")
+        end)
+
+        it("keeps the pending line when a trigger deletes an older one (#9429)", function()
+          local logPath, triggerId, deletedLine
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            moveCursorEnd()
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          local started, _, path = startLogging(true)
+          assert.is_true(started, "the test did not open a log of its own")
+          logPath = path
+
+          feedTriggers("First of three.\n")
+          feedTriggers("Second of three.\n")
+          triggerId = tempTrigger("Third of three.", function()
+            moveCursor(0, getLineNumber() - 2)
+            deletedLine = getCurrentLine()
+            deleteLine()
+          end)
+          feedTriggers("Third of three.\n")
+          assert.are.equal("First of three.", deletedLine, "the trigger deleted a line other than the one two above it")
+
+          startLogging(false)
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.equals(1, occurrences(log, "First of three."), "the line that was written before it was deleted is not in the log exactly once")
+          assert.equals(1, occurrences(log, "Second of three."), "deleting an older line dropped the line that was still pending for logging")
+          assert.equals(1, occurrences(log, "Third of three."), "the line the deleting trigger fired on is missing from the log")
         end)
 
         it("does not replay the last line of one session into the next", function()
@@ -2117,6 +2193,73 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(enableTrigger(parentGroup))
         assert.is_true(isAncestorsActive(childId, "trigger"))
       end)
+
+      -- The profile these run in is saved on exit and reused by the next run,
+      -- and Lua cannot delete a permanent item, so what an earlier run made is
+      -- reused rather than stacked up again under the same name.
+      local function nestedIn(groupName, groupKind, childName, childKind, makeChild)
+        local id = findItems(childName, childKind)[1]
+        if not id then
+          assert.is_true(permGroup(groupName, groupKind), "could not create the " .. groupKind .. " group")
+          id = makeChild()
+        end
+        assert.is_true(type(id) == "number" and id > 0, "could not nest a " .. childKind .. " in " .. groupName)
+        return id
+      end
+
+      it("follows the state of a nested alias's parent group", function()
+        local group = "mudletSpecIsActiveAliasGroup"
+        local childId = nestedIn(group, "alias", "mudletSpecIsActiveAliasChild", "alias", function()
+          return permAlias("mudletSpecIsActiveAliasChild", group, "^mudletSpecIsActiveNeverTyped$", "")
+        end)
+        finally(function() enableAlias(group) end)
+
+        assert.is_true(enableAlias(group))
+        assert.is_true(isAncestorsActive(childId, "alias"))
+        assert.is_true(disableAlias(group))
+        assert.is_false(isAncestorsActive(childId, "alias"))
+      end)
+
+      it("follows the state of a nested script's parent group", function()
+        local group = "mudletSpecIsActiveScriptGroup"
+        local childId = nestedIn(group, "script", "mudletSpecIsActiveScriptChild", "script", function()
+          return permScript("mudletSpecIsActiveScriptChild", group, "")
+        end)
+        -- script and timer groups are made switched off, unlike the others
+        finally(function() disableScript(group) end)
+
+        assert.is_true(enableScript(group))
+        assert.is_true(isAncestorsActive(childId, "script"))
+        assert.is_true(disableScript(group))
+        assert.is_false(isAncestorsActive(childId, "script"))
+      end)
+
+      it("follows whether the toolbar a button sits on is shown", function()
+        local toolbar = "mudletSpecIsActiveToolbar"
+        -- see "names the toolbar a button sits on" below for why it is hidden;
+        -- hiding it switches it off, and that is saved with the profile, so a
+        -- reused profile brings it back hidden and it has to be shown first
+        finally(function() hideToolBar(toolbar) end)
+        if exists(toolbar, "button") == 0 then
+          assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
+        end
+        local buttonId = findItems("mudletSpecIsActiveButton", "button")[1]
+            or tempButton(toolbar, "mudletSpecIsActiveButton", 0)
+        assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+
+        showToolBar(toolbar)
+        assert.is_true(isAncestorsActive(buttonId, "button"))
+        hideToolBar(toolbar)
+        assert.is_false(isAncestorsActive(buttonId, "button"))
+      end)
+
+      it("returns nil+msg for an item of any type that does not exist", function()
+        for _, itemType in ipairs({"button", "keybind", "script", "timer", "trigger"}) do
+          local ok, err = isAncestorsActive(9999999, itemType)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, itemType .. " item ID 9999999 does not exist"), tostring(err))
+        end
+      end)
     end)
 
     describe("Tests the functionality of ancestors", function()
@@ -2269,6 +2412,44 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
 
         assertNamesTheGroup(ancestors(buttonId, "button"), toolbar)
+      end)
+
+      -- A timer whose parent is another timer rather than a group is an offset
+      -- timer: it runs relative to its parent, and the parent is an item in
+      -- its own right, which is what the node says
+      it("calls an offset timer's parent an item, not a group", function()
+        local parentName = "mudletSpecAncestorOffsetParent"
+        local childName = "mudletSpecAncestorOffsetChild"
+        local childId = findItems(childName, "timer")[1]
+        if not childId then
+          assert.is_number(permTimer(parentName, "", 60, [[ ]]))
+          childId = permTimer(childName, parentName, 30, [[ ]])
+        end
+        assert.is_true(type(childId) == "number" and childId > 0, "could not make an offset timer under " .. parentName)
+
+        -- a permanent timer is made switched off, and is left that way
+        finally(function() disableTimer(parentName) end)
+        assert.is_true(disableTimer(parentName))
+
+        local list = ancestors(childId, "timer")
+        assert.is_table(list)
+        assert.equals(1, #list)
+        assert.equals(parentName, list[1].name)
+        assert.equals("item", list[1].node)
+        assert.is_false(list[1].isActive)
+        assert.is_false(isAncestorsActive(childId, "timer"))
+
+        assert.is_true(enableTimer(parentName))
+        assert.is_true(ancestors(childId, "timer")[1].isActive)
+        assert.is_true(isAncestorsActive(childId, "timer"))
+      end)
+
+      it("returns nil+msg for an item of any other type that does not exist", function()
+        for _, itemType in ipairs({"timer", "alias", "keybind", "script", "button"}) do
+          local ok, err = ancestors(9999999, itemType)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, itemType .. " item ID 9999999 does not exist"), tostring(err))
+        end
       end)
 
       it("is case insensitive about the item type", function()

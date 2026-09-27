@@ -31,7 +31,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -179,7 +179,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
@@ -211,7 +211,7 @@ private slots:
         mpServer = nullptr;
         mpHost = nullptr;
         if (mudlet::self()) {
-            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }

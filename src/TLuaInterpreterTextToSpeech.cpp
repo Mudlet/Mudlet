@@ -443,9 +443,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(inputText);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    // index is the 0-based position the text was inserted at; the event reports
-    // the 1-based one that ttsGetQueue() and ttsClearQueue() take, so a handler
-    // can hand the number it is given straight back to them
+    // 1-based, as ttsGetQueue() and ttsClearQueue() take it
     event.mArgumentList.append(QString::number(index + 1));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     host.raiseEvent(event);

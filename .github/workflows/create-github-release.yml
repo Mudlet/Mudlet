@@ -80,6 +80,8 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+          # We are just reading the logs, so we don't need the files
+          filter: blob:none
 
       # workflow_run always runs this file from the default branch, while the
       # checkout above is the commit that was built - which may predate the release
@@ -454,9 +456,7 @@ jobs:
           cat published-final/assets.txt
           bash release-scripts/CI/verify-release-checksums.sh published-final/SHA256SUMS.txt published-final/assets.txt
 
-      # A release made with GITHUB_TOKEN fires no release event, so start the
-      # package build directly. It is not part of the release, so failing to start
-      # it must not fail the release.
+      # A GITHUB_TOKEN release fires no release event, so start the package build here, best-effort.
       - name: Start the Linux package build
         if: steps.release-type.outputs.type == 'release' && vars.LINUX_PACKAGES_BASE_URL != ''
         continue-on-error: true

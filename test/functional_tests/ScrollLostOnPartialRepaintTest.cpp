@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QScrollBar>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -24,7 +25,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
@@ -73,7 +74,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -178,6 +179,33 @@ private slots:
                  "is missing from the pane until something unrelated forces a full repaint");
     }
 
+    // Output that arrives soon after a paint leaves the scrollbar to the paint
+    // pacer, and a full repaint landing first must not take that with it
+    void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mpConsole, "no main console");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+        QScrollBar* scrollBar = host->mpConsole->mpScrollBar;
+        QVERIFY(scrollBar);
+        auto* lua = host->getLuaInterpreter();
+
+        lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
+        qApp->processEvents();
+        pane->repaint();
+        lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+        QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
+        pane->forceUpdate();
+        pane->repaint();
+
+        // not QTRY: later output from the connection refreshes the scrollbar
+        // within its retry window and would hide the loss
+        QTest::qWait(100);
+        QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
+    }
+
 private:
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
@@ -191,7 +219,7 @@ private:
         }
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -205,7 +233,7 @@ private:
 private slots:
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mpHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;

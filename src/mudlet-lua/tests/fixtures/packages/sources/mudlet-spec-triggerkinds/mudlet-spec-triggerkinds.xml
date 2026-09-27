@@ -146,6 +146,33 @@
 				<integer>1</integer>
 			</regexCodePropertyList>
 		</Trigger>
+		<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>mudlet-spec-triggerkinds named chain</name>
+			<script>local function row(n) return multimatches[n] or {} end
+_G.TriggerKindsSpec.namedChain = {rows = #multimatches, first = row(1).first, spacerName = row(2).last, middleName = row(3).last, last = row(4).last}</script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>10</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>transparent</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList>
+				<string>^tknamed (?&lt;first&gt;\w+)$</string>
+				<string>1</string>
+				<string>tkmiddle</string>
+				<string>^tknamed end (?&lt;last&gt;\w+)$</string>
+			</regexCodeList>
+			<regexCodePropertyList>
+				<integer>1</integer>
+				<integer>5</integer>
+				<integer>0</integer>
+				<integer>1</integer>
+			</regexCodePropertyList>
+		</Trigger>
 		<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 			<name>mudlet-spec-triggerkinds command</name>
 			<script></script>

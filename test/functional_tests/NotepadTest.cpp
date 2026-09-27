@@ -18,8 +18,12 @@
  ***************************************************************************/
 
 #include <QDir>
+#include <QAction>
+#include <QIcon>
 #include <QLineEdit>
+#include <QPalette>
 #include <QPlainTextEdit>
+#include <QScopeGuard>
 #include <QTabWidget>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -32,8 +36,8 @@
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgNotepad.h"
 #include "ctelnet.h"
@@ -62,13 +66,26 @@ private:
 
     // The names the notepad writes and the ones it upgrades from, which the
     // tests below have to put in place or clear out before it starts up.
-    QString notesPath(const QString& fileName) const { return MudletPaths::getMudletPath(enums::profileDataItemPath, mHostname, fileName); }
+    QString notesPath(const QString& fileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, mHostname, fileName); }
 
     static QPlainTextEdit* editAt(dlgNotepad* notepad, const int index) { return qobject_cast<QPlainTextEdit*>(notepad->tabWidget->widget(index)); }
 
     static QLineEdit* findBox(dlgNotepad* notepad) { return notepad->findChild<QLineEdit*>(qsl("notepadFindBox")); }
 
     static QToolButton* findBarButton(dlgNotepad* notepad, const QString& name) { return notepad->findChild<QToolButton*>(name); }
+
+    // A QIcon holds no record of which file it was built from, so the only way
+    // to name the arrow on screen is to render it and compare the pixels. The
+    // ratio is pinned to 1 because the resource it is compared against is not
+    // scaled, and a pixmap asked for without one comes back at the display's.
+    static bool iconIs(const QIcon& icon, const QString& resourcePath, const QIcon::State state = QIcon::Off)
+    {
+        const QPixmap expected(resourcePath);
+        if (expected.isNull()) {
+            return false;
+        }
+        return icon.pixmap(expected.size(), 1.0, QIcon::Normal, state).toImage() == expected.toImage();
+    }
 
     bool waitForServerToReceive(const QByteArray& text) const
     {
@@ -81,7 +98,7 @@ private:
 
     void writeNotesFile(const QString& fileName, const QByteArray& content) const
     {
-        QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
+        QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
         QFile file(notesPath(fileName));
         QVERIFY2(file.open(QIODevice::WriteOnly), "could not write the notes file the test needs in place");
         file.write(content);
@@ -153,7 +170,7 @@ private:
         }
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -185,7 +202,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -194,7 +211,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -414,6 +431,40 @@ private slots:
 
         findBox(notepad.data())->setText(QString());
         QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 0);
+    }
+
+    // The send controls hide behind one small arrow, and the grey arrow the .ui
+    // file carries is invisible on a dark background, so the icon has to be
+    // picked from the palette - both as the notepad opens and again if the
+    // appearance is switched while it is up (#9488).
+    void test_theSendControlsArrowIsPickedForTheBackgroundItSitsOn()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+
+        const QPalette savedPalette = QApplication::palette();
+        const auto restorePalette = qScopeGuard([savedPalette]() {
+            QApplication::setPalette(savedPalette);
+        });
+
+        // Dark first, because the .ui file's own icon is the grey one: an arrow
+        // asserted to be grey says nothing about whether anything picked it.
+        QPalette darkPalette(savedPalette);
+        darkPalette.setColor(QPalette::Window, QColor(30, 30, 30));
+        QApplication::setPalette(darkPalette);
+        QApplication::processEvents();
+
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        QAction* pToggle = notepad->action_toggleSendControls;
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-right-16x.png")), "the notepad came up with the arrow that disappears into a dark background");
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-down-16x.png"), QIcon::On), "the notepad came up with an arrow that disappears into a dark background once the controls are open");
+
+        QPalette lightPalette(savedPalette);
+        lightPalette.setColor(QPalette::Window, QColor(240, 240, 240));
+        QApplication::setPalette(lightPalette);
+        QApplication::processEvents();
+
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-right_grey-16x.png")), "switching to a light appearance left the arrow the one meant for a dark one");
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-down_grey-16x.png"), QIcon::On), "switching to a light appearance left the opened-controls arrow the one meant for a dark one");
     }
 };
 

@@ -20,7 +20,7 @@ describe("stt bridge", function()
 
     it("provides every documented function", function()
       local documented = {
-        "init", "start", "stop", "toggle", "close",
+        "init", "start", "stop", "cancel", "toggle", "close",
         "available", "initialized", "listening",
         "getInfo", "getModelPath", "getLibraryPath", "listModels",
         "getPlatformKey", "reloadLibrary", "unloadLibrary",
@@ -489,6 +489,17 @@ describe("stt bridge", function()
         return
       end
       assert.is_true(stt.stop(), "stopping nothing is not an error")
+    end)
+
+    it("cancels without complaint when nothing is listening", function()
+      -- The same two answers as stt.stop(), for the same reason
+      if stt.getInfo().state == "error" then
+        local ok, err = stt.cancel()
+        assert.is_nil(ok, "cancelling in an error state should not claim a clean cancel")
+        assert.is_string(err)
+        return
+      end
+      assert.is_true(stt.cancel(), "cancelling nothing is not an error")
     end)
 
     it("closes without complaint when nothing is initialized", function()

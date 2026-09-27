@@ -395,3 +395,25 @@ describe("Tests keybind-related functions", function()
   end)
 
 end)
+
+-- A binding on one of Mudlet's own keys never fires. It is warned about in the
+-- editor, not on the main console, where a script making its bindings at
+-- profile load would repeat the warning at every startup. AddonControlsTest
+-- covers the editor warning, which Lua cannot open.
+describe("a key binding on a key Mudlet itself uses", function()
+
+  it("is still made, and says nothing on the main console", function()
+    local mark = getLastLineNumber("main")
+
+    -- Ctrl+Alt+T is Mudlet's "Toggle Time Stamps" on every platform
+    local key = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo("mine")]])
+    local text = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+    killKey(key)
+
+    assert.is_number(key, "the binding should still be made")
+    assert.is_nil(text:find("WARN", 1, true), "the clash was posted to the main console: " .. text)
+    -- the console wraps long lines, so the action's name is looked for without spaces
+    assert.is_nil(text:gsub("%s", ""):find("ToggleTimeStamps", 1, true), "the clash was posted to the main console: " .. text)
+  end)
+
+end)

@@ -261,6 +261,27 @@ describe("Alias processing", function()
 
     end)
 
+    describe("expandAlias with nothing in the echo argument", function()
+
+        -- expandAlias used to insist on a boolean whenever a second argument was
+        -- present at all, so a script passing an unset variable through got an
+        -- error instead of its command
+        it("takes a nil where the echo flag goes and still sends the command (#1298)", function()
+            local sends = 0
+            local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                if command == "expand_alias_nil_echo" then
+                    sends = sends + 1
+                end
+            end)
+            finally(function() killAnonymousEventHandler(handler) end)
+
+            local ok, err = pcall(expandAlias, "expand_alias_nil_echo", nil)
+            assert.is_true(ok, tostring(err))
+            assert.are.equal(1, sends, "the command never reached the game")
+        end)
+
+    end)
+
     -- A nested expandAlias() runs a whole alias pass inside the caller's script,
     -- and that pass sets the "command" global and the capture groups for itself.
     -- Whatever ran the outer script has to get its own state back when the
@@ -728,6 +749,24 @@ describe("Alias processing", function()
 
             assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
             assert.are.equal(0, _G.AliasSpec.bad, "an alias whose regex did not compile must not fire")
+        end)
+
+        it("does not fire an alias whose script failed to compile", function()
+            _G.AliasSpec = {good = 0}
+            local goodId = tempAlias([[^bad_alias_script$]], [==[_G.AliasSpec.good = _G.AliasSpec.good + 1]==])
+            local badId = tempAlias([[^bad_alias_script$]], [==[_G.AliasSpec.bad = true; this is not ( lua]==])
+            finally(function()
+                killAlias(goodId)
+                killAlias(badId)
+            end)
+            assert.is_true(badId > 0, "an uncompilable script still makes an alias, so that it can be seen and repaired")
+            assert.are.equal(1, isActive(tostring(goodId), "alias"), "the control alias should be switched on")
+            assert.are.equal(0, isActive(tostring(badId), "alias"), "an alias whose script did not compile cannot be switched on")
+
+            expandAlias("bad_alias_script", false)
+
+            assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
+            assert.is_nil(_G.AliasSpec.bad, "an alias whose script did not compile must not run any of it")
         end)
 
         it("does not fire an alias with an empty pattern", function()

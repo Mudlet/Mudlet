@@ -56,7 +56,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MiddleMousePanHandler.h"
@@ -65,6 +65,8 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMapLabel.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
@@ -124,7 +126,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -489,10 +491,12 @@ private:
     QDialog* moveToAreaDialog() const { return mp2dMap->arealist_combobox ? qobject_cast<QDialog*>(mp2dMap->arealist_combobox->window()) : nullptr; }
 
     // The dialog Configure areas puts up. It is not modal either, and closing
-    // it deletes it, so it is looked up afresh each time.
-    QDialog* configureAreasDialog() const
+    // it deletes it, so it is looked up afresh each time. Defaults to the
+    // primary mapper's T2DMap; pass a secondary view's to reach its own
+    // dialog instead.
+    QDialog* configureAreasDialog(T2DMap* p2dMap = nullptr) const
     {
-        for (QDialog* pDialog : mp2dMap->findChildren<QDialog*>()) {
+        for (QDialog* pDialog : (p2dMap ? p2dMap : mp2dMap)->findChildren<QDialog*>()) {
             if (pDialog->isVisible() && pDialog->windowTitle() == qsl("Configure Areas")) {
                 return pDialog;
             }
@@ -506,16 +510,25 @@ private:
         return pickContextMenuItem(qsl("Configure areas...")) && configureAreasDialog();
     }
 
-    QListWidget* configuredAreaList() const
+    // Opens a secondary view's own Configure Areas dialog. There's no mouse
+    // fixture for a secondary view's widget, so this calls the slot the
+    // context menu action would trigger directly instead.
+    bool openConfigureAreasOn(T2DMap* p2dMap)
     {
-        QDialog* pDialog = configureAreasDialog();
+        p2dMap->slot_configureAreas();
+        return configureAreasDialog(p2dMap);
+    }
+
+    QListWidget* configuredAreaList(T2DMap* p2dMap = nullptr) const
+    {
+        QDialog* pDialog = configureAreasDialog(p2dMap);
         return pDialog ? pDialog->findChild<QListWidget*>() : nullptr;
     }
 
-    QStringList configuredAreas() const
+    QStringList configuredAreas(T2DMap* p2dMap = nullptr) const
     {
         QStringList rows;
-        if (QListWidget* pList = configuredAreaList()) {
+        if (QListWidget* pList = configuredAreaList(p2dMap)) {
             for (int row = 0; row < pList->count(); ++row) {
                 rows << pList->item(row)->text();
             }
@@ -523,15 +536,15 @@ private:
         return rows;
     }
 
-    QString configuredAreaSelected() const
+    QString configuredAreaSelected(T2DMap* p2dMap = nullptr) const
     {
-        QListWidget* pList = configuredAreaList();
+        QListWidget* pList = configuredAreaList(p2dMap);
         return pList && pList->currentItem() ? pList->currentItem()->text() : QString();
     }
 
-    bool selectConfiguredArea(const QString& rowText) const
+    bool selectConfiguredArea(const QString& rowText, T2DMap* p2dMap = nullptr) const
     {
-        QListWidget* pList = configuredAreaList();
+        QListWidget* pList = configuredAreaList(p2dMap);
         if (!pList) {
             return false;
         }
@@ -544,9 +557,9 @@ private:
         return false;
     }
 
-    QPushButton* configureAreasButton(const QString& text) const
+    QPushButton* configureAreasButton(const QString& text, T2DMap* p2dMap = nullptr) const
     {
-        QDialog* pDialog = configureAreasDialog();
+        QDialog* pDialog = configureAreasDialog(p2dMap);
         if (!pDialog) {
             return nullptr;
         }
@@ -558,15 +571,15 @@ private:
         return nullptr;
     }
 
-    bool configureAreasButtonEnabled(const QString& text) const
+    bool configureAreasButtonEnabled(const QString& text, T2DMap* p2dMap = nullptr) const
     {
-        QPushButton* pButton = configureAreasButton(text);
+        QPushButton* pButton = configureAreasButton(text, p2dMap);
         return pButton && pButton->isEnabled();
     }
 
-    bool pressConfigureAreasButton(const QString& text) const
+    bool pressConfigureAreasButton(const QString& text, T2DMap* p2dMap = nullptr) const
     {
-        QPushButton* pButton = configureAreasButton(text);
+        QPushButton* pButton = configureAreasButton(text, p2dMap);
         if (!pButton || !pButton->isEnabled()) {
             return false;
         }
@@ -578,9 +591,9 @@ private:
     // an empty name cancels the prompt instead. A name the map turns down is
     // followed by a warning box, which is dismissed with its text kept in
     // mLastWarningText. Reports whether the prompt came up at all.
-    bool pressAndName(const QString& buttonText, const QString& name)
+    bool pressAndName(const QString& buttonText, const QString& name, T2DMap* p2dMap = nullptr)
     {
-        QPushButton* pButton = configureAreasButton(buttonText);
+        QPushButton* pButton = configureAreasButton(buttonText, p2dMap);
         if (!pButton || !pButton->isEnabled()) {
             return false;
         }
@@ -733,7 +746,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         // The context menu items are found by their text.
@@ -1627,6 +1640,25 @@ private slots:
         dragFromTo(pointUnitsFromCentre(1, 4), pointUnitsFromCentre(2, 4));
 
         QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+        QCOMPARE(linePoints(), lineAsDrawn());
+    }
+
+    // A point stays selected once the left button is released, so that the
+    // context menu can act on it. Every later move over the map therefore has
+    // to be told apart from a drag of that point by which button is held down
+    // (#8397).
+    void test_aSelectedPointIsOnlyDraggedByTheLeftButton()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 4));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+
+        // the right button held down on the way to the point's context menu
+        sendMouse(QEvent::MouseMove, pointUnitsFromCentre(2, 4), Qt::NoButton, Qt::RightButton, Qt::NoModifier);
+
         QCOMPARE(linePoints(), lineAsDrawn());
     }
 
@@ -2916,6 +2948,104 @@ private slots:
         QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
         QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
         QCOMPARE(mp2dMap->mAreaID, mAreaId);
+    }
+
+    // Regression test: slot_configureAreas() used to preselect by index into
+    // the mapper's dropdown, which omits the default area when it's hidden,
+    // against a list that always includes it - misaligning the two whenever
+    // an area sorting after "Default Area" was shown.
+    void test_configureAreasPreselectsTheShownAreaWithTheDefaultAreaHidden()
+    {
+        showMapWithAnotherArea();
+        map()->setDefaultAreaShown(false);
+        map()->mpMapper->updateAreaComboBox();
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+
+        QVERIFY(openConfigureAreas());
+
+        QCOMPARE(configuredAreaSelected(), mouseAreaRow());
+    }
+
+    void test_creatingRenamingAndDeletingAnAreaMarksTheMapUnsaved()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        map()->resetUnsaved();
+        QVERIFY(pressAndName(qsl("Create"), qsl("Brand New")));
+        QVERIFY(map()->isUnsaved());
+
+        map()->resetUnsaved();
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+        QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Other")));
+        QVERIFY(map()->isUnsaved());
+
+        map()->resetUnsaved();
+        QVERIFY(pressConfigureAreasButton(qsl("Delete")));
+        QVERIFY(map()->isUnsaved());
+    }
+
+    void test_renamingAnAreaThatIsNotShownLeavesTheDropdownAlone()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+
+        QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Area")));
+
+        QVERIFY(mLastWarningText.isEmpty());
+        QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mOtherAreaId), qsl("Renamed Area"));
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QCOMPARE(mp2dMap->mAreaID, mAreaId);
+    }
+
+    // Regression test: create/rename/delete used to only refresh the combo
+    // box of whichever view (primary or secondary) opened the dialog, so the
+    // other views' dropdowns went stale.
+    void test_creatingAndRenamingFromASecondaryViewUpdatesThePrimaryDropdownToo()
+    {
+        showMapWithAnotherArea();
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapView* pView = map()->getViewManager()->getView(viewId);
+        QVERIFY(pView);
+
+        QVERIFY(openConfigureAreasOn(pView->get2DMap()));
+        QVERIFY(pressAndName(qsl("Create"), qsl("Brand New"), pView->get2DMap()));
+        QVERIFY(mLastWarningText.isEmpty());
+        QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Brand New")) >= 0, "the primary dropdown was not refreshed after a secondary view's dialog created an area");
+
+        QVERIFY(selectConfiguredArea(otherAreaRow(), pView->get2DMap()));
+        QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Other"), pView->get2DMap()));
+        QVERIFY(mLastWarningText.isEmpty());
+        QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
+        QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Renamed Other")) >= 0, "the primary dropdown was not refreshed after a secondary view's dialog renamed an area");
+
+        mpHost->closeMapView(viewId);
+    }
+
+    // Regression test: slot_switchArea() treated -1 as "area not found", but
+    // -1 is also the default area's real id, so falling back to it after a
+    // delete left the view blank instead of showing "Default Area".
+    void test_deletingTheShownAreaFromASecondaryViewMovesItToDefaultArea()
+    {
+        showMapWithAnotherArea();
+        const auto [viewId, error] = mpHost->createMapView(mOtherAreaId);
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapView* pView = map()->getViewManager()->getView(viewId);
+        QVERIFY(pView);
+        QCOMPARE(pView->getCurrentAreaId(), mOtherAreaId);
+
+        QVERIFY(openConfigureAreasOn(pView->get2DMap()));
+        QCOMPARE(configuredAreaSelected(pView->get2DMap()), otherAreaRow());
+
+        QVERIFY(pressConfigureAreasButton(qsl("Delete"), pView->get2DMap()));
+
+        QVERIFY2(pView->getCurrentAreaId() != mOtherAreaId, "the secondary view is still showing the deleted area");
+        QCOMPARE(pView->getCurrentAreaId(), -1);
+        QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
+
+        mpHost->closeMapView(viewId);
     }
 };
 

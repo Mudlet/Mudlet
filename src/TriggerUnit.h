@@ -43,6 +43,7 @@
 
 class Host;
 class TTrigger;
+struct TRootTriggerFilter;
 
 class TriggerUnit
 {
@@ -81,17 +82,23 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
-    // Called by anything that changes whether one trigger can be ruled out of a
-    // line by its text alone.
+    // Call on any change to whether a trigger can be ruled out of a line by its text alone.
     void markPrescanStale(TTrigger* pT);
-    // As above, but for the changes that make a trigger fire without matching
-    // text. Those have to reach the line already being processed, whose
-    // candidate list was settled before the change - see processDataStream().
-    void markRootUnfilterable()
+    // As above, for a change made mid-line: that line's candidate list is already settled, so the
+    // epoch sends the rest of it down the unfiltered path.
+    void markPrescanStaleForLineInFlight(TTrigger* pT)
     {
         ++mUnfilterableEpoch;
-        markRootNodeListReordered();
+        ++mRootFilterEpoch;
+        markPrescanStale(pT);
     }
+    // How many times a change has been announced to the passes that pinned a copy of the root
+    // triggers' filters. Moves only for a change one of those copies could be of, so a spec can tell a
+    // needed announcement from one that cost a line its filters for nothing.
+    quint32 rootFilterEpoch() const { return mRootFilterEpoch; }
+    // Both paths build the same index, so this is how a test checks the incremental path keeps full
+    // rebuilds flat.
+    quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -152,8 +159,7 @@ private:
     void stopSameLineCreationLoop(const int chainId);
     void markRootNodeAppended(TTrigger* pT);
     void markRootNodeRemoved(TTrigger* pT);
-    // For the changes that move existing triggers around, which the snapshot
-    // and its index can only follow by being built again.
+    // For changes that move existing triggers, which the snapshot and its index can only follow by rebuilding
     void markRootNodeListReordered()
     {
         mRootNodeSnapshotStale = true;
@@ -162,54 +168,46 @@ private:
     void refreshRootNodeSnapshot();
 
     QPointer<Host> mpHost;
-    // Storage processDataStream() lends out for the UTF-8 form of the line it is
-    // matching, kept between lines for its capacity alone - it holds nothing
-    // meaningful outside that call. Past this size the capacity is dropped
-    // instead of kept, so one outsized line cannot hold its allocation for the
-    // rest of the session; the bound is three bytes per QChar of a line longer
-    // than any game sends.
+    // mUtf8Scratch is kept between lines only for its capacity, which is dropped past this size so one
+    // outsized line cannot hold it all session: 3 bytes per QChar of a line longer than any game sends.
     static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
     QByteArray mUtf8Scratch;
-    // Every trigger in the tree whose own patterns gate what is below it, in
-    // the order they are reached, so a line's worth of them can be handed to
-    // the match pool as one list. Rebuilt only when the tree changes - see
-    // rebuildPrescanTasksIfStale().
+    // Handed to the match pool as one list per line; see collectPrescanTasks()
     std::vector<TTrigger*> mPrescanTasks;
     quint64 mPrescanTasksGeneration = std::numeric_limits<quint64>::max();
-    // How many regex searches the previous line took, on whichever path it
-    // went, which stands in for how many this one will take - the work the
-    // pool could share out, as opposed to how many triggers hold a regex,
-    // most of which may be disabled or settled before their regex is reached.
+    // Estimates the work the pool could share out on this line. Not the count of regex triggers: most
+    // may be disabled or settled before their regex is reached.
     int mRegexSearchesOnTheLastLine = 0;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
-    // What processDataStream() iterates instead of mTriggerRootNodeList itself -
-    // see the note there. Shared rather than rebuilt per line: a pass pins the
-    // snapshot that was current when it started, so mutating the root list
-    // mid-pass leaves that one alone and only the next pass sees the rebuilt
-    // one. Every mutation of mTriggerRootNodeList must set the flag below, or a
-    // pass would go on walking triggers that have since been freed.
-    // The prescan files triggers by their position in the snapshot, so the two
-    // are rebuilt and pinned together.
+    // What processDataStream() iterates instead of mTriggerRootNodeList. A pass pins the snapshot current
+    // when it started, so a mid-pass mutation only affects the next pass. Every mutation of
+    // mTriggerRootNodeList must set the flag below, or a pass would walk freed triggers.
+    // The prescan files triggers by snapshot position, so the two are rebuilt and pinned together.
+    // mFilters runs parallel to mNodes; what it says about a trigger holds only while mRootFilterEpoch
+    // stands still - see processDataStream().
     struct RootNodeSnapshot
     {
         std::vector<TTrigger*> mNodes;
+        std::vector<TRootTriggerFilter> mFilters;
         TTriggerPrescan mPrescan;
     };
     std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
     bool mRootNodeSnapshotStale = true;
     bool mRootNodeSnapshotNeedsRebuild = true;
-    // What the snapshot has yet to be told about, so that the ordinary churn of
-    // a script arming and killing temporary triggers costs the snapshot one
-    // entry each rather than a rebuild per line. Removals and refilings name a
-    // position because the trigger they refer to may be freed before the next
-    // line reads them; positions outlive it, and a removed one is never reused.
+    // Pending snapshot updates, so scripts arming and killing temporary triggers cost one entry each, not
+    // a rebuild per line. Removals and refiles hold positions since the trigger may be freed before the
+    // next line reads them; a removed position is never reused.
     std::vector<TTrigger*> mRootNodesAppended;
     std::vector<int> mRootNodesRemoved;
     std::vector<int> mRootNodesRefiled;
     std::vector<int> mCandidateScratch;
     std::vector<int> mCandidates;
+    quint64 mPrescanRebuilds = 0;
     quint32 mUnfilterableEpoch = 0;
+    // Moves whenever a trigger changes in a way its TRootTriggerFilter copies,
+    // which a pass that has pinned those copies has no other way to hear of
+    quint32 mRootFilterEpoch = 0;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;
@@ -219,8 +217,7 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
-    // How many substring patterns asked about the previous line, which decides
-    // whether summarising this one is worth it - see TBigramFilter
+    // Decides whether summarising the next line is worth it; see TBigramFilter
     int mSubstringQuestionsOnTheLastLine = 0;
     const QString* mpCurrentExecutingTriggerName = nullptr;
     // Root triggers registered while processDataStream() is running, so each

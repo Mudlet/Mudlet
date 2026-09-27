@@ -48,8 +48,7 @@ class TLabel : public QLabel
 {
     Q_OBJECT
 
-    // Declared ahead of every other member: the references below are initialised
-    // from it, so it has to be constructed first.
+    // Declared first: the references below are initialised from it.
     std::unique_ptr<TLabelModel> mpModel;
 
 public:
@@ -88,10 +87,7 @@ public:
     void resetSvgTransform();
     TLabelModel& model() { return *mpModel; }
 
-    // The members below are references aliasing the model above. They stand for
-    // the label's identity, callback registry indexes, link colouring and
-    // background colour, which live in the core TLabelModel this label owns and
-    // the profile's TWindowRegistry indexes by name.
+    // References aliasing the model above.
     QPointer<Host>& mpHost;
     QString& mName;
     int& mClickFunction;
@@ -117,9 +113,8 @@ private:
     QPixmap renderSvgPixmap(const QSize& size) const;
     void refreshSvg();
     void stopMovie();
-    // The selection flags would cost the label the press its click callback needs;
-    // the keyboard flag puts a link in reach of Tab and Return, through the focus
-    // policy QLabel derives from these flags.
+    // No selection flags: they would take the press the click callback needs. The keyboard flag puts
+    // links in reach of Tab and Return via the focus policy QLabel derives from these flags.
     static constexpr Qt::TextInteractionFlags scmLinkInteraction = Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard;
 
     bool carriesLink() const;
