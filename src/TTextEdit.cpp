@@ -2589,8 +2589,8 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 {
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.setFont(font());
-    // A cache of its own, as the image usually has a different resolution from
-    // the screen and handing that to the console's cache would empty it.
+    // A cache of its own, so that this leaves the console's caches alone as
+    // promised above.
     TGlyphCache glyphCache;
     glyphCache.setFont(painter.font(), *painter.device());
 

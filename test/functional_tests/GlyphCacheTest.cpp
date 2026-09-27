@@ -22,6 +22,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPixmap>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 
 #include "TGlyphCache.h"
@@ -188,7 +189,7 @@ private slots:
         }
         for (const auto& [styleName, style] : styles) {
             // A display font picked by style name, such as "Fira Code SemiBold",
-            // keeps its own weight and must not be drawn at Normal or Bold instead
+            // keeps its own weight wherever it already counts as bold or not bold
             QTest::addRow("demibold font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::DemiBold) << int(QFont::PreferDefault);
             QTest::addRow("light font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::Light) << int(QFont::PreferDefault);
             // What every console other than the main one draws with
@@ -282,11 +283,16 @@ private slots:
 
         const int id = QFontDatabase::addApplicationFont(qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf"));
         QVERIFY2(id != -1, "could not register the bundled Ubuntu Mono");
+        // Other tests share this binary, so a failure below must not leave it installed
+        auto unregister = qScopeGuard([id] {
+            QFontDatabase::removeApplicationFont(id);
+        });
         QCOMPARE(cache.size(), 0);
         const QImage withFont = render(font, 1.0, false, TGlyphCache::Plain, nullptr);
         QVERIFY2(withFont != withFallback, "registering the font did not change how drawText() draws, so this proves nothing");
         QCOMPARE(differingPixels(render(font, 1.0, false, TGlyphCache::Plain, &cache), withFont), 0);
 
+        unregister.dismiss();
         QFontDatabase::removeApplicationFont(id);
         QCOMPARE(cache.size(), 0);
         QCOMPARE(differingPixels(render(font, 1.0, false, TGlyphCache::Plain, &cache), render(font, 1.0, false, TGlyphCache::Plain, nullptr)), 0);
