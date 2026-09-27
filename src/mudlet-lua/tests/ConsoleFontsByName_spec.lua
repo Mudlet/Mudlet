@@ -125,8 +125,13 @@ describe("Tests that the font functions find their console by name", function()
     local kinds = {
       {"mini console", function(name) return createMiniConsole(name, 0, 0, 300, 200) end, deleteMiniConsole},
       -- once a docked user window has been deleted, every one docked after it
-      -- opens with no height, so this one is only closed and left behind
-      {"user window", function(name) return openUserWindow(name, false) end, closeUserWindow},
+      -- opens with no height, so this one is floated at a fixed size, and only
+      -- closed and left behind so it cannot do the same to later specs
+      {"user window", function(name)
+        local opened = openUserWindow(name, false)
+        resizeWindow(name, 300, 400)
+        return opened
+      end, closeUserWindow},
       -- a buffer cannot be deleted, so it is left behind under its unique name
       {"buffer", function(name) createBuffer(name) return true end, function() end},
     }
