@@ -148,6 +148,29 @@ describe("Tests that the timestamp and wrap functions find their console by name
           assert.are.equal(mainWrap, getWindowWrap("main"))
           assert.are.equal(mainWidth, getMainConsoleWidth())
         end)
+
+        it("rewraps a line with wrapLine() to the width and indents it is given", function()
+          setWindowWrap(window, 200)
+          setWindowWrapIndent(window, 0)
+          setWindowWrapHangingIndent(window, 0)
+          clearWindow(window)
+          echo(window, text .. "\n")
+          assert.are.same({text}, getLines(window, 0, getLineCount(window)))
+
+          setWindowWrap(window, 20)
+          setWindowWrapIndent(window, 2)
+          setWindowWrapHangingIndent(window, 4)
+          wrapLine(window, 0)
+          local lines = getLines(window, 0, getLineCount(window))
+          assert.is_true(#lines > 1)
+          assert.is_truthy(lines[1]:find("^  %S"), lines[1])
+          for i = 2, #lines do
+            assert.is_truthy(lines[i]:find("^    %S"), lines[i])
+          end
+          for _, line in ipairs(lines) do
+            assert.is_true(#line <= 20, line)
+          end
+        end)
       end)
     end
   end)
