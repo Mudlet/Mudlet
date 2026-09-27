@@ -218,6 +218,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
+, mTriggerEngineMode(mpModel->mTriggerEngineMode)
 , mUserCursor(mpModel->mUserCursor)
 , mWrapAt(mpModel->mWrapAt)
 , P_begin(mpModel->P_begin)

@@ -174,6 +174,7 @@ private slots:
         QCOMPARE(&console->mEngineCursor, &model.mEngineCursor);
         QCOMPARE(&console->mUserCursor, &model.mUserCursor);
         QCOMPARE(&console->mIsPromptLine, &model.mIsPromptLine);
+        QCOMPARE(&console->mTriggerEngineMode, &model.mTriggerEngineMode);
         QCOMPARE(&console->mLogFile, &model.mLogFile);
         QCOMPARE(&console->mLogFileName, &model.mLogFileName);
         QCOMPARE(&console->mLogStream, &model.mLogStream);

@@ -404,7 +404,7 @@ public:
 
     QElapsedTimer mProcessingTimer;
 
-    bool mTriggerEngineMode = false;
+    bool& mTriggerEngineMode;
 
     QPoint& mUserCursor;
     int& mWrapAt;
