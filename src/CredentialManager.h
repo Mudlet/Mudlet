@@ -217,7 +217,8 @@ private:
     // How many reads the store may refuse, without answering any of them, before a lookup stops
     // asking it. Two rather than one: a single refusal can be one entry's own, and an older layout
     // behind it may still hold the password, so the second read is what tells a locked or dismissed
-    // store apart from an entry that is simply not readable.
+    // store apart from an entry that is simply not readable. Fewer when the chain runs out of keychain
+    // reads first; see runLookupStage().
     static constexpr int scmRefusalsBeforeGivingUpOnTheStore = 2;
     // Hands the answer of the read the deadline cut short to the lookup's lateCallback, whenever
     // the keychain gets round to giving it

@@ -39,6 +39,7 @@
 #include <QTimer>
 #include <QVersionNumber>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
@@ -778,9 +779,18 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
                 // prompt the player dismissed. Everything behind it would be refused the same way,
                 // at the cost of another prompt each, so the chain stops asking. The file is still
                 // read, and the refusal is still what the lookup reports if nothing turns up.
-                if (!lookup->storeHasAnswered && lookup->consecutiveRefusals >= scmRefusalsBeforeGivingUpOnTheStore) {
-                    qWarning() << "CredentialManager: the keychain refused" << lookup->consecutiveRefusals << "reads in a row for profile" << lookup->profileName
-                               << "- not asking it for the remaining formats";
+                //
+                // A refusal with no keychain read left behind it counts as the store's too, however
+                // few came before it: there is nothing left to tell the two apart with, and a sign-in
+                // key's chain has only the one read on Linux and macOS. Waiting for a second would
+                // mean the window never opened for the lookups it exists for - the preferences ask
+                // about "reconnect" and then "reconnect-token", a prompt each.
+                const bool keychainReadLeft = std::any_of(lookup->stages.cbegin() + index + 1, lookup->stages.cend(), [](const LookupStage& stage) {
+                    return !stage.fromFile;
+                });
+                if (!lookup->storeHasAnswered && (lookup->consecutiveRefusals >= scmRefusalsBeforeGivingUpOnTheStore || !keychainReadLeft)) {
+                    qWarning() << "CredentialManager: the keychain refused" << lookup->consecutiveRefusals << (lookup->consecutiveRefusals == 1 ? "read" : "reads in a row") << "for profile"
+                               << lookup->profileName << "without answering any - not asking it again for the remaining formats, nor for the next" << scmStoreRefusalCooldownMs / 1000 << "seconds";
                     lookup->storeRefused = true;
                     noteStoreRefusal();
                 }

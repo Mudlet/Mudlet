@@ -81,6 +81,7 @@ private slots:
     void testAKeychainErrorIsReportedRatherThanNothingFound();
     void testAStoreThatRefusesIsNotAskedForEveryOtherLayout();
     void testAFreshRefusalSparesTheNextLookupTheStore();
+    void testARefusalOfTheSignInsOnlyKeychainReadSparesTheNextLookup();
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
     void testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain();
     void testASignInKeyIsNotLookedForInLayoutsOlderThanItself();
@@ -1328,6 +1329,38 @@ void CredentialManagerKeychainTest::testAFreshRefusalSparesTheNextLookupTheStore
     const auto secondAnswer = startRetrieval(secondManager, mProfile, QStringLiteral("reconnect-token"));
     QVERIFY(waitForAnswer(secondAnswer));
     QVERIFY(!secondAnswer->success);
+    QVERIFY2(secondStaller.reads().isEmpty(), "the store was asked again moments after refusing, so the player is prompted twice");
+}
+
+// The lookups the window is for: the preferences ask about "reconnect" and then "reconnect-token",
+// and a sign-in key's chain has a single keychain read on Linux and macOS - so a refusal that waited
+// for a second before counting as the store's never opened the window, and the player was prompted
+// for each (raised in review of #11031).
+void CredentialManagerKeychainTest::testARefusalOfTheSignInsOnlyKeychainReadSparesTheNextLookup()
+{
+    JobStaller firstStaller;
+    firstStaller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager firstManager;
+    firstManager.mJobStartHook = firstStaller.hook();
+
+    const auto firstAnswer = startRetrieval(firstManager, mProfile, QStringLiteral("reconnect"));
+    // Every keychain read the chain has: one, and on Windows the pre-0.17 naming as well
+    const int keychainReads = onWindows() ? 2 : 1;
+    for (int refusal = 0; refusal < keychainReads; ++refusal) {
+        QKeychain::Job* refused = firstStaller.waitForStalled(refusal);
+        QVERIFY(refused);
+        JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: the wallet is locked"));
+    }
+    QVERIFY(waitForAnswer(firstAnswer));
+    QCOMPARE(firstStaller.reads().size(), keychainReads);
+
+    JobStaller secondStaller;
+    secondStaller.stallEvery<QKeychain::ReadPasswordJob>();
+    CredentialManager secondManager;
+    secondManager.mJobStartHook = secondStaller.hook();
+
+    const auto secondAnswer = startRetrieval(secondManager, mProfile, QStringLiteral("reconnect-token"));
+    QVERIFY(waitForAnswer(secondAnswer));
     QVERIFY2(secondStaller.reads().isEmpty(), "the store was asked again moments after refusing, so the player is prompted twice");
 }
 
