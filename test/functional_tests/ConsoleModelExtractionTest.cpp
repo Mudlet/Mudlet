@@ -1535,6 +1535,17 @@ end
 -- a family setFont() takes, which it checks for before it looks for a console
 local anyFont = next(getAvailableFonts())
 
+-- replace() is wrapped in Lua, and the wrapper drops what the function it wraps
+-- answers
+local rawReplace
+for index = 1, math.huge do
+    local name, value = debug.getupvalue(replace, index)
+    if not name or name == 'oldreplace' then
+        rawReplace = value
+        break
+    end
+end
+
 expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
 expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
 expectRefusal('deleteLabel', deleteLabel('noViewLbl'))
@@ -1627,6 +1638,14 @@ expectRefusal('getFont main', getFont('main'))
 expectRefusal('setFont', setFont(anyFont))
 expectRefusal('getFontSize', getFontSize())
 expectRefusal('setFontSize', setFontSize(10))
+expectRefusal('echoLink', echoLink('text', 'cmd', 'hint'))
+expectRefusal('echoPopup', echoPopup('text', {'cmd'}, {'hint'}))
+expectRefusal('insertLink', insertLink('text', 'cmd', 'hint'))
+expectRefusal('insertPopup', insertPopup('text', {'cmd'}, {'hint'}))
+expectRefusal('setLink', setLink('cmd', 'hint'))
+expectRefusal('setPopup', setPopup({'cmd'}, {'hint'}))
+expectRefusal('insertText', insertText('text'))
+expectRefusal('replace', rawReplace('text'))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1648,6 +1667,11 @@ expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, ge
 expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
 expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
+-- a link handed a function for its command refuses in the same way
+expectValue('echoLink reason', 'window "main" not found', select(2, echoLink('text', function() end, 'hint')))
+expectValue('setPopup reason', 'window "main" not found', select(2, setPopup({function() end}, {'hint'})))
+expectValue('insertText reason', 'window "" not found', select(2, insertText('text')))
+expectValue('replace reason', 'window "" not found', select(2, rawReplace('text')))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())
