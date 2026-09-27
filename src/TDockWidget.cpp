@@ -87,6 +87,10 @@ void TDockWidget::setVisible(bool visible)
     }
     auto pC = mpHost->mpConsole->subConsoleWidget(mWidgetConsoleName);
     if (!pC) {
+        // deleteMiniConsole() lets go of the console before it takes the dock down
+        if (!visible) {
+            QWidget::setVisible(false);
+        }
         return;
     }
     //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
