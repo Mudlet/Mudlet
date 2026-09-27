@@ -237,6 +237,11 @@ private slots:
         QVERIFY(mpHost);
         mpHost->setEnableSpellCheck(true);
         mpHost->setUserDictionaryOptions(true, false);
+        // hunspell hands back a handle even when it found no files to load
+        const QString dictionary = mpHost->getSpellDic();
+        const QString dictionaryPath = MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary);
+        QVERIFY2(QFile::exists(qsl("%1%2.dic").arg(dictionaryPath, dictionary)),
+                 qPrintable(qsl("no \"%1\" system dictionary in \"%2\", so nothing below gets checked at all").arg(dictionary, dictionaryPath)));
         QVERIFY2(mpHost->spellChecker().systemHandle(), "the profile has no system dictionary handle, so nothing below gets checked at all");
         QVERIFY2(mpHost->spellChecker().userHandle(), "the profile has no user dictionary to add words to");
     }
