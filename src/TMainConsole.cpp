@@ -1333,13 +1333,6 @@ TConsole* TMainConsole::consoleNamed(const QString& name)
     return mSubConsoleMap.value(name);
 }
 
-void TMainConsole::markWindowDirty(const QString& name, const int firstLine, const int lastLine)
-{
-    if (auto pC = consoleNamed(name)) {
-        pC->markLinesDirty(firstLine, lastLine);
-    }
-}
-
 void TMainConsole::markWindowDirty(const TConsoleModel& model, const int firstLine, const int lastLine)
 {
     if (auto pC = model.buffer.console()) {
