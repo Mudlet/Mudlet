@@ -2350,6 +2350,28 @@ void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor
     mpConsole->print(msg, fgColor, bgColor);
 }
 
+// The echoed-text mark is buffer state, so it is set on the model rather than through the view.
+bool Host::echoToMainConsole(const QString& text)
+{
+    if (!mpConsole) {
+        return false;
+    }
+    TBuffer& buffer = mpMainConsoleModel->buffer;
+    buffer.mEchoingText = true;
+    mpConsole->echo(text);
+    buffer.mEchoingText = false;
+    return true;
+}
+
+bool Host::insertHtmlInMainConsole(const QString& text)
+{
+    if (!mpConsole) {
+        return false;
+    }
+    mpConsole->insertHTML(text);
+    return true;
+}
+
 void Host::printSystemMessage(const QString& msg)
 {
     mpConsole->printSystemMessage(msg);
