@@ -265,6 +265,10 @@ bool TDebug::passesFilters(const Host* pHost)
     if (Q_UNLIKELY(!smpSink)) {
         if (Q_LIKELY(!line.isEmpty())) {
             // Don't enqueue empty messages
+            if (smMessageQueue.count() >= csmMessageQueueLimit) {
+                smMessageQueue.dequeue();
+                ++smMessageQueueDroppedCount;
+            }
             // Stamped here rather than when the sink turns up, so that a
             // backlog replayed minutes later still reads as when it happened:
             smMessageQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(TBuffer::smTimeStampFormat)));
@@ -275,6 +279,12 @@ bool TDebug::passesFilters(const Host* pHost)
     if (Q_UNLIKELY(!smMessageQueue.isEmpty())) {
         // The sink must have just come on-line - so unload all the messages
         // stacked up while there was none:
+        if (smMessageQueueDroppedCount) {
+            // Ahead of the backlog, as the cap drops the OLDEST messages:
+            //: Shown in the Central Debug Console when it opens, if more messages arrived while it was closed than could be kept for it.
+            smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while the Central Debug Console was closed.\n", "", smMessageQueueDroppedCount), Qt::white, Qt::darkRed, QString());
+            smMessageQueueDroppedCount = 0;
+        }
         while (!smMessageQueue.isEmpty() && smpSink) {
             const auto message = smMessageQueue.dequeue();
             smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);

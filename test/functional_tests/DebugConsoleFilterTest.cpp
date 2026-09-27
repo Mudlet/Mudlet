@@ -576,6 +576,40 @@ private slots:
         QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Backlog line was stamped %1, outside its arrival window %2").arg(sink.lines.at(0).timeStamp, window)));
     }
 
+    // Lines written with no sink wait for one, but only as many as the console
+    // could show: a run that never opens it would otherwise keep them all for as
+    // long as it lasts. The oldest go first, and the sink that finally turns up
+    // is told how many - once.
+    void test_backlogDropsTheOldestPastItsCapAndSaysHowMany()
+    {
+        RecordingDebugSink sink;
+        installSink(sink);
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setSink(nullptr);
+
+        // Two more than the backlog can hold, so exactly the first two go:
+        const int limit = TDebug::messageQueueLimit();
+        for (int i = 0; i < limit + 2; ++i) {
+            TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << qsl("backlog message %1\n").arg(i) >> nullptr;
+        }
+
+        TDebug::setSink(&sink);
+        TDebug::flushMessageQueue();
+
+        QCOMPARE(sink.lines.size(), limit + 1);
+        QVERIFY2(sink.lines.at(0).text.contains(qsl("2 message(s) dropped")), qPrintable(sink.lines.at(0).text));
+        QVERIFY2(sink.lines.at(1).text.endsWith(qsl("backlog message 2\n")), qPrintable(sink.lines.at(1).text));
+        QVERIFY2(sink.lines.last().text.endsWith(qsl("backlog message %1\n").arg(limit + 1)), qPrintable(sink.lines.last().text));
+
+        sink.lines.clear();
+        TDebug::setSink(nullptr);
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "later backlog\n" >> nullptr;
+        TDebug::setSink(&sink);
+        TDebug::flushMessageQueue();
+        QCOMPARE(sink.lines.size(), 1);
+        QVERIFY2(sink.lines.at(0).text.endsWith(qsl("later backlog\n")), qPrintable(sink.lines.at(0).text));
+    }
+
     // Resuming hands each held line to the sink stamped with the time it
     // arrived, not the time it was let through.
     void test_resumingHandsHeldLinesToTheSinkWithTheirArrivalTimes()
