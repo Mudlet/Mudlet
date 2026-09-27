@@ -204,10 +204,6 @@ public:
     std::optional<bool> getCommandLineSavesHistory(const QString& name) const;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory);
     bool setCommandLineVisible(const QString& name, bool visible);
-    // Repaints buffer lines the core changed in place in the named console: an
-    // empty name or "main" is this one, any other a mini console, user window or
-    // buffer. Nothing happens for a name that is none of those.
-    void markWindowDirty(const QString& name, int firstLine, int lastLine);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.

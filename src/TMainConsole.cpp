@@ -1749,13 +1749,6 @@ TConsole* TMainConsole::consoleNamed(const QString& name)
     return mSubConsoleMap.value(name);
 }
 
-void TMainConsole::markWindowDirty(const QString& name, const int firstLine, const int lastLine)
-{
-    if (auto pC = consoleNamed(name)) {
-        pC->markLinesDirty(firstLine, lastLine);
-    }
-}
-
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
