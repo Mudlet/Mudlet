@@ -1857,10 +1857,10 @@ private slots:
   }
 
   // A link closed while text is held back cannot know its columns in the
-  // joined line yet, so it is left out of visibility management - as a link
-  // spanning lines is - rather than registered where a reveal would write
-  // over the held text.
-  void test_AClosedLinkBehindHeldTextIsNotRegisteredForVisibility() {
+  // joined line yet, so it is registered once the join is settled, at the
+  // columns the held text moved it to - not where a reveal would write over
+  // the held text.
+  void test_AClosedLinkBehindHeldTextIsRegisteredWhereTheJoinPutsIt() {
     undoServerWrap();
     const QString heldText = QString(64, QLatin1Char('x')) + qsl(" alpha");
     feedFromServer(heldText + qsl("\n"));
@@ -1869,10 +1869,81 @@ private slots:
     TMainConsole *console = mpHost->mpConsole;
     const int joinedLine = lineStartingWith(heldText);
     QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
-    QCOMPARE(console->buffer.line(joinedLine), heldText + qsl(" beta tail."));
+    // Concealed where the link landed: the held text in front is untouched
+    QCOMPARE(console->buffer.line(joinedLine), heldText + qsl("      tail."));
     const int linkId = console->buffer.getLinkIndexAt(joinedLine, 71);
     QVERIFY2(linkId > 0, "the link text is no longer a link");
-    QVERIFY(!console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId));
+    QVERIFY(console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId));
+  }
+
+  // Held text the next line does not continue is committed on its own, and a
+  // link closed on that next line is then a single-line link at exactly the
+  // columns it recorded - so it keeps its visibility, as it did before held
+  // text was ever considered (raised in review of #11023).
+  void test_AClosedLinkAfterHeldTextCommittedAloneKeepsItsVisibility() {
+    undoServerWrap();
+    const QString heldText = QString(64, QLatin1Char('x')) + qsl(" alpha");
+    feedFromServer(heldText + qsl("\n"));
+    // a list entry is never the continuation of the line above
+    feedFromServer(qsl("- \x1b]8;;send:hide?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}\x1b\\item\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int heldLine = lineStartingWith(heldText);
+    QVERIFY2(heldLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(heldLine), heldText);
+    QCOMPARE(console->buffer.line(heldLine + 1), qsl("-     "));
+    const int linkId = console->buffer.getLinkIndexAt(heldLine + 1, 2);
+    QVERIFY2(linkId > 0, "the link text is no longer a link");
+    QVERIFY2(console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId), "the link lost its visibility settings");
+  }
+
+  // A link whose opening sequence comes just before a line break has no text
+  // on that line: it is for the line after it, so the break does not end it
+  // (raised in review of #11023).
+  void test_ALinkOpenedJustBeforeALineBreakIsForTheLineAfterIt() {
+    feedFromServer(qsl("Exits: \x1b]8;;send:north\x1b\\\nnorth\x1b]8;;\x1b\\\nafter\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int linkLine = lineStartingWith(qsl("north"));
+    QVERIFY2(linkLine > 0, qPrintable(qsl("the link's line is missing: '%1'").arg(allBufferText())));
+    QVERIFY2(console->buffer.getLinkIndexAt(linkLine, 0) > 0, "the line the link was opened for is plain text");
+    QCOMPARE(console->buffer.getLinkIndexAt(linkLine - 1, 0), 0);
+    QCOMPARE(console->buffer.getLinkIndexAt(linkLine + 1, 0), 0);
+  }
+
+  // The flush marker right after held text, with nothing of the next line
+  // yet, has nothing to carry a link into: the held text ended at the game's
+  // own newline, so a link begun in it ends with it rather than landing on
+  // whatever unrelated line comes next (raised in review of #11023).
+  void test_AFlushMarkerAfterAHeldLineDoesNotCarryItsLinkOn() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:held\x1b\\alpha\n"));
+    feedFromServer(qsl("\r"));
+    feedFromServer(qsl("- a list entry\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int heldLine = lineStartingWith(padding);
+    const int nextLine = lineStartingWith(qsl("- a list entry"));
+    QVERIFY2(heldLine >= 0 && nextLine >= 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
+    QVERIFY2(console->buffer.getLinkIndexAt(heldLine, 65) > 0, "the held text is no longer a link");
+    for (int column = 0; column < console->buffer.line(nextLine).size(); ++column) {
+      QCOMPARE(console->buffer.getLinkIndexAt(nextLine, column), 0);
+    }
+  }
+
+  // What is accepted: a prompt without GA or EOR that ends inside a link is
+  // indistinguishable, at the flush marker, from a line the game is still
+  // sending, so the link carries on into the one line that follows - and ends
+  // there, where it used to claim every line after it.
+  void test_ALinkOpenAtAPromptWithoutGoAheadReachesOneLineAtMost() {
+    feedFromServer(qsl("HP 10 \x1b]8;;send:x\x1b\\go\r"));
+    feedFromServer(qsl("You arrive.\nLater.\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int arriveLine = lineStartingWith(qsl("You arrive."));
+    QVERIFY2(arriveLine > 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.getLinkIndexAt(arriveLine + 1, 0), 0);
   }
 
   // A spoiler the flush marker lands in is committed a piece at a time, and

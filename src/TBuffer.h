@@ -497,7 +497,8 @@ private:
     void decodeSGR38(const SgrParameters&, bool isColonSeparated = true);
     void decodeSGR48(const SgrParameters&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
-    void finaliseActiveHyperlink(const bool mayRegisterVisibility = true);
+    void finaliseActiveHyperlink();
+    void registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling);
     void carryActiveHyperlinkPastFlush(QString& line);
     void maskSpoilerText(const int linkId, QString& line, const int column, const int length);
     void resetColors();
@@ -691,6 +692,19 @@ private:
     int mHeldSpoilerLinkId = 0;
     int mHeldSpoilerStartColumn = 0;
     int mHeldSpoilerContinuationLength = 0;
+    // A link with visibility settings closed while text is held back for joining. Where its text ends
+    // up is known only once that is resolved - joined, or committed as a line of its own - so it is
+    // registered then: from startColumn in the text it began in, through continuationLength
+    // characters of the text after the held text. linkId 0 is none.
+    struct HeldVisibility
+    {
+        int linkId = 0;
+        int startColumn = 0;
+        int continuationLength = 0;
+        bool startsAfterHeldText = false;
+        Mudlet::HyperlinkStyling styling;
+    };
+    HeldVisibility mHeldVisibility;
     QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase { Phase1_Snapshot, Phase2_Unfreeze, None };
