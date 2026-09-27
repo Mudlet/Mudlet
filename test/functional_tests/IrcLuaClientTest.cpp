@@ -251,7 +251,8 @@ private:
         return waitForJoinEvent() && runLua(qsl("ircEvents = {}"));
     }
 
-    // Our own join, reported from the channel's buffer
+    // The channel list names the stored channels before any JOIN, so it can't
+    // tell that the server's JOIN has arrived; our own join reaching Lua can
     bool waitForJoinEvent()
     {
         return QTest::qWaitFor(
