@@ -305,9 +305,8 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     const int oldY = pR->y();
     const int oldZ = pR->z();
 
-    // Ahead of moveRoom(), which re-measures the exits leading to this room
-    // and so needs it to be where it says it is. The area indexes are keyed on
-    // the coordinates passed in, not on the room, so the order suits them too.
+    // Before moveRoom(), which re-measures exits to this room from its stored position; the area
+    // indexes use the coordinates passed in, so they don't mind the order.
     pR->setCoordinates(x, y, z);
 
     if (oldX != x || oldY != y || oldZ != z) {
@@ -724,8 +723,7 @@ void TMap::audit()
     QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
     while (itArea.hasNext()) {
         itArea.next();
-        // The audit rewrites exits, stubs and area membership behind the
-        // setters' backs, so no room re-filed its own index entry:
+        // The audit bypasses the setters, so no room re-filed its own index entry:
         itArea.value()->markLodExitIndexDirty();
         itArea.value()->clean();
     }
@@ -923,14 +921,9 @@ void TMap::initGraph()
         boost::add_vertex(g);
     }
 
-    // searchGraph() keeps its per-room state between searches, so a rebuild has
-    // to put that state back in step with the graph. This function is the only
-    // one that clears g or gives it vertices, which makes it the only place the
-    // state can go stale - room deletion, area deletion and a map reload all
-    // arrive here through mMapGraphNeedsUpdate rather than touching the graph
-    // themselves. A surviving mSearchTouched would be worse than merely wrong:
-    // the next search restores the rooms it names, so an entry past a shrunken
-    // roomCount is an out-of-bounds write.
+    // The only place g is cleared or grown (deletions and reloads come via mMapGraphNeedsUpdate), so the
+    // only place search state goes stale. A surviving mSearchTouched entry past a shrunken roomCount
+    // would make the next search write out of bounds.
     resetSearchState(roomCount);
 
     // Now identify the routes between rooms, and pick out the best edges of parallel ones
@@ -984,9 +977,7 @@ void TMap::initGraph()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }
 
-// Put every room back to "not yet reached". Refills the three per-room vectors
-// rather than only resizing them, or stale values below the old room count
-// survive a rebuild that shrank the map.
+// Refill rather than only resize, or stale values below the old room count survive a shrink.
 void TMap::resetSearchState(const std::size_t roomCount)
 {
     mSearchPredecessor.resize(roomCount);
@@ -998,29 +989,18 @@ void TMap::resetSearchState(const std::size_t roomCount)
     mSearchTouched.clear();
 }
 
-// A* from one room to another, leaving the route in mSearchPredecessor.
-//
-// boost::astar_search() would do the same job, but before it looks at a single
-// exit it resets one entry per room in the WHOLE map - four property maps' worth
-// - so a two-room walk on a 2.3 million room map pays for 2.3 million rooms.
-// Measured on Ssaliss' Aetherspace map that fixed toll is ~55ms, an order of
-// magnitude more than an ordinary search costs. Here the state lives across
-// searches instead and only the rooms the last search wrote to are put back.
+// Not boost::astar_search(): it resets four property maps for every room in the map before starting,
+// ~55ms on the 2.3M-room Aetherspace map, 10x an ordinary search. Here state persists across
+// searches and only the rooms the last one wrote are reset.
 bool TMap::searchGraph(const vertex start, const vertex goal)
 {
-    // A room not yet reached is 0, one that has been reached is stateFrontier,
-    // and one already expanded is stateExpanded - though a re-opened room drops
-    // back to stateFrontier. Only 0 and stateExpanded are ever tested: writing
-    // stateFrontier is what stops a room being listed in mSearchTouched twice.
+    // 0 is unreached; a re-opened room drops back to stateFrontier. Only 0 and stateExpanded are tested:
+    // writing stateFrontier stops a room being listed in mSearchTouched twice.
     static constexpr quint8 stateFrontier = 1;
     static constexpr quint8 stateExpanded = 2;
 
-    // A search that finds nothing has to settle every room it can reach, so one
-    // getPath() to an unreachable room leaves the touched list naming most of the
-    // map - 8 bytes a room, held for the rest of the session, where the old code
-    // freed its scratch after every search. Past half the map give the memory
-    // back and refill instead; the list has stopped being the smaller job by
-    // then anyway, though the point where that happens was not measured.
+    // A failed search touches every reachable room, and the list would hold 8 bytes a room for the
+    // session. Past half the map, free it and refill instead, likely cheaper by then too (unmeasured).
     if (mSearchTouched.size() > mSearchPredecessor.size() / 2) {
         resetSearchState(mSearchPredecessor.size());
         std::vector<vertex>().swap(mSearchTouched);
@@ -1048,8 +1028,7 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
         const vertex current = frontier.top().second;
         frontier.pop();
         if (mSearchState[current] == stateExpanded) {
-            // A cheaper route to this room was found after it was queued, so
-            // the frontier holds it more than once; this is the stale copy.
+            // Stale duplicate: a cheaper route was queued later.
             continue;
         }
         mSearchState[current] = stateExpanded;
@@ -1068,11 +1047,8 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
             }
             mSearchDistance[neighbour] = throughCurrent;
             mSearchPredecessor[neighbour] = current;
-            // An already expanded room goes back into the frontier: the
-            // heuristic measures map coordinates while the costs are room
-            // weights, so the two need not agree and a better route to a room
-            // already left behind can still turn up. boost::astar_search()
-            // re-opens rooms for the same reason.
+            // Re-open: the heuristic uses map coordinates but costs are room weights, so they can
+            // disagree and a better route to an expanded room can appear (boost does the same).
             mSearchState[neighbour] = stateFrontier;
             frontier.push({throughCurrent + heuristic(neighbour), neighbour});
         }
@@ -1189,11 +1165,8 @@ bool TMap::findPath(int from, int to)
         return false;
     }
 
-    // The check above is what keeps searchGraph()'s unchecked indexing in range,
-    // so the search state has to be the same size as the graph for it to mean
-    // anything. Sizing it is initGraph()'s job and nothing else adds vertices,
-    // but boost::add_edge() on a vecS graph grows one silently to fit an
-    // out-of-range index, which would part the two without saying so.
+    // The check above only bounds searchGraph()'s unchecked indexing if the state matches the graph,
+    // and boost::add_edge() on a vecS graph silently grows it to fit an out-of-range index.
     if (mSearchPredecessor.size() != vertexCount) {
         qWarning().nospace().noquote() << "TMap::findPath(" << from << "," << to << ") WARN: search state (" << mSearchPredecessor.size() << ") is out of step with the graph (" << vertexCount
                                        << ") - resetting it.";
@@ -1712,9 +1685,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
 
     ifs.setDevice(&file);
-    // QFont's binary representation changed at Qt 5.13, so the stream version is
-    // pinned to Qt 5.12's here and everywhere else Mudlet reads or writes one,
-    // to keep the files readable across Mudlet versions:
+    // QFont's binary format changed at Qt 5.13; every Mudlet file stream pins 5.12 for compatibility:
     ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> version;
     if ((version < 1) || (version > 127)) {

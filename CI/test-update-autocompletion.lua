@@ -33,13 +33,11 @@ end
 
 local encoded = "<<the function table, encoded>>"
 
--- a self-test that stopped part way reads exactly like a passing one, so the closing
--- line below says how much of it ran
+-- a self-test that stopped part way reads like a passing one, so the last line reports how much ran
 local checks, pages = 0, 0
 
--- Run the generator itself rather than a copy of its patterns: the two rocks it
--- pulls in are replaced, so the fixture stands in for the wiki and the table it
--- would have written out is kept here instead.
+-- Runs the generator itself, not a copy of its patterns; its two rocks are stubbed so the fixture
+-- stands in for the wiki and the output table is captured here.
 local function run(fixture)
   pages = pages + 1
   local scraped
@@ -80,8 +78,7 @@ local function run(fixture)
   end
 
   arg = {outputPath}
-  -- without the pcall a generator error would abort this script with a traceback
-  -- before a single check below had run
+  -- pcall so a generator error fails a check instead of aborting before any ran
   local ok, err = pcall(dofile, generator)
   require, print = realRequire, realPrint
 
@@ -135,8 +132,7 @@ local manual = run(table.concat({
   -- documented twice: the first signature wins and the run is warned about it
   heading("addAreaName_2", "addAreaName", true),
   '<dl><dt>areaID = addAreaName(areaName, areaID)</dt>',
-  -- a section that writes its signature in prose instead of <dl><dt>: it must not be
-  -- handed the next section's signature (the live sendCmdLine/setConsoleBufferSize case)
+  -- a prose signature (no <dl><dt>) must not take the next section's (live sendCmdLine/setConsoleBufferSize case)
   heading("sendCmdLine", "sendCmdLine", true),
   '<p><b>sendCmdLine(command)</b> - puts text on the command line.</p>',
   heading("setConsoleBufferSize", "setConsoleBufferSize", true),
@@ -182,13 +178,11 @@ local chrome = run(table.concat({
   '<h2><span class="mw-headline" id="raiseEvent">raiseEvent</span>'
     .. '<span class="mw-editsection-v2"><span>[</span>edit<span>]</span></span></h2>',
   '<dl><dt>raiseEvent(name, ...)</dt>',
-  -- leaked chrome that carries a colon of its own: a namespaced name is what it looks
-  -- like, so only a positive test for those keeps this one out of the silent path
+  -- leaked chrome with its own colon looks namespaced; only the positive namespace test keeps it warned
   '<h2><span class="mw-headline" id="addAreaName">addAreaName</span>'
     .. '<span class="mw-editsection-v2">[edit | Manual:edit source]</span></h2>',
   '<dl><dt>areaID = addAreaName(areaName)</dt>',
-  -- a namespace with a separator hanging off it is nothing anyone can call: it is a
-  -- mangled heading, so it has to be warned about rather than taken for a db:add
+  -- a trailing separator is a mangled heading, so it warns rather than passing as db:add
   heading("db:add:", "db:add:", true),
   '<dl><dt>db:add(sheet, table)</dt>',
 }, "\n"))
@@ -204,8 +198,7 @@ local reported = table.concat(unusable, " ")
 check(reported:match("raiseEvent") and reported:match("addAreaName") and reported:match("db:add:"),
       "the warnings should name the headings they came from: " .. table.concat(unusable, " / "))
 
--- 3. the heading shape newer MediaWiki releases build (1.43 dropped mw-headline
---    for a wrapping div), where nothing the scraper looks for matches at all
+-- 3. the MediaWiki 1.43+ heading shape (a wrapping div, no mw-headline), which nothing matches
 local moved = run(table.concat({
   '<div class="mw-heading mw-heading2"><h2 id="addAreaName">addAreaName</h2>' .. editSection .. '</div>',
   '<dl><dt>areaID = addAreaName(areaName)</dt>',
@@ -236,9 +229,7 @@ check(shorter.written ~= nil and shorter.written:match('"func1"'),
       "the list being replaced must be left alone when the run fails")
 os.remove(outputPath)
 
--- 5. headings the scraper cannot read, on a page long enough that they stay under a
---    twentieth of it: the allowance is all that stands between them and a list the
---    editor is quietly missing those functions from, so it has to bite on its own
+-- 5. unreadable headings too few for keepRatio to notice: the allowance must catch them on its own
 local function pageMissing(broken)
   local page = {}
   for entry = 1, 160 do

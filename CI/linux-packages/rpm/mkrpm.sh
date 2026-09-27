@@ -23,14 +23,9 @@ echo "==> packaging ${PACKAGE} ${PKG_VERSION}-${RELEASE} ($(uname -m))"
 
 cmake --install "$SRC/build" --prefix "$STAGE/usr"
 
-# An end-user package carries runtime files only, but a plain add_subdirectory()
-# adopts a vendored project's own install() rules - that is how QTagEdit's header,
-# static library and CMake export files reached the 5.0.1 packages (#10871).
-# CMakeLists.txt keeps them out with EXCLUDE_FROM_ALL, which is observed rather
-# than documented CMake behaviour, so the staged tree is checked here rather than
-# trusted. They are dropped rather than refused because this script also packages
-# tags whose source predates that CMake fix, which would otherwise stop packaging
-# altogether.
+# add_subdirectory() adopts vendored projects' install() rules, which would ship their dev files (#10871).
+# EXCLUDE_FROM_ALL keeps them out, but that is undocumented CMake behaviour, so check the staged tree.
+# Drop rather than refuse: this also packages tags that predate that CMake fix.
 mapfile -d '' -t DEVELOPMENT_FILES < <(cd "$STAGE" && find . \( -path './usr/include' \
   -o -name '*.a' -o -name '*.cmake' -o -name '*.h' -o -name '*.hpp' -o -name '*.la' \
   -o -name '*.pc' -o -path '*/cmake/*' -o \( -type l -name '*.so' \) \) -prune -print0)
@@ -45,9 +40,7 @@ else
   echo "==> no development files staged"
 fi
 
-# EXCLUDE_FROM_ALL works by leaving a subdirectory out of the generated install
-# script, so its own failure mode is a file quietly going missing - check what the
-# install had to produce, not only what it must not
+# EXCLUDE_FROM_ALL fails by silently dropping files, so also check what the install must produce.
 mapfile -t STAGED_TOP < <(cd "$STAGE/usr" && find . -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
 if [[ "${STAGED_TOP[*]}" != "bin share" || ! -x "$STAGE/usr/bin/mudlet" || ! -d "$STAGE/usr/share/mudlet/lua" ]]; then
   echo "the install staged no usable Mudlet: expected bin/mudlet and share/mudlet/lua below" >&2
@@ -95,8 +88,7 @@ done < <(find "$STAGE/usr" -type f -print0)
 LICENSE_PATH="/usr/share/licenses/${PACKAGE}/COPYING"
 install -Dm644 "$SRC/COPYING" "$STAGE$LICENSE_PATH"
 
-# Claim every shipped file, but only the directories no installed package owns,
-# so the package never fights the filesystem or Lua packages over a directory
+# Claim every file but only directories no installed package owns, so we never fight over a directory
 FILELIST="$TOPDIR/SPECS/${PACKAGE}.files"
 : > "$FILELIST"
 while IFS= read -r -d '' d; do

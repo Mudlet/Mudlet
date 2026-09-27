@@ -2885,7 +2885,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     const int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     auto& host = getHostFromLua(L);
-    // capture the profile as a pointer - the lambda copies its captures and Host is non-copyable
+    // Host is non-copyable and the lambda copies its captures.
     auto* pHost = &host;
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,

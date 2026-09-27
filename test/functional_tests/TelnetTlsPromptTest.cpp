@@ -667,8 +667,8 @@ private slots:
         mpPackageBodyDrip = nullptr;
         delete mpPackageServer;
         mpPackageServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // Utility function to manually start a profile like a user would do via the
@@ -689,14 +689,7 @@ private slots:
     // Utility function
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-
-        if (!dir.exists()) {
-            qInfo() << "Profile directory does not exist:" << path;
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 
 private:
