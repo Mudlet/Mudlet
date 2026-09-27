@@ -88,7 +88,9 @@ describe("Tests that the timestamp and wrap functions find their console by name
   describe("with a sub-console's name", function()
     local kinds = {
       {"mini console", function(name) return createMiniConsole(name, 0, 0, 300, 100) end, deleteMiniConsole},
-      {"user window", function(name) return openUserWindow(name, false) end, deleteMiniConsole},
+      -- once a docked user window has been deleted, every one docked after it
+      -- opens with no height, so this one is only closed and left behind
+      {"user window", function(name) return openUserWindow(name, false) end, closeUserWindow},
       -- a buffer cannot be deleted, so it is left behind under its unique name
       {"buffer", function(name) createBuffer(name) return true end, function() end},
     }
