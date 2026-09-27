@@ -103,9 +103,10 @@ private:
     Host* mpSource = nullptr;
     Host* mpTarget = nullptr;
     Host* mpLegacyTarget = nullptr;
-    // Runs from just before the running stopwatch is started, so the time it
-    // has on it once read back has an upper bound as well as a lower one.
-    QElapsedTimer mSinceStopWatchStarted;
+    // Taken just before the running stopwatch is started, so the time it has
+    // on it once read back has an upper bound as well as a lower one. Wall
+    // clock, as the stopwatch itself is, so a clock change moves both alike.
+    qint64 mStopWatchStartedMSecs = 0;
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
     const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
@@ -543,7 +544,7 @@ private slots:
         QVERIFY(mpSource->makeStopWatchPersistent(runningWatch, true));
         QVERIFY(mpSource->makeStopWatchPersistent(stoppedWatch, true));
         QVERIFY(mpSource->adjustStopWatch(runningWatch, scmStopWatchMilliSeconds));
-        mSinceStopWatchStarted.start();
+        mStopWatchStartedMSecs = QDateTime::currentMSecsSinceEpoch();
         QVERIFY(mpSource->startStopWatch(runningWatch).first);
         QVERIFY(mpSource->adjustStopWatch(stoppedWatch, scmStopWatchMilliSeconds));
 
@@ -824,9 +825,8 @@ private slots:
         QVERIFY(running->persistent());
         QVERIFY(running->running());
         const qint64 elapsed = running->getElapsedMilliSeconds();
-        // a second's slack for the wall clock the file is written and read by
-        // against the monotonic one timing this
-        QVERIFY2(elapsed >= scmStopWatchMilliSeconds && elapsed <= scmStopWatchMilliSeconds + mSinceStopWatchStarted.elapsed() + 1000, qPrintable(qsl("%1 ms on the running stopwatch").arg(elapsed)));
+        const qint64 sinceStarted = QDateTime::currentMSecsSinceEpoch() - mStopWatchStartedMSecs;
+        QVERIFY2(elapsed >= scmStopWatchMilliSeconds && elapsed <= scmStopWatchMilliSeconds + sinceStarted, qPrintable(qsl("%1 ms on the running stopwatch").arg(elapsed)));
         QVERIFY(stopped->persistent());
         QVERIFY(!stopped->running());
         QCOMPARE(stopped->getElapsedMilliSeconds(), scmStopWatchMilliSeconds);
