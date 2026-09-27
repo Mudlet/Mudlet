@@ -2322,7 +2322,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         // An unknown area is refused, but only once the window is showing
         QVERIFY2(host->hideWindow(name), "hideWindow() did not find the user window.");
         QCOMPARE(host->openWindow(name, false, true, qsl("middle")),
-                 std::make_pair(false, qsl(R"("docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")")));
+                 std::make_pair(false, qsl(R"(docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)")));
         QVERIFY2(!dockWidget->isHidden(), "Refusing an unknown area left the user window hidden.");
         QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::RightDockWidgetArea);
         QVERIFY2(!dockWidget->isFloating(), "Refusing an unknown area floated the user window.");
