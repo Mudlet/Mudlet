@@ -123,6 +123,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        applyPendingScrollBarUpdate();
         if (!mPendingPaintRegion.isEmpty()) {
             update(mPendingPaintRegion);
             mPendingPaintRegion = QRegion();
@@ -161,6 +162,7 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
     if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+        applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
         mPendingPaintRegion = QRegion();
         return;
@@ -250,6 +252,9 @@ void TTextEdit::toggleTimeStamps(const bool state)
 // Only wired up for the upper pane:
 void TTextEdit::slot_scrollBarMoved(int line)
 {
+    if (mUpdatingScrollBar) {
+        return;
+    }
     if (mpConsole->mpScrollBar) {
         updateScrollBar(line);
         scrollTo(line);
@@ -259,17 +264,25 @@ void TTextEdit::slot_scrollBarMoved(int line)
 void TTextEdit::updateScrollBar(int line)
 {
     Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
+    mScrollBarUpdatePending = false;
     int screenHeight{mScreenHeight};
     if (mIsTailMode) {
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
     }
     if (mpConsole->mpScrollBar) {
-        disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
+        mUpdatingScrollBar = true;
         mpConsole->mpScrollBar->setRange(screenHeight, mpBuffer->getLastLineNumber() + 1);
         mpConsole->mpScrollBar->setSingleStep(1);
         mpConsole->mpScrollBar->setPageStep(screenHeight);
         mpConsole->mpScrollBar->setValue(std::max(0, line));
-        connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
+        mUpdatingScrollBar = false;
+    }
+}
+
+void TTextEdit::applyPendingScrollBarUpdate()
+{
+    if (mScrollBarUpdatePending) {
+        updateScrollBar(mpBuffer->mCursorY);
     }
 }
 
@@ -405,7 +418,7 @@ void TTextEdit::showNewLines()
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
         if (mpConsole->mpScrollBar && mOldScrollPos > 0) {
-            updateScrollBar(mpBuffer->mCursorY);
+            mScrollBarUpdatePending = true;
         }
     }
     scheduleUpdate();
@@ -1484,9 +1497,9 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
         // would be redundant. Only the remainder - if a partial expose left one -
-        // still needs the pacer.
+        // and a pending scrollbar update still need the pacer.
         mPendingPaintRegion -= e->region();
-        if (mPendingPaintRegion.isEmpty()) {
+        if (mPendingPaintRegion.isEmpty() && !mScrollBarUpdatePending) {
             mpPaintPacer->stop();
         }
     }
@@ -1915,15 +1928,11 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
         return;
     }
 
-    // Turning the line you are already looking at into a filter beats typing it
-    // into the box, so the selection drives most of this menu. establishSelectedText()
-    // is what actually decides whether there IS a selection - mPA and mPB keep
-    // their old values after one is dropped, so without it the menu offers text
-    // the user can no longer see highlighted:
+    // mPA and mPB keep their old values after a selection is dropped, so establishSelectedText() decides
+    // whether there IS one; otherwise the menu offers text no longer highlighted:
     QString selection = establishSelectedText() ? getSelectedText(QChar::Space).simplified() : QString();
-    // The profile marking is added after the filters have run, so a selection
-    // that starts at the beginning of a line would otherwise contain a prefix
-    // that no message can ever match:
+    // The profile marking is added after filters run, so a selection from a line start would carry a
+    // prefix no message can match:
     static const QRegularExpression profileTag(qsl("^\\[(?:[A-Z]|\\?|\\x{2731})\\]\\s*"));
     selection.remove(profileTag);
 
@@ -1955,8 +1964,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
     }
 
     menu.addSeparator();
-    // The search strip is hidden until asked for, so this is where people find
-    // out it exists at all:
+    // The search strip is hidden until asked for, so this is how people discover it:
     //: Central Debug Console right-click action that reveals its search box
     auto* pActionFind = menu.addAction(tr("Find..."));
     pActionFind->setShortcut(QKeySequence::Find);
@@ -2158,8 +2166,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             forceUpdate();
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
-        // Invalid until the first click, so a click soon after the console
-        // appears does not count as the second half of a double-click:
+        // Invalid until the first click, so an early click isn't taken as a double-click's second half:
         if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
             mMouseTracking = true;
             mMouseTrackLevel++;
