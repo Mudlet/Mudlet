@@ -92,9 +92,11 @@ private:
         QFAIL(qPrintable(qsl("no sidebar item for category '%1'").arg(key)));
     }
 
-    void openPreferences()
+    void openPreferences() { openPreferencesOn(mpHost); }
+
+    void openPreferencesOn(Host* pHost)
     {
-        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), pHost);
         mpPreferences->resize(1060, 760);
         mpPreferences->show();
         QVERIFY(QTest::qWaitForWindowExposed(mpPreferences));
@@ -222,6 +224,28 @@ private slots:
             QVERIFY2(pColumn->layout()->indexOf(pBanner) < 0, qPrintable(qsl("the dismissed banner came back on the '%1' page").arg(key)));
         }
         QVERIFY2(pBanner->isHidden(), "the dismissed banner is still showing somewhere");
+    }
+
+    // Its "Got it" beside the notice explaining why settings are greyed out
+    // reads as dismissing that notice, which stays until a profile loads
+    void test_theBannerWaitsForAProfile()
+    {
+        openPreferencesOn(nullptr);
+        QFrame* pBanner = banner();
+        QVERIFY2(pBanner, "the migration banner was not built on a fresh installation");
+        QVERIFY2(!pBanner->isVisible(), "the migration banner is showing beside the notice that no profile is open");
+        QCOMPARE(columnOf(qsl("general"))->layout()->indexOf(pBanner), -1);
+
+        selectCategory(qsl("mapper"));
+        QVERIFY2(!pBanner->isVisible(), "the migration banner came along to another page with no profile open");
+
+        mpPreferences->slot_handleHostAddition(mpHost, 1);
+        QVERIFY2(pBanner->isVisible(), "the migration banner did not appear once a profile loaded");
+        QCOMPARE(columnOf(qsl("mapper"))->layout()->indexOf(pBanner), 0);
+
+        mpPreferences->slot_handleHostDeletion(mpHost);
+        QVERIFY2(!pBanner->isVisible(), "the migration banner stayed after the profile went away");
+        QVERIFY2(!MudletApp::getQSettings()->value(mBannerSeenKey, false).toBool(), "the banner counted as seen without being dismissed");
     }
 
     void test_aLaterDialogDoesNotShowTheBanner()

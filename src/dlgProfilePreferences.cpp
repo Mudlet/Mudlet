@@ -898,6 +898,10 @@ void dlgProfilePreferences::buildMigrationBanner()
 // position, which a banner above would offset.
 void dlgProfilePreferences::placeBannerOn(QWidget* pColumn)
 {
+    // Its "Got it" beside the no-profile notice reads as dismissing that notice, which stays until a profile loads
+    if (!mpHost) {
+        pColumn = nullptr;
+    }
     QWidget* pDestination = pColumn ? pColumn : static_cast<QWidget*>(this);
     if (!mpFrame_migrationBanner || mpFrame_migrationBanner->parentWidget() == pDestination) {
         return;
@@ -919,6 +923,10 @@ void dlgProfilePreferences::updateNoProfileNotice()
     mpLabel_noProfileNotice->setVisible(!mpHost);
     // Screen readers can read a dialog's description out as it opens, before Tab would reach the notice
     setAccessibleDescription(mpHost ? QString() : mpLabel_noProfileNotice->text());
+    if (!mSearchActive) {
+        auto* pShownPage = qobject_cast<QScrollArea*>(mpStackedWidget_categories->currentWidget());
+        placeBannerOn(pShownPage ? pShownPage->widget() : nullptr);
+    }
 }
 
 void dlgProfilePreferences::buildSearchResultsPage()

@@ -103,12 +103,14 @@ private:
             }
             QWidget* pColumn = pScrollArea->widget();
             auto* pColumnLayout = qobject_cast<QBoxLayout*>(pColumn->layout());
+            int position = 0;
             for (int item = 0, items = pColumnLayout->count(); item < items; ++item) {
                 QWidget* pCard = pColumnLayout->itemAt(item)->widget();
-                if (!pCard) {
+                // The migration banner is no card, and waits for a profile before joining a page
+                if (!pCard || pCard->objectName() == qsl("settingsMigrationBanner")) {
                     continue;
                 }
-                placements << qsl("%1[%2] = %3, parented to %4").arg(pColumn->objectName(), QString::number(item), pCard->objectName(), pCard->parentWidget()->objectName());
+                placements << qsl("%1[%2] = %3, parented to %4").arg(pColumn->objectName(), QString::number(position++), pCard->objectName(), pCard->parentWidget()->objectName());
             }
         }
         return placements;
