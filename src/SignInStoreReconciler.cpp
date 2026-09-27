@@ -71,6 +71,13 @@ SignInStoreReconciler::Intent SignInStoreReconciler::Intent::absent()
     return Intent{};
 }
 
+SignInStoreReconciler::Intent SignInStoreReconciler::Intent::forgotten()
+{
+    Intent intent;
+    intent.everyCopy = true;
+    return intent;
+}
+
 std::vector<SignInStoreReconciler::Operation> SignInStoreReconciler::sequenceFor(const Intent& intent)
 {
     // The write goes metadata first and the token only after, so a failure part-way leaves a resume
@@ -186,7 +193,7 @@ void SignInStoreReconciler::issue(Operation op, QString payload)
     // a late completion a no-op instead of a use-after-free.
     const auto id = mActive->id;
     QPointer<SignInStoreReconciler> self = this;
-    mPerformer(op, std::move(payload), [self, id, op](bool ok, QString error) {
+    mPerformer(op, std::move(payload), mActive->intent.everyCopy, [self, id, op](bool ok, QString error) {
         if (self) {
             self->onStepDone(id, op, ok, std::move(error));
             return;

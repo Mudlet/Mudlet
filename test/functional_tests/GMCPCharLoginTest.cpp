@@ -384,6 +384,7 @@ private:
     {
         SignInStoreReconciler::Operation op;
         QString payload;
+        bool everyCopy;
         SignInStoreReconciler::Done done;
     };
     std::vector<HeldStoreOperation> mHeldStoreOperations;
@@ -1144,6 +1145,46 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("saved sign-in has expired")), "a rejected reconnect should be reported");
         QVERIFY2(waitForNoStoredReconnect(host), "a rejected token with no resume hint should be removed from storage");
+    }
+
+    // A removal the client makes on its own - here, the token the game just rejected - is one the game
+    // can set off as often as it likes, so it stays where the storage preference files the sign-in;
+    // only the player's own forget reaches past it, to the keychain copy an earlier preference left.
+    // The standard bounds a client's store work by the player's actions, never by the frames a server
+    // sends, and has the local forget clear all of it.
+    void testOnlyTheForgetReachesPastWhereThePreferenceKeepsTheSignIn()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"token\": \"stale-token\"}")));
+        holdStoreOperations(host);
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        // Token then metadata: with no provider to resume, the whole entry goes
+        for (int step = 0; step < 2; ++step) {
+            QVERIFY2(waitForHeldStoreOperations(1), "the rejected token was never dropped");
+            QVERIFY2(!mHeldStoreOperations.front().everyCopy,
+                     qPrintable(qsl("dropping a rejected token reached past the preferred store at %1").arg(QVariant::fromValue(mHeldStoreOperations.front().op).toString())));
+            releaseHeldStoreOperation(host);
+        }
+
+        bool reported = false;
+        host->mpAuth->forgetSavedSignIn([&](bool) {
+            reported = true;
+        });
+        for (int step = 0; step < 2; ++step) {
+            QVERIFY2(waitForHeldStoreOperations(1), "the forget never reached the store");
+            QVERIFY2(mHeldStoreOperations.front().everyCopy,
+                     qPrintable(qsl("the forget left a copy where the preference no longer looks at %1").arg(QVariant::fromValue(mHeldStoreOperations.front().op).toString())));
+            releaseHeldStoreOperation(host);
+        }
+        QVERIFY(reported);
     }
 
     void testRejectedReconnectKeepsResumeHint()
@@ -2255,8 +2296,8 @@ private:
     // to act while a sequence is part way through.
     void holdStoreOperations(Host* host)
     {
-        host->mpAuth->mpStoreReconciler.reset(new SignInStoreReconciler([this](SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done) {
-            mHeldStoreOperations.push_back({op, std::move(payload), std::move(done)});
+        host->mpAuth->mpStoreReconciler.reset(new SignInStoreReconciler([this](SignInStoreReconciler::Operation op, QString payload, bool everyCopy, SignInStoreReconciler::Done done) {
+            mHeldStoreOperations.push_back({op, std::move(payload), everyCopy, std::move(done)});
         }));
     }
 
@@ -2302,7 +2343,7 @@ private:
         auto held = std::move(mHeldStoreOperations.front());
         mHeldStoreOperations.erase(mHeldStoreOperations.begin());
         if (succeed) {
-            host->mpAuth->performStoreOperation(held.op, std::move(held.payload), std::move(held.done));
+            host->mpAuth->performStoreOperation(held.op, std::move(held.payload), held.everyCopy, std::move(held.done));
         } else {
             held.done(false, qsl("held store operation failed by the test"));
         }

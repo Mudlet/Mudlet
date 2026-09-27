@@ -341,6 +341,11 @@ bool CredentialManager::isOperationValid() const
     return !mudlet::self()->storingPasswordsSecurely();
 }
 
+bool CredentialManager::keychainMayHoldAnEarlierCopy() const
+{
+    return profileStoragePreferred().value_or(false) && !isPortableModeActive() && !SecureStringUtils::isTestEnvironment();
+}
+
 bool CredentialManager::isPortableModeActive() const
 {
     // The settled answer rather than a marker stat: a portable.txt naming a root
@@ -464,7 +469,8 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
             nullptr);
 }
 
-void CredentialManager::retrievePassword(const QString& profileName, const QString& key, TimedRetrievalCallback callback, QObject* lateContext, CredentialRetrievalCallback lateCallback)
+void CredentialManager::retrievePassword(
+        const QString& profileName, const QString& key, TimedRetrievalCallback callback, QObject* lateContext, CredentialRetrievalCallback lateCallback, const StoreScope scope)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         if (callback) {
@@ -496,7 +502,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         return;
     }
 
-    if (shouldUseKeychain(profileName)) {
+    if (shouldUseKeychain(profileName) || (scope == StoreScope::EveryStore && keychainMayHoldAnEarlierCopy())) {
         auto lookup = std::make_shared<Lookup>();
         lookup->profileName = profileName;
         lookup->key = key;
@@ -618,19 +624,29 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
     }
 }
 
-void CredentialManager::credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback)
+void CredentialManager::credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback, const StoreScope scope)
 {
     // Take the password by value so this callback holds the sole owner of the secret buffer
     // (retrievePassword moves it in), then zero it in place before forwarding only whether a credential
     // exists. QString is copy-on-write, so scrubbing a shared copy would detach and leave the original
     // intact - sole ownership is what makes the wipe effective.
-    retrievePassword(profileName, key, [callback](bool success, QString password, const QString&) {
+    auto answer = [callback](bool success, QString password, const QString&, bool) {
         const bool exists = success && !password.isEmpty();
         SecureStringUtils::secureStringClear(password);
         if (callback) {
             callback(exists);
         }
-    });
+    };
+    // The profile's own copy first, so the keychain is only asked when there is nothing here - once
+    // per time the player looks, and only for the copy a forget would otherwise leave behind.
+    if (scope == StoreScope::EveryStore && keychainMayHoldAnEarlierCopy()) {
+        QString password = retrieveCredentialFromFile(profileName, key);
+        if (!password.isEmpty()) {
+            answer(true, std::move(password), QString(), false);
+            return;
+        }
+    }
+    retrievePassword(profileName, key, std::move(answer), nullptr, nullptr, scope);
 }
 
 void CredentialManager::startJob(QKeychain::Job* job)
@@ -991,7 +1007,7 @@ void CredentialManager::migrateLegacyEntry(const QString& profileName, const QSt
     });
 }
 
-void CredentialManager::removePassword(const QString& profileName, const QString& key, CredentialCallback callback)
+void CredentialManager::removePassword(const QString& profileName, const QString& key, CredentialCallback callback, const StoreScope scope)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         if (callback) {
@@ -1059,15 +1075,19 @@ void CredentialManager::removePassword(const QString& profileName, const QString
         // success once the keychain has answered for both names and the file store reports itself
         // clear - which is as strong as removeCredentialFromFile()'s own answer, and that one still
         // reports success when only a legacy-named copy resisted removal (#11029).
-        // Only where the preference is what put us on the file: a portable install and a test run
-        // have never written to the keychain through here, so asking it to delete would cost a
-        // prompt - or a stalled job - for an entry that cannot exist.
-        if (!profileStoragePreferred().value_or(false) || isPortableModeActive() || SecureStringUtils::isTestEnvironment()) {
-            // Said rather than assumed: a portable build can be run against a configuration an
-            // installed one wrote, so an entry may exist that this removal has not touched. It is
-            // still not asked for - that is what portable means here - but the log says which store
-            // was cleared, which is the first question when a credential appears to come back.
-            qDebug().noquote() << "CredentialManager: removed the profile's own copy for" << profileName << "and left the keychain alone, as portable or test storage asks";
+        //
+        // Only for EveryStore. A removal the client makes on its own - a rejected token discarded - can
+        // be set off by the game as often as it likes, and each would cost a keychain prompt for an
+        // entry the preference no longer uses; and a keychain that refused would fail a removal that
+        // had already succeeded where the credential lives.
+        if (scope == StoreScope::PreferredStore || !keychainMayHoldAnEarlierCopy()) {
+            if (scope == StoreScope::EveryStore) {
+                // Said rather than assumed: a portable build can be run against a configuration an
+                // installed one wrote, so an entry may exist that this removal has not touched. It is
+                // still not asked for - that is what portable means here - but the log says which store
+                // was cleared, which is the first question when a credential appears to come back.
+                qDebug().noquote() << "CredentialManager: removed the profile's own copy for" << profileName << "and left the keychain alone, as portable or test storage asks";
+            }
             if (callback) {
                 callback(fileSuccess, fileSuccess ? QString() : qsl("Failed to remove password with SecureStringUtils"));
             }

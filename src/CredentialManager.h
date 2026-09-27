@@ -79,6 +79,18 @@ public:
     using TimedRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage, bool timedOut)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
+    // How far a removal or an existence check reaches when the storage preference puts credentials
+    // in the profile: an entry stored before the player made that choice is still in the keychain.
+    enum class StoreScope {
+        // Only where the preference files the credential. For removals the client makes on its own -
+        // a rejected token discarded, say - which the game can trigger as often as it likes, so they
+        // must not cost the player a keychain prompt each time.
+        PreferredStore,
+        // The keychain as well, for what the player asks for by name: forgetting a saved sign-in has
+        // to forget every copy of it.
+        EveryStore
+    };
+
     // Hybrid password management methods (preferred public API)
     // These methods intelligently choose between keychain and SecureStringUtils based on availability and portable mode
     void storePassword(const QString& profileName, const QString& key, const QString& password, CredentialCallback callback);
@@ -88,12 +100,19 @@ public:
     // exactly once, as above. When that answer is the deadline's, lateCallback is answered once
     // more with what the read the lookup was left waiting on finds, as long as lateContext still
     // exists by then. That read only: the places the lookup had not reached yet stay unread.
-    void retrievePassword(const QString& profileName, const QString& key, TimedRetrievalCallback callback, QObject* lateContext, CredentialRetrievalCallback lateCallback);
-    void removePassword(const QString& profileName, const QString& key, CredentialCallback callback);
+    // scope EveryStore reads the keychain even when the preference files the credential in the
+    // profile, for a copy stored there before the player chose it.
+    void retrievePassword(const QString& profileName,
+                          const QString& key,
+                          TimedRetrievalCallback callback,
+                          QObject* lateContext,
+                          CredentialRetrievalCallback lateCallback,
+                          StoreScope scope = StoreScope::PreferredStore);
+    void removePassword(const QString& profileName, const QString& key, CredentialCallback callback, StoreScope scope = StoreScope::EveryStore);
     // Existence check that never hands the stored secret to the caller. QtKeychain has no metadata-only
     // lookup, so this reads the credential internally but forwards only whether one exists (scrubbing the
     // retrieved value), so callers such as UI code need not materialize the secret just to test presence.
-    void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback);
+    void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback, StoreScope scope = StoreScope::PreferredStore);
 
     // Where this manager's own last store left a secret that other accounts on the machine can
     // still read, empty when it left none. Asked by the caller that reports the store to the
@@ -222,6 +241,10 @@ private:
     static std::optional<bool> profileStoragePreferred();
     // Test-only: stands in for that preference where there is no mudlet to read it from.
     static std::optional<bool>& profileStorageOverrideForTesting();
+    // Whether the preference alone is what keeps this manager off the keychain, so a copy stored
+    // there before the player chose the profile may remain. Never for a portable install or a test
+    // run, which have never written to the keychain through here.
+    bool keychainMayHoldAnEarlierCopy() const;
     static constexpr int scmStoreRefusalCooldownMs = 30000;
     // How many reads the store may refuse, without answering any of them, before a lookup stops
     // asking it. Two rather than one: a single refusal can be one entry's own, and an older layout

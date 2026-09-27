@@ -143,8 +143,9 @@ private:
     void storeResumeHint(const QString& account, const QString& provider);
     // Requests that nothing be stored. The token goes first, and a failure to remove it leaves the
     // metadata alone: deleting that half would hide the surviving token from the only UI that can
-    // offer to remove it again. callback reports whether the store really did become empty.
-    void discardReconnectToken(std::function<void(bool success)> callback = {});
+    // offer to remove it again. callback reports whether the store really did become empty. intent is
+    // Intent::forgotten() when the player asked for it, so the removal reaches every copy.
+    void discardReconnectToken(std::function<void(bool success)> callback = {}, SignInStoreReconciler::Intent intent = SignInStoreReconciler::Intent::absent());
     void resetPerConnectionState();
     // Per socket connection, unlike resetPerConnectionState() which runs per Char.Login.Default.
     void resetForNewConnection();
@@ -152,7 +153,7 @@ private:
     // The mechanism the reconciler drives: one store operation against CredentialManager, mapped to
     // the metadata or token key, with the same per-operation CredentialManager guard every credential
     // callback in this file uses.
-    void performStoreOperation(SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done);
+    void performStoreOperation(SignInStoreReconciler::Operation op, QString payload, bool everyCopy, SignInStoreReconciler::Done done);
 
     // Adds the two fields every client->server Char.Login message may carry: the negotiated version we
     // are acting on, and token_storage - whether a reconnect token minted on this connection would

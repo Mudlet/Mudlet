@@ -82,6 +82,8 @@ private slots:
     void testAStoreThatRefusesIsNotAskedForEveryOtherLayout();
     void testAFreshRefusalSparesTheNextLookupTheStore();
     void testTheProfileStoragePreferenceKeepsTheKeychainOutOfIt();
+    void testARemovalTheClientMakesItselfLeavesTheKeychainAlone();
+    void testTheForgetCheckSeesAKeychainCopyTheProfileLacks();
     void testARefusalForOneProfileDoesNotSkipTheStoreForAnother();
     void testATrimmedLookupStillFindsTheProfilesOwnCopy();
     void testForgettingSaysSoWhenTheKeychainCopyRemains();
@@ -1413,6 +1415,91 @@ void CredentialManagerKeychainTest::testTheProfileStoragePreferenceKeepsTheKeych
              qPrintable(QStringLiteral("the current-format entry was not cleared, only: %1").arg(describeDeletes(watcher.deletes()))));
     QVERIFY2(watcher.deletes().contains({expectedLegacyServiceName(mProfile, mKey), expectedLegacyServiceName(mProfile, mKey)}),
              qPrintable(QStringLiteral("the colliding-format entry was not cleared, only: %1").arg(describeDeletes(watcher.deletes()))));
+}
+
+// A removal the client makes by itself - a token the game rejected, dropped - can be set off by the
+// game as often as it likes, so with the profile chosen it must not reach the keychain: each would
+// be a prompt, and a keychain that refused would fail a removal the profile's file had already
+// carried out (raised in review of #11032).
+void CredentialManagerKeychainTest::testARemovalTheClientMakesItselfLeavesTheKeychainAlone()
+{
+    CredentialManager::profileStorageOverrideForTesting() = true;
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, QStringLiteral("token-the-game-rejected")));
+
+    JobStaller watcher;
+    watcher.stallEvery<QKeychain::ReadPasswordJob>();
+    watcher.stallEvery<QKeychain::DeletePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+
+    bool removed = false;
+    bool answered = false;
+    manager.removePassword(
+            mProfile,
+            mKey,
+            [&removed, &answered](bool success, const QString&) {
+                removed = success;
+                answered = true;
+            },
+            CredentialManager::StoreScope::PreferredStore);
+
+    QTRY_VERIFY(answered);
+    QVERIFY2(removed, "the removal failed although the profile's own copy went");
+    QVERIFY(CredentialManager::retrieveCredential(mProfile, mKey).isEmpty());
+    QVERIFY2(watcher.deletes().isEmpty(), qPrintable(QStringLiteral("the keychain was asked to delete: %1").arg(describeDeletes(watcher.deletes()))));
+    QVERIFY(watcher.reads().isEmpty());
+}
+
+// Forgetting clears the keychain copy an earlier preference left, so the control that offers the
+// forget has to see that copy too - or it stays hidden, and the copy is there for good. Only that
+// check looks: the lookups a sign-in makes stay with the profile, as the player asked (raised in
+// review of #11032).
+void CredentialManagerKeychainTest::testTheForgetCheckSeesAKeychainCopyTheProfileLacks()
+{
+    CredentialManager::profileStorageOverrideForTesting() = true;
+    const QString service = expectedServiceName(mProfile, mKey);
+
+    JobStaller watcher;
+    watcher.stallNth<QKeychain::ReadPasswordJob>(0);
+    watcher.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+
+    std::optional<bool> preferredOnly;
+    manager.credentialExists(mProfile, mKey, [&preferredOnly](bool exists) {
+        preferredOnly = exists;
+    });
+    QTRY_VERIFY(preferredOnly.has_value());
+    QVERIFY2(watcher.reads().isEmpty(), "a sign-in lookup reached past the profile the player chose");
+
+    std::optional<bool> everyStore;
+    manager.credentialExists(
+            mProfile,
+            mKey,
+            [&everyStore](bool exists) {
+                everyStore = exists;
+            },
+            CredentialManager::StoreScope::EveryStore);
+    QKeychain::Job* read = watcher.waitForStalled();
+    QVERIFY2(read, "the forget check never looked in the keychain for the copy the forget would clear");
+    QCOMPARE(read->key(), service);
+    JobStaller::answer(read, QKeychain::EntryNotFound, QStringLiteral("synthetic: nothing stored here"));
+    QTRY_VERIFY(everyStore.has_value());
+
+    // With the profile's own copy there, that is the answer, and the keychain is not asked at all
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, QStringLiteral("kept-in-the-profile")));
+    const auto readsBefore = watcher.reads().size();
+    std::optional<bool> fromTheProfile;
+    manager.credentialExists(
+            mProfile,
+            mKey,
+            [&fromTheProfile](bool exists) {
+                fromTheProfile = exists;
+            },
+            CredentialManager::StoreScope::EveryStore);
+    QTRY_VERIFY(fromTheProfile.has_value());
+    QVERIFY(*fromTheProfile);
+    QCOMPARE(watcher.reads().size(), readsBefore);
 }
 
 // A single refusal can be one entry's own - a per-item ACL, or an item another build saved under
