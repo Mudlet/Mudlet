@@ -1627,6 +1627,20 @@ expectRefusal('getFont main', getFont('main'))
 expectRefusal('setFont', setFont(anyFont))
 expectRefusal('getFontSize', getFontSize())
 expectRefusal('setFontSize', setFontSize(10))
+expectRefusal('echoLink', echoLink('text', 'cmd', 'hint'))
+expectRefusal('echoPopup', echoPopup('text', {'cmd'}, {'hint'}))
+expectRefusal('insertLink', insertLink('text', 'cmd', 'hint'))
+expectRefusal('insertPopup', insertPopup('text', {'cmd'}, {'hint'}))
+expectRefusal('setLink', setLink('cmd', 'hint'))
+expectRefusal('setPopup', setPopup({'cmd'}, {'hint'}))
+expectRefusal('insertText', insertText('text'))
+expectRefusal('replace', rawReplace('text'))
+expectRefusal('copy', copy())
+expectRefusal('paste', paste())
+expectRefusal('appendBuffer', appendBuffer())
+expectRefusal('getConsoleBufferSize', getConsoleBufferSize())
+expectRefusal('setConsoleBufferSize', setConsoleBufferSize(1000, 100))
+expectRefusal('setConsoleBufferSize useMaximum', setConsoleBufferSize('main', 1000, 100, true))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1648,6 +1662,16 @@ expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, ge
 expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
 expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
+-- a link handed a function for its command refuses in the same way
+expectValue('echoLink reason', 'window "main" not found', select(2, echoLink('text', function() end, 'hint')))
+expectValue('setPopup reason', 'window "main" not found', select(2, setPopup({function() end}, {'hint'})))
+expectValue('insertText reason', 'window "" not found', select(2, insertText('text')))
+expectValue('replace reason', 'window "" not found', select(2, rawReplace('text')))
+expectValue('copy reason', 'window "" not found', select(2, copy()))
+expectValue('appendBuffer reason', 'window "main" not found', select(2, appendBuffer('main')))
+expectValue('getConsoleBufferSize reason', 'window "" not found', select(2, getConsoleBufferSize()))
+-- the window is looked for before the maximum is refused for anything but the main console
+expectValue('setConsoleBufferSize reason', 'window "main" not found', select(2, setConsoleBufferSize('main', 1000, 100, true)))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())
@@ -1808,94 +1832,83 @@ noViewCursor = table.concat(results, '|')
         }
     }
 
-    // With no view the main console's wrap settings still belong to its model
-    // and to the profile, and wrapLine() then rewraps to them.
-    void test_windowWrapReachesTheModelWithNoView()
+    // The main console's buffer size is also the profile's, which the
+    // preferences dialog shows and saves, so setting it by either name of the
+    // main console has to reach the profile, and setting another's must not.
+    void test_theMainConsoleBufferSizeIsTheProfiles()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
-        destroyTheView(host);
 
-        runLua(host, qsl("setWindowWrap('main', 23)\nsetWindowWrapIndent('', 2)\nsetWindowWrapHangingIndent('main', 3)\nnoViewWrap = getWindowWrap()\n"));
+        const QString miniConsole = qsl("bufferSizeSpy");
+        runLua(host, qsl("createMiniConsole('%1', 0, 0, 100, 100)\n").arg(miniConsole));
+        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        QVERIFY2(pMiniConsole, "The mini console was not created.");
+        const int maxBufferSize = host->mpConsole->buffer.getMaxBufferSize();
+        QVERIFY(maxBufferSize > 1000);
 
-        QCOMPARE(model->buffer.mWrapAt, 23);
-        QCOMPARE(model->buffer.mWrapIndent, 2);
-        QCOMPARE(model->buffer.mWrapHangingIndent, 3);
-        QCOMPARE(model->mWrapAt, 23);
-        QCOMPARE(model->mIndentCount, 2);
-        QCOMPARE(model->mHangingIndentCount, 3);
-        QCOMPARE(host->mWrapAt, 23);
-        QCOMPARE(host->mWrapIndentCount, 2);
-        QCOMPARE(host->mWrapHangingIndentCount, 3);
-        QCOMPARE(luaGlobalNumber(host, "noViewWrap"), 23);
+        host->setConsoleBufferSize(12345);
+        host->setUseMaxConsoleBufferSize(true);
+        runLua(host, qsl("setConsoleBufferSize('%1', 500, 50)\n").arg(miniConsole));
+        QCOMPARE(pMiniConsole->buffer.mLinesLimit, 500);
+        QCOMPARE(pMiniConsole->buffer.mBatchDeleteSize, 50);
+        runLua(host, qsl("setConsoleBufferSize('%1', 600, 60, true)\n").arg(miniConsole));
+        QCOMPARE(pMiniConsole->buffer.mLinesLimit, 500);
+        QCOMPARE(host->getConsoleBufferSize(), 12345);
+        QVERIFY(host->getUseMaxConsoleBufferSize());
+        QVERIFY(host->mpConsole->buffer.mLinesLimit != 500);
+
+        for (const QString& call : {qsl("setConsoleBufferSize(50, 10)"), qsl("setConsoleBufferSize('', 50, 10)"), qsl("setConsoleBufferSize('main', 50, 10)")}) {
+            host->setConsoleBufferSize(12345);
+            host->setUseMaxConsoleBufferSize(true);
+            runLua(host, call);
+            // the profile keeps the limit asked for, and the buffer the one it can have
+            QCOMPARE(host->getConsoleBufferSize(), 50);
+            QVERIFY(!host->getUseMaxConsoleBufferSize());
+            QCOMPARE(host->mpConsole->buffer.mLinesLimit, 100);
+            QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 10);
+        }
+
+        for (const QString& name : {QString(), qsl("main")}) {
+            host->setConsoleBufferSize(12345);
+            host->setUseMaxConsoleBufferSize(false);
+            runLua(host, qsl("setConsoleBufferSize('%1', 700, 70, true)\n").arg(name));
+            QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+            QVERIFY(host->getUseMaxConsoleBufferSize());
+            QCOMPARE(host->mpConsole->buffer.mLinesLimit, maxBufferSize);
+            QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 70);
+        }
+        QCOMPARE(pMiniConsole->buffer.mLinesLimit, 500);
     }
 
-    // A profile that never had a view, whose changeColors() would otherwise
-    // hand the model the profile's wrap, still wraps as its save says.
-    void test_profileLoadSeedsTheWrapWithNoView()
-    {
-        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mWrapHostname);
-        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
-        const QString savePath = qsl("%1profileWrap.xml").arg(saveFolder);
-        writeProfileSave(savePath,
-                         qsl("      <wrapAt>57</wrapAt>\n"
-                             "      <wrapIndentCount>3</wrapIndentCount>\n"
-                             "      <wrapHangingIndentCount>5</wrapHangingIndentCount>\n"));
-        QVERIFY2(QFileInfo(savePath).size() > 0, "The seeded profile save is missing or empty.");
-
-        Host* host = mudlet::self()->loadProfile(mWrapHostname, false);
-        QVERIFY2(host, "The seeded profile was not loaded.");
-        QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
-        QCOMPARE(host->mWrapAt, 57);
-
-        runLua(host, qsl("loadedWrap = getWindowWrap('main')\n"));
-        QCOMPARE(luaGlobalNumber(host, "loadedWrap"), 57);
-        const TConsoleModel& model = host->mainConsoleModel();
-        QCOMPARE(model.mWrapAt, 57);
-        QCOMPARE(model.mIndentCount, 3);
-        QCOMPARE(model.mHangingIndentCount, 5);
-        QCOMPARE(model.buffer.mWrapIndent, 3);
-        QCOMPARE(model.buffer.mWrapHangingIndent, 5);
-
-        // a profile with no save at all is never read by XMLimport
-        Host* freshHost = mudlet::self()->loadProfile(mHostname, false);
-        QVERIFY2(freshHost && freshHost != host, "The unsaved profile was not loaded.");
-        QVERIFY2(freshHost->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
-        runLua(freshHost, qsl("freshWrap = getWindowWrap('main')\n"));
-        QCOMPARE(luaGlobalNumber(freshHost, "freshWrap"), freshHost->mWrapAt);
-    }
-
-    // changeColors() hands the profile's wrap over without setWindowWrap(), and
-    // wrapLine('main') rewraps to it alike with a view and without one.
-    void test_wrapLineUsesTheProfilesWrapWithAndWithoutAView()
+    // Pasting or appending the clipboard writes the console's model; its view
+    // only shows the new text once told to, which brings the upper pane's
+    // cursor, and the buffer's with it, down to the end.
+    void test_clipboardTextReachesTheView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
-        TConsoleModel& model = host->mainConsoleModel();
 
-        const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-        QVERIFY2(model.buffer.mWrapAt > token.size() + 10, "The profile already wraps narrower than the test lines.");
-        // The view-less line goes first, so rewrapping the other cannot move it.
-        const int viewlessLine = appendModelLine(model.buffer, qsl("viewless-%1").arg(token));
-        const int viewLine = appendModelLine(model.buffer, qsl("view-%1").arg(token));
+        const QString miniConsole = qsl("clipboardView");
+        runLua(host, qsl("createMiniConsole('%1', 0, 0, 300, 100)\necho('%1', 'one\\ntwo\\n')\nmoveCursor('%1', 0, 0)\nselectCurrentLine('%1')\ncopy('%1')\n").arg(miniConsole));
+        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        QVERIFY2(pMiniConsole, "The mini console was not created.");
 
-        host->mWrapAt = 20;
-        host->mWrapIndentCount = 2;
-        host->mWrapHangingIndentCount = 4;
-        host->mpConsole->changeColors();
-
-        runLua(host, qsl("wrapLine('main', %1)\n").arg(viewLine));
-        verifyRewrappedTo20(model.buffer, viewLine, qsl("  view-"));
-
-        destroyTheView(host);
-        runLua(host, qsl("wrapLine('main', %1)\n").arg(viewlessLine));
-        verifyRewrappedTo20(model.buffer, viewlessLine, qsl("  viewless-"));
+        const QStringList calls{qsl("appendBuffer('%1')"), qsl("moveCursorEnd('%1') paste('%1')"), qsl("moveCursor('%1', 0, 0) paste('%1')"), qsl("pasteWindow('%1')")};
+        for (const QString& call : calls) {
+            pMiniConsole->buffer.mCursorY = -1;
+            runLua(host, call.arg(miniConsole));
+            QVERIFY2(pMiniConsole->buffer.mCursorY == pMiniConsole->buffer.size(), qPrintable(call));
+        }
+        for (const QString& call : {qsl("appendBuffer('main')"), qsl("paste()")}) {
+            host->mpConsole->buffer.mCursorY = -1;
+            runLua(host, call);
+            QVERIFY2(host->mpConsole->buffer.mCursorY == host->mpConsole->buffer.size(), qPrintable(call));
+        }
     }
 
     // A profile with no view owns its Hunspell handles and word set, so every
