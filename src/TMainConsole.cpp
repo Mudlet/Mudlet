@@ -917,9 +917,9 @@ TMainConsole::ActionBars& TMainConsole::actionBarsFor(TAction* pAction)
 {
     auto it = mActionBars.find(pAction);
     if (it == mActionBars.end()) {
-        // Hides the bars at the point the action used to hide them itself, the
-        // end of ~TAction(), which reaches here even when the action can no
-        // longer reach this console through its Host
+        // Hides the bars as the action goes, straight after ~TAction()'s body.
+        // A signal, because an action being deleted by ~ActionUnit() can no
+        // longer reach this console through its Host.
         connect(pAction, &QObject::destroyed, this, [this, pAction]() {
             const ActionBars bars = mActionBars.take(pAction);
             if (bars.mpToolBar) {

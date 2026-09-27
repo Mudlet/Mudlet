@@ -336,10 +336,12 @@ private slots:
 
         host->getActionUnit()->reParentAction(group->getID(), floating->getID(), 0);
         host->getActionUnit()->updateAllToolbars();
+        // A toolbar taken down is only queued for deletion
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 
         QVERIFY(!console->actionToolBar(group));
+        QVERIFY2(toolBar, "moving the group out destroyed the toolbar it had been drawn on");
         QCOMPARE(console->actionToolBar(floating), toolBar.data());
-        QVERIFY(toolBar);
     }
 
     void cleanup()
