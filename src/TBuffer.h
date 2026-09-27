@@ -409,7 +409,7 @@ public:
     int pendingChunkLines() const { return mPendingChunkLines; }
     // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
     // - public so that the connection teardown can flush it:
-    void flushPendingServerWrapJoin();
+    void flushPendingServerWrapJoin(const bool endsHyperlink = true);
     void flushPendingDestinationContent();
     void resetCurrentTextFormat();
     // Drops any half-received ANSI sequence or multi-byte character, on both
@@ -512,6 +512,8 @@ private:
     void decodeSGR48(const SgrParameters&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void finaliseActiveHyperlink(const bool mayRegisterVisibility = true);
+    void carryActiveHyperlinkPastFlush(QString& line);
+    void maskSpoilerText(const int linkId, QString& line, const int column, const int length);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
     void commitLineData(QString line, std::vector<TChar> chars, char ch);
@@ -694,6 +696,16 @@ private:
     // Track hyperlink start position for visibility manager registration
     int mCurrentHyperlinkStartLine = 0;
     int mCurrentHyperlinkStartColumn = 0;
+    // mCurrentHyperlinkStartColumn counts from the segment after held wrap text
+    // rather than from the start of the line the two will be joined into
+    bool mCurrentHyperlinkStartsAfterHeldText = false;
+    // A spoiler that began in text held back for joining and closed before that
+    // was resolved. Masking the held text then would change how it is joined, so
+    // it is masked once it is: from the column it began at in the held text,
+    // through this many characters of the text after it
+    int mHeldSpoilerLinkId = 0;
+    int mHeldSpoilerStartColumn = 0;
+    int mHeldSpoilerContinuationLength = 0;
     QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase { Phase1_Snapshot, Phase2_Unfreeze, None };

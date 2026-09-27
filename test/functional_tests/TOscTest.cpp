@@ -40,6 +40,7 @@
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
 #include "THyperlinkStyling.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TLinkStore.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
@@ -188,6 +189,28 @@ private:
     return allText;
   }
 
+  int lineStartingWith(const QString &start) {
+    TMainConsole *console = mpHost->mpConsole;
+    for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
+      if (console->buffer.line(i).startsWith(start)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  void feedFromServer(const QString &data) {
+    std::string bytes{data.toStdString()};
+    mpHost->mpConsole->printOnDisplay(bytes, true);
+  }
+
+  // Holds the next line back for joining, as a game that wraps its own output
+  // at 80 columns would have it: prose that ends within reach of the column.
+  void undoServerWrap() {
+    mpHost->mUndoServerWrap = true;
+    mpHost->mUndoServerWrapWidth = 80;
+  }
+
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
@@ -253,6 +276,15 @@ private slots:
     QVERIFY(mpHost);
     QVERIFY(mpHost->mpConsole);
     mpHost->mpConsole->buffer.clear();
+  }
+
+  void cleanup() {
+    if (mpHost && mpHost->mUndoServerWrap) {
+      // A blank line is never a continuation, so it commits anything still
+      // held back rather than leaving it to be joined onto the next test's text
+      feedFromServer(qsl("\n"));
+      mpHost->mUndoServerWrap = false;
+    }
   }
 
   // Data-driven test: verifies text after various OSC sequences is displayed
@@ -1698,8 +1730,7 @@ private slots:
 
     TMainConsole *console = mpHost->mpConsole;
     const int lastLine = console->buffer.getLastLineNumber();
-    // The lines carrying the text fed above: the last one Mudlet has, and the
-    // two before it. The prompt-less feed puts one line in the buffer each.
+    // The three lines before the last, which is left empty by the final newline.
     const int laterLine = lastLine - 1;
     const int followingLine = lastLine - 2;
     const int linkLine = lastLine - 3;
@@ -1734,6 +1765,176 @@ private slots:
     QVERIFY2(!console->buffer.line(spoilerLine).contains(qsl("SECRET")),
              "the spoiler's own text is still visible on the line");
     QCOMPARE(console->buffer.getLinkIndexAt(afterLine, 0), 0);
+  }
+
+  // The carriage return cTelnet appends when the game falls quiet part way
+  // through a line is not the end of the line, so a link it lands in must
+  // carry on into the text that arrives after it.
+  void test_AFlushMarkerDoesNotEndAnOpenHyperlink_data() {
+    QTest::addColumn<QString>("firstPacket");
+    QTest::addColumn<QString>("secondPacket");
+    QTest::addColumn<QString>("secondPart");
+
+    QTest::newRow("inside the link text")
+        << qsl("\x1b]8;;send:split\x1b\\FLUSHED \r")
+        << qsl("REST\x1b]8;;\x1b\\\n")
+        << qsl("REST");
+    QTest::newRow("right after the opening sequence")
+        << qsl("\x1b]8;;send:split\x1b\\\r")
+        << qsl("WHOLE LINK\x1b]8;;\x1b\\\n")
+        << qsl("WHOLE LINK");
+  }
+
+  void test_AFlushMarkerDoesNotEndAnOpenHyperlink() {
+    QFETCH(QString, firstPacket);
+    QFETCH(QString, secondPacket);
+    QFETCH(QString, secondPart);
+
+    feedFromServer(firstPacket);
+    feedFromServer(secondPacket);
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int secondLine = lineStartingWith(secondPart);
+    QVERIFY2(secondLine >= 0, qPrintable(qsl("'%1' never reached the buffer: '%2'").arg(secondPart, allBufferText())));
+    QVERIFY2(console->buffer.getLinkIndexAt(secondLine, 0) > 0,
+             "the text after the flush marker is no longer part of the link");
+  }
+
+  // A line the game wrapped is held back and joined onto the rest, and a link
+  // broken by that wrap belongs to the one line the player sees.
+  void test_AHyperlinkTheGameWrapsCarriesOnIntoTheJoinedLine() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:wrapped\x1b\\alpha\n"));
+    feedFromServer(qsl("beta tail.\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int joinedLine = lineStartingWith(padding);
+    QVERIFY2(joinedLine >= 0, qPrintable(qsl("the wrapped line never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(joinedLine), padding + qsl(" alpha beta tail."));
+    const int linkId = console->buffer.getLinkIndexAt(joinedLine, 65);
+    QVERIFY2(linkId > 0, "the half of the link before the wrap is not a link");
+    QCOMPARE(console->buffer.getLinkIndexAt(joinedLine, 71), linkId);
+    QCOMPARE(console->buffer.getLinkIndexAt(joinedLine, 76), linkId);
+  }
+
+  // A link opened after the held text counts its columns from where it
+  // opened, so they have to move along by the held text once it is joined on
+  // in front - or masking a spoiler there blanks the start of the line instead.
+  void test_ASpoilerAfterHeldTextIsMaskedWhereItLandsInTheJoinedLine() {
+    undoServerWrap();
+    const QString heldText = QString(64, QLatin1Char('x')) + qsl(" alpha");
+    feedFromServer(heldText + qsl("\n"));
+    feedFromServer(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\beta tail.\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int joinedLine = lineStartingWith(heldText);
+    QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text is missing or was masked: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(joinedLine), heldText + qsl(" ") + QString(10, QLatin1Char(' ')));
+    QCOMPARE(console->buffer.getLinkIndexAt(joinedLine, 0), 0);
+    QVERIFY2(console->buffer.getLinkIndexAt(joinedLine, 71) > 0, "the spoiler text is no longer a link");
+  }
+
+  // Held text that turns out to be a whole line takes a link it opened with
+  // it: the line after is not clickable, and a spoiler is masked on its own
+  // line rather than at its columns on the next one.
+  void test_AHyperlinkEndsWithHeldTextThatIsCommittedAlone() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\alpha\n"));
+    // a list entry is never the continuation of the line above
+    feedFromServer(qsl("- a list entry\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int heldLine = lineStartingWith(padding);
+    const int nextLine = lineStartingWith(qsl("- a list entry"));
+    QVERIFY2(heldLine >= 0 && nextLine >= 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(heldLine), padding + qsl(" ") + QString(5, QLatin1Char(' ')));
+    QVERIFY2(console->buffer.getLinkIndexAt(heldLine, 65) > 0, "the spoiler text is no longer a link");
+    for (int column = 0; column < console->buffer.line(nextLine).size(); ++column) {
+      QCOMPARE(console->buffer.getLinkIndexAt(nextLine, column), 0);
+    }
+  }
+
+  // A link closed while text is held back cannot know its columns in the
+  // joined line yet, so it is left out of visibility management - as a link
+  // spanning lines is - rather than registered where a reveal would write
+  // over the held text.
+  void test_AClosedLinkBehindHeldTextIsNotRegisteredForVisibility() {
+    undoServerWrap();
+    const QString heldText = QString(64, QLatin1Char('x')) + qsl(" alpha");
+    feedFromServer(heldText + qsl("\n"));
+    feedFromServer(qsl("\x1b]8;;send:hide?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}\x1b\\beta\x1b]8;;\x1b\\ tail.\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int joinedLine = lineStartingWith(heldText);
+    QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(joinedLine), heldText + qsl(" beta tail."));
+    const int linkId = console->buffer.getLinkIndexAt(joinedLine, 71);
+    QVERIFY2(linkId > 0, "the link text is no longer a link");
+    QVERIFY(!console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId));
+  }
+
+  // A spoiler the flush marker lands in is committed a piece at a time, and
+  // each piece is masked as it goes: the next line is out of reach of the
+  // masking the link gets when it ends. Revealing it restores every piece.
+  void test_ASpoilerSplitByTheFlushMarkerIsMaskedOnEveryLine() {
+    feedFromServer(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\SEC\r"));
+    feedFromServer(qsl("RET\x1b]8;;\x1b\\ after\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    QVERIFY2(!allBufferText().contains(qsl("SEC")) && !allBufferText().contains(qsl("RET")),
+             qPrintable(qsl("part of the spoiler is on show: '%1'").arg(allBufferText())));
+    const int restLine = lineStartingWith(qsl("    after"));
+    QVERIFY2(restLine > 0, qPrintable(qsl("the rest of the spoiler's line is missing: '%1'").arg(allBufferText())));
+    const int linkId = console->buffer.getLinkIndexAt(restLine, 0);
+    QVERIFY2(linkId > 0, "the spoiler text after the flush marker is no longer a link");
+    QCOMPARE(console->buffer.getLinkIndexAt(restLine - 1, 0), linkId);
+
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(restLine - 1), qsl("SEC"));
+    QCOMPARE(console->buffer.line(restLine), qsl("RET after"));
+  }
+
+  // The flush marker commits held text as a line of its own, but it still
+  // does not end a link that began there: the text after carries on in it.
+  void test_AFlushMarkerAfterHeldTextDoesNotEndItsHyperlink() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:held\x1b\\alpha\n"));
+    feedFromServer(qsl("beta \r"));
+    feedFromServer(qsl("tail.\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int heldLine = lineStartingWith(padding);
+    QVERIFY2(heldLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(heldLine + 1), qsl("beta "));
+    QCOMPARE(console->buffer.line(heldLine + 2), qsl("tail."));
+    const int linkId = console->buffer.getLinkIndexAt(heldLine, 65);
+    QVERIFY2(linkId > 0, "the held text is no longer a link");
+    QCOMPARE(console->buffer.getLinkIndexAt(heldLine + 1, 0), linkId);
+    QCOMPARE(console->buffer.getLinkIndexAt(heldLine + 2, 0), linkId);
+  }
+
+  // A spoiler that began in held text and closes before the rest of the line
+  // arrives is masked across the joined line once the two are joined - not at
+  // its held columns in the text after, and not before the join, which would
+  // hide the break the join puts back between them.
+  void test_ASpoilerClosedAcrossHeldTextIsMaskedOnceJoined() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\alpha\n"));
+    feedFromServer(qsl("beta\x1b]8;;\x1b\\ tail.\n"));
+
+    TMainConsole *console = mpHost->mpConsole;
+    const int joinedLine = lineStartingWith(padding);
+    QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(joinedLine), padding + QString(11, QLatin1Char(' ')) + qsl(" tail."));
+    const int linkId = console->buffer.getLinkIndexAt(joinedLine, 65);
+    QVERIFY2(linkId > 0, "the spoiler text is no longer a link");
+
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(joinedLine), padding + qsl(" alpha beta tail."));
   }
 
   void cleanupTestCase() {
