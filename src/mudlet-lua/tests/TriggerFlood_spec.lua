@@ -295,9 +295,11 @@ describe("trigger matching under a flood", function()
         end
 
         setup(function()
-            -- itFlood() reports pending without test mode, and installing needs
-            -- pumpEvents(), which does nothing without it
-            if not os.getenv("MUDLET_TEST_MODE") then
+            -- itFlood() reports pending without test mode or a working pool,
+            -- so there is nothing to install for; installing also needs
+            -- pumpEvents(), which does nothing without test mode
+            local workers = getProfileStats().triggers.prescanWorkers
+            if not os.getenv("MUDLET_TEST_MODE") or not workers or workers < 2 then
                 return
             end
             removePackage()
