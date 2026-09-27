@@ -267,6 +267,31 @@ private slots:
         QCOMPARE(cache.size(), 0);
     }
 
+    // Package fonts are installed and removed while consoles are showing text
+    void reshapesWhenFontsAreInstalledOrRemoved()
+    {
+        const QString family = qsl("Ubuntu Mono");
+        if (QFontDatabase::hasFamily(family)) {
+            QSKIP("Ubuntu Mono is already installed here, so registering it would change nothing");
+        }
+        QFont font(family);
+        font.setPointSize(13);
+        TGlyphCache cache;
+        const QImage withFallback = render(font, 1.0, false, TGlyphCache::Plain, &cache);
+        QVERIFY(cache.size() > 0);
+
+        const int id = QFontDatabase::addApplicationFont(qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf"));
+        QVERIFY2(id != -1, "could not register the bundled Ubuntu Mono");
+        QCOMPARE(cache.size(), 0);
+        const QImage withFont = render(font, 1.0, false, TGlyphCache::Plain, nullptr);
+        QVERIFY2(withFont != withFallback, "registering the font did not change how drawText() draws, so this proves nothing");
+        QCOMPARE(differingPixels(render(font, 1.0, false, TGlyphCache::Plain, &cache), withFont), 0);
+
+        QFontDatabase::removeApplicationFont(id);
+        QCOMPARE(cache.size(), 0);
+        QCOMPARE(differingPixels(render(font, 1.0, false, TGlyphCache::Plain, &cache), render(font, 1.0, false, TGlyphCache::Plain, nullptr)), 0);
+    }
+
     void staysBounded()
     {
         QImage device(64, 64, QImage::Format_ARGB32_Premultiplied);

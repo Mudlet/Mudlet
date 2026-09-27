@@ -19,10 +19,33 @@
 
 #include "TGlyphCache.h"
 
+#include <QGuiApplication>
 #include <QPaintDevice>
 #include <QPainter>
 #include <QRect>
 #include <QTextLayout>
+
+TGlyphCache::TGlyphCache()
+: mFontDatabaseConnection(QObject::connect(qGuiApp, &QGuiApplication::fontDatabaseChanged, [this]() {
+    forget();
+}))
+{
+}
+
+TGlyphCache::~TGlyphCache()
+{
+    QObject::disconnect(mFontDatabaseConnection);
+}
+
+void TGlyphCache::forget()
+{
+    mEntries.clear();
+    // The font resolved for the old database would shape with the old files
+    // even once it is empty, so the next setFont() has to take a fresh one.
+    mFont = QFont();
+    mDpiX = 0;
+    mDpiY = 0;
+}
 
 void TGlyphCache::setFont(const QFont& font, const QPaintDevice& device)
 {
@@ -31,7 +54,7 @@ void TGlyphCache::setFont(const QFont& font, const QPaintDevice& device)
     if (font == mFont && dpiX == mDpiX && dpiY == mDpiY) {
         return;
     }
-    mEntries.clear();
+    forget();
     mFont = font;
     mDpiX = dpiX;
     mDpiY = dpiY;

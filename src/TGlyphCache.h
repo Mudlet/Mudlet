@@ -25,6 +25,7 @@
 #include <QGlyphRun>
 #include <QHash>
 #include <QList>
+#include <QMetaObject>
 #include <QString>
 #include <QStringView>
 
@@ -43,6 +44,10 @@ public:
     // draws them differently from drawText(), so decorated text is left to that.
     enum StyleFlag : quint8 { Plain = 0x00, Bold = 0x01, Italic = 0x02 };
     Q_DECLARE_FLAGS(Style, StyleFlag)
+
+    TGlyphCache();
+    ~TGlyphCache();
+    Q_DISABLE_COPY_MOVE(TGlyphCache)
 
     // Empties the cache when the font, or the resolution it is drawn at,
     // differs from the one the cached glyphs were shaped for.
@@ -74,6 +79,7 @@ private:
         qreal height = 0.0;
     };
 
+    void forget();
     const Entry& lookup(QStringView grapheme, Style);
     Entry shape(QStringView grapheme, Style) const;
 
@@ -81,6 +87,10 @@ private:
     int mDpiX = 0;
     int mDpiY = 0;
     QHash<Key, Entry> mEntries;
+    // Each cached glyph holds on to the font file it was shaped from, so a
+    // font being installed or removed has to send every grapheme back to be
+    // resolved again - as drawText() would have done on its next call.
+    QMetaObject::Connection mFontDatabaseConnection;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TGlyphCache::Style)
