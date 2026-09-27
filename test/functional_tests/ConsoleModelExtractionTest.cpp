@@ -3161,7 +3161,6 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         QCOMPARE(host->windowGeometry(miniName), std::optional<QRect>(QRect(10, 20, 100, 50)));
         QCOMPARE(host->windowVisible(miniName), std::optional<bool>(true));
-        QCOMPARE(host->findConsole(miniName).data(), host->mpConsole->subConsoleWidget(miniName));
 
         // The name is taken, and every one of these refusals is the registry's
         // answer rather than a widget lookup
@@ -3192,7 +3191,6 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(!host->windowType(absentName).has_value(), "Host reports a window type for a sub-console that was never created.");
         QVERIFY2(!host->windowGeometry(absentName).has_value(), "Host reports a geometry for a sub-console that was never created.");
         QVERIFY2(!host->windowVisible(absentName).has_value(), "Host reports a visibility for a sub-console that was never created.");
-        QVERIFY2(!host->findConsole(absentName), "findConsole() found a sub-console that was never created.");
         QVERIFY2(!host->showWindow(absentName), "showWindow() found a sub-console that was never created.");
         QVERIFY2(!host->closeWindow(absentName), "closeWindow() found a sub-console that was never created.");
         QVERIFY2(!host->pasteWindow(absentName), "pasteWindow() found a sub-console that was never created.");
