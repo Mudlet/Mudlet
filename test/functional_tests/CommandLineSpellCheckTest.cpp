@@ -379,7 +379,7 @@ private slots:
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         // the caret ends up on the last word, not the one right-clicked
-        enterText(pCommandLine, qsl("qzxnewword look"));
+        enterText(pCommandLine, qsl("qzxnewword qzxother"));
         QVERIFY(!mpHost->spellChecker().wordSet().contains(qsl("qzxnewword")));
 
         QMenu* pMenu = rightClick(pCommandLine, qsl("qzxnewword"));
@@ -398,7 +398,7 @@ private slots:
 
         QVERIFY2(mpHost->spellChecker().wordSet().contains(qsl("qzxnewword")), "choosing to add the word did not put it in the user dictionary");
         QVERIFY2(markedAsTheUsersOwn(pCommandLine, qsl("qzxnewword")), "the added word was not rechecked");
-        QVERIFY(markedMisspelt(pCommandLine, qsl("look")));
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxother")));
     }
 
     void test_rightClickingAUserDictionaryWordOffersToRemoveIt()
