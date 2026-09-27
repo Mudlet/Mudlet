@@ -269,6 +269,25 @@ bool mudlet::claimMicrophoneFor(Host* pHost)
         if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting())) {
             mpSpeechRecognizer->stopListening();
         }
+
+        // Asked again, because the state to test is the one the stop left behind
+        // rather than the one before it. A backend that finalises the last phrase
+        // asynchronously - AppleSpeechRecognizer does - returns from the stop
+        // while still Processing, so the guard above saw only Listening and had
+        // nothing to catch. Moving the owner now would hand that phrase to the
+        // profile taking the microphone instead of the one that spoke it.
+        //
+        // The caller gets the same "try again in a moment" it gets above. The
+        // losing profile has already been told of the handover, and that stands:
+        // its session really has ended, and it keeps the microphone only until
+        // its phrase lands, when the session's end releases it. The retry then
+        // finds nobody holding it and announces nothing, so the handover is told
+        // once. Announcing it after the stop instead would put it behind the
+        // state change, and docs/stt-api.md tells a script the state change is
+        // what follows sysSTTHandover.
+        if (mpSpeechRecognizer && mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing) {
+            return false;
+        }
     }
 
     mpMicrophoneOwner = pHost;
@@ -4057,10 +4076,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpEditorDialog = pEditor;
     connect(pH, &Host::profileSaveStarted, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
     connect(pH, &Host::profileSaveFinished, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
-    // The editor's item trees are deliberately not populated here: the
-    // profile's scripts have yet to run and ScriptUnit::compileAll() queues a
-    // full rebuild once they have, so populating now would only double the
-    // cost of the load.
+    // Item trees are deliberately not populated here: ScriptUnit::compileAll() queues a full rebuild once
+    // the profile's scripts have run, so populating now would double the cost of the load.
 
     pH->getActionUnit()->updateAllToolbars();
 
@@ -4895,9 +4912,8 @@ void mudlet::readLateSettings(const QSettings& settings)
         const auto stored = TDebug::Categories::fromInt(settings.value(qsl("debugConsole/categories")).toInt());
         TDebug::setEnabledCategories(stored & TDebug::csmAllCategories);
     }
-    // The text filter is deliberately NOT restored: which kinds of message are
-    // worth seeing is a lasting preference, but the string someone was hunting
-    // for last month would just make the console look broken today.
+    // The text filter is deliberately NOT restored: last month's search string would just make the
+    // console look broken today.
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -5038,15 +5054,9 @@ void mudlet::adjustToolBarVisibility()
     const bool toolBarVisible = toolBarShouldBeVisible();
     mpMainToolBar->setVisible(toolBarVisible);
 
-    // A detached window is handed the toolbar state once, in its constructor,
-    // and otherwise only hears the toolbar's own toggle through
-    // synchronizeToolBarVisibility(). Without this the settings path stops at
-    // the main window and a window detached before the setting changed keeps
-    // the state it was built with until it is reattached and detached again.
-    // Detached windows deliberately mirror the main window here, including a
-    // hide that synchronizeToolBarVisibility() would refuse under
-    // canHideToolBar(): a detached window always keeps its own menu bar, and
-    // letting it disagree with the main window is the very fault this fixes.
+    // Detached windows only get the toolbar state in their constructor and from the toolbar's own toggle,
+    // so push the setting to them too. They mirror the main window even for a hide canHideToolBar() would
+    // refuse: a detached window always keeps its own menu bar.
     for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow) {
             detachedWindow->setToolBarVisibility(toolBarVisible);
@@ -6438,14 +6448,12 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->setWindowTitle(tr("Central Debug Console"));
     smpDebugArea->setWindowIcon(QIcon(qsl(":/icons/mudlet_debug.png")));
 
-    // Pausing is a momentary thing, and the state is global while the toolbar
-    // showing it is not - a console left paused when its profile closed would
-    // otherwise come back silently dead:
+    // The pause state is global but the toolbar showing it is not, so a console left paused when its
+    // profile closed would come back silently dead:
     TDebug::setPaused(false);
     TDebug::discardPausedMessages();
 
-    // The filters are the everyday controls, so they get a row of the window to
-    // themselves - the find bar is the console's own and floats over it.
+    // The filters get a row to themselves; the find bar is the console's own and floats over it.
     smpDebugFilterBar = new TDebugFilterBar(smpDebugArea);
     smpDebugArea->addToolBar(Qt::BottomToolBarArea, smpDebugFilterBar);
 
@@ -7152,9 +7160,8 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
         }
     }
 
-    // If we right-clicked on a specific tab, add tab-specific actions. Detaching
-    // is only offered while another tab would be left behind, since detachTab()
-    // refuses to empty the main window
+    // Detaching is only offered while another tab would be left behind: detachTab() refuses to empty the
+    // main window
     if (tabIndex >= 0 && mpTabBar->count() > 1) {
         const QString profileName = mpTabBar->tabData(tabIndex).toString();
 
@@ -7296,10 +7303,8 @@ void mudlet::updateReplayTimeLabel()
 
     //: Elapsed time readout on the replay toolbar. %1 is the time itself
     QString text = tr("Time: %1").arg(mReplayTime.toString(mTimeFormat));
-    // A replay can have long quiet stretches in it, so a clock that has simply
-    // stopped is not on its own a sign that the replay is held. Read that from
-    // the profile rather than from the button, so that the readout reports what
-    // playback is doing instead of confirming what the button was set to:
+    // A replay can be quiet for long stretches, so read "held" from the profile, not the button, to report
+    // what playback is actually doing:
     if (mpReplayingHost && mpReplayingHost->mTelnet.replayPaused()) {
         //: Replaces the elapsed-time readout on the replay toolbar while the replay is held. %1 is the already translated and formatted "Time: ..." text, so do not add a time prefix of your own
         text = tr("%1 (paused)").arg(text);
@@ -7685,7 +7690,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name);
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name, pHost->mAcceptServerGUI && pHost->mEnableGMCP);
         pHost->setupIreDriverBugfix();
     }
 
@@ -8465,7 +8470,7 @@ void mudlet::refreshTabBar()
 
 //NOLINT(readability-convert-member-functions-to-static)
 // doesn't make sense to make it static since it modifies a class variable
-void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName)
+void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName, const bool serverGuiAccepted)
 {
     if (mSkipDefaultPackageInstall) {
         return;
@@ -8529,12 +8534,17 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     }
 
     // A modest starter UI that adapts to whatever any game provides.
-    // Games whose bundled loader above fetches the game's own full interface
-    // (flagged in TGameDetails) are skipped: the starter UI would only fight
-    // it for the same screen space. Games that push a GUI via Client.GUI at
-    // connect time are handled at runtime instead - the starter UI stands
-    // aside when one installs.
-    if (!TGameDetails::gameProvidesOwnUi(gameUrl)) {
+    // Games known to install their own full interface, by a bundled loader
+    // above or by Client.GUI (flagged in TGameDetails), are skipped: the
+    // starter UI would only fight it for the same screen space, and would
+    // build and announce itself before a post-login Client.GUI package lands.
+    // Other games that push a GUI via Client.GUI are handled at runtime
+    // instead - the starter UI stands aside when one installs.
+    // A Client.GUI package only arrives if the profile lets it in, and a
+    // profile copied with its settings can already refuse it.
+    const auto ownUi = TGameDetails::gameOwnUi(gameUrl);
+    const bool ownUiArrives = ownUi == GameDetail::OwnUi::BundledLoader || (ownUi == GameDetail::OwnUi::ClientGui && serverGuiAccepted);
+    if (!ownUiArrives) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
     }
 
@@ -8892,9 +8902,8 @@ void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
 
 void mudlet::detachTab(int tabIndex, const QPoint& position)
 {
-    // The main window keeps at least one tab: which tab is being taken out of
-    // it does not matter, only how many would be left. Every route to a detach
-    // comes through here, so this is the one place the rule has to hold
+    // The main window keeps at least one tab. Every detach route comes through here, so this is the one
+    // place the rule has to hold
     if (tabIndex < 0 || tabIndex >= mpTabBar->count() || mpTabBar->count() < 2) {
         return;
     }

@@ -1378,7 +1378,179 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(message.isEmpty(), "an allowed move has nothing to tell the user");
     }
 
+    // A panic while the walk is naming the globals themselves cannot be pinned
+    // on any one saved global, so rather than go round again the walk stops -
+    // and every saved global it had not reached by then is missing from the
+    // save, which has to be said, or that save silently drops them.
+    void testAWalkThatPanicsBetweenTheSavedGlobalsNamesEveryOneItMissed()
+    {
+        // Naming a number key costs a fresh Lua string, and the walk names
+        // every global before asking whether it is a saved one - so with only
+        // strings inside the saved globals, the first allocation the walk makes
+        // is at the top level, between saved globals rather than inside one.
+        const char* buildGlobals = "savedRoot1 = {member = 'saved value'} savedRoot2 = {member = 'saved value'} "
+                                   "savedRoot3 = {member = 'saved value'} savedRoot4 = {member = 'saved value'} "
+                                   "savedRoot5 = {member = 'saved value'} savedRoot6 = {member = 'saved value'}";
+        const QStringList allSavedRoots{qsl("savedRoot1"), qsl("savedRoot2"), qsl("savedRoot3"), qsl("savedRoot4"), qsl("savedRoot5"), qsl("savedRoot6")};
+
+        AllocationBudget budget;
+        lua_State* state = lua_newstate(&budgetedAllocator, &budget);
+        QVERIFY(state);
+        {
+            LuaInterface luaInterface(state);
+            QCOMPARE(luaL_dostring(state, buildGlobals), 0);
+            addNumberKeyedGlobals(state, 200);
+            markSavedRoots(luaInterface);
+
+            budget.failAt = budget.allocations + 1;
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("Lua panicked before or between the saved variables")));
+            luaInterface.getSavedVars();
+            budget.failAt = -1;
+
+            QStringList inTheTree;
+            for (TVar* root : luaInterface.getVarUnit()->getBase()->getChildren(false)) {
+                inTheTree << root->getName();
+            }
+            const QStringList unreadable = luaInterface.unreadableSavedRoots();
+            QVERIFY2(inTheTree.size() < allSavedRoots.size(), "the panic is meant to land before the walk has reached every saved global");
+            for (const QString& savedRoot : allSavedRoots) {
+                QVERIFY2(inTheTree.contains(savedRoot) != unreadable.contains(savedRoot),
+                         qPrintable(qsl("%1 has to be either in the tree or reported as missing from it, and not both").arg(savedRoot)));
+            }
+            QCOMPARE(unreadable.size() + inTheTree.size(), allSavedRoots.size());
+            luaInterface.releaseVariableReferences();
+        }
+        lua_close(state);
+    }
+
+    // The walk of the whole of _G the Variables view makes: a panic inside it
+    // has to give the caller back a stack of the height it found, rather than
+    // strand the walk's working values on the profile's live interpreter, and
+    // the next walk has to read everything again. Only the height: Lua's own
+    // panic handling writes its error message over the bottom of the stack
+    // before the panic function is called, so what was in those slots is gone.
+    void testAPanicInTheVariablesWalkLeavesTheStackAsItFoundIt()
+    {
+        AllocationBudget budget;
+        lua_State* state = lua_newstate(&budgetedAllocator, &budget);
+        QVERIFY(state);
+        {
+            LuaInterface luaInterface(state);
+            QCOMPARE(luaL_dostring(state, "walkedGlobal = 'a value'"), 0);
+            addNumberKeyedGlobals(state, 200);
+            lua_pushstring(state, "sentinel one");
+            lua_pushnumber(state, 42);
+            const int topBefore = lua_gettop(state);
+
+            budget.failAt = budget.allocations + 1;
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("Lua panicked while reading the variables in")));
+            luaInterface.getVars(false);
+            budget.failAt = -1;
+
+            QCOMPARE(lua_gettop(state), topBefore);
+
+            luaInterface.getVars(false);
+            bool found = false;
+            for (TVar* root : luaInterface.getVarUnit()->getBase()->getChildren(false)) {
+                found = found || root->getName() == qsl("walkedGlobal");
+            }
+            QVERIFY2(found, "a walk after a panicked one must read _G afresh");
+            QCOMPARE(lua_gettop(state), topBefore);
+            luaInterface.releaseVariableReferences();
+        }
+        lua_close(state);
+    }
+
+    // A rename Lua panics part way through - out of memory, here, at each
+    // allocation it makes in turn - must leave the value under one name or the
+    // other, never under neither, with the node naming whichever it is. And the
+    // probe for a sibling already holding the new name fails closed: a rename
+    // it could not finish checking does not go ahead.
+    void testARenameThatPanicsNeverLosesTheValue()
+    {
+        const QString oldName = qsl("oldName");
+        const QString newName = qsl("aNameNothingHasInternedYet");
+        bool probePanicked = false;
+        bool renamePanicked = false;
+        bool completedWithoutAPanic = false;
+        for (qint64 failAfter = 1; failAfter <= 64 && !completedWithoutAPanic; ++failAfter) {
+            AllocationBudget budget;
+            lua_State* state = lua_newstate(&budgetedAllocator, &budget);
+            QVERIFY(state);
+            {
+                LuaInterface luaInterface(state);
+                QCOMPARE(luaL_dostring(state, "renHolder = {oldName = 'the value'}"), 0);
+                luaInterface.getVars(false);
+                TVar* member = nullptr;
+                for (TVar* root : luaInterface.getVarUnit()->getBase()->getChildren(false)) {
+                    if (root->getName() == qsl("renHolder")) {
+                        const QList<TVar*> members = root->getChildren(false);
+                        member = members.isEmpty() ? nullptr : members.constFirst();
+                    }
+                }
+                QVERIFY(member);
+                QCOMPARE(member->getName(), oldName);
+
+                member->setNewName(newName, LUA_TSTRING);
+                smCapturedWarnings.clear();
+                smPreviousHandler = qInstallMessageHandler(captureWarnings);
+                budget.failAt = budget.allocations + failAfter;
+                const bool renamed = luaInterface.renameVar(member);
+                budget.failAt = -1;
+                qInstallMessageHandler(smPreviousHandler);
+
+                const QString warnings = smCapturedWarnings.join(QChar('\n'));
+                const bool probeFailed = warnings.contains(qsl("treated as a name already in use"));
+                probePanicked = probePanicked || probeFailed;
+                renamePanicked = renamePanicked || warnings.contains(qsl("it may be left under either name"));
+                completedWithoutAPanic = !warnings.contains(qsl("panicked"));
+
+                lua_getglobal(state, "renHolder");
+                lua_getfield(state, -1, "oldName");
+                const bool underOldName = QString::fromUtf8(lua_tostring(state, -1)) == qsl("the value");
+                lua_pop(state, 1);
+                lua_getfield(state, -1, newName.toUtf8().constData());
+                const bool underNewName = QString::fromUtf8(lua_tostring(state, -1)) == qsl("the value");
+                lua_pop(state, 2);
+
+                const QString context = qsl("failing allocation %1 of the rename, warnings: %2").arg(failAfter).arg(warnings);
+                QVERIFY2(underOldName != underNewName, qPrintable(qsl("the value must be under exactly one of the names - %1").arg(context)));
+                QVERIFY2(renamed == underNewName, qPrintable(qsl("renameVar() must say whether the value moved - %1").arg(context)));
+                QVERIFY2(member->getName() == (underNewName ? newName : oldName), qPrintable(qsl("the node must name the variable it stands for - %1").arg(context)));
+                if (probeFailed) {
+                    QVERIFY2(!renamed, qPrintable(qsl("a rename whose check for a sibling of the new name panicked must not go ahead - %1").arg(context)));
+                }
+                luaInterface.releaseVariableReferences();
+            }
+            lua_close(state);
+        }
+        QVERIFY2(completedWithoutAPanic, "the rename is supposed to need only a few allocations, so the sweep should reach one with none failing");
+        QVERIFY2(probePanicked, "the sweep is supposed to fail an allocation inside the check for a sibling of the new name");
+        QVERIFY2(renamePanicked, "the sweep is supposed to fail an allocation inside the rename itself");
+    }
+
 private:
+    static inline QStringList smCapturedWarnings;
+    static inline QtMessageHandler smPreviousHandler = nullptr;
+
+    static void captureWarnings(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        if (type == QtWarningMsg) {
+            smCapturedWarnings << message;
+        } else if (smPreviousHandler) {
+            smPreviousHandler(type, context, message);
+        }
+    }
+
+    // These states go without the base library, so there is no _G to index
+    static void addNumberKeyedGlobals(lua_State* state, const int count)
+    {
+        for (int i = 1; i <= count; ++i) {
+            lua_pushboolean(state, 1);
+            lua_rawseti(state, LUA_GLOBALSINDEX, i);
+        }
+    }
+
     static std::unique_ptr<TVar> namedVar(const QString& name)
     {
         auto var = std::make_unique<TVar>();

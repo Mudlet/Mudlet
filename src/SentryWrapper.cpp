@@ -51,11 +51,9 @@
 void initSentry()
 {
 #ifdef WITH_SENTRY
-    // Never arm crashpad for a test run. The Lua suite drives this very binary with
-    // MUDLET_TEST_MODE set, and an armed crashpad answers a crash there by launching
-    // MudletCrashReporter, which blocks on a modal dialog unless "autoSendCrashReports" is already
-    // AlwaysSend. No CI runner has that setting, so a crash would hang the job to its timeout
-    // rather than fail it - and the report would go out as if a player had hit it.
+    // Never arm crashpad for a test run: the Lua suite runs this binary with MUDLET_TEST_MODE, and a crash
+    // would open MudletCrashReporter's modal dialog (unless "autoSendCrashReports" is AlwaysSend, which no
+    // CI runner has), hanging the job until timeout and sending the report as if a player hit it.
     if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
         return;
     }
