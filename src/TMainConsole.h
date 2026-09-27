@@ -224,19 +224,9 @@ public:
     bool setWindowWrapAt(const QString& name, int wrapAt);
     bool setWindowWrapIndent(const QString& name, int indent);
     bool setWindowWrapHangingIndent(const QString& name, int indent);
-    // The cursor and line operations, found by name in the same way. Each
-    // console has its own cursor; a trigger's script starts with the main
-    // console's on the line that fired it.
-    std::optional<bool> moveWindowCursor(const QString& name, int x, int y);
-    bool moveWindowCursorEnd(const QString& name);
-    std::optional<int> getWindowLineNumber(const QString& name);
-    std::optional<int> getWindowColumnNumber(const QString& name);
-    std::optional<int> getWindowLineCount(const QString& name);
-    std::optional<int> getWindowLastLineNumber(const QString& name);
-    std::optional<QString> getWindowCurrentLine(const QString& name);
+    // How many characters and lines fit in the named console's upper pane, from its size and font.
     std::optional<int> getWindowColumnCount(const QString& name);
     std::optional<int> getWindowRowCount(const QString& name);
-    bool deleteWindowCurrentLine(const QString& name);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.

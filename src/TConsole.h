@@ -222,7 +222,6 @@ public:
     std::tuple<bool, QString, int, int> getSelection();
     void deselect();
     bool selectSection(int, int);
-    void skipLine();
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
@@ -266,7 +265,6 @@ public:
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
-    void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
     void refreshView() const;
