@@ -24,15 +24,23 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        pulls=$(gh api --paginate --slurp \
+          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files")
+        # The endpoint lists at most 3000 files, so a longer list could be hiding
+        # code; anything short of the whole list counts as a code change
+        listed=$(jq '[.[][]] | length' <<< "$pulls")
+        changed=${{ github.event.pull_request.changed_files }}
         # A renamed file counts under its old name too, so moving code into docs/
         # still reads as a code change
-        files=$(gh api --paginate \
-          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
-          -q '.[] | .filename, (.previous_filename // empty)')
-        echo "Changed files:"
+        files=$(jq -r '.[][] | .filename, (.previous_filename // empty)' <<< "$pulls")
+        echo "Changed files (${listed} of ${changed} listed):"
         printf '%s\n' "$files"
 
-        if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
+        # grep reads a here-string rather than a pipe: it exits at the first match,
+        # and a writer killed by SIGPIPE would turn into a false "docs only" under
+        # pipefail
+        if [ "$listed" -eq "$changed" ] && [ "$listed" -lt 3000 ] && [ -n "$files" ] \
+            && ! grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)' <<< "$files"; then
           echo "docs_only=true" >> "$GITHUB_OUTPUT"
         else
           echo "docs_only=false" >> "$GITHUB_OUTPUT"
