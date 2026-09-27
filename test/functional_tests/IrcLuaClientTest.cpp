@@ -248,7 +248,17 @@ private:
         if (!welcome(mNick) || !waitForLine(connection, qsl("JOIN %1").arg(mChannel).toUtf8()) || !mpIrcServer->sendLine(qsl(":%1!u@h JOIN %2").arg(mNick, mChannel).toUtf8())) {
             return false;
         }
-        return waitForLua(qsl("table.concat(getIrcChannels(), ',')"), mChannel) && runLua(qsl("ircEvents = {}"));
+        return waitForJoinEvent() && runLua(qsl("ircEvents = {}"));
+    }
+
+    // Our own join, reported from the channel's buffer
+    bool waitForJoinEvent()
+    {
+        return QTest::qWaitFor(
+                [this]() {
+                    return events().contains(qsl("%1>%2:! You have joined %2 as %1").arg(mNick, mChannel));
+                },
+                5000);
     }
 
     QStringList bufferTitles() const
@@ -733,6 +743,7 @@ private slots:
         QVERIFY(welcome(mNick));
         QVERIFY(waitForLine(oldConnection + 1, qsl("JOIN %1").arg(mChannel).toUtf8()));
         QVERIFY(mpIrcServer->sendLine(qsl(":%1!u@h JOIN %2").arg(mNick, mChannel).toUtf8()));
+        QVERIFY2(waitForJoinEvent(), qPrintable(events()));
         QVERIFY(runLua(qsl("ircEvents = {}")));
 
         QVERIFY(mpIrcServer->sendLine(qsl(":alice!u@h PRIVMSG %1 :welcome back").arg(mChannel).toUtf8()));
