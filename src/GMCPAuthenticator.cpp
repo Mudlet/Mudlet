@@ -194,15 +194,23 @@ QPair<bool, QString> removeMetadataFromProfile(const QString& profileName)
 // forget path does wait for it, because there the whole point is that it is gone.
 void forgetMetadataTheStoreStillHolds(const QString& profileName)
 {
+    //
+    // Only where the read found it: the read is part of connecting, which the game sets off, and it
+    // looked in the store the storage preference names and no further.
     QPointer<CredentialManager> remover = new CredentialManager();
-    remover->removePassword(profileName, metadataKey(), [remover, profileName](bool removed, const QString& error) {
-        if (remover) {
-            remover->deleteLater();
-        }
-        if (!removed) {
-            qWarning().noquote() << "GMCP Char.Login - the saved sign-in's older credential-store entry for profile" << profileName << "was not removed, so the next read finds it again:" << error;
-        }
-    });
+    remover->removePassword(
+            profileName,
+            metadataKey(),
+            [remover, profileName](bool removed, const QString& error) {
+                if (remover) {
+                    remover->deleteLater();
+                }
+                if (!removed) {
+                    qWarning().noquote() << "GMCP Char.Login - the saved sign-in's older credential-store entry for profile" << profileName
+                                         << "was not removed, so the next read finds it again:" << error;
+                }
+            },
+            CredentialManager::StoreScope::PreferredStore);
 }
 
 // Holds the raw token and nothing else, so the *stored* token never passes through a QJsonDocument -
@@ -551,7 +559,24 @@ void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation o
         const QString profileName = mpHost->getName();
         if (op == Operation::WriteMetadata) {
             const auto written = writeMetadataToProfile(profileName, payload);
-            done(written.first, written.first ? QString() : qsl("Could not write the saved sign-in to the profile: %1").arg(written.second));
+            if (!written.first || !*mpStoreHoldsInlineRecord) {
+                done(written.first, written.first ? QString() : qsl("Could not write the saved sign-in to the profile: %1").arg(written.second));
+                return;
+            }
+            // The store still holds a record from before the token had a key of its own, with the token
+            // inside it, and that is the record an older Mudlet sharing the store replays: rewriting only
+            // the profile would leave a token this one has just dropped as dead live there. So it is
+            // overwritten with the same token-less record, once, and the next save needs the profile only.
+            QPointer<CredentialManager> writer = new CredentialManager();
+            writer->storePassword(profileName, metadataKey(), payload, [holdsInlineRecord = mpStoreHoldsInlineRecord, writer, done = std::move(done)](bool overwritten, const QString& error) mutable {
+                if (writer) {
+                    writer->deleteLater();
+                }
+                if (overwritten) {
+                    *holdsInlineRecord = false;
+                }
+                done(overwritten, overwritten ? QString() : qsl("Saved in the profile, but the credential store's older record, with its token, remains: %1").arg(error));
+            });
             return;
         }
 
@@ -566,16 +591,26 @@ void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation o
         // undone by the next connect, which reads the store when the profile has nothing and moves
         // what it finds back in. The player would be told the sign-in was forgotten and then watch
         // Mudlet offer it again.
+        //
+        // As far as the token's removal reaches (see below): a forget clears every store, while a
+        // removal the client makes on its own stays with the store the preference names - which is
+        // also the only one the next connect would read.
         QPointer<CredentialManager> remover = new CredentialManager();
-        remover->removePassword(profileName, metadataKey(), [remover, profileName, done = std::move(done)](bool storeCleared, const QString& error) mutable {
-            if (remover) {
-                remover->deleteLater();
-            }
-            if (!storeCleared) {
-                qWarning().noquote() << "GMCP Char.Login - the saved sign-in is gone from the profile, but the credential store still holds the copy written before it moved there:" << error;
-            }
-            done(storeCleared, storeCleared ? QString() : qsl("Removed from the profile, but the credential store's older copy remains: %1").arg(error));
-        });
+        remover->removePassword(
+                profileName,
+                metadataKey(),
+                [holdsInlineRecord = mpStoreHoldsInlineRecord, remover, profileName, done = std::move(done)](bool storeCleared, const QString& error) mutable {
+                    if (remover) {
+                        remover->deleteLater();
+                    }
+                    if (storeCleared) {
+                        *holdsInlineRecord = false;
+                    } else {
+                        qWarning().noquote() << "GMCP Char.Login - the saved sign-in is gone from the profile, but the credential store still holds the copy written before it moved there:" << error;
+                    }
+                    done(storeCleared, storeCleared ? QString() : qsl("Removed from the profile, but the credential store's older copy remains: %1").arg(error));
+                },
+                everyCopy ? CredentialManager::StoreScope::EveryStore : CredentialManager::StoreScope::PreferredStore);
         return;
     }
 
@@ -1451,6 +1486,11 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
             entry.provider = obj[qsl("provider")].toString();
             entry.secureOnly = readStoredTransportRequirement(obj);
             entry.token = obj[qsl("token")].toString();
+            // The profile's record never carries a token, so this one came from the store, in the
+            // format from before the split; the next save overwrites it there (performStoreOperation).
+            if (obj.contains(qsl("token"))) {
+                *mpStoreHoldsInlineRecord = true;
+            }
             // An inline token wins over the token key. Only a Mudlet from before the split writes
             // one, and every split-format save rewrites the metadata without it - so an inline token
             // sitting beside a token key means that instance rotated the token more recently than

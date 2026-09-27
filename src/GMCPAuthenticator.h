@@ -35,6 +35,7 @@
 
 #include <chrono>
 #include <functional>
+#include <memory>
 
 class OAuthClientFlow;
 
@@ -285,6 +286,11 @@ private:
     // just removed, and a rotation re-saves it under a fresh value - leaving Forget with nothing to show
     // for itself. Not part of mConn: it must monotonically increase, never reset.
     unsigned int mForgetGeneration = 0;
+    // The credential store holds the sign-in's record in the format from before the token had a key of
+    // its own, with the token inside it - which a read leaves where it is, since the profile is no place
+    // for a secret. Cleared once a save or a removal has dealt with that record - by a store job's
+    // completion, which can outlive this authenticator, hence shared rather than a plain member.
+    std::shared_ptr<bool> mpStoreHoldsInlineRecord = std::make_shared<bool>(false);
 
     // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in
     // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how
