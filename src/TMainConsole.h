@@ -315,7 +315,6 @@ private:
     // Resolves the three name-only kinds in the same order as the core.
     QWidget* plainWindowWidget(const QString& name) const;
     TCommandLine* commandLineNamed(const QString& name) const;
-    TConsole* consoleNamed(const QString& name);
     // The single answer to "does this profile have a map widget on screen right
     // now" - null if it never opened one, put it away, or createMapper() took it over.
     //

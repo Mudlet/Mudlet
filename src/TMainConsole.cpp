@@ -1325,14 +1325,6 @@ bool TMainConsole::setCommandLineVisible(const QString& name, bool visible)
     return true;
 }
 
-TConsole* TMainConsole::consoleNamed(const QString& name)
-{
-    if (name.isEmpty() || !name.compare(qsl("main"))) {
-        return this;
-    }
-    return mSubConsoleMap.value(name);
-}
-
 void TMainConsole::markWindowDirty(const TConsoleModel& model, const int firstLine, const int lastLine)
 {
     if (auto pC = model.buffer.console()) {
