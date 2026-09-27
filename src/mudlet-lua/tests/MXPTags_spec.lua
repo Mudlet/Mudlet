@@ -343,6 +343,19 @@ describe("Tests the tags MXP handles", function()
       assert.are.same({}, currentActions())
     end)
 
+    -- only the newest link can be read back, so the one kept is the newest and
+    -- the one retired comes before it: a name that matches a link must not
+    -- take the links of other names with it
+    it("leaves a link in another group working when it retires a group", function()
+      feed([[<A href="https://example.com/h" expire=mxpExpireRetired>mxpExpireRetiredLink</A>]])
+      feed([[<A href="https://example.com/i" expire=mxpExpireSurvivor>mxpExpireSurvivorLink</A>]])
+      assert.are.equal("https://example.com/i", openedAddress(currentActions()))
+      feed("<EXPIRE mxpExpireRetired>")
+      assert.are.equal("https://example.com/i", openedAddress(currentActions()))
+      feed("<EXPIRE mxpExpireSurvivor>")
+      assert.are.same({}, currentActions())
+    end)
+
     it("reads the name from a NAME attribute as well", function()
       feed([[<A href="https://example.com/g" expire=mxpExpireNamed>mxpExpireNamedLink</A>]])
       assert.are.equal("https://example.com/g", openedAddress(currentActions()))

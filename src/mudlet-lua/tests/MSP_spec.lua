@@ -260,22 +260,30 @@ describe("Tests the sound and music MSP asks for", function()
     end
     local file = hold("musiccontinue")
     local started = watchStarts()
+    local finished = {}
+    collect("sysMediaFinished", finished)
 
     feed(('<MUSIC FName="%s">'):format(file))
     waitForCount("sysMediaStarted", started, 1)
     assert.equals(1, #started, names(started))
 
+    -- the ten second track is still going, so a finish here would be the
+    -- request stopping it
     feed(('<MUSIC FName="%s">'):format(file))
     pump()
     assert.equals(1, #started, names(started))
+    assert.equals(0, #finished, names(finished))
 
     feed(('<MUSIC FName="%s" C=1>'):format(file))
     pump()
     assert.equals(1, #started, names(started))
+    assert.equals(0, #finished, names(finished))
 
     feed(('<MUSIC FName="%s" C=0>'):format(file))
     waitForCount("sysMediaStarted", started, 2)
     assert.equals(2, #started, names(started))
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, names(finished))
   end)
 
   -- FName, V, L, P, T and U in that order, which is how a game that writes
