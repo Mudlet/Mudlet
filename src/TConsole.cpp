@@ -2039,41 +2039,6 @@ void TConsole::echo(const QString& msg)
     }
 }
 
-void TConsole::copy()
-{
-    mpHost->mpConsole->mClipboard = buffer.copy(P_begin, P_end);
-}
-
-void TConsole::cut()
-{
-    mpHost->mpConsole->mClipboard = buffer.cut(P_begin, P_end);
-}
-
-void TConsole::paste()
-{
-    if (buffer.size() - 1 > mUserCursor.y()) {
-        buffer.paste(mUserCursor, mpHost->mpConsole->mClipboard);
-        mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y());
-    } else {
-        buffer.appendBuffer(mpHost->mpConsole->mClipboard);
-    }
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
-}
-
-void TConsole::pasteWindow(const TBuffer& bufferSlice)
-{
-    mpHost->mpConsole->mClipboard = bufferSlice;
-    paste();
-}
-
-void TConsole::appendBuffer()
-{
-    buffer.appendBuffer(mpHost->mpConsole->mClipboard);
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
-}
-
 void TConsole::appendBuffer(const TBuffer& bufferSlice)
 {
     buffer.appendBuffer(bufferSlice);
