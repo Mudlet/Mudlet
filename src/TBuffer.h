@@ -78,6 +78,8 @@ public:
 class TChar
 {
     friend class TBuffer;
+    // Reads the Echo flag, which only the buffer itself looks at:
+    friend class HostConsolePrintTest;
 
 public:
     // clang-format off

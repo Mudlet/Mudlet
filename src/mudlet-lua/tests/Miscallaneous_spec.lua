@@ -2012,6 +2012,45 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    describe("Tests the functionality of echo", function()
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() echo() end, "echo: bad argument #1 type")
+      end)
+
+      it("raises a Lua error for a console name that is not a string", function()
+        assertArgError(function() echo({}, "mudlet-spec-echo") end, "echo: bad argument #1 type")
+      end)
+
+      it("raises a Lua error for text that is not a string", function()
+        assertArgError(function() echo("main", {}) end, "echo: bad argument #2 type")
+      end)
+
+      it("writes to the main console and answers true, named or not", function()
+        local mark = getLastLineNumber("main")
+
+        assert.same({true}, {echo("mudlet-spec-echo-unnamed ")})
+        assert.same({true}, {echo("main", "mudlet-spec-echo-main ")})
+        assert.same({true}, {echo("", "mudlet-spec-echo-empty\n")})
+
+        assert.is_true(containsWrapped(textFrom(mark), "mudlet-spec-echo-unnamed mudlet-spec-echo-main mudlet-spec-echo-empty"), textFrom(mark))
+      end)
+
+      it("writes to a miniconsole and answers true", function()
+        local name = "mudlet-spec-echo-miniconsole"
+        createMiniConsole(name, 0, 0, 200, 100)
+        finally(function() deleteMiniConsole(name) end)
+
+        assert.same({true}, {echo(name, "mudlet-spec-echo-mini")})
+
+        local text = table.concat(getLines(name, 0, getLastLineNumber(name) + 1), "")
+        assert.is_true(contains(text, "mudlet-spec-echo-mini"), text)
+      end)
+
+      it("answers nil and a message for a console that does not exist", function()
+        assert.same({nil, "console/label 'mudlet-spec-echo-nowhere' does not exist"}, {echo("mudlet-spec-echo-nowhere", "text")})
+      end)
+    end)
+
     describe("Tests the functionality of setMergeTables", function()
       it("raises a Lua error when a module is not a string", function()
         assertArgError(function() setMergeTables({}) end, "setMergeTables: bad argument #1 type")
