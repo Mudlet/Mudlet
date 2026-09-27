@@ -96,6 +96,38 @@ engine's installed models rather than picking one, since a downloaded model
 should stay visible whether or not its engine happens to be the one loaded
 right now.
 
+**Using the built-in macOS backend from a development build.** It asks macOS
+for speech-recognition permission, and macOS attributes that request to the
+*responsible process* - which, for anything started from a shell, is the
+application that owns the terminal, not Mudlet. Launched from a terminal
+embedded in an editor, the editor is asked for a usage description it has no
+reason to carry, and macOS used to kill the process outright: `Namespace TCC`,
+with a message naming `NSSpeechRecognitionUsageDescription` as missing from
+`Info.plist` even though Mudlet's own has carried it since the backend was
+added. Mudlet now notices that it is not its own responsible process and
+refuses the request instead, saying how to relaunch itself as an application,
+so a development build says why rather than disappearing.
+
+Launch the bundle rather than the binary, so Mudlet is its own responsible
+process:
+
+```bash
+open build/src/mudlet.app
+```
+
+Double-clicking it in Finder does the same. Running
+`build/src/mudlet.app/Contents/MacOS/mudlet` directly from a shell is what
+provokes it - which is also why it is worth knowing before reaching for
+`codesign`, since the bundle's signature is not what decides this.
+
+The other two engines avoid the *speech-recognition* request specifically: they
+do their own decoding, so nothing asks macOS for
+`NSSpeechRecognitionUsageDescription`. They are not free of the responsible
+process entirely - every engine here records through `SpeechAudioCapture`, and
+microphone access is its own TCC request, attributed to the terminal's owner
+the same way. What differs is only the `SFSpeechRecognizer` authorization call
+the built-in backend makes on top of it.
+
 ## `stt.getInfo()`
 
 | Key | Type | Meaning |
@@ -233,7 +265,7 @@ others read while leaving them no way to hear about it.
 | `sysSTTWords` | JSON string | Alongside each `sysSTTResult`, on backends whose `words` capability is true. Describes **the text as emitted**: an implementation that drops a word from the result must drop it here too, or the two events describe different phrases. Schema below. |
 | `sysSTTStateChanged` | state name | Any transition between the six states. |
 | `sysSTTError` | message | Anything the user should know went wrong: refusals to start, capture faults, model failures, and a configured model quietly replaced by another. The state moves to `error` for faults, but refusal messages can arrive without a state change. Most refusals carry the same text the call returned as its second value; a refused `stt.start()` is the exception, since the engine's own reason is what the event carries while the call returns only a pointer to it. **Raised with no engine installed too** — a consumer driving the bridge from events alone must be able to tell "no engine" from "nothing said yet". |
-| `sysSTTHandover` | profile name | Another profile took the microphone and this session is over. Raised on the profile that lost it, naming the one that now holds it. Nothing else says why a session stopped: the state change that follows looks like any other stop. |
+| `sysSTTHandover` | profile name | Another profile asked for the microphone and this session is over. Raised on the profile losing it, naming the one that asked. Nothing else says why a session stopped: the state change that follows looks like any other stop. Usually the asking profile holds the microphone from here. The exception is a backend still finishing this session's last phrase when the request arrives - the built-in macOS one returns from a stop before its phrase lands. Then the request is refused with "try again in a moment", the phrase still arrives here, and this profile keeps the microphone until it does; the asking profile's retry takes it without raising this again. So the event is raised once per handover, and a package must not assume the named profile is already listening. |
 | `sysSTTCapabilitiesChanged` | JSON string | The `capabilities` table changed: a model loaded, a model was released — including by `stt.close()` — an engine was created or swapped for another, or the engine library was unloaded or reloaded underneath it. **Raised on every open profile**, unlike every other event here, for the reason given above. Same keys as `getInfo().capabilities`. Which of those actually fire it differs by backend, because different backends hang different capabilities off different things: sherpa-onnx's `biasing` follows the loaded model, so releasing one changes it, while Vosk's `words` follows a library symbol and releasing a model changes nothing. |
 
 ### `sysSTTWords` schema

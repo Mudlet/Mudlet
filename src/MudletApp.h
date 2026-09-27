@@ -88,30 +88,24 @@ public:
     // a portable.txt marker beside the executable or in ~/.config/mudlet names it,
     // otherwise $XDG_CONFIG_HOME/mudlet and then ~/.config/mudlet are tried.
 
-    // Where the running executable lives, or where the AppImage sits when running
-    // from one
+    // Where the running executable lives, or the AppImage when running from one
     static QString executableDir();
 
     // ~/.config/mudlet: the pre-XDG default, and the second place a portable.txt
     // marker is looked for
     static QString legacyConfigDir();
 
-    // The portable.txt that governs, or an empty string when there is none - the
-    // one beside the executable outranks the one in the config dir. Two stats and
-    // no file read, so callers that only want to know whether portable mode is on
-    // can ask on every operation.
+    // The governing portable.txt, or empty; the one beside the executable outranks the config dir's.
+    // Only stats, so cheap enough to ask on every operation.
     static QString portableMarkerPath(const QString& execDir, const QString& configDir = legacyConfigDir());
 
-    // Whether a root a portable.txt named can be used at all: it has to name
-    // something, must not already exist as anything other than a directory - a
-    // symlink with no target included, since mkpath() cannot create through one -
-    // and its parent has to exist. Says why when it refuses.
+    // Whether a portable.txt's root is usable: non-empty, not an existing non-directory (a dangling symlink
+    // included, as mkpath() can't create through one), and with an existing parent. Warns why it refuses.
     static bool portableRootUsable(const QString& path);
 
-    // Applies the whole precedence to a given executable directory. Remembers
-    // nothing, so the Mudlet.ini read that happens before QApplication exists can
-    // share it. Never hands back an empty root: a portable.txt naming an unusable
-    // one falls back to the non-portable location with portableRootRejected set.
+    // The whole precedence for a given executable directory. Stateless, so the Mudlet.ini read before
+    // QApplication exists can share it. Never returns an empty root: an unusable portable one falls back to
+    // the non-portable location with portableRootRejected set.
     static ConfigDirResolution resolveConfigRoot(const QString& execDir, const QString& configDir = legacyConfigDir());
 
     // The XDG leg on its own: $XDG_CONFIG_HOME/mudlet takes a tie with
@@ -122,10 +116,8 @@ public:
     // inference is what hides profiles, so assume the strongest content instead.
     static bool configDirHoldsProfiles(const QString& dir);
 
-    // Resolves the config root itself on first use and then remembers it, so the
-    // resolver runs once however many paths are asked for; setConfigPath()
-    // replaces it, which is how setupConfig() installs the root it has validated.
-    // An empty path passed to setConfigPath() forgets the resolution instead.
+    // Resolves the root on first use and caches it. setConfigPath() replaces it (that is how setupConfig()
+    // installs the validated root); an empty path forgets it instead.
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 
     // Whether the main dictionary files are the ones bundled with Mudlet (true) or
@@ -133,17 +125,13 @@ public:
     // enums::hunspellDictionaryPath, so it only answers once that has been asked for.
     static bool usingMudletDictionaries();
 
-    // Replaces filesystem-unsafe characters with underscores and bounds the length.
-    // Callers file data under the result, so shortening has to keep distinct
-    // inputs distinct: a shortened name carries a digest of the whole input, since
-    // plain truncation made two long profile names share - and overwrite - one
-    // stored password.
+    // Replaces filesystem-unsafe characters with underscores and bounds the length. A shortened name carries
+    // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.
     static QString sanitizeForPath(const QString& input);
 
     static QString readProfileData(const QString& profile, const QString& item);
 
-    // Creates the profile's directory when it is not there yet, so a write for a
-    // profile that does not exist brings one into being
+    // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
     static QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
 
     // The on-disk spelling of a profile named in any case, or an empty string if
