@@ -1527,6 +1527,65 @@ bool TMainConsole::setWindowCommandLineVisible(const QString& name, bool visible
     return true;
 }
 
+bool TMainConsole::hasWindow(const QString& name)
+{
+    return consoleNamed(name) != nullptr;
+}
+
+bool TMainConsole::echoWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->echoLink(text, commands, hints, useCurrentFormat, luaReferences);
+    return true;
+}
+
+bool TMainConsole::insertWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->insertLink(text, commands, hints, useCurrentFormat, luaReferences);
+    return true;
+}
+
+bool TMainConsole::setWindowLink(const QString& name, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setLink(commands, hints, luaReferences);
+    if (pC != this) {
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
+    }
+    return true;
+}
+
+bool TMainConsole::insertWindowText(const QString& name, const QString& text)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->insertText(text);
+    return true;
+}
+
+bool TMainConsole::replaceWindowText(const QString& name, const QString& text)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->replace(text);
+    return true;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
