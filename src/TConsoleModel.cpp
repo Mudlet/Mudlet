@@ -57,6 +57,24 @@ QStringList TConsoleModel::lines(int from, int to)
     return ret;
 }
 
+bool TConsoleModel::moveCursor(int x, int y)
+{
+    QPoint P(x, y);
+    if (buffer.moveCursor(P)) {
+        mUserCursor = P;
+        return true;
+    }
+    return false;
+}
+
+void TConsoleModel::moveCursorEnd()
+{
+    const int y = buffer.getLastLineNumber();
+    int x = buffer.line(y).size() - 1;
+    x = x >= 0 ? x : 0;
+    moveCursor(x, y);
+}
+
 void TConsoleModel::deselect()
 {
     P_begin = QPoint();

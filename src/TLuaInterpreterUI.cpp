@@ -945,10 +945,11 @@ int TLuaInterpreter::deleteScrollBox(lua_State* L)
 int TLuaInterpreter::deleteLine(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->deleteWindowCurrentLine(windowName)) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    pModel->buffer.deleteLine(pModel->mUserCursor.y());
     return 0;
 }
 
@@ -1491,12 +1492,11 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
 int TLuaInterpreter::getColumnNumber(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto columnNumber = host.mpConsole ? host.mpConsole->getWindowColumnNumber(windowName) : std::nullopt;
-    if (!columnNumber) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    lua_pushnumber(L, *columnNumber);
+    lua_pushnumber(L, pModel->mUserCursor.x());
     return 1;
 }
 
@@ -1504,15 +1504,14 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto line = host.mpConsole ? host.mpConsole->getWindowCurrentLine(windowName) : std::nullopt;
-    if (!line) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         // the next line should be "pushnil"; compatibility with old bugs and all that
         lua_pushstring(L, "ERROR: mini console does not exist");
         lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
         return 2;
     }
-    lua_pushstring(L, line->toUtf8().constData());
+    lua_pushstring(L, pModel->buffer.line(pModel->mUserCursor.y()).toUtf8().constData());
     return 1;
 }
 
@@ -1640,9 +1639,8 @@ int TLuaInterpreter::getLabelStyleSheet(lua_State* L)
 int TLuaInterpreter::getLastLineNumber(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto lastLine = host.mpConsole ? host.mpConsole->getWindowLastLineNumber(windowName) : std::nullopt;
-    lua_pushnumber(L, lastLine.value_or(-1));
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    lua_pushnumber(L, pModel ? pModel->buffer.getLastLineNumber() : -1);
     return 1;
 }
 
@@ -1650,12 +1648,11 @@ int TLuaInterpreter::getLastLineNumber(lua_State* L)
 int TLuaInterpreter::getLineCount(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto lineCount = host.mpConsole ? host.mpConsole->getWindowLineCount(windowName) : std::nullopt;
-    if (!lineCount) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    lua_pushnumber(L, *lineCount);
+    lua_pushnumber(L, pModel->buffer.getLastLineNumber());
     return 1;
 }
 
@@ -1695,12 +1692,11 @@ int TLuaInterpreter::getLines(lua_State* L)
 int TLuaInterpreter::getLineNumber(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto lineNumber = host.mpConsole ? host.mpConsole->getWindowLineNumber(windowName) : std::nullopt;
-    if (!lineNumber) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    lua_pushnumber(L, *lineNumber);
+    lua_pushnumber(L, pModel->mUserCursor.y());
     return 1;
 }
 
@@ -2449,12 +2445,11 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     const int luaTo = getVerifiedInt(L, __func__, s, "y");
 
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    const auto moved = host.mpConsole ? host.mpConsole->moveWindowCursor(consoleName, luaFrom, luaTo) : std::nullopt;
-    if (!moved) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(consoleName);
+    if (!pModel) {
         return windowNotFound(L, consoleName);
     }
-    lua_pushboolean(L, *moved);
+    lua_pushboolean(L, pModel->moveCursor(luaFrom, luaTo));
     return 1;
 }
 
@@ -2462,10 +2457,11 @@ int TLuaInterpreter::moveCursor(lua_State* L)
 int TLuaInterpreter::moveCursorEnd(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->moveWindowCursorEnd(windowName)) {
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    pModel->moveCursorEnd();
     return 0;
 }
 

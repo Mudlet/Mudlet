@@ -1607,18 +1607,16 @@ expectRefusal('scrollTo end', scrollTo())
 expectRefusal('enableTimeStamps', enableTimeStamps())
 expectRefusal('disableTimeStamps', disableTimeStamps())
 expectRefusal('timeStampsEnabled', timeStampsEnabled())
-expectRefusal('getWindowWrap', getWindowWrap())
-expectRefusal('setWindowWrap', setWindowWrap(80))
-expectRefusal('setWindowWrapIndent', setWindowWrapIndent('main', 1))
-expectRefusal('setWindowWrapHangingIndent', setWindowWrapHangingIndent('main', 1))
-expectRefusal('moveCursor', moveCursor(0, 0))
-expectRefusal('moveCursorEnd', moveCursorEnd())
-expectRefusal('getLineNumber', getLineNumber())
-expectRefusal('getLineCount', getLineCount())
-expectRefusal('getColumnNumber', getColumnNumber())
+expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
+expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
+expectRefusal('moveCursor', moveCursor('noViewMc', 0, 0))
+expectRefusal('moveCursorEnd', moveCursorEnd('noViewMc'))
+expectRefusal('getLineNumber', getLineNumber('noViewMc'))
+expectRefusal('getLineCount', getLineCount('noViewMc'))
+expectRefusal('getColumnNumber', getColumnNumber('noViewMc'))
 expectRefusal('getColumnCount', getColumnCount())
 expectRefusal('getRowCount', getRowCount())
-expectRefusal('deleteLine', deleteLine())
+expectRefusal('deleteLine', deleteLine('noViewMc'))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1626,12 +1624,16 @@ expectValue('raiseWindow', false, raiseWindow('noViewUw'))
 -- both of these answer for "main" before they look for any console
 expectValue('scrollingActive main', true, scrollingActive('main'))
 expectValue('enableScrolling main', "scrolling cannot be enabled/disabled for the 'main' window", select(2, enableScrolling('main')))
--- whereas the wrap width is only checked once the console is found
-expectValue('setWindowWrap 0', 'window "" not found', select(2, setWindowWrap(0)))
+-- the main console's wrap is its model's, so it answers with no view
+expectValue('setWindowWrap', true, setWindowWrap(80))
+expectValue('getWindowWrap', 80, getWindowWrap())
+expectValue('setWindowWrapIndent', true, setWindowWrapIndent('main', 1))
+expectValue('setWindowWrapHangingIndent', true, setWindowWrapHangingIndent('main', 1))
+expectValue('setWindowWrap 0', 'wrapAt must be greater than zero, got 0', select(2, setWindowWrap(0)))
 -- these two answer something other than nil when they find no console
-expectValue('getLastLineNumber', -1, getLastLineNumber())
-expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine())
-expectValue('getCurrentLine reason', 'window "" not found', select(2, getCurrentLine()))
+expectValue('getLastLineNumber', -1, getLastLineNumber('noViewMc'))
+expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine('noViewMc'))
+expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, getCurrentLine('noViewMc')))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())
@@ -1640,6 +1642,50 @@ noViewReport = table.concat(noViewProblems, '; ')
 )LUA"));
 
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+    }
+
+    // The cursor and line functions work on the console's model, so on the
+    // main console they answer for real with no view.
+    void test_cursorAndLineFunctionsWorkWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const int first = appendModelLine(model->buffer, qsl("NoViewCursor first"));
+        appendModelLine(model->buffer, qsl("NoViewCursor second"));
+        appendModelLine(model->buffer, qsl("NoViewCursor third"));
+
+        runLua(host,
+               qsl(R"LUA(
+local first = %1
+local results = {}
+local function add(value) results[#results + 1] = tostring(value) end
+add(moveCursor(4, first + 1))
+add(getLineNumber())
+add(getColumnNumber('main'))
+add(getCurrentLine())
+add(moveCursor('main', 0, first + 10))
+add(getLineNumber(''))
+add(getLastLineNumber())
+add(getLineCount())
+add(select('#', deleteLine()))
+add(getCurrentLine('main'))
+add(getLastLineNumber())
+add(select('#', moveCursorEnd()))
+add(getLineNumber())
+noViewCursor = table.concat(results, '|')
+)LUA")
+                       .arg(first));
+
+        const QString expected = qsl("true|%1|4|NoViewCursor second|false|%1|%2|%2|0|NoViewCursor third|%3|0|%3").arg(first + 1).arg(first + 3).arg(first + 2);
+        QCOMPARE(luaGlobalString(host, "noViewCursor"), expected);
+        QCOMPARE(model->mUserCursor, QPoint(0, first + 2));
+        QCOMPARE(model->buffer.line(first + 1), qsl("NoViewCursor third"));
     }
 
     // The main console's wrap width and indents are also the profile's, which
