@@ -1741,14 +1741,6 @@ bool TMainConsole::setCommandLineVisible(const QString& name, bool visible)
     return true;
 }
 
-TConsole* TMainConsole::consoleNamed(const QString& name)
-{
-    if (name.isEmpty() || !name.compare(qsl("main"))) {
-        return this;
-    }
-    return mSubConsoleMap.value(name);
-}
-
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
