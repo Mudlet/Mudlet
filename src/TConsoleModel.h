@@ -27,11 +27,14 @@
 
 #include <QColor>
 #include <QFile>
+#include <QPair>
 #include <QPoint>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
+
+#include <tuple>
 
 class Host;
 
@@ -75,14 +78,24 @@ struct TConsoleModel
     // Half-open: lines(n, n) is empty. Not const because TBuffer::line() returns a mutable QString&.
     QStringList lines(int from, int to);
 
-    // Colorizer triggers: select a run of the current line, paint it, restore the format. Needs no view;
-    // the painting calls return whether the buffer changed, the view's cue to repaint. They write
-    // mFormatCurrent and the selected run, not mFgColor/mBgColor below (the profile's colours).
+    // Selecting a run of the cursor's line, painting it and restoring the format, for colorizer triggers
+    // and scripts. Needs no view; the painting calls return whether the buffer changed, the view's cue to
+    // repaint the selected lines. They write mFormatCurrent and the selected run, not mFgColor/mBgColor
+    // below (the profile's colours).
     void deselect();
     bool selectSection(int from, int to);
+    void selectCurrentLine();
+    // Selects the numOfMatch-th match of text on the cursor's line and returns where it starts, or
+    // deselects and returns -1 when there is none.
+    int selectString(const QString& text, int numOfMatch);
+    // Whether the selection is still valid, its text (else why not), its start and its length.
+    std::tuple<bool, QString, int, int> selection();
+    // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
+    QPair<quint8, TChar> textAttributes() const;
     void resetFormat();
     bool setSelectionFgColor(const QColor& newColor);
     bool setSelectionBgColor(const QColor& newColor);
+    bool setSelectionDisplayAttributes(TChar::AttributeFlags attributes, bool enabled);
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;

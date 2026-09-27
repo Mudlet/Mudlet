@@ -1098,21 +1098,6 @@ expectRefusal('isAnsiFgColor', isAnsiFgColor(1))
 expectRefusal('cut', cut())
 expectRefusal('echo', echo('x'))
 expectRefusal('insertHTML', insertHTML('x'))
-expectRefusal('deselect', deselect())
-expectRefusal('selectCurrentLine', selectCurrentLine())
-expectRefusal('selectSection', selectSection(0, 1))
-expectRefusal('selectString', selectString('x', 1))
-expectRefusal('getSelection', getSelection())
-expectRefusal('getTextFormat', getTextFormat())
-expectRefusal('setBold', setBold(true))
-expectRefusal('setItalics', setItalics(true))
-expectRefusal('setOverline', setOverline(true))
-expectRefusal('setReverse', setReverse(true))
-expectRefusal('setStrikeOut', setStrikeOut(true))
-expectRefusal('setUnderline', setUnderline(true))
-expectRefusal('setFgColor', setFgColor(1, 2, 3))
-expectRefusal('setBgColor', setBgColor(1, 2, 3))
-expectRefusal('resetFormat', resetFormat())
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1328,6 +1313,83 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         host->runTriggers(appendModelLine(model->buffer, qsl("NoViewCapture alpha")));
 
         QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("-1"));
+    }
+
+    // Selection and format are the model's cursor, selection and characters, so
+    // a script reaches them on the main console with no window at all, while a
+    // console that does not exist is still refused by name.
+    void test_selectionAndFormatWorkWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const int line = appendModelLine(model->buffer, qsl("noview alpha bravo"));
+        model->mUserCursor = QPoint(0, line);
+
+        runLua(host, qsl(R"LUA(
+noViewSelectionProblems = {}
+
+local function expectValues(name, expected, ...)
+    local got = {...}
+    for i = 1, math.max(#expected, select('#', ...)) do
+        if got[i] ~= expected[i] then
+            table.insert(noViewSelectionProblems, name .. ' answered ' .. tostring(got[i]) .. ' rather than ' .. tostring(expected[i]) .. ' at ' .. i)
+        end
+    end
+end
+
+local function expectMissing(name, first, second)
+    if first ~= nil or type(second) ~= 'string' or not second:find('nosuchwindow', 1, true) then
+        table.insert(noViewSelectionProblems, name .. ' did not refuse the missing window: ' .. tostring(first) .. ', ' .. tostring(second))
+    end
+end
+
+expectValues('selectCurrentLine', {}, selectCurrentLine())
+expectValues('getSelection after selectCurrentLine', {'noview alpha bravo', 0, 18}, getSelection())
+expectValues('selectSection', {true}, selectSection(0, 6))
+expectValues('getSelection after selectSection', {'noview', 0, 6}, getSelection())
+expectValues('deselect', {true}, deselect())
+expectValues('selectString', {7}, selectString('alpha', 1))
+expectValues('setBold', {true}, setBold(true))
+expectValues('setUnderline', {true}, setUnderline(true))
+expectValues('setFgColor', {}, setFgColor(1, 2, 3))
+expectValues('setBgColor', {true}, setBgColor(4, 5, 6))
+local format = getTextFormat()
+if type(format) ~= 'table' then
+    table.insert(noViewSelectionProblems, 'getTextFormat answered ' .. tostring(format))
+else
+    expectValues('getTextFormat', {true, true, false, 1, 2, 3, 4, 5, 6}, format.bold, format.underline, format.italic,
+        format.foreground[1], format.foreground[2], format.foreground[3], format.background[1], format.background[2], format.background[3])
+end
+expectValues('resetFormat', {true}, resetFormat())
+
+expectMissing('deselect', deselect('nosuchwindow'))
+expectMissing('selectCurrentLine', selectCurrentLine('nosuchwindow'))
+expectMissing('selectSection', selectSection('nosuchwindow', 0, 1))
+expectMissing('selectString', selectString('nosuchwindow', 'x', 1))
+expectMissing('getSelection', getSelection('nosuchwindow'))
+expectMissing('getTextFormat', getTextFormat('nosuchwindow'))
+expectMissing('setBold', setBold('nosuchwindow', true))
+expectMissing('setFgColor', setFgColor('nosuchwindow', 1, 2, 3))
+expectMissing('setBgColor', setBgColor('nosuchwindow', 1, 2, 3))
+expectMissing('resetFormat', resetFormat('nosuchwindow'))
+
+noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
+)LUA"));
+
+        QCOMPARE(luaGlobalString(host, "noViewSelectionReport"), QString());
+        // "alpha" is characters 7 to 11; the script painted it and left the rest alone
+        const TChar& painted = model->buffer.buffer.at(line).at(7);
+        QVERIFY(painted.isBold());
+        QCOMPARE(painted.foreground(), QColor(1, 2, 3));
+        QCOMPARE(painted.background(), QColor(4, 5, 6));
+        QVERIFY(!model->buffer.buffer.at(line).at(6).isBold());
+        QCOMPARE(model->P_begin, QPoint());
+        QCOMPARE(model->P_end, QPoint());
     }
 
     // The main console's background is the model's, so a script can still read
@@ -3163,10 +3225,7 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()
