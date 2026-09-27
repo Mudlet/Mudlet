@@ -692,10 +692,14 @@ void TRoom::removeExitExtras(const int direction)
         changed |= exitLocks.removeAll(direction) > 0;
     }
     changed |= exitWeights.remove(exitKey) > 0;
-    changed |= customLines.remove(exitKey) > 0;
+    const bool lineRemoved = customLines.remove(exitKey) > 0;
     customLinesColor.remove(exitKey);
     customLinesStyle.remove(exitKey);
     customLinesArrow.remove(exitKey);
+    if (lineRemoved) {
+        calcRoomDimensions();
+        changed = true;
+    }
     if (changed) {
         mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
         mpRoomDB->mpMap->setUnsaved(__func__);
