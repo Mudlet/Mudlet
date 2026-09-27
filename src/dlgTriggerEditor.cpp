@@ -1415,19 +1415,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
     mpHost->editorThemeChanged();
 
-    // Force the minimum size of the scroll area for the trigger items to be
-    // enough for a useful number of them. The right hand column of advanced
-    // options used to provide that height as a side effect, so collapsing it
-    // left a single row and a sliver of the next one - hiding the very
-    // patterns the room was made for. Issue #2548 settled on five.
-    //
-    // A row is measured by its minimum rather than its preferred height: once
-    // the list is longer than it can show - the case this floor is here for -
-    // the scroll area lays its inner widget out at that widget's minimum, so
-    // the minimum is the height the rows really get. The frame and the
-    // horizontal scrollbar come off the viewport rather than off the rows, so
-    // they are paid for on top; a colour trigger's row is wider than a narrow
-    // editor and without that allowance its scrollbar eats the fifth row.
+    // Keep room for csmMinimumVisiblePatternRows patterns (#2548), which collapsing the advanced
+    // options would otherwise shrink to one. Rows are measured at their minimum height, since that is
+    // what the scroll area lays an overflowing list out at. The frame and horizontal scrollbar come on
+    // top: a colour trigger's row is wider than a narrow editor, and its scrollbar would eat the fifth row.
     const int scrollAreaChromeHeight = 2 * mpScrollArea->frameWidth() + mpScrollArea->horizontalScrollBar()->sizeHint().height();
     mpScrollArea->setMinimumHeight(mPatternRowHeight * csmMinimumVisiblePatternRows + scrollAreaChromeHeight);
 
@@ -1682,15 +1673,9 @@ void dlgTriggerEditor::createPatternItem(int index)
     mTriggerPatternEdit.push_back(pItem);
     pItem->mRow = index;
 
-    // Measure a row here, while every control it can carry is still on show -
-    // which is how the .ui hands one over, before a pattern type hides the
-    // ones it has no use for. Each type shows a different set of them and
-    // they are not all the same height: on macOS a colour trigger's two
-    // colour buttons stand a pixel taller than the controls the other types
-    // show, so a row measured wearing one type's clothes is not the height
-    // rows are laid out at wearing another's. With all of them showing the
-    // row's own layout takes its minimum from whichever is tallest, which is
-    // the tallest a row can end up however it is later set.
+    // Measure while the .ui still shows every control, before a pattern type hides some. They differ
+    // in height (on macOS a colour trigger's buttons are a pixel taller), so this takes the tallest,
+    // the most any row can need.
     if (!mPatternRowHeight) {
         mPatternRowHeight = pItem->minimumSizeHint().height();
     }
@@ -1939,9 +1924,8 @@ void dlgTriggerEditor::readSettings()
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
 
-    // Only place the editor ourselves the very first time it is opened; after
-    // that the position the user left it at wins, even on another screen -
-    // showEvent() deals with a screen that has since gone away
+    // Only place the editor ourselves on first open; after that the user's position wins, even on
+    // another screen - showEvent() deals with a screen that has since gone away
     const QVariant savedPosition = settings.value("script_editor_pos");
     if (savedPosition.isValid()) {
         move(savedPosition.toPoint());
@@ -6989,8 +6973,7 @@ void dlgTriggerEditor::updatePackageItemAccessibility(QTreeWidgetItem* pItem, co
     pItem->setData(0, Qt::AccessibleDescriptionRole, newDescription);
 }
 
-// Also kept in the item's accessible description, which is heard on landing
-// on the item, so it need not be announced over whatever else is being read
+// Also kept in the item's accessible description, heard on landing on it, so announcing is optional
 void dlgTriggerEditor::showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, const bool announce)
 {
     if (!warning.isEmpty()) {
@@ -7981,12 +7964,9 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             patternItem->spinBox_lineSpacer->hide();
             patternItem->comboBox_patternType->setCurrentIndex(0);
         }
-        // Open the pattern list on pattern 1 - that is the one wanted first, and
-        // it is the row a trigger's own name and command sit next to. Setting
-        // the scrollbar rather than calling ensureWidgetVisible() also settles
-        // where the list opens: the widget is asked for its position before the
-        // layout that follows this selection has run, so scrolling to a row
-        // further down landed on a different row from one opening to the next.
+        // Open on pattern 1, beside the trigger's name and command. Set the scrollbar, not
+        // ensureWidgetVisible(): that reads positions before this selection's layout has run, so it
+        // landed on a different row from one opening to the next.
         mpScrollArea->verticalScrollBar()->setValue(0);
         const QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
@@ -8213,9 +8193,8 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
                     firstPackageAnnounced = true;
                 }
             }
-            // A warning given while the editor was closed is replaced when it
-            // opens, so a binding a script made is only warned about here. Not
-            // announced, or arrowing through the keys would be talked over.
+            // A warning given while the editor was closed is replaced when it opens, so a script-made binding
+            // is only warned about here. Not announced, or arrowing through the keys would be talked over.
             showKeyTakenWarning(pItem, mpHost->getKeyUnit()->takenKeyWarning(pT), false);
         }
     } else {
@@ -11500,8 +11479,7 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
         // If this is the first time the window is shown we want any previously
         // enqueued messages to be painted onto the central debug console:
         TDebug::flushMessageQueue();
-        // Every time it is opened, not just the first: the filters may well
-        // have been narrowed since it was last closed:
+        // Every time, not just the first: the filters may have been narrowed since it was last closed:
         TDebug::announceFilters();
     }
     mudlet::self()->refreshTabBar();

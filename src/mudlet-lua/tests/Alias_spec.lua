@@ -751,6 +751,24 @@ describe("Alias processing", function()
             assert.are.equal(0, _G.AliasSpec.bad, "an alias whose regex did not compile must not fire")
         end)
 
+        it("does not fire an alias whose script failed to compile", function()
+            _G.AliasSpec = {good = 0}
+            local goodId = tempAlias([[^bad_alias_script$]], [==[_G.AliasSpec.good = _G.AliasSpec.good + 1]==])
+            local badId = tempAlias([[^bad_alias_script$]], [==[_G.AliasSpec.bad = true; this is not ( lua]==])
+            finally(function()
+                killAlias(goodId)
+                killAlias(badId)
+            end)
+            assert.is_true(badId > 0, "an uncompilable script still makes an alias, so that it can be seen and repaired")
+            assert.are.equal(1, isActive(tostring(goodId), "alias"), "the control alias should be switched on")
+            assert.are.equal(0, isActive(tostring(badId), "alias"), "an alias whose script did not compile cannot be switched on")
+
+            expandAlias("bad_alias_script", false)
+
+            assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
+            assert.is_nil(_G.AliasSpec.bad, "an alias whose script did not compile must not run any of it")
+        end)
+
         it("does not fire an alias with an empty pattern", function()
             _G.AliasSpec = {empty = 0, control = 0}
             local emptyId = tempAlias("", [==[_G.AliasSpec.empty = _G.AliasSpec.empty + 1]==])

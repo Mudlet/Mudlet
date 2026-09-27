@@ -50,8 +50,6 @@ using namespace std::chrono_literals;
                                                                   Category::Map,
                                                                   Category::Other};
 
-// The console is unusable with the noisy categories on, so they start off - see
-// TDebug::csmNoisyCategories:
 /* static */ TDebug::Categories TDebug::smEnabledCategories = TDebug::csmAllCategories & ~TDebug::csmNoisyCategories;
 
 TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const QString& itemName)
@@ -116,9 +114,6 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
     }
 }
 
-// A console filtered down to nothing looks exactly like a console that has
-// stopped working, and some categories are hidden out of the box - so say so
-// rather than leaving people to wonder.
 /* static */ void TDebug::announceFilters()
 {
     if (!smpSink) {
@@ -132,15 +127,11 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
     }
 
     if (!smItemFilter.isEmpty()) {
-        // Much more drastic than hiding a category - everything that is not
-        // about this one item is gone, so it needs saying out loud:
         //: Shown in the Central Debug Console when it opens narrowed to a single trigger, alias, timer and so on. %1 is that item's name.
         smpSink->printDebugLine(csmTagSystemMessage % tr("Showing only messages about \"%1\" - use the controls below to change that.\n").arg(smItemFilter), Qt::white, Qt::darkBlue, QString());
     }
 }
 
-// How many of the categories are currently switched off. Shared so that the
-// notice above and the toolbar's own label can never disagree.
 /* static */ int TDebug::hiddenCategoryCount()
 {
     const Categories hidden = csmAllCategories & ~smEnabledCategories;
@@ -153,17 +144,13 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
     return count;
 }
 
-// Throws away anything held back while paused - used when the user clears the
-// console, so that resuming does not immediately refill it.
 /* static */ void TDebug::discardPausedMessages()
 {
     smPausedQueue.clear();
     smPausedDroppedCount = 0;
 }
 
-// Replays everything held back while paused, in the order it arrived. Keeps
-// anything it could not print - the console going away is not a reason to throw
-// the user's messages out.
+// Keeps what it couldn't print: the console going away is no reason to lose the user's messages.
 /* static */ void TDebug::drainPausedQueue()
 {
     if (!smpSink) {
@@ -171,8 +158,7 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
     }
 
     if (smPausedDroppedCount) {
-        // Ahead of the replay, because it is the OLDEST messages that the cap
-        // had to throw away - the gap is at the top, not the bottom:
+        // Ahead of the replay: the cap drops the OLDEST messages, so the gap is at the top:
         //: Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.
         smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed, QString());
         smPausedDroppedCount = 0;
@@ -180,7 +166,6 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
 
     while (!smPausedQueue.isEmpty()) {
         if (!smpSink) {
-            // Sink has gone - leave the remainder queued
             return;
         }
         const auto message = smPausedQueue.dequeue();
@@ -189,8 +174,7 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
     }
 }
 
-// The text to print for this message, profile marking included. Returns an
-// empty string for the dummy message used to flush the queue.
+// Empty for the dummy message used to flush the queue.
 QString TDebug::displayLine(Host* pHost)
 {
     if (pHost && !smIdentifierMap.contains(pHost)) {
@@ -204,8 +188,6 @@ QString TDebug::displayLine(Host* pHost)
     return composeLine(deduceProfileTag(msg, pHost), msg);
 }
 
-// The profile marking is only worth showing when it tells the reader something
-// they cannot already infer:
 /* static */ QString TDebug::composeLine(const QString& profileTag, const QString& text)
 {
     if (profileTag.isNull()) {
@@ -218,9 +200,8 @@ QString TDebug::displayLine(Host* pHost)
     return text;
 }
 
-// Decides whether this message should reach the console at all. Filtering here,
-// rather than when drawing, means enabling or disabling a filter never disturbs
-// what is already on screen and that filtered-out messages cost nothing.
+// Filtering here, not when drawing, means toggling a filter never disturbs what is on screen and
+// filtered-out messages cost nothing.
 bool TDebug::passesFilters(const Host* pHost)
 {
     if (msg.isEmpty() && !pHost) {
@@ -230,16 +211,12 @@ bool TDebug::passesFilters(const Host* pHost)
     }
 
     if (msg.startsWith(csmContinue)) {
-        // A continuation of the preceding message: it has to share that
-        // message's fate or the console is left with orphaned fragments such as
-        // a bare "<some captured text>":
+        // A continuation shares its head's fate, or the console is left with orphaned fragments:
         if (smLastMessagePassed) {
             return true;
         }
-        // ...unless the head was held back by the text filter alone. The text
-        // people search for usually lives in the fragment - the trigger name in
-        // "ERROR:", the game line in "new line arrived:" - so a fragment that
-        // matches brings its head back with it:
+        // ...unless only the text filter held the head: the searched-for text often lives in the fragment
+        // (the trigger name after "ERROR:", the game line after "new line arrived:"), so a match brings it back:
         if (smHeadHeld && msg.contains(smTextFilter, smTextFilterCaseSensitivity)) {
             smLastMessagePassed = true;
             return true;
@@ -256,15 +233,10 @@ bool TDebug::passesFilters(const Host* pHost)
     if (pHost && smDisabledHosts.contains(pHost)) {
         return false;
     }
-    // Case-insensitively, to agree with the completer that offered the name in
-    // the first place - typing "combat" after being shown "Combat trigger"
-    // should not silently match nothing:
+    // Case-insensitive to agree with the completer that offered the name:
     if (!smItemFilter.isEmpty() && mItemName.compare(smItemFilter, Qt::CaseInsensitive) != 0 && mCategory != Category::System) {
-        // Focusing on one item still leaves profile starts and ends visible,
-        // so the console does not look dead when nothing is happening.
-        // NOTE: this test must stay AHEAD of the text filter below - the
-        // held-head rule lets a fragment re-admit its head on a text match
-        // alone, which is only safe because the head already passed here:
+        // System messages still pass, so the console doesn't look dead. Must stay AHEAD of the text filter:
+        // the held-head rule re-admits a head on a text match alone, which is safe only because it passed here:
         return false;
     }
     if (!smTextFilter.isEmpty() && !msg.contains(smTextFilter, smTextFilterCaseSensitivity)) {
@@ -276,8 +248,6 @@ bool TDebug::passesFilters(const Host* pHost)
     return true;
 }
 
-// Sends a composed line on its way: into the paused queue, into the backlog
-// that builds up before the console exists, or straight onto the console.
 /* static */ void TDebug::emitLine(const QString& line, const QColor& foreground, const QColor& background)
 {
     if (Q_UNLIKELY(smPaused)) {
@@ -322,10 +292,7 @@ bool TDebug::passesFilters(const Host* pHost)
 }
 
 // This is the method that pushes the accumulated text out to the Central Debug
-// Console, after the filters have had their say. Handles 'msg' beginning with
-// 'csmContinue', otherwise if more than 1 profile active, prepends msg with an
-// indicator of the profile from which it came, which is deduced from the
-// supplied Host pointer.
+// Console, after the filters have had their say.
 TDebug& TDebug::operator>>(Host* pHost)
 {
     if (!passesFilters(pHost)) {
@@ -506,11 +473,8 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         smAvailableIdentifiers.enqueue(identifier.second);
     }
 
-    // Forget the filter setting of every profile that is no longer active -
-    // a stale pointer could otherwise be matched by a later, unrelated Host
-    // allocated at the same address, silencing it for no visible reason.
-    // Pruning against the whole map rather than removing the one profile
-    // covers the case where the name lookup above found nothing:
+    // Forget the filter setting of inactive profiles, or a later Host at the same address would be
+    // silenced. Pruning against the whole map also covers the name lookup above finding nothing:
     QSet<const Host*> stillActive;
     for (auto it = smIdentifierMap.cbegin(); it != smIdentifierMap.cend(); ++it) {
         stillActive.insert(it.key());
@@ -532,8 +496,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         return QString();
     }
 
-    // The identifier legend is left untranslated - most Central Debug Console
-    // content still is, although some of it now is not
+    // Left untranslated, like most Central Debug Console content
     QStringList messageLines;
     QMapIterator<const Host*, QPair<QString, QString>> itIdentifier(TDebug::smIdentifierMap);
     while (itIdentifier.hasNext()) {

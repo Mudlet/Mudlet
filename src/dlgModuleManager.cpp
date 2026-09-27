@@ -70,9 +70,6 @@ void dlgModuleManager::layoutModules()
     moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
     moduleTable->setShowGrid(true);
-    // every row has to go, not every other one: removing a row moves the ones
-    // below it up, so a loop that advances as it removes leaves half of what
-    // was listed behind for the rebuilt listing to be added on top of
     moduleTable->setRowCount(0);
     //order modules by priority and then alphabetically
     QMap<int, QStringList> mOrder;
@@ -182,14 +179,10 @@ void dlgModuleManager::slot_uninstallModule()
     if (!pI) {
         return;
     }
-    // Read before the uninstall, not after: it pumps the event loop while it waits
-    // a profile save out, and a handler that takes a module away rebuilds this
-    // table - which deletes the item this row is holding.
+    // Read before uninstalling: that pumps the event loop while a save finishes, and a handler that
+    // removes a module rebuilds this table, deleting this row's item.
     const QString moduleName = pI->text();
     if (!mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
-        // a save in progress is the one the user can do something about; the other
-        // is a row that outlived its module, which the rebuild below clears up, so
-        // it says that rather than blaming a save that is not running
         QString msg;
         if (mpHost->currentlySavingProfile()) {
             //: %1 is the name of the module the user asked to remove
@@ -201,8 +194,7 @@ void dlgModuleManager::slot_uninstallModule()
         //: Title of the dialog that says why a module the user asked to remove was not removed
         QMessageBox::warning(this, tr("Removal failed"), msg);
     }
-    // rebuilt whether the removal took or not: refused, this puts back what is
-    // actually installed, which is the only thing that clears a stale row
+    // Rebuild even if refused: only that clears a stale row
     layoutModules();
 }
 

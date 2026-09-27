@@ -6,8 +6,7 @@
 name: "CodeQL"
 
 on:
-  # Not on push: merges to development come in bursts and a scan takes an hour,
-  # so per-push runs either pile up or leave cancelled checks on merged commits.
+  # Not on push: merges come in bursts and a scan takes an hour, so runs pile up or get cancelled.
   schedule:
     - cron: '0 7 * * *'
   workflow_dispatch:
