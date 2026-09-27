@@ -286,9 +286,6 @@ private slots:
     // straight to QList::reserve(): 0x1b000001 of them asked for 1.7 GiB (#10689)
     void test_aCorruptZLevelCountIsNotReserved()
     {
-        if (!QFile::exists(qsl("/proc/self/status"))) {
-            QSKIP("needs /proc/self/status to see what the read asked for");
-        }
         buildMapToSave();
         if (QTest::currentTestFailed()) {
             return;
@@ -315,6 +312,16 @@ private slots:
         QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
         QCOMPARE(file.write(data), data.size());
         file.close();
+
+        if (!QFile::exists(qsl("/proc/self/status"))) {
+            // What the read asked for cannot be seen here, only that it finishes
+            QElapsedTimer timer;
+            timer.start();
+            map()->retrieveMapFileStats(mOtherProfileName, nullptr, nullptr, nullptr, nullptr, nullptr);
+            const qint64 elapsedMs = timer.elapsed();
+            QVERIFY2(elapsedMs < 5000, qPrintable(qsl("reading the stats took %1 ms").arg(elapsedMs)));
+            return;
+        }
 
         constexpr qint64 gibibyteKiB = 1024 * 1024;
         constexpr qint64 allowedRiseKiB = gibibyteKiB / 4;
