@@ -238,6 +238,13 @@ bool TConsoleModel::setSelectionFgColor(const QColor& newColor)
     return buffer.applyFgColor(P_begin, P_end, newColor);
 }
 
+// Sets or resets all the given attributes, and no others.
+bool TConsoleModel::setSelectionDisplayAttributes(const TChar::AttributeFlags attributes, const bool enabled)
+{
+    mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (enabled ? attributes : TChar::None));
+    return buffer.applyAttribute(P_begin, P_end, attributes, enabled);
+}
+
 bool TConsoleModel::setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
 {
     return buffer.applyLink(P_begin, P_end, commands, hints, luaReferences);
