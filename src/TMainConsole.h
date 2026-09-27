@@ -178,7 +178,8 @@ public:
     void setCommandLinePlaceholderText(const QString& text);
     void updateCommandLineSpellCheck(bool enabled);
     void setCommandLineText(const QString& text);
-    TCommandLine* raiseCommandLine();
+    // Raises and focuses pCommandLine, or this console's own command line when it is null.
+    void focusCommandLine(TCommandLine* pCommandLine);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // Shared by scroll boxes, command lines and text boxes: each is the same plain QWidget call.
     bool showPlainWindow(const QString& name);

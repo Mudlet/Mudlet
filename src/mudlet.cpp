@@ -3938,6 +3938,17 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
     connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
 
+    connect(pH, &Host::signal_consoleFontChanged, this, [](const QFont& font) {
+        if (smpDebugArea && smpDebugConsole) {
+            smpDebugConsole->setFont(font);
+        }
+    });
+    connect(pH, &Host::signal_profileStyleSheetChanged, this, [this, pH](const QString& styleSheet) {
+        if (pH == mpCurrentActiveHost) {
+            setGlobalStyleSheet(styleSheet);
+        }
+    });
+
     // Wire the map engine's progress signals to the console that owns the dialog.
     // Must be connected before the profile's map is loaded (further down in
     // slot_connectionDialogueFinished()), or early map operations have no
