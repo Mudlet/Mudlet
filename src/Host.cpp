@@ -4879,6 +4879,16 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
+    // A user window holds a console and a dock under its name, so a name holding
+    // only one of them belongs to something else, such as a miniconsole or buffer
+    const bool hasConsole = mWindowRegistry.hasSubConsole(name);
+    if (hasConsole != mWindowRegistry.hasDockWidget(name)) {
+        return {false, qsl("userwindow '%1' already exists").arg(name)};
+    }
+    Q_ASSERT_X(!hasConsole || mWindowRegistry.subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow,
+               "Host::openWindow(...)",
+               "An existing console with a dock was expected to be a User Window but it isn't");
+
     return mpConsole->openUserWindow(name, loadLayout, autoDock, area);
 }
 

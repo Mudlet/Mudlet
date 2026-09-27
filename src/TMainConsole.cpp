@@ -455,18 +455,11 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
 
 std::pair<bool, QString> TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
-    auto console = subConsoleWidget(name);
+    // Host::openWindow() has refused a name holding a console or a dock but not both
     auto dockwidget = dockWidget(name);
-
-    if (!console && !dockwidget) {
+    if (!dockwidget) {
         dockwidget = createUserWindow(name);
-        console = subConsoleWidget(name);
     }
-    if (!console || !dockwidget) {
-        return {false, qsl("userwindow '%1' already exists").arg(name)};
-    }
-
-    Q_ASSERT_X(console->getType() == TConsole::UserWindow, "TMainConsole::openUserWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
     dockwidget->update();
 
     if (loadLayout && !dockwidget->hasLayoutAlready) {
