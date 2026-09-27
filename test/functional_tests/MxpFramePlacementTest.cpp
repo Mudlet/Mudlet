@@ -725,6 +725,91 @@ private slots:
         }
     }
 
+    // An INTERNAL frame belongs to the window it is opened in, so inside the
+    // DEST of an EXTERNAL frame it is shown in that window and placed in its
+    // coordinates, whatever the window's own position on the screen
+    void test_frameNestedInAnExternalFrameIsShownInsideIt()
+    {
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup && popup->isWindow());
+        popup->move(400, 300);
+        settle();
+
+        auto& manager = mpHost->mMxpFrameManager;
+        manager.setDestination(qsl("popup"), false, false);
+        QVERIFY(createFrame(qsl("inpopup"), qsl("top"), qsl("100%"), qsl("40px")));
+        manager.setDestination(qsl("inpopup"), false, false);
+        QVERIFY(createFrame(qsl("deeper"), qsl("top"), qsl("100%"), qsl("20px")));
+        manager.clearDestination();
+
+        QCOMPARE(mpHost->borders(), QMargins());
+        for (const QString& name : {qsl("inpopup"), qsl("deeper")}) {
+            QVERIFY(frameWidget(name));
+            QCOMPARE(frameWidget(name)->parentWidget(), popup);
+        }
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 300, 40));
+        QCOMPARE(frameGeometry(qsl("deeper")), QRect(0, 0, 300, 20));
+
+        mudlet::self()->resize(1000, 700);
+        settle();
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 300, 40));
+        QCOMPARE(frameGeometry(qsl("deeper")), QRect(0, 0, 300, 20));
+    }
+
+    // Inside a tab it is shown on the tab's page, against the space the header
+    // gives that page, which follows the header's frame across a relayout
+    void test_frameNestedInATabIsShownInsideIt()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        QWidget* page = frameWidget(qsl("tab"));
+        QVERIFY(page);
+        const QMargins bordersBefore = mpHost->borders();
+
+        mpHost->mMxpFrameManager.setDestination(qsl("tab"), false, false);
+        QVERIFY(createFrame(qsl("intab"), qsl("top"), qsl("100%"), qsl("40px")));
+        QVERIFY(createFrame(qsl("footer"), qsl("bottom"), qsl("100%"), qsl("30px")));
+        mpHost->mMxpFrameManager.clearDestination();
+
+        QCOMPARE(mpHost->borders(), bordersBefore);
+        for (const QString& name : {qsl("intab"), qsl("footer")}) {
+            QVERIFY(frameWidget(name));
+            QCOMPARE(frameWidget(name)->parentWidget(), page);
+        }
+        QVERIFY2(page->height() > 100, "the tab's page was never laid out");
+        QCOMPARE(frameGeometry(qsl("intab")), QRect(0, 0, page->width(), 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, page->height() - 30, page->width(), 30));
+
+        const int pageHeightBefore = page->height();
+        mudlet::self()->resize(1000, 700);
+        settle();
+        QVERIFY2(page->height() != pageHeightBefore, "the resize did not change the tab's page");
+        QCOMPARE(frameGeometry(qsl("intab")), QRect(0, 0, page->width(), 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, page->height() - 30, page->width(), 30));
+    }
+
+    // what is shown inside a tab goes with it
+    void test_closingATabClosesTheFramesNestedInIt()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        mpHost->mMxpFrameManager.setDestination(qsl("tab"), false, false);
+        QVERIFY(createFrame(qsl("intab"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        const QPointer<QWidget> intab = frameWidget(qsl("intab"));
+        QVERIFY(intab);
+
+        QVERIFY(mpHost->mMxpFrameManager.closeFrame(qsl("tab")));
+        settle();
+
+        QVERIFY(!mpHost->mMxpFrameManager.frameExists(qsl("intab")));
+        QVERIFY(intab.isNull());
+        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("intab")));
+        QVERIFY(!mpHost->windowRegistry().hasSubConsole(qsl("intab")));
+        QCOMPARE(frameTabs(qsl("titled"))->count(), 1);
+    }
+
     // A frame at LEFT/TOP takes no border, so nothing relayouts between it
     // opening and a frame opening inside it: that one has to go by where the
     // first was put when it opened.

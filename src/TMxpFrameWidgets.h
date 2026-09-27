@@ -42,8 +42,9 @@ class TMxpFrameWidgets
 public:
     explicit TMxpFrameWidgets(TMainConsole* pMainConsole);
 
-    // A frame on the main window, with its title on a tab header when showHeader
-    void createInternalFrame(const QString& name, const QString& title, const QRect& geometry, bool showHeader, bool scrolling);
+    // A frame on the main window, or inside hostName's frame when that is set,
+    // with its title on a tab header when showHeader
+    void createInternalFrame(const QString& name, const QString& hostName, const QString& title, const QRect& geometry, bool showHeader, bool scrolling);
     // A frame in a window of its own; false when no console could be made for it
     bool createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling);
     // The space a tab added to parentName's header has, or nothing when that
@@ -58,9 +59,6 @@ public:
     void showFrame(const QString& name);
     void focusFrame(const QString& name);
 
-    // Where a tab or an EXTERNAL frame is, which frames nested inside it are
-    // placed against
-    std::optional<QRect> placementArea(const QString& name) const;
     void setGeometry(const QString& name, const QRect& geometry);
 
     // Tells the frame manager the main console's size on the next event loop
