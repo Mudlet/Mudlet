@@ -78,8 +78,6 @@ public:
 class TChar
 {
     friend class TBuffer;
-    // Reads the Echo flag, which only the buffer itself looks at:
-    friend class HostConsolePrintTest;
 
 public:
     // clang-format off
@@ -137,8 +135,6 @@ public:
         // Has been found in a search operation (currently Main Console only)
         // and has been given a highlight to indicate that:
         Found = 0x100000,             // 0000 0000 0001 0000 0000 0000 0000 0000
-        // Replaces TCHAR_ECHO 16
-        Echo = 0x200000,              // 0000 0000 0010 0000 0000 0000 0000 0000
         // In the showing console's selection. Not a display attribute (outside TestMask); dropped by the copy constructor:
         Selected = 0x2000000          // 0000 0010 0000 0000 0000 0000 0000 0000
     };
@@ -179,7 +175,7 @@ public:
         mFgColor = newForeGroundColor.rgba();
         mBgColor = newBackGroundColor.rgba();
     }
-    // Only considers the flags within TestMask - so not Echo or Found:
+    // Only considers the flags within TestMask - so not Found or Selected:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
     void setForeground(const QColor& newColor) { mFgColor = newColor.rgba(); }
     void setBackground(const QColor& newColor) { mBgColor = newColor.rgba(); }
@@ -362,7 +358,6 @@ public:
     int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
     void log(int, int);
     QString assembleLog(int fromLine, int toLine);
-    inline int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
@@ -475,7 +470,6 @@ public:
     int mWrapIndent = 0;
     int mWrapHangingIndent = 0;
     int mCursorY = 0;
-    bool mEchoingText = false;
 
 private:
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
@@ -849,9 +843,6 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     }
     if (attributes & TChar::Found) {
         presentAttributes << QLatin1String("Found (0x100000)");
-    }
-    if (attributes & TChar::Echo) {
-        presentAttributes << QLatin1String("Echo (0x200000)");
     }
     if (attributes & TChar::UnderlineWavy) {
         presentAttributes << QLatin1String("UnderlineWavy (0x400000)");

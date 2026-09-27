@@ -597,7 +597,6 @@ TBuffer::TBuffer(const TBuffer& other)
 , mWrapIndent(other.mWrapIndent)
 , mWrapHangingIndent(other.mWrapHangingIndent)
 , mCursorY(other.mCursorY)
-, mEchoingText(other.mEchoingText)
 , mpConsole(other.mpConsole)
 , mGotESC(other.mGotESC)
 , mGotEscCharset(other.mGotEscCharset)
@@ -695,7 +694,6 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mWrapIndent = other.mWrapIndent;
         mWrapHangingIndent = other.mWrapHangingIndent;
         mCursorY = other.mCursorY;
-        mEchoingText = other.mEchoingText;
         mpConsole = other.mpConsole;
         mGotESC = other.mGotESC;
         mGotEscCharset = other.mGotEscCharset;
@@ -5375,8 +5373,7 @@ void TBuffer::appendLine(const QString& text,
         // There are NO lines in the buffer - so initialize with a new empty line
         appendEmptyLine();
         lastLine = 0;
-        // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
-        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | (flags & TChar::TestMask)) : (flags & TChar::TestMask)));
+        const TChar styling(fgColor, bgColor, flags & TChar::TestMask);
         buffer.back().push_back(styling);
     }
 
@@ -5402,7 +5399,7 @@ void TBuffer::appendLine(const QString& text,
         }
 
         lineBuffer.back().append(thisChar);
-        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+        const TChar styling(fgColor, bgColor, flags, linkID);
         buffer.back().push_back(styling);
 
         // Note: Original character storage for ANSI-styled OSC 8 links happens in
@@ -5554,25 +5551,6 @@ int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
     }
 
     return lineSize;
-}
-
-int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
-{
-    int offset = 0;
-    int position = column;
-    const int endOfLinePosition = lineBuffer.at(row).size();
-    while (position < endOfLinePosition) {
-        if (buffer.at(row).at(position).mFlags & TChar::Echo) {
-            break;
-        }
-        if (lineBuffer.at(row).at(position) == QChar::Space) {
-            ++offset;
-        } else {
-            break;
-        }
-        position++;
-    }
-    return offset;
 }
 
 // find lindbreaks and indents (if not necessary, return empty list)
