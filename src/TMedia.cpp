@@ -305,6 +305,8 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
@@ -314,7 +316,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
@@ -359,12 +361,14 @@ void TMedia::stopMedia(TMediaData& mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (auto& pPlayer : mediaPlayerList) {
         if (!pPlayer) {
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
@@ -586,6 +590,30 @@ QList<std::shared_ptr<TMediaPlayer>> TMedia::findMediaPlayersByCriteria(const TM
     return {}; // Default empty list fallback
 }
 
+// A pause, stop or resume carries no input type of its own. An absolute path an API call names plays
+// from the copy transitionNonRelativeFile() made under its bare file name, its directories dropped,
+// so that is what a player of a file is matched against; a stream keeps the name it was given and
+// is matched against it as asked.
+TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData)
+{
+    TMediaData fileRequest = mediaData;
+    const QString& fileName = mediaData.mediaFileName();
+
+    if (mediaData.mediaProtocol() != TMediaData::MediaProtocolAPI || mediaData.mediaInput() == TMediaData::MediaInputStream || fileName.isEmpty() || QFileInfo(fileName).isRelative()) {
+        return fileRequest;
+    }
+
+    // A name ending in a separator has no file name to trim to, and an empty one would match every
+    // player, so it is left as given to match none.
+    const QString bareName = fileName.section(QLatin1Char('/'), -1);
+
+    if (!bareName.isEmpty()) {
+        fileRequest.setMediaFileName(bareName);
+    }
+
+    return fileRequest;
+}
+
 bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData)
 {
     if (!player) {
@@ -634,6 +662,8 @@ bool TMedia::resume(TMediaData mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
@@ -643,7 +673,7 @@ bool TMedia::resume(TMediaData mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
