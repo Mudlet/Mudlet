@@ -179,7 +179,7 @@ private:
     static QList<char16_t> controlCharacters()
     {
         QList<char16_t> result;
-        for (char16_t c = 1; c < 0x20; ++c) {
+        for (char16_t c = 0; c < 0x20; ++c) {
             if (c != '\n') {
                 result.append(c);
             }
@@ -377,7 +377,8 @@ private slots:
             pictures.append(QChar(c == 0x7F ? 0x2421 : 0x2400 + c));
         }
         // Code page 437, as the IBM PC's OEM font drew these bytes
-        const QString oem = QString::fromUtf16(u"☺☻♥♦♣♠•◘○♂♀♪♫☼"
+        // with NUL drawn as a space
+        const QString oem = QString::fromUtf16(u" ☺☻♥♦♣♠•◘○♂♀♪♫☼"
                                                u"►◄↕‼¶§▬↨↑↓→←∟↔▲▼⌂");
         QCOMPARE(oem.size(), controlCharacters().size());
 
