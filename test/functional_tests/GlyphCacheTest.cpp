@@ -81,15 +81,17 @@ private:
         return font;
     }
 
-    // What TTextEdit does to the painter's font before a drawText() of an
-    // undecorated cell
+    // The font TTextEdit drew an undecorated cell with before the cache, once
+    // a paint had toggled bold both ways
     static QFont styled(QFont font, const TGlyphCache::Style style)
     {
         font.setUnderline(false);
         font.setOverline(false);
         font.setStrikeOut(false);
-        if (font.bold() != style.testFlag(TGlyphCache::Bold)) {
-            font.setBold(style.testFlag(TGlyphCache::Bold));
+        if (style.testFlag(TGlyphCache::Bold)) {
+            font.setBold(true);
+        } else if (font.bold()) {
+            font.setBold(false);
         }
         if (font.italic() != style.testFlag(TGlyphCache::Italic)) {
             font.setItalic(style.testFlag(TGlyphCache::Italic));
@@ -197,8 +199,8 @@ private slots:
             QTest::addRow("%dpt, pixmap at 1.50x, scrolled", pointSize) << pointSize << 1.5 << true << 0 << -3 << int(QFont::Normal) << int(QFont::PreferDefault) << false;
         }
         for (const auto& [styleName, style] : styles) {
-            // A display font picked by style name, such as "Fira Code SemiBold",
-            // keeps its own weight wherever it already counts as bold or not bold
+            // A display font picked by style name, such as "Fira Code Light" or
+            // "Fira Code SemiBold": Light stays Light, SemiBold's plain text is Normal
             QTest::addRow("demibold font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::DemiBold) << int(QFont::PreferDefault) << false;
             QTest::addRow("light font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::Light) << int(QFont::PreferDefault) << false;
             // Decorations saved on the display font itself were never drawn on

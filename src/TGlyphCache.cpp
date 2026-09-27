@@ -103,11 +103,14 @@ TGlyphCache::Entry TGlyphCache::shape(QStringView grapheme, const Style style) c
         }
     }
 
-    // Only toggled when they differ, as setBold() replaces the weight outright
-    // and would turn a Light or DemiBold display font into Normal or Bold.
+    // The weights drawText() ended up with once a line held both bold and
+    // plain text: bold is always Bold, and plain is the display font's own
+    // weight unless that counts as bold, as setBold(false) makes it Normal.
     QFont font = mFont;
-    if (font.bold() != style.testFlag(Bold)) {
-        font.setBold(style.testFlag(Bold));
+    if (style.testFlag(Bold)) {
+        font.setBold(true);
+    } else if (font.bold()) {
+        font.setBold(false);
     }
     if (font.italic() != style.testFlag(Italic)) {
         font.setItalic(style.testFlag(Italic));
