@@ -2696,10 +2696,11 @@ describe("Media playback effects with a generated sound file", function()
     end
     writeSoundFiles()
     -- the four parsers clamp on their own, so each is asked for a volume
-    -- outside the range - sound below it in one form and above it in the
-    -- other, music on both sides in both; the query reports what the player got
+    -- outside the range on both sides; the query reports what the player got
     local cases = {
       {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "table", volume = -20, expected = 1},
+      {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "table", volume = 150, expected = 100},
+      {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "ordered", volume = -20, expected = 1},
       {play = playSoundFile, query = getPlayingSounds, stop = stopSounds, form = "ordered", volume = 150, expected = 100},
       {play = playMusicFile, query = getPlayingMusic, stop = stopMusic, form = "table", volume = 150, expected = 100},
       {play = playMusicFile, query = getPlayingMusic, stop = stopMusic, form = "table", volume = -20, expected = 1},
@@ -2757,13 +2758,15 @@ describe("Media playback effects with a generated sound file", function()
     -- printed as the track starts.
     local caption = "Busted music caption"
     local mark = getLastLineNumber("main")
+    -- The natural end is ten seconds away, so anything under half that is the
+    -- finish at work; the rest is slack for a loaded runner.
     local began = getEpoch()
     assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-finish-table", fadein = 200, fadeout = 100, start = 0,
       finish = 400, caption = caption}))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished, "a finish of 400 did not end the ten second track early")
-    assert.is_true(getEpoch() - began < 2, "the ten second track ran on well past a finish of 400")
+    assert.is_true(getEpoch() - began < 5, "the ten second track ran on well past a finish of 400")
     assert.equals("busted-music-finish-table", finished[1].key)
     local captioned = false
     for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
@@ -2779,7 +2782,7 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     waitForCount("sysMediaFinished", finished, 2)
     assert.equals(2, #finished, "a finish of 300 did not end the ten second track early")
-    assert.is_true(getEpoch() - began < 2, "the ten second track ran on well past a finish of 300")
+    assert.is_true(getEpoch() - began < 5, "the ten second track ran on well past a finish of 300")
     assert.equals("busted-music-finish-ordered", finished[2].key)
     assert.equals(0, #getPlayingMusic())
   end)
@@ -2834,7 +2837,7 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysMediaFinished", finished, 3)
     assert.equals(3, #started)
     assert.equals(3, #finished, "a finish of 300 did not end the ten second file early")
-    assert.is_true(getEpoch() - began < 2, "the ten second file ran on well past a finish of 300")
+    assert.is_true(getEpoch() - began < 5, "the ten second file ran on well past a finish of 300")
     assert.equals("busted-gmcp-number-finish", finished[3].key)
   end)
 
