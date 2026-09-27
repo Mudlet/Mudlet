@@ -164,7 +164,7 @@ private slots:
                 {"italic", TGlyphCache::Italic},
                 {"bold italic", TGlyphCache::Bold | TGlyphCache::Italic},
         };
-        for (const int pointSize : {9, 10, 13}) {
+        for (const int pointSize : {9, 10, 11, 13}) {
             for (const qreal ratio : {1.0, 1.25, 1.5, 2.0, 3.0}) {
                 for (const auto& [styleName, style] : styles) {
                     QTest::addRow("%dpt, pixmap at %.2fx, %s", pointSize, ratio, styleName) << pointSize << ratio << true << int(style.toInt()) << 0;
