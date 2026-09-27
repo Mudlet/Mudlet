@@ -593,11 +593,30 @@ void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
     int frameWidth = widthSize.width();
     int frameHeight = heightSize.height();
 
-    if (!widgets->createExternalFrame(frame->name, frame->title, QSize(frameWidth, frameHeight), frame->scrolling)) {
+    const std::optional<QSize> shownSize = widgets->createExternalFrame(frame->name, frame->title, QSize(frameWidth, frameHeight), frame->scrolling);
+    if (!shownSize) {
         qWarning() << "TMxpFrameManager::layoutExternalFrame: Failed to create console";
         return;
     }
     frame->shown = TMxpFrame::Shown::Window;
+    frame->geometry = QRect(QPoint(0, 0), *shownSize);
+}
+
+void TMxpFrameManager::setWindowSize(const QString& name, const QSize& size)
+{
+    auto* frame = getFrame(name);
+    if (!frame || frame->shown != TMxpFrame::Shown::Window) {
+        return;
+    }
+
+    const QRect inside(QPoint(0, 0), size);
+    if (frame->geometry == inside) {
+        return;
+    }
+    frame->geometry = inside;
+    if (!frame->childFrames.isEmpty()) {
+        relayoutFrames();
+    }
 }
 
 void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
@@ -780,19 +799,8 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
 {
     switch (frame.shown) {
     case TMxpFrame::Shown::Placed:
+    case TMxpFrame::Shown::Window:
         return frame.geometry;
-    case TMxpFrame::Shown::Window: {
-        // Asked each time, as the player sizes the window
-        const auto* widgets = frameWidgets();
-        if (!widgets) {
-            return std::nullopt;
-        }
-        const std::optional<QSize> size = widgets->windowAreaSize(frame.name);
-        if (!size) {
-            return std::nullopt;
-        }
-        return QRect(QPoint(0, 0), *size);
-    }
     case TMxpFrame::Shown::Tab: {
         // Asked each time, as the header's frame is moved by relayouts
         const auto* widgets = frameWidgets();

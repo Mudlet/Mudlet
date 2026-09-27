@@ -27,6 +27,7 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QFrame>
+#include <QResizeEvent>
 #include <QSizePolicy>
 #include <QStackedWidget>
 #include <QTabWidget>
@@ -171,14 +172,14 @@ void TMxpFrameWidgets::createInternalFrame(const QString& name, const QString& h
     QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 }
 
-bool TMxpFrameWidgets::createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling)
+std::optional<QSize> TMxpFrameWidgets::createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling)
 {
     destroyStaleFrame(name);
     // Create standalone window with mini console
     auto* console = mpMainConsole->createMiniConsole(qsl("main"), name, 0, 0, size.width(), size.height());
 
     if (!console) {
-        return false;
+        return std::nullopt;
     }
 
     mFrames.insert(name, {console, console, nullptr});
@@ -192,7 +193,13 @@ bool TMxpFrameWidgets::createExternalFrame(const QString& name, const QString& t
     console->setWindowTitle(title);
     console->setWindowFlags(Qt::Window);
     console->show();
-    return true;
+
+    QObject::connect(console, &TConsole::resized, console, [host = mpMainConsole->mpHost, name](QResizeEvent* event) {
+        if (host) {
+            host->mMxpFrameManager.setWindowSize(name, event->size());
+        }
+    });
+    return console->size();
 }
 
 std::optional<QSize> TMxpFrameWidgets::tabAreaSize(const QString& parentName) const
@@ -206,15 +213,6 @@ std::optional<QSize> TMxpFrameWidgets::tabAreaSize(const QString& parentName) co
         return pages->contentsRect().size();
     }
     return tabWidget->size();
-}
-
-std::optional<QSize> TMxpFrameWidgets::windowAreaSize(const QString& name) const
-{
-    const QWidget* window = frameWidget(name);
-    if (!window || !window->isWindow()) {
-        return std::nullopt;
-    }
-    return window->size();
 }
 
 void TMxpFrameWidgets::createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select)
