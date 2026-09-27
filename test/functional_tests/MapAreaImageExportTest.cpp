@@ -78,6 +78,16 @@ private:
     // the save has reported back, so none left means the pool threads are done
     static bool exportsInFlight(const T2DMap* pMap) { return !pMap->findChildren<QFutureWatcherBase*>(QString(), Qt::FindDirectChildrenOnly).isEmpty(); }
 
+    // Waits for the saves themselves rather than for the whole global thread
+    // pool, which other work can be using too; their handlers still wait for
+    // the event loop
+    static void waitForExportSaves(const T2DMap* pMap)
+    {
+        for (auto* pWatcher : pMap->findChildren<QFutureWatcherBase*>(QString(), Qt::FindDirectChildrenOnly)) {
+            pWatcher->waitForFinished();
+        }
+    }
+
     static void addOneRoomArea(TMap* pMap, const QString& areaName, int& areaId)
     {
         areaId = pMap->mpRoomDB->addArea(areaName);
@@ -224,10 +234,10 @@ private slots:
         QVERIFY2(firstExported, qPrintable(firstMessage));
         // Both saves finish before either reports back, as when a script
         // exports twice in one go and the event loop only runs once it returns
-        QVERIFY(QThreadPool::globalInstance()->waitForDone(10000));
+        waitForExportSaves(mp2dMap);
         const auto [secondExported, secondMessage] = mp2dMap->exportAreaToImage(areaId, secondPath);
         QVERIFY2(secondExported, qPrintable(secondMessage));
-        QVERIFY(QThreadPool::globalInstance()->waitForDone(10000));
+        waitForExportSaves(mp2dMap);
         // Or the wait below would pass without running a single handler
         QVERIFY(exportsInFlight(mp2dMap));
 

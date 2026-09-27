@@ -2744,16 +2744,16 @@ describe("Tests mapper functions against a shared fixture", function()
       for _, name in ipairs(names) do
         assert.is_false(io.exists(exportPath(name)), "a stale " .. name .. " could not be removed")
       end
-      -- The file appears as soon as the save opens it, so look for the whole
-      -- PNG signature rather than for the file
+      -- The file appears as soon as the save opens it, so look for the PNG
+      -- signature it starts with and the IEND chunk the save writes last
       local function written()
         for _, name in ipairs(names) do
           local file = io.open(exportPath(name), "rb")
-          local signature = file and file:read(8)
+          local contents = file and file:read("*a")
           if file then
             file:close()
           end
-          if signature ~= "\137PNG\r\n\26\n" then
+          if not contents or contents:sub(1, 8) ~= "\137PNG\r\n\26\n" or contents:sub(-8) ~= "IEND\174B`\130" then
             return false
           end
         end
