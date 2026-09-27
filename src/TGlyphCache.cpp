@@ -24,10 +24,10 @@
 #include <QRect>
 #include <QTextLayout>
 
-void TGlyphCache::setFont(const QFont& font, const QPaintDevice* device)
+void TGlyphCache::setFont(const QFont& font, const QPaintDevice& device)
 {
-    const int dpiX = device->logicalDpiX();
-    const int dpiY = device->logicalDpiY();
+    const int dpiX = device.logicalDpiX();
+    const int dpiY = device.logicalDpiY();
     if (font == mFont && dpiX == mDpiX && dpiY == mDpiY) {
         return;
     }
@@ -39,6 +39,7 @@ void TGlyphCache::setFont(const QFont& font, const QPaintDevice* device)
 
 void TGlyphCache::drawCentered(QPainter& painter, const QRect& cell, QStringView grapheme, const Style style)
 {
+    Q_ASSERT_X(mDpiX > 0, "TGlyphCache::drawCentered(...)", "setFont() has not been called, so there is no font to shape with");
     if (grapheme.isEmpty()) {
         return;
     }
@@ -79,9 +80,15 @@ TGlyphCache::Entry TGlyphCache::shape(QStringView grapheme, const Style style) c
         }
     }
 
+    // Only toggled when they differ, as setBold() replaces the weight outright
+    // and would turn a Light or DemiBold display font into Normal or Bold.
     QFont font = mFont;
-    font.setBold(style.testFlag(Bold));
-    font.setItalic(style.testFlag(Italic));
+    if (font.bold() != style.testFlag(Bold)) {
+        font.setBold(style.testFlag(Bold));
+    }
+    if (font.italic() != style.testFlag(Italic)) {
+        font.setItalic(style.testFlag(Italic));
+    }
 
     QTextLayout layout(text, font);
     QTextOption option;
@@ -97,8 +104,8 @@ TGlyphCache::Entry TGlyphCache::shape(QStringView grapheme, const Style style) c
     }
     entry.runs = layout.glyphRuns();
     entry.advance = line.horizontalAdvance();
-    // Not line.height(), which is rounded up and would lift glyphs by a device
-    // pixel on scaled displays compared to where drawText() puts them.
+    // Not line.height(), which is rounded up and would lift glyphs above where
+    // drawText() puts them.
     entry.height = line.ascent() + line.descent();
     return entry;
 }

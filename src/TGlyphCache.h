@@ -34,7 +34,7 @@ class QRect;
 
 // QPainter::drawText() lays out and shapes its text from scratch on every call,
 // which for a console painted one grapheme per cell is most of the cost of a
-// frame. A console only ever shows a small set of distinct graphemes, so this
+// frame. A console usually shows a small set of distinct graphemes, so this
 // shapes each one once per font style and replays the glyphs afterwards.
 class TGlyphCache
 {
@@ -46,9 +46,10 @@ public:
 
     // Empties the cache when the font, or the resolution it is drawn at,
     // differs from the one the cached glyphs were shaped for.
-    void setFont(const QFont&, const QPaintDevice*);
+    void setFont(const QFont&, const QPaintDevice&);
     // Places the grapheme exactly where drawText(cell, Qt::AlignCenter |
-    // Qt::TextDontClip | Qt::TextSingleLine, grapheme) would have put it.
+    // Qt::TextDontClip | Qt::TextSingleLine, grapheme) would have put it,
+    // shaped with the font given to the last setFont().
     void drawCentered(QPainter&, const QRect& cell, QStringView grapheme, Style);
     qsizetype size() const { return mEntries.size(); }
 

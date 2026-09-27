@@ -1018,6 +1018,8 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCac
     const bool useQtOverline = isOverline && !hasLink;
     const bool useQtStrikeOut = isStrikeOut && !hasLink;
 
+    // const bool isConcealed = attributes & TChar::Concealed;
+    // const int altFontIndex = charStyle.alternateFont();
     const bool useQtDecoration = useQtUnderline || useQtOverline || useQtStrikeOut;
 
     if (textRect.isNull()) {
@@ -1027,8 +1029,6 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCac
     if (painter.pen().color() != effectiveFgColor) {
         painter.setPen(effectiveFgColor);
     }
-    // const bool isConcealed = attributes & TChar::Concealed;
-    // const int altFontIndex = charStyle.alternateFont();
     if (Q_UNLIKELY(useQtDecoration)) {
         // drawGlyphRun() draws these decorations differently, so they stay with drawText()
         if ((painter.font().bold() != isBold) || (painter.font().italic() != isItalics) || (painter.font().overline() != useQtOverline) || (painter.font().strikeOut() != useQtStrikeOut)
@@ -1282,7 +1282,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     QPainter p(&pixmap);
     // Setting the font here isn't academic as the text IS drawn with THIS painter (p)
     p.setFont(painter.font());
-    mpGlyphCache->setFont(p.font(), p.device());
+    mpGlyphCache->setFont(p.font(), *p.device());
     // Source rather than SourceOver for the cache blits below: they have to
     // overwrite whatever a reused buffer still holds from an earlier frame, and
     // over a freshly cleared buffer the two modes produce identical pixels.
@@ -1436,8 +1436,8 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         layoutLine(lastRow + lineOffset, lastRow, timeStampStyle, mOverflowLineLayout);
         paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, spareRowRect);
     }
-    // The layouts borrow TChar pointers from the buffer, so do not keep them
-    // past the paint they were built for.
+    // The layouts borrow TChar pointers and text from the buffer, so do not
+    // keep them past the paint they were built for.
     mPreviousLineLayout.clear();
     mCurrentLineLayout.clear();
     mOverflowLineLayout.clear();
@@ -2589,9 +2589,10 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 {
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.setFont(font());
-    // Its own cache, so that copying an image leaves the console's untouched
+    // A cache of its own, as the image usually has a different resolution from
+    // the screen and handing that to the console's cache would empty it.
     TGlyphCache glyphCache;
-    glyphCache.setFont(painter.font(), painter.device());
+    glyphCache.setFont(painter.font(), *painter.device());
 
     int lineCount = rectangle.height() / mFontHeight;
     int linesDrawn = 0;

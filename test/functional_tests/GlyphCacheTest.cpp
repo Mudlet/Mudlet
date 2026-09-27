@@ -28,9 +28,9 @@
 
 #include "GroupedTest.h"
 
-// TTextEdit used to paint every grapheme with drawText(cell, Qt::AlignCenter);
-// TGlyphCache replaces that, so whatever it draws has to be pixel for pixel
-// what drawText() would have drawn - on scaled displays too, where the two
+// TTextEdit paints undecorated graphemes through TGlyphCache instead of
+// drawText(cell, Qt::AlignCenter), so whatever it draws has to be pixel for
+// pixel what drawText() would have drawn - on scaled displays too, where the two
 // differ unless the cache rounds its origin exactly as QTextLine::draw() does.
 class GlyphCacheTest : public QObject
 {
@@ -53,6 +53,7 @@ private:
                 {qsl("_"), 1},
                 {qsl("|"), 1},
                 {qsl("\t"), 8},
+                // Precomposed, then as a base letter and a combining accent
                 {qsl("é"), 1},
                 {qsl("é"), 1},
                 {qsl("—"), 1},
@@ -67,17 +68,24 @@ private:
         };
     }
 
-    static QFont testFont(const int pointSize)
+    static QFont testFont(const int pointSize, const QFont::Weight weight = QFont::Normal, const QFont::StyleStrategy strategy = QFont::PreferDefault)
     {
         QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
         font.setPointSize(pointSize);
+        font.setWeight(weight);
+        font.setStyleStrategy(strategy);
         return font;
     }
 
+    // What TTextEdit does to the painter's font before a drawText()
     static QFont styled(QFont font, const TGlyphCache::Style style)
     {
-        font.setBold(style.testFlag(TGlyphCache::Bold));
-        font.setItalic(style.testFlag(TGlyphCache::Italic));
+        if (font.bold() != style.testFlag(TGlyphCache::Bold)) {
+            font.setBold(style.testFlag(TGlyphCache::Bold));
+        }
+        if (font.italic() != style.testFlag(TGlyphCache::Italic)) {
+            font.setItalic(style.testFlag(TGlyphCache::Italic));
+        }
         return font;
     }
 
@@ -105,7 +113,7 @@ private:
         painter.setFont(font);
         painter.setPen(QColor(220, 200, 120));
         if (cache) {
-            cache->setFont(painter.font(), painter.device());
+            cache->setFont(painter.font(), *painter.device());
         } else {
             painter.setFont(styled(painter.font(), style));
         }
@@ -157,6 +165,8 @@ private slots:
         QTest::addColumn<bool>("viaPixmap");
         QTest::addColumn<int>("style");
         QTest::addColumn<int>("xOffset");
+        QTest::addColumn<int>("weight");
+        QTest::addColumn<int>("strategy");
 
         const QList<std::pair<const char*, TGlyphCache::Style>> styles = {
                 {"plain", TGlyphCache::Plain},
@@ -164,15 +174,27 @@ private slots:
                 {"italic", TGlyphCache::Italic},
                 {"bold italic", TGlyphCache::Bold | TGlyphCache::Italic},
         };
+        // 11pt is where the system monospace font on Linux shows whether the
+        // origin is truncated to the 1/64 pixel grid, at 1.25x
         for (const int pointSize : {9, 10, 11, 13}) {
             for (const qreal ratio : {1.0, 1.25, 1.5, 2.0, 3.0}) {
                 for (const auto& [styleName, style] : styles) {
-                    QTest::addRow("%dpt, pixmap at %.2fx, %s", pointSize, ratio, styleName) << pointSize << ratio << true << int(style.toInt()) << 0;
+                    QTest::addRow("%dpt, pixmap at %.2fx, %s", pointSize, ratio, styleName) << pointSize << ratio << true << int(style.toInt()) << 0 << int(QFont::Normal) << int(QFont::PreferDefault);
                 }
             }
-            QTest::addRow("%dpt, image", pointSize) << pointSize << 1.0 << false << 0 << 0;
+            QTest::addRow("%dpt, image", pointSize) << pointSize << 1.0 << false << 0 << 0 << int(QFont::Normal) << int(QFont::PreferDefault);
             // A horizontally scrolled console starts its cells left of zero
-            QTest::addRow("%dpt, pixmap at 1.50x, scrolled", pointSize) << pointSize << 1.5 << true << 0 << -3;
+            QTest::addRow("%dpt, pixmap at 1.50x, scrolled", pointSize) << pointSize << 1.5 << true << 0 << -3 << int(QFont::Normal) << int(QFont::PreferDefault);
+        }
+        for (const auto& [styleName, style] : styles) {
+            // A display font picked by style name, such as "Fira Code SemiBold",
+            // keeps its own weight and must not be drawn at Normal or Bold instead
+            QTest::addRow("demibold font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::DemiBold) << int(QFont::PreferDefault);
+            QTest::addRow("light font, %s", styleName) << 10 << 1.0 << true << int(style.toInt()) << 0 << int(QFont::Light) << int(QFont::PreferDefault);
+            // What every console other than the main one draws with
+            for (const qreal ratio : {1.0, 1.5}) {
+                QTest::addRow("unantialiased at %.2fx, %s", ratio, styleName) << 10 << ratio << true << int(style.toInt()) << 0 << int(QFont::Normal) << int(QFont::NoAntialias | QFont::PreferQuality);
+            }
         }
     }
 
@@ -183,8 +205,10 @@ private slots:
         QFETCH(bool, viaPixmap);
         QFETCH(int, style);
         QFETCH(int, xOffset);
+        QFETCH(int, weight);
+        QFETCH(int, strategy);
 
-        const QFont font = testFont(pointSize);
+        const QFont font = testFont(pointSize, QFont::Weight(weight), QFont::StyleStrategy(strategy));
         const auto cacheStyle = TGlyphCache::Style::fromInt(style);
         const QImage expected = render(font, devicePixelRatio, viaPixmap, cacheStyle, nullptr, xOffset);
         QVERIFY2(hasInk(expected), "drawText() drew nothing, so there is nothing to compare against");
@@ -220,11 +244,11 @@ private slots:
         QImage device(10, 10, QImage::Format_ARGB32_Premultiplied);
         QPainter painter(&device);
         painter.setFont(testFont(10));
-        cache.setFont(painter.font(), painter.device());
+        cache.setFont(painter.font(), *painter.device());
         QVERIFY2(cache.size() > 0, "setting the same font again should keep the cached glyphs");
 
         painter.setFont(testFont(14));
-        cache.setFont(painter.font(), painter.device());
+        cache.setFont(painter.font(), *painter.device());
         QCOMPARE(cache.size(), 0);
     }
 
@@ -239,7 +263,7 @@ private slots:
         highDpi.setDotsPerMeterY(highDpi.dotsPerMeterY() * 2);
         QPainter painter(&highDpi);
         painter.setFont(testFont(10));
-        cache.setFont(painter.font(), painter.device());
+        cache.setFont(painter.font(), *painter.device());
         QCOMPARE(cache.size(), 0);
     }
 
@@ -249,7 +273,7 @@ private slots:
         QPainter painter(&device);
         painter.setFont(testFont(10));
         TGlyphCache cache;
-        cache.setFont(painter.font(), painter.device());
+        cache.setFont(painter.font(), *painter.device());
         for (char32_t codepoint = 0x4E00; codepoint < 0x4E00 + TGlyphCache::csmMaxEntries + 100; ++codepoint) {
             cache.drawCentered(painter, QRect(0, 0, 32, 32), QString::fromUcs4(&codepoint, 1), TGlyphCache::Plain);
             QVERIFY(cache.size() <= TGlyphCache::csmMaxEntries);
