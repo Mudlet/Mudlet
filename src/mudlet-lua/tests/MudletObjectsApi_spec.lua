@@ -248,7 +248,10 @@ describe("Mudlet object API edges", function()
     end)
 
     it("tempButtonToolbar and tempButton refuse a name already in use", function()
-      -- buttons cannot be deleted from Lua, hence the per-run names
+      -- buttons cannot be deleted from Lua, hence the per-run names; a docked
+      -- toolbar left showing keeps its share of the main window's height and
+      -- starves the window resize specs, so hide it again
+      finally(function() hideToolBar(toolbarName) end)
       assert.is_number(tempButtonToolbar(toolbarName, 0, 0))
       assert.is_nil((tempButtonToolbar(toolbarName, 0, 0)))
       assert.equals(1, exists(toolbarName, "button"))
