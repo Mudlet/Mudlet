@@ -35,15 +35,23 @@ end
 -- function for finally() that puts both back as they were, or removes them.
 -- Each file is restored on its own, so one that cannot be written back neither
 -- stops the other nor goes unreported.
+local ENOENT = 2
+
 local function preserveProfileAddress()
   local directory = getMudletHomeDir()
   local saved = {}
   for _, name in ipairs({"url", "port"}) do
-    local handle = io.open(directory .. "/" .. name, "rb")
+    local path = directory .. "/" .. name
+    local handle, err, code = io.open(path, "rb")
     if handle then
-      saved[name] = handle:read("*a")
+      local contents, readErr = handle:read("*a")
       handle:close()
+      assert(contents, "could not read " .. path .. ": " .. tostring(readErr))
+      saved[name] = contents
     else
+      -- Only a missing file may be deleted afterwards; any other failure would
+      -- otherwise turn an unreadable address into a lost one.
+      assert(code == ENOENT, "could not read " .. path .. ": " .. tostring(err))
       saved[name] = false
     end
   end
@@ -54,10 +62,11 @@ local function preserveProfileAddress()
       local ok, err = pcall(function()
         if contents then
           local handle = assert(io.open(path, "wb"))
-          handle:write(contents)
-          handle:close()
+          assert(handle:write(contents))
+          assert(handle:close())
         else
-          os.remove(path)
+          local removed, removeErr, code = os.remove(path)
+          assert(removed or code == ENOENT, removeErr)
         end
       end)
       if not ok then
