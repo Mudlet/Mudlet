@@ -237,6 +237,20 @@ public:
     bool setWindowFontSize(const QString& name, int size);
     // Creates the console's own command line the first time it is shown.
     bool setWindowCommandLineVisible(const QString& name, bool visible);
+    // The link and text operations, found by name in the same way. A link's
+    // commands can hold Lua registry references, which the console takes over
+    // only when it is found, so hasWindow() lets a caller look for it before
+    // taking any. Text or a link put into the main console's line while a
+    // trigger runs over it, or a replacement there, moves the trigger's
+    // captures to follow it.
+    bool hasWindow(const QString& name);
+    bool echoWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    bool insertWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    // Makes the console's selection a link.
+    bool setWindowLink(const QString& name, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+    bool insertWindowText(const QString& name, const QString& text);
+    // Puts text in place of the console's selection.
+    bool replaceWindowText(const QString& name, const QString& text);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.
