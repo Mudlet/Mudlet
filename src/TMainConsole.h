@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include <QFile>
 #include <QPointer>
+#include <QStack>
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
@@ -178,8 +179,12 @@ public:
     void setCommandLinePlaceholderText(const QString& text);
     void updateCommandLineSpellCheck(bool enabled);
     void setCommandLineText(const QString& text);
-    // Raises and focuses pCommandLine, or this console's own command line when it is null.
-    void focusCommandLine(TCommandLine* pCommandLine);
+    // The command line the player used last for this profile, so the focus can
+    // go back to it on returning to the profile.
+    void recordActiveCommandLine(TCommandLine*);
+    void forgetCommandLine(TCommandLine*);
+    // Raises and focuses that command line, or this console's own when none is on record.
+    void focusActiveCommandLine();
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // Shared by scroll boxes, command lines and text boxes: each is the same plain QWidget call.
     bool showPlainWindow(const QString& name);
@@ -317,6 +322,7 @@ private:
     // which would also say "no map widget" while the main window is hidden (e.g. in the tray).
     QDockWidget* mapWidget() const;
     void registerLabelWidget(const QString& name, TLabel* pLabel);
+    TCommandLine* activeCommandLine();
     void deregisterLabelWidget(TLabel* pLabel);
 
     // With registerSubCommandLine()/deregisterSubCommandLine(), all scroll box, text box and command line
@@ -333,6 +339,7 @@ private:
     QMap<QString, QPointer<TConsole>> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QStack<QPointer<TCommandLine>> mLastCommandLineUsed;
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
 

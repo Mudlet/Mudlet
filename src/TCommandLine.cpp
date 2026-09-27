@@ -648,8 +648,8 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (event->reason() != Qt::ActiveWindowFocusReason) {
-        mpHost->recordActiveCommandLine(this);
+    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost->mpConsole) {
+        mpHost->mpConsole->recordActiveCommandLine(this);
     }
 
     QPlainTextEdit::focusInEvent(event);
