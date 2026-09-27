@@ -101,7 +101,8 @@ struct TConsoleModel
     void resetFormat();
     bool setSelectionFgColor(const QColor& newColor);
     bool setSelectionBgColor(const QColor& newColor);
-    bool setSelectionDisplayAttributes(TChar::AttributeFlags attributes, bool enabled);
+    // Makes the selected run a link, taking over the commands' Lua registry references.
+    bool setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;

@@ -283,7 +283,6 @@ public:
     void setBorderColor(const QColor&);
     QColor borderColor() const { return mBorderColor; }
     void lowerMainDisplay();
-    void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
     void showEvent(QShowEvent* event) override;

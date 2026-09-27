@@ -1320,7 +1320,70 @@ TConsole* TMainConsole::consoleNamed(const QString& name)
     return mSubConsoleMap.value(name);
 }
 
-void TMainConsole::markWindowDirty(const TConsoleModel& model, const int firstLine, const int lastLine)
+void TMainConsole::markWindowDirty(const QString& name, const int firstLine, const int lastLine)
+{
+    if (auto pC = consoleNamed(name)) {
+        pC->markLinesDirty(firstLine, lastLine);
+    }
+}
+
+bool TMainConsole::clearWindowSelection(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->deselect();
+    return true;
+}
+
+bool TMainConsole::selectWindowCurrentLine(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->selectCurrentLine();
+    return true;
+}
+
+std::optional<bool> TMainConsole::selectWindowSection(const QString& name, int from, int length)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->selectSection(from, length)};
+}
+
+std::optional<int> TMainConsole::selectWindowString(const QString& name, const QString& text, int matchNumber)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->select(text, matchNumber)};
+}
+
+std::optional<std::tuple<bool, QString, int, int>> TMainConsole::getWindowSelection(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getSelection()};
+}
+
+std::optional<QPair<quint8, TChar>> TMainConsole::getWindowTextFormat(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getTextAttributes()};
+}
+
+bool TMainConsole::setWindowDisplayAttributes(const QString& name, TChar::AttributeFlags attributes, bool enabled)
 {
     if (auto pC = model.buffer.console()) {
         pC->markLinesDirty(firstLine, lastLine);
@@ -1527,11 +1590,6 @@ bool TMainConsole::setWindowCommandLineVisible(const QString& name, bool visible
     return true;
 }
 
-bool TMainConsole::hasWindow(const QString& name)
-{
-    return consoleNamed(name) != nullptr;
-}
-
 bool TMainConsole::echoWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences)
 {
     auto pC = consoleNamed(name);
@@ -1549,20 +1607,6 @@ bool TMainConsole::insertWindowLink(const QString& name, const QString& text, QS
         return false;
     }
     pC->insertLink(text, commands, hints, useCurrentFormat, luaReferences);
-    return true;
-}
-
-bool TMainConsole::setWindowLink(const QString& name, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->setLink(commands, hints, luaReferences);
-    if (pC != this) {
-        pC->mUpperPane->forceUpdate();
-        pC->mLowerPane->forceUpdate();
-    }
     return true;
 }
 
