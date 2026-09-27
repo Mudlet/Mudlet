@@ -2332,6 +2332,47 @@ TConsoleModel* Host::consoleModelNamed(const QString& name)
     return mWindowRegistry.subConsoleModel(name);
 }
 
+void Host::markSelectionDirty(const TConsoleModel& model)
+{
+    TMainConsole::markWindowDirty(model, std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
+}
+
+bool Host::setWindowFgColor(const QString& name, const QColor& color)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionFgColor(color)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+bool Host::setWindowBgColor(const QString& name, const QColor& color)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionBgColor(color)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+bool Host::setWindowDisplayAttributes(const QString& name, const TChar::AttributeFlags attributes, const bool enabled)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionDisplayAttributes(attributes, enabled)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
 // Hot: the trigger engine reads the model for every character of a colour
 // pattern, so this hands back a reference rather than a shared_ptr copy - the
 // latter costs an atomic increment and decrement per call.
@@ -4839,15 +4880,56 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
     return qMakePair(true, pModel->lines(lineFrom, lineTo));
 }
 
-bool Host::setWindowLink(const QString& name, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+// Hands the view the cue for what a console model write did: new lines to show, or lines to repaint.
+static void showConsoleWrite(TMainConsole* pConsole, const TConsoleModel& model, const TConsoleModel::WriteResult& result)
+{
+    if (!pConsole) {
+        return;
+    }
+    if (result.appended) {
+        pConsole->showWindowNewLines(model);
+    } else if (result.firstLine >= 0) {
+        pConsole->markWindowDirty(model, result.firstLine, result.lastLine);
+    }
+}
+
+void Host::echoWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    model.echoLink(text, commands, hints, useCurrentFormat, luaReferences);
+    if (mpConsole) {
+        mpConsole->showWindowNewLines(model);
+    }
+}
+
+void Host::insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    showConsoleWrite(mpConsole, model, model.insertLink(text, commands, hints, useCurrentFormat, luaReferences));
+}
+
+void Host::setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    if (model.setLink(commands, hints, luaReferences)) {
+        markSelectionDirty(model);
+    }
+}
+
+bool Host::insertWindowText(const QString& name, const QString& text)
 {
     auto pModel = consoleModelNamed(name);
     if (!pModel) {
         return false;
     }
-    if (pModel->setLink(commands, hints, luaReferences) && mpConsole) {
-        mpConsole->markWindowDirty(name, std::min(pModel->P_begin.y(), pModel->P_end.y()), std::max(pModel->P_begin.y(), pModel->P_end.y()));
+    showConsoleWrite(mpConsole, *pModel, pModel->insertText(text));
+    return true;
+}
+
+bool Host::replaceWindowText(const QString& name, const QString& text)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
     }
+    pModel->replace(text);
     return true;
 }
 

@@ -106,7 +106,7 @@ private slots:
     }
 
     // The count is not "lines added": it is every line in the rewrapped range
-    // bar one, whether that line was split or not. TConsole::insertLink() moves
+    // bar one, whether that line was split or not. TConsoleModel::insertLink() moves
     // the user cursor down by it, so a line that needed no wrapping still has
     // to be counted.
     void test_rewrapCountsEveryLineInItsRange()

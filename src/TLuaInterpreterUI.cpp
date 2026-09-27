@@ -1108,7 +1108,8 @@ int TLuaInterpreter::echoLink(lua_State* L)
     // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     Host& host = getHostFromLua(L);
-    if (!host.consoleModelNamed(windowName)) {
+    auto pModel = host.consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
 
@@ -1124,10 +1125,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    if (!host.mpConsole || !host.mpConsole->echoWindowLink(windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences)) {
-        releaseLuaReferences(L, luaReferences);
-        return windowNotFound(L, windowName);
-    }
+    host.echoWindowLink(*pModel, windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1171,7 +1169,8 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     Host& host = getHostFromLua(L);
-    if (!host.consoleModelNamed(windowName)) {
+    auto pModel = host.consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
 
@@ -1192,10 +1191,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     }
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    if (!host.mpConsole || !host.mpConsole->echoWindowLink(windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences)) {
-        releaseLuaReferences(L, luaReferences);
-        return windowNotFound(L, windowName);
-    }
+    host.echoWindowLink(*pModel, windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2120,7 +2116,8 @@ int TLuaInterpreter::insertLink(lua_State* L)
     // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     Host& host = getHostFromLua(L);
-    if (!host.consoleModelNamed(windowName)) {
+    auto pModel = host.consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
 
@@ -2136,10 +2133,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    if (!host.mpConsole || !host.mpConsole->insertWindowLink(windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences)) {
-        releaseLuaReferences(L, luaReferences);
-        return windowNotFound(L, windowName);
-    }
+    host.insertWindowLink(*pModel, windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2173,7 +2167,8 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString windowName = hasWindowName ? QString{lua_tostring(L, windowNamePos)} : qsl("main");
     Host& host = getHostFromLua(L);
-    if (!host.consoleModelNamed(windowName)) {
+    auto pModel = host.consoleModelNamed(windowName);
+    if (!pModel) {
         return windowNotFound(L, windowName);
     }
 
@@ -2194,10 +2189,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     }
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    if (!host.mpConsole || !host.mpConsole->insertWindowLink(windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences)) {
-        releaseLuaReferences(L, luaReferences);
-        return windowNotFound(L, windowName);
-    }
+    host.insertWindowLink(*pModel, windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2225,8 +2217,8 @@ int TLuaInterpreter::insertText(lua_State* L)
     }
     const QString text = getVerifiedString(L, __func__, ++s, "text");
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->insertWindowText(consoleName, text)) {
+    Host& host = getHostFromLua(L);
+    if (!host.insertWindowText(consoleName, text)) {
         return windowNotFound(L, consoleName);
     }
     lua_pushboolean(L, true);
@@ -2621,8 +2613,8 @@ int TLuaInterpreter::replace(lua_State* L)
     }
     const QString text = getVerifiedString(L, __func__, s, "with");
     const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->replaceWindowText(consoleName, text)) {
+    Host& host = getHostFromLua(L);
+    if (!host.replaceWindowText(consoleName, text)) {
         return windowNotFound(L, consoleName);
     }
     return 0;
@@ -3794,7 +3786,8 @@ int TLuaInterpreter::setLink(lua_State* L)
     // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-    if (!host.consoleModelNamed(consoleName)) {
+    auto pModel = host.consoleModelNamed(consoleName);
+    if (!pModel) {
         return windowNotFound(L, consoleName);
     }
 
@@ -3809,10 +3802,7 @@ int TLuaInterpreter::setLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
     luaReferences << luaReference;
 
-    if (!host.setWindowLink(consoleName, commandList, hintList, luaReferences)) {
-        releaseLuaReferences(L, luaReferences);
-        return windowNotFound(L, consoleName);
-    }
+    host.setWindowLink(*pModel, consoleName, commandList, hintList, luaReferences);
 
     lua_pushboolean(L, true);
     return 1;
@@ -3927,7 +3917,8 @@ int TLuaInterpreter::setPopup(lua_State* L)
     // resolved before the parse, so a miss strands nothing - see releaseLuaReferences()
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-    if (!host.consoleModelNamed(consoleName)) {
+    auto pModel = host.consoleModelNamed(consoleName);
+    if (!pModel) {
         return windowNotFound(L, consoleName);
     }
 
@@ -3948,10 +3939,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return 2;
     }
 
-    if (!host.setWindowLink(consoleName, commandList, hintList, luaReferences)) {
-        releaseLuaReferences(L, luaReferences);
-        return windowNotFound(L, consoleName);
-    }
+    host.setWindowLink(*pModel, consoleName, commandList, hintList, luaReferences);
 
     lua_pushboolean(L, true);
     return 1;

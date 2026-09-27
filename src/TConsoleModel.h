@@ -104,6 +104,25 @@ struct TConsoleModel
     // Makes the selected run a link, taking over the commands' Lua registry references.
     bool setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
 
+    // What a write at mUserCursor leaves the view to do: show the lines it
+    // appended, or repaint firstLine..lastLine, which it changed in place.
+    struct WriteResult
+    {
+        bool appended = false;
+        int firstLine = -1;
+        int lastLine = -1;
+    };
+    // Links and text go in at mUserCursor, and text in mFormatCurrent. While
+    // triggers run over this console's line, a write there shifts their
+    // capture groups to match.
+    void echoLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    WriteResult insertLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    WriteResult insertText(const QString& text);
+    // Puts text in place of the selected run.
+    void replace(const QString& text);
+    // The WCAG contrast ratio, which link colours here and TConsole's scroll bar are both chosen by.
+    static double contrastRatio(const QColor& first, const QColor& second);
+
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
     // A QPointer because Host and view are torn down in either order: quitting
@@ -128,7 +147,7 @@ struct TConsoleModel
     TChar mFormatCurrent;
     bool mIsPromptLine = false;
     // Set while triggers run on incoming text, so that script writes treat the
-    // matched line as still open - see the branches on it in TConsole and
+    // matched line as still open - see the branches on it here, in TConsole and
     // TBuffer::addLink(). Only ever raised on the main console's model.
     bool mTriggerEngineMode = false;
     // Last pressed toolbar button's state for getButtonState(): 1 = up, 2 = down (0 invalid); a plain button

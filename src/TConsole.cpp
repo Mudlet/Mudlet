@@ -68,7 +68,6 @@
 #include <QVideoWidget>
 #include <cerrno>
 #include <chrono>
-#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -77,29 +76,6 @@ using namespace std::chrono_literals;
 namespace {
 // Between the text panes and the vertical scroll bar; predictions of pane width must subtract it.
 constexpr int scrollBarSpacing = 1;
-
-double relativeLuminance(const QColor& color)
-{
-    const auto channel = [](const double value) {
-        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
-    };
-    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
-}
-
-double contrastRatio(const QColor& first, const QColor& second)
-{
-    const double one = relativeLuminance(first);
-    const double other = relativeLuminance(second);
-    return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
-}
-
-// Plain blue is barely legible against the dark background most profiles use,
-// so whichever of the two link blues stands out more against this console wins:
-QColor readableLinkColor(const QColor& background)
-{
-    const QColor lightBlue(80, 160, 255);
-    return contrastRatio(QColor(Qt::blue), background) >= contrastRatio(lightBlue, background) ? QColor(Qt::blue) : lightBlue;
-}
 
 // Windows 11 colours the handle for the app's colour scheme, not its surface: 45% black, invisible on a
 // black console. A style, not a style sheet: a widget's own sheet outranks every rule, so it would drop
@@ -1282,7 +1258,7 @@ void TConsole::updateScrollBarStyle()
 {
     const QColor background = (mType == MainConsole) ? mpHost->mBgColor : mBgColor;
     // 200 is the lowest alpha clearing a 3:1 contrast ratio on every background a profile can set
-    const QColor handle = contrastRatio(Qt::white, background) >= contrastRatio(Qt::black, background) ? QColor(255, 255, 255, 200) : QColor(0, 0, 0, 200);
+    const QColor handle = TConsoleModel::contrastRatio(Qt::white, background) >= TConsoleModel::contrastRatio(Qt::black, background) ? QColor(255, 255, 255, 200) : QColor(0, 0, 0, 200);
 
     for (QScrollBar* pScrollBar : {mpScrollBar, mpHScrollBar}) {
         pScrollBar->setProperty(ConsoleScrollBarStyle::csHandleColorProperty, handle);
@@ -1446,141 +1422,20 @@ void TConsole::reset()
     mpModel->resetFormat();
 }
 
-void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat, QVector<int> luaReference)
-{
-    const int x = P.x();
-    const int y = P.y();
-    QPoint P2 = P;
-    P2.setX(x + text.size());
-
-    const TChar standardLinkFormat = TChar(readableLinkColor(mBgColor), mBgColor, TChar::Underline);
-    if (mTriggerEngineMode) {
-        mpHost->getLuaInterpreter()->adjustCaptureGroups(x, text.size());
-
-        if (customFormat) {
-            buffer.insertInLine(P, text, mFormatCurrent);
-        } else {
-            buffer.insertInLine(P, text, standardLinkFormat);
-        }
-
-        buffer.applyLink(P, P2, func, hint, luaReference);
-
-        if (y < mEngineCursor) {
-            mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
-        }
-        return;
-    }
-    if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
-        if (customFormat) {
-            buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
-        } else {
-            buffer.addLink(mTriggerEngineMode, text, func, hint, standardLinkFormat, luaReference);
-        }
-
-        mUpperPane->showNewLines();
-        mLowerPane->showNewLines();
-
-    } else {
-        if (customFormat) {
-            buffer.insertInLine(mUserCursor, text, mFormatCurrent);
-        } else {
-            buffer.insertInLine(mUserCursor, text, standardLinkFormat);
-        }
-
-        buffer.applyLink(P, P2, func, hint, luaReference);
-        if (text.indexOf("\n") != -1) {
-            const int y_tmp = mUserCursor.y();
-            const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
-            mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
-            const int y_neu = y_tmp + down;
-            const int x_adjust = text.lastIndexOf("\n");
-            int x_neu = 0;
-            if (x_adjust != -1) {
-                x_neu = text.size() - x_adjust - 1 > 0 ? text.size() - x_adjust - 1 : 0;
-            }
-            moveCursor(x_neu, y_neu);
-        } else {
-            mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
-            moveCursor(mUserCursor.x() + text.size(), mUserCursor.y());
-        }
-    }
-}
-
-void TConsole::insertText(const QString& text, QPoint P)
-{
-    const int x = P.x();
-    const int y = P.y();
-    if (mTriggerEngineMode) {
-        mpHost->getLuaInterpreter()->adjustCaptureGroups(x, text.size());
-        buffer.insertInLine(P, text, mFormatCurrent);
-        if (y < mEngineCursor) {
-            mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
-        }
-
-    } else {
-        if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
-            buffer.append(text, 0, text.size(), mFormatCurrent);
-            mUpperPane->showNewLines();
-            mLowerPane->showNewLines();
-        } else {
-            buffer.insertInLine(mUserCursor, text, mFormatCurrent);
-            const int y_tmp = mUserCursor.y();
-            if (text.indexOf(QChar::LineFeed) != -1) {
-                const int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
-                mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
-            } else {
-                mUpperPane->needUpdate(y_tmp, y_tmp + 1);
-            }
-        }
-    }
-}
-
-
-void TConsole::replace(const QString& text)
-{
-    const int x = P_begin.x();
-    const int o = P_end.x() - P_begin.x();
-    const int r = text.size();
-
-    if (mTriggerEngineMode) {
-        if (hasSelection()) {
-            if (r < o) {
-                const int a = -1 * (o - r);
-                mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
-            }
-            if (r > o) {
-                const int a = r - o;
-                mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
-            }
-        } else {
-            mpHost->getLuaInterpreter()->adjustCaptureGroups(x, r);
-        }
-    }
-
-    buffer.replaceInLine(P_begin, P_end, text, mFormatCurrent);
-}
-
 bool TConsole::deleteLine(int y)
 {
     return buffer.deleteLine(y);
 }
 
-bool TConsole::hasSelection()
+void TConsole::insertText(const QString& text)
 {
-    if (P_begin != P_end) {
-        return true;
+    const auto result = mpModel->insertText(text);
+    if (result.appended) {
+        mUpperPane->showNewLines();
+        mLowerPane->showNewLines();
+    } else {
+        markLinesDirty(result.firstLine, result.lastLine);
     }
-    return false;
-}
-
-void TConsole::insertText(const QString& msg)
-{
-    insertText(msg, mUserCursor);
-}
-
-void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat, QVector<int> luaReference)
-{
-    insertLink(text, func, hint, mUserCursor, customFormat, luaReference);
 }
 
 void TConsole::insertHTML(const QString& text)
@@ -2108,19 +1963,6 @@ void TConsole::printCommand(QString& msg)
         msg.append("\n");
         print(msg, mCommandFgColor, mCommandBgColor);
     }
-}
-
-void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat, QVector<int> luaReference)
-{
-    if (customFormat) {
-        buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
-    } else {
-        const QColor background = (mType == MainConsole ? mpHost->mBgColor : mBgColor);
-        const TChar f = TChar(readableLinkColor(background), background, TChar::Underline);
-        buffer.addLink(mTriggerEngineMode, text, func, hint, f, luaReference);
-    }
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
 }
 
 // An overload of print(const QString& msg):

@@ -1046,17 +1046,6 @@ end
 -- a family setFont() takes, which it checks for before it looks for a console
 local anyFont = next(getAvailableFonts())
 
--- replace() is wrapped in Lua, and the wrapper drops what the function it wraps
--- answers
-local rawReplace
-for index = 1, math.huge do
-    local name, value = debug.getupvalue(replace, index)
-    if not name or name == 'oldreplace' then
-        rawReplace = value
-        break
-    end
-end
-
 expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
 expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
 expectRefusal('deleteLabel', deleteLabel('noViewLbl'))
@@ -1149,12 +1138,6 @@ expectRefusal('getFont main', getFont('main'))
 expectRefusal('setFont', setFont(anyFont))
 expectRefusal('getFontSize', getFontSize())
 expectRefusal('setFontSize', setFontSize(10))
-expectRefusal('echoLink', echoLink('text', 'cmd', 'hint'))
-expectRefusal('echoPopup', echoPopup('text', {'cmd'}, {'hint'}))
-expectRefusal('insertLink', insertLink('text', 'cmd', 'hint'))
-expectRefusal('insertPopup', insertPopup('text', {'cmd'}, {'hint'}))
-expectRefusal('insertText', insertText('text'))
-expectRefusal('replace', rawReplace('text'))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1176,10 +1159,6 @@ expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, ge
 expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
 expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
--- a link handed a function for its command refuses in the same way
-expectValue('echoLink reason', 'window "main" not found', select(2, echoLink('text', function() end, 'hint')))
-expectValue('insertText reason', 'window "" not found', select(2, insertText('text')))
-expectValue('replace reason', 'window "" not found', select(2, rawReplace('text')))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())
@@ -1218,6 +1197,45 @@ noViewReport = table.concat(noViewProblems, '; ')
         const int popupId = model.buffer.getLinkIndexAt(line, 5);
         QVERIFY2(popupId > 0 && popupId != linkId, "setPopup() put no link of its own on the main model's selection.");
         QCOMPARE(model.buffer.mLinkStore.getLinksConst(popupId), QStringList({qsl("one"), qsl("two")}));
+
+        // replace() is wrapped in Lua by a function that reads the selection
+        // back through getSelection() first, so the one it wraps is called
+        runLua(host, qsl(R"LUA(
+for index = 1, math.huge do
+    local name, value = debug.getupvalue(replace, index)
+    if not name or name == 'oldreplace' then
+        noViewReplace = value
+        break
+    end
+end
+)LUA"));
+        model.P_begin = QPoint(0, line);
+        model.P_end = QPoint(4, line);
+        runLua(host, qsl("noViewReplace('main', 'LINKED')\n"));
+        QCOMPARE(model.buffer.line(line), qsl("LINKED popup"));
+
+        model.mUserCursor = QPoint(6, line);
+        runLua(host, qsl("noViewInsertText = tostring(insertText(' and'))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewInsertText"), qsl("true"));
+        QCOMPARE(model.buffer.line(line), qsl("LINKED and popup"));
+        QCOMPARE(model.mUserCursor, QPoint(6, line));
+
+        runLua(host, qsl("noViewInsertLink = tostring(insertLink('', ' a', 'cmd', 'hint'))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewInsertLink"), qsl("true"));
+        QCOMPARE(model.buffer.line(line), qsl("LINKED a and popup"));
+        QVERIFY2(model.buffer.getLinkIndexAt(line, 7) > 0, "insertLink() put no link on the text it inserted.");
+        QCOMPARE(model.mUserCursor, QPoint(8, line));
+
+        const int echoLine = model.buffer.getLastLineNumber();
+        runLua(host,
+               qsl("noViewEchoLink = tostring(echoLink('echoed', 'cmd', 'hint'))\n"
+                   "noViewEchoPopup = tostring(echoPopup('main', ' popup', {'cmd'}, {'hint'}))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewEchoLink"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "noViewEchoPopup"), qsl("true"));
+        QCOMPARE(model.buffer.line(echoLine), qsl("echoed popup"));
+        const int echoId = model.buffer.getLinkIndexAt(echoLine, 0);
+        QVERIFY2(echoId > 0, "echoLink() put no link on the text it echoed.");
+        QVERIFY2(model.buffer.getLinkIndexAt(echoLine, 7) > 0 && model.buffer.getLinkIndexAt(echoLine, 7) != echoId, "echoPopup() put no link of its own on the text it echoed.");
     }
 
     // The main console's wrap width and indents are also the profile's, which
