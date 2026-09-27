@@ -176,6 +176,9 @@ private slots:
         QCOMPARE(&console->mLogFileName, &model.mLogFileName);
         QCOMPARE(&console->mLogStream, &model.mLogStream);
         QCOMPARE(&console->mLogToLogFile, &model.mLogToLogFile);
+        QCOMPARE(&console->mWrapAt, &model.mWrapAt);
+        QCOMPARE(&console->mIndentCount, &model.mIndentCount);
+        QCOMPARE(&console->mHangingIndentCount, &model.mHangingIndentCount);
 
         model.mFgColor = QColorConstants::Svg::orange;
         QCOMPARE(console->mFgColor, QColorConstants::Svg::orange);
@@ -1112,10 +1115,8 @@ expectRefusal('scrollTo end', scrollTo())
 expectRefusal('enableTimeStamps', enableTimeStamps())
 expectRefusal('disableTimeStamps', disableTimeStamps())
 expectRefusal('timeStampsEnabled', timeStampsEnabled())
-expectRefusal('getWindowWrap', getWindowWrap())
-expectRefusal('setWindowWrap', setWindowWrap(80))
-expectRefusal('setWindowWrapIndent', setWindowWrapIndent('main', 1))
-expectRefusal('setWindowWrapHangingIndent', setWindowWrapHangingIndent('main', 1))
+expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
+expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1123,8 +1124,12 @@ expectValue('raiseWindow', false, raiseWindow('noViewUw'))
 -- both of these answer for "main" before they look for any console
 expectValue('scrollingActive main', true, scrollingActive('main'))
 expectValue('enableScrolling main', "scrolling cannot be enabled/disabled for the 'main' window", select(2, enableScrolling('main')))
--- whereas the wrap width is only checked once the console is found
-expectValue('setWindowWrap 0', 'window "" not found', select(2, setWindowWrap(0)))
+-- the main console's wrap is its model's, so it answers with no view
+expectValue('setWindowWrap', true, setWindowWrap(80))
+expectValue('getWindowWrap', 80, getWindowWrap())
+expectValue('setWindowWrapIndent', true, setWindowWrapIndent('main', 1))
+expectValue('setWindowWrapHangingIndent', true, setWindowWrapHangingIndent('main', 1))
+expectValue('setWindowWrap 0', 'wrapAt must be greater than zero, got 0', select(2, setWindowWrap(0)))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())
@@ -1167,6 +1172,31 @@ noViewReport = table.concat(noViewProblems, '; ')
             QCOMPARE(host->mWrapIndentCount, indent + offset);
             QCOMPARE(host->mWrapHangingIndentCount, hangingIndent + offset);
         }
+    }
+
+    // With no view the main console's wrap settings still belong to its model
+    // and to the profile, and wrapLine() then rewraps to them.
+    void test_windowWrapReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        runLua(host, qsl("setWindowWrap('main', 23)\nsetWindowWrapIndent('', 2)\nsetWindowWrapHangingIndent('main', 3)\nnoViewWrap = getWindowWrap()\n"));
+
+        QCOMPARE(model->buffer.mWrapAt, 23);
+        QCOMPARE(model->buffer.mWrapIndent, 2);
+        QCOMPARE(model->buffer.mWrapHangingIndent, 3);
+        QCOMPARE(model->mWrapAt, 23);
+        QCOMPARE(model->mIndentCount, 2);
+        QCOMPARE(model->mHangingIndentCount, 3);
+        QCOMPARE(host->mWrapAt, 23);
+        QCOMPARE(host->mWrapIndentCount, 2);
+        QCOMPARE(host->mWrapHangingIndentCount, 3);
+        QCOMPARE(luaGlobalNumber(host, "noViewWrap"), 23);
     }
 
     // A profile with no view owns its Hunspell handles and word set, so every
@@ -3282,10 +3312,7 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()

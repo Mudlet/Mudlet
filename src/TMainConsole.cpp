@@ -1428,15 +1428,6 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     return true;
 }
 
-std::optional<TConsole::ConsoleType> TMainConsole::getWindowConsoleType(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->getType()};
-}
-
 std::optional<bool> TMainConsole::getWindowTimeStamps(const QString& name)
 {
     auto pC = consoleNamed(name);
@@ -1457,45 +1448,6 @@ std::optional<bool> TMainConsole::setWindowTimeStamps(const QString& name, bool 
         pC->slot_toggleTimeStamps(shown);
     }
     return {wasShown};
-}
-
-std::optional<int> TMainConsole::getWindowWrapAt(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->getWrapAt()};
-}
-
-bool TMainConsole::setWindowWrapAt(const QString& name, int wrapAt)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->setWrapAt(wrapAt);
-    return true;
-}
-
-bool TMainConsole::setWindowWrapIndent(const QString& name, int indent)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->setIndentCount(indent);
-    return true;
-}
-
-bool TMainConsole::setWindowWrapHangingIndent(const QString& name, int indent)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->setHangingIndentCount(indent);
-    return true;
 }
 
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)

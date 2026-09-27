@@ -125,6 +125,29 @@ struct TConsoleModel
     // resets it to 1.
     int mButtonState = 1;
 
+    // The width and indents wrapLine() rewraps a line to. The buffer keeps its
+    // own copy, which wraps text as it arrives: these setters change both, but
+    // on the main console TConsole::changeColors() also resets the buffer's
+    // copy to the profile's and leaves these alone.
+    void setWrapAt(int pos)
+    {
+        mWrapAt = pos;
+        buffer.setWrapAt(pos);
+    }
+    void setIndentCount(int count)
+    {
+        mIndentCount = count;
+        buffer.setWrapIndent(count);
+    }
+    void setHangingIndentCount(int count)
+    {
+        mHangingIndentCount = count;
+        buffer.setWrapHangingIndent(count);
+    }
+    int mWrapAt = 100;
+    int mIndentCount = 0;
+    int mHangingIndentCount = 0;
+
     // The OSC 8 hyperlink managers. Concealing and revealing rewrite this
     // model's buffer, so they run with or without a view; repainting afterwards
     // is the view's job. Registering a link is not view-free yet - TBuffer
