@@ -53,6 +53,7 @@
 #include <QDockWidget>
 #include <QLabel>
 #include <QMenuBar>
+#include <QToolBar>
 #include <QTemporaryDir>
 
 #include <zip.h>
@@ -496,12 +497,20 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
 
-        const QString styleSheet = qsl("QMenuBar { color: #123456; }");
-        QVERIFY2(mudlet::self()->menuBar()->styleSheet() != styleSheet, "SETUP: the menu bar already carries the style sheet, so the assertion below cannot fail.");
+        QMenuBar* menuBar = mudlet::self()->menuBar();
+        QToolBar* toolBar = mudlet::self()->mpMainToolBar;
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+
+        const QString styleSheet = qsl("QWidget { color: #123456; }");
+        QVERIFY2(menuBar->styleSheet() != styleSheet && toolBar->styleSheet() != styleSheet && tabBar->styleSheet() != styleSheet,
+                 "SETUP: a bar already carries the style sheet, so the assertions below cannot fail.");
 
         QVERIFY(host->setProfileStyleSheet(styleSheet));
 
-        QCOMPARE(mudlet::self()->menuBar()->styleSheet(), styleSheet);
+        QCOMPARE(menuBar->styleSheet(), styleSheet);
+        QCOMPARE(toolBar->styleSheet(), styleSheet);
+        QCOMPARE(tabBar->styleSheet(), styleSheet);
     }
 
     // The main window's bars are shared by every profile, so only the active
@@ -515,20 +524,28 @@ private slots:
         Host* second = mudlet::self()->getActiveHost();
         QVERIFY2(second && second != first, "Starting the second profile did not make it the active one.");
         QMenuBar* menuBar = mudlet::self()->menuBar();
+        QToolBar* toolBar = mudlet::self()->mpMainToolBar;
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
 
-        const QString firstStyleSheet = qsl("QMenuBar { color: #111111; }");
+        const QString firstStyleSheet = qsl("QWidget { color: #111111; }");
         QVERIFY(first->setProfileStyleSheet(firstStyleSheet));
-        QVERIFY2(menuBar->styleSheet() != firstStyleSheet, "A profile that is not the active one restyled the main window.");
+        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() != firstStyleSheet && tabBar->styleSheet() != firstStyleSheet,
+                 "A profile that is not the active one restyled the main window.");
 
-        const QString secondStyleSheet = qsl("QMenuBar { color: #222222; }");
+        const QString secondStyleSheet = qsl("QWidget { color: #222222; }");
         QVERIFY(second->setProfileStyleSheet(secondStyleSheet));
         QCOMPARE(menuBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(tabBar->styleSheet(), secondStyleSheet);
 
-        mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(first->getName()));
+        tabBar->setCurrentIndex(tabBar->tabIndex(first->getName()));
         QCOMPARE(mudlet::self()->getActiveHost(), first);
 
-        QVERIFY(second->setProfileStyleSheet(qsl("QMenuBar { color: #333333; }")));
+        QVERIFY(second->setProfileStyleSheet(qsl("QWidget { color: #333333; }")));
         QCOMPARE(menuBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(tabBar->styleSheet(), firstStyleSheet);
     }
 
     // The central debug console follows the display font of a profile that
