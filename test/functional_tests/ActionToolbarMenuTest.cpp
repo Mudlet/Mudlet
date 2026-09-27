@@ -348,6 +348,71 @@ private slots:
         QCOMPARE(console->actionToolBar(actionNamed(host, qsl("menuTestSubEntry"))), toolBar);
     }
 
+    // setButtonState() reaches both the button a floating toolbar draws a group
+    // as and the menu entry the group gets on it, including after the toolbar
+    // has been rebuilt with new ones.
+    void test_setButtonStateChecksAFloatingToolbarsButtonAndMenuEntry()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* group = buildNestedGroup(host, 4);
+        group->setIsPushDownButton(true);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TFlipButton> firstButton = findButtonWidget(group);
+        QVERIFY(firstButton);
+
+        group->setDataChanged();
+        host->getActionUnit()->updateAllToolbars();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!firstButton, "rebuilding the toolbar should have replaced the group's button");
+
+        auto* button = findButtonWidget(group);
+        QVERIFY(button);
+        QVERIFY(button->menu());
+        QPointer<QAction> entry = entryNamed(button->menu(), qsl("menuTestGroup"));
+        QVERIFY(entry);
+        QVERIFY2(!button->isChecked() && !entry->isChecked(), "both have to start unchecked, or checking them proves nothing");
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("setButtonState(%1, true)").arg(group->getID())));
+        QVERIFY(button->isChecked());
+        QVERIFY(entry->isChecked());
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("setButtonState(%1, false)").arg(group->getID())));
+        QVERIFY(!button->isChecked());
+        QVERIFY(!entry->isChecked());
+    }
+
+    // The docked button bar: the group is a button, its children menu entries.
+    void test_setButtonStateChecksAButtonBarsButtonAndMenuEntry()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* group = buildNestedGroup(host, 0);
+        group->setIsPushDownButton(true);
+        auto* entryAction = actionNamed(host, qsl("menuTestEntry"));
+        QVERIFY(entryAction);
+        entryAction->setIsPushDownButton(true);
+        host->getActionUnit()->updateAllToolbars();
+
+        auto* button = findButtonWidget(group);
+        QVERIFY(button);
+        QVERIFY(button->menu());
+        QPointer<QAction> entry = entryNamed(button->menu(), qsl("menuTestEntry"));
+        QVERIFY(entry);
+        QVERIFY2(!button->isChecked() && !entry->isChecked(), "both have to start unchecked, or checking them proves nothing");
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("setButtonState(%1, true)").arg(group->getID())));
+        QVERIFY(button->isChecked());
+        QVERIFY(!entry->isChecked());
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("setButtonState(%1, true)").arg(entryAction->getID())));
+        QVERIFY(entry->isChecked());
+    }
+
     void cleanup()
     {
         if (auto* self = mudlet::self()) {

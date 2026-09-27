@@ -52,7 +52,6 @@
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TTextEdit.h"
-#include "TToolBar.h"
 #include "utils.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
@@ -5837,14 +5836,6 @@ void Host::setDockLayoutUpdated(const QString& name)
     }
 }
 
-void Host::setToolbarLayoutUpdated(TToolBar* pTB)
-{
-    if (!mToolbarLayoutChanges.contains(pTB)) {
-        pTB->setProperty("layoutChanged", QVariant(true));
-        mToolbarLayoutChanges.append(pTB);
-    }
-}
-
 bool Host::commitLayoutUpdates(bool flush)
 {
     bool updated = false;
@@ -5859,23 +5850,13 @@ bool Host::commitLayoutUpdates(bool flush)
     }
     mDockLayoutChanges.clear();
 
-    // commit changes (or rather clear the layout changed flags) for
-    // dockable/floating toolbars across all profiles:
-    if (!flush) {
-        for (const auto& pToolBar : std::as_const(mToolbarLayoutChanges)) {
-            if (!pToolBar || pToolBar.isNull()) {
-                // This can happen when a TToolBar is deleted
-                continue;
-            }
-            if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
-                qWarning().nospace().noquote() << "host::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
-            } else if (pToolBar->property("layoutChanged").toBool()) {
-                pToolBar->setProperty("layoutChanged", QVariant(false));
-                updated = true;
-            }
+    if (mpConsole) {
+        if (flush) {
+            mpConsole->discardToolBarLayoutChanges();
+        } else if (mpConsole->commitToolBarLayoutChanges()) {
+            updated = true;
         }
     }
-    mToolbarLayoutChanges.clear();
     return updated;
 }
 

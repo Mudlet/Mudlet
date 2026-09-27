@@ -18,6 +18,8 @@
  ***************************************************************************/
 
 #include <QLayout>
+#include <QMoveEvent>
+#include <QResizeEvent>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -410,6 +412,87 @@ private slots:
         // The freed pointer is only looked up as a key, never followed
         QVERIFY(!console->actionEasyButtonBar(group));
         QVERIFY(console->actionEasyButtonBar(root));
+    }
+
+    // Moving or resizing a floating toolbar raises its layout-changed flag, and
+    // committing the layout clears it and tells the window there is a layout to
+    // save again.
+    void test_aMovedOrResizedFloatingToolbarMarksTheLayoutChanged()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* floating = makeRootBar(host, qsl("placementLayout"), 4);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QVERIFY(toolBar);
+        QCoreApplication::processEvents();
+        host->commitLayoutUpdates();
+        QVERIFY2(!host->commitLayoutUpdates(), "nothing should be left to commit once the toolbar has settled");
+
+        QMoveEvent moved(QPoint(7, 9), QPoint(0, 0));
+        QCoreApplication::sendEvent(toolBar, &moved);
+        QVERIFY(toolBar->property("layoutChanged").toBool());
+        mudlet::self()->mHasSavedLayout = true;
+        mudlet::self()->commitLayoutUpdates();
+        QVERIFY2(!mudlet::self()->mHasSavedLayout, "a moved toolbar should leave the window layout needing a save");
+        QVERIFY(!toolBar->property("layoutChanged").toBool());
+        QVERIFY(!host->commitLayoutUpdates());
+
+        QResizeEvent resized(QSize(60, 40), QSize(50, 30));
+        QCoreApplication::sendEvent(toolBar, &resized);
+        QVERIFY(toolBar->property("layoutChanged").toBool());
+        QVERIFY(host->commitLayoutUpdates());
+        QVERIFY(!toolBar->property("layoutChanged").toBool());
+    }
+
+    // A layout just restored is not a change: flushing drops what was counted
+    // without clearing the flags.
+    void test_flushingTheLayoutUpdatesDropsAToolbarsChange()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* floating = makeRootBar(host, qsl("placementFlushed"), 4);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QVERIFY(toolBar);
+        QCoreApplication::processEvents();
+        host->commitLayoutUpdates();
+
+        QMoveEvent moved(QPoint(7, 9), QPoint(0, 0));
+        QCoreApplication::sendEvent(toolBar, &moved);
+        QVERIFY(toolBar->property("layoutChanged").toBool());
+
+        QVERIFY(!host->commitLayoutUpdates(true));
+        QVERIFY(toolBar->property("layoutChanged").toBool());
+        QVERIFY2(!host->commitLayoutUpdates(), "a flushed change should no longer be counted");
+
+        QCoreApplication::sendEvent(toolBar, &moved);
+        QVERIFY2(host->commitLayoutUpdates(), "a change after the flush should be counted again");
+    }
+
+    // A toolbar deleted after it was marked is skipped, not followed.
+    void test_aDeletedToolbarsLayoutChangeIsNotCounted()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* floating = makeRootBar(host, qsl("placementLayoutGone"), 4);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QVERIFY(toolBar);
+        QCoreApplication::processEvents();
+        host->commitLayoutUpdates();
+
+        QMoveEvent moved(QPoint(7, 9), QPoint(0, 0));
+        QCoreApplication::sendEvent(toolBar, &moved);
+        delete toolBar.data();
+
+        QVERIFY(!host->commitLayoutUpdates());
     }
 
     void cleanup()

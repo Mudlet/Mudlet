@@ -31,7 +31,6 @@
 #include "MudletApp.h"
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "EventLoopPump.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -43,10 +42,10 @@
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TKey.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -1862,11 +1861,8 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        if (pItem->mpEAction) {
-            pItem->mpEAction->setChecked(checked);
-        }
-        if (pItem->mpFButton) {
-            pItem->mpFButton->setChecked(checked);
+        if (auto* pConsole = getHostFromLua(L).mpConsole.data()) {
+            pConsole->setActionButtonChecked(pItem, checked);
         }
         lua_pushboolean(L, true);
         return 1;

@@ -37,8 +37,10 @@
 
 #include <list>
 
+class EAction;
 class TAction;
 class TEasyButtonBar;
+class TFlipButton;
 class TMediaPlayer;
 class TMxpFrameWidgets;
 class TScrollBox;
@@ -224,11 +226,23 @@ public:
     void renameActionToolBar(TAction* pAction, const QString& name);
     void setActionToolBarVisible(TAction* pAction, bool visible);
     void hideActionEasyButtonBar(TAction* pAction);
+    // The button and the menu entry a bar draws an action as; the one each
+    // replaces is deleted later.
+    void replaceActionButton(TAction* pAction, TFlipButton* pButton);
+    void replaceActionMenuEntry(TAction* pAction, EAction* pEntry);
+    TFlipButton* actionButton(TAction* pAction) const;
+    EAction* actionMenuEntry(TAction* pAction) const;
+    void setActionButtonChecked(TAction* pAction, bool checked);
     // Floating toolbars are the main window's children rather than this
     // console's, so the profile has to delete them itself.
     const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }
     void deleteActionToolBars();
     void deleteActionToolBarsLater();
+    // A floating toolbar that has moved or been resized since the layout was
+    // last saved; committing clears the flags and answers whether any was raised.
+    void setToolBarLayoutChanged(TToolBar* pToolBar);
+    bool commitToolBarLayoutChanges();
+    void discardToolBarLayoutChanges();
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();
@@ -297,6 +311,8 @@ private:
     {
         QPointer<TToolBar> mpToolBar;
         QPointer<TEasyButtonBar> mpEasyButtonBar;
+        QPointer<TFlipButton> mpButton;
+        QPointer<EAction> mpMenuEntry;
     };
     ActionBars& actionBarsFor(TAction* pAction);
     // The latency box repaints on every setText(), so a flood of packets is
@@ -343,6 +359,7 @@ private:
     QHash<TAction*, ActionBars> mActionBars;
     std::list<QPointer<TToolBar>> mToolBarList;
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
+    QList<QPointer<TToolBar>> mToolBarLayoutChanges;
 
     bool mEnableClose = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;

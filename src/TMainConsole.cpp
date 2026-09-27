@@ -25,6 +25,7 @@
 #include "TConsole.h"
 
 
+#include "EAction.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TCommandLine.h"
@@ -32,6 +33,7 @@
 #include "TDockWidget.h"
 #include "TEasyButtonBar.h"
 #include "TEvent.h"
+#include "TFlipButton.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMap.h"
@@ -999,6 +1001,44 @@ void TMainConsole::hideActionEasyButtonBar(TAction* pAction)
 {
     if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
         pBar->hide();
+    }
+}
+
+void TMainConsole::replaceActionButton(TAction* pAction, TFlipButton* pButton)
+{
+    ActionBars& bars = actionBarsFor(pAction);
+    if (bars.mpButton) {
+        bars.mpButton->deleteLater();
+    }
+    bars.mpButton = pButton;
+}
+
+void TMainConsole::replaceActionMenuEntry(TAction* pAction, EAction* pEntry)
+{
+    ActionBars& bars = actionBarsFor(pAction);
+    if (bars.mpMenuEntry) {
+        bars.mpMenuEntry->deleteLater();
+    }
+    bars.mpMenuEntry = pEntry;
+}
+
+TFlipButton* TMainConsole::actionButton(TAction* pAction) const
+{
+    return mActionBars.value(pAction).mpButton;
+}
+
+EAction* TMainConsole::actionMenuEntry(TAction* pAction) const
+{
+    return mActionBars.value(pAction).mpMenuEntry;
+}
+
+void TMainConsole::setActionButtonChecked(TAction* pAction, const bool checked)
+{
+    if (EAction* pEntry = actionMenuEntry(pAction)) {
+        pEntry->setChecked(checked);
+    }
+    if (TFlipButton* pButton = actionButton(pAction)) {
+        pButton->setChecked(checked);
     }
 }
 
@@ -2138,6 +2178,38 @@ void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)
     if (mpDockableMapWidget) {
         mpDockableMapWidget->setStyleSheet(styleSheet);
     }
+}
+
+void TMainConsole::setToolBarLayoutChanged(TToolBar* pToolBar)
+{
+    if (!mToolBarLayoutChanges.contains(pToolBar)) {
+        pToolBar->setProperty("layoutChanged", QVariant(true));
+        mToolBarLayoutChanges.append(pToolBar);
+    }
+}
+
+bool TMainConsole::commitToolBarLayoutChanges()
+{
+    bool updated = false;
+    for (const auto& pToolBar : std::as_const(mToolBarLayoutChanges)) {
+        if (!pToolBar) {
+            continue;
+        }
+        if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+            qWarning().nospace().noquote() << "TMainConsole::commitToolBarLayoutChanges() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+        } else if (pToolBar->property("layoutChanged").toBool()) {
+            pToolBar->setProperty("layoutChanged", QVariant(false));
+            updated = true;
+        }
+    }
+    mToolBarLayoutChanges.clear();
+    return updated;
+}
+
+// For a layout just restored: the flags stay raised but are no longer counted.
+void TMainConsole::discardToolBarLayoutChanges()
+{
+    mToolBarLayoutChanges.clear();
 }
 
 void TMainConsole::setDockLayoutChanged(const QString& name)
