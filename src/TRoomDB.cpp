@@ -879,6 +879,14 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             pA->mUserData.insert(qsl("audit.remapped_id"), QString::number(faultyAreaId));
             validUsedAreaIds.insert(replacementAreaId);
             areas.insert(replacementAreaId, pA);
+            // Task 8 checks each area's room list against the rooms that name
+            // it, so those rooms have to be found under the new id or they
+            // are all taken out of the list as ones that do not belong there:
+            const QList<int> roomsNamingFaultyArea{areaRoomMultiHash.values(faultyAreaId)};
+            areaRoomMultiHash.remove(faultyAreaId);
+            for (const int roomId : roomsNamingFaultyArea) {
+                areaRoomMultiHash.insert(replacementAreaId, roomId);
+            }
 
             pA->mIsDirty = true;
         }
