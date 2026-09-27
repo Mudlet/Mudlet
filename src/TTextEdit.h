@@ -191,6 +191,7 @@ private slots:
     void slot_copySelectionToClipboardImage();
 
 private:
+    void applyPendingScrollBarUpdate();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
@@ -313,6 +314,12 @@ private:
     QElapsedTimer mSincePaint;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
+    // The scrollbar repaints on every range change, so new output moves it
+    // with the paced frame rather than with every packet.
+    bool mScrollBarUpdatePending = false;
+    // Set while updateScrollBar() is moving the bar itself, which
+    // slot_scrollBarMoved() must not mistake for the user dragging it.
+    bool mUpdatingScrollBar = false;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
     // How many "normal" width "characters" are each tab stop apart, while
     // there is no current mechanism to adjust this, sensible values will

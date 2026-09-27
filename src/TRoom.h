@@ -141,10 +141,27 @@ public:
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
 
+    // The members from mX to highlight are declared first, and must stay
+    // within the first 16 bytes of the object: T2DMap::drawNonGridModeRoomsLod()
+    // reads them for every room on screen and prefetches one cache line per
+    // room, and at any 16-byte-aligned address - what operator new gives on
+    // the 64-bit platforms - those 16 bytes never straddle two lines.
+private:
+    // Made private so we can catch all cases where they are to be modified.
+    int mX = 0;
+    int mY = 0;
+
+public:
     int environment = -1;
 
     bool isLocked = false;
     bool hidden = false;
+    bool highlight = false;
+
+private:
+    int mZ = 0;
+
+public:
     qreal min_x = 0.0;
     qreal min_y = 0.0;
     qreal max_x = 0.0;
@@ -164,7 +181,6 @@ public:
     QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
 
-    bool highlight = false;
     QColor highlightColor;
     QColor highlightColor2;
     float highlightRadius = 0.0f;
@@ -203,10 +219,6 @@ private:
     int id = 0;
     int area = -1;
     int weight = 1;
-    // Made private so we can catch all cases where they are to be modified:
-    int mX = 0;
-    int mY = 0;
-    int mZ = 0;
     // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
     int north = -1;

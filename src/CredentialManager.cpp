@@ -60,9 +60,7 @@ bool keychainDeleteSucceeded(QKeychain::Error error)
     return error == QKeychain::NoError || error == QKeychain::EntryNotFound || error == QKeychain::NoBackendAvailable || error == QKeychain::NotImplemented;
 }
 
-// Reported when a key gets as far as the async API but could not safely become a path
-// component; the wording is what tells a caller its argument was refused rather than
-// its storage having gone wrong
+// Worded so a caller can tell a refused argument from a storage failure
 const auto scmInvalidKeyNameError = qsl("Key name is not valid for credential storage");
 
 // QStandardPaths automatically handles portable mode configuration paths
@@ -71,14 +69,11 @@ QString credentialFilePath(const QString& profileComponent, const QString& keyCo
     return qsl("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profileComponent, keyComponent);
 }
 
-// The length the old scheme cut a path component to. Its own constant rather than
-// the limit MudletApp::sanitizeForPath() applies: that one is free to change, while
-// this records what is already written on disk and so can never change.
+// Not tied to sanitizeForPath()'s limit, which may change: this records what is already on disk.
 constexpr int scmLegacyMaxPathComponentLength = 50;
 
-// How MudletApp::sanitizeForPath() built a path component before it started keeping
-// shortened names distinct, kept so that credentials filed under the old name can
-// still be found. Same role as generateLegacyServiceName() plays for the keychain.
+// sanitizeForPath() before it kept shortened names distinct, so credentials filed under the old
+// name can still be found. The file counterpart of generateLegacyServiceName().
 QString legacyPathComponent(const QString& input)
 {
     static const auto unsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
@@ -87,11 +82,8 @@ QString legacyPathComponent(const QString& input)
     return sanitized.left(scmLegacyMaxPathComponentLength);
 }
 
-// Decides between the two copies a long profile name can have: a Mudlet that predates the
-// digest-bearing name writes only the legacy one, so whichever copy was written last holds
-// the password the user set last. Timestamps a filesystem cannot tell apart - one that
-// records whole seconds, as FAT and some network mounts do - count as "not after", leaving
-// the copy under the current naming in charge.
+// An older Mudlet writes only the legacy copy, so the copy written last holds the latest password.
+// Timestamps the filesystem can't tell apart (whole-second FAT, network mounts) favour the current copy.
 bool fileWrittenAfter(const QString& path, const QString& otherPath)
 {
     const QFileInfo info(path);
@@ -109,9 +101,8 @@ bool writeCredentialFile(const QString& filePath, const QString& profileName, co
         return false;
     }
 
-    // Nothing but credentials is kept in there, so the directory is owner-only too. The
-    // profile directory above it holds only this one and the encryption key, and is narrowed
-    // by SecureStringUtils when that key is written or read.
+    // Holds only credentials, so owner-only too. The profile directory above is narrowed by
+    // SecureStringUtils when the encryption key is written or read.
     SecureStringUtils::restrictDirectoryToOwner(directoryPath);
 
     // an empty credential is allowed - it stands for "no password"
@@ -123,10 +114,8 @@ bool writeCredentialFile(const QString& filePath, const QString& profileName, co
     }
 
     const QByteArray payload = encrypted.toUtf8();
-    // QSaveFile rather than QFile: opening a QFile for writing empties the file that is
-    // already there before a byte of the new credential is written, and a payload this small
-    // only leaves QFile's write buffer inside close(), which returns void - so a disk that
-    // fills up in between leaves an empty file where the password was and reports success.
+    // QSaveFile, not QFile: QFile empties the file on open, and a payload this small is only written in
+    // close(), which returns void - so a full disk would leave an empty file and report success.
     QSaveFile file(filePath);
 
     if (!file.open(QIODevice::WriteOnly)) {
@@ -167,8 +156,7 @@ bool readFoundNothing(QKeychain::Error error)
 void startUnattendedJob(QKeychain::Job* job, const std::function<bool(QKeychain::Job*)>& hook, int timeoutMs, const QString& description)
 {
     detachJob(job);
-    // A hook that takes the job over gets it before the watchdog, which has nothing to report about
-    // a job that never reached the keychain
+    // Before the watchdog: a job the hook takes over never reaches the keychain
     if (hook && !hook(job)) {
         return;
     }
@@ -314,10 +302,8 @@ bool CredentialManager::isOperationValid() const
 
 bool CredentialManager::isPortableModeActive() const
 {
-    // The settled answer rather than a marker stat: a portable.txt naming a root
-    // Mudlet had to refuse leaves the marker in place while the config root is the
-    // ordinary one, and treating that as portable mode would quietly move the
-    // user's credentials out of the keychain on an install running non-portably.
+    // The settled answer, not a marker stat: a portable.txt naming a refused root leaves the marker while the
+    // config root is the ordinary one, and treating that as portable would move credentials out of the keychain.
     return MudletApp::portableRootInUse();
 }
 
@@ -342,10 +328,8 @@ bool CredentialManager::shouldUseKeychain(const QString& profileName) const
     return true;
 }
 
-// The file fallback narrows what it writes, and a failure to do so is recorded process-wide -
-// where another profile's credential work can have left one of its own, and can leave one
-// between a keychain job starting and its callback running. Anything already recorded is
-// discarded first, so what is left afterwards belongs to this store and to no other.
+// Narrowing failures are recorded process-wide, where another profile's credential work can add one
+// mid-job. Clearing first leaves only this store's.
 bool CredentialManager::storeCredentialToFileForThisOperation(const QString& profileName, const QString& key, const QString& credential)
 {
     SecureStringUtils::takeUnprotectedSecretPath();
@@ -365,9 +349,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
         return;
     }
 
-    // The static API refuses a key that cannot safely become a path component, and this
-    // one has to agree: an over-long or slash-bearing key stored here would be filed
-    // where the static API - the migration and cleanup path - could never look for it.
+    // Match the static API: a key it refuses would be filed where its migration and cleanup never look.
     if (!isValidKeyName(key)) {
         if (callback) {
             callback(false, scmInvalidKeyNameError);
@@ -427,9 +409,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
         return;
     }
 
-    // The static API refuses a key that cannot safely become a path component, and this
-    // one has to agree: an over-long or slash-bearing key stored here would be filed
-    // where the static API - the migration and cleanup path - could never look for it.
+    // Match the static API: a key it refuses would be filed where its migration and cleanup never look.
     if (!isValidKeyName(key)) {
         if (callback) {
             callback(false, QString(), scmInvalidKeyNameError, false);
@@ -866,9 +846,7 @@ void CredentialManager::removePassword(const QString& profileName, const QString
         return;
     }
 
-    // The static API refuses a key that cannot safely become a path component, and this
-    // one has to agree: an over-long or slash-bearing key stored here would be filed
-    // where the static API - the migration and cleanup path - could never look for it.
+    // Match the static API: a key it refuses would be filed where its migration and cleanup never look.
     if (!isValidKeyName(key)) {
         if (callback) {
             callback(false, scmInvalidKeyNameError);
@@ -1339,11 +1317,9 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
         return false;
     }
 
-    // Only once the file under the current naming is committed: the two sit in directories
-    // of their own, so this one can be written where that one cannot, and a store that
-    // reports failure must not leave the two Mudlets holding different passwords. Writing it
-    // last can leave it the newer of the two, which the next read settles by taking it and
-    // copying it across once.
+    // Only after the current file is committed: they live in separate directories, so one can fail alone,
+    // and a failed store must not leave old and new Mudlets with different passwords. If this leaves the
+    // legacy file newer, the next read copies it across.
     refreshLegacyFileCredential(profileName, key, credential);
 
     return true;
@@ -1359,16 +1335,14 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         return QString();
     }
 
-    // A Mudlet that predates the digest-bearing name reads and writes only the truncated
-    // path, so a copy there that is newer than this one's is the password saved last
+    // An older Mudlet uses only the truncated path, so a newer copy there is the latest password
     const QString legacyPath = generateLegacyFilePath(profileName, key);
 
     if (!legacyPath.isEmpty() && fileWrittenAfter(legacyPath, filePath)) {
         const QString migrated = readLegacyFileCredential(profileName, key);
 
         if (!migrated.isEmpty()) {
-            // Copied across, not moved: that file is the only place an older Mudlet sharing
-            // this configuration directory looks, so taking it away would lose it the password
+            // Copied, not moved: an older Mudlet sharing this config directory looks only there
             if (!writeCredentialFile(filePath, profileName, migrated)) {
                 qWarning() << "CredentialManager: could not copy the newer credential at" << legacyPath << "across to" << filePath << "- it will be read from the older path again next time";
             }
@@ -1378,8 +1352,7 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
             return migrated;
         }
 
-        // Nothing this profile can decrypt: a colliding profile's credential, or a damaged
-        // one. Its own copy, where it has one, is then the older of the two
+        // Undecryptable: a profile this one used to collide with wrote it, or it is damaged
         if (QFile::exists(filePath)) {
             qWarning() << "CredentialManager: the credential file" << legacyPath << "is newer than" << filePath << "but holds nothing profile" << profileName
                        << "can decrypt - the older copy is being used instead";
@@ -1397,9 +1370,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         return QString();
     }
 
-    // A credential written before this narrowing existed - or by an older Mudlet sharing this
-    // configuration directory, which still writes with the umask - may be group- and
-    // world-readable. Narrowing it here tightens it the first time the password is used.
+    // Credentials from before this narrowing, or from an older Mudlet (which uses the umask), may be
+    // world-readable.
     SecureStringUtils::restrictFileToOwner(filePath);
     SecureStringUtils::restrictDirectoryToOwner(QFileInfo(filePath).absolutePath());
 
@@ -1417,10 +1389,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
     if (decrypted.isEmpty()) {
         qWarning() << "CredentialManager: Failed to decrypt credential for profile" << profileName;
     } else {
-        // Said here rather than by the caller, which cannot tell a password the keychain
-        // answered with from one that came out of the file fallback. The key is named because
-        // this also answers for the proxy password and for credentialExists()'s reconnect
-        // token, and a log that says only "password" cannot tell those apart.
+        // Logged here because the caller can't tell keychain from file fallback. The key is named because
+        // this also serves the proxy password and credentialExists()'s reconnect token.
         qDebug() << "CredentialManager: Found the" << key << "credential for profile" << profileName << "in the encrypted file";
     }
 
@@ -1437,8 +1407,7 @@ bool CredentialManager::removeCredentialFromFile(const QString& profileName, con
         return false;
     }
 
-    // A credential still filed under the legacy truncated path has to go as well, or
-    // the next read would copy it back and resurrect the password just removed
+    // The legacy file too, or the next read would copy it back and resurrect the password
     removeLegacyFileCredential(profileName, key);
 
     // Check if file exists before attempting removal
@@ -1530,10 +1499,8 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
     return credentialFilePath(MudletApp::sanitizeForPath(profileName), MudletApp::sanitizeForPath(key));
 }
 
-// Where a credential was filed while both path components were simply truncated to 50
-// characters. Empty when nothing there can safely be claimed: either that is the path in
-// use anyway, or the key is long enough that another key's credential could be sitting
-// under it.
+// Path under the old truncate-to-50 scheme, or empty when it can't safely be claimed: it is the current
+// path anyway, or the key is long enough that another key's credential may be there.
 QString CredentialManager::generateLegacyFilePath(const QString& profileName, const QString& key)
 {
     const QString currentPath = generateFilePath(profileName, key);
@@ -1542,13 +1509,9 @@ QString CredentialManager::generateLegacyFilePath(const QString& profileName, co
         return QString();
     }
 
-    // Keys this long collide on one legacy file, and they share the profile's encryption
-    // key - so decrypting it proves only that some key in this profile wrote it, never
-    // which. Migrating would hand one key the other's secret and removing would delete it,
-    // so an undecidable file is left alone: the password for a key this long is re-entered
-    // rather than guessed at. The cap itself is on the undecidable side, because a key of
-    // exactly that length came through truncation unchanged and so was already filed at
-    // the same path every longer key was cut down to.
+    // Keys this long share one legacy file and the profile's encryption key, so decrypting can't tell which
+    // key wrote it; leave it and have the password re-entered. A key of exactly the cap was never truncated
+    // but still lands on the path longer keys were cut to, hence >=.
     if (key.length() >= scmLegacyMaxPathComponentLength) {
         return QString();
     }
@@ -1557,11 +1520,8 @@ QString CredentialManager::generateLegacyFilePath(const QString& profileName, co
     return legacyPath == currentPath ? QString() : legacyPath;
 }
 
-// Reads what the legacy truncated path holds for this profile. Anything filed there
-// that this profile's key cannot decrypt was written by a profile this one used to
-// collide with, which is why this decrypts rather than just reading the file: whose
-// credential it is is the only thing that distinguishes the two. Empty when there is
-// nothing there for this profile.
+// Empty when nothing there is this profile's. Decrypts rather than just reading: a file this profile
+// can't decrypt belongs to a profile it used to collide with.
 QString CredentialManager::readLegacyFileCredential(const QString& profileName, const QString& key)
 {
     const QString legacyPath = generateLegacyFilePath(profileName, key);
@@ -1580,9 +1540,7 @@ QString CredentialManager::readLegacyFileCredential(const QString& profileName, 
         return QString();
     }
 
-    // Narrowed like every other credential this reads: the copy under the earlier naming
-    // scheme is by definition one an older Mudlet wrote, so it is the likeliest of all of
-    // them to have been left readable by every account on the machine
+    // Legacy copies were written by older Mudlets, so are the likeliest to be world-readable
     SecureStringUtils::restrictFileToOwner(legacyPath);
     SecureStringUtils::restrictDirectoryToOwner(QFileInfo(legacyPath).absolutePath());
 
@@ -1592,9 +1550,8 @@ QString CredentialManager::readLegacyFileCredential(const QString& profileName, 
     return SecureStringUtils::decryptStringForProfile(encrypted, profileName);
 }
 
-// Whose credential the legacy file holds is the only thing that tells this profile's file
-// apart from one a profile it used to collide with left, so refreshing that file and
-// removing it both have to ask first.
+// Only decrypting tells our legacy file from one a formerly-colliding profile left, so refresh and
+// remove must check through this.
 QString CredentialManager::ourLegacyFilePath(const QString& profileName, const QString& key)
 {
     QString existing = readLegacyFileCredential(profileName, key);
@@ -1604,9 +1561,6 @@ QString CredentialManager::ourLegacyFilePath(const QString& profileName, const Q
     return ours ? generateLegacyFilePath(profileName, key) : QString();
 }
 
-// Deletes the legacy file, but only once it has proved to hold this profile's own
-// credential, so a profile it used to collide with never has its password removed on
-// this one's behalf.
 void CredentialManager::removeLegacyFileCredential(const QString& profileName, const QString& key)
 {
     const QString legacyPath = ourLegacyFilePath(profileName, key);
@@ -1616,11 +1570,8 @@ void CredentialManager::removeLegacyFileCredential(const QString& profileName, c
     }
 }
 
-// Keeps a credential file left by the earlier naming scheme in step with the one under the
-// current naming, so a Mudlet old enough to read only that one does not hand the user back a
-// password they have since changed. Only a file that already holds this profile's own
-// credential is refreshed: creating one would put two profiles whose names share their first
-// 50 characters on a single file.
+// Keeps the legacy file in step so an older Mudlet doesn't offer a stale password. Never creates it:
+// two profiles sharing their first 50 characters would then share it.
 void CredentialManager::refreshLegacyFileCredential(const QString& profileName, const QString& key, const QString& credential)
 {
     const QString legacyPath = ourLegacyFilePath(profileName, key);
@@ -1629,8 +1580,7 @@ void CredentialManager::refreshLegacyFileCredential(const QString& profileName, 
         return;
     }
 
-    // An empty credential stands for "no password": writing one would leave a file this
-    // profile can no longer prove is its own, and so could never refresh or remove again
+    // Written empty, the file could no longer be proven ours, so never refreshed or removed again
     if (credential.isEmpty()) {
         if (!QFile::remove(legacyPath)) {
             qWarning() << "CredentialManager: Failed to remove credential file left by the earlier naming scheme:" << legacyPath;

@@ -337,8 +337,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     // A game that lists several charsets it can speak must not pull a UTF-8
@@ -548,10 +548,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

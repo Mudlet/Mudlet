@@ -98,10 +98,8 @@ constexpr auto CHARACTER_MODE_DETECT = 3s;
 constexpr auto PASSWORD_MASK_LOGIN_PHASE = 5min;
 constexpr auto PASSWORD_MASK_TIMEOUT = 60s;
 
-// How long the console has to hold still before its size is reported to the
-// game - see cTelnet::checkNAWS(). Has to outlast the 0.2s timer an adjustable
-// Geyser container re-reserves its border on, which is the longest step of a
-// resize:
+// See cTelnet::checkNAWS(). Must outlast the 0.2s timer on which adjustable Geyser containers
+// re-reserve their borders, the longest step of a resize:
 constexpr auto NAWS_SETTLE_TIME = 300ms;
 
 // How long to leave a game alone after a connection attempt to it failed, before
@@ -134,13 +132,8 @@ constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
 
 constexpr size_t BUFFER_SIZE = 100000L;
 
-// Where the run of ordinary text starting at buffer[from] ends: the index of
-// the first byte after it that the state machine reading the run handles on its
-// own (the start of a telnet command, a carriage return, a NUL or a bell), or
-// `to` if the run reaches that far. buffer[from] must not be one of those
-// bytes, as the caller steps back one from the result before its loop steps
-// forward - both callers therefore need a branch for every one of them, even
-// where that branch only appends the byte.
+// buffer[from] must not be a byte this stops at: a zero-length run would leave the caller's loop on
+// the same byte forever, so both callers need a branch for each of them, even one that only appends it.
 static int textRunEnd(const char* buffer, const int from, const int to)
 {
     int i = from;
@@ -256,8 +249,7 @@ void cTelnet::reset()
     if (mTimerCharacterModeDetect) {
         mTimerCharacterModeDetect->stop();
     }
-    // A window size waiting to be reported belongs to the connection being
-    // reset, and mNaws_x/mNaws_y are about to be zeroed for the next one
+    // a pending size belongs to the old connection; mNaws_x/mNaws_y are about to be zeroed
     if (mTimerNawsUpdate) {
         mTimerNawsUpdate->stop();
     }
@@ -323,9 +315,7 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
-    // A recording that is still running would otherwise be thrown away:
-    // ~QSaveFile() calls cancelWriting(), which deletes the temporary file
-    // without ever producing the .dat the user has been recording into.
+    // Otherwise ~QSaveFile() calls cancelWriting(), deleting the recording without producing the .dat.
     if (mRecordReplay) {
         stopReplayRecording();
     }
@@ -347,9 +337,7 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
-    // Unconditional: the end of a compressed stream re-initialises the stream
-    // for the next one while switching decompression off, so the state to free
-    // exists whether or not compression is active
+    // Unconditional: the end of a compressed stream re-initialises it while switching decompression off
     inflateEnd(&mZstream);
 
     // Aggressively disconnect the sockets to prevent signals during destruction
@@ -1114,9 +1102,7 @@ void cTelnet::slot_socketDisconnected()
         mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
     }
 
-    // The session being recorded has ended, so commit what was captured rather
-    // than leave it to ~QSaveFile(), which cancels the save and deletes the
-    // temporary file:
+    // Commit now; ~QSaveFile() would cancel the save and delete the temporary file:
     if (mRecordReplay) {
         const QString recordedFileName = replayRecordingFileName();
         if (stopReplayRecording()) {
@@ -1883,11 +1869,8 @@ void cTelnet::abandonNetworkLatencyMeasurement()
 
 void cTelnet::checkNAWS()
 {
-    // A window resize reaches the console as a burst rather than as one event:
-    // Qt lays it out, then any Geyser container attached to a border re-reserves
-    // that border from a timer of its own, which lays the console out again.
-    // Reporting each step would publish widths the window only ever had in
-    // passing - and the game wraps whatever it sends next to them - so wait for
+    // A resize arrives as a burst (Qt's layout, then Geyser containers re-reserving borders from
+    // a timer); the game would wrap its next output to each passing width, so wait for
     // the burst to finish and report the size once.
     if (!mTimerNawsUpdate) {
         mTimerNawsUpdate = new QTimer(this);
@@ -4168,10 +4151,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // Uninstall the old version, and leave the installed one alone if that is
-                    // refused: installing over it fails as "already installed", so the upgrade
-                    // would go missing while the version recorded below claimed otherwise. A
-                    // name that is not installed has nothing to refuse and nothing to remove,
+                    // If uninstalling is refused, installing over it would fail as "already installed"
+                    // while the version recorded below claimed the upgrade. A name not installed
+                    // has nothing to remove,
                     // and must not hold the upgrade up.
                     const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
                     const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
@@ -4593,10 +4575,9 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // Uninstall the old version, and leave the installed one alone if that is
-        // refused: installing over it fails as "already installed", so the upgrade
-        // would go missing while the version recorded below claimed otherwise. A
-        // name that is not installed has nothing to refuse and nothing to remove,
+        // If uninstalling is refused, installing over it would fail as "already installed"
+        // while the version recorded below claimed the upgrade. A name not installed
+        // has nothing to remove,
         // and must not hold the upgrade up.
         const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
         const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
@@ -5216,18 +5197,16 @@ void cTelnet::gotPrompt(std::string& mud_data)
     mIsTimerPosting = false;
 }
 
-// MXP escape sequences are the ONLY safe detection method.
-// Text-based tags like <version>, <send>, etc. can be faked by players
-// using illusions in games like IRE MUDs, which would cause false positives.
-// ESC sequences contain control character 0x1B which cannot be typed/illusioned.
-// Per MXP spec: "To ensure that tags are difficult to send by MUD players,
-// an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
+// Only the ESC[#z mode switch is safe to detect MXP by: players can fake text tags like <version>
+// (e.g. IRE illusions) but cannot type ESC. The MXP spec uses it so "tags are difficult to send by MUD players".
 // Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
 //              5=lock open, 6=lock secure, 7=lock locked
 static bool containsMxpModeSwitch(const std::string& data)
 {
-    for (size_t pos = data.find('\x1B'); pos != std::string::npos && pos + 3 < data.size(); pos = data.find('\x1B', pos + 1)) {
-        if (data[pos + 1] == '[' && data[pos + 2] >= '0' && data[pos + 2] <= '7' && data[pos + 3] == 'z') {
+    // Anchored on the closing 'z' rather than the ESC: every SGR colour code
+    // opens with an ESC, so a scan from those stops at each one of them.
+    for (size_t pos = data.find('z', 3); pos != std::string::npos; pos = data.find('z', pos + 1)) {
+        if (data[pos - 3] == '\x1B' && data[pos - 2] == '[' && data[pos - 1] >= '0' && data[pos - 1] <= '7') {
             return true;
         }
     }
@@ -5277,7 +5256,7 @@ void cTelnet::gotRest(std::string& mud_data)
         size_t i = mud_data.rfind('\n');
 
         if (i != std::string::npos) {
-            mMudData += mud_data.substr(0, i + 1);
+            mMudData.append(mud_data, 0, i + 1);
             postData();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
@@ -5287,11 +5266,7 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            if (i + 1 < mud_data.size()) {
-                mMudData = mud_data.substr(i + 1, mud_data.size());
-            } else {
-                mMudData = "";
-            }
+            mMudData.assign(mud_data, i + 1, std::string::npos);
         } else {
             mMudData += mud_data;
 
@@ -5339,14 +5314,29 @@ void cTelnet::postData()
 
     // Detach the pending data first: a trigger fired inside printOnDisplay() can
     // call feedTelnet(), re-entering here - it must not post this data again.
-    std::string data{std::move(mMudData)};
-    mMudData.clear();
+    std::string data;
+    data.swap(mMudData);
+
+    // translateToPlainText() parses its argument in place, so anyone snooping
+    // the stream gets a copy of the original bytes:
+    std::string original;
+    const bool snooped = mpHost->mMMCPServer != nullptr;
+    if (snooped) {
+        original = data;
+    }
 
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(data);
+        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data);
+    }
+
+    // Hand the capacity back so the next packet appends without a malloc. A
+    // re-entrant feed may have left a tail of its own behind; that stays.
+    if (mMudData.empty()) {
+        data.clear();
+        mMudData.swap(data);
     }
 }
 
@@ -5573,10 +5563,8 @@ void cTelnet::resumeReplay()
     }
 
     mReplayPaused = false;
-    // loadReplayChunk() will not arm the timer while the replay is held, so the
-    // wait a pause interrupted has to be re-armed from here. When no chunk is
-    // waiting there is nothing to arm: the loadReplayChunk() still to come does
-    // it now that the replay is running again, and at the end of the file
+    // loadReplayChunk() won't arm the timer while paused, so re-arm here. With no chunk pending, the
+    // next loadReplayChunk() arms it, and at the end of the file
     // arming it would push the chunk just played through a second time.
     if (mReplayChunkPending) {
         mpReplayChunkTimer->start(mReplayChunkDelay);
@@ -5589,8 +5577,7 @@ void cTelnet::stopReplay()
         return;
     }
 
-    // Unlike the end of the file, this is something the user did, so say so
-    // even for a replay that lua started - they pressed the button:
+    // Reported even for a Lua-started replay, as the user pressed the button:
     //: Console message when the user ends a replay early with the replay toolbar's Stop button. The [  OK  ] prefix is column padding shared with Mudlet's other console messages, keep it as it is
     endReplay(tr("[  OK  ]  - The replay has been stopped."));
 }
@@ -5674,10 +5661,8 @@ void cTelnet::slot_processReplayChunk()
                 command = "";
             }
         } else if (ch == TN_BELL) {
-            // Not rung here, unlike the socket path: a replay has never rung
-            // the bell, it only shows it. It still needs a branch of its own,
-            // because textRunEnd() ends a run at a bell: reaching one through
-            // the run branch below would measure an empty run and put the loop
+            // Not rung, unlike the socket path, but needs its own branch: textRunEnd() stops at a
+            // bell, so the run branch would measure an empty run and put the loop
             // back on the same byte for ever.
             cleandata += ch;
         } else if (ch != '\r' && ch != '\0') {
@@ -5728,13 +5713,9 @@ void cTelnet::slot_socketReadyToBeRead()
     readPendingSocketData();
 }
 
-// Reads one BUFFER_SIZE chunk, and comes back through the event loop for
-// whatever is left. readyRead() is only emitted when fresh bytes reach the
-// socket, so a burst's remainder past one read would sit unseen until the
-// server happened to send again - a game that pushes 100 KB in one go and then
-// waits for input stops part-way through it. The leftovers are deliberately
-// drained from here rather than from slot_socketReadyToBeRead(): they were
-// already buffered before any command a trigger has since sent, so treating
+// Requeues itself for what is left after one BUFFER_SIZE read: readyRead() fires only on fresh bytes,
+// so the rest of a burst would sit unseen until the server sent again. Not drained via
+// slot_socketReadyToBeRead(): the leftovers predate any command a trigger has since sent, so treating
 // them as that command's reply would report a latency of nearly nothing.
 void cTelnet::readPendingSocketData()
 {
@@ -5758,9 +5739,8 @@ void cTelnet::readPendingSocketData()
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
-    // The cap that bounds a decompression bomb (see scmMaxDecompressionRecursion)
-    // is per-connection - a member, not thread-wide - so one profile's drain, or
-    // a re-entrant feedTelnet(), cannot spend another connection's budget.
+    // The depth count (see scmMaxDecompressionRecursion) is per-connection, so one profile's drain or a
+    // re-entrant feedTelnet() can't spend another connection's budget.
     // Being a member, a level leaked by an early return would be permanent:
     // scmMaxDecompressionRecursion of them and the connection refuses all further
     // data, so the count comes off in a guard rather than at each return.
@@ -5797,9 +5777,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     in_buffer[amount] = '\0';
 
     std::string cleandata;
-    // Pre-allocate for worst case: decompressed data can be much larger than input
-    // BUFFER_SIZE is 100000, so reserve enough for typical usage
-    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE) * 4);
     qint32 datalen = 0;
     datalen = amount;
     char* buffer = in_buffer;
@@ -5822,6 +5799,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
+
+    // About what stripping telnet leaves of the read (decompression already
+    // went through out_buffer above):
+    cleandata.reserve(static_cast<size_t>(datalen));
 
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.

@@ -29,10 +29,8 @@
 
 HostManager::HostManager()
 {
-    // One instance is the contract, and every self()-> call site takes it on
-    // trust. A second one silently repointing the accessor - and nulling it
-    // again when it went out of scope, while the first was still in use - would
-    // surface as a null deref far from whatever built it.
+    // self() callers trust there is only one; a second would repoint the accessor, then null it on
+    // destruction while the first is still in use.
     if (smpSelf) {
         qWarning() << "HostManager::HostManager() WARNING - a HostManager already exists, so self() keeps pointing at that one.";
         return;
@@ -42,10 +40,7 @@ HostManager::HostManager()
 
 HostManager::~HostManager()
 {
-    // Drain the pool while self() still answers: ~Host() and everything it
-    // drives is entitled to reach the manager it is being removed from, which
-    // is the window the header promises. Clearing the accessor first would
-    // leave every profile's teardown looking at a null manager.
+    // Drain the pool while self() still answers: ~Host() may reach the manager it is being removed from.
     mHostPool.clear();
     if (smpSelf == this) {
         smpSelf = nullptr;
