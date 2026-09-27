@@ -1359,6 +1359,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 continue;
             }
 
+            // Unlike a normal exit, a special exit is only there when it leads
+            // somewhere, so one to -1 does follow that room to its new id:
             if (roomRemapping.contains(exitRoomId)) {
                 const QString auditKey = qsl("audit.remapped_special_exit.%1").arg(exitName);
                 userData.insert(auditKey, QString::number(exitRoomId));
@@ -1635,7 +1637,9 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       QMap<QString, bool>& customLinesArrowPool,
                       const QHash<int, int> roomRemapping)
 {
-    if (roomRemapping.contains(exitRoomId)) {
+    // -1 is also what every absent exit holds, so a room renumbered from that
+    // id cannot take the exits that led to it without taking all the others:
+    if (exitRoomId != -1 && roomRemapping.contains(exitRoomId)) {
         const QString auditKey = qsl("audit.remapped_exit.%1").arg(dirCode);
         userData.insert(auditKey, QString::number(exitRoomId));
         //: %1 is the room ID, %2 is the exit direction, %3 is the old destination room ID, %4 is the new destination room ID

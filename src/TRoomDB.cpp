@@ -956,6 +956,11 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 if (roomRemapping.contains(itRoom.key())) {
                     pR->userData.insert(qsl("audit.remapped_id"), QString::number(itRoom.key()));
                     pR->setId(roomRemapping.value(itRoom.key()));
+                    if (roomIDToHash.contains(itRoom.key())) {
+                        const QString hash{roomIDToHash.take(itRoom.key())};
+                        roomIDToHash.insert(pR->getId(), hash);
+                        hashToRoomID.insert(hash, pR->getId());
+                    }
                     itRoom.remove();
                     holdingSet.insert(pR);
                 }
@@ -1047,9 +1052,12 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 pA->rooms.unite(replacementRoomsSet);
             }
 
-            // Now compare pA->rooms to areaRoomMultiHash.values(itArea.key())
-            QList<int> roomIdsInAreaList{areaRoomMultiHash.values(itArea.key())};
-            QSet<int> const foundRooms{roomIdsInAreaList.begin(), roomIdsInAreaList.end()};
+            // Now compare pA->rooms to areaRoomMultiHash.values(itArea.key()),
+            // which was filled in before task 1 renumbered any rooms:
+            QSet<int> foundRooms;
+            for (const int roomId : areaRoomMultiHash.values(itArea.key())) {
+                foundRooms.insert(roomRemapping.value(roomId, roomId));
+            }
 
             QSetIterator<int> itFoundRoom(foundRooms);
             // Original form of code which was slower because the two sets of rooms were
@@ -1358,6 +1366,15 @@ void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
 
 bool TRoomDB::restoreSingleRoom(int i, TRoom* pT)
 {
+    if (i < 1 && pT && !rooms.contains(i)) {
+        // addRoom() refuses an id below one, but the audit that follows the
+        // load gives such a room a new one, so it is kept rather than lost:
+        rooms.insert(i, pT);
+        pT->setId(i);
+        updateEntranceMap(pT, true);
+        return true;
+    }
+
     if (addRoom(i, pT, true)) {
         return true;
     }
