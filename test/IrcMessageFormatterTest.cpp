@@ -579,9 +579,11 @@ private slots:
     {
         auto* message = new IrcWhoisMessage(&mConnection);
         message->setPrefix(QStringLiteral("bob!ident@example.org"));
-        message->setParameters({QStringLiteral("Bob Smith"), QStringLiteral("irc.example.org"), QStringLiteral("Example Network"), QStringLiteral("bobaccount")});
+        QStringList parameters = whoisParameters(QStringLiteral("1700000000"), QStringLiteral("0"));
+        parameters[3] = QStringLiteral("bobaccount");
+        message->setParameters(parameters);
         const QStringList lines = IrcMessageFormatter::formatMessage(message, true).split(QLatin1Char('\n'));
-        QCOMPARE(lines.size(), 3);
+        QCOMPARE(lines.size(), 4);
         for (const QString& line : lines) {
             QVERIFY2(line.startsWith(QStringLiteral("[WHOIS] bob ")) && line.count(QStringLiteral("[WHOIS]")) == 1, qPrintable(line));
         }
