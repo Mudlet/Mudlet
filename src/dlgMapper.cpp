@@ -216,6 +216,43 @@ void dlgMapper::connectMapCues()
             updateAreaComboBox();
         }
     });
+    connect(mpMap, &TMap::signal_areaRenamed, this, [this](const QString& oldName, const QString& newName) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        const bool wasShown = oldName == comboBox_showArea->currentText();
+        updateAreaComboBox();
+        if (wasShown) {
+            comboBox_showArea->setCurrentText(newName);
+        }
+    });
+    connect(mpMap, &TMap::signal_playerAreaShowRequested, this, [this]() {
+        if (drawsTheMap()) {
+            resetAreaComboBoxToPlayerRoomArea();
+        }
+    });
+    connect(mpMap, &TMap::signal_defaultAreaVisibilitySet, this, [this](const bool wasShown) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        // The 2D map can be on the default area while the list leaves it out,
+        // and then relisting cannot keep the list on it:
+        if (!wasShown && mpMap->getDefaultAreaShown() && mp2dMap->mAreaID == -1) {
+            comboBox_showArea->setCurrentText(mpMap->getDefaultAreaName());
+        }
+        mp2dMap->repaint();
+        update();
+    });
+    connect(mpMap, &TMap::signal_mapInfoContributorsChanged, this, [this]() {
+        if (drawsTheMap()) {
+            slot_updateInfoContributors();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapRepaintRequested, this, [this]() {
+        if (drawsTheMap()) {
+            mp2dMap->update();
+        }
+    });
 }
 
 static QFrame* createOverlayFrame(QWidget* parent, const QString& objectName)
