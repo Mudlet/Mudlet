@@ -147,6 +147,8 @@ Tree<T>::Tree(T* pParent)
 template <class T>
 Tree<T>::~Tree()
 {
+    // Each T destructor has already emptied it, so this is only a safety net
+    Q_ASSERT(mpMyChildrenList->empty());
     deleteChildren();
     delete mpMyChildrenList;
     mpMyChildrenList = nullptr;
