@@ -157,13 +157,23 @@ public:
         }
     }
 
-    void profileRenamed(const QString& newName, const QString& tag) override { mudlet::self()->mpTabBar->applyPrefixToDisplayedText(newName, tag); }
+    // Installed before init() makes the tab bar, and it outlives mudlet:
+    void profileRenamed(const QString& newName, const QString& tag) override
+    {
+        if (auto* self = mudlet::self(); self && self->mpTabBar) {
+            self->mpTabBar->applyPrefixToDisplayedText(newName, tag);
+        }
+    }
 
     void profileAddedInDebugMode() override
     {
+        auto* self = mudlet::self();
+        if (!self) {
+            return;
+        }
         // The profile's tab does not exist yet, so refresh them all once idle:
-        QTimer::singleShot(0ms, mudlet::self(), []() {
-            mudlet::self()->refreshTabBar();
+        QTimer::singleShot(0ms, self, [self]() {
+            self->refreshTabBar();
         });
     }
 };
