@@ -40,7 +40,6 @@
 #include <QPointer>
 #include <QWidget>
 
-#include <list>
 #include <map>
 #include <memory>
 #include <vector>
@@ -278,8 +277,6 @@ public:
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
     // Not used:    void setConsoleFgColor(int, int, int);
-    std::list<int> getFgColor();
-    std::list<int> getBgColor();
     void luaWrapLine(int line);
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
@@ -288,12 +285,6 @@ public:
     void syncHiddenScreenDimensions();
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
-    // In the next function the first element in the return is an
-    // error code:
-    // 0 = Okay
-    // 1 = Window not found
-    // 2 = Selection not valid
-    QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
     void setSearchOptions(const enums::BufferSearchOptions);
     void setF3SearchEnabled(const bool enabled);

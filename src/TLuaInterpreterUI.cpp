@@ -1363,12 +1363,16 @@ int TLuaInterpreter::getBgColor(lua_State* L)
         windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
 
-    const Host& host = getHostFromLua(L);
-    std::list<int> const result = host.mpConsole ? host.mpConsole->getBgColor(windowName) : std::list<int>{};
-    for (const int pos : result) {
-        lua_pushnumber(L, pos);
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    const TChar* pChar = pModel ? pModel->selectionStartChar() : nullptr;
+    if (!pChar) {
+        return 0;
     }
-    return result.size();
+    const QColor color = pChar->background();
+    lua_pushnumber(L, color.red());
+    lua_pushnumber(L, color.green());
+    lua_pushnumber(L, color.blue());
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderBottom
@@ -1490,12 +1494,16 @@ int TLuaInterpreter::getFgColor(lua_State* L)
         windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
 
-    const Host& host = getHostFromLua(L);
-    std::list<int> const result = host.mpConsole ? host.mpConsole->getFgColor(windowName) : std::list<int>{};
-    for (const int pos : result) {
-        lua_pushnumber(L, pos);
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    const TChar* pChar = pModel ? pModel->selectionStartChar() : nullptr;
+    if (!pChar) {
+        return 0;
     }
-    return result.size();
+    const QColor color = pChar->foreground();
+    lua_pushnumber(L, color.red());
+    lua_pushnumber(L, color.green());
+    lua_pushnumber(L, color.blue());
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFont
@@ -2203,11 +2211,9 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
     QString windowName = qsl("main");
     const int ansiBg = getVerifiedInt(L, __func__, 1, "ANSI color");
 
-    std::list<int> result;
-    const Host& host = getHostFromLua(L);
-    result = host.mpConsole ? host.mpConsole->getBgColor(windowName) : std::list<int>{};
-    auto it = result.begin();
-    if (result.size() < 3) {
+    Host& host = getHostFromLua(L);
+    const TChar* pChar = host.mainConsoleModel().selectionStartChar();
+    if (!pChar) {
         return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
     }
     if (ansiBg < 0 || ansiBg > 16) {
@@ -2270,21 +2276,8 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
         break;
     }
 
-    int val = *it;
-    if (val == c.red()) {
-        it++;
-        val = *it;
-        if (val == c.green()) {
-            it++;
-            val = *it;
-            if (val == c.blue()) {
-                lua_pushboolean(L, true);
-                return 1;
-            }
-        }
-    }
-
-    lua_pushboolean(L, false);
+    const QColor color = pChar->background();
+    lua_pushboolean(L, color.red() == c.red() && color.green() == c.green() && color.blue() == c.blue());
     return 1;
 }
 
@@ -2294,11 +2287,9 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
     QString windowName = qsl("main");
     const int ansiFg = getVerifiedInt(L, __func__, 1, "ANSI color");
 
-    std::list<int> result;
-    const Host& host = getHostFromLua(L);
-    result = host.mpConsole ? host.mpConsole->getFgColor(windowName) : std::list<int>{};
-    auto it = result.begin();
-    if (result.size() < 3) {
+    Host& host = getHostFromLua(L);
+    const TChar* pChar = host.mainConsoleModel().selectionStartChar();
+    if (!pChar) {
         return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
     }
     if (ansiFg < 0 || ansiFg > 16) {
@@ -2361,21 +2352,8 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
         break;
     }
 
-    int val = *it;
-    if (val == c.red()) {
-        it++;
-        val = *it;
-        if (val == c.green()) {
-            it++;
-            val = *it;
-            if (val == c.blue()) {
-                lua_pushboolean(L, true);
-                return 1;
-            }
-        }
-    }
-
-    lua_pushboolean(L, false);
+    const QColor color = pChar->foreground();
+    lua_pushboolean(L, color.red() == c.red() && color.green() == c.green() && color.blue() == c.blue());
     return 1;
 }
 
@@ -4001,7 +3979,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
 int TLuaInterpreter::setTextFormat(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
 
     const int n = lua_gettop(L);
 
@@ -4116,12 +4094,11 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                                         | (fastBlink ? TChar::FastBlink : (slowBlink ? TChar::Blink : TChar::None));
 
     const QString windowName{windowNameCString};
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value, true);
-    }
-    if (!host.mpConsole->setTextFormat(windowName, QColor(colorComponents[3], colorComponents[4], colorComponents[5]), QColor(colorComponents[0], colorComponents[1], colorComponents[2]), flags)) {
+    auto pModel = host.consoleModelNamed(windowName);
+    if (!pModel) {
         return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName), true);
     }
+    pModel->mFormatCurrent.setTextFormat(QColor(colorComponents[3], colorComponents[4], colorComponents[5]), QColor(colorComponents[0], colorComponents[1], colorComponents[2]), flags);
 
     lua_pushboolean(L, true);
     return 1;

@@ -99,6 +99,9 @@ struct TConsoleModel
     std::tuple<bool, QString, int, int> selection();
     // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
     QPair<quint8, TChar> textAttributes() const;
+    // The character the selection starts on, or nullptr when that is off the buffer. With no selection
+    // that is the buffer's first character: unlike textAttributes(), this does not fall back to the cursor.
+    const TChar* selectionStartChar() const;
     void resetFormat();
     bool setSelectionFgColor(const QColor& newColor);
     bool setSelectionBgColor(const QColor& newColor);

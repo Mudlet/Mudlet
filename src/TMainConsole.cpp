@@ -343,46 +343,6 @@ void TMainConsole::selectCurrentLine(std::string& buf)
     }
 }
 
-std::list<int> TMainConsole::getFgColor(QString& buf)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        return TConsole::getFgColor();
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        return pC->getFgColor();
-    }
-
-    return {};
-}
-
-std::list<int> TMainConsole::getBgColor(QString& buf)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        return TConsole::getBgColor();
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        return pC->getBgColor();
-    }
-
-    return {};
-}
-
-QPair<quint8, TChar> TMainConsole::getTextAttributes(const QString& name) const
-{
-    if (name.isEmpty() || name == QLatin1String("main")) {
-        return TConsole::getTextAttributes();
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->getTextAttributes();
-    }
-
-    return qMakePair(1, TChar());
-}
-
 void TMainConsole::luaWrapLine(QString& buf, int line)
 {
     if (buf.isEmpty() || buf == QLatin1String("main")) {
@@ -3017,22 +2977,6 @@ std::pair<bool, QString> TMainConsole::getUserWindowTitle(const QString& name) c
     }
 
     return {true, pD->windowTitle()};
-}
-
-bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)
-{
-    if (name.isEmpty() || name.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
-        return true;
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        pC->mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
-        return true;
-    }
-
-    return false;
 }
 
 bool TMainConsole::startIncomingText()

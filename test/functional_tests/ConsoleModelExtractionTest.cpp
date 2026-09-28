@@ -1534,13 +1534,6 @@ local function expectValue(name, expected, ...)
     end
 end
 
--- an invalid selection has always returned no values at all
-local function expectNothing(name, ...)
-    if select('#', ...) ~= 0 then
-        table.insert(noViewProblems, name .. ' returned ' .. tostring((...)))
-    end
-end
-
 -- a family setFont() takes, which it checks for before it looks for a console
 local anyFont = next(getAvailableFonts())
 
@@ -1601,9 +1594,6 @@ expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
 expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
-expectRefusal('setTextFormat', setTextFormat('main', 0, 0, 0, 255, 255, 255, false, false, false))
-expectRefusal('isAnsiBgColor', isAnsiBgColor(1))
-expectRefusal('isAnsiFgColor', isAnsiFgColor(1))
 expectRefusal('echo', echo('x'))
 expectRefusal('insertHTML', insertHTML('x'))
 expectRefusal('enableScrollBar', enableScrollBar())
@@ -1663,9 +1653,6 @@ expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSi
 expectValue('copy reason', 'window "noViewMini" not found', select(2, copy('noViewMini')))
 -- the window is looked for before the maximum is refused for anything but the main console
 expectValue('setConsoleBufferSize reason', 'window "noViewMini" not found', select(2, setConsoleBufferSize('noViewMini', 1000, 100, true)))
-
-expectNothing('getBgColor', getBgColor())
-expectNothing('getFgColor', getFgColor())
 
 noViewReport = table.concat(noViewProblems, '; ')
 )LUA"));
@@ -2702,7 +2689,13 @@ else
     expectValues('getTextFormat', {true, true, false, 1, 2, 3, 4, 5, 6}, format.bold, format.underline, format.italic,
         format.foreground[1], format.foreground[2], format.foreground[3], format.background[1], format.background[2], format.background[3])
 end
+expectValues('getFgColor', {1, 2, 3}, getFgColor())
+expectValues('getBgColor', {4, 5, 6}, getBgColor('main'))
+expectValues('isAnsiFgColor', {false}, isAnsiFgColor(1))
+expectValues('isAnsiBgColor', {false}, isAnsiBgColor(1))
+expectValues('isAnsiFgColor out of range', {nil, 'ANSI color 99 out of range (0 to 16)'}, isAnsiFgColor(99))
 expectValues('resetFormat', {true}, resetFormat())
+expectValues('setTextFormat', {true}, setTextFormat('main', 7, 8, 9, 10, 11, 12, false, false, false))
 
 expectMissing('deselect', deselect('nosuchwindow'))
 expectMissing('selectCurrentLine', selectCurrentLine('nosuchwindow'))
@@ -2714,6 +2707,8 @@ expectMissing('setBold', setBold('nosuchwindow', true))
 expectMissing('setFgColor', setFgColor('nosuchwindow', 1, 2, 3))
 expectMissing('setBgColor', setBgColor('nosuchwindow', 1, 2, 3))
 expectMissing('resetFormat', resetFormat('nosuchwindow'))
+expectValues('getFgColor of a missing window', {}, getFgColor('nosuchwindow'))
+expectValues('setTextFormat of a missing window', {false, "window 'nosuchwindow' does not exist"}, setTextFormat('nosuchwindow', 0, 0, 0, 0, 0, 0, false, false, false))
 
 noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 )LUA"));
@@ -2727,6 +2722,8 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY(!model->buffer.buffer.at(line).at(6).isBold());
         QCOMPARE(model->P_begin, QPoint());
         QCOMPARE(model->P_end, QPoint());
+        QCOMPARE(model->mFormatCurrent.foreground(), QColor(10, 11, 12));
+        QCOMPARE(model->mFormatCurrent.background(), QColor(7, 8, 9));
     }
 
     // The main console's background is the model's, so a script can still read
