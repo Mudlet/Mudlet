@@ -1295,7 +1295,9 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
-        runLua(host, qsl("tempRegexTrigger([[^NoViewPaint (\\w+) after]], [[selectCaptureGroup(2)]], 10)\n"));
+        runLua(host,
+               qsl("noViewPaintRan = 'no'\n"
+                   "tempRegexTrigger([[^NoViewPaint (\\w+) after]], [[noViewPaintRan = 'yes'; selectCaptureGroup(2)]], 10)\n"));
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -1304,6 +1306,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
 
         const int fedLine = appendModelLine(model->buffer, qsl("NoViewPaint beta after"));
         host->runTriggers(fedLine);
+        QVERIFY2(luaGlobalString(host, "noViewPaintRan") == qsl("yes"), "The capture group trigger never ran, so there is no selection to paint.");
 
         const QColor paint(13, 57, 91);
         host->setMainConsoleFgColor(paint);
