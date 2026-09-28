@@ -131,6 +131,45 @@ are active.
 Because IDEs read `CMakePresets.json` natively, selecting one of these presets in CLion, VS Code or
 Qt Creator is enough — no per-IDE sanitizer configuration is needed.
 
+## Profile-guided optimisation
+
+A PGO build lays out and inlines code by what a training run measured. It is off by default and
+takes two builds of the *same* tree, since GCC finds each object's profile by the object's path:
+
+```bash
+cmake --preset linux-release -DMUDLET_PGO=GENERATE
+cmake --build build-linux-release --target mudlet PipelineBenchmark
+CI/pgo-train.sh build-linux-release       # runs PipelineBenchmark, writes the profile
+cmake -B build-linux-release -DMUDLET_PGO=USE
+cmake --build build-linux-release --target mudlet
+```
+
+GCC and Clang are both supported; for Clang, `CI/pgo-train.sh` merges the raw profiles with
+`llvm-profdata` (`LLVM_PROFDATA` picks a particular one), and on Linux the instrumented link needs
+the compiler-rt profile runtime (`libclang-rt-<version>-dev` on Ubuntu). The profile lands in
+`MUDLET_PGO_DIR`, `<build>/pgo-profile` unless set. The training script clears it before each run,
+because GCC adds to existing `.gcda` files and a profile of older code describes branches that no
+longer exist. Never change sources between the two builds - GCC refuses a profile that no longer
+matches a function's control flow.
+
+The training is PipelineBenchmark: text decoding, the trigger engine, the default packages and
+console painting. Measured against a plain Release build of the same compiler at `-O3`, interleaved
+and paired per round, with svof (an Achaea combat system of 3,086 triggers), the 2D mapper and the
+pathfinder kept out of the training:
+
+| | GCC 13 | Clang 18 |
+| --- | --- | --- |
+| trigger engine (trained) | 0.99x | 0.81x |
+| text pipeline (trained) | 0.98x | 0.83x |
+| console painting (trained) | noise | 0.95x |
+| svof triggers (held out) | 0.98x | noise |
+| pathfinder graph build (held out) | noise | 0.82x |
+| 2D map rendering (held out) | noise | noise |
+
+So it pays mostly for Clang builds, and most for the paths the training runs: a profile that
+leaves a workload out buys that workload little. Hand-placed `Q_LIKELY`/`Q_UNLIKELY` hints are not
+a substitute - removing all of Mudlet's, or adding more to the hottest branches, measured as noise.
+
 ## Optional feature modules
 
 Six feature modules are declared through `include_optional_module` in `CMakeLists.txt`: the updater,
