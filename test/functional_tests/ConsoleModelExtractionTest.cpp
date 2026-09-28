@@ -113,6 +113,7 @@ private:
     const QString mColourHostname = "Test-ConsoleModelColours";
     const QString mSpellHostname = "Test-ConsoleModelSpellDic";
     const QString mViewlessHostname = "Test-ConsoleModelViewless";
+    const QString mNawsHostname = "Test-ConsoleModelNaws";
     const QString mWrapHostname = "Test-ConsoleModelWrap";
     const QString mLocalhost = "localhost";
     QString mPort;
@@ -164,6 +165,7 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
+        deleteProfileDirectory(mNawsHostname);
         deleteProfileDirectory(mWrapHostname);
     }
 
@@ -1487,6 +1489,7 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
+        deleteProfileDirectory(mNawsHostname);
         deleteProfileDirectory(mWrapHostname);
     }
 
@@ -2009,6 +2012,38 @@ headlessProblems = table.concat(headlessProblems, '; ')
 
         destroyTheView(host);
         QVERIFY(host->mainConsoleShowsTimeStamps());
+    }
+
+    // A profile with no view still tells the game its size when asked: the
+    // character grid it would wrap to, with no timestamp gutter to leave out.
+    void test_nawsReportsTheCharacterGridWithNoView()
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        // A save of its own, or loading the profile goes off to install the default packages
+        writeProfileSave(qsl("%1profileNaws.xml").arg(saveFolder), QString());
+
+        Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+
+        host->mTelnet.connectIt(mLocalhost, mPort.toInt());
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+                         },
+                         5000),
+                 "The view-less profile did not connect.");
+        // IAC DO NAWS
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !mpServer->nawsUpdates().isEmpty();
+                         },
+                         5000),
+                 "The view-less profile never answered IAC DO NAWS.");
+        QCOMPARE(mpServer->nawsUpdates().constLast(), QSize(std::min(host->mScreenWidth, host->mWrapAt), host->mScreenHeight));
     }
 
     // A profile that never had a view, whose changeColors() would otherwise

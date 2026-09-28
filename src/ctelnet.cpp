@@ -1879,7 +1879,7 @@ void cTelnet::checkNAWS()
 void cTelnet::sendCurrentNAWS()
 {
     Host* pHost = mpHost;
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost) {
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
