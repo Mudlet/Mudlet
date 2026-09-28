@@ -4547,14 +4547,11 @@ describe("Window and label state", function()
       assert.is_false(timeStampsEnabled(console))
     end)
 
-    -- Both refusals share one message, and on the enable path it reads
-    -- "timestamps were not enabled ..." when they in fact already are - so the
-    -- shape is asserted rather than that wrong wording, which should change.
     it("enableTimeStamps refuses when timestamps are already on", function()
       enableTimeStamps(console)
       local ok, err = enableTimeStamps(console)
       assert.is_nil(ok)
-      assert.is_string(err)
+      assert.are.equal(('timestamps were already enabled for the "%s" console'):format(console), err)
       disableTimeStamps(console)
     end)
 

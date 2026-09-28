@@ -472,6 +472,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // attaches (TConsole::TConsole) and unbinds it when it goes away, and
     // TConsole::changeColors() refreshes the snapshot as it does so.
     mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
+    // a view does this in TConsole::changeColors(), but a profile need never get one
+    mpMainConsoleModel->setWrapAt(mWrapAt);
+    mpMainConsoleModel->setIndentCount(mWrapIndentCount);
+    mpMainConsoleModel->setHangingIndentCount(mWrapHangingIndentCount);
 }
 
 Host::~Host()
@@ -2326,6 +2330,47 @@ TConsoleModel* Host::consoleModelNamed(const QString& name)
         return mpMainConsoleModel.get();
     }
     return mWindowRegistry.subConsoleModel(name);
+}
+
+void Host::markSelectionDirty(const TConsoleModel& model)
+{
+    TMainConsole::markWindowDirty(model, std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
+}
+
+bool Host::setWindowFgColor(const QString& name, const QColor& color)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionFgColor(color)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+bool Host::setWindowBgColor(const QString& name, const QColor& color)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionBgColor(color)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+bool Host::setWindowDisplayAttributes(const QString& name, const TChar::AttributeFlags attributes, const bool enabled)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionDisplayAttributes(attributes, enabled)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
 }
 
 // Hot: the trigger engine reads the model for every character of a colour

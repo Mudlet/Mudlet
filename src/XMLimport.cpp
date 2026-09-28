@@ -1248,6 +1248,10 @@ void XMLimport::readHost(Host* pHost)
         pHost->mpConsole->changeColors();
     } else {
         pHost->refreshMainConsoleColors();
+        TConsoleModel& model = pHost->mainConsoleModel();
+        model.setWrapAt(pHost->mWrapAt);
+        model.setIndentCount(pHost->mWrapIndentCount);
+        model.setHangingIndentCount(pHost->mWrapHangingIndentCount);
     }
 }
 

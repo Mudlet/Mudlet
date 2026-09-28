@@ -109,18 +109,19 @@ describe("Tests that the timestamp and wrap functions find their console by name
 
         it("turns that console's timestamps on and off", function()
           local mainShows = timeStampsEnabled("main")
-          local refusal = ('timestamps were not enabled for the "%s" console'):format(window)
+          local enableRefusal = ('timestamps were already enabled for the "%s" console'):format(window)
+          local disableRefusal = ('timestamps were not enabled for the "%s" console'):format(window)
 
           assert.is_false(timeStampsEnabled(window))
           assert.is_true(enableTimeStamps(window))
           assert.is_true(timeStampsEnabled(window))
           assert.are.equal(mainShows, timeStampsEnabled("main"))
-          assert.are.same({nil, refusal}, {enableTimeStamps(window)})
+          assert.are.same({nil, enableRefusal}, {enableTimeStamps(window)})
           assert.is_true(timeStampsEnabled(window))
 
           assert.is_true(disableTimeStamps(window))
           assert.is_false(timeStampsEnabled(window))
-          assert.are.same({nil, refusal}, {disableTimeStamps(window)})
+          assert.are.same({nil, disableRefusal}, {disableTimeStamps(window)})
           assert.is_false(timeStampsEnabled(window))
           assert.are.equal(mainShows, timeStampsEnabled("main"))
         end)
@@ -193,6 +194,8 @@ describe("Tests that the timestamp and wrap functions find their console by name
     end)
 
     it("turns the main console's timestamps on and off by either name", function()
+      local enabledByEmptyName = "timestamps were already enabled for the main console"
+      local enabledByMain = 'timestamps were already enabled for the "main" console'
       local byEmptyName = "timestamps were not enabled for the main console"
       local byMain = 'timestamps were not enabled for the "main" console'
       disableTimeStamps("main")
@@ -201,8 +204,8 @@ describe("Tests that the timestamp and wrap functions find their console by name
       assert.is_true(enableTimeStamps(""))
       assert.is_true(timeStampsEnabled("main"))
       assert.is_true(timeStampsEnabled())
-      assert.are.same({nil, byEmptyName}, {enableTimeStamps()})
-      assert.are.same({nil, byMain}, {enableTimeStamps("main")})
+      assert.are.same({nil, enabledByEmptyName}, {enableTimeStamps()})
+      assert.are.same({nil, enabledByMain}, {enableTimeStamps("main")})
 
       assert.is_true(disableTimeStamps("main"))
       assert.is_false(timeStampsEnabled(""))
