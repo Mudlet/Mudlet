@@ -975,8 +975,11 @@ private slots:
     void test_frameNestedInATabOpenedInABackgroundTabFitsItsPage()
     {
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
-        const auto showThisProfile = qScopeGuard([this]() {
+        // closed again here, as its tab bar would change the window every later case lays out in
+        const auto closeSecondProfile = qScopeGuard([this]() {
             showTab(mHostname);
+            mudlet::self()->slot_closeProfileByName(mSecondHostname);
+            QTest::qWait(1000ms);
         });
         showTab(mSecondHostname);
         QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
