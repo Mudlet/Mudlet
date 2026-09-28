@@ -88,6 +88,11 @@ signals:
     void signal_symbolCachesStale();
     void signal_playerRoomStyleChanged();
     void signal_areaListChanged();
+    void signal_areaRenamed(const QString& oldName, const QString& newName);
+    void signal_playerAreaShowRequested();
+    void signal_defaultAreaVisibilitySet(bool wasShown);
+    void signal_mapInfoContributorsChanged();
+    void signal_mapRepaintRequested();
 
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
@@ -138,6 +143,13 @@ public:
     // For a whole map read in outside TMap, as XMLimport does:
     void announceMapLoaded(bool showPlayerArea);
     void requestMapperShown();
+    // For changes the Lua API makes to the map or to the mapper's settings:
+    void announceAreaListChanged();
+    void announceAreaRenamed(const QString& oldName, const QString& newName);
+    void requestPlayerAreaShown();
+    void announceDefaultAreaVisibilitySet(bool wasShown);
+    void announceMapInfoContributorsChanged();
+    void requestMapRepaint();
 
     void audit();
     inline static bool smShowMapAuditErrors = false;

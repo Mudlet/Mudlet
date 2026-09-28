@@ -3826,6 +3826,36 @@ void TMap::requestMapperShown()
     emit signal_mapperShowRequested();
 }
 
+void TMap::announceAreaListChanged()
+{
+    emit signal_areaListChanged();
+}
+
+void TMap::announceAreaRenamed(const QString& oldName, const QString& newName)
+{
+    emit signal_areaRenamed(oldName, newName);
+}
+
+void TMap::requestPlayerAreaShown()
+{
+    emit signal_playerAreaShowRequested();
+}
+
+void TMap::announceDefaultAreaVisibilitySet(const bool wasShown)
+{
+    emit signal_defaultAreaVisibilitySet(wasShown);
+}
+
+void TMap::announceMapInfoContributorsChanged()
+{
+    emit signal_mapInfoContributorsChanged();
+}
+
+void TMap::requestMapRepaint()
+{
+    emit signal_mapRepaintRequested();
+}
+
 void TMap::updateArea(int areaId)
 {
     static bool debounce;
