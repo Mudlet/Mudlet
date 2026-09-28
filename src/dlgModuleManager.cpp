@@ -133,12 +133,14 @@ void dlgModuleManager::layoutModules()
 
 void dlgModuleManager::showModuleSync(const QString& module, const bool sync)
 {
-    const QList<QTableWidgetItem*> found = moduleTable->findItems(module, Qt::MatchExactly);
-    if (found.isEmpty()) {
+    for (int row = 0; row < moduleTable->rowCount(); ++row) {
+        if (auto* nameItem = moduleTable->item(row, 0); !nameItem || nameItem->text() != module) {
+            continue;
+        }
+        if (auto* checkItem = moduleTable->item(row, 2)) {
+            checkItem->setCheckState(sync ? Qt::Checked : Qt::Unchecked);
+        }
         return;
-    }
-    if (auto* checkItem = moduleTable->item(found.first()->row(), 2)) {
-        checkItem->setCheckState(sync ? Qt::Checked : Qt::Unchecked);
     }
 }
 
