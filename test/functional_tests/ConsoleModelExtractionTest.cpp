@@ -1976,7 +1976,7 @@ headlessProblems = table.concat(headlessProblems, '; ')
 
     // The main console's timestamp flag lives in its model: the toolbar button and
     // Lua both set it there, the button and the autotimestamp file follow it, and
-    // NAWS can still read it once the view is gone.
+    // it outlives the view.
     void test_mainConsoleTimeStampsLiveInTheModel()
     {
         startProfile();
@@ -2097,7 +2097,8 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
     }
 
     // A profile with no view still tells the game its size when asked: the
-    // character grid it would wrap to, with no timestamp gutter to leave out.
+    // character grid it would wrap to. Timestamps turned on leave out no gutter,
+    // as none is drawn.
     void test_nawsReportsTheCharacterGridWithNoView()
     {
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
@@ -2108,7 +2109,8 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
         QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
-        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
 
         host->mTelnet.connectIt(mLocalhost, mPort.toInt());
         QVERIFY2(QTest::qWaitFor(
