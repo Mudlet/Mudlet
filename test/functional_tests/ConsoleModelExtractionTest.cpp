@@ -579,9 +579,9 @@ private slots:
                          },
                          8000),
                  "The stalled tag was never written out as text.");
-        // Both watchdog phases (TBuffer::MAX_TAG_TIMEOUT_MS each) have to have
-        // run, or something other than the watchdog wrote it out.
-        QVERIFY2(sinceFeed.elapsed() >= 2 * 1300 - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
+        // Both watchdog phases have to have run, or something other than the
+        // watchdog wrote it out.
+        QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
     }
 
     // Writing the stalled tag out commits it and finalizes through the main
@@ -598,12 +598,33 @@ private slots:
         destroyTheView(host);
         feedStalledMxpTag(host, model->buffer, "WDOGNOVIEW <send");
 
-        // Both watchdog phases (TBuffer::MAX_TAG_TIMEOUT_MS each) and then
-        // some; there is nothing to poll for, since what is being checked is
-        // that nothing happens.
-        QTest::qWait(2 * 1300ms + 1000ms);
+        // Both watchdog phases and then some; there is nothing to poll for,
+        // since what is being checked is that nothing happens.
+        QTest::qWait(2 * TBuffer::MAX_TAG_TIMEOUT_MS + 1000);
         QVERIFY2(lastLineHolding(model->buffer, qsl("WDOGNOVIEW")) < 0, "The stalled tag was written out with no view.");
         QCOMPARE(QString::fromStdString(host->mMxpProcessor.getMxpTagBuilder().getRawTagContent()), qsl("send"));
+    }
+
+    // The watchdog writes the stalled tag out into its own buffer but
+    // finalizes the main console, so only the main console's buffer may do it:
+    // for any other the text and the repaint would land on different consoles.
+    void test_aStalledMxpTagInAnotherBufferIsLeftAlone()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host, qsl("createMiniConsole('wdogsub', 0, 0, 300, 100)"));
+        TConsoleModel* subModel = host->windowRegistry().subConsoleModel(qsl("wdogsub"));
+        QVERIFY2(subModel, "The mini console has no model.");
+        // The MXP tag builder is the profile's, so let the connection's own
+        // traffic finish before holding a tag open in it.
+        QTest::qWait(1000ms);
+        feedStalledMxpTag(host, subModel->buffer, "WDOGSUB <send");
+
+        QTest::qWait(2 * TBuffer::MAX_TAG_TIMEOUT_MS + 1000);
+        QVERIFY2(lastLineHolding(subModel->buffer, qsl("WDOGSUB")) < 0, "The stalled tag was written out into a buffer that is not the main console's.");
     }
 
     // Host hears that a line is being held back for its continuation straight

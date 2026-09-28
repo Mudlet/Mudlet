@@ -235,7 +235,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 {
     // The model is built without a view (Host creates the main console's one
     // before any widget exists), so this view subscribes to it now.
-    connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesAppended, this, &TConsole::handleLinesOverflowEvent);
+    // Only these two can overflow, and the buffer emits for every line it
+    // appends, so the others stay unconnected and pay no dispatch for it:
+    if (mType & (UserWindow | SubConsole)) {
+        connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesAppended, this, &TConsole::handleLinesOverflowEvent);
+    }
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::lineCommitted, this, &TConsole::mirrorLineToStdOut);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linkCharactersChanged, this, &TConsole::repaintPanes);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
