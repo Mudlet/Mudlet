@@ -320,6 +320,11 @@ class TBuffer
     // logRemainingOutput() clears it even when there is no view to log through:
     friend class ConsoleModelExtractionTest;
 
+    // Binds a buffer of its own to the main console's model, the only one
+    // whose stalled MXP tag the watchdog writes out, so it can destroy that
+    // buffer while the write-out is queued:
+    friend class MxpWatchdogBufferLifetimeTest;
+
     static inline const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     static inline const int TCHAR_IN_BYTES = sizeof(TChar);
