@@ -4523,7 +4523,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
         return lua_error(L);
     }
     const int lineNumber = getVerifiedInt(L, __func__, hasWindowName ? 2 : 1, "line");
-    QString windowName = hasWindowName ? QString{lua_tostring(L, 1)} : qsl("main");
+    const QString windowName = hasWindowName ? QString{lua_tostring(L, 1)} : qsl("main");
 
     Host& host = getHostFromLua(L);
     if (!host.mpConsole) {
@@ -4534,7 +4534,9 @@ int TLuaInterpreter::wrapLine(lua_State* L)
         }
         return 0;
     }
-    host.mpConsole->luaWrapLine(windowName, lineNumber);
+    if (auto pModel = host.consoleModelNamed(windowName)) {
+        pModel->wrapLine(lineNumber);
+    }
     return 0;
 }
 

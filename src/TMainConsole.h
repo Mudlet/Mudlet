@@ -74,8 +74,6 @@ public:
     bool printWindow(const QString& name, const QString& text);
     bool clear(const QString& name);
     void setProfileName(const QString&) override;
-    void selectCurrentLine(std::string&);
-    void luaWrapLine(QString& buf, int line);
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::optional<QString> getUserWindowStyleSheet(const QString& name) const;

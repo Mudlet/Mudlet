@@ -1399,11 +1399,6 @@ void TConsole::scrollUp(int lines)
     slot_adjustAccessibleNames();
 }
 
-void TConsole::deselect()
-{
-    mpModel->deselect();
-}
-
 void TConsole::showEvent(QShowEvent* event)
 {
     if (mType & (MainConsole | Buffer)) {
@@ -1434,11 +1429,6 @@ void TConsole::reset()
     mpModel->resetFormat();
 }
 
-bool TConsole::deleteLine(int y)
-{
-    return buffer.deleteLine(y);
-}
-
 void TConsole::insertText(const QString& text)
 {
     const auto result = mpModel->insertText(text);
@@ -1463,19 +1453,6 @@ int TConsole::getLineNumber()
 int TConsole::getWrapAt()
 {
     return buffer.mWrapAt;
-}
-
-void TConsole::selectCurrentLine()
-{
-    mpModel->selectCurrentLine();
-}
-
-void TConsole::luaWrapLine(int line)
-{
-    if (!mpHost) {
-        return;
-    }
-    buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount);
 }
 
 void TConsole::setFontSize(int size)
@@ -1762,21 +1739,6 @@ bool TConsole::moveCursor(int x, int y)
     return mpModel->moveCursor(x, y);
 }
 
-int TConsole::select(const QString& text, int numOfMatch)
-{
-    return mpModel->selectString(text, numOfMatch);
-}
-
-bool TConsole::selectSection(int from, int to)
-{
-    return mpModel->selectSection(from, to);
-}
-
-std::tuple<bool, QString, int, int> TConsole::getSelection()
-{
-    return mpModel->selection();
-}
-
 // The callers below rewrite the text of an existing selection rather than
 // appending to the buffer, so the lines they touched are all that has to be
 // redrawn. They used to force a whole-screen repaint of both panes, which cost a
@@ -1790,13 +1752,6 @@ void TConsole::markLinesDirty(const int firstLine, const int lastLine)
 {
     mUpperPane->markLinesDirty(firstLine, lastLine);
     mLowerPane->markLinesDirty(firstLine, lastLine);
-}
-
-void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, const bool b)
-{
-    if (mpModel->setSelectionDisplayAttributes(attributes, b)) {
-        markSelectionDirty();
-    }
 }
 
 void TConsole::setFgColor(int r, int g, int b)
@@ -1981,13 +1936,6 @@ void TConsole::echo(const QString& msg)
     } else {
         print(normalizedMsg);
     }
-}
-
-void TConsole::appendBuffer(const TBuffer& bufferSlice)
-{
-    buffer.appendBuffer(bufferSlice);
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
 }
 
 void TConsole::slot_stopAllItems(bool b)
