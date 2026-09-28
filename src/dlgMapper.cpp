@@ -253,6 +253,30 @@ void dlgMapper::connectMapCues()
             mp2dMap->update();
         }
     });
+    connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        switch (setting) {
+        case TMap::MapperSetting::RoomSize:
+            mp2dMap->setRoomSize(mpHost->mRoomSize);
+            mp2dMap->update();
+            break;
+        case TMap::MapperSetting::ExitSize:
+            mp2dMap->setExitSize(mpHost->mLineSize);
+            mp2dMap->update();
+            break;
+        case TMap::MapperSetting::RoundRooms:
+            slot_toggleRoundRooms(mpHost->mBubbleMode);
+            break;
+        case TMap::MapperSetting::ShowRoomIds:
+            slot_setShowRoomIds(mpHost->mShowRoomID);
+            break;
+        case TMap::MapperSetting::ShowGrid:
+            slot_setShowGrid(mpHost->mMapperShowGrid);
+            break;
+        }
+    });
 }
 
 static QFrame* createOverlayFrame(QWidget* parent, const QString& objectName)
