@@ -137,10 +137,85 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     setupEmptyStateOverlay();
     setupProgressOverlay();
     connect(mpMap, &TMap::signal_mmpMapLocationChanged, this, &dlgMapper::updateEmptyStateOverlay);
+    connectMapCues();
+    updateEmptyStateOverlay();
+}
+
+bool dlgMapper::drawsTheMap() const
+{
+    return mpMap && mpMap->mpMapper == this;
+}
+
+void dlgMapper::connectMapCues()
+{
     connect(mpMap, &TMap::signal_areaChanged, this, [this](int) {
+#if defined(INCLUDE_3DMAPPER)
+        if (glWidget && mpMap->mpM == glWidget) {
+            glWidget->update();
+        }
+#endif
+        if (drawsTheMap()) {
+            mp2dMap->mNewMoveAction = true;
+            mp2dMap->update();
+        }
         updateEmptyStateOverlay();
     });
-    updateEmptyStateOverlay();
+    connect(mpMap, &TMap::signal_mapperColoursChanged, this, [this]() {
+        if (drawsTheMap()) {
+            refreshColours();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapCleared, this, [this]() {
+        if (!drawsTheMap()) {
+            return;
+        }
+        updateAreaComboBox();
+        mp2dMap->mMultiSelectionListWidget.clear();
+        mp2dMap->mMultiSelectionListWidget.hide();
+    });
+    connect(mpMap, &TMap::signal_mapLabelsChanged, this, [this]() {
+        if (drawsTheMap()) {
+            mp2dMap->update();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapLoaded, this, [this](const bool showPlayerArea) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        mp2dMap->init();
+        updateAreaComboBox();
+        if (showPlayerArea) {
+            resetAreaComboBoxToPlayerRoomArea();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapperShowRequested, this, [this]() {
+        if (drawsTheMap()) {
+            show();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapDownloadEnded, this, [this]() {
+        if (drawsTheMap()) {
+            updateEmptyStateOverlay();
+        }
+    });
+    connect(mpMap, &TMap::signal_symbolCachesStale, this, [this]() {
+        if (!drawsTheMap()) {
+            return;
+        }
+        mp2dMap->flushSymbolPixmapCache();
+        mp2dMap->update();
+        update();
+    });
+    connect(mpMap, &TMap::signal_playerRoomStyleChanged, this, [this]() {
+        if (drawsTheMap()) {
+            mp2dMap->setPlayerRoomStyle(mpMap->mPlayerRoomStyle);
+        }
+    });
+    connect(mpMap, &TMap::signal_areaListChanged, this, [this]() {
+        if (drawsTheMap()) {
+            updateAreaComboBox();
+        }
+    });
 }
 
 static QFrame* createOverlayFrame(QWidget* parent, const QString& objectName)
