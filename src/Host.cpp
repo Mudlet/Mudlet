@@ -485,15 +485,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         if (mIsClosingDown) {
             return;
         }
-        // Mimic TMainConsole::printOnDisplay() so that trigger-context
+        // Mimic Host::printOnDisplay() so that trigger-context
         // functions behave the same as for any other committed line:
-        if (mpConsole) {
-            mpConsole->mTriggerEngineMode = true;
-        }
+        mpMainConsoleModel->mTriggerEngineMode = true;
         mpMainConsoleModel->buffer.flushPendingServerWrapJoin();
-        if (mpConsole) {
-            mpConsole->mTriggerEngineMode = false;
-        }
+        mpMainConsoleModel->mTriggerEngineMode = false;
         finalizeMainConsole();
     });
 }
@@ -2365,9 +2361,46 @@ void Host::printSystemMessage(const QString& msg)
     mpConsole->printSystemMessage(msg);
 }
 
-void Host::printOnDisplay(std::string& data, bool isFromServer)
+void Host::printOnDisplay(std::string& data, const bool isFromServer)
 {
-    mpConsole->printOnDisplay(data, isFromServer);
+    // The view only times the pass, flashes the taskbar and marks the profile's
+    // tab; the text is processed whether or not there is one.
+    const bool alertWanted = mpConsole && mpConsole->startIncomingText() && isFromServer;
+    TConsoleModel& model = *mpMainConsoleModel;
+    TBuffer& buffer = model.buffer;
+
+    // Notify visibility manager of incoming data (for output gap detection)
+    if (isFromServer) {
+        model.mHyperlinkVisibilityManager.onDataReceived();
+    }
+
+    // feedTriggers() lands here, so this runs nested inside an outer pass that
+    // is itself mid-translate; clearing the flag outright would take trigger
+    // context away from the rest of that pass.
+    const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
+    model.mTriggerEngineMode = true;
+    const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
+    const QString beforeTranslateLastLine = alertWanted ? buffer.line(beforeTranslateLastLineNumber - 1) : QString();
+    buffer.translateToPlainText(data, isFromServer);
+    model.mTriggerEngineMode = wasInTriggerEngineMode;
+
+    if (alertWanted && mpConsole) {
+        const int lastLineNumber = buffer.getLastLineNumber();
+        if (lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine) {
+            mpConsole->alertNewData();
+        }
+    }
+
+    // dequeues MXP events and raise them through the LuaInterpreter
+    auto& mxpEventQueue = mMxpClient.mMxpEvents;
+    while (!mxpEventQueue.isEmpty()) {
+        const auto& event = mxpEventQueue.dequeue();
+        mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions, event.caption);
+    }
+
+    if (mpConsole) {
+        mpConsole->finishIncomingText();
+    }
 }
 
 void Host::finalizeMainConsole()

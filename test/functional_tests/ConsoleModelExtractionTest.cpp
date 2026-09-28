@@ -380,6 +380,42 @@ private slots:
         model->mIsPromptLine = false;
     }
 
+    // Game text comes in through Host::printOnDisplay(), which has to run it
+    // with no view: the line reaches the model's buffer, its trigger fires, and
+    // an MXP element's event reaches Lua after that.
+    void test_incomingTextIsProcessedWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host,
+               qsl("viewlessIncoming = ''\n"
+                   "tempRegexTrigger('^ViewlessIncoming', [[viewlessIncoming = viewlessIncoming .. 'trigger:' .. line .. ';']], 10)\n"
+                   "registerAnonymousEventHandler('mxp.rviewless', function() viewlessIncoming = viewlessIncoming .. 'event' end)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        // Closing the profile emergency-stops the trigger engine
+        // (Host::closeChildren()), which a profile that simply never had a view
+        // would not do:
+        host->reenableAllTriggers();
+        host->setForceMXPProcessorOn(true);
+        host->mMxpProcessor.enable();
+        // defining an element is only allowed in secure mode
+        host->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+
+        std::string definition{"<!ELEMENT RViewless FLAG=\"RoomViewless\">\n"};
+        host->printOnDisplay(definition, true);
+        std::string data{"<RViewless>ViewlessIncoming delta</RViewless>\n"};
+        host->printOnDisplay(data, true);
+
+        QVERIFY2(lastLineHolding(model->buffer, qsl("ViewlessIncoming delta")) >= 0, qPrintable(qsl("The line never reached the model's buffer: '%1'").arg(joinedBuffer(model->buffer))));
+        QCOMPARE(luaGlobalString(host, "viewlessIncoming"), qsl("trigger:ViewlessIncoming delta;event"));
+        QVERIFY2(!model->mTriggerEngineMode, "The trigger-context flag was left set after the text was processed.");
+    }
+
     // A colorizer trigger recolors its match by selecting a run of the line and
     // painting it, all of which is model state. The return that used to guard
     // those calls left the whole function, so with no view the trigger did not

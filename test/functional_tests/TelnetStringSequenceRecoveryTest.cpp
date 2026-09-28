@@ -459,13 +459,13 @@ private slots:
     void unterminatedSequenceInALocalFeedIsBounded()
     {
         std::string stuck{"BEFORE-LOCAL\x1bP0;SEQPAYLOAD"};
-        mpHost->mpConsole->printOnDisplay(stuck, false);
+        mpHost->printOnDisplay(stuck, false);
         // As on the Game Server channel, the line ending of this one is what
         // ends the sequence, so this feed is the one that is lost:
         std::string eaten{"EATEN-LOCAL\n"};
-        mpHost->mpConsole->printOnDisplay(eaten, false);
+        mpHost->printOnDisplay(eaten, false);
         std::string resumed{"VISIBLE-LOCAL\n"};
-        mpHost->mpConsole->printOnDisplay(resumed, false);
+        mpHost->printOnDisplay(resumed, false);
 
         QVERIFY2(waitForBufferText(qsl("VISIBLE-LOCAL")), qPrintable(qsl("Locally fed text stayed dark after an unterminated sequence: '%1'").arg(joinedBuffer())));
         QVERIFY2(!joinedBuffer().contains(qsl("SEQPAYLOAD")), qPrintable(qsl("Sequence payload was displayed: '%1'").arg(joinedBuffer())));

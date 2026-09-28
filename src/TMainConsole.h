@@ -247,7 +247,13 @@ public:
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
     void toggleLogging(bool);
-    void printOnDisplay(std::string&, bool isFromServer = false);
+    // The view's part of Host::printOnDisplay(). startIncomingText() starts
+    // timing the pass for the latency box and answers whether to alert the user
+    // if the text changes the buffer; finishIncomingText() schedules the paced
+    // latency box refresh and marks the profile's tab.
+    bool startIncomingText();
+    void alertNewData();
+    void finishIncomingText();
     void finalize();
     void refreshSubconsoles();
 
