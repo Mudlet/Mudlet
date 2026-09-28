@@ -14,8 +14,10 @@ describe("Tests that the font functions find their console by name", function()
   end
 
   -- every spec after this one lays itself out against the main console's font,
-  -- so it goes back exactly as it was even if a case fails before its own
-  -- finally() has restored it
+  -- so the family and size on show go back as they were even if a case fails
+  -- before its own finally() has restored them. Setting the main console's
+  -- family counts as the user choosing it, so in a profile whose own family is
+  -- not installed, the stand-in shown for it is what the profile saves after this.
   local mainFont, mainFontSize
   setup(function()
     mainFont, mainFontSize = getFont("main"), getFontSize("main")
@@ -128,7 +130,7 @@ describe("Tests that the font functions find their console by name", function()
       -- opens with no height, so this one is floated at a fixed size, and only
       -- closed and left behind so it cannot do the same to later specs
       {"user window", function(name)
-        local opened = openUserWindow(name, false)
+        local opened = openUserWindow(name, false, false)
         resizeWindow(name, 300, 400)
         return opened
       end, closeUserWindow},

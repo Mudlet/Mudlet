@@ -44,6 +44,7 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "FontManager.h"
 #include "GifTracker.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -1499,6 +1500,7 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!FontManager::availableFonts().isEmpty(), "No font is installed, so setFont() refuses every family before it looks for a console.");
         destroyTheView(host);
 
         runLua(host, qsl(R"LUA(
@@ -1531,7 +1533,7 @@ local function expectNothing(name, ...)
 end
 
 -- a family setFont() takes, which it checks for before it looks for a console
-local anyFont = next(getAvailableFonts()) or 'no font is installed'
+local anyFont = next(getAvailableFonts())
 
 expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
 expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
@@ -1619,7 +1621,7 @@ expectRefusal('getLineCount', getLineCount('noViewMc'))
 expectRefusal('getColumnNumber', getColumnNumber('noViewMc'))
 expectRefusal('getColumnCount', getColumnCount())
 expectRefusal('getRowCount', getRowCount())
-expectRefusal('deleteLine', deleteLine())
+expectRefusal('deleteLine', deleteLine('noViewMc'))
 expectRefusal('getFont', getFont())
 expectRefusal('getFont main', getFont('main'))
 expectRefusal('setFont', setFont(anyFont))
@@ -1639,9 +1641,9 @@ expectValue('setWindowWrapIndent', true, setWindowWrapIndent('main', 1))
 expectValue('setWindowWrapHangingIndent', true, setWindowWrapHangingIndent('main', 1))
 expectValue('setWindowWrap 0', 'wrapAt must be greater than zero, got 0', select(2, setWindowWrap(0)))
 -- these two answer something other than nil when they find no console
-expectValue('getLastLineNumber', -1, getLastLineNumber())
-expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine())
-expectValue('getCurrentLine reason', 'window "" not found', select(2, getCurrentLine()))
+expectValue('getLastLineNumber', -1, getLastLineNumber('noViewMc'))
+expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine('noViewMc'))
+expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, getCurrentLine('noViewMc')))
 -- whereas the font and the size are checked before any console is looked for
 expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
