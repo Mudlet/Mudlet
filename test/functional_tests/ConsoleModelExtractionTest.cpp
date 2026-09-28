@@ -2011,6 +2011,33 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QVERIFY(host->mainConsoleShowsTimeStamps());
     }
 
+    // With a view, turning timestamps on from the toolbar button or from Lua saves
+    // the choice once, not once for the model and again for the view. A directory
+    // in the file's place makes every save attempt warn, so the warnings count them.
+    void test_timeStampsTurnedOnWithAViewAreSavedOnce()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
+        const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
+        QVERIFY(QDir().mkpath(autoTimeStampPath));
+        const QRegularExpression saveFailed(qsl("failed to open autotimestamp file"));
+        QTest::failOnWarning(saveFailed);
+
+        QTest::ignoreMessage(QtWarningMsg, saveFailed);
+        host->mpConsole->timeStampButton->click();
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+
+        QTest::ignoreMessage(QtWarningMsg, saveFailed);
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+    }
+
     // Timestamps turned on or off from Lua change the width the game is told,
     // by the gutter they take, as the toolbar button does.
     void test_luaTimeStampsOnTheMainConsoleResendNaws()
@@ -2043,8 +2070,8 @@ headlessProblems = table.concat(headlessProblems, '; ')
     }
 
     // The timestamp functions set and read the console model's flag, so the main
-    // console answers them with no view, as it does with one. Only the flag
-    // changes: the autotimestamp file and the size report belong to the view.
+    // console answers them with no view, as it does with one, and the profile
+    // still loads next time as they left it. The size report belongs to the view.
     void test_timeStampFunctionsWorkWithNoView()
     {
         startProfile();
@@ -2077,7 +2104,7 @@ expectTimeStampAnswer('enableTimeStamps again', nil, 'timestamps were already en
 expectTimeStampAnswer('enableTimeStamps main again', nil, 'timestamps were already enabled for the "main" console', enableTimeStamps('main'))
 )LUA"));
         QVERIFY(host->mainConsoleShowsTimeStamps());
-        QVERIFY2(!QFile::exists(autoTimeStampPath), "A profile with no view wrote the view's autotimestamp file.");
+        QVERIFY2(QFile::exists(autoTimeStampPath), "Timestamps turned on with no view were not saved for the next load.");
 
         runLua(host, qsl(R"LUA(
 local unknown = 'noViewNoSuchConsole'
@@ -2092,6 +2119,7 @@ expectTimeStampAnswer('timeStampsEnabled unknown', nil, notFound, timeStampsEnab
 noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
 )LUA"));
         QVERIFY(!host->mainConsoleShowsTimeStamps());
+        QVERIFY2(!QFile::exists(autoTimeStampPath), "Timestamps turned off with no view were not saved for the next load.");
         QCOMPARE(luaGlobalString(host, "noViewTimeStampReport"), QString());
         QCOMPARE(luaGlobalNumber(host, "noViewSizeReports"), 0);
     }
