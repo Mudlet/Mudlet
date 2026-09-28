@@ -69,6 +69,7 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaEnum>
