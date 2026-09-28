@@ -120,6 +120,16 @@ private:
         mPaintCount = 0;
     }
 
+    void makeTheMapper()
+    {
+        mpHost->showHideOrCreateMapper(false);
+        mpMapper = map()->mpMapper;
+        QVERIFY2(mpMapper, "the profile has no mapper to take the cues");
+        mp2dMap = mpMapper->mp2dMap;
+        QVERIFY(mp2dMap);
+        mp2dMap->installEventFilter(this);
+    }
+
     bool waitForPaint()
     {
         return QTest::qWaitFor(
@@ -192,8 +202,15 @@ private slots:
     void init()
     {
         buildMap();
-        if (QTest::currentTestFailed() || !mpMapper) {
+        if (QTest::currentTestFailed() || qstrcmp(QTest::currentTestFunction(), "test_withoutAMapperTheDefaultAreaIsLeftAloneAndAreasStillWork") == 0) {
             return;
+        }
+        // Made here rather than by a test of its own, so any one test can be run alone
+        if (!mpMapper) {
+            makeTheMapper();
+            if (QTest::currentTestFailed()) {
+                return;
+            }
         }
         QVERIFY2(map()->mpMapper == mpMapper, "the mapper made for this test is no longer the one drawing the map");
         mpMapper->show();
@@ -203,7 +220,7 @@ private slots:
         QCOMPARE(mpMapper->comboBox_showArea->currentText(), qsl("Ground"));
     }
 
-    // Runs before the mapper exists, so it must stay the first test.
+    // Needs a profile with no mapper yet, so it must stay the first test.
     void test_withoutAMapperTheDefaultAreaIsLeftAloneAndAreasStillWork()
     {
         QVERIFY2(map()->mpMapper.isNull(), "the profile already has a mapper");
@@ -215,16 +232,6 @@ private slots:
         QVERIFY(lua(qsl("assert(setAreaName('Cellar', 'Crypt') == true)")));
         QVERIFY(lua(qsl("assert(deleteArea('Crypt') == true)")));
         QCOMPARE(areaIdOf(qsl("Crypt")), 0);
-    }
-
-    void test_makeTheMapper()
-    {
-        mpHost->showHideOrCreateMapper(false);
-        mpMapper = map()->mpMapper;
-        QVERIFY2(mpMapper, "the profile has no mapper to take the cues");
-        mp2dMap = mpMapper->mp2dMap;
-        QVERIFY(mp2dMap);
-        mp2dMap->installEventFilter(this);
     }
 
     void test_addAreaNameListsTheAreaInTheMapper()
