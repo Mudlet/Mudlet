@@ -28,6 +28,7 @@
  */
 
 #include <QTemporaryDir>
+#include <QTextDocument>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <QtTest/QtTest>
@@ -437,6 +438,24 @@ private slots:
         QCOMPARE(luaValues(qsl("getIrcConnectedHost()")), qsl("false|no client active"));
         QCOMPARE(luaValues(qsl("restartIrc()")), qsl("false"));
         QCOMPARE(luaValues(qsl("getIrcNick()")), mNick);
+    }
+
+    // Ending the session disconnects it, which the window must not hear about
+    // while it is being destroyed
+    void test_closingTheWindowRunsNoneOfItsSlots()
+    {
+        QVERIFY(openRegisteredClient());
+        QPointer<QTextDocument> shownDocument = mpHost->mpDlgIRC->ircBrowser->document();
+        int changes = 0;
+        QObject probe;
+        connect(shownDocument, &QTextDocument::contentsChanged, &probe, [&changes]() {
+            ++changes;
+        });
+
+        delete mpHost->mpDlgIRC;
+
+        QVERIFY2(!shownDocument, "SETUP: the shown document outlived its session");
+        QCOMPARE(changes, 0);
     }
 
     // With no frontend to start it, openIRC() leaves a session that never
