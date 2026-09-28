@@ -181,7 +181,9 @@ cd "$WS"
 rc=0
 started=$SECONDS
 timeout -k 10 "$TIMEOUT" xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline 2>&1 \
-  | tee "$TMP/run.log" || rc=$?
+  | tee "$TMP/run.log" || { status=("${PIPESTATUS[@]}"); rc=${status[0]}; [ "$rc" -ne 0 ] || rc=${status[1]}; }
+# Mudlet's status comes first: under pipefail a failing tee (e.g. a full /tmp) would
+# otherwise replace a timeout's 124 with its own 1.
 # 137 is the -k escalation, but also any other SIGKILL (e.g. the OOM killer),
 # so only the elapsed time can say which it was.
 timed_out=false
