@@ -412,7 +412,7 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
         # The run-varying half of the ci-linux/ci-macos presets - everything else
         # about the configuration lives in CMakePresets.json
-        CMAKE_BUILD_TYPE: ${{ (startsWith(github.ref, 'refs/tags/Mudlet-') || github.event.inputs.pgo == 'true') && 'Release' || '' }}
+        CMAKE_BUILD_TYPE: ${{ (startsWith(github.ref, 'refs/tags/Mudlet-') || (matrix.pgo == 'true' && github.event.inputs.pgo == 'true')) && 'Release' || '' }}
         MUDLET_PGO: ${{ env.MUDLET_PGO_BUILD == 'true' && 'GENERATE' || '' }}
         USE_SANITIZER: ${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
         WITH_SENTRY: 'ON'

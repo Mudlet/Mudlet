@@ -57,7 +57,10 @@ find "${PROFILE_DIR}" -type f \( -name '*.gcda' -o -name '*.profraw' -o -name '*
 
 echo "Training with ${BENCHMARK}"
 TRAINING_LOG="${PROFILE_DIR}/training.log"
-if ! QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "${BENCHMARK}" 2>&1 | tee "${TRAINING_LOG}"; then
+# MUDLET_TEST_MODE as ctest and compare-perf-baseline.py set it: a release or PTB
+# build would otherwise look for updates, and install mpkg, which updates itself
+# from the network part way through a slot
+if ! QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" MUDLET_TEST_MODE="${MUDLET_TEST_MODE:-1}" "${BENCHMARK}" 2>&1 | tee "${TRAINING_LOG}"; then
   echo "=== ERROR: the training run failed - see the PipelineBenchmark output above ===" >&2
   exit 1
 fi
