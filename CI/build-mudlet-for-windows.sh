@@ -19,7 +19,7 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 3.4.0    Build tagged releases profile-guided when MUDLET_PGO_RELEASE is set
+# Version: 3.4.0    Build profile-guided when MUDLET_PGO_BUILD is set
 #          3.3.0    Fail the script when CMake configuration or build fails
 #          3.2.0    Configure from the ci-windows CMake preset
 #          3.1.0    Switch from MINGW64 to CLANG64
@@ -146,12 +146,12 @@ else
   PARALLEL=()
 fi
 
-# A profile-guided release builds twice: first an instrumented PipelineBenchmark,
+# A profile-guided build (releases and PTBs) builds twice: first an instrumented PipelineBenchmark,
 # which CI/pgo-train.sh runs to record the profile, then Mudlet built against it.
 # Only the benchmark in the first pass, as building mudlet would send the
 # instrumented binary's debug files to Sentry.
-if [ "${MUDLET_PGO_RELEASE}" = "true" ]; then
-  echo "Building the instrumented pass of a profile-guided release ..."
+if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
+  echo "Building the instrumented pass of a profile-guided build ..."
   if ! cmake --preset ci-windows -DMUDLET_PGO=GENERATE; then
     echo "=== ERROR: CMake configuration of the instrumented pass failed ==="
     exit 4

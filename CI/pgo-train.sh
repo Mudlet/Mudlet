@@ -7,7 +7,8 @@
 #
 # The workload is PipelineBenchmark - text decoding, the trigger engine, the
 # default packages and painting the console - because that is the per-line path
-# a busy game hammers. Code it never reaches keeps its ordinary optimisation.
+# a busy game hammers. Functions it never enters are optimised as if there were
+# no profile under GCC, but Clang treats them as cold.
 
 set -euo pipefail
 
@@ -28,6 +29,10 @@ if [ "${PGO_STAGE}" != "GENERATE" ]; then
 fi
 PROFILE_DIR="$(cache_value MUDLET_PGO_DIR)"
 COMPILER="$(sed -n 's/^set(CMAKE_CXX_COMPILER_ID "\(.*\)")$/\1/p' "${BUILD_DIR}"/CMakeFiles/*/CMakeCXXCompiler.cmake | head -1)"
+if [ -z "${PROFILE_DIR}" ] || [ -z "${COMPILER}" ]; then
+  echo "could not read MUDLET_PGO_DIR or the compiler from ${BUILD_DIR}" >&2
+  exit 1
+fi
 
 # The Windows preset gathers every executable into CMAKE_RUNTIME_OUTPUT_DIRECTORY
 BENCHMARK=""
@@ -44,13 +49,26 @@ if [ -z "${BENCHMARK}" ]; then
   exit 1
 fi
 
-# A profile left over from older code would be merged into this one - GCC adds
-# to existing .gcda files - and describe branches that no longer exist.
+# Clang names each raw profile after the binary that wrote it, so an older
+# build's would be merged into this one; GCC would add to the counts of a
+# .gcda left by an earlier run of this same build.
 mkdir -p "${PROFILE_DIR}"
 find "${PROFILE_DIR}" -type f \( -name '*.gcda' -o -name '*.profraw' -o -name '*.profdata' \) -delete
 
 echo "Training with ${BENCHMARK}"
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "${BENCHMARK}"
+TRAINING_LOG="${PROFILE_DIR}/training.log"
+if ! QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "${BENCHMARK}" 2>&1 | tee "${TRAINING_LOG}"; then
+  echo "=== ERROR: the training run failed - see the PipelineBenchmark output above ===" >&2
+  exit 1
+fi
+# A skipped slot exits 0 and still writes a profile - one of startup alone, if
+# initTestCase() skips - so require a metric from each slot the training is for.
+for METRIC in text_best_pass_ms trigger_best_pass_ms defaults_text_best_pass_ms display_paint_ms; do
+  if ! grep -q "^METRIC ${METRIC} " "${TRAINING_LOG}"; then
+    echo "=== ERROR: the training run reported no ${METRIC}, so that slot did not run and the profile would leave its code cold ===" >&2
+    exit 1
+  fi
+done
 
 if [[ "${COMPILER}" == *Clang* ]]; then
   # The merged profile has to be in the format of the compiler that reads it, so

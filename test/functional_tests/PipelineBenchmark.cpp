@@ -1191,6 +1191,7 @@ private slots:
         QFile corpusFile(corpusPath);
         QVERIFY2(corpusFile.open(QIODevice::ReadOnly), qPrintable(qsl("cannot read %1").arg(corpusPath)));
         const QByteArray corpus = corpusFile.readAll();
+        QVERIFY2(!corpus.isEmpty(), qPrintable(qsl("%1 is empty").arg(corpusPath)));
         QByteArrayList packets;
         const QByteArray goAhead("\xff\xf9");
         qsizetype start = 0;
@@ -1200,6 +1201,8 @@ private slots:
             packets << corpus.mid(start, end - start);
             start = end;
         }
+        // One packet would be the flood path, the opposite of what a prompt-driven game sends
+        QVERIFY2(packets.size() > 1, "the corpus has no IAC GA to split it into packets at");
         const int corpusLines = static_cast<int>(corpus.count('\n'));
 
         Host* host = startProfile();
@@ -1226,8 +1229,11 @@ private slots:
         const auto [report, total, patterns, temporary, active, activePatterns] = host->getTriggerUnit()->assembleReport();
         Q_UNUSED(report)
         QVERIFY2(temporary > 0, "the package made no temporary triggers - its scripts did not run, so only half of it would be timed");
+        QVERIFY2(activePatterns > 0, "none of the package's triggers is active, so nothing would be matched");
 
         const double triggerSeconds = feedBestPass(kFeedPasses);
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > corpusLines, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
         emitMetric("pkg_corpus_lines", static_cast<qint64>(corpusLines));
         emitMetric("pkg_corpus_packets", static_cast<qint64>(packets.size()));

@@ -97,7 +97,7 @@ as what CI passes — set them to match the job being reproduced:
 | `USE_SANITIZER` | `Address` on Linux, empty on macOS | empty |
 | `WITH_SENTRY` | `ON` | `ON` |
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
-| `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS and Windows (see below) |
+| `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS (Windows passes it with `-D`); see below |
 
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
@@ -139,45 +139,56 @@ takes two builds of the *same* tree, since GCC finds each object's profile by th
 
 ```bash
 cmake --preset linux-release -DMUDLET_PGO=GENERATE
-cmake --build build-linux-release --target mudlet PipelineBenchmark
+cmake --build build-linux-release --target PipelineBenchmark   # the instrumented program
 CI/pgo-train.sh build-linux-release       # runs PipelineBenchmark, writes the profile
 cmake -B build-linux-release -DMUDLET_PGO=USE
-cmake --build build-linux-release --target mudlet
+cmake --build build-linux-release --target mudlet_executable
 ```
 
 GCC and Clang are both supported; for Clang, `CI/pgo-train.sh` merges the raw profiles with
 `llvm-profdata` (`LLVM_PROFDATA` picks a particular one), and on Linux the instrumented link needs
 the compiler-rt profile runtime (`libclang-rt-<version>-dev` on Ubuntu). The profile lands in
 `MUDLET_PGO_DIR`, `<build>/pgo-profile` unless set. The training script clears it before each run,
-because GCC adds to existing `.gcda` files and a profile of older code describes branches that no
-longer exist. Never change sources between the two builds - GCC refuses a profile that no longer
-matches a function's control flow.
+as Clang names each raw profile after the binary that wrote it and would otherwise merge an older
+build's in. It also fails when a slot the training is for did not run, since a skipped slot still
+leaves a profile - one that marks its code cold. Keep the sources the same between the two builds: a
+function whose code changed loses its profile, which GCC refuses as an error and Clang reports as a
+`hash mismatch` warning.
 
 The training is PipelineBenchmark: text decoding, the trigger engine, the default packages and
-console painting. Measured against a plain Release build of the same compiler at `-O3`, interleaved
+console painting. Functions it never enters are compiled as if there were no profile under GCC,
+thanks to `-fprofile-partial-training`, and treated as cold under Clang. Measured as time taken
+relative to a plain Release build of the same compiler at `-O3` - below 1 is faster - interleaved
 and paired per round, with svof (an Achaea combat system of 3,086 triggers), the 2D mapper and the
 pathfinder kept out of the training:
 
 | | GCC 13 | Clang 18 |
 | --- | --- | --- |
-| trigger engine (trained) | 0.99x | 0.81x |
-| text pipeline (trained) | 0.98x | 0.83x |
-| console painting (trained) | noise | 0.95x |
-| svof triggers (held out) | 0.98x | noise |
-| pathfinder graph build (held out) | noise | 0.82x |
+| trigger engine (trained) | 0.99 | 0.81 |
+| text pipeline (trained) | 0.98 | 0.83 |
+| console painting (trained) | noise | 0.95 |
+| svof triggers (held out) | 0.98 | noise |
+| pathfinder graph build (held out) | noise | 0.82 |
 | 2D map rendering (held out) | noise | noise |
 
-So it pays mostly for Clang builds, and most for the paths the training runs: a profile that
-leaves a workload out buys that workload little. Hand-placed `Q_LIKELY`/`Q_UNLIKELY` hints are not
-a substitute - removing all of Mudlet's, or adding more to the hottest branches, measured as noise.
+So it pays mostly for Clang builds. Held-out work can gain too, as the pathfinder did, but a big
+trigger package like svof gained little from a profile of the benchmark's triggers, and nothing
+measured slower. Hand-placed `Q_LIKELY`/`Q_UNLIKELY` hints are not a substitute - removing all of
+Mudlet's, or adding more to the hottest branches, measured as noise.
 
-CI builds the macOS and Windows releases this way, both of which use Clang; Linux stays on plain
-GCC, as switching it to Clang for PGO bought no more than GCC already gives and slowed the mapper.
-On a `Mudlet-*` tag the first pass builds only an instrumented `PipelineBenchmark` - building
-`mudlet` would send the instrumented binary's debug files to Sentry - and the second pass builds
-everything against the profile, so the tests that follow run on what ships. Pull requests and PTBs
-never build profile-guided. To exercise the release path without tagging, run the *Build Mudlet* or
-*Build Mudlet (windows)* workflow by hand with its `pgo` input set to `true`.
+CI builds the macOS and Windows releases this way, both of which use Clang. Linux stays on plain
+GCC: against it, a profile-guided Clang build was faster on the trained paths (triggers 0.90, text
+0.86) but no faster on svof (0.98, noise) and slower at 2D map rendering (1.08 to 1.24), plain
+Clang being slower than GCC there to begin with.
+
+The first pass builds only an instrumented `PipelineBenchmark` - building `mudlet` would send the
+instrumented binary's debug files to Sentry - and the second builds everything against the profile,
+so the tests that follow run on what ships. Tagged releases and the nightly PTBs both build this way,
+so a broken profile-guided build shows up the morning after it lands rather than on release day;
+macOS PTBs keep their own build type rather than becoming Release builds. Pull requests never build
+profile-guided. To exercise the release path by hand, run the *Build Mudlet* or *Build Mudlet
+(windows)* workflow with its `pgo` input set to `true`, which also builds macOS as Release. Neither
+kind of run saves its objects to the shared ccache.
 
 ## Optional feature modules
 
