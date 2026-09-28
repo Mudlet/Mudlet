@@ -4628,8 +4628,8 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     if (!host.mpConsole) {
         // Sub-windows die with the view, but the main buffer is the model's and keeps the view's wrap settings.
         if (isMain(windowName)) {
-            TConsoleModel& model = host.mainConsoleModel();
-            model.buffer.wrapLine(lineNumber, model.mWrapAt, model.mIndentCount, model.mHangingIndentCount);
+            TBuffer& buffer = host.mainConsoleModel().buffer;
+            buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
         }
         return 0;
     }
