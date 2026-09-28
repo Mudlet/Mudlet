@@ -36,6 +36,7 @@
 #include <iterator>
 
 #include "EAction.h"
+#include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "TArea.h"
@@ -1358,7 +1359,7 @@ int TLuaInterpreter::enableTimeStamps(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAvailableFonts
 int TLuaInterpreter::getAvailableFonts(lua_State* L)
 {
-    auto fontList = mudlet::self()->getAvailableFonts();
+    auto fontList = FontManager::availableFonts();
 
     lua_newtable(L);
     for (auto& font : fontList) {

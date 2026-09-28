@@ -201,7 +201,6 @@ public:
     void forceClose();
     void armForceClose();
     Host* getActiveHost();
-    QStringList getAvailableFonts();
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
