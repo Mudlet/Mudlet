@@ -200,9 +200,9 @@ void dlgNotepad::setTabsStyleSheet(const QString& styleSheet)
 
 dlgNotepad::~dlgNotepad()
 {
-    if (mpHost && HostDialogs::of(mpHost).mpNotePad) {
+    if (auto* pDialogs = mpHost ? HostDialogs::find(mpHost) : nullptr; pDialogs && pDialogs->mpNotePad) {
         save();
-        HostDialogs::of(mpHost).mpNotePad = nullptr;
+        pDialogs->mpNotePad = nullptr;
     }
 }
 

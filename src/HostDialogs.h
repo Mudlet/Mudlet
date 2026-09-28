@@ -38,7 +38,10 @@ class HostDialogs : public QObject
 
 public:
     Q_DISABLE_COPY(HostDialogs)
-    static HostDialogs& of(const Host*);
+    // Makes the profile's set on first use
+    static HostDialogs& of(Host*);
+    // Only looks: nullptr when the frontend has opened nothing for the profile yet
+    static HostDialogs* find(const Host*);
     // Makes the frontend answer the profile's requests to close or destroy the
     // dialogs it opened for it. Call once per Host.
     static void connectTeardown(Host*);

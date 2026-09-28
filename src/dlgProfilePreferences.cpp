@@ -4284,7 +4284,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -6574,12 +6574,11 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_showIdNumbers)) {
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         }
-        // Re-theming an open script editor is a full edbee reconfiguration, so it
-        // waits for one of the settings it carries to actually move
-        if (auto* pEditor = HostDialogs::of(pHost).mpEditorDialog.data();
+        // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
+        auto* pDialogs = HostDialogs::find(pHost);
+        if (auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr;
             pEditor && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
-            // The write above settled the choice into the Host, so the name comes
-            // from there rather than a box a script may have moved on from
+            // From the Host, which the write above updated, not a box a script may have moved on from
             pEditor->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
         }
 

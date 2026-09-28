@@ -1362,7 +1362,7 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // editor is where a key binding is looked at and where it is changed.
         // Opening it replaces this notice, so it is read out only if the editor
         // is open; selecting the binding says it again.
-        if (auto* pEditor = HostDialogs::of(pOtherHost.data()).mpEditorDialog.data()) {
+        if (auto* pDialogs = HostDialogs::find(pOtherHost.data()); auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr) {
             //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
             pEditor->showWarning(
                     tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
@@ -4137,10 +4137,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     HostDialogs::of(pH).mpEditorDialog = pEditor;
     connect(pH, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
     connect(pH, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    // The editor's item trees are deliberately not populated here: the
-    // profile's scripts have yet to run and ScriptUnit::compileAll() queues a
-    // full rebuild once they have, so populating now would only double the
-    // cost of the load.
+    // Item trees are deliberately not populated here: ScriptUnit::compileAll() queues a full rebuild once
+    // the profile's scripts have run, so populating now would double the cost of the load.
 
     pH->getActionUnit()->updateAllToolbars();
 

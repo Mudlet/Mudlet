@@ -91,13 +91,18 @@ HostDialogs::HostDialogs(Host* pHost)
 {
 }
 
-HostDialogs& HostDialogs::of(const Host* pHost)
+HostDialogs& HostDialogs::of(Host* pHost)
 {
-    auto* pDialogs = pHost->findChild<HostDialogs*>(QString(), Qt::FindDirectChildrenOnly);
+    auto* pDialogs = find(pHost);
     if (!pDialogs) {
-        pDialogs = new HostDialogs(const_cast<Host*>(pHost));
+        pDialogs = new HostDialogs(pHost);
     }
     return *pDialogs;
+}
+
+HostDialogs* HostDialogs::find(const Host* pHost)
+{
+    return pHost->findChild<HostDialogs*>(QString(), Qt::FindDirectChildrenOnly);
 }
 
 void HostDialogs::connectTeardown(Host* pHost)
