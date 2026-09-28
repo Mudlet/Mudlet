@@ -290,7 +290,7 @@ private slots:
         const QString text = buffer().line(line);
         QVERIFY2(text.endsWith(qsl("careful")), qPrintable(text));
         QVERIFY2(text != qsl("careful"), "the system message label is missing");
-        QCOMPARE(buffer().buffer.at(line).front().foreground(), mpHost->mpConsole->mSystemMessageFgColor);
+        QCOMPARE(buffer().buffer.at(line).front().foreground(), mpHost->mainConsoleModel().mSystemMessageFgColor);
         QCOMPARE(buffer().mCursorY, buffer().size());
     }
 

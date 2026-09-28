@@ -475,6 +475,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
     mpMainConsoleModel->mConsoleName = qsl("main");
     mpMainConsoleModel->mScriptAddressable = true;
+    mpMainConsoleModel->mCommandFgColor = mCommandFgColor;
+    mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
 
     mServerWrapFlushTimer.setSingleShot(true);
     mServerWrapFlushTimer.setInterval(TBuffer::csmServerWrapFlushDelayMs);
@@ -1903,14 +1905,17 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
-            mpConsole->printCommand(cmd);
+            const TConsoleModel::CommandEcho echo = mpMainConsoleModel->printCommand(cmd);
+            if (mpConsole) {
+                mpConsole->showCommandEcho(echo);
+            }
         }
 
         //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
 #if defined(INCLUDE_3DMAPPER)
-        if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
+        if (mpConsole && (!mpMap->mpMapper || !mpMap->mpMapper->glWidget)) {
 #else
-        if (!mpMap->mpMapper) {
+        if (mpConsole && !mpMap->mpMapper) {
 #endif
             mpConsole->update();
         }
@@ -2311,6 +2316,8 @@ void Host::refreshMainConsoleColors()
 {
     mpMainConsoleModel->mFgColor = mFgColor;
     mpMainConsoleModel->mBgColor = mBgColor;
+    mpMainConsoleModel->mCommandFgColor = mCommandFgColor;
+    mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
     mpMainConsoleModel->mFormatCurrent.setColors(mFgColor, mBgColor);
     mpMainConsoleModel->buffer.updateColors();
 }
@@ -2326,12 +2333,18 @@ void Host::applyMainConsoleColors()
 
 void Host::printToMainConsole(const QString& msg)
 {
-    mpConsole->print(msg);
+    mpMainConsoleModel->print(msg);
+    if (mpConsole) {
+        mpConsole->showNewLines();
+    }
 }
 
 void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor)
 {
-    mpConsole->print(msg, fgColor, bgColor);
+    mpMainConsoleModel->print(msg, fgColor, bgColor);
+    if (mpConsole) {
+        mpConsole->showNewLines();
+    }
 }
 
 // The echoed-text mark is buffer state, so it is set on the model rather than through the view.
@@ -2358,7 +2371,10 @@ bool Host::insertHtmlInMainConsole(const QString& text)
 
 void Host::printSystemMessage(const QString& msg)
 {
-    mpConsole->printSystemMessage(msg);
+    mpMainConsoleModel->printSystemMessage(msg);
+    if (mpConsole) {
+        mpConsole->showNewLines();
+    }
 }
 
 void Host::printOnDisplay(std::string& data, const bool isFromServer)
@@ -4582,6 +4598,7 @@ void Host::setName(const QString& name)
     }
 
     mTelnet.mProfileName = name;
+    mpMainConsoleModel->mProfileName = name;
     if (mpMap) {
         mpMap->mProfileName = name;
         if (currentPlayerRoom) {
@@ -5755,17 +5772,15 @@ void Host::setProfileBackgroundColor(const QColor& color)
 void Host::setProfileCommandBackgroundColor(const QColor& color)
 {
     mCommandBgColor = color;
-    if (mpConsole) {
-        mpConsole->setCommandBgColor(color);
-    }
+    // The main console's view reads this from the model, which exists with no view too:
+    mpMainConsoleModel->mCommandBgColor = color;
 }
 
 void Host::setProfileCommandForegroundColor(const QColor& color)
 {
     mCommandFgColor = color;
-    if (mpConsole) {
-        mpConsole->setCommandFgColor(color);
-    }
+    // The main console's view reads this from the model, which exists with no view too:
+    mpMainConsoleModel->mCommandFgColor = color;
 }
 
 // Returns true when a script has claimed the built-in map buttons for this

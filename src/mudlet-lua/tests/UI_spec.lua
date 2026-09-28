@@ -5002,6 +5002,37 @@ describe("Window and label state", function()
     end)
   end)
 
+  describe("command echo on the main console", function()
+    -- A sent command is echoed on a line of its own when the line before is not a prompt
+    local function echoedCommandColours(command)
+      echo("\n")
+      send(command, true)
+      moveCursor("main", 0, getLastLineNumber("main") - 1)
+      assert.are.equal(command, getCurrentLine())
+      assert.is_true(selectString(command, 1) >= 0)
+      local fg, bg = {getFgColor()}, {getBgColor()}
+      deselect()
+      moveCursorEnd()
+      return fg, bg
+    end
+
+    it("is written in the colours setCommandForegroundColor and setCommandBackgroundColor set", function()
+      local command = name("wlsEchoedCommand")
+      local originalFg, originalBg = echoedCommandColours(command)
+      finally(function()
+        setCommandForegroundColor(unpack(originalFg))
+        setCommandBackgroundColor(unpack(originalBg))
+      end)
+      assert.is_true(setCommandForegroundColor(11, 22, 33))
+      assert.is_true(setCommandBackgroundColor(44, 55, 66))
+
+      local fg, bg = echoedCommandColours(command)
+
+      assert.are.same({11, 22, 33}, {fg[1], fg[2], fg[3]})
+      assert.are.same({44, 55, 66}, {bg[1], bg[2], bg[3]})
+    end)
+  end)
+
   describe("getImageSize", function()
     it("returns the size of a bundled image", function()
       local w, h = getImageSize(":/icons/mudlet.png")

@@ -417,6 +417,74 @@ private slots:
         QVERIFY2(!model->mTriggerEngineMode, "The trigger-context flag was left set after the text was processed.");
     }
 
+    // Core code prints to the main console through Host - telnet and MMCP
+    // messages, media errors and Lua error reports - so it has to reach the
+    // model with no view.
+    void test_printsReachTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        TBuffer& buffer = model->buffer;
+
+        host->printToMainConsole(qsl("ViewlessPlain\n"));
+        QVERIFY2(lastLineHolding(buffer, qsl("ViewlessPlain")) >= 0, qPrintable(qsl("The plain print never reached the model's buffer: '%1'").arg(joinedBuffer(buffer))));
+
+        const QColor tintFg(0x10, 0x20, 0x30);
+        const QColor tintBg(0x40, 0x50, 0x60);
+        host->printToMainConsole(qsl("ViewlessTinted\n"), tintFg, tintBg);
+        const int tintedLine = lastLineHolding(buffer, qsl("ViewlessTinted"));
+        QVERIFY2(tintedLine >= 0, "The coloured print never reached the model's buffer.");
+        QCOMPARE(buffer.buffer.at(tintedLine).front().foreground(), tintFg);
+        QCOMPARE(buffer.buffer.at(tintedLine).front().background(), tintBg);
+    }
+
+    void test_systemMessageReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        TBuffer& buffer = model->buffer;
+
+        host->printSystemMessage(qsl("ViewlessSystem\n"));
+        const int systemLine = lastLineHolding(buffer, qsl("ViewlessSystem"));
+        QVERIFY2(systemLine >= 0, "The system message never reached the model's buffer.");
+        QVERIFY2(buffer.line(systemLine) != qsl("ViewlessSystem"), "The system message label is missing.");
+        QCOMPARE(buffer.buffer.at(systemLine).front().foreground(), model->mSystemMessageFgColor);
+    }
+
+    // Host::send() echoes the command it sends: on a line of its own in the
+    // colour a script chose for it, or onto the prompt it answers.
+    void test_commandEchoReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        TBuffer& buffer = model->buffer;
+
+        const QColor commandFg(0x65, 0x43, 0x21);
+        runLua(host, qsl("setCommandForegroundColor(0x65, 0x43, 0x21)\nsend('ViewlessCommand', true)\n"));
+        const int commandLine = lastLineHolding(buffer, qsl("ViewlessCommand"));
+        QVERIFY2(commandLine >= 0, qPrintable(qsl("The command echo never reached the model's buffer: '%1'").arg(joinedBuffer(buffer))));
+        QCOMPARE(buffer.line(commandLine), qsl("ViewlessCommand"));
+        QCOMPARE(buffer.buffer.at(commandLine).front().foreground(), commandFg);
+
+        const int promptLine = appendModelLine(buffer, qsl("ViewlessPrompt>"));
+        buffer.promptBuffer[promptLine] = true;
+        runLua(host, qsl("send('ViewlessAnswer', true)\n"));
+        QCOMPARE(buffer.line(promptLine), qsl("ViewlessPrompt>ViewlessAnswer"));
+        QVERIFY2(!buffer.promptBuffer.at(promptLine), "The prompt flag was not cleared once the command was echoed onto it.");
+    }
+
     // A colorizer trigger recolors its match by selecting a run of the line and
     // painting it, all of which is model state. The return that used to guard
     // those calls left the whole function, so with no view the trigger did not
@@ -3422,10 +3490,7 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()

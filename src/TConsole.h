@@ -263,13 +263,12 @@ public:
     void print(const char*);
     // timeStampOverride keeps the arrival time for held-back content being replayed.
     void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
+    // The repaint cues for text the model wrote: showNewLines() for lines appended to it, and
+    // showCommandEcho() for whatever TConsoleModel::printCommand() did.
+    void showNewLines();
+    void showCommandEcho(const TConsoleModel::CommandEcho&);
     // The Central Debug Console's find bar is hidden until Ctrl+F or its context menu calls this.
     void showSearchBar();
-    // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
-    // line fragment, so what follows the last line feed is held until one arrives.
-    void mirrorToStdOut(const QString& text);
-    // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
-    void mirrorLineToStdOut(const QString& line);
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
     void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
     void discardAll() override;
@@ -371,20 +370,12 @@ public:
 
     QColor& mBgColor;
     QColor& mFgColor;
-    QColor mSystemMessageFgColor = QColorConstants::Red;
-    QColor mCommandBgColor = QColorConstants::Black;
-    // Transparent so a system message blends into the console's real background
-    // instead of an opaque bar; TTextEdit's selection swap and TBuffer's HTML
-    // export both resolve alpha-0 against getConsoleBgColor() so the text stays
-    // visible when selected and the same colour is kept in copied/exported HTML.
-    QColor mSystemMessageBgColor = QColorConstants::Transparent;
-    QColor mCommandFgColor = QColor(213, 195, 0);
+    QColor& mCommandBgColor;
+    QColor& mCommandFgColor;
 
     int& mButtonState;
 
     QString& mConsoleName;
-    // --mirror text not yet ended by a line feed.
-    QString mMirrorPendingLine;
     QString& mCurrentLine;
     int& mEngineCursor;
 
@@ -420,7 +411,7 @@ public:
     QLineEdit* mpLineEdit_networkLatency = nullptr;
     QPoint& P_begin;
     QPoint& P_end;
-    QString mProfileName;
+    QString& mProfileName;
     TSplitter* splitter = nullptr;
     bool& mIsPromptLine;
     QToolButton* logButton = nullptr;
