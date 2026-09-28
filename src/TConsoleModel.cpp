@@ -75,6 +75,11 @@ void TConsoleModel::moveCursorEnd()
     moveCursor(x, y);
 }
 
+void TConsoleModel::deleteLineAtCursor()
+{
+    buffer.deleteLine(mUserCursor.y());
+}
+
 void TConsoleModel::deselect()
 {
     P_begin = QPoint();

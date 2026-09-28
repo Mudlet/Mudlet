@@ -79,7 +79,6 @@ public:
     std::list<int> getBgColor(QString& buf);
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
     void luaWrapLine(QString& buf, int line);
-    QString getCurrentLine(const std::string&);
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
@@ -224,10 +223,6 @@ public:
     // Answers whether they were shown before, and leaves them alone when that
     // is already what was asked for.
     std::optional<bool> setWindowTimeStamps(const QString& name, bool shown);
-    std::optional<int> getWindowWrapAt(const QString& name);
-    bool setWindowWrapAt(const QString& name, int wrapAt);
-    bool setWindowWrapIndent(const QString& name, int indent);
-    bool setWindowWrapHangingIndent(const QString& name, int indent);
     // How many characters and lines fit in the named console's upper pane, from its size and font.
     std::optional<int> getWindowColumnCount(const QString& name);
     std::optional<int> getWindowRowCount(const QString& name);

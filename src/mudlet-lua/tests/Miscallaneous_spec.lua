@@ -159,6 +159,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_string(getTimestamp(1))
       end)
 
+      it("should read the main console by an empty name or main", function()
+        local timestamp = getTimestamp(1)
+        assert.is_string(timestamp)
+        assert.are.equal(timestamp, getTimestamp("main", 1))
+        assert.are.equal(timestamp, getTimestamp("", 1))
+      end)
+
       it("should return nil+msg for an out-of-range line number", function()
         local timestamp, err = getTimestamp(getLineCount() + 1000)
         assert.is_nil(timestamp)
