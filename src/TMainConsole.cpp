@@ -371,19 +371,6 @@ void TMainConsole::luaWrapLine(QString& buf, int line)
     }
 }
 
-QString TMainConsole::getCurrentLine(const std::string& buf)
-{
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
-        return TConsole::getCurrentLine();
-    }
-    auto pC = mSubConsoleMap.value(key);
-    if (pC) {
-        return pC->getCurrentLine();
-    }
-    return qsl("ERROR: mini console does not exist");
-}
-
 
 bool TMainConsole::createBuffer(const QString& name)
 {
@@ -1448,45 +1435,6 @@ std::optional<bool> TMainConsole::setWindowTimeStamps(const QString& name, bool 
         pC->slot_toggleTimeStamps(shown);
     }
     return {wasShown};
-}
-
-std::optional<int> TMainConsole::getWindowWrapAt(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->getWrapAt()};
-}
-
-bool TMainConsole::setWindowWrapAt(const QString& name, int wrapAt)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->setWrapAt(wrapAt);
-    return true;
-}
-
-bool TMainConsole::setWindowWrapIndent(const QString& name, int indent)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->setIndentCount(indent);
-    return true;
-}
-
-bool TMainConsole::setWindowWrapHangingIndent(const QString& name, int indent)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->setHangingIndentCount(indent);
-    return true;
 }
 
 std::optional<int> TMainConsole::getWindowColumnCount(const QString& name)

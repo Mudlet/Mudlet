@@ -200,13 +200,9 @@ public:
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void pasteWindow(const TBuffer&);
-    QStringList getLines(int from, int to);
     int getLineNumber();
-    int getLineCount();
     bool deleteLine(int);
     void clearSelection() const;
-
-    int getColumnNumber();
 
     void setWrapAt(int pos) { mpModel->setWrapAt(pos); }
     int getWrapAt();
@@ -298,7 +294,6 @@ public:
     std::list<int> getFgColor();
     std::list<int> getBgColor();
     void luaWrapLine(int line);
-    QString getCurrentLine();
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;

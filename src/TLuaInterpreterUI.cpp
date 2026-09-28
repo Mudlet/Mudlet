@@ -955,7 +955,7 @@ int TLuaInterpreter::deleteLine(lua_State* L)
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    pModel->buffer.deleteLine(pModel->mUserCursor.y());
+    pModel->deleteLineAtCursor();
     return 0;
 }
 

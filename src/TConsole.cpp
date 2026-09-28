@@ -1593,24 +1593,9 @@ int TConsole::getLineNumber()
     return mUserCursor.y();
 }
 
-int TConsole::getColumnNumber()
-{
-    return mUserCursor.x();
-}
-
 int TConsole::getWrapAt()
 {
     return buffer.mWrapAt;
-}
-
-int TConsole::getLineCount()
-{
-    return buffer.getLastLineNumber();
-}
-
-QStringList TConsole::getLines(int from, int to)
-{
-    return mpModel->lines(from, to);
 }
 
 void TConsole::selectCurrentLine()
@@ -1957,11 +1942,6 @@ void TConsole::setFontName(const QString& fontName)
 {
     mDisplayFontDetails.mName = fontName;
     setFont(mDisplayFontDetails.makeFont(), true);
-}
-
-QString TConsole::getCurrentLine()
-{
-    return buffer.line(mUserCursor.y());
 }
 
 int TConsole::getLastLineNumber()
