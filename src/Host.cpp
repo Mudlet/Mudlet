@@ -480,6 +480,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mServerWrapFlushTimer.setInterval(TBuffer::csmServerWrapFlushDelayMs);
     connect(&mpMainConsoleModel->mNotifier, &TConsoleModelNotifier::serverWrapLineHeld, &mServerWrapFlushTimer, qOverload<>(&QTimer::start));
     connect(&mServerWrapFlushTimer, &QTimer::timeout, this, [this]() {
+        // closeChildren() has emergency-stopped the triggers, and a line held
+        // after it re-arms this timer:
+        if (mIsClosingDown) {
+            return;
+        }
         // Mimic TMainConsole::printOnDisplay() so that trigger-context
         // functions behave the same as for any other committed line:
         if (mpConsole) {
