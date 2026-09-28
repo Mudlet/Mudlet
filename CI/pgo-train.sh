@@ -29,12 +29,18 @@ fi
 PROFILE_DIR="$(cache_value MUDLET_PGO_DIR)"
 COMPILER="$(sed -n 's/^set(CMAKE_CXX_COMPILER_ID "\(.*\)")$/\1/p' "${BUILD_DIR}"/CMakeFiles/*/CMakeCXXCompiler.cmake | head -1)"
 
-BENCHMARK="${BUILD_DIR}/test/functional_tests/PipelineBenchmark"
-if [ ! -x "${BENCHMARK}" ] && [ -x "${BENCHMARK}.exe" ]; then
-  BENCHMARK="${BENCHMARK}.exe"
-fi
-if [ ! -x "${BENCHMARK}" ]; then
-  echo "${BENCHMARK} is missing - build the PipelineBenchmark target (it needs BUILD_TESTING=ON)" >&2
+# The Windows preset gathers every executable into CMAKE_RUNTIME_OUTPUT_DIRECTORY
+BENCHMARK=""
+for DIR in "$(cache_value CMAKE_RUNTIME_OUTPUT_DIRECTORY)" "${BUILD_DIR}/test/functional_tests"; do
+  for CANDIDATE in "${DIR}/PipelineBenchmark" "${DIR}/PipelineBenchmark.exe"; do
+    if [ -n "${DIR}" ] && [ -x "${CANDIDATE}" ]; then
+      BENCHMARK="${CANDIDATE}"
+      break 2
+    fi
+  done
+done
+if [ -z "${BENCHMARK}" ]; then
+  echo "PipelineBenchmark is missing from ${BUILD_DIR} - build that target (it needs BUILD_TESTING=ON)" >&2
   exit 1
 fi
 
@@ -47,9 +53,14 @@ echo "Training with ${BENCHMARK}"
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "${BENCHMARK}"
 
 if [[ "${COMPILER}" == *Clang* ]]; then
+  # The merged profile has to be in the format of the compiler that reads it, so
+  # on macOS ask Xcode for Apple's own rather than any Homebrew LLVM on PATH
   PROFDATA="${LLVM_PROFDATA:-}"
+  if [ -z "${PROFDATA}" ] && [ "$(uname)" = "Darwin" ]; then
+    PROFDATA="$(xcrun --find llvm-profdata 2>/dev/null || true)"
+  fi
   if [ -z "${PROFDATA}" ]; then
-    PROFDATA="$(command -v llvm-profdata || xcrun --find llvm-profdata 2>/dev/null || true)"
+    PROFDATA="$(command -v llvm-profdata || true)"
   fi
   if [ -z "${PROFDATA}" ]; then
     echo "llvm-profdata not found - install it or point LLVM_PROFDATA at the one matching the compiler" >&2

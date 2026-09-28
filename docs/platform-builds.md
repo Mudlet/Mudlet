@@ -97,6 +97,7 @@ as what CI passes — set them to match the job being reproduced:
 | `USE_SANITIZER` | `Address` on Linux, empty on macOS | empty |
 | `WITH_SENTRY` | `ON` | `ON` |
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
+| `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS and Windows (see below) |
 
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
@@ -169,6 +170,14 @@ pathfinder kept out of the training:
 So it pays mostly for Clang builds, and most for the paths the training runs: a profile that
 leaves a workload out buys that workload little. Hand-placed `Q_LIKELY`/`Q_UNLIKELY` hints are not
 a substitute - removing all of Mudlet's, or adding more to the hottest branches, measured as noise.
+
+CI builds the macOS and Windows releases this way, both of which use Clang; Linux stays on plain
+GCC, as switching it to Clang for PGO bought no more than GCC already gives and slowed the mapper.
+On a `Mudlet-*` tag the first pass builds only an instrumented `PipelineBenchmark` - building
+`mudlet` would send the instrumented binary's debug files to Sentry - and the second pass builds
+everything against the profile, so the tests that follow run on what ships. Pull requests and PTBs
+never build profile-guided. To exercise the release path without tagging, run the *Build Mudlet* or
+*Build Mudlet (windows)* workflow by hand with its `pgo` input set to `true`.
 
 ## Optional feature modules
 
