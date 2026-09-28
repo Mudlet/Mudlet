@@ -381,8 +381,9 @@ private slots:
     }
 
     // Game text comes in through Host::printOnDisplay(), which has to run it
-    // with no view: the line reaches the model's buffer, its trigger fires, and
-    // an MXP element's event reaches Lua after that.
+    // with no view: the line reaches the model's buffer, its trigger fires and
+    // can ask whether its line is a prompt, and an MXP element's event reaches
+    // Lua after that.
     void test_incomingTextIsProcessedWithNoView()
     {
         startProfile();
@@ -392,7 +393,7 @@ private slots:
 
         runLua(host,
                qsl("viewlessIncoming = ''\n"
-                   "tempRegexTrigger('^ViewlessIncoming', [[viewlessIncoming = viewlessIncoming .. 'trigger:' .. line .. ';']], 10)\n"
+                   "tempRegexTrigger('^ViewlessIncoming', [[viewlessIncoming = viewlessIncoming .. 'trigger:' .. line .. ':' .. tostring(isPrompt()) .. ';']], 10)\n"
                    "registerAnonymousEventHandler('mxp.rviewless', function() viewlessIncoming = viewlessIncoming .. 'event' end)\n"));
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
@@ -412,7 +413,7 @@ private slots:
         host->printOnDisplay(data, true);
 
         QVERIFY2(lastLineHolding(model->buffer, qsl("ViewlessIncoming delta")) >= 0, qPrintable(qsl("The line never reached the model's buffer: '%1'").arg(joinedBuffer(model->buffer))));
-        QCOMPARE(luaGlobalString(host, "viewlessIncoming"), qsl("trigger:ViewlessIncoming delta;event"));
+        QCOMPARE(luaGlobalString(host, "viewlessIncoming"), qsl("trigger:ViewlessIncoming delta:false;event"));
         QVERIFY2(!model->mTriggerEngineMode, "The trigger-context flag was left set after the text was processed.");
     }
 
