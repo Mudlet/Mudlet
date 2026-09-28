@@ -157,13 +157,6 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
         return;
     }
 
-    if (smPausedDroppedCount) {
-        // Ahead of the replay: the cap drops the OLDEST messages, so the gap is at the top:
-        //: Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.
-        smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed, QString());
-        smPausedDroppedCount = 0;
-    }
-
     while (!smPausedQueue.isEmpty()) {
         if (!smpSink) {
             return;
@@ -171,6 +164,14 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
         const auto message = smPausedQueue.dequeue();
         // Already composed when it arrived, profile marking and all:
         smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
+    }
+
+    if (smPausedDroppedCount && smpSink) {
+        // After the replay, not ahead of it: a full queue is as many lines as the console
+        // keeps, so its own trimming would take a notice printed first straight back out:
+        //: Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.
+        smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed, QString());
+        smPausedDroppedCount = 0;
     }
 }
 
