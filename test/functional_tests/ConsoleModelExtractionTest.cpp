@@ -2014,6 +2014,37 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QVERIFY(host->mainConsoleShowsTimeStamps());
     }
 
+    // Timestamps turned on or off from Lua change the width the game is told,
+    // by the gutter they take, as the toolbar button does.
+    void test_luaTimeStampsOnTheMainConsoleResendNaws()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
+        const auto sizeWithGutter = [host](const int gutter) {
+            return QSize(std::min(host->mScreenWidth, host->mWrapAt) - gutter, host->mScreenHeight);
+        };
+        const auto nawsReaches = [this, &sizeWithGutter](const int gutter) {
+            return QTest::qWaitFor(
+                    [this, &sizeWithGutter, gutter]() {
+                        return !mpServer->nawsUpdates().isEmpty() && mpServer->nawsUpdates().constLast() == sizeWithGutter(gutter);
+                    },
+                    5000);
+        };
+
+        // IAC DO NAWS
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        QVERIFY2(nawsReaches(0), "The profile never reported its size with no timestamps.");
+
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY2(nawsReaches(TBuffer::smTimeStampFormat.size()), "Timestamps turned on from Lua left the game's width alone.");
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY2(nawsReaches(0), "Timestamps turned off from Lua left the game's width alone.");
+    }
+
     // A profile with no view still tells the game its size when asked: the
     // character grid it would wrap to, with no timestamp gutter to leave out.
     void test_nawsReportsTheCharacterGridWithNoView()
