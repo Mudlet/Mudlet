@@ -147,8 +147,8 @@ QString tokenKey()
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 : mpHost(pHost)
-, mpStoreReconciler(new SignInStoreReconciler([this](SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done) {
-    performStoreOperation(op, std::move(payload), std::move(done));
+, mpStoreReconciler(new SignInStoreReconciler([this](SignInStoreReconciler::Operation op, QString payload, bool everyCopy, SignInStoreReconciler::Done done) {
+    performStoreOperation(op, std::move(payload), everyCopy, std::move(done));
 }))
 , mStoreReader([this](const QString& key, StoreReadDone done) {
     readStoreKey(key, std::move(done));
@@ -321,8 +321,9 @@ void GMCPAuthenticator::addCommonFields(QJsonObject& payload) const
     // remember this player before it writes its sign-in screen.
     //
     // Constant true for Mudlet: CredentialManager writes to the system keychain, or to its own encrypted
-    // file store when the install is portable and when a keychain write fails. The standard asks per
-    // connection because a client that has no store at all has to say so; ours always has one to try.
+    // file store when the player keeps passwords in the profile, when the install is portable and when a
+    // keychain write fails. The standard asks per connection because a client that has no store at all
+    // has to say so; ours always has one to try.
     //
     // A version 1 server gets the fields too. An unknown member is inert to it, and we already echo
     // `version` - itself a version 2 addition - to such servers today. Only the hand-off is special-cased
@@ -469,7 +470,7 @@ bool GMCPAuthenticator::sendReconnect(const QString& account, QString token, boo
     return true;
 }
 
-void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done)
+void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation op, QString payload, bool everyCopy, SignInStoreReconciler::Done done)
 {
     using Operation = SignInStoreReconciler::Operation;
     const bool onMetadata = (op == Operation::WriteMetadata || op == Operation::RemoveMetadata);
@@ -495,7 +496,11 @@ void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation o
         SecureStringUtils::secureStringClear(payload);
         return;
     }
-    credentialManager->removePassword(mpHost->getName(), key, std::move(onDone));
+    // Only a forget reaches past where the storage preference files the entry. Every other removal is
+    // the client's own - a rejected token dropped - which the game can set off as often as it likes,
+    // and the standard bounds a client's store work by the player's actions, never by the frames a
+    // server sends.
+    credentialManager->removePassword(mpHost->getName(), key, std::move(onDone), everyCopy ? CredentialManager::StoreScope::EveryStore : CredentialManager::StoreScope::PreferredStore);
 }
 
 void GMCPAuthenticator::storeReconnectToken(const QString& account, QString token, bool secureOnly)
@@ -607,27 +612,26 @@ void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> call
     // awaiting the result of a token it replayed - can see that the player has since asked for all of
     // it to go, and stops short of putting any of it back.
     ++mForgetGeneration;
-    discardReconnectToken(std::move(callback));
+    discardReconnectToken(std::move(callback), SignInStoreReconciler::Intent::forgotten());
 }
 
-void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> callback)
+void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> callback, SignInStoreReconciler::Intent intent)
 {
-    mpStoreReconciler->setIntent(SignInStoreReconciler::Intent::absent(),
-                                 [callback = std::move(callback)](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation failedAt, QString error) {
-                                     using Outcome = SignInStoreReconciler::Outcome;
-                                     using Operation = SignInStoreReconciler::Operation;
-                                     if (outcome == Outcome::Failed) {
-                                         // A failed removal may leave a now-invalid bearer token on disk, so make it visible rather
-                                         // than swallowing it.
-                                         qWarning().noquote() << "GMCP Char.Login - failed to remove the stored" << (failedAt == Operation::RemoveToken ? "reconnect token:" : "sign-in:") << error;
-                                     }
-                                     // Report the real outcome so callers (e.g. the preferences UI) only claim success once
-                                     // everything is actually gone. A superseded forget did not complete as asked - it takes a
-                                     // token arriving in the same instant - and is reported as such.
-                                     if (callback) {
-                                         callback(outcome == Outcome::Reached);
-                                     }
-                                 });
+    mpStoreReconciler->setIntent(std::move(intent), [callback = std::move(callback)](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation failedAt, QString error) {
+        using Outcome = SignInStoreReconciler::Outcome;
+        using Operation = SignInStoreReconciler::Operation;
+        if (outcome == Outcome::Failed) {
+            // A failed removal may leave a now-invalid bearer token on disk, so make it visible rather
+            // than swallowing it.
+            qWarning().noquote() << "GMCP Char.Login - failed to remove the stored" << (failedAt == Operation::RemoveToken ? "reconnect token:" : "sign-in:") << error;
+        }
+        // Report the real outcome so callers (e.g. the preferences UI) only claim success once
+        // everything is actually gone. A superseded forget did not complete as asked - it takes a
+        // token arriving in the same instant - and is reported as such.
+        if (callback) {
+            callback(outcome == Outcome::Reached);
+        }
+    });
 }
 
 void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QString& data)
