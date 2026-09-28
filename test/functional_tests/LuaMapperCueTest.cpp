@@ -348,6 +348,75 @@ private slots:
         QVERIFY2(paintRequested(), "the mapper was not repainted for a hidden info overlay");
     }
 
+    void test_mapRoomSizeResizesTheDrawnRoomsAndFlushesTheSymbolCache()
+    {
+        const double before = mpHost->mRoomSize;
+        auto restore = qScopeGuard([this, before]() {
+            lua(qsl("setConfig('mapRoomSize', %1)").arg(qRound(before * 10)));
+        });
+        const int target = qRound(before * 10) == 3 ? 7 : 3;
+        mp2dMap->addSymbolToPixmapCache(qsl("test-key"), qsl("A"), Qt::white, false);
+        QVERIFY2(mp2dMap->symbolPixmapCacheCount() > 0, "nothing was cached, so a flush would prove nothing");
+        map()->resetUnsaved();
+        settlePaints();
+
+        QVERIFY(lua(qsl("assert(setConfig('mapRoomSize', %1) == true)").arg(target)));
+
+        // Rounded through float, which is what the profile saves.
+        const double expected = static_cast<float>(target / 10.0);
+        QCOMPARE(mpHost->mRoomSize, expected);
+        QCOMPARE(mp2dMap->rSize, expected);
+        QCOMPARE(mp2dMap->symbolPixmapCacheCount(), 0);
+        QVERIFY2(map()->isUnsaved(), "a new room size did not mark the map unsaved");
+        QVERIFY2(waitForPaint(), "the mapper was not repainted");
+    }
+
+    void test_mapExitSizeSetsTheDrawnExitWidth()
+    {
+        const double before = mpHost->mLineSize;
+        auto restore = qScopeGuard([this, before]() {
+            mpHost->mLineSize = before;
+            mp2dMap->eSize = before;
+        });
+        const int target = qRound(before) == 4 ? 6 : 4;
+
+        QVERIFY(lua(qsl("assert(setConfig('mapExitSize', %1) == true)").arg(target)));
+
+        QCOMPARE(mpHost->mLineSize, static_cast<double>(target));
+        QCOMPARE(mp2dMap->eSize, static_cast<double>(target));
+    }
+
+    void test_theBooleanMapKeysReachTheDrawnMap_data()
+    {
+        QTest::addColumn<QString>("key");
+        QTest::newRow("mapRoundRooms") << qsl("mapRoundRooms");
+        QTest::newRow("showRoomIdsOnMap") << qsl("showRoomIdsOnMap");
+        QTest::newRow("mapShowGrid") << qsl("mapShowGrid");
+    }
+
+    void test_theBooleanMapKeysReachTheDrawnMap()
+    {
+        QFETCH(QString, key);
+        const QMap<QString, std::pair<bool*, bool*>> copies{
+                {qsl("mapRoundRooms"), {&mpHost->mBubbleMode, &mp2dMap->mBubbleMode}},
+                {qsl("showRoomIdsOnMap"), {&mpHost->mShowRoomID, &mp2dMap->mShowRoomID}},
+                {qsl("mapShowGrid"), {&mpHost->mMapperShowGrid, &mp2dMap->mShowGrid}},
+        };
+        auto [hostCopy, mapCopy] = copies.value(key);
+        const bool before = *hostCopy;
+        QCOMPARE(*mapCopy, before);
+        auto restore = qScopeGuard([this, key, before]() {
+            lua(qsl("setConfig('%1', %2)").arg(key, before ? qsl("true") : qsl("false")));
+        });
+        settlePaints();
+
+        QVERIFY(lua(qsl("assert(setConfig('%1', %2) == true)").arg(key, before ? qsl("false") : qsl("true"))));
+
+        QCOMPARE(*hostCopy, !before);
+        QCOMPARE(*mapCopy, !before);
+        QVERIFY2(waitForPaint(), "the mapper was not repainted");
+    }
+
     // A second mapper of the same profile - one in a detached window, say -
     // is not the one drawing the map.
     void test_onlyTheMapperDrawingTheMapFollowsTheLuaFunctions()
@@ -357,15 +426,23 @@ private slots:
         other->updateAreaComboBox();
         other->comboBox_showArea->setCurrentText(qsl("Ground"));
         const QStringList otherAreasBefore = areaListOf(other.get());
+        const bool gridBefore = mpHost->mMapperShowGrid;
+        auto restoreGrid = qScopeGuard([this, gridBefore]() {
+            lua(qsl("setConfig('mapShowGrid', %1)").arg(gridBefore ? qsl("true") : qsl("false")));
+        });
+        QCOMPARE(other->mp2dMap->mShowGrid, gridBefore);
 
         QVERIFY(lua(qsl("assert(addAreaName('Cellar') > 0)")));
         QVERIFY(lua(qsl("assert(setAreaName('Ground', 'Zenith') == true)")));
         QVERIFY(lua(qsl("assert(centerview(2) == true)")));
+        QVERIFY(lua(qsl("assert(setConfig('mapShowGrid', %1) == true)").arg(gridBefore ? qsl("false") : qsl("true"))));
 
         QCOMPARE(areaListOf(mpMapper), (QStringList{qsl("Cellar"), qsl("Upstairs"), qsl("Zenith")}));
         QCOMPARE(mpMapper->comboBox_showArea->currentText(), qsl("Upstairs"));
+        QCOMPARE(mp2dMap->mShowGrid, !gridBefore);
         QCOMPARE(areaListOf(other.get()), otherAreasBefore);
         QCOMPARE(other->comboBox_showArea->currentText(), qsl("Ground"));
+        QCOMPARE(other->mp2dMap->mShowGrid, gridBefore);
     }
 };
 
