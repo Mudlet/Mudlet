@@ -38,6 +38,7 @@
 #include "EAction.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "TAction.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
