@@ -17,6 +17,16 @@ describe("Tests that the clipboard and buffer size functions find their console 
     deleteMiniConsole(helper)
   end)
 
+  -- Lua cannot read the profile's "use the maximum" setting, which a plain
+  -- setConsoleBufferSize() clears, but with it set the limit is the machine's
+  -- maximum; so if asking for the maximum gives back the old limit, it was set
+  local function restoreMainBufferSize(lines, batch)
+    setConsoleBufferSize("main", lines, batch, true)
+    if getConsoleBufferSize("main") ~= lines then
+      setConsoleBufferSize("main", lines, batch)
+    end
+  end
+
   -- an array rather than a keyed table so the specs are always generated in
   -- the same order; each is a call that would succeed on a console
   local calls = {
@@ -280,7 +290,7 @@ describe("Tests that the clipboard and buffer size functions find their console 
       it("sets and reads the main console's buffer size given " .. name[1], function()
         local lines, batch = getConsoleBufferSize("main")
         finally(function()
-          setConsoleBufferSize("main", lines, batch)
+          restoreMainBufferSize(lines, batch)
         end)
         assert.are.same({lines, batch}, {call(getConsoleBufferSize)})
         assert.are.same({true}, {call(setConsoleBufferSize, 700 + index, 70)})
@@ -305,7 +315,7 @@ describe("Tests that the clipboard and buffer size functions find their console 
       it(("takes the maximum buffer size for %q"):format(name), function()
         local lines, batch = getConsoleBufferSize("main")
         finally(function()
-          setConsoleBufferSize("main", lines, batch)
+          restoreMainBufferSize(lines, batch)
         end)
         assert.are.same({true}, {setConsoleBufferSize(name, 700, 70 + index, true)})
         local maxLines, maxBatch = getConsoleBufferSize("main")
