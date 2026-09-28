@@ -278,7 +278,7 @@ describe("Tests that the timestamp and wrap functions find their console by name
         for _, wrapped in ipairs(lines) do
           assert.is_true(#wrapped <= 20, wrapped)
         end
-      end)
+      end
     end)
 
     -- the main console's width is also the profile's, which is what
