@@ -1332,9 +1332,9 @@ int TLuaInterpreter::enableTimeStamps(lua_State* L)
     if (*wasShown) {
         lua_pushnil(L);
         if (windowName.isEmpty()) {
-            lua_pushstring(L, qsl("timestamps were not enabled for the main console").toUtf8().constData());
+            lua_pushstring(L, qsl("timestamps were already enabled for the main console").toUtf8().constData());
         } else {
-            lua_pushstring(L, qsl("timestamps were not enabled for the \"%1\" console").arg(windowName).toUtf8().constData());
+            lua_pushstring(L, qsl("timestamps were already enabled for the \"%1\" console").arg(windowName).toUtf8().constData());
         }
         return 2;
     }
@@ -4606,8 +4606,8 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     if (!host.mpConsole) {
         // Sub-windows die with the view, but the main buffer is the model's and keeps the view's wrap settings.
         if (isMain(windowName)) {
-            TBuffer& buffer = host.mainConsoleModel().buffer;
-            buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
+            TConsoleModel& model = host.mainConsoleModel();
+            model.buffer.wrapLine(lineNumber, model.mWrapAt, model.mIndentCount, model.mHangingIndentCount);
         }
         return 0;
     }

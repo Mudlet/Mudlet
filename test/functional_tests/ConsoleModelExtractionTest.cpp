@@ -112,6 +112,7 @@ private:
     const QString mColourHostname = "Test-ConsoleModelColours";
     const QString mSpellHostname = "Test-ConsoleModelSpellDic";
     const QString mViewlessHostname = "Test-ConsoleModelViewless";
+    const QString mWrapHostname = "Test-ConsoleModelWrap";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
@@ -162,6 +163,7 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
+        deleteProfileDirectory(mWrapHostname);
     }
 
     // The view's members must be the model's fields, not copies of them: same
@@ -1484,6 +1486,7 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
+        deleteProfileDirectory(mWrapHostname);
     }
 
     // Every one of these Lua functions used to reach through Host::mpConsole
@@ -1686,6 +1689,71 @@ noViewReport = table.concat(noViewProblems, '; ')
         QCOMPARE(host->mWrapIndentCount, 2);
         QCOMPARE(host->mWrapHangingIndentCount, 3);
         QCOMPARE(luaGlobalNumber(host, "noViewWrap"), 23);
+    }
+
+    // A profile that never had a view, whose changeColors() would otherwise
+    // hand the model the profile's wrap, still wraps as its save says.
+    void test_profileLoadSeedsTheWrapWithNoView()
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mWrapHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        const QString savePath = qsl("%1profileWrap.xml").arg(saveFolder);
+        writeProfileSave(savePath,
+                         qsl("      <wrapAt>57</wrapAt>\n"
+                             "      <wrapIndentCount>3</wrapIndentCount>\n"
+                             "      <wrapHangingIndentCount>5</wrapHangingIndentCount>\n"));
+        QVERIFY2(QFileInfo(savePath).size() > 0, "The seeded profile save is missing or empty.");
+
+        Host* host = mudlet::self()->loadProfile(mWrapHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QCOMPARE(host->mWrapAt, 57);
+
+        runLua(host, qsl("loadedWrap = getWindowWrap('main')\n"));
+        QCOMPARE(luaGlobalNumber(host, "loadedWrap"), 57);
+        const TConsoleModel& model = host->mainConsoleModel();
+        QCOMPARE(model.mWrapAt, 57);
+        QCOMPARE(model.mIndentCount, 3);
+        QCOMPARE(model.mHangingIndentCount, 5);
+        QCOMPARE(model.buffer.mWrapIndent, 3);
+        QCOMPARE(model.buffer.mWrapHangingIndent, 5);
+
+        // a profile with no save at all is never read by XMLimport
+        Host* freshHost = mudlet::self()->loadProfile(mHostname, false);
+        QVERIFY2(freshHost && freshHost != host, "The unsaved profile was not loaded.");
+        QVERIFY2(freshHost->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        runLua(freshHost, qsl("freshWrap = getWindowWrap('main')\n"));
+        QCOMPARE(luaGlobalNumber(freshHost, "freshWrap"), freshHost->mWrapAt);
+    }
+
+    // changeColors() hands the profile's wrap over without setWindowWrap(), and
+    // wrapLine('main') rewraps to it alike with a view and without one.
+    void test_wrapLineUsesTheProfilesWrapWithAndWithoutAView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        TConsoleModel& model = host->mainConsoleModel();
+
+        const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        QVERIFY2(model.buffer.mWrapAt > token.size() + 10, "The profile already wraps narrower than the test lines.");
+        // The view-less line goes first, so rewrapping the other cannot move it.
+        const int viewlessLine = appendModelLine(model.buffer, qsl("viewless-%1").arg(token));
+        const int viewLine = appendModelLine(model.buffer, qsl("view-%1").arg(token));
+
+        host->mWrapAt = 20;
+        host->mWrapIndentCount = 2;
+        host->mWrapHangingIndentCount = 4;
+        host->mpConsole->changeColors();
+
+        runLua(host, qsl("wrapLine('main', %1)\n").arg(viewLine));
+        verifyRewrappedTo20(model.buffer, viewLine, qsl("  view-"));
+
+        destroyTheView(host);
+        runLua(host, qsl("wrapLine('main', %1)\n").arg(viewlessLine));
+        verifyRewrappedTo20(model.buffer, viewlessLine, qsl("  viewless-"));
     }
 
     // A profile with no view owns its Hunspell handles and word set, so every
@@ -3681,6 +3749,17 @@ private:
 
     // Utility function appending one whole line - only a line feed starts a new
     // buffer line - and handing back the index it landed on.
+    // Utility function checking a line was rewrapped at 20 columns with an
+    // indent of 2 and a hanging indent of 4.
+    void verifyRewrappedTo20(TBuffer& buffer, int lineNumber, const QString& start)
+    {
+        const QString firstLine = buffer.line(lineNumber);
+        const QString secondLine = buffer.line(lineNumber + 1);
+        QVERIFY2(firstLine.size() <= 20, qPrintable(qsl("The line was not rewrapped to the profile's width: '%1'").arg(firstLine)));
+        QVERIFY2(firstLine.startsWith(start), qPrintable(qsl("The first line did not get the profile's indent: '%1'").arg(firstLine)));
+        QVERIFY2(secondLine.startsWith(qsl("    ")), qPrintable(qsl("The second line did not get the profile's hanging indent: '%1'").arg(secondLine)));
+    }
+
     int appendModelLine(TBuffer& buffer, const QString& text, const QColor& fgColor = QColorConstants::LightGray, const QColor& bgColor = QColorConstants::Black)
     {
         const QString line = text + QChar::LineFeed;
@@ -3897,7 +3976,10 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
+    void deleteProfileDirectory(const QString& profileName)
+    {
+        TestProfile::removeProfileDirectory(profileName);
+    }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()

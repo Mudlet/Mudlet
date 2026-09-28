@@ -173,9 +173,8 @@ struct TConsoleModel
     int mButtonState = 1;
 
     // The width and indents wrapLine() rewraps a line to. The buffer keeps its
-    // own copy, which wraps text as it arrives: these setters change both, but
-    // for the main console and buffers TConsole::changeColors() also resets
-    // the buffer's copy to the profile's and leaves these alone.
+    // own copy, which wraps text as it arrives, so always set them through
+    // these setters to keep the two the same.
     void setWrapAt(int pos)
     {
         mWrapAt = pos;
