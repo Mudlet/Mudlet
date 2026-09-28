@@ -90,7 +90,6 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
-#include <QMediaDevices>
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QPoint>
@@ -583,7 +582,7 @@ void mudlet::announceSpeechCapabilitiesIfChanged()
         // profile, and return. Carrying on would then deliver this older one to
         // the profiles the outer loop has not reached, leaving them holding a
         // value nothing will correct: the baseline already names the newer one.
-        // The same shape as toggleMute()'s guard over this list.
+        // The same shape as MudletMedia::setMuted()'s guard over its list.
         if (mAnnouncedSpeechCapabilities != current) {
             break;
         }
@@ -2198,9 +2197,10 @@ void mudlet::init()
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_packageManager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_packageExporter);
-    connect(mpActionMuteMedia.data(), &QAction::triggered, this, &mudlet::slot_muteMedia);
-    connect(mpActionMuteAPI.data(), &QAction::triggered, this, &mudlet::slot_muteAPI);
-    connect(mpActionMuteGame.data(), &QAction::triggered, this, &mudlet::slot_muteGame);
+    connect(&mMedia, &MudletMedia::signal_muteSet, this, &mudlet::slot_muteSet);
+    connect(mpActionMuteMedia.data(), &QAction::triggered, &mMedia, &MudletMedia::toggleAllMuted);
+    connect(mpActionMuteAPI.data(), &QAction::triggered, &mMedia, &MudletMedia::setApiMuted);
+    connect(mpActionMuteGame.data(), &QAction::triggered, &mMedia, &MudletMedia::setGameMuted);
 
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_showConnectionDialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
@@ -2271,9 +2271,9 @@ void mudlet::init()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_packageExporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multiView);
-    connect(dactionMuteMedia, &QAction::triggered, this, &mudlet::slot_muteMedia);
-    connect(dactionMuteAPI, &QAction::triggered, this, &mudlet::slot_muteAPI);
-    connect(dactionMuteGame, &QAction::triggered, this, &mudlet::slot_muteGame);
+    connect(dactionMuteMedia, &QAction::triggered, &mMedia, &MudletMedia::toggleAllMuted);
+    connect(dactionMuteAPI, &QAction::triggered, &mMedia, &MudletMedia::setApiMuted);
+    connect(dactionMuteGame, &QAction::triggered, &mMedia, &MudletMedia::setGameMuted);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compactInputLine);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::slot_showTriggerDialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::slot_showEditorDialog);
@@ -3959,7 +3959,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // the `if (pH->mpConsole) return;` early-return at the top of this function.
     connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this]() {
         QApplication::alert(this, 3000);
-        if (!muteGame()) {
+        if (!mMedia.gameMuted()) {
             QApplication::beep();
         }
     });
@@ -4964,8 +4964,8 @@ void mudlet::readLateSettings(const QSettings& settings)
     }
     slot_multiView(multiView);
 
-    slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
-    slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
+    mMedia.setApiMuted(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
+    mMedia.setGameMuted(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
 
     if (settings.contains(qsl("debugConsole/categories"))) {
         // Only categories Mudlet still knows about, so that a category retired
@@ -5167,8 +5167,8 @@ void mudlet::writeSettings()
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
-    settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
-    settings.setValue(qsl("enableMuteGame"), mMuteGame);
+    settings.setValue(qsl("enableMuteAPI"), mMedia.apiMuted());
+    settings.setValue(qsl("enableMuteGame"), mMedia.gameMuted());
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
     settings.setValue(qsl("debugConsole/categories"), TDebug::enabledCategories().toInt());
 #if !defined(Q_OS_MACOS)
@@ -5859,7 +5859,7 @@ void mudlet::assignKeySequences()
 
         delete mpShortcutMute.data();
         mpShortcutMute = new QShortcut(mKeySequenceMute, this);
-        connect(mpShortcutMute.data(), &QShortcut::activated, this, &mudlet::slot_muteMedia);
+        connect(mpShortcutMute.data(), &QShortcut::activated, &mMedia, &MudletMedia::toggleAllMuted);
         dactionMuteMedia->setShortcut(QKeySequence());
 
         delete mpShortcutConnect.data();
@@ -6945,47 +6945,24 @@ void mudlet::slot_multiView(const bool state)
     }
 }
 
-void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
+void mudlet::slot_muteSet(const bool apiNotGame, const bool muted)
 {
-    // Read before the flag below is assigned: the rest of this function runs
-    // either way, because it also re-syncs the actions with the flag
-    const bool changed = (isAPINotGame ? mMuteAPI : mMuteGame) != state;
-
-    if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
-        toolbarAction->setChecked(state);
-        menuAction->setChecked(state);
+    QAction* toolbarAction = apiNotGame ? mpActionMuteAPI.data() : mpActionMuteGame.data();
+    QAction* menuAction = apiNotGame ? dactionMuteAPI : dactionMuteGame;
+    if (toolbarAction->isChecked() != muted || menuAction->isChecked() != muted) {
+        toolbarAction->setChecked(muted);
+        menuAction->setChecked(muted);
     }
 
-    for (const auto& pHost : mHostManager) {
-        if (state) {
-            if (isAPINotGame) {
-                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolAPI);
-            } else {
-                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolGMCP);
-                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolMSP);
-            }
-        } else {
-            if (isAPINotGame) {
-                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolAPI);
-            } else {
-                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolGMCP);
-                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolMSP);
-            }
-        }
-    }
-
-    if (isAPINotGame) {
-        mMuteAPI = state;
-        mpActionMuteAPI->setText(mMuteAPI ? unmuteText : muteText);
-        mpActionMuteAPI->setIcon(QIcon(mMuteAPI ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+    if (apiNotGame) {
+        toolbarAction->setText(muted ? tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)") : tr("Mute sounds from Mudlet (triggers, scripts, etc.)"));
     } else {
-        mMuteGame = state;
-        mpActionMuteGame->setText(mMuteGame ? unmuteText : muteText);
-        mpActionMuteGame->setIcon(QIcon(mMuteGame ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+        toolbarAction->setText(muted ? tr("Unmute sounds from the game (MCMP, MSP)") : tr("Mute sounds from the game (MCMP, MSP)"));
     }
+    toolbarAction->setIcon(QIcon(muted ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
 
     // Toolbar icon. "Mute all media" when any protocol is unmuted. "Unmute all media" only when all protocols are muted.
-    const bool isMediaMuted = mediaMuted();
+    const bool isMediaMuted = mMedia.allMuted();
     mpActionMuteMedia->setIcon(QIcon(isMediaMuted ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     mpActionMuteMedia->setText(isMediaMuted ? tr("Unmute all media") : tr("Mute all media"));
     mpActionMuteMedia->setChecked(isMediaMuted);
@@ -6995,11 +6972,11 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
     mpButtonMute->setEnabled(true);
 
     // Notify when all media is muted or all media is unmuted. Helps if the shortcut is hit accidentally.
-    if (isMediaMuted || mediaUnmuted()) {
+    if (isMediaMuted || mMedia.noneMuted()) {
         QString message;
 
         for (auto pHost : mHostManager) {
-            if (mudlet::self()->showMuteAllMediaTutorial()) {
+            if (showMuteAllMediaTutorial()) {
                 const QKeySequence* sequence = nullptr;
                 if (auto it = pHost->profileShortcuts.find(qsl("Mute all media")); it != pHost->profileShortcuts.end()) {
                     sequence = it->second.get();
@@ -7014,75 +6991,10 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
                 }
 
                 pHost->postMessage(message);
-                mudlet::self()->showedMuteAllMediaTutorial();
+                showedMuteAllMediaTutorial();
             }
         }
     }
-
-    if (changed) {
-        // Muting is application-wide rather than per profile, so every open
-        // profile is told about it. The handlers run Lua synchronously and may
-        // open a profile, which inserts into the live host map, so this walks
-        // a copy the way HostManager's own broadcasts do:
-        const QString settingName = isAPINotGame ? qsl("muteMediaAPI") : qsl("muteMediaGame");
-        const QList<QSharedPointer<Host>> hosts = mHostManager.hostList();
-        for (const auto& pHost : hosts) {
-            if ((isAPINotGame ? mMuteAPI : mMuteGame) != state) {
-                // A handler in an earlier profile wrote the opposite value
-                // back; that nested call already told every profile, so the
-                // rest of this loop would report a value nothing holds any more
-                break;
-            }
-            pHost->raiseSettingChangedEvent(settingName, state);
-        }
-    }
-}
-
-void mudlet::slot_muteAPI(const bool state)
-{
-    toggleMute(state, mpActionMuteAPI, dactionMuteAPI, true, tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)"), tr("Mute sounds from Mudlet (triggers, scripts, etc.)"));
-}
-
-void mudlet::slot_muteGame(const bool state)
-{
-    toggleMute(state, mpActionMuteGame, dactionMuteGame, false, tr("Unmute sounds from the game (MCMP, MSP)"), tr("Mute sounds from the game (MCMP, MSP)"));
-}
-
-void mudlet::slot_muteMedia()
-{
-    if (mediaMuted()) {
-        slot_muteAPI(false);
-        slot_muteGame(false);
-    } else {
-        if (!mMuteAPI) {
-            slot_muteAPI(true);
-        }
-
-        if (!mMuteGame) {
-            slot_muteGame(true);
-        }
-    }
-}
-
-void mudlet::slot_audioOutputDeviceChanged()
-{
-    for (const auto& pHost : mHostManager) {
-        if (pHost && pHost->mpMedia) {
-            pHost->mpMedia->refreshAudioDevices();
-        }
-    }
-}
-
-// Only wanted once there is a player to refresh, and not before: constructing
-// a QMediaDevices loads the multimedia backend, which can stall start-up for
-// hundreds of milliseconds probing hardware decoders.
-void mudlet::watchAudioOutputDevices()
-{
-    if (mpMediaDevices) {
-        return;
-    }
-    mpMediaDevices = new QMediaDevices(this);
-    connect(mpMediaDevices, &QMediaDevices::audioOutputsChanged, this, &mudlet::slot_audioOutputDeviceChanged);
 }
 
 // Called by the short-cut to the menu item that doesn't pass the checked state
