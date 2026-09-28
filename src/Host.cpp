@@ -2330,9 +2330,7 @@ TConsoleModel* Host::consoleModelNamed(const QString& name)
 
 void Host::markSelectionDirty(const TConsoleModel& model)
 {
-    if (mpConsole) {
-        mpConsole->markWindowDirty(model, std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
-    }
+    TMainConsole::markWindowDirty(model, std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
 }
 
 bool Host::setWindowFgColor(const QString& name, const QColor& color)

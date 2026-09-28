@@ -190,6 +190,20 @@ describe("Tests that the selection and format functions find their console by na
 
   describe("with the main console", function()
     local marker = "specConsoleByNameMainLine" .. suffix
+    local savedWrap
+
+    -- the marker line has to come back as one line, whatever width the
+    -- main console wraps at
+    setup(function()
+      savedWrap = getWindowWrap("main")
+      setWindowWrap("main", 500)
+    end)
+
+    teardown(function()
+      if savedWrap then
+        setWindowWrap("main", savedWrap)
+      end
+    end)
 
     -- the main console carries on after this spec, so its line is found
     -- rather than cleared into place

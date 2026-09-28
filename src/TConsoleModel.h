@@ -88,7 +88,8 @@ struct TConsoleModel
     // Selects the numOfMatch-th match of text on the cursor's line and returns where it starts, or
     // deselects and returns -1 when there is none.
     int selectString(const QString& text, int numOfMatch);
-    // Whether the selection is still valid, its text (else why not), its start and its length.
+    // Whether the selection is still valid, its text (else why not), its start and its length. The text
+    // is read from the cursor's line, not the selection's, at the selection's columns.
     std::tuple<bool, QString, int, int> selection();
     // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
     QPair<quint8, TChar> textAttributes() const;

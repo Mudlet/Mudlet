@@ -199,7 +199,7 @@ public:
     // Repaints buffer lines the core changed in place in the console showing
     // this model, if one does. Taking the model the core already found, rather
     // than a name, saves a second lookup on a script's per-line calls.
-    void markWindowDirty(const TConsoleModel& model, int firstLine, int lastLine);
+    static void markWindowDirty(const TConsoleModel& model, int firstLine, int lastLine);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.
