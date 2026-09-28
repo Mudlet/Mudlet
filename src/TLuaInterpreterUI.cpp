@@ -52,16 +52,9 @@
 #include "TTextBox.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
-#include "dlgComposer.h"
 #include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <array>
 #include <limits>
@@ -69,7 +62,6 @@
 
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
