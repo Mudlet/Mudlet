@@ -2073,8 +2073,8 @@ byMain = 'timestamps were not enabled for the "main" console'
 expectTimeStampAnswer('timeStampsEnabled before', false, nil, timeStampsEnabled())
 expectTimeStampAnswer('enableTimeStamps', true, nil, enableTimeStamps())
 expectTimeStampAnswer('timeStampsEnabled on', true, nil, timeStampsEnabled('main'))
-expectTimeStampAnswer('enableTimeStamps again', nil, byEmptyName, enableTimeStamps())
-expectTimeStampAnswer('enableTimeStamps main again', nil, byMain, enableTimeStamps('main'))
+expectTimeStampAnswer('enableTimeStamps again', nil, 'timestamps were already enabled for the main console', enableTimeStamps())
+expectTimeStampAnswer('enableTimeStamps main again', nil, 'timestamps were already enabled for the "main" console', enableTimeStamps('main'))
 )LUA"));
         QVERIFY(host->mainConsoleShowsTimeStamps());
         QVERIFY2(!QFile::exists(autoTimeStampPath), "A profile with no view wrote the view's autotimestamp file.");
