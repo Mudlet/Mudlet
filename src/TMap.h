@@ -77,6 +77,18 @@ signals:
     void signal_mmpMapLocationChanged();
     void signal_mapSymbolFontChanged();
 
+    // Cues for the mapper drawing this map (mpMapper); the symbol cache one
+    // also reaches every secondary map view. With no mapper nothing listens.
+    void signal_mapperColoursChanged();
+    void signal_mapCleared();
+    void signal_mapLabelsChanged();
+    void signal_mapLoaded(bool showPlayerArea);
+    void signal_mapperShowRequested();
+    void signal_mapDownloadEnded();
+    void signal_symbolCachesStale();
+    void signal_playerRoomStyleChanged();
+    void signal_areaListChanged();
+
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
     // the frontend (TMainConsole) to render as a QProgressDialog. Cancellation
@@ -123,6 +135,9 @@ public:
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
     void updateArea(int areaId);
+    // For a whole map read in outside TMap, as XMLimport does:
+    void announceMapLoaded(bool showPlayerArea);
+    void requestMapperShown();
 
     void audit();
     inline static bool smShowMapAuditErrors = false;
