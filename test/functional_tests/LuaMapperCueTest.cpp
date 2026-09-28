@@ -130,13 +130,13 @@ private:
         mp2dMap->installEventFilter(this);
     }
 
-    bool waitForPaint()
+    // Delivers the repaints already asked for and nothing else: no timer or
+    // later event gets to run, so a paint counted here was requested by the time
+    // this is called, not by something that happened to repaint afterwards.
+    bool paintRequested()
     {
-        return QTest::qWaitFor(
-                [this]() {
-                    return mPaintCount > 0;
-                },
-                2000);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::UpdateRequest);
+        return mPaintCount > 0;
     }
 
 protected:
@@ -332,7 +332,7 @@ private slots:
 
         QVERIFY(lua(qsl("assert(setConfig('showUpperLowerLevels', not mapperCueUpperLower) == true)")));
 
-        QVERIFY2(waitForPaint(), "the mapper was not repainted");
+        QVERIFY2(paintRequested(), "the mapper was not repainted");
     }
 
     void test_showingAndHidingMapInfoRepaintsTheMapper()
@@ -340,12 +340,12 @@ private slots:
         settlePaints();
         QVERIFY(lua(qsl("assert(setConfig('showMapInfo', 'Short') == true)")));
         QVERIFY(mpHost->mMapInfoContributors.contains(qsl("Short")));
-        QVERIFY2(waitForPaint(), "the mapper was not repainted for a shown info overlay");
+        QVERIFY2(paintRequested(), "the mapper was not repainted for a shown info overlay");
 
         settlePaints();
         QVERIFY(lua(qsl("assert(setConfig('hideMapInfo', 'Short') == true)")));
         QVERIFY(!mpHost->mMapInfoContributors.contains(qsl("Short")));
-        QVERIFY2(waitForPaint(), "the mapper was not repainted for a hidden info overlay");
+        QVERIFY2(paintRequested(), "the mapper was not repainted for a hidden info overlay");
     }
 
     // A second mapper of the same profile - one in a detached window, say -
