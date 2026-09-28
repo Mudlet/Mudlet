@@ -4122,13 +4122,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
         mpCurrentActiveHost->mpConsole->hide();
     }
 
-    if (pH->mLogStatus) {
-        // The above flag is set/reset at the start of the TMainConsole
-        // constructor - and if it is set we now need to "click" the button
-        // to immediately start logging the game output as text/HTML:
-        pConsole->logButton->click();
-    }
-
     pConsole->show();
 
     auto pEditor = new dlgTriggerEditor(pH);
@@ -7637,6 +7630,8 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name, pHost->mAcceptServerGUI && pHost->mEnableGMCP);
         pHost->setupIreDriverBugfix();
     }
+
+    pHost->startSavedLogging();
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     emit signal_adjustAccessibleNames();

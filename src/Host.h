@@ -348,6 +348,9 @@ public:
     // logging change through here.
     void raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName);
     void raiseLoggingStateChanged(const bool isLogging);
+    // Starts the log the "autolog" file asks for, once the profile's log
+    // settings have been read, whether or not the profile has a view.
+    void startSavedLogging();
     void postIrcMessage(const QString&, const QString&, const QString&);
     // The running IRC session, creating one if there is none.
     TIrcClient* getOrCreateIrcClient();
@@ -979,7 +982,6 @@ public:
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
-    bool mLogStatus = false;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;

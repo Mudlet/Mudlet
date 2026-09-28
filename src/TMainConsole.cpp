@@ -100,6 +100,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // and re-labelling the log button are the only parts of it that need a view.
     connect(pH, &Host::signal_loggingAnnouncement, this, &TMainConsole::slot_loggingAnnouncement, Qt::UniqueConnection);
     connect(pH, &Host::signal_loggingStateChanged, this, &TMainConsole::slot_loggingStateChanged, Qt::UniqueConnection);
+    // Host starts a saved log as the profile loads, before there is a view
+    slot_loggingStateChanged(mLogToLogFile);
 
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
@@ -319,7 +321,7 @@ void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString&
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 {
-    // A click has already flipped the button; this is for logging toggled from Lua, and failed starts.
+    // A click has already flipped the button; this is for logging toggled from Lua, failed starts, and a new view.
     logButton->setChecked(isLogging);
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
 }
