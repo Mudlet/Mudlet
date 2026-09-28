@@ -1636,14 +1636,14 @@ bool TMainConsole::scaleLabelMovie(const QString& name, bool followLabelSize)
         return false;
     }
     movie->setScaledSize(pL->size());
+    // only drop the movie-scaling connection, so that asking twice does not
+    // connect it twice; other consumers of the label's resized signal must
+    // stay connected
+    QObject::disconnect(pL, &TLabel::resized, movie, nullptr);
     if (followLabelSize) {
         connect(pL, &TLabel::resized, movie, [=] {
             movie->setScaledSize(pL->size());
         });
-    } else {
-        // only drop the movie-scaling connection(s); other consumers of
-        // the label's resized signal must stay connected
-        QObject::disconnect(pL, &TLabel::resized, movie, nullptr);
     }
     return true;
 }
