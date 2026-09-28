@@ -70,7 +70,7 @@ describe("Tests that writing past the end of a line pads it in the console's cur
     assertPaddedInTheCurrentFormat()
   end)
 
-  it("pads for insertLink() in the link's own colours", function()
+  it("pads for insertLink() in the current format rather than the link's", function()
     insertLink(window, "L", "", "", false)
     assert.are.equal("ab    L", getLines(window, 0, 1)[1])
     assertPaddedInTheCurrentFormat()
