@@ -619,6 +619,22 @@ void TMxpFrameManager::setWindowSize(const QString& name, const QSize& size)
     }
 }
 
+bool TMxpFrameManager::setTabAreaSize(const QString& name, const QSize& size)
+{
+    auto* frame = getFrame(name);
+    if (!frame || frame->tabArea == size) {
+        return false;
+    }
+
+    frame->tabArea = size;
+    for (const auto* tab : std::as_const(frame->childFrames)) {
+        if (tab->shown == TMxpFrame::Shown::Tab && !tab->childFrames.isEmpty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
 {
     auto* widgets = frameWidgets();
@@ -636,7 +652,7 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
         return;
     }
 
-    const std::optional<QSize> tabSize = widgets->tabAreaSize(parentFrame->name);
+    const std::optional<QSize> tabSize = parentFrame->tabArea;
     if (!tabSize) {
         qWarning() << "TMxpFrameManager::layoutTabFrame: Failed to create tab widget";
         layoutInternalFrame(frame);
@@ -808,18 +824,11 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
         }
         return frame.geometry;
     }
-    case TMxpFrame::Shown::Tab: {
-        // Asked each time, as the header's frame is moved by relayouts
-        const auto* widgets = frameWidgets();
-        if (!widgets || !frame.parentFrame) {
+    case TMxpFrame::Shown::Tab:
+        if (!frame.parentFrame || !frame.parentFrame->tabArea) {
             return std::nullopt;
         }
-        const std::optional<QSize> size = widgets->tabAreaSize(frame.parentFrame->name);
-        if (!size) {
-            return std::nullopt;
-        }
-        return QRect(QPoint(0, 0), *size);
-    }
+        return QRect(QPoint(0, 0), *frame.parentFrame->tabArea);
     case TMxpFrame::Shown::Not:
         break;
     }
