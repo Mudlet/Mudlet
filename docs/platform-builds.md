@@ -184,11 +184,13 @@ Clang being slower than GCC there to begin with.
 The first pass builds only an instrumented `PipelineBenchmark` - building `mudlet` would send the
 instrumented binary's debug files to Sentry - and the second builds everything against the profile,
 so the tests that follow run on what ships. Tagged releases and the nightly PTBs both build this way,
-so a broken profile-guided build shows up the morning after it lands rather than on release day;
-macOS PTBs keep their own build type rather than becoming Release builds. Pull requests never build
-profile-guided. To exercise the release path by hand, run the *Build Mudlet* or *Build Mudlet
-(windows)* workflow with its `pgo` input set to `true`, which also builds macOS as Release. Neither
-kind of run saves its objects to the shared ccache.
+so a broken profile-guided build shows up the morning after it lands rather than on release day.
+macOS PTBs keep their own build type, which is unoptimised, so there the nightly run proves the
+steps work but not that the optimised compile does - before tagging a release, run the *Build
+Mudlet* workflow by hand with its `pgo` input set to `true`, which builds macOS as Release the way
+a tag does (*Build Mudlet (windows)* takes the same input, though its PTBs are Release already).
+Pull requests never build profile-guided, and no profile-guided run saves its objects to the
+shared ccache.
 
 ## Optional feature modules
 
