@@ -1696,6 +1696,34 @@ noViewReport = table.concat(noViewProblems, '; ')
         QCOMPARE(luaGlobalString(host, "noViewPrompt"), qsl("false"));
     }
 
+    // echo() to a sub-console writes its model, so it reaches one that no view
+    // shows, as a frontend without widgets would register.
+    void test_subConsoleEchoWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        destroyTheView(host);
+
+        const QString name = qsl("noViewEchoMini");
+        TConsoleModel model(host);
+        host->windowRegistry().registerSubConsole(name, &model, TWindowRegistry::SubConsoleKind::MiniConsole);
+        const auto deregister = qScopeGuard([host, &name, &model]() {
+            host->windowRegistry().deregisterSubConsole(name, &model);
+        });
+        const QColor foreground(12, 34, 56);
+        model.mFormatCurrent.setForeground(foreground);
+
+        runLua(host,
+               qsl("noViewSubEcho = {echo('noViewEchoMini', 'NoViewSubEcho one\\nNoViewSubEcho open')}\n"
+                   "noViewSubEchoAnswers = #noViewSubEcho .. tostring(noViewSubEcho[1]) .. select('#', echoUserWindow('noViewEchoMini', ', closed\\n'))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewSubEchoAnswers"), qsl("1true0"));
+        QCOMPARE(model.buffer.line(0), qsl("NoViewSubEcho one"));
+        QCOMPARE(model.buffer.line(1), qsl("NoViewSubEcho open, closed"));
+        QCOMPARE(model.buffer.buffer.at(1).at(0).foreground(), foreground);
+    }
+
     // The link and text functions write the console's model, so the main
     // console takes them with no view at all.
     void test_linksAndTextReachTheMainModelWithNoView()

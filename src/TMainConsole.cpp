@@ -2825,21 +2825,6 @@ bool TMainConsole::hideWindow(const QString& name)
     return false;
 }
 
-bool TMainConsole::printWindow(const QString& name, const QString& text)
-{
-    auto pC = mSubConsoleMap.value(name);
-    auto pL = mLabelMap.value(name);
-    if (pC) {
-        pC->print(text);
-        return true;
-    }
-    if (pL) {
-        pL->setText(text);
-        return true;
-    }
-    return false;
-}
-
 //getUserWindowSize for resizing in Geyser
 QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
