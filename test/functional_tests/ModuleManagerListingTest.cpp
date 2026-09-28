@@ -180,6 +180,35 @@ private slots:
         delete manager;
     }
 
+    // The box is found by the module's name alone: another row's location
+    // can read the same, and a module installed since the dialog listed its
+    // modules has no row to tick
+    void test_aScriptChangingAnUnlistedModulesSyncTicksNoOtherRow()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        mudlet::self()->slot_moduleManager();
+        dlgModuleManager* manager = HostDialogs::of(host).mpModuleManager;
+        QVERIFY2(manager, "The module manager did not open for the profile");
+        const int row = rowNames(manager).indexOf(qsl("listing-c"));
+        QVERIFY2(row >= 0, "The seeded module is not listed");
+        const QString location = manager->moduleTable->item(row, 3)->text();
+        QVERIFY2(!location.isEmpty(), "SETUP: the seeded module shows no location");
+        host->mInstalledModules[location] = QStringList{location, qsl("0")};
+        host->mModulePriorities[location] = 0;
+        QVERIFY2(!rowNames(manager).contains(location), "SETUP: the dialog listed the new module, so it has a row of its own to tick");
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("enableModuleSync([[%1]])").arg(location)));
+        QCOMPARE(host->mInstalledModules[location].at(1), qsl("1"));
+        QCOMPARE(manager->moduleTable->item(row, 2)->checkState(), Qt::Unchecked);
+
+        host->mInstalledModules.remove(location);
+        host->mModulePriorities.remove(location);
+        delete manager;
+    }
+
 private:
     Host* startProfile()
     {
