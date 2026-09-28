@@ -23,6 +23,7 @@
 #include "dlgSystemMessageArea.h"
 
 #include "mudlet.h"
+#include "MudletApp.h"
 
 
 dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pParentWidget)
@@ -50,7 +51,7 @@ dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pParentWidget)
 
 void dlgSystemMessageArea::slot_applyAppearance()
 {
-    const bool darkMode = mudlet::self()->inDarkMode();
+    const bool darkMode = MudletApp::darkMode();
     const QString background = darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)");
     const QString textColor = darkMode ? qsl("rgb(230, 230, 230)") : qsl("black");
     frame_notificationArea->setStyleSheet(qsl("QFrame#frame_notificationArea {\n"

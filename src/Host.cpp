@@ -391,7 +391,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         loadSecuredPassword();
     } else {
         QString password{readProfileData(qsl("password"))};
@@ -405,7 +405,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         thankForUsingPTB();
     }
 
-    if (mudlet::self()->smFirstLaunch) {
+    if (MudletApp::firstLaunch()) {
         QTimer::singleShot(0ms, this, [this]() {
             if (mpConsole) {
                 mpConsole->setCommandLinePlaceholderText(tr("Text to send to the game"));
@@ -6165,7 +6165,7 @@ void Host::setCommandLineHistorySaveSize(const int lines)
 
 QString Host::getEditorTheme() const
 {
-    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
+    if (MudletApp::darkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
         return mEditorThemeDark;
     }
     return mEditorTheme;
@@ -6173,7 +6173,7 @@ QString Host::getEditorTheme() const
 
 QString Host::getEditorThemeFile() const
 {
-    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
+    if (MudletApp::darkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
         return mEditorThemeFileDark;
     }
     return mEditorThemeFile;

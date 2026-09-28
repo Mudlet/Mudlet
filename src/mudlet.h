@@ -121,42 +121,10 @@ public:
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
-    // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
-    // (1000ths, range 0 to 999) that is used as a "version" attribute number when
-    // writing the <MudletPackage ...> element of all (but maps if I ever get around
-    // to doing a Map Xml file exporter/writer) Xml files used to export/save Mudlet
-    // button/menu/toolbars; aliases. keys, scripts, timers, triggers and variables
-    // and collections of these as modules/packages and entire profiles as "game
-    // saves".  Mudlet versions up to 3.0.1 never bothered checking the version
-    // detail and it had been hard coded as "1.0" back as far as history can
-    // determine.  From that version a check was coded to test that the version
-    // was less than 2.000f with the intention to loudly and clearly fail if a
-    // higher version was encountered. Values above 1.001f have not yet been
-    // codified but should be accepted so it should be possible to raise the number
-    // a little and to use that to extend the Xml data format in a manner that older
-    // versions ignore (possibly with some noise) but which they can still get the
-    // details they can handle yet allow a later upgraded version to get extra
-    // information they want.
-    //
-    // Taking this number to 2.000f or more WILL prevent old versions from reading
-    // Xml files and should be considered a step associated with a major version
-    // number change in the Mudlet application itself and SHOULD NOT BE DONE WITHOUT
-    // agreement and consideration from the Project management, even a minor part
-    // increment should not be done without justification...!
-    // XML version Change history (what and why):
-    // 1.001    Added method to allow XML format to permit ASCII control codes
-    //          0x01-0x08, 0x0b, 0x0c, 0x0e-0x1f, 0x7f to be stored as part of the
-    //          "script" element for a Mudlet "item" (0x09, 0x0a, 0x0d are the only
-    //          ones that ARE permitted) - this is wanted so that, for instance
-    //          ANSI ESC codes can be included in a Lua script without breaking
-    //          the XML format used to store it - prior to this embedding such
-    //          codes would break or destroy the script that used it.
-    inline static const QString scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
-    inline static bool smFirstLaunch = false;
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
     inline static QPointer<QMainWindow> smpDebugArea;
@@ -265,7 +233,6 @@ public:
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
     const QLocale& getUserLocale() const { return mUserLocale; }
-    bool inDarkMode() const { return mDarkMode; }
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
@@ -369,8 +336,7 @@ public:
     // supplied, for the given Host - or the active one if none is given:
     void showOptionsDialog(const QString&, Host* = nullptr);
     void startAutoLogin(const QStringList&, bool offline = false);
-    bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
-    void setStorePasswordsSecurely(const bool storeSecurely) { mStorePasswordsSecurely = storeSecurely; }
+    void setStorePasswordsSecurely(bool storeSecurely);
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
@@ -666,7 +632,6 @@ private:
     inline static QPointer<mudlet> smpSelf = nullptr;
 
 
-    bool mDarkMode = false;
     QString mDefaultStyle;
     // The portable.txt that named a data directory Mudlet could not use, and the
     // directory it named, kept from setupConfig() until main() can say so on screen
@@ -834,7 +799,6 @@ private:
     // use setAppearance instead
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
     QSplitter* mpSplitter_profileContainer = nullptr;
-    bool mStorePasswordsSecurely = true;
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;

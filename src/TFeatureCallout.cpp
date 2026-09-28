@@ -110,7 +110,7 @@ void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, cons
     auto* settings = MudletApp::getQSettings();
     // players installing today experience the current interface as the
     // baseline, so nothing in it is "new" to them
-    if (mudlet::smFirstLaunch) {
+    if (MudletApp::firstLaunch()) {
         settings->setValue(dismissedKey(featureId), true);
         return;
     }

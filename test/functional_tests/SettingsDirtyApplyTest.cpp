@@ -381,7 +381,7 @@ private slots:
     void test_aThemeListRefreshDoesNotWipeTheChosenTheme()
     {
         writeEditorThemesFile(R"([{"Title": "PhaseDProbe", "FileName": "PhaseDProbe.tmTheme"}])");
-        const bool dark = mudlet::self()->inDarkMode();
+        const bool dark = MudletApp::darkMode();
         // Host::getEditorTheme() only reads the dark name when the dark file is
         // set too, so a name on its own leaves the dialog on the light theme
         (dark ? mpHost->mEditorThemeDark : mpHost->mEditorTheme) = qsl("PhaseDProbe");
