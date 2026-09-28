@@ -828,7 +828,7 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
         QVERIFY2(heightBefore * 10 / 100 < 50 && area().height() * 10 / 100 >= 50, "10% of the height has to be too short for a header before the resize and not after it");
 
-        QVERIFY(createFrame(qsl("status"), qsl("left"), qsl("200px"), qsl("10%"), {{qsl("TITLE"), qsl("Status")}}));
+        QVERIFY(createFrame(qsl("status"), qsl("top"), QString(), qsl("10%"), {{qsl("TITLE"), qsl("Status")}}));
 
         QVERIFY2(frameTabs(qsl("status")), "the frame was opened without its header");
     }
