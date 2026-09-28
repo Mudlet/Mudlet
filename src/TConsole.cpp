@@ -510,6 +510,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     // so that we can set the state of the button without getting the signal
     // being raised:
     connect(timeStampButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleTimeStamps);
+    if (mType == MainConsole) {
+        timeStampButton->setChecked(mpModel->mShowTimeStamps);
+    }
 
     replayButton = new QToolButton;
     replayButton->setCheckable(true);

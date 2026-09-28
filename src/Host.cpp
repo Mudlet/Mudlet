@@ -303,8 +303,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // confuse it with the "autologin" item, which controls whether the profile
     // is automatically started when the Mudlet application is run!
     mLogStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
-    // "autotimestamp" determines if profile loads with timestamps enabled
-    mTimeStampStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
@@ -494,6 +492,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mpMainConsoleModel->mTriggerEngineMode = false;
         finalizeMainConsole();
     });
+    // Applied to the model rather than by the view, so that a profile loaded
+    // with no view starts with them too
+    mpMainConsoleModel->mShowTimeStamps = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mpClipboard = std::make_unique<TBuffer>(this);
     // a view does this in TConsole::changeColors(), but a profile need never get one
     mpMainConsoleModel->setWrapAt(mWrapAt);
