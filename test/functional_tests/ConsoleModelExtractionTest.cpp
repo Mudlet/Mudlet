@@ -85,6 +85,11 @@ extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResourcesForConsoleModelExtraction();
 
 using namespace std::chrono_literals;
+// QObject::receivers() is protected; naming it through a subclass is how a test may call it.
+struct SignalReceiverCount : QObject
+{
+    static int of(const QObject* object, const char* signal) { return (object->*(&SignalReceiverCount::receivers))(signal); }
+};
 
 // The main console's text buffer, cursor/prompt state, fg/bg colours and log
 // lifecycle were lifted out of the TConsole widget into a core TConsoleModel
@@ -3171,8 +3176,11 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QSignalSpy resizes(label, &TLabel::resized);
         QVERIFY(resizes.isValid());
 
+        const int listenersBefore = SignalReceiverCount::of(label, SIGNAL(resized()));
         runLua(host, qsl("scaleMovie('%1')\n").arg(labelName));
         QCOMPARE(movie->scaledSize(), QSize(60, 30));
+        runLua(host, qsl("scaleMovie('%1')\n").arg(labelName));
+        QVERIFY2(SignalReceiverCount::of(label, SIGNAL(resized())) == listenersBefore + 1, "Asking twice for a movie to be scaled connected it to the label's resizes twice.");
         runLua(host, qsl("resizeWindow('%1', 90, 45)\n").arg(labelName));
         QTRY_COMPARE(movie->scaledSize(), QSize(90, 45));
 
