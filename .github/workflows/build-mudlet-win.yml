@@ -96,6 +96,13 @@ jobs:
         ccache --recompress 19
         ccache --show-compression
 
+    - name: note the cutoff for evicting unused ccache entries
+      if: >-
+        github.ref_name == 'development'
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+      shell: msys2 {0}
+      run: echo "CCACHE_CUTOFF=$(date +%s)" >> "$GITHUB_ENV"
+
     - name: (Windows) Build
       shell: msys2 {0}
       env:
@@ -192,6 +199,18 @@ jobs:
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
           exit 1
         fi
+
+    - name: evict ccache entries this build did not use
+      if: >-
+        success() && github.ref_name == 'development'
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+      run: |
+        ccache --evict-older-than "$(( $(date +%s) - ${CCACHE_CUTOFF:-0} ))s"
+        ccache --show-stats -v
+        ccache --show-compression
 
     - name: Save ccache
       if: >-
