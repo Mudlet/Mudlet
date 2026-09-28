@@ -224,6 +224,8 @@ private slots:
         runLua(qsl("setBorderSizes(0)"));
         mudlet::self()->resize(1200, 800);
         settle();
+
+        QVERIFY2(!HostManager::self()->getHost(mSecondHostname), "the case left the second profile loaded");
     }
 
     void test_rightFrameKeepsClearOfAReservedRightBorder()
@@ -762,8 +764,11 @@ private slots:
     void test_frameOpenedInABackgroundTabIsPlacedInTheWindowItComesBackTo()
     {
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
-        const auto showThisProfile = qScopeGuard([this]() {
+        // closed again here, as its tab bar would change the window every later case lays out in
+        const auto closeSecondProfile = qScopeGuard([this]() {
             showTab(mHostname);
+            mudlet::self()->slot_closeProfileByName(mSecondHostname);
+            QTest::qWait(1000ms);
         });
         showTab(mSecondHostname);
         QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
@@ -781,8 +786,8 @@ private slots:
     }
 
     // The console reports its new size a turn after the resize, so a frame
-    // opened in between is placed against the old size until that report. One
-    // at LEFT/TOP takes no border, so nothing else moves it afterwards.
+    // opened in between has to ask for it. One at LEFT/TOP takes no border, so
+    // nothing else moves it afterwards.
     void test_frameOpenedStraightAfterAResizeIsPlacedInTheNewSize()
     {
         const QSize sizeBefore = mpHost->mpConsole->getMainWindowSize();
@@ -794,6 +799,38 @@ private slots:
 
         const QRect expected(area().x() + area().width() / 2, area().y() + area().height() / 2, 200, 100);
         QCOMPARE(frameGeometry(qsl("status")), expected);
+    }
+
+    // An EXTERNAL frame is never relaid out, so the size it opens with is the
+    // one it keeps
+    void test_externalFrameOpenedStraightAfterAResizeTakesTheNewSize()
+    {
+        const QSize sizeBefore = mpHost->mpConsole->size();
+        mudlet::self()->resize(1000, 700);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        const QSize consoleSize = mpHost->mpConsole->size();
+        QVERIFY2(consoleSize != sizeBefore, "the console did not see the resize");
+
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("50%"), qsl("25%"), {{qsl("EXTERNAL"), qsl("true")}}));
+
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup);
+        QCOMPARE(popup->size(), QSize(consoleSize.width() * 50 / 100, consoleSize.height() * 25 / 100));
+    }
+
+    // Whether a titled frame gets a header is decided once, when it opens
+    void test_titledFrameOpenedStraightAfterAnEnlargementGetsItsHeader()
+    {
+        mudlet::self()->resize(1200, 500);
+        settle();
+        const int heightBefore = area().height();
+        mudlet::self()->resize(1200, 800);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QVERIFY2(heightBefore * 10 / 100 < 50 && area().height() * 10 / 100 >= 50, "10% of the height has to be too short for a header before the resize and not after it");
+
+        QVERIFY(createFrame(qsl("status"), qsl("left"), qsl("200px"), qsl("10%"), {{qsl("TITLE"), qsl("Status")}}));
+
+        QVERIFY2(frameTabs(qsl("status")), "the frame was opened without its header");
     }
 
     // How the base UI reserves its space, so this is #9698 as reported. Declared

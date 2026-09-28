@@ -124,6 +124,13 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
     mFrames[name] = frame;
     mFrameOrder.append(frame);
 
+    // A resize reports the new size a turn later, and a frame opened in between
+    // would keep the old one for good: an EXTERNAL frame is never relaid out,
+    // and whether a frame gets a header is only decided here
+    if (auto* widgets = frameWidgets()) {
+        widgets->reportSize();
+    }
+
     // Create the appropriate UI layout
     if (frame->isInternal) {
         if (!frame->dockFrame.isEmpty() && frame->align == qsl("client")) {
