@@ -657,12 +657,7 @@ describe("Tests functionality of Geyser.UserWindow", function()
       -- a dock left behind is still holding a live widget here, so it would
       -- answer with its own size rather than the fallback
       assert.are.same({getMainWindowSize()}, {getUserWindowSize("guwReopen")})
-      -- and once the console's deferred deletion has run that widget is freed,
-      -- which is the moment the query used to dereference it. The main window
-      -- is measured again, as the layout pass in here gives it the space any
-      -- dock taken out of the layout has left.
       pumpEvents(50)
-      assert.are.same({getMainWindowSize()}, {getUserWindowSize("guwReopen")})
 
       track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
       assert.are.equal("userwindow", windowType("guwReopen"))

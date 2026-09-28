@@ -1,5 +1,5 @@
 describe("Sub-console geometry", function()
-  -- User windows cannot be deleted from Lua, so names have to be unique per run.
+  -- Unique names per run, so a window an earlier run left behind is never measured instead.
   local runCounter = 0
   local function uniqueName(stem)
     runCounter = runCounter + 1
@@ -115,16 +115,18 @@ describe("Sub-console geometry", function()
 
       -- On the left: the map widget other specs open stays docked on the right
       -- for the rest of the session, leaving a window docked next to it no height.
-      openUserWindow(deletedName, false, true, "left")
+      assert.is_true(openUserWindow(deletedName, false, true, "left"), "the first user window did not open")
       pumpEvents(100)
       local _, deletedHeight = getUserWindowSize(deletedName)
       assert.is_true(deletedHeight > 0, "the first user window came up with no height, so there is nothing to compare with")
+      -- what getUserWindowSize falls back to for a name it has no dock for
+      assert.are_not.equal(select(2, getMainWindowSize()), deletedHeight, "the first user window has no dock of its own")
       deleteMiniConsole(deletedName)
       -- the dock's deferred delete cannot run inside a pump, so it is still alive
       -- when the next window is docked
       pumpEvents(100)
 
-      openUserWindow(laterName, false, true, "left")
+      assert.is_true(openUserWindow(laterName, false, true, "left"), "the second user window did not open")
       pumpEvents(100)
       local _, laterHeight = getUserWindowSize(laterName)
       assert.equals(deletedHeight, laterHeight)
