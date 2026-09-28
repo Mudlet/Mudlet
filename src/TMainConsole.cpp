@@ -1823,28 +1823,6 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     return true;
 }
 
-std::optional<bool> TMainConsole::getWindowTimeStamps(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->showTimeStamps()};
-}
-
-std::optional<bool> TMainConsole::setWindowTimeStamps(const QString& name, bool shown)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    const bool wasShown = pC->showTimeStamps();
-    if (wasShown != shown) {
-        pC->slot_toggleTimeStamps(shown);
-    }
-    return {wasShown};
-}
-
 std::optional<int> TMainConsole::getWindowColumnCount(const QString& name)
 {
     auto pC = consoleNamed(name);

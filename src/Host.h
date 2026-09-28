@@ -330,6 +330,12 @@ public:
     bool setWindowFgColor(const QString& name, const QColor& color);
     bool setWindowBgColor(const QString& name, const QColor& color);
     bool setWindowDisplayAttributes(const QString& name, TChar::AttributeFlags attributes, bool enabled);
+    // Whether the named console shows timestamps. The buffer records every
+    // line's time either way.
+    std::optional<bool> getWindowTimeStamps(const QString& name);
+    // Answers whether they were shown before, and leaves them alone when that
+    // is already what was asked for. A view shows the change.
+    std::optional<bool> setWindowTimeStamps(const QString& name, bool shown);
     TWindowRegistry& windowRegistry() { return mWindowRegistry; }
     const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();

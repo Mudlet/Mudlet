@@ -44,6 +44,8 @@ signals:
     // Lines were written at the end, which the view brings into view as
     // echoing there does.
     void newLinesWritten();
+    // mShowTimeStamps was flipped.
+    void timeStampsToggled();
     void spoilerRevealed();
 };
 

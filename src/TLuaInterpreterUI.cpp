@@ -998,8 +998,7 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
 int TLuaInterpreter::disableTimeStamps(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto wasShown = host.mpConsole ? host.mpConsole->setWindowTimeStamps(windowName, false) : std::nullopt;
+    const auto wasShown = getHostFromLua(L).setWindowTimeStamps(windowName, false);
     if (!wasShown) {
         return windowNotFound(L, windowName);
     }
@@ -1296,8 +1295,7 @@ int TLuaInterpreter::getScrollBarVisible(lua_State* L)
 int TLuaInterpreter::enableTimeStamps(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto wasShown = host.mpConsole ? host.mpConsole->setWindowTimeStamps(windowName, true) : std::nullopt;
+    const auto wasShown = getHostFromLua(L).setWindowTimeStamps(windowName, true);
     if (!wasShown) {
         return windowNotFound(L, windowName);
     }
@@ -1938,8 +1936,7 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 int TLuaInterpreter::timeStampsEnabled(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto shown = host.mpConsole ? host.mpConsole->getWindowTimeStamps(windowName) : std::nullopt;
+    const auto shown = getHostFromLua(L).getWindowTimeStamps(windowName);
     if (!shown) {
         return windowNotFound(L, windowName);
     }

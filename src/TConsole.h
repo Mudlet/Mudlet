@@ -308,6 +308,8 @@ public:
     void clearSplit();
     bool showTimeStamps() const { return mpModel->mShowTimeStamps; }
     void raiseMudletResizeEvent();
+    // Shows the model's timestamp flag as it now stands.
+    void applyTimeStamps();
     // This hides QWidget::setFont(const QFont&) rather than overriding it
     // (QWidget::setFont is non-virtual). The forceChange parameter is needed
     // when calling from setFontName(...) or setFontSize(...) because those

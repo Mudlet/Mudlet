@@ -224,6 +224,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linkCharactersChanged, this, &TConsole::repaintPanes);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesChanged, this, &TConsole::markLinesDirty);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::newLinesWritten, this, &TConsole::showNewLines);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::timeStampsToggled, this, &TConsole::applyTimeStamps);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
 
     // Every console, not just the main one: the manager is per model, and only
@@ -3051,6 +3052,12 @@ void TConsole::slot_toggleTimeStamps(const bool state)
     }
 
     mpModel->mShowTimeStamps = state;
+    applyTimeStamps();
+}
+
+void TConsole::applyTimeStamps()
+{
+    const bool state = mpModel->mShowTimeStamps;
     if (mType == TConsole::MainConsole) {
         if (timeStampButton->isChecked() != state) {
             // using this will NOT cause the QAbstractButton::checked signal
