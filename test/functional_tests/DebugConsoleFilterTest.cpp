@@ -295,11 +295,10 @@ private slots:
     }
 
     // Past the cap the OLDEST held messages are discarded and counted, so that
-    // resuming can say how much of the history is missing. Asserted on the
-    // queue rather than the console: replaying a full queue is by definition
-    // enough to overflow the console's own line limit, so what survives in the
-    // buffer afterwards says more about TBuffer::shrinkBuffer() than about the
-    // cap being tested here.
+    // resuming can say how much of the history is missing. The cap is asserted
+    // on the queue rather than the console: replaying a full queue is by
+    // definition enough to overflow the console's own line limit, which is also
+    // why the notice has to come after the replay to survive in it.
     void test_pausedQueueDropsTheOldestPastItsCap()
     {
         auto* host = startDebuggingProfile();
@@ -322,6 +321,7 @@ private slots:
         QVERIFY2(!TDebug::pausedDroppedCount(), "The dropped count survived the replay that was supposed to report it");
         // The newest is at the tail of the replay, so it outlives any trimming:
         QVERIFY2(debugBufferContains(qsl("held message %1").arg(limit + 1)), "The newest held message did not survive the replay");
+        QVERIFY2(debugBufferContains(qsl("2 message(s) dropped while paused")), "The dropped-message notice was pushed out of the console by the replay it introduces");
     }
 
     // A message held back keeps the time it arrived, so a replayed burst does
