@@ -2289,6 +2289,7 @@ void Host::refreshMainConsoleColors()
 {
     mpMainConsoleModel->mFgColor = mFgColor;
     mpMainConsoleModel->mBgColor = mBgColor;
+    mpMainConsoleModel->mFormatCurrent.setColors(mFgColor, mBgColor);
     mpMainConsoleModel->buffer.updateColors();
 }
 

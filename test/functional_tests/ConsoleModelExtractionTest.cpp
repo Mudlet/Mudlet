@@ -630,6 +630,35 @@ private slots:
         QCOMPARE(model->buffer.buffer.at(line).at(lineLength).foreground(), paddingFg);
     }
 
+    // An <OSC>R palette reset re-seeds the format that pads lines and fills
+    // cuts from the profile's colours, with a view or without one.
+    void test_paletteResetReseedsTheCurrentFormatWithAndWithoutAView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        const QColor staleFg{1, 2, 3};
+        const QColor staleBg{4, 5, 6};
+        QVERIFY2(host->mFgColor != staleFg && host->mBgColor != staleBg, "The profile already uses the stale colours, so the assertions cannot fail.");
+        host->setMayRedefineColors(true);
+
+        model->mFormatCurrent.setColors(staleFg, staleBg);
+        std::string reset = "\x1b]R\x07";
+        model->buffer.translateToPlainText(reset, true);
+        QCOMPARE(model->mFormatCurrent.foreground(), host->mFgColor);
+        QCOMPARE(model->mFormatCurrent.background(), host->mBgColor);
+
+        destroyTheView(host);
+        model->mFormatCurrent.setColors(staleFg, staleBg);
+        reset = "\x1b]R\x07";
+        model->buffer.translateToPlainText(reset, true);
+        QCOMPARE(model->mFormatCurrent.foreground(), host->mFgColor);
+        QCOMPARE(model->mFormatCurrent.background(), host->mBgColor);
+    }
+
     // The log file, its stream and the on/off flag are core model state, so the
     // announcement and the log button are all a logging change still needs this
     // view for. TConsoleModel raises both through Host and TMainConsole acts on
