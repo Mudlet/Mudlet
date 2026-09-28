@@ -368,7 +368,7 @@ private slots:
         QCOMPARE(mp2dMap->rSize, expected);
         QCOMPARE(mp2dMap->symbolPixmapCacheCount(), 0);
         QVERIFY2(map()->isUnsaved(), "a new room size did not mark the map unsaved");
-        QVERIFY2(waitForPaint(), "the mapper was not repainted");
+        QVERIFY2(paintRequested(), "the mapper was not repainted");
     }
 
     void test_mapExitSizeSetsTheDrawnExitWidth()
@@ -414,7 +414,7 @@ private slots:
 
         QCOMPARE(*hostCopy, !before);
         QCOMPARE(*mapCopy, !before);
-        QVERIFY2(waitForPaint(), "the mapper was not repainted");
+        QVERIFY2(paintRequested(), "the mapper was not repainted");
     }
 
     // A second mapper of the same profile - one in a detached window, say -
