@@ -20,6 +20,7 @@
 #include <QCursor>
 #include <QFile>
 #include <QFontDatabase>
+#include <QGuiApplication>
 #include <QImage>
 #include <QElapsedTimer>
 #include <QMovie>
@@ -3121,6 +3122,10 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
+        // Anywhere else this would move the real pointer (X11), or not move it at all (Wayland)
+        if (QGuiApplication::platformName() != qsl("offscreen")) {
+            QSKIP("Needs the offscreen platform, which ctest sets, to place the pointer.");
+        }
 
         const QPoint local(13, 7);
         const QPoint global = host->mpConsole->mapToGlobal(local);
