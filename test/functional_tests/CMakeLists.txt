@@ -36,6 +36,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
     AsciiLineBreakTest.cpp
     ConsoleModelExtractionTest.cpp
+    ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp

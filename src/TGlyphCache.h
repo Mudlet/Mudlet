@@ -57,6 +57,9 @@ public:
     // shaped with the font given to the last setFont().
     void drawCentered(QPainter&, const QRect& cell, QStringView grapheme, Style);
     qsizetype size() const { return mEntries.size(); }
+    // The display font as a cell in this style is drawn with, for text that
+    // does not go through the cache, so that both paths agree on its weight.
+    static QFont styled(QFont, Style);
 
     // Large enough for any real game's repertoire, small enough that a flood
     // of distinct CJK or emoji cannot grow it without bound.

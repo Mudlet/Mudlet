@@ -1029,23 +1029,20 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCac
     if (painter.pen().color() != effectiveFgColor) {
         painter.setPen(effectiveFgColor);
     }
+    TGlyphCache::Style style;
+    style.setFlag(TGlyphCache::Bold, isBold);
+    style.setFlag(TGlyphCache::Italic, isItalics);
     if (Q_UNLIKELY(useQtDecoration)) {
         // drawGlyphRun() draws these decorations differently, so they stay with drawText()
-        if ((painter.font().bold() != isBold) || (painter.font().italic() != isItalics) || (painter.font().overline() != useQtOverline) || (painter.font().strikeOut() != useQtStrikeOut)
-            || (painter.font().underline() != useQtUnderline)) {
-            QFont font = painter.font();
-            font.setBold(isBold);
-            font.setItalic(isItalics);
-            font.setOverline(useQtOverline);
-            font.setStrikeOut(useQtStrikeOut);
-            font.setUnderline(useQtUnderline);
+        QFont font = TGlyphCache::styled(this->font(), style);
+        font.setOverline(useQtOverline);
+        font.setStrikeOut(useQtStrikeOut);
+        font.setUnderline(useQtUnderline);
+        if (painter.font() != font) {
             painter.setFont(font);
         }
         painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme.toString());
     } else if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space) {
-        TGlyphCache::Style style;
-        style.setFlag(TGlyphCache::Bold, isBold);
-        style.setFlag(TGlyphCache::Italic, isItalics);
         glyphCache.drawCentered(painter, textRect, grapheme, style);
     }
 

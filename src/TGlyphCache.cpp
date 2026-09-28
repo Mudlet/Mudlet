@@ -95,6 +95,22 @@ const TGlyphCache::Entry& TGlyphCache::lookup(QStringView grapheme, const Style 
     return *mEntries.insert(Key{grapheme.toString(), style}, shape(grapheme, style));
 }
 
+QFont TGlyphCache::styled(QFont font, const Style style)
+{
+    // The weights drawText() ended up with once a line held both bold and
+    // plain text: bold is always Bold, and plain is the display font's own
+    // weight unless that counts as bold, as setBold(false) makes it Normal.
+    if (style.testFlag(Bold)) {
+        font.setBold(true);
+    } else if (font.bold()) {
+        font.setBold(false);
+    }
+    if (font.italic() != style.testFlag(Italic)) {
+        font.setItalic(style.testFlag(Italic));
+    }
+    return font;
+}
+
 TGlyphCache::Entry TGlyphCache::shape(QStringView grapheme, const Style style) const
 {
     QString text = grapheme.toString();
@@ -105,18 +121,7 @@ TGlyphCache::Entry TGlyphCache::shape(QStringView grapheme, const Style style) c
         }
     }
 
-    // The weights drawText() ended up with once a line held both bold and
-    // plain text: bold is always Bold, and plain is the display font's own
-    // weight unless that counts as bold, as setBold(false) makes it Normal.
-    QFont font = mFont;
-    if (style.testFlag(Bold)) {
-        font.setBold(true);
-    } else if (font.bold()) {
-        font.setBold(false);
-    }
-    if (font.italic() != style.testFlag(Italic)) {
-        font.setItalic(style.testFlag(Italic));
-    }
+    QFont font = styled(mFont, style);
     // Decorations belong to the drawText() path, even ones set on the display
     // font itself, which the glyph runs would otherwise carry.
     font.setUnderline(false);
