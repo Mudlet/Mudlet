@@ -177,10 +177,11 @@ describe("openUserWindow", function()
     local function closeFrame()
       feedTriggers(('<FRAME %s ACTION="close">'):format(frameName) .. "\n")
     end
+    local mxpWasForced = getConfig("specialForceMXPProcessorOn")
     setConfig("specialForceMXPProcessorOn", true)
     finally(function()
       closeFrame()
-      setConfig("specialForceMXPProcessorOn", false)
+      setConfig("specialForceMXPProcessorOn", mxpWasForced)
     end)
 
     feedTriggers(('<FRAME Name="%s" Align="right" Width="20%%" Height="30%%">'):format(frameName) .. "\n")
