@@ -115,6 +115,7 @@ private:
     const QString mViewlessHostname = "Test-ConsoleModelViewless";
     const QString mNawsHostname = "Test-ConsoleModelNaws";
     const QString mTimeStampHostname = "Test-ConsoleModelTimeStamps";
+    const QString mWrapHostname = "Test-ConsoleModelWrap";
     const QString mAutoLogHostname = "Test-ConsoleModelAutoLog";
     const QString mLocalhost = "localhost";
     QString mPort;
@@ -168,6 +169,7 @@ private slots:
         deleteProfileDirectory(mViewlessHostname);
         deleteProfileDirectory(mNawsHostname);
         deleteProfileDirectory(mTimeStampHostname);
+        deleteProfileDirectory(mWrapHostname);
         deleteProfileDirectory(mAutoLogHostname);
     }
 
@@ -1042,7 +1044,7 @@ private slots:
         const QString startAnnouncement = TMainConsole::tr("Logging has started. Log file is %1");
         const QString stopAnnouncement = TMainConsole::tr("Logging has been stopped. Log file is %1");
         // The sentinel is what makes logging resume at the next launch
-        // (Host::mLogStatus), so it has to appear and disappear with the log.
+        // (Host::startSavedLogging()), so it has to appear and disappear with the log.
         const QString sentinel = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
         QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging before one has been started.");
 
@@ -1493,6 +1495,7 @@ private slots:
         deleteProfileDirectory(mViewlessHostname);
         deleteProfileDirectory(mNawsHostname);
         deleteProfileDirectory(mTimeStampHostname);
+        deleteProfileDirectory(mWrapHostname);
         deleteProfileDirectory(mAutoLogHostname);
     }
 
