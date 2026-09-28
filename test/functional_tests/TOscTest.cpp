@@ -201,7 +201,7 @@ private:
 
   void feedFromServer(const QString &data) {
     std::string bytes{data.toStdString()};
-    mpHost->mpConsole->printOnDisplay(bytes, true);
+    mpHost->printOnDisplay(bytes, true);
   }
 
   // Holds the next line back for joining, as a game that wraps its own output
