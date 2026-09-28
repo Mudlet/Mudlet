@@ -26,9 +26,15 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QScopeGuard>
+
 #include <chrono>
+#include <cstdio>
 #include <memory>
 #include <tuple>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "GifTestHelper.h"
 #include "MudletApp.h"
@@ -105,6 +111,8 @@ private:
     // getSpellDic() falls back to: the seeded save is then the only place a
     // profile could have got this name from.
     const QString mProfileSpellDic = "mudlet_test_dictionary";
+    QString mStdOutCapturePath;
+    int mSavedStdOut = -1;
 
 private slots:
     void initTestCase()
@@ -483,6 +491,39 @@ private slots:
         runLua(host, qsl("send('ViewlessAnswer', true)\n"));
         QCOMPARE(buffer.line(promptLine), qsl("ViewlessPrompt>ViewlessAnswer"));
         QVERIFY2(!buffer.promptBuffer.at(promptLine), "The prompt flag was not cleared once the command was echoed onto it.");
+    }
+
+    // --mirror copies game text as it arrives whether or not a view shows it, in
+    // step with the client output around it: an unfinished print is written out
+    // ahead of the game line committed below it.
+    void test_incomingTextIsMirroredWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        destroyTheView(host);
+
+        const bool savedMirrorToStdOut = mudlet::smMirrorToStdOut;
+        auto restoreMirrorToStdOut = qScopeGuard([savedMirrorToStdOut]() {
+            mudlet::smMirrorToStdOut = savedMirrorToStdOut;
+        });
+        mudlet::smMirrorToStdOut = true;
+        startStdOutCapture();
+        host->printToMainConsole(qsl("ViewlessOpen"));
+        std::string gameLines{"ViewlessGame one\nViewlessGame two\n"};
+        host->printOnDisplay(gameLines, true);
+        std::string prompt{"ViewlessPrompt> \xff"};
+        host->printOnDisplay(prompt, true);
+        host->printSystemMessage(qsl("ViewlessAfter\n"));
+        mudlet::smMirrorToStdOut = false;
+        const QStringList captured = stopStdOutCapture();
+
+        const QString prefix = qsl("%1.main| ").arg(mHostname);
+        const QStringList mirrored = captured.filter(qsl("Viewless"));
+        QCOMPARE(mirrored.size(), 5);
+        QCOMPARE(mirrored.mid(0, 4), QStringList({prefix + qsl("ViewlessOpen"), prefix + qsl("ViewlessGame one"), prefix + qsl("ViewlessGame two"), prefix + qsl("ViewlessPrompt> ")}));
+        QVERIFY2(mirrored.at(4).startsWith(prefix) && mirrored.at(4).endsWith(qsl(": ViewlessAfter")), qPrintable(mirrored.at(4)));
     }
 
     // A colorizer trigger recolors its match by selecting a run of the line and
@@ -3230,6 +3271,42 @@ private:
                          5000),
                  "The main console view was not destroyed by closing the profile.");
         QVERIFY2(host->mpConsole.isNull(), "The host still points at a main console.");
+    }
+
+    // Utility function redirecting this process's standard output into a file
+    // until stopStdOutCapture(), so what is checked is the bytes --mirror wrote.
+    // Nothing may assert in between: a failure report would be captured too.
+    void startStdOutCapture()
+    {
+        mStdOutCapturePath = qsl("%1/captured-stdout.txt").arg(mConfigDir.path());
+        std::fflush(stdout);
+        mSavedStdOut = dup(fileno(stdout));
+        QVERIFY(mSavedStdOut != -1);
+        const int captureFd = open(mStdOutCapturePath.toLocal8Bit().constData(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+        QVERIFY(captureFd != -1);
+        QVERIFY(dup2(captureFd, fileno(stdout)) != -1);
+        close(captureFd);
+    }
+
+    // The captured lines, without the carriage return Windows' text mode adds
+    QStringList stopStdOutCapture()
+    {
+        std::fflush(stdout);
+        dup2(mSavedStdOut, fileno(stdout));
+        close(mSavedStdOut);
+        mSavedStdOut = -1;
+
+        QFile captured(mStdOutCapturePath);
+        if (!captured.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        QStringList lines = QString::fromUtf8(captured.readAll()).split(QChar::LineFeed, Qt::SkipEmptyParts);
+        for (QString& line : lines) {
+            if (line.endsWith(QChar::CarriageReturn)) {
+                line.chop(1);
+            }
+        }
+        return lines;
     }
 
     // Utility function opening an MXP tag the game never closes, which arms the

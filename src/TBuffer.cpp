@@ -2125,10 +2125,10 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
     if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
-        if (Q_LIKELY(mpModel && mpModel->mNotifier.hasLineMirror())) {
+        if (Q_LIKELY(mpModel)) {
             // Read back out of the buffer rather than from line, which every
             // path above has moved from by now
-            emit mpModel->mNotifier.lineCommitted(lineBuffer.back());
+            mpModel->mirrorLineToStdOut(lineBuffer.back());
         } else {
             static bool mirrorWithoutConsoleReported = false;
             if (!mirrorWithoutConsoleReported) {

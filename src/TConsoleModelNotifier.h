@@ -20,9 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QMetaMethod>
 #include <QObject>
-#include <QString>
 
 // What a console model's buffer tells the view showing it, and for the main
 // console's model, Host. The buffer only emits, so it needs no view check of
@@ -34,14 +32,9 @@ class TConsoleModelNotifier : public QObject
 public:
     using QObject::QObject;
 
-    bool hasLineMirror() const { return isSignalConnected(QMetaMethod::fromSignal(&TConsoleModelNotifier::lineCommitted)); }
-
 signals:
     // The count is of every line in the buffer, not just the new ones.
     void linesAppended(int lineCount);
-    // A game line as the game sent it, before a trigger can gag or rewrite it.
-    // Only emitted while --mirror is on.
-    void lineCommitted(const QString& line);
     // A line that may have been wrapped by the game is being held back for its
     // continuation, which may never come.
     void serverWrapLineHeld();
