@@ -20,6 +20,7 @@
 #include <QtTest/QtTest>
 
 #include <algorithm>
+#include <utility>
 
 #include "GroupedTest.h"
 #include "Host.h"
@@ -739,6 +740,44 @@ private slots:
 
         TDebug::removeHost(pOther, qsl("Renamed profile"));
         TDebug::setProfileObserver(previous);
+    }
+
+    // The GUI's observer is installed by mudlet's constructor, before init()
+    // makes the tab bar, and is never uninstalled, so it outlives mudlet too.
+    void test_aRenameBeforeTheTabBarExistsIsSafe()
+    {
+        StandInHost standIn;
+        TDebug::addHost(standIn.host(), qsl("Early profile"));
+        auto* tabBar = std::exchange(mudlet::self()->mpTabBar, nullptr);
+
+        TDebug::changeHostName(standIn.host(), qsl("Renamed early"));
+
+        mudlet::self()->mpTabBar = tabBar;
+        QCOMPARE(TDebug::getTag(standIn.host()).isNull(), false);
+    }
+
+    void test_aRenameAfterTheWindowIsGoneIsSafe()
+    {
+        StandInHost standIn;
+        TDebug::addHost(standIn.host(), qsl("Late profile"));
+        delete mudlet::self();
+
+        TDebug::changeHostName(standIn.host(), qsl("Renamed late"));
+
+        QCOMPARE(TDebug::getTag(standIn.host()).isNull(), false);
+    }
+
+    void test_aProfileAddedInDebugModeAfterTheWindowIsGoneIsSafe()
+    {
+        StandInHost standIn;
+        delete mudlet::self();
+        TDebug::smDebugMode = true;
+
+        TDebug::addHost(standIn.host(), qsl("Late profile"));
+        // the tab refresh is asked for once idle
+        QTest::qWait(50);
+
+        QCOMPARE(TDebug::getTag(standIn.host()).isNull(), false);
     }
 
     // The GUI's observer keeps the filter bar's profile menu and the profile
