@@ -4955,10 +4955,13 @@ describe("Window and label state", function()
 
     teardown(function()
       setConfig("showSentText", savedEchoMode)
-      setBackgroundColor(savedBg[1], savedBg[2], savedBg[3], savedBg[4])
-      -- unset when setup failed, and that failure is the one worth reading
+      -- these are unset when setup failed, and that failure is the one worth reading
+      if savedBg then
+        setBackgroundColor(savedBg[1], savedBg[2], savedBg[3], savedBg[4])
+      end
       if savedCommand then
         setCommandForegroundColor(unpack(savedCommand.foreground))
+        -- getTextFormat() gives no alpha, so this restores the command background opaque
         setCommandBackgroundColor(unpack(savedCommand.background))
       end
       resetFormat()
