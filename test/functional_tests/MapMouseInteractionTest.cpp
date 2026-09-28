@@ -2092,9 +2092,9 @@ private slots:
 
         rollWheelAt(viewCentre(), 100);
 
-        QCOMPARE(zoom(), T2DMap::csmMinXYZoom);
+        QCOMPARE(zoom(), TMap::scmMinXYZoom);
         rollWheelAt(viewCentre(), 1);
-        QCOMPARE(zoom(), T2DMap::csmMinXYZoom);
+        QCOMPARE(zoom(), TMap::scmMinXYZoom);
     }
 
     // "Move" from the context menu picks the selected rooms up without a

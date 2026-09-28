@@ -24,7 +24,6 @@
 
 #include "Host.h"
 #include "TArea.h"
-#include "T2DMap.h"
 #include "TMap.h"
 
 #include <QDataStream>
@@ -1440,7 +1439,7 @@ bool TRoomDB::set2DMapZoom(const int areaId, const qreal zoom) const
     if (!pA) {
         return false;
     }
-    if (zoom < T2DMap::csmMinXYZoom) {
+    if (zoom < TMap::scmMinXYZoom) {
         return false;
     }
     pA->set2DMapZoom(zoom);
@@ -1451,7 +1450,7 @@ qreal TRoomDB::get2DMapZoom(const int areaId) const
 {
     auto pA = areas.value(areaId);
     if (!pA) {
-        return T2DMap::csmDefaultXYZoom;
+        return TMap::scmDefaultXYZoom;
     }
     return pA->get2DMapZoom();
 }
