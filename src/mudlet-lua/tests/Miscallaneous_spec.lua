@@ -1882,7 +1882,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           os.remove(first)
           os.remove(second)
         end)
-        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
+        -- Two chunks, so that the second is still in the file when the refused
+        -- call comes, and would be lost if that call touched the file
+        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n") .. chunk(10, "mudlet-spec-first-replay-tail\r\n"))
         writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
         local mark = getLastLineNumber("main")
 
@@ -1892,6 +1894,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_nil(ok)
         assert.is_true(contains(err, "already be in progress"), tostring(err))
         assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
+        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-tail"), "refusing the second replay cut the first one short")
         assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
