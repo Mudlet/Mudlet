@@ -27,6 +27,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "T2DMap.h"
 #include "TMap.h"

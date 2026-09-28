@@ -29,6 +29,7 @@
 
 #include "Host.h"
 #include "TBuffer.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
