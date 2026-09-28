@@ -34,6 +34,7 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "MudletReplay.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TBuffer.h"
@@ -816,7 +817,7 @@ int TLuaInterpreter::loadReplay(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString errMsg;
-    if (mudlet::self()->loadReplay(&host, replayFileName, &errMsg)) {
+    if (MudletReplay::self()->load(&host, replayFileName, &errMsg)) {
         lua_pushboolean(L, true);
         return 1;
     }

@@ -2198,6 +2198,9 @@ void mudlet::init()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_packageExporter);
     connect(&mMedia, &MudletMedia::signal_muteSet, this, &mudlet::slot_muteSet);
+    connect(&mReplay, &MudletReplay::signal_replayStarted, this, &mudlet::slot_replayStarted);
+    connect(&mReplay, &MudletReplay::signal_replayOver, this, &mudlet::slot_replayOver);
+    connect(&mReplay, &MudletReplay::signal_replaySpeedChanged, this, &mudlet::slot_replaySpeedChanged);
     connect(mpActionMuteMedia.data(), &QAction::triggered, &mMedia, &MudletMedia::toggleAllMuted);
     connect(mpActionMuteAPI.data(), &QAction::triggered, &mMedia, &MudletMedia::setApiMuted);
     connect(mpActionMuteGame.data(), &QAction::triggered, &mMedia, &MudletMedia::setGameMuted);
@@ -6428,7 +6431,7 @@ void mudlet::slot_replay()
     settings.setValue("lastFileDialogLocation", lastDir);
 
     // No third argument causes error messages to be sent to pHost's main console:
-    loadReplay(pHost, fileName);
+    mReplay.load(pHost, fileName);
 }
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
@@ -7176,14 +7179,10 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     contextMenu.exec(mpTabBar->mapToGlobal(position));
 }
 
-// Called from the ctelnet instance for the host concerned:
-bool mudlet::replayStart(Host* pHost)
+void mudlet::slot_replayStarted()
 {
-    // Do not proceed if there is a problem with the main toolbar (it isn't there)
-    // OR if there is already a replay toolbar in existence (a replay is already
-    // in progress)...
     if (!mpMainToolBar || mpToolBarReplay) {
-        return false;
+        return;
     }
 
     // Lock the replay button and menu item down until the replay is over
@@ -7194,18 +7193,9 @@ bool mudlet::replayStart(Host* pHost)
     mpActionReplay->setToolTip(utils::richText(tr("Cannot load a replay as one is already in progress in this or another profile.")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 
-    mpReplayingHost = pHost;
-
     mpToolBarReplay = new QToolBar(this);
     mpToolBarReplay->setIconSize(QSize(8 * mToolbarIconSize, 8 * mToolbarIconSize));
     mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
-
-    mReplaySpeed = 1;
-    mReplayTime.setHMS(0, 0, 0, 1); // Since Qt5.0 adding anything to a zero
-                                    // (invalid) time leaves the time value
-                                    // STILL being regarded as invalid - so to
-                                    // get a valid time we have to use a very
-                                    // small, NON-zero time to initiase it...!
 
     mpLabelReplayTime = new QLabel(this);
     mpLabelReplayTime->setObjectName(qsl("replay_time_label"));
@@ -7245,10 +7235,10 @@ bool mudlet::replayStart(Host* pHost)
 
     connect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
     connect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
-    connect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
-    connect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
+    connect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mReplay, &MudletReplay::speedUp);
+    connect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mReplay, &MudletReplay::speedDown);
 
-    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplay.speed())));
 
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1s);
@@ -7264,22 +7254,21 @@ bool mudlet::replayStart(Host* pHost)
 
     mpToolBarReplay->show();
     mpTimerReplay->start();
-    return true;
 }
 
 void mudlet::updateReplayTimeLabel()
 {
-    // Callers can reach this after replayOver() has taken the toolbar down -
+    // Callers can reach this after slot_replayOver() has taken the toolbar down -
     // the replay tick in particular keeps firing:
     if (!mpLabelReplayTime) {
         return;
     }
 
     //: Elapsed time readout on the replay toolbar. %1 is the time itself
-    QString text = tr("Time: %1").arg(mReplayTime.toString(mTimeFormat));
+    QString text = tr("Time: %1").arg(mReplay.elapsed().toString(mTimeFormat));
     // A replay can be quiet for long stretches, so read "held" from the profile, not the button, to report
     // what playback is actually doing:
-    if (mpReplayingHost && mpReplayingHost->mTelnet.replayPaused()) {
+    if (Host* pHost = mReplay.host(); pHost && pHost->mTelnet.replayPaused()) {
         //: Replaces the elapsed-time readout on the replay toolbar while the replay is held. %1 is the already translated and formatted "Time: ..." text, so do not add a time prefix of your own
         text = tr("%1 (paused)").arg(text);
     }
@@ -7290,11 +7279,11 @@ void mudlet::updateReplayTimeLabel()
 void mudlet::slot_replayPauseToggled(const bool paused)
 {
     // Tell playback first, so that the readout below reports what it did:
-    if (mpReplayingHost) {
+    if (Host* pHost = mReplay.host()) {
         if (paused) {
-            mpReplayingHost->mTelnet.pauseReplay();
+            pHost->mTelnet.pauseReplay();
         } else {
-            mpReplayingHost->mTelnet.resumeReplay();
+            pHost->mTelnet.resumeReplay();
         }
     }
 
@@ -7314,26 +7303,22 @@ void mudlet::slot_replayPauseToggled(const bool paused)
 
 void mudlet::slot_replayStop()
 {
-    if (mpReplayingHost) {
-        // This ends up in replayOver(), which is what takes this toolbar down:
-        mpReplayingHost->mTelnet.stopReplay();
+    if (Host* pHost = mReplay.host()) {
+        // This ends up in slot_replayOver(), which is what takes this toolbar down:
+        pHost->mTelnet.stopReplay();
     }
 }
 
-void mudlet::replayOver()
+void mudlet::slot_replayOver()
 {
-    // Ownership of the pointer should not hinge on the widget teardown below
-    // running, so let it go first:
-    mpReplayingHost = nullptr;
-
     if ((!mpMainToolBar) || (!mpToolBarReplay)) {
         return;
     }
 
     disconnect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
     disconnect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
-    disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
-    disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
+    disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mReplay, &MudletReplay::speedUp);
+    disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mReplay, &MudletReplay::speedDown);
     mpToolBarReplay->removeAction(mpActionReplayPause);
     mpToolBarReplay->removeAction(mpActionReplayStop);
     mpToolBarReplay->removeAction(mpActionReplaySpeedUp);
@@ -7358,7 +7343,7 @@ void mudlet::replayOver()
     mpLabelReplayTime = nullptr;
     mpToolBarReplay->deleteLater();
     mpToolBarReplay = nullptr;
-    // replayStart() makes a new one each time, so without this every replay
+    // slot_replayStarted() makes a new one each time, so without this every replay
     // leaves another 1Hz timer running for the life of the application:
     mpTimerReplay->stop();
     mpTimerReplay->deleteLater();
@@ -7373,20 +7358,10 @@ void mudlet::replayOver()
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 }
 
-void mudlet::slot_replaySpeedUp()
+void mudlet::slot_replaySpeedChanged(const int speed)
 {
     if (mpLabelReplaySpeedDisplay) {
-        mReplaySpeed = qMin(1024, mReplaySpeed * 2);
-        mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
-        mpLabelReplaySpeedDisplay->show();
-    }
-}
-
-void mudlet::slot_replaySpeedDown()
-{
-    if (mpLabelReplaySpeedDisplay) {
-        mReplaySpeed = qMax(1, mReplaySpeed / 2);
-        mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+        mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(speed)));
         mpLabelReplaySpeedDisplay->show();
     }
 }
@@ -7673,44 +7648,6 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     updateMultiViewControls();
 
     return pHost;
-}
-
-// Can be called from lua sub-system OR from slot_replay(), the presence of a
-// non-NULLPTR pErrMsg indicates the former; also the replayFileName CAN be
-// relative (to the profiles ./log sub-directory where replays are stored) if
-// sourced from the lua sub-system.
-bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pErrMsg)
-{
-    // Do not proceed if there is a problem with the main toolbar (it isn't there)
-    // OR if there is already a replay toolbar in existence (a replay is already
-    // in progress)...
-    if (!mpMainToolBar || mpToolBarReplay) {
-        // This was in (bool) ctelnet::loadReplay(const QString&, QString*)
-        // but is needed here to prevent getting into there otherwise a lua call
-        // to start a replay would mess up (QFile) ctelnet::replayFile for a
-        // replay already in progress in the SAME profile.  Technically there
-        // could be a very small chance of a race condition if a lua call of
-        // loadReplay happens at the same time as a file was selected for a
-        // replay after the toolbar/menu command to do a reaply for the same
-        // profile - but the window for this is likely to be a fraction of a
-        // second...
-        if (pErrMsg) {
-            *pErrMsg = qsl("cannot perform replay, another one seems to already be in progress; try again when it has finished.");
-        } else {
-            pHost->postMessage(tr("[ WARN ]  - Cannot perform replay, another one may already be in progress,\n"
-                                  "try again when it has finished."));
-        }
-        return false;
-    }
-
-    QString absoluteReplayFileName;
-    if (QFileInfo(replayFileName).isRelative()) {
-        absoluteReplayFileName = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
-    } else {
-        absoluteReplayFileName = replayFileName;
-    }
-
-    return pHost->mTelnet.loadReplay(absoluteReplayFileName, pErrMsg);
 }
 
 void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)

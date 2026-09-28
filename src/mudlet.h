@@ -30,6 +30,7 @@
 #include "FontManager.h"
 #include "HostManager.h"
 #include "MudletMedia.h"
+#include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "SpeechRecognizerFactory.h"
 #include "utils.h"
@@ -48,7 +49,6 @@
 #include <QPointer>
 #include <QSystemTrayIcon>
 #include <QTextOption>
-#include <QTime>
 
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
@@ -239,7 +239,6 @@ public:
     bool isGoingDown() { return mIsGoingDown; }
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
-    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
@@ -263,8 +262,6 @@ public:
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
-    void replayOver();
-    bool replayStart(Host*);
     std::pair<bool, QString> resetProfileIcon(const QString&);
     bool saveWindowLayout();
     void scanForMudletTranslations(const QString&);
@@ -399,12 +396,10 @@ public:
     QToolBar* mpMainToolBar = nullptr;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
-    int mReplaySpeed = 1;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our
     // icons to override some of them:
-    QTime mReplayTime;
     bool mShowIconsOnDialogs = true;
     // This is the state for the tri-state control on the preferences and
     // means:
@@ -484,8 +479,6 @@ public slots:
     void slot_activateDetachedWindowProfile();
     void slot_replay();
     void slot_replayPauseToggled(const bool);
-    void slot_replaySpeedUp();
-    void slot_replaySpeedDown();
     void slot_replayStop();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
     void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
@@ -573,6 +566,9 @@ private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
     void slot_compactInputLine(const bool);
     void slot_muteSet(bool apiNotGame, bool muted);
+    void slot_replayOver();
+    void slot_replaySpeedChanged(int speed);
+    void slot_replayStarted();
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
 #if defined(INCLUDE_UPDATER)
@@ -634,6 +630,8 @@ private:
     // Before mHostManager, so it is destroyed after the profiles that reach it
     MudletMedia mMedia;
     HostManager mHostManager;
+    // After mHostManager, so it is gone before the profiles that reach it are
+    MudletReplay mReplay;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
@@ -775,9 +773,6 @@ private:
     QPointer<QShortcut> mpShortcutPreviousProfile;
     std::array<QPointer<QShortcut>, 9> mpShortcutsSwitchToProfile;
     QPointer<QTimer> mpTimerReplay;
-    // The profile playing the replay, which need not be the one in front, so the toolbar's buttons
-    // reach it rather than whichever is active.
-    QPointer<Host> mpReplayingHost;
     QPointer<QTimer> mpBlinkTimer;
     QElapsedTimer mBlinkElapsedTimer;
     qreal mBlinkTimeMs = 0.0;
