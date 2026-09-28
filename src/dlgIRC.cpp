@@ -90,8 +90,13 @@ dlgIRC::~dlgIRC()
 {
     writeQSettings();
 
-    // the session ends with its window
-    delete mpClient.data();
+    // The session ends with its window, which must not hear it disconnect or go
+    if (mpClient) {
+        ircBrowser->setDocument(nullptr);
+        mpClient->connection()->disconnect(this);
+        mpClient->disconnect(this);
+        delete mpClient.data();
+    }
 
     if (mpHost && mpHost->mpDlgIRC) {
         mpHost->mpDlgIRC = nullptr;
