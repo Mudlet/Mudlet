@@ -196,6 +196,10 @@ struct TConsoleModel
     // Last pressed toolbar button's state for getButtonState(): 1 = up, 2 = down (0 invalid); a plain button
     // resets it to 1.
     int mButtonState = 1;
+    // Whether the view draws each line's timestamp in a gutter to its left. NAWS
+    // leaves the gutter out of the width it reports, so this has to be readable
+    // with no view.
+    bool mShowTimeStamps = false;
 
     // The width and indents wrapLine() rewraps a line to. The buffer keeps its
     // own copy, which wraps text as it arrives, so always set them through

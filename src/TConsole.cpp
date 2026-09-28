@@ -240,7 +240,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // which has its own title and icon set.
         setWindowTitle(tr("Debug Console"));
         mWrapAt = 50;
-        mShowTimeStamps = true;
+        mpModel->mShowTimeStamps = true;
     } else if (mType == MainConsole) {
         mBorders = mpHost->borders();
         mCommandBgColor = mpHost->mCommandBgColor;
@@ -3039,18 +3039,18 @@ void TConsole::raiseMudletResizeEvent()
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mudletEvent.mArgumentList.append(QString::number(characterDimensions.height()));
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentList.append(QString::number(mShowTimeStamps ? TBuffer::smTimeStampFormat.size() : 0));
+    mudletEvent.mArgumentList.append(QString::number(showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0));
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(mudletEvent);
 }
 
 void TConsole::slot_toggleTimeStamps(const bool state)
 {
-    if (mShowTimeStamps == state) {
+    if (mpModel->mShowTimeStamps == state) {
         return;
     }
 
-    mShowTimeStamps = state;
+    mpModel->mShowTimeStamps = state;
     if (mType == TConsole::MainConsole) {
         if (timeStampButton->isChecked() != state) {
             // using this will NOT cause the QAbstractButton::checked signal

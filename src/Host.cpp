@@ -2545,7 +2545,7 @@ void Host::finalizeMainConsole()
 
 bool Host::mainConsoleShowsTimeStamps() const
 {
-    return mpConsole->showTimeStamps();
+    return mpMainConsoleModel->mShowTimeStamps;
 }
 
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
