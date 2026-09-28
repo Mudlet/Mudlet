@@ -49,7 +49,6 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
-#include "TTextEdit.h"
 #include "TTimer.h"
 #include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
@@ -1116,7 +1115,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.echoWindowLink(*pModel, windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    host.echoWindowLink(*pModel, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1182,7 +1181,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     }
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.echoWindowLink(*pModel, windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    host.echoWindowLink(*pModel, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2124,7 +2123,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.insertWindowLink(*pModel, windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    host.insertWindowLink(*pModel, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2180,7 +2179,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     }
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.insertWindowLink(*pModel, windowName, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    host.insertWindowLink(*pModel, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3786,7 +3785,7 @@ int TLuaInterpreter::setLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
     luaReferences << luaReference;
 
-    host.setWindowLink(*pModel, consoleName, commandList, hintList, luaReferences);
+    host.setWindowLink(*pModel, commandList, hintList, luaReferences);
 
     lua_pushboolean(L, true);
     return 1;
@@ -3923,7 +3922,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return 2;
     }
 
-    host.setWindowLink(*pModel, consoleName, commandList, hintList, luaReferences);
+    host.setWindowLink(*pModel, commandList, hintList, luaReferences);
 
     lua_pushboolean(L, true);
     return 1;

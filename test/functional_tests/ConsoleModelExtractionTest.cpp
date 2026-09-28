@@ -1692,7 +1692,10 @@ noViewReport = table.concat(noViewProblems, '; ')
         runLua(host, qsl(R"LUA(
 for index = 1, math.huge do
     local name, value = debug.getupvalue(replace, index)
-    if not name or name == 'oldreplace' then
+    if not name then
+        error('the function replace() wraps was not found')
+    end
+    if name == 'oldreplace' then
         noViewReplace = value
         break
     end
@@ -1725,6 +1728,50 @@ end
         const int echoId = model.buffer.getLinkIndexAt(echoLine, 0);
         QVERIFY2(echoId > 0, "echoLink() put no link on the text it echoed.");
         QVERIFY2(model.buffer.getLinkIndexAt(echoLine, 7) > 0 && model.buffer.getLinkIndexAt(echoLine, 7) != echoId, "echoPopup() put no link of its own on the text it echoed.");
+    }
+
+    // The cursor and line functions work on the console's model, so on the
+    // main console they answer for real with no view.
+    void test_cursorAndLineFunctionsWorkWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const int first = appendModelLine(model->buffer, qsl("NoViewCursor first"));
+        appendModelLine(model->buffer, qsl("NoViewCursor second"));
+        appendModelLine(model->buffer, qsl("NoViewCursor third"));
+
+        runLua(host,
+               qsl(R"LUA(
+local first = %1
+local results = {}
+local function add(value) results[#results + 1] = tostring(value) end
+add(moveCursor(4, first + 1))
+add(getLineNumber())
+add(getColumnNumber('main'))
+add(getCurrentLine())
+add(moveCursor('main', 0, first + 10))
+add(getLineNumber(''))
+add(getLastLineNumber())
+add(getLineCount())
+add(select('#', deleteLine()))
+add(getCurrentLine('main'))
+add(getLastLineNumber())
+add(select('#', moveCursorEnd()))
+add(getLineNumber())
+noViewCursor = table.concat(results, '|')
+)LUA")
+                       .arg(first));
+
+        const QString expected = qsl("true|%1|4|NoViewCursor second|false|%1|%2|%2|0|NoViewCursor third|%3|0|%3").arg(first + 1).arg(first + 3).arg(first + 2);
+        QCOMPARE(luaGlobalString(host, "noViewCursor"), expected);
+        QCOMPARE(model->mUserCursor, QPoint(0, first + 2));
+        QCOMPARE(model->buffer.line(first + 1), qsl("NoViewCursor third"));
     }
 
     // The main console's wrap width and indents are also the profile's, which
