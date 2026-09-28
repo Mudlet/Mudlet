@@ -246,6 +246,8 @@ private:
                 titles << buffer->title();
             }
         }
+        // The list is in no promised order
+        titles.sort();
         return titles;
     }
 
@@ -496,7 +498,9 @@ private slots:
                                      "alice>%2:psst")
                                          .arg(mChannel, mNick);
         QVERIFY2(waitForEvents(expected), qPrintable(events()));
-        QCOMPARE(bufferTitles(), QStringList({mServerHost, mChannel, qsl("alice")}));
+        QStringList expectedTitles{mServerHost, mChannel, qsl("alice")};
+        expectedTitles.sort();
+        QCOMPARE(bufferTitles(), expectedTitles);
 
         QVERIFY(showBuffer(mChannel));
         QVERIFY2(shownText().contains(qsl("<alice> hello there")), qPrintable(shownText()));
@@ -613,6 +617,7 @@ private slots:
     void test_aSessionWithoutAWindowDoesNotConnect()
     {
         QVERIFY(storeSettings(mNick, mChannel));
+        QVERIFY2(!mpHost->mpIrcClient, "SETUP: an earlier case left a session, which would be handed back rather than made");
         const int connectionsBefore = mpIrcServer->connectionCount();
 
         QPointer<TIrcClient> client = mpHost->getOrCreateIrcClient();
