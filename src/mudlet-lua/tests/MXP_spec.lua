@@ -45,6 +45,20 @@ describe("Tests MXP handling", function()
       assert.is_not_nil(mxp.ritem.sword)
       assert.is_nil(mxp.ritem.Sword)
     end)
+
+    -- The events wait until the packet's text has been through the triggers,
+    -- so a handler sees what the triggers did with the line.
+    it("should raise the element's event after the line's triggers have run", function()
+      local order = {}
+      local triggerId = tempExactMatchTrigger("a snarling kobold", function() order[#order + 1] = "trigger" end)
+      local handlerId = registerAnonymousEventHandler("mxp.rkobold", function() order[#order + 1] = "event" end)
+      feedTriggers([[<!ELEMENT RKobold FLAG="RoomKobold">]] .. "\n")
+      feedTriggers([[<RKobold>a snarling kobold</RKobold>]] .. "\n")
+      killTrigger(triggerId)
+      killAnonymousEventHandler(handlerId)
+
+      assert.are.same({"trigger", "event"}, order)
+    end)
   end)
 
   describe("Tests the text an MXP line is displayed as", function()

@@ -5518,6 +5518,26 @@ describe("Trigger processing", function()
         end)
     end)
 
+    -- A trigger's echo joins the line being processed instead of starting new
+    -- lines, and still does once the trigger has fed text of its own.
+    describe("echo from a trigger", function()
+        it("joins the trigger's line after a nested feedTriggers", function()
+            local addedLines
+            local innerId = tempExactMatchTrigger("nested echo inner", function() end)
+            local outerId = tempExactMatchTrigger("nested echo outer", function()
+                feedTriggers("nested echo inner\n")
+                local before = getLineCount()
+                echo(" joined\nstill joined")
+                addedLines = getLineCount() - before
+            end)
+            feedTriggers("nested echo outer\n")
+            killTrigger(innerId)
+            killTrigger(outerId)
+
+            assert.are.equal(0, addedLines)
+        end)
+    end)
+
     -- A line is held up against copies of what the top-level triggers look for,
     -- taken before any script has run, and a trigger the copy rules out is never
     -- asked. Every case here changes a trigger after its copy was taken. A copy
