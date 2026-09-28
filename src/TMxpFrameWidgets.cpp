@@ -40,6 +40,7 @@ void TMxpFrameWidgets::createInternalFrame(const QString& name, const QString& t
     const int frameWidth = geometry.width();
     const int frameHeight = geometry.height();
     const int tabBarHeight = showHeader ? 30 : 0; // Tab widget overhead including margins
+    destroyStaleFrame(name);
 
     // Create the container widget for the frame - use WA_DontShowOnScreen to prevent any rendering
     auto* containerWidget = new QFrame(mpMainConsole->mpMainFrame);
@@ -162,6 +163,7 @@ void TMxpFrameWidgets::createInternalFrame(const QString& name, const QString& t
 
 bool TMxpFrameWidgets::createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling)
 {
+    destroyStaleFrame(name);
     // Create standalone window with mini console
     auto* console = mpMainConsole->createMiniConsole(qsl("main"), name, 0, 0, size.width(), size.height());
 
@@ -198,6 +200,7 @@ void TMxpFrameWidgets::createTabFrame(const QString& name, const QString& title,
     if (!parentTabWidget) {
         return;
     }
+    destroyStaleFrame(name);
 
     // Create a page widget to hold the console (avoids flash on mpMainFrame)
     auto* tabPage = new QWidget();
@@ -256,6 +259,15 @@ void TMxpFrameWidgets::destroyFrame(const QString& name)
 
     const Widgets widgets = mFrames.take(name);
     delete widgets.widget.data();
+}
+
+// TMxpFrameManager never rebuilds a live frame, but a second build of a name
+// would otherwise orphan the first one's widgets:
+void TMxpFrameWidgets::destroyStaleFrame(const QString& name)
+{
+    if (mFrames.contains(name)) {
+        destroyFrame(name);
+    }
 }
 
 void TMxpFrameWidgets::showFrame(const QString& name)

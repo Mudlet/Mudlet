@@ -75,6 +75,8 @@ public:
     QTabWidget* frameTabs(const QString& name) const;
 
 private:
+    void destroyStaleFrame(const QString& name);
+
     struct Widgets
     {
         // The container: a QFrame, a tab page, or the console itself for an

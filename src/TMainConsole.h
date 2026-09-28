@@ -61,7 +61,8 @@ public:
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     TConsole* createSubConsole(const QString& name, QWidget* parent);
-    TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
+    TMxpFrameWidgets& mxpFrameWidgets() { return *mpMxpFrameWidgets; }
+    const TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
     bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);

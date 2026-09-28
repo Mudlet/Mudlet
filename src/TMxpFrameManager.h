@@ -131,7 +131,8 @@ private:
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
     void relayoutFrames();
     // Null while the profile has no main console
-    TMxpFrameWidgets* frameWidgets() const;
+    TMxpFrameWidgets* frameWidgets();
+    const TMxpFrameWidgets* frameWidgets() const;
 
     // Validation
     bool validateFrameName(const QString& name) const;

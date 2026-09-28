@@ -594,6 +594,23 @@ private slots:
         QCOMPARE(first->width(), 200);
     }
 
+    // Building a name again replaces the widgets it had rather than losing
+    // track of them.
+    void test_rebuildingAFramesWidgetsReplacesTheOldOnes()
+    {
+        TMxpFrameWidgets& widgets = mpHost->mpConsole->mxpFrameWidgets();
+        auto teardown = qScopeGuard([&widgets]() {
+            widgets.destroyFrame(qsl("twice"));
+        });
+        widgets.createInternalFrame(qsl("twice"), qsl("Twice"), QRect(0, 0, 200, 100), false, true);
+        QPointer<QWidget> first = frameWidget(qsl("twice"));
+        QVERIFY(first);
+
+        widgets.createInternalFrame(qsl("twice"), qsl("Twice"), QRect(0, 0, 200, 100), false, true);
+        QVERIFY(frameWidget(qsl("twice")));
+        QVERIFY2(first.isNull(), "Building the frame again left the first container orphaned.");
+    }
+
     void test_focusActionRaisesAnExistingFrameOnly()
     {
         QVERIFY(createFrame(qsl("first"), qsl("right"), qsl("200px"), qsl("100%")));

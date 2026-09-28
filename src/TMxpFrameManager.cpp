@@ -767,10 +767,19 @@ void TMxpFrameManager::relayoutFrames()
     mpHost->setMxpBorders(mMxpBorders);
 }
 
-TMxpFrameWidgets* TMxpFrameManager::frameWidgets() const
+TMxpFrameWidgets* TMxpFrameManager::frameWidgets()
 {
     if (!mpHost || !mpHost->mpConsole) {
         return nullptr;
     }
     return &mpHost->mpConsole->mxpFrameWidgets();
+}
+
+const TMxpFrameWidgets* TMxpFrameManager::frameWidgets() const
+{
+    if (!mpHost || !mpHost->mpConsole) {
+        return nullptr;
+    }
+    const TMainConsole* console = mpHost->mpConsole;
+    return &console->mxpFrameWidgets();
 }
