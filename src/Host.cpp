@@ -595,6 +595,7 @@ void Host::closeChildren()
         mpEditorDialog->close();
         // close() only posts the deletion; disconnect so no emit reaches the released editor:
         disconnect(this, nullptr, mpEditorDialog, nullptr);
+        disconnect(mpMap.data(), nullptr, mpEditorDialog, nullptr);
         mpEditorDialog = nullptr;
     }
 

@@ -98,6 +98,9 @@ signals:
     void signal_mapRepaintRequested();
     void signal_mapperSettingChanged(TMap::MapperSetting setting);
 
+    // The trigger editor prints these in its error console.
+    void signal_mapErrorLogged(const QString& text);
+
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
     // the frontend (TMainConsole) to render as a QProgressDialog. Cancellation
@@ -285,6 +288,7 @@ public:
 
 
     std::unique_ptr<TRoomDB> mpRoomDB;
+    // Made by the GUI when it gives the profile a console, so null without one.
     // Non-owning: Qt parent-child system (TMap as parent) handles lifetime.
     TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
@@ -292,6 +296,7 @@ public:
     QString mProfileName;
 
     TMapViewManager* getViewManager() { return mpViewManager; }
+    void setViewManager(TMapViewManager* pViewManager) { mpViewManager = pViewManager; }
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name

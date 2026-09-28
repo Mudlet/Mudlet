@@ -33,6 +33,7 @@
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEasyButtonBar.h"
+#include "TMap.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
@@ -1412,6 +1413,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpHost, &Host::signal_editorSearchOptionsChanged, this, &dlgTriggerEditor::setSearchOptions);
     connect(mpHost, &Host::signal_editorShowBidiChanged, this, &dlgTriggerEditor::setEditorShowBidi);
     connect(mpHost, &Host::signal_showIdsInEditorChanged, this, &dlgTriggerEditor::showIDLabels);
+    connect(mpHost->mpMap.data(), &TMap::signal_mapErrorLogged, this, [this](const QString& text) {
+        mpErrorConsole->print(text, QColor(255, 128, 0), QColor(Qt::black));
+    });
     // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
     mpHost->editorThemeChanged();
 

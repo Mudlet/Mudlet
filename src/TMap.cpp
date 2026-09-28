@@ -26,14 +26,11 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TArea.h"
-#include "TConsole.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
-#include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
 
@@ -152,7 +149,6 @@ TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
 , mUnnamedAreaName(tr("Unnamed Area"))
 , mpRoomDB(std::make_unique<TRoomDB>(this))
-, mpViewManager(new TMapViewManager(pH, this))
 , mpHost(pH)
 , mProfileName(profileName)
 {
@@ -218,11 +214,9 @@ void TMap::mapClear()
 // The supplied message should contain a localised message and no "WARNING:" or other prefixes:
 void TMap::logError(const QString& msg)
 {
-    if (mpHost->mpEditorDialog) {
-        /*: Used to print a map error in the Errors console in the Editor, %1 is the
+    /*: Used to print a map error in the Errors console in the Editor, %1 is the
  message text and a line-feed is also appended.*/
-        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
-    }
+    emit signal_mapErrorLogged(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed));
 }
 
 // Not used:
