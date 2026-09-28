@@ -4318,7 +4318,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // asynchronous, so start hidden and reveal on a hit; the QPointer guards against the dialog closing
     // before the store answers. credentialExists() collapses a read failure (locked/denied/timed-out
     // keychain) to "nothing stored", so the button deliberately stays hidden on any read failure - the
-    // only cost is not offering to forget an entry that could not be read.
+    // only cost is not offering to forget an entry that could not be read. Every store, because the
+    // forget clears every store: a token saved to the keychain before the player chose to keep
+    // passwords in the profile is still there, and offering nothing would leave it for good.
     pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
     // Once per profile, not per refresh: reading the keychain can prompt the user on some platforms
     if (mSignInTokenCheckedFor != pHost->getName()) {
@@ -4327,27 +4329,35 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         QPointer<dlgProfilePreferences> safeDialog = this;
         QPointer<CredentialManager> credentialManager = new CredentialManager();
         const QString profileName = pHost->getName();
-        credentialManager->credentialExists(profileName, qsl("reconnect"), [safeDialog, credentialManager, profileName](bool exists) {
-            if (credentialManager) {
-                credentialManager->deleteLater();
-            }
-            if (!safeDialog) {
-                return;
-            }
-            if (exists) {
-                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
-                return;
-            }
-            QPointer<CredentialManager> tokenChecker = new CredentialManager();
-            tokenChecker->credentialExists(profileName, qsl("reconnect-token"), [safeDialog, tokenChecker](bool tokenExists) {
-                if (tokenChecker) {
-                    tokenChecker->deleteLater();
-                }
-                if (safeDialog && tokenExists) {
-                    safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
-                }
-            });
-        });
+        credentialManager->credentialExists(
+                profileName,
+                qsl("reconnect"),
+                [safeDialog, credentialManager, profileName](bool exists) {
+                    if (credentialManager) {
+                        credentialManager->deleteLater();
+                    }
+                    if (!safeDialog) {
+                        return;
+                    }
+                    if (exists) {
+                        safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                        return;
+                    }
+                    QPointer<CredentialManager> tokenChecker = new CredentialManager();
+                    tokenChecker->credentialExists(
+                            profileName,
+                            qsl("reconnect-token"),
+                            [safeDialog, tokenChecker](bool tokenExists) {
+                                if (tokenChecker) {
+                                    tokenChecker->deleteLater();
+                                }
+                                if (safeDialog && tokenExists) {
+                                    safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                                }
+                            },
+                            CredentialManager::StoreScope::EveryStore);
+                },
+                CredentialManager::StoreScope::EveryStore);
     }
 
     groupBox_proxy->setEnabled(true);
