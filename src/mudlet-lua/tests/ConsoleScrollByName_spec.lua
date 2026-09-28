@@ -111,7 +111,7 @@ describe("Tests that the scroll bar and scrolling functions find their console b
       -- opens with no height and never scrolls, so this one is floated at a
       -- fixed size, and only closed so it cannot do the same to later specs
       {"user window", function(name)
-        local opened = openUserWindow(name, false)
+        local opened = openUserWindow(name, false, false)
         resizeWindow(name, 300, 400)
         return opened
       end, closeUserWindow},

@@ -1455,16 +1455,6 @@ std::optional<int> TMainConsole::getWindowRowCount(const QString& name)
     return {pC->mUpperPane->getRowCount()};
 }
 
-bool TMainConsole::deleteWindowCurrentLine(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->skipLine();
-    return true;
-}
-
 std::optional<QFont> TMainConsole::getWindowFont(const QString& name)
 {
     auto pC = consoleNamed(name);
@@ -1474,10 +1464,7 @@ std::optional<QFont> TMainConsole::getWindowFont(const QString& name)
     if (pC == this) {
         return {mpHost->getDisplayFont()};
     }
-    if (pC->mUpperPane) {
-        return {pC->mUpperPane->font()};
-    }
-    return {pC->font()};
+    return {pC->mUpperPane->font()};
 }
 
 std::optional<int> TMainConsole::getWindowFontSize(const QString& name)
