@@ -3225,7 +3225,10 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
+    void deleteProfileDirectory(const QString& profileName)
+    {
+        TestProfile::removeProfileDirectory(profileName);
+    }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()
