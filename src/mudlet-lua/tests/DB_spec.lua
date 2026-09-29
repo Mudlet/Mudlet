@@ -1,5 +1,21 @@
 describe("Tests DB.lua functions", function()
 
+  describe("Tests db:safe_name()", function()
+    it("keeps digits and strips non-alphanumeric characters", function()
+      assert.are.equal("log1", db:safe_name("log1"))
+      assert.are.equal("log2", db:safe_name("log2"))
+      assert.are.equal("db2024", db:safe_name("db2024"))
+      assert.are.equal("mydatabase", db:safe_name("my_database"))
+      assert.are.equal("a1b2", db:safe_name("A1B2"))
+      assert.are.equal("questlog7", db:safe_name("quest_log_7"))
+      assert.are.equal("etcpasswd", db:safe_name("../../../../etc/passwd"))
+    end)
+
+    it("does not collapse names that differ only by digits", function()
+      assert.are_not.equal(db:safe_name("stats1"), db:safe_name("stats2"))
+    end)
+  end)
+
   describe("Tests that DB creation and deletion works", function()
     describe("Test the functionality of db:create", function()
       it("Should create a db", function()
