@@ -382,6 +382,30 @@ void TTabBar::removeTab(const QString& tabName)
     }
 }
 
+void TTabBar::markActivity(const QString& tabName, const bool isLowerPriorityChange)
+{
+    if (count() < 2) {
+        return;
+    }
+    if (!isLowerPriorityChange) {
+        setTabBold(tabName, true);
+        setTabItalic(tabName, false);
+        update();
+    } else if (!tabBold(tabName)) {
+        // A lower priority, local change must not replace the indication of a
+        // higher priority remote one:
+        setTabItalic(tabName, true);
+        update();
+    }
+}
+
+void TTabBar::clearActivity(const int index)
+{
+    setTabBold(index, false);
+    setTabItalic(index, false);
+    setTabUnderline(index, false);
+}
+
 QStringList TTabBar::tabNames() const
 {
     QStringList results;
