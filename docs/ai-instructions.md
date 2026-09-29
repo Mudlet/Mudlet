@@ -117,7 +117,7 @@ Two harnesses: Lua specs in `src/mudlet-lua/tests/*_spec.lua` (busted, run in th
 
 Prefer a spec. A functional test statically links `mudlet_core`, so it costs ~250MB and a link step in every build tree unless it joins a grouped per-subsystem binary, where it costs a compile instead; either way each ctest case runs in its own process. Some subsystems have such a group today - the `*_GROUP_TEST_SOURCES` lists in `test/functional_tests/CMakeLists.txt`, which document how to join one. A spec is ~30KB and needs no rebuild at all because `mudlet-lua` loads from disk. Specs are also shared with Mudlet Web, so writing one grows that platform's coverage for free, which a functional test never does. Write a functional test when a spec genuinely cannot reach the behaviour: private C++ state, a path with no Lua entry point, or something that happens before Lua exists. Sanitiser coverage is not one of those reasons, as the spec run exercises the same instrumented binary.
 
-Both harnesses fail silently rather than red when the setup is wrong, so confirm a new test fails without the fix before trusting it.
+Both harnesses fail silently rather than red when the setup is wrong, so confirm a new test fails without the fix before trusting it. A test that bites says nothing about behaviour the change didn't mean to touch, so also run the same probes on the merge base and the branch, and check that every difference is intended.
 
 ## Demo videos
 
