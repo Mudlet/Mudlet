@@ -7119,6 +7119,11 @@ bool TBuffer::processEncodedSequence(const std::string& data, const bool fromSer
 bool TBuffer::processLegacySequence(const std::string& data, const bool fromServer, const size_t length, size_t& position, bool& nonBmp)
 {
     const auto lead = static_cast<quint8>(data[position]);
+    // Preserve codec-specific mappings for C0 and DEL bytes.
+    if (lead >= 0x20 && lead < 0x7f) {
+        mMudLine.append(QChar::fromLatin1(lead));
+        return true;
+    }
     size_t count = 1;
     if (mDecoder == Decoder::ShiftJis) {
         if ((lead >= 0x81 && lead <= 0x9f) || (lead >= 0xe0 && lead <= 0xfc)) {

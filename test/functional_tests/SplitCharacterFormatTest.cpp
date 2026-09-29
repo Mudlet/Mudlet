@@ -23,6 +23,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "TEncodingHelper.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
@@ -156,6 +157,31 @@ private slots:
             QCOMPARE(format.rightHalfFormat().background(), QColor(64, 0, 0));
             QVERIFY(!chars.back().hasSplitFormat());
             QCOMPARE(chars.back().foreground(), QColor(0, 255, 0));
+        }
+    }
+
+    void japaneseAsciiKeepsCodecMappings_data()
+    {
+        QTest::addColumn<QByteArray>("encoding");
+        QTest::newRow("shift-jis") << QByteArray("SHIFT_JIS");
+        QTest::newRow("euc-jp") << QByteArray("EUC-JP");
+    }
+
+    void japaneseAsciiKeepsCodecMappings()
+    {
+        QFETCH(QByteArray, encoding);
+        QVERIFY(mpHost->mTelnet.setEncoding(encoding, false).first);
+        for (int value = 0x1a; value < 0x80; ++value) {
+            if (value < 0x20 && value != 0x1a && value != 0x1c) {
+                continue;
+            }
+            const QByteArray byte(1, static_cast<char>(value));
+            feed("ascii:");
+            feed(byte);
+            feed(":end\n");
+            const QString actual = buffer().line(lastTextLine());
+            const QString expected = qsl("ascii:") + TEncodingHelper::decode(byte, encoding) + qsl(":end");
+            QCOMPARE(actual, expected);
         }
     }
 
