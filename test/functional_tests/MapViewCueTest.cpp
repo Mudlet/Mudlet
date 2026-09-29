@@ -133,6 +133,15 @@ private:
         mPaintCount = 0;
     }
 
+    // Delivers the repaints already asked for and nothing else: no timer or
+    // later event gets to run, so a paint counted here was requested by the time
+    // this is called, not by something that happened to repaint afterwards.
+    bool paintRequested()
+    {
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::UpdateRequest);
+        return mPaintCount > 0;
+    }
+
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
@@ -266,23 +275,19 @@ private slots:
 
     void test_aMoveFlagsAndRepaintsTheDrawingMapper()
     {
+        // The move cue also brings the empty map overlay up to date, which can
+        // repaint the map by itself; settle that first so it cannot stand in.
+        mpMapper->updateEmptyStateOverlay();
         settlePaints();
         mp2dMap->mNewMoveAction = false;
 
         map()->updateArea(-1);
+        // updateArea() cues the mapper from a zero timer, which is a call posted
+        // to the map: deliver just that, so no unrelated repaint can land.
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
 
-        QVERIFY2(QTest::qWaitFor(
-                         [this]() {
-                             return mp2dMap->mNewMoveAction;
-                         },
-                         2000),
-                 "the mapper was not told a move happened");
-        QVERIFY2(QTest::qWaitFor(
-                         [this]() {
-                             return mPaintCount > 0;
-                         },
-                         2000),
-                 "the mapper was not repainted after a move");
+        QVERIFY2(mp2dMap->mNewMoveAction, "the mapper was not told a move happened");
+        QVERIFY2(paintRequested(), "the mapper was not repainted after a move");
     }
 
     void test_addingAndDeletingALabelRepaintsTheDrawingMapper()
@@ -293,21 +298,11 @@ private slots:
 
         const int labelId = map()->createMapLabel(areaId, qsl("hello"), 0, 0, 0, Qt::white, Qt::black, true, true, true);
         QVERIFY(labelId >= 0);
-        QVERIFY2(QTest::qWaitFor(
-                         [this]() {
-                             return mPaintCount > 0;
-                         },
-                         2000),
-                 "the mapper was not repainted for a new label");
+        QVERIFY2(paintRequested(), "the mapper was not repainted for a new label");
 
         settlePaints();
         map()->deleteMapLabel(areaId, labelId);
-        QVERIFY2(QTest::qWaitFor(
-                         [this]() {
-                             return mPaintCount > 0;
-                         },
-                         2000),
-                 "the mapper was not repainted for a deleted label");
+        QVERIFY2(paintRequested(), "the mapper was not repainted for a deleted label");
     }
 
     void test_anXmlMapImportRelistsAndShowsTheMapper()
