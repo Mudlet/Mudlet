@@ -26,6 +26,7 @@
 
 #include <pugixml.hpp>
 
+#include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
@@ -2079,6 +2080,13 @@ void dlgConnectionProfiles::slot_copyProfile()
         if (!mProfileList.contains(profile_name)) {
             mProfileList << profile_name;
         }
+
+        // The copy takes every file in the profile directory, and the saved sign-in's record is one
+        // of them now that it lives there. Its token is not: that is filed under the profile it was
+        // saved for, so the copy would carry an account and a provider with nothing behind them and
+        // ask the game to sign that account in again. A copy starts with no saved sign-in, which is
+        // what it had before the record moved out of the credential store.
+        QFile::remove(GMCPAuthenticator::savedSignInRecordPath(profile_name));
 
         // The dialog stays usable while the copy runs, and switching the games
         // tab calls fillout_form(), which destroys every item - including the
