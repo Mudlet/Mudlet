@@ -47,6 +47,7 @@
 #include <deque>
 #include <memory>
 #include <optional>
+#include <new>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -151,28 +152,54 @@ public:
     explicit TChar(TConsole* pC = nullptr);
     // Another non-default constructor:
     TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
-    // Inline because filling a run's format and copying out a finished line call it per character:
+    // Ordinary characters keep their colors inline; only split characters share storage.
     TChar(const TChar& copy)
-    : mFgColor(copy.mFgColor)
-    , mBgColor(copy.mBgColor)
-    , mFlags(copy.mFlags & ~Selected)
+    : mFlags(copy.mFlags & ~Selected)
     , mLinkIndex(copy.mLinkIndex)
-    , mRightHalfFormat(copy.mRightHalfFormat)
     {
+        if (hasSplitFormat()) {
+            new (&mStorage.split) QSharedDataPointer<SplitFormat>(copy.mStorage.split);
+        } else {
+            mStorage.colors = copy.mStorage.colors;
+        }
     }
-    // Under the rule of three, because we have a user defined copy-constructor,
-    // we should also have a destructor and an assignment operator but they can,
-    // in this case, be default ones:
-    TChar& operator=(const TChar&) = default;
-    // Moving is not copying: a std::vector of TChars relocates its elements
-    // when it outgrows its allocation, and the characters of a line the user
-    // has selected have to stay selected when that happens. Declaring the
-    // copy-constructor above suppressed the implicit move, so without these
-    // the vector would relocate through the copy-constructor and quietly
-    // deselect every line that text was appended to.
-    TChar(TChar&&) = default;
-    TChar& operator=(TChar&&) = default;
-    ~TChar() = default;
+    TChar& operator=(const TChar& copy)
+    {
+        if (this != &copy) {
+            TChar replacement(copy);
+            replacement.mFlags = copy.mFlags;
+            *this = std::move(replacement);
+        }
+        return *this;
+    }
+    // Relocation must preserve selection, unlike the copy constructor.
+    TChar(TChar&& other) noexcept
+    : mFlags(other.mFlags)
+    , mLinkIndex(other.mLinkIndex)
+    {
+        if (hasSplitFormat()) {
+            new (&mStorage.split) QSharedDataPointer<SplitFormat>(std::move(other.mStorage.split));
+            other.mStorage.split.~QSharedDataPointer();
+            other.mStorage.colors = {};
+            other.mFlags &= ~Split;
+        } else {
+            mStorage.colors = other.mStorage.colors;
+        }
+    }
+    TChar& operator=(TChar&& other) noexcept
+    {
+        if (this != &other) {
+            this->~TChar();
+            new (this) TChar(std::move(other));
+        }
+        return *this;
+    }
+    ~TChar()
+    {
+        if (hasSplitFormat()) {
+            mStorage.split.~QSharedDataPointer();
+        }
+    }
 
     bool operator==(const TChar&) const;
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor)
@@ -186,7 +213,7 @@ public:
     void setBackground(const QColor& newColor);
     void setRightHalfFormat(const TChar& format);
     void setDisplayAttributes(AttributeFlags attributes, bool enabled);
-    bool hasSplitFormat() const { return static_cast<bool>(mRightHalfFormat); }
+    bool hasSplitFormat() const { return mFlags.testFlag(Split); }
     TChar rightHalfFormat() const;
     void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes)
     {
@@ -194,11 +221,11 @@ public:
         setAllDisplayAttributes(newDisplayAttributes);
     }
 
-    QColor foreground() const { return QColor::fromRgba(mFgColor); }
-    QColor background() const { return QColor::fromRgba(mBgColor); }
+    QColor foreground() const { return QColor::fromRgba(foregroundRgba()); }
+    QColor background() const { return QColor::fromRgba(backgroundRgba()); }
     // For comparing colors without building a QColor:
-    QRgb foregroundRgba() const { return mFgColor; }
-    QRgb backgroundRgba() const { return mBgColor; }
+    QRgb foregroundRgba() const { return hasSplitFormat() ? mStorage.split->left.foreground : mStorage.colors.foreground; }
+    QRgb backgroundRgba() const { return hasSplitFormat() ? mStorage.split->left.background : mStorage.colors.background; }
     AttributeFlags allDisplayAttributes() const { return mFlags & TestMask; }
     void select() { mFlags |= Selected; }
     void deselect() { mFlags &= ~Selected; }
@@ -301,26 +328,36 @@ public:
     }
 
 private:
-    // One per scrollback character, so QRgb rather than 16-byte QColors; the text pipeline's colors are
-    // all 8-bit RGB, which QRgb holds exactly.
-    struct HalfFormat : QSharedData
+    static constexpr AttributeFlag Split = static_cast<AttributeFlag>(0x40000);
+    struct Colors
     {
         QRgb foreground;
         QRgb background;
+    };
+    struct SplitFormat : QSharedData
+    {
+        Colors left;
+        Colors right;
         AttributeFlags flags;
-        HalfFormat(QRgb fg, QRgb bg, AttributeFlags attributes)
-        : foreground(fg)
-        , background(bg)
+        SplitFormat(Colors leftColors, Colors rightColors, AttributeFlags attributes)
+        : left(leftColors)
+        , right(rightColors)
         , flags(attributes)
         {
         }
     };
-    QRgb mFgColor = 0;
-    QRgb mBgColor = 0;
+    // The tag lives outside the display flags, keeping the common case at 16 bytes.
+    union Storage {
+        Colors colors;
+        QSharedDataPointer<SplitFormat> split;
+        Storage()
+        : colors{}
+        {
+        }
+        ~Storage() {}
+    } mStorage;
     AttributeFlags mFlags = None;
     int mLinkIndex = 0;
-    // Only split characters allocate a second format; copies share it until recoloured.
-    QSharedDataPointer<HalfFormat> mRightHalfFormat;
     // Note: Decoration colors (underline/overline/strikeout) are stored in TLinkStore
     // for memory efficiency - they are looked up via linkIndex() at render time.
 };
@@ -328,7 +365,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 // std::vector only relocates by moving if the move cannot throw; otherwise it
 // falls back to the copy-constructor, which deselects.
 static_assert(std::is_nothrow_move_constructible_v<TChar>);
-static_assert(sizeof(TChar) == 16 + sizeof(void*), "TChar has grown - every character of every buffered line is one of these");
+static_assert(sizeof(TChar) == 16, "TChar has grown - every character of every buffered line is one of these");
 
 
 class TBuffer

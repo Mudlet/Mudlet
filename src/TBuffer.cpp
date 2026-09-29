@@ -459,51 +459,51 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
 } // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
-: mFgColor(foreground.rgba())
-, mBgColor(background.rgba())
-, mFlags(flags)
+: mFlags(flags & ~Split)
 , mLinkIndex(linkIndex)
 {
+    mStorage.colors = {foreground.rgba(), background.rgba()};
 }
 
 TChar::TChar(TConsole* pC)
-: mFgColor(pC ? pC->mFormatCurrent.mFgColor : QColorConstants::White.rgba())
-, mBgColor(pC ? pC->mFormatCurrent.mBgColor : QColorConstants::Black.rgba())
-, mFlags(pC ? pC->mFormatCurrent.allDisplayAttributes() : AttributeFlag::None)
+: mFlags(pC ? pC->mFormatCurrent.allDisplayAttributes() : AttributeFlag::None)
 {
+    mStorage.colors = {pC ? pC->mFormatCurrent.foregroundRgba() : QColorConstants::White.rgba(), pC ? pC->mFormatCurrent.backgroundRgba() : QColorConstants::Black.rgba()};
 }
 
-// Note: this operator compares ALL aspects of 'this' against 'other' which may
-// not be wanted in every case:
 bool TChar::operator==(const TChar& other) const
 {
-    return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags
-           && (mRightHalfFormat == other.mRightHalfFormat
-               || (mRightHalfFormat && other.mRightHalfFormat && mRightHalfFormat->foreground == other.mRightHalfFormat->foreground
-                   && mRightHalfFormat->background == other.mRightHalfFormat->background && mRightHalfFormat->flags == other.mRightHalfFormat->flags));
+    return mLinkIndex == other.mLinkIndex && foregroundRgba() == other.foregroundRgba() && backgroundRgba() == other.backgroundRgba() && mFlags == other.mFlags
+           && (!hasSplitFormat() || mStorage.split == other.mStorage.split
+               || (mStorage.split->right.foreground == other.mStorage.split->right.foreground && mStorage.split->right.background == other.mStorage.split->right.background
+                   && mStorage.split->flags == other.mStorage.split->flags));
 }
 
 void TChar::setForeground(const QColor& color)
 {
-    mFgColor = color.rgba();
-    if (mRightHalfFormat) {
-        mRightHalfFormat->foreground = mFgColor;
+    if (hasSplitFormat()) {
+        auto* format = mStorage.split.data();
+        format->left.foreground = format->right.foreground = color.rgba();
+    } else {
+        mStorage.colors.foreground = color.rgba();
     }
 }
 
 void TChar::setBackground(const QColor& color)
 {
-    mBgColor = color.rgba();
-    if (mRightHalfFormat) {
-        mRightHalfFormat->background = mBgColor;
+    if (hasSplitFormat()) {
+        auto* format = mStorage.split.data();
+        format->left.background = format->right.background = color.rgba();
+    } else {
+        mStorage.colors.background = color.rgba();
     }
 }
 
 void TChar::setAllDisplayAttributes(const AttributeFlags attributes)
 {
     mFlags = (mFlags & ~TestMask) | (attributes & TestMask);
-    if (mRightHalfFormat) {
-        mRightHalfFormat->flags = attributes & TestMask;
+    if (hasSplitFormat()) {
+        mStorage.split->flags = attributes & TestMask;
     }
 }
 
@@ -511,29 +511,34 @@ void TChar::setDisplayAttributes(const AttributeFlags attributes, const bool ena
 {
     const AttributeFlags displayAttributes = attributes & TestMask;
     mFlags = (mFlags & ~displayAttributes) | (enabled ? displayAttributes : None);
-    if (mRightHalfFormat) {
-        mRightHalfFormat->flags = (mRightHalfFormat->flags & ~displayAttributes) | (enabled ? displayAttributes : None);
+    if (hasSplitFormat()) {
+        mStorage.split->flags = (mStorage.split->flags & ~displayAttributes) | (enabled ? displayAttributes : None);
     }
 }
 
 void TChar::setRightHalfFormat(const TChar& format)
 {
-    if (mFgColor == format.mFgColor && mBgColor == format.mBgColor && allDisplayAttributes() == format.allDisplayAttributes()) {
-        mRightHalfFormat.reset();
+    const Colors left{foregroundRgba(), backgroundRgba()};
+    const Colors right{format.foregroundRgba(), format.backgroundRgba()};
+    const auto attributes = format.allDisplayAttributes();
+    if (hasSplitFormat()) {
+        mStorage.split.~QSharedDataPointer();
+        mFlags &= ~Split;
+        mStorage.colors = left;
+    }
+    if (left.foreground == right.foreground && left.background == right.background && allDisplayAttributes() == attributes) {
         return;
     }
-    mRightHalfFormat = new HalfFormat(format.mFgColor, format.mBgColor, format.allDisplayAttributes());
+    new (&mStorage.split) QSharedDataPointer<SplitFormat>(new SplitFormat(left, right, attributes));
+    mFlags |= Split;
 }
 
 TChar TChar::rightHalfFormat() const
 {
-    TChar result(*this);
-    if (mRightHalfFormat) {
-        result.mFgColor = mRightHalfFormat->foreground;
-        result.mBgColor = mRightHalfFormat->background;
-        result.mFlags = (mFlags & ~TestMask) | mRightHalfFormat->flags;
-        result.mRightHalfFormat.reset();
+    if (!hasSplitFormat()) {
+        return TChar(*this);
     }
+    TChar result(QColor::fromRgba(mStorage.split->right.foreground), QColor::fromRgba(mStorage.split->right.background), (mFlags & ~TestMask & ~Split) | mStorage.split->flags, mLinkIndex);
     return result;
 }
 
@@ -6675,9 +6680,9 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                     }
                 }
                 TChar& character = buffer.at(y).at(x);
-                character.mFlags = (character.mFlags & ~attributes) | (state ? attributes : TChar::None);
-                if (character.mRightHalfFormat) {
-                    character.mRightHalfFormat->flags = (character.mRightHalfFormat->flags & ~attributes) | (state ? attributes : TChar::None);
+                character.mFlags = (character.mFlags & ~(attributes & ~TChar::Split)) | (state ? (attributes & ~TChar::Split) : TChar::None);
+                if (character.hasSplitFormat()) {
+                    character.mStorage.split->flags = (character.mStorage.split->flags & ~attributes) | (state ? attributes : TChar::None);
                 }
                 ++x;
             }
@@ -9015,11 +9020,11 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                              << "Current FgColor:" << tchar.foreground().name() << "Current Bold:" << bool(tchar.mFlags & TChar::Bold);
 #endif
                     // Restore ANSI base - these will be overridden below if styling specifies them
-                    tchar.mFgColor = originalChar.mFgColor;
-                    tchar.mBgColor = originalChar.mBgColor;
+                    auto& colors = tchar.hasSplitFormat() ? tchar.mStorage.split->left : tchar.mStorage.colors;
+                    colors = {originalChar.foregroundRgba(), originalChar.backgroundRgba()};
                     // Restore ALL ANSI formatting flags including decorations,
                     // keeping the character selected if it is now
-                    tchar.mFlags = (tchar.mFlags & TChar::Selected) | (originalChar.mFlags & ~TChar::Selected);
+                    tchar.mFlags = (tchar.mFlags & (TChar::Selected | TChar::Split)) | (originalChar.mFlags & ~(TChar::Selected | TChar::Split));
 
                     // DON'T continue here - let the pseudo-class styling below override the ANSI base
                     // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting

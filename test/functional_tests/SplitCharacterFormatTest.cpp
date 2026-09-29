@@ -170,6 +170,38 @@ private slots:
         QVERIFY(buffer().buffer.at(line).front().hasSplitFormat());
     }
 
+    void compactStoragePreservesCopiesAndMoves()
+    {
+        QCOMPARE(sizeof(TChar), size_t(16));
+        TChar original(Qt::red, Qt::black, TChar::Bold, 23);
+        original.setRightHalfFormat(TChar(Qt::green, Qt::blue, TChar::Italic));
+        original.select();
+        TChar assigned(Qt::white, Qt::black);
+        assigned = original;
+        QVERIFY(assigned.isSelected());
+        assigned.setBackground(Qt::yellow);
+        QCOMPARE(original.background(), QColor(Qt::black));
+        QCOMPARE(original.rightHalfFormat().background(), QColor(Qt::blue));
+        QCOMPARE(assigned.rightHalfFormat().background(), QColor(Qt::yellow));
+        TChar moved(std::move(assigned));
+        QVERIFY(moved.isSelected());
+        QCOMPARE(moved.linkIndex(), 23);
+        QVERIFY(!assigned.hasSplitFormat());
+        assigned = original;
+        moved = std::move(assigned);
+        QVERIFY(moved == original);
+        QVERIFY(!assigned.hasSplitFormat());
+        moved.setRightHalfFormat(moved);
+        QVERIFY(!moved.hasSplitFormat());
+        QCOMPARE(moved.foreground(), QColor(Qt::red));
+        QVERIFY(original.hasSplitFormat());
+        moved = TChar(Qt::white, Qt::black);
+        QVERIFY(!moved.hasSplitFormat());
+        original = moved;
+        QVERIFY(!original.hasSplitFormat());
+        QCOMPARE(original.foreground(), QColor(Qt::white));
+    }
+
     void copiesAndRecolouringKeepIndependentHalves()
     {
         TChar original(Qt::red, Qt::black);

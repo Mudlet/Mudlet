@@ -42,7 +42,7 @@ and Copy as Image share the split renderer. HTML/plain-text logs and existing
 single-colour query APIs do not encode a second rendition; colour queries and
 HTML output use the left half.
 
-The optional right-half format is shared when characters are copied and detached
-when recoloured. Each `TChar` has one additional pointer (8 bytes on 64-bit builds);
-only split characters allocate the extra rendition. There is no global format
+Split formats are shared when characters are copied and detached when recoloured.
+Each `TChar` remains 16 bytes; ordinary characters store their colors inline, while
+only split characters allocate storage for both renditions. There is no global format
 registry that retains styles after scrollback is discarded.
