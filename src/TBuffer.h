@@ -37,6 +37,7 @@
 #include <QPointer>
 #include <QQueue>
 #include <QSet>
+#include <QSharedDataPointer>
 #include <QString>
 #include <QStringList>
 #include <QStringView>
@@ -45,6 +46,7 @@
 
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -155,6 +157,7 @@ public:
     , mBgColor(copy.mBgColor)
     , mFlags(copy.mFlags & ~Selected)
     , mLinkIndex(copy.mLinkIndex)
+    , mRightHalfFormat(copy.mRightHalfFormat)
     {
     }
     // Under the rule of three, because we have a user defined copy-constructor,
@@ -171,16 +174,19 @@ public:
     TChar& operator=(TChar&&) = default;
     ~TChar() = default;
 
-    bool operator==(const TChar&);
+    bool operator==(const TChar&) const;
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor)
     {
-        mFgColor = newForeGroundColor.rgba();
-        mBgColor = newBackGroundColor.rgba();
+        setForeground(newForeGroundColor);
+        setBackground(newBackGroundColor);
     }
     // Only considers the flags within TestMask - so not Echo or Found:
-    void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
-    void setForeground(const QColor& newColor) { mFgColor = newColor.rgba(); }
-    void setBackground(const QColor& newColor) { mBgColor = newColor.rgba(); }
+    void setAllDisplayAttributes(AttributeFlags newDisplayAttributes);
+    void setForeground(const QColor& newColor);
+    void setBackground(const QColor& newColor);
+    void setRightHalfFormat(const TChar& format);
+    bool hasSplitFormat() const { return bool(mRightHalfFormat); }
+    TChar rightHalfFormat() const;
     void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes)
     {
         setColors(newFgColor, newBgColor);
@@ -296,10 +302,24 @@ public:
 private:
     // One per scrollback character, so QRgb rather than 16-byte QColors; the text pipeline's colors are
     // all 8-bit RGB, which QRgb holds exactly.
+    struct HalfFormat : QSharedData
+    {
+        QRgb foreground;
+        QRgb background;
+        AttributeFlags flags;
+        HalfFormat(QRgb fg, QRgb bg, AttributeFlags attributes)
+        : foreground(fg)
+        , background(bg)
+        , flags(attributes)
+        {
+        }
+    };
     QRgb mFgColor = 0;
     QRgb mBgColor = 0;
     AttributeFlags mFlags = None;
     int mLinkIndex = 0;
+    // Only split characters allocate a second format; copies share it until recoloured.
+    QSharedDataPointer<HalfFormat> mRightHalfFormat;
     // Note: Decoration colors (underline/overline/strikeout) are stored in TLinkStore
     // for memory efficiency - they are looked up via linkIndex() at render time.
 };
@@ -307,7 +327,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 // std::vector only relocates by moving if the move cannot throw; otherwise it
 // falls back to the copy-constructor, which deselects.
 static_assert(std::is_nothrow_move_constructible_v<TChar>);
-static_assert(sizeof(TChar) == 16, "TChar has grown - every character of every buffered line is one of these");
+static_assert(sizeof(TChar) == 16 + sizeof(void*), "TChar has grown - every character of every buffered line is one of these");
 
 
 class TBuffer
@@ -447,7 +467,7 @@ public:
     void injectOSC8DocumentationExamples();
 
     // Resolved from the encoding name when it changes, not in the per-byte loop:
-    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, Utf8 };
+    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, ShiftJis, EucJp, Utf8 };
     static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
@@ -487,6 +507,9 @@ private:
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
     void swapParserSequenceState();
     void warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd);
+    bool processEncodedSequence(const std::string&, bool, size_t, size_t&, bool&, std::optional<TChar>&);
+    bool processLegacySequence(const std::string&, bool, size_t, size_t&, bool&);
+    bool decodeSequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -642,6 +665,7 @@ private:
     // and is not generated locally {because both pass through
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
+    std::optional<TChar> mIncompleteCharacterFormat;
 
     // The parser sequence state (the mGot... latches and
     // mIncompleteSequenceBytes) for whichever of the two data channels - Game
@@ -655,6 +679,7 @@ private:
     bool mLocalGotOSC = false;
     bool mLocalGotString = false;
     std::string mLocalIncompleteSequenceBytes;
+    std::optional<TChar> mLocalIncompleteCharacterFormat;
     // Set whilst a locally generated feed is being processed, so a nested feed
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
     bool mProcessingLocalFeed = false;

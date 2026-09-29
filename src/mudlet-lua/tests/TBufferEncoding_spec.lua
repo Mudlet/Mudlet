@@ -1025,3 +1025,64 @@ describe("Tests the bulk copy of plain text runs", function()
     end)
   end)
 end)
+
+
+describe("Tests split colours in legacy double-byte characters", function()
+  local cases = {
+    {"BIG5", bytes(0xA4, 0xA4), "中"},
+    {"BIG5-HKSCS", bytes(0xA7, 0x41), "你"},
+    {"GBK", bytes(0xD6, 0xD0), "中"},
+    {"GB18030", bytes(0xD6, 0xD0), "中"},
+    {"EUC-KR", bytes(0xC7, 0xD1), "한"},
+    {"SHIFT_JIS", bytes(0x93, 0xFA), "日"},
+    {"EUC-JP", bytes(0xC6, 0xFC), "日"},
+  }
+
+  for _, case in ipairs(cases) do
+    it("keeps " .. case[1] .. " characters intact for triggers", function()
+      local restoreEncoding = restoreServerEncoding()
+      assert.is_true(setServerEncoding(case[1]))
+      _G.splitCharacterMatches = 0
+      local trigger = tempExactMatchTrigger("enc:" .. case[3] .. "X", function()
+        _G.splitCharacterMatches = _G.splitCharacterMatches + 1
+      end)
+      finally(function()
+        killTrigger(trigger)
+        _G.splitCharacterMatches = nil
+        restoreEncoding()
+      end)
+      assert.equals(case[3] .. "X", decoded("\27[31m" .. case[2]:sub(1, 1) .. "\27[32m" .. case[2]:sub(2) .. "X\27[0m"))
+      assert.equals(1, _G.splitCharacterMatches)
+    end)
+  end
+
+  it("leaves an incomplete UTF-8 sequence interrupted by SGR malformed", function()
+    using("UTF-8")
+    assert.equals(replacement .. replacement .. replacement, decoded(bytes(0xE4) .. "\27[31m" .. bytes(0xB8, 0xAD)))
+  end)
+
+  it("does not treat non-SGR controls as part of a character", function()
+    using("BIG5")
+    assert.equals(replacement .. "X", decoded(bytes(0xA4) .. "\27[0m\27[2KX"))
+  end)
+
+  it("recovers after an overlong pending rendition", function()
+    using("BIG5")
+    local text = decoded(bytes(0xA4) .. "\27[" .. string.rep("0;", 3000) .. "mRECOVER")
+    assert.is_truthy(text:find("RECOVER", 1, true))
+    assert.equals("中", decoded(bytes(0xA4, 0xA4)))
+  end)
+
+  it("does not combine a pending lead byte with the next line", function()
+    using("BIG5")
+    assert.equals(replacement, decoded(bytes(0xA4) .. "\27[31m"))
+    assert.equals("A", decoded("A"))
+  end)
+
+  it("still decodes ordinary Japanese text and half-width katakana", function()
+    using("SHIFT_JIS")
+    assert.equals("日ｱ", decoded(bytes(0x93, 0xFA, 0xB1)))
+    assert.is_true(setServerEncoding("EUC-JP"))
+    assert.equals("日ｱ", decoded(bytes(0xC6, 0xFC, 0x8E, 0xB1)))
+  end)
+end)

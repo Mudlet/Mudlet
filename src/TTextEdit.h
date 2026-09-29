@@ -131,6 +131,7 @@ public:
     int mOldCaretColumn = 0;
 
     friend class CopyAsImageTest;
+    friend class SplitCharacterFormatTest;
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class MainConsoleSelectionTest;
@@ -224,6 +225,8 @@ private:
     struct GraphemeRun
     {
         QRect textRect;
+        QRect halfRect;
+        bool rightHalf = false;
         QColor fgColor;
         QColor bgColor;
         QString grapheme;
@@ -245,6 +248,7 @@ private:
     void paintForegrounds(QPainter&, const LineLayout&, const QRect& clip = QRect()) const;
     void drawCustomDecorations(QPainter&, const QColor&, const QRect&, const TChar&) const;
     int layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QString& grapheme, const int column, const int line, const TChar& charStyle) const;
+    void resolveRunColors(GraphemeRun&, const TChar&, bool caretIsHere) const;
     void paintGraphemeForeground(QPainter&, const GraphemeRun&) const;
 
     // Reused between paints to keep their capacity rather than reallocating a

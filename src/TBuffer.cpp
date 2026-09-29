@@ -475,9 +475,57 @@ TChar::TChar(TConsole* pC)
 
 // Note: this operator compares ALL aspects of 'this' against 'other' which may
 // not be wanted in every case:
-bool TChar::operator==(const TChar& other)
+bool TChar::operator==(const TChar& other) const
 {
-    return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags;
+    return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags
+           && (mRightHalfFormat == other.mRightHalfFormat
+               || (mRightHalfFormat && other.mRightHalfFormat && mRightHalfFormat->foreground == other.mRightHalfFormat->foreground
+                   && mRightHalfFormat->background == other.mRightHalfFormat->background && mRightHalfFormat->flags == other.mRightHalfFormat->flags));
+}
+
+void TChar::setForeground(const QColor& color)
+{
+    mFgColor = color.rgba();
+    if (mRightHalfFormat) {
+        mRightHalfFormat->foreground = mFgColor;
+    }
+}
+
+void TChar::setBackground(const QColor& color)
+{
+    mBgColor = color.rgba();
+    if (mRightHalfFormat) {
+        mRightHalfFormat->background = mBgColor;
+    }
+}
+
+void TChar::setAllDisplayAttributes(const AttributeFlags attributes)
+{
+    mFlags = (mFlags & ~TestMask) | (attributes & TestMask);
+    if (mRightHalfFormat) {
+        mRightHalfFormat->flags = attributes & TestMask;
+    }
+}
+
+void TChar::setRightHalfFormat(const TChar& format)
+{
+    if (mFgColor == format.mFgColor && mBgColor == format.mBgColor && allDisplayAttributes() == format.allDisplayAttributes()) {
+        mRightHalfFormat.reset();
+        return;
+    }
+    mRightHalfFormat = new HalfFormat(format.mFgColor, format.mBgColor, format.allDisplayAttributes());
+}
+
+TChar TChar::rightHalfFormat() const
+{
+    TChar result(*this);
+    if (mRightHalfFormat) {
+        result.mFgColor = mRightHalfFormat->foreground;
+        result.mBgColor = mRightHalfFormat->background;
+        result.mFlags = (mFlags & ~TestMask) | mRightHalfFormat->flags;
+        result.mRightHalfFormat.reset();
+    }
+    return result;
 }
 
 quint8 TChar::alternateFont() const
@@ -645,12 +693,14 @@ TBuffer::TBuffer(const TBuffer& other)
 , mServerWrapPendingSegmentLength(other.mServerWrapPendingSegmentLength)
 , mServerWrapPendingSegmentStart(other.mServerWrapPendingSegmentStart)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
+, mIncompleteCharacterFormat(other.mIncompleteCharacterFormat)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotEscCharset(other.mLocalGotEscCharset)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
 , mLocalGotString(other.mLocalGotString)
 , mLocalIncompleteSequenceBytes(other.mLocalIncompleteSequenceBytes)
+, mLocalIncompleteCharacterFormat(other.mLocalIncompleteCharacterFormat)
 , mProcessingLocalFeed(other.mProcessingLocalFeed)
 , lastLoggedFromLine(other.lastLoggedFromLine)
 , lastloggedToLine(other.lastloggedToLine)
@@ -743,12 +793,14 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mServerWrapPendingSegmentLength = other.mServerWrapPendingSegmentLength;
         mServerWrapPendingSegmentStart = other.mServerWrapPendingSegmentStart;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
+        mIncompleteCharacterFormat = other.mIncompleteCharacterFormat;
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotEscCharset = other.mLocalGotEscCharset;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
         mLocalGotString = other.mLocalGotString;
         mLocalIncompleteSequenceBytes = other.mLocalIncompleteSequenceBytes;
+        mLocalIncompleteCharacterFormat = other.mLocalIncompleteCharacterFormat;
         mProcessingLocalFeed = other.mProcessingLocalFeed;
         lastLoggedFromLine = other.lastLoggedFromLine;
         lastloggedToLine = other.lastloggedToLine;
@@ -977,6 +1029,8 @@ void TBuffer::resetSequenceParserState()
     mLocalGotString = false;
     mLocalIncompleteSequenceBytes.clear();
     mWarnedAboutStringSequence = false;
+    mIncompleteCharacterFormat.reset();
+    mLocalIncompleteCharacterFormat.reset();
 }
 
 void TBuffer::warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd)
@@ -1003,6 +1057,7 @@ void TBuffer::swapParserSequenceState()
     std::swap(mGotOSC, mLocalGotOSC);
     std::swap(mGotString, mLocalGotString);
     std::swap(mIncompleteSequenceBytes, mLocalIncompleteSequenceBytes);
+    std::swap(mIncompleteCharacterFormat, mLocalIncompleteCharacterFormat);
 }
 
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
@@ -1077,6 +1132,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
         // The other channel's held-over bytes are equally stale:
         mLocalIncompleteSequenceBytes.clear();
+        mIncompleteCharacterFormat.reset();
+        mLocalIncompleteCharacterFormat.reset();
     }
 
     if (isFromServer && !mIncompleteSequenceBytes.empty()) {
@@ -1693,6 +1750,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         bool isTwoTCharsNeeded = false;
         // A decoder ran out mid-sequence and stored its bytes for the next chunk:
         bool heldIncompleteSequence = false;
+        std::optional<TChar> leadingFormat;
 
         if (!encodingLookupTable.isEmpty()) {
             auto index = static_cast<quint8>(ch);
@@ -1703,16 +1761,10 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             }
         } else if (mDecoder == Decoder::Latin1) {
             mMudLine.append(QChar::fromLatin1(ch));
-        } else if (mDecoder == Decoder::Gbk) {
-            heldIncompleteSequence = !processGBSequence(localBuffer, isFromServer, false, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
-        } else if (mDecoder == Decoder::Gb18030) {
-            heldIncompleteSequence = !processGBSequence(localBuffer, isFromServer, true, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
-        } else if (mDecoder == Decoder::EucKr) {
-            heldIncompleteSequence = !processEUC_KRSequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
-        } else if (mDecoder == Decoder::Big5) {
-            heldIncompleteSequence = !processBig5Sequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
         } else if (mDecoder == Decoder::Utf8) {
             heldIncompleteSequence = !processUtf8Sequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
+        } else if (mDecoder != Decoder::Ascii) {
+            heldIncompleteSequence = !processEncodedSequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded, leadingFormat);
         } else {
             // Default - no encoding case - reject anything that has MS Bit set
             // as that isn't ASCII which is what no encoding specifies!
@@ -1739,6 +1791,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+        if (leadingFormat) {
+            TChar rightFormat(c);
+            c = *leadingFormat;
+            c.setRightHalfFormat(rightFormat);
+        }
 
         if (mHyperlinkActive) {
             c.mLinkIndex = mCurrentHyperlinkLinkId;
@@ -1881,7 +1938,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1; // -1 because we just added 1 char
                 }
                 mCurrentHyperlinkText += QString(QChar(ch));
-            } else if (!(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
+            } else if (!c.hasSplitFormat() && !(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
                 // Plain text bytes decode to themselves with the format just computed, so a run takes one
                 // append and one fill. Not for MXP, which must see every byte, nor hyperlink text, built per character.
                 size_t runEnd = localBufferPosition + 1;
@@ -6608,7 +6665,11 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                         return true;
                     }
                 }
-                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags & ~(attributes)) | (state ? attributes : TChar::None);
+                TChar& character = buffer.at(y).at(x);
+                character.mFlags = (character.mFlags & ~attributes) | (state ? attributes : TChar::None);
+                if (character.mRightHalfFormat) {
+                    character.mRightHalfFormat->flags = (character.mRightHalfFormat->flags & ~attributes) | (state ? attributes : TChar::None);
+                }
                 ++x;
             }
         }
@@ -6918,6 +6979,168 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // that editor!
 
     return s;
+}
+
+bool TBuffer::decodeSequence(const std::string& data, const bool fromServer, const size_t length, size_t& position, bool& nonBmp)
+{
+    switch (mDecoder) {
+    case Decoder::Gbk:
+    case Decoder::Gb18030:
+        return processGBSequence(data, fromServer, mDecoder == Decoder::Gb18030, length, position, nonBmp);
+    case Decoder::Big5:
+        return processBig5Sequence(data, fromServer, length, position, nonBmp);
+    case Decoder::EucKr:
+        return processEUC_KRSequence(data, fromServer, length, position, nonBmp);
+    case Decoder::ShiftJis:
+    case Decoder::EucJp:
+        return processLegacySequence(data, fromServer, length, position, nonBmp);
+    default:
+        Q_UNREACHABLE();
+    }
+}
+
+bool TBuffer::processEncodedSequence(const std::string& data, const bool fromServer, const size_t length, size_t& position, bool& nonBmp, std::optional<TChar>& leadingFormat)
+{
+    const auto lead = static_cast<quint8>(data[position]);
+    bool doubleByteLead = lead >= 0x81 && lead <= 0xfe;
+    if (mDecoder == Decoder::ShiftJis) {
+        doubleByteLead = (lead >= 0x81 && lead <= 0x9f) || (lead >= 0xe0 && lead <= 0xfc);
+    } else if (mDecoder == Decoder::EucKr || mDecoder == Decoder::EucJp) {
+        doubleByteLead = lead >= 0xa1 && lead <= 0xfe;
+    }
+    if (!doubleByteLead || (position + 1 < length && data[position + 1] != '\033')) {
+        mIncompleteCharacterFormat.reset();
+        return decodeSequence(data, fromServer, length, position, nonBmp);
+    }
+
+    const TChar initialFormat =
+            mIncompleteCharacterFormat ? *mIncompleteCharacterFormat : TChar((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+    mIncompleteCharacterFormat.reset();
+    size_t cursor = position + 1;
+    QList<QString> renditions;
+    // Only SGR is permitted inside a character. Leave other controls to the outer
+    // parser, and bound the entire pending character, including repeated SGRs.
+    while (cursor < length && data[cursor] == '\033' && cursor - position < MAX_CSI_SEQUENCE_LENGTH) {
+        const size_t escape = cursor;
+        if (++cursor == length) {
+            break;
+        }
+        if (data[cursor] != '[') {
+            cursor = escape;
+            break;
+        }
+        const size_t parameters = ++cursor;
+        while (cursor < length && cursor - position < MAX_CSI_SEQUENCE_LENGTH && ((data[cursor] >= '0' && data[cursor] <= '9') || data[cursor] == ';' || data[cursor] == ':')) {
+            ++cursor;
+        }
+        if (cursor == length) {
+            break;
+        }
+        if (data[cursor] != 'm') {
+            cursor = escape;
+            break;
+        }
+        renditions.append(QString::fromLatin1(data.data() + parameters, cursor - parameters));
+        ++cursor;
+    }
+
+    if (cursor == length && cursor - position < MAX_CSI_SEQUENCE_LENGTH) {
+        if (fromServer) {
+            mIncompleteSequenceBytes = data.substr(position, length - position);
+            mIncompleteCharacterFormat = initialFormat;
+            return false;
+        }
+        if (renditions.isEmpty() && cursor == position + 1) {
+            return decodeSequence(data, false, length, position, nonBmp);
+        }
+    }
+
+    if (cursor == position + 1 && (cursor == length || data[cursor] != '\033')) {
+        return decodeSequence(data, fromServer, length, position, nonBmp);
+    }
+
+    for (const QString& rendition : renditions) {
+        decodeSGR(QStringView(rendition));
+    }
+
+    bool validTrail = false;
+    if (cursor < length) {
+        const auto trail = static_cast<quint8>(data[cursor]);
+        switch (mDecoder) {
+        case Decoder::Big5:
+            validTrail = (trail >= 0x40 && trail <= 0x7e) || (trail >= 0xa1 && trail <= 0xfe);
+            break;
+        case Decoder::EucKr:
+        case Decoder::EucJp:
+            validTrail = trail >= 0xa1 && trail <= 0xfe;
+            break;
+        case Decoder::ShiftJis:
+            validTrail = trail >= 0x40 && trail <= 0xfc && trail != 0x7f;
+            break;
+        case Decoder::Gbk:
+        case Decoder::Gb18030:
+            validTrail = trail >= 0x40 && trail <= 0xfe && trail != 0x7f;
+            break;
+        default:
+            break;
+        }
+    }
+    if (!renditions.isEmpty() && validTrail) {
+        const char bytes[] = {data[position], data[cursor]};
+        const QString decoded = TEncodingHelper::decode(QByteArray(bytes, 2), mEncoding);
+        if (!decoded.isEmpty() && !decoded.contains(QChar::ReplacementCharacter)) {
+            mMudLine.append(decoded);
+            nonBmp = decoded.size() == 2;
+            leadingFormat = initialFormat;
+            position = cursor;
+            return true;
+        }
+        ++cursor;
+    }
+    mMudLine.append(QChar::ReplacementCharacter);
+    position = cursor - 1;
+    return true;
+}
+
+bool TBuffer::processLegacySequence(const std::string& data, const bool fromServer, const size_t length, size_t& position, bool& nonBmp)
+{
+    const auto lead = static_cast<quint8>(data[position]);
+    size_t count = 1;
+    if (mDecoder == Decoder::ShiftJis) {
+        if ((lead >= 0x81 && lead <= 0x9f) || (lead >= 0xe0 && lead <= 0xfc)) {
+            count = 2;
+        }
+    } else if (lead == 0x8f) {
+        count = 3;
+    } else if (lead == 0x8e || (lead >= 0xa1 && lead <= 0xfe)) {
+        count = 2;
+    }
+    for (size_t offset = 1; offset < count; ++offset) {
+        if (position + offset >= length) {
+            if (fromServer) {
+                mIncompleteSequenceBytes = data.substr(position, length - position);
+                return false;
+            }
+            mMudLine.append(QChar::ReplacementCharacter);
+            position = length - 1;
+            return true;
+        }
+        const auto trail = static_cast<quint8>(data[position + offset]);
+        const bool valid = mDecoder == Decoder::ShiftJis ? (trail >= 0x40 && trail <= 0xfc && trail != 0x7f) : lead == 0x8e ? (trail >= 0xa1 && trail <= 0xdf) : (trail >= 0xa1 && trail <= 0xfe);
+        if (!valid) {
+            mMudLine.append(QChar::ReplacementCharacter);
+            position += offset - 1;
+            return true;
+        }
+    }
+    QString decoded = TEncodingHelper::decode(QByteArray::fromRawData(data.data() + position, count), mEncoding);
+    if (decoded.isEmpty() || decoded.contains(QChar::ReplacementCharacter)) {
+        decoded = QString(QChar::ReplacementCharacter);
+    }
+    mMudLine.append(decoded);
+    nonBmp = decoded.size() == 2;
+    position += count - 1;
+    return true;
 }
 
 bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFromServer, const size_t len, size_t& pos, bool& isNonBMPCharacter)
@@ -7796,6 +8019,12 @@ TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
     if (encoding == "EUC-KR") {
         return Decoder::EucKr;
     }
+    if (encoding == "SHIFT_JIS") {
+        return Decoder::ShiftJis;
+    }
+    if (encoding == "EUC-JP") {
+        return Decoder::EucJp;
+    }
     if (encoding == "BIG5" || encoding == "BIG5-HKSCS") {
         return Decoder::Big5;
     }
@@ -7807,7 +8036,7 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
-        if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
+        if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR" || mEncoding == "SHIFT_JIS" || mEncoding == "EUC-JP") {
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {
