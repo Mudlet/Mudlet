@@ -268,6 +268,22 @@ private slots:
         QVERIFY(!copied.buffer.front().front().rightHalfFormat().isUnderlined());
     }
 
+    void clearingSearchRemovesBothHalves()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
+        feed(QByteArray("\033[31m") + QByteArray::fromHex("a4") + "\033[32m" + QByteArray::fromHex("a4") + "\n");
+        const int line = lastTextLine();
+        const auto& character = buffer().buffer.at(line).front();
+        QVERIFY(!character.isFound());
+        QVERIFY(!character.rightHalfFormat().isFound());
+        QVERIFY(buffer().applyAttribute(QPoint(0, line), QPoint(1, line), TChar::Found, true));
+        QVERIFY(character.isFound());
+        QVERIFY(character.rightHalfFormat().isFound());
+        buffer().clearSearchHighlights();
+        QVERIFY(!character.isFound());
+        QVERIFY(!character.rightHalfFormat().isFound());
+    }
+
     void resettingTheParserDropsThePendingCharacter()
     {
         QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);

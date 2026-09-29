@@ -538,7 +538,8 @@ TChar TChar::rightHalfFormat() const
     if (!hasSplitFormat()) {
         return TChar(*this);
     }
-    TChar result(QColor::fromRgba(mStorage.split->right.foreground), QColor::fromRgba(mStorage.split->right.background), (mFlags & ~TestMask & ~Split) | mStorage.split->flags, mLinkIndex);
+    TChar result(
+            QColor::fromRgba(mStorage.split->right.foreground), QColor::fromRgba(mStorage.split->right.background), (mFlags & ~TestMask & ~Split) | (mStorage.split->flags & TestMask), mLinkIndex);
     return result;
 }
 
@@ -6681,8 +6682,9 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                 }
                 TChar& character = buffer.at(y).at(x);
                 character.mFlags = (character.mFlags & ~(attributes & ~TChar::Split)) | (state ? (attributes & ~TChar::Split) : TChar::None);
-                if (character.hasSplitFormat()) {
-                    character.mStorage.split->flags = (character.mStorage.split->flags & ~attributes) | (state ? attributes : TChar::None);
+                if (character.hasSplitFormat() && (attributes & TChar::TestMask)) {
+                    const auto displayAttributes = attributes & TChar::TestMask;
+                    character.mStorage.split->flags = (character.mStorage.split->flags & ~displayAttributes) | (state ? displayAttributes : TChar::None);
                 }
                 ++x;
             }
