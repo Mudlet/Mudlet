@@ -302,6 +302,34 @@ private slots:
         QVERIFY(buffer().buffer.at(lastTextLine()).front() == expected);
     }
 
+    void japaneseEncodingNames_data()
+    {
+        QTest::addColumn<QByteArray>("encoding");
+        QTest::newRow("shift-jis") << QByteArray("SHIFT_JIS");
+        QTest::newRow("euc-jp") << QByteArray("EUC-JP");
+    }
+
+    void japaneseEncodingNames()
+    {
+        QFETCH(QByteArray, encoding);
+        QVERIFY(mudlet::self()->getEncodingNamesMap().contains(encoding));
+    }
+
+    void japaneseAutomaticWidth_data() { japaneseEncodingNames_data(); }
+
+    void japaneseAutomaticWidth()
+    {
+        QFETCH(QByteArray, encoding);
+        QVERIFY(mpHost->mTelnet.setEncoding(encoding, false).first);
+        mpHost->setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
+        QVERIFY(!mpHost->wideAmbiguousEAsianGlyphs());
+        mpHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        QVERIFY(mpHost->wideAmbiguousEAsianGlyphs());
+        QVERIFY(mpHost->mTelnet.setEncoding("UTF-8", false).first);
+        mpHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
+        QVERIFY(!mpHost->wideAmbiguousEAsianGlyphs());
+    }
+
     void resettingTheParserDropsThePendingCharacter()
     {
         QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
