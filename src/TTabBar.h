@@ -168,6 +168,8 @@ signals:
     void tabReattachRequested(const QString& tabName, int index);
 
 private:
+    void relayoutTab(int index);
+
     // This instance of TStyle needs a pointer to a QTabBar on instantiation:
     TStyle mStyle;
 
