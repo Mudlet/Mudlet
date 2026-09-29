@@ -86,7 +86,6 @@ private:
         qreal height = 0.0;
     };
 
-    void forget();
     const Entry& lookup(QStringView grapheme, Style);
     Entry shape(QStringView grapheme, Style) const;
 
@@ -96,7 +95,8 @@ private:
     QHash<Key, Entry> mEntries;
     // Each cached glyph holds on to the font file it was shaped from, so a
     // font being installed or removed has to send every grapheme back to be
-    // resolved again - as drawText() would have done on its next call.
+    // resolved again - as drawText() would have done on its next call. mFont
+    // can stay, as Qt drops every font's resolved files when the database changes.
     QMetaObject::Connection mFontDatabaseConnection;
 };
 
