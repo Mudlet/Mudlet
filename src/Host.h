@@ -575,6 +575,11 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
+    // The profile's own colours, which the main console draws with, applied to
+    // it at once - unlike setMainConsoleBgColor(), which paints a selection.
+    void setProfileBackgroundColor(const QColor& color);
+    void setProfileCommandBackgroundColor(const QColor& color);
+    void setProfileCommandForegroundColor(const QColor& color);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
     bool resetBackgroundImage(const QString& name, bool fullWindow = false);

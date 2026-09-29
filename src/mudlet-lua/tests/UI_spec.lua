@@ -4918,6 +4918,90 @@ describe("Window and label state", function()
     end)
   end)
 
+  -- Called without a window name these write the profile's own colours, and
+  -- the main console has to pick them up at once: the next echo and the next
+  -- echoed command are drawn with them.
+  describe("main console colours", function()
+    local savedBg, savedCommand, savedEchoMode
+
+    local function readFormatOf(text)
+      local last = getLastLineNumber("main")
+      for line = last, math.max(0, last - 3), -1 do
+        moveCursor("main", 0, line)
+        if selectString(text, 1) >= 0 then
+          local format = getTextFormat("main")
+          deselect()
+          return format
+        end
+      end
+      error(("'%s' did not reach the main console"):format(text))
+    end
+
+    local function sendAndReadItsFormat(command)
+      send(command, true)
+      return readFormatOf(command)
+    end
+
+    setup(function()
+      -- the command colours are read off an echoed command, which the profile's
+      -- own echo setting could otherwise hide
+      savedEchoMode = getConfig("showSentText", true)
+      setConfig("showSentText", "script")
+      savedBg = {getBackgroundColor()}
+      -- there is no Lua reader for the command colours, but an echoed command
+      -- is drawn in them
+      savedCommand = sendAndReadItsFormat(name("mccSavedCommand"))
+    end)
+
+    teardown(function()
+      setConfig("showSentText", savedEchoMode)
+      -- these are unset when setup failed, and that failure is the one worth reading
+      if savedBg then
+        setBackgroundColor(savedBg[1], savedBg[2], savedBg[3], savedBg[4])
+      end
+      if savedCommand then
+        setCommandForegroundColor(unpack(savedCommand.foreground))
+        -- getTextFormat() gives no alpha, so this restores the command background opaque
+        setCommandBackgroundColor(unpack(savedCommand.background))
+      end
+      resetFormat()
+    end)
+
+    it("setBackgroundColor moves the console's background and what is echoed next", function()
+      assert.are_not.same({17, 34, 51, 200}, savedBg, "the profile already uses this background")
+      assert.is_true(setBackgroundColor(17, 34, 51, 200))
+      assert.are.same({17, 34, 51, 200}, {getBackgroundColor()})
+
+      resetFormat()
+      local text = name("mccEchoAfterBackground")
+      echo(text .. "\n")
+      assert.are.same({17, 34, 51}, readFormatOf(text).background)
+    end)
+
+    it("setCommandForegroundColor and setCommandBackgroundColor colour the next echoed command", function()
+      assert.are_not.same({10, 20, 30}, savedCommand.foreground, "the profile already uses this command foreground")
+      assert.are_not.same({40, 50, 60}, savedCommand.background, "the profile already uses this command background")
+      assert.is_true(setCommandForegroundColor(10, 20, 30))
+      assert.is_true(setCommandBackgroundColor(40, 50, 60))
+
+      local format = sendAndReadItsFormat(name("mccCommand"))
+      assert.are.same({10, 20, 30}, format.foreground)
+      assert.are.same({40, 50, 60}, format.background)
+    end)
+
+    it("all three reject a colour component outside 0-255 without a window name", function()
+      local ok, err = setBackgroundColor(0, 0, 256)
+      assert.is_nil(ok)
+      assert.are.equal("blue value 256 needs to be between 0-255", err)
+      local ok2, err2 = setCommandForegroundColor(300, 0, 0)
+      assert.is_nil(ok2)
+      assert.are.equal("red value 300 needs to be between 0-255", err2)
+      local ok3, err3 = setCommandBackgroundColor(0, 0, 0, 999)
+      assert.is_nil(ok3)
+      assert.are.equal("alpha value 999 needs to be between 0-255", err3)
+    end)
+  end)
+
   describe("getImageSize", function()
     it("returns the size of a bundled image", function()
       local w, h = getImageSize(":/icons/mudlet.png")

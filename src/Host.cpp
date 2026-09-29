@@ -5672,6 +5672,33 @@ bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, i
     return mpConsole->setSubConsoleCommandForegroundColor(name, QColor(r, g, b, alpha));
 }
 
+void Host::setProfileBackgroundColor(const QColor& color)
+{
+    mBgColor = color;
+    // Host outlives its main console; with no view, the buffer's colours must still follow:
+    if (mpConsole) {
+        mpConsole->setConsoleBgColor(color.red(), color.green(), color.blue(), color.alpha());
+    } else {
+        refreshMainConsoleColors();
+    }
+}
+
+void Host::setProfileCommandBackgroundColor(const QColor& color)
+{
+    mCommandBgColor = color;
+    if (mpConsole) {
+        mpConsole->setCommandBgColor(color);
+    }
+}
+
+void Host::setProfileCommandForegroundColor(const QColor& color)
+{
+    mCommandFgColor = color;
+    if (mpConsole) {
+        mpConsole->setCommandFgColor(color);
+    }
+}
+
 // Returns true when a script has claimed the built-in map buttons for this
 // profile via setConfig("mapperButton", ...): "disabled" swallows the request
 // outright, "scripted" turns it into a sysMapperButtonAction event so the
