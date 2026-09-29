@@ -1082,12 +1082,9 @@ int TLuaInterpreter::echo(lua_State* L)
     const QString displayText{lua_tostring(L, s)};
 
     if (isMain(consoleName)) {
-        if (!host.mpConsole) {
+        if (!host.echoToMainConsole(displayText)) {
             return warnArgumentValue(L, __func__, no_main_window_value);
         }
-        host.mpConsole->buffer.mEchoingText = true;
-        host.mpConsole->echo(displayText);
-        host.mpConsole->buffer.mEchoingText = false;
         // Writing to the main window must always succeed, but for consistent
         // results, we now return a true for that
         lua_pushboolean(L, true);
@@ -2221,11 +2218,10 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 int TLuaInterpreter::insertHTML(lua_State* L)
 {
     const QString sendText = getVerifiedString(L, __func__, 1, "sendText");
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole) {
+    Host& host = getHostFromLua(L);
+    if (!host.insertHtmlInMainConsole(sendText)) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    host.mpConsole->insertHTML(sendText);
     return 0;
 }
 
@@ -2947,13 +2943,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
     const QString windowName{windowNameArg};
     if (isMain(windowName)) {
-        host.mBgColor.setRgb(r, g, b, alpha);
-        // Host outlives its main console; with no view, the buffer's colours must still follow:
-        if (host.mpConsole) {
-            host.mpConsole->setConsoleBgColor(r, g, b, alpha);
-        } else {
-            host.refreshMainConsoleColors();
-        }
+        host.setProfileBackgroundColor(QColor(r, g, b, alpha));
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
         return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
     }
@@ -4437,10 +4427,7 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
 
     const QString windowName{windowNameArg};
     if (isMain(windowName)) {
-        host.mCommandBgColor.setRgb(r, g, b, alpha);
-        if (host.mpConsole) {
-            host.mpConsole->setCommandBgColor(r, g, b, alpha);
-        }
+        host.setProfileCommandBackgroundColor(QColor(r, g, b, alpha));
     } else if (!host.setCommandBackgroundColor(windowName, r, g, b, alpha)) {
         return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
     }
@@ -4497,10 +4484,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
 
     const QString windowName{windowNameArg};
     if (isMain(windowName)) {
-        host.mCommandFgColor.setRgb(r, g, b, alpha);
-        if (host.mpConsole) {
-            host.mpConsole->setCommandFgColor(r, g, b, alpha);
-        }
+        host.setProfileCommandForegroundColor(QColor(r, g, b, alpha));
     } else if (!host.setCommandForegroundColor(windowName, r, g, b, alpha)) {
         return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
     }

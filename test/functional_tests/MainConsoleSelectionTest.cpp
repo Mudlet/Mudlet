@@ -118,6 +118,35 @@ private:
         return upperPane();
     }
 
+    // What "Analyse characters" reports is built from the selection's first
+    // line alone, so these print one of their own rather than using the prose.
+    // Every code point takes a different branch: one needing HTML escaping,
+    // whitespace and invisible formatting shown by name, two- and three-byte
+    // UTF-8, a surrogate pair, a surrogate pair shown by name, and a
+    // noncharacter - then enough plain letters to spill onto a second table.
+    static QString analysedLine() { return qsl("<\t  ‍é€") + QString::fromUcs4(U"\U0001F600\U0001F3FB") + qsl("﷐abcdefghij"); }
+
+    QString analysisOf(TTextEdit* pane, const QPoint& from, const QPoint& to)
+    {
+        pane->mPA = from;
+        pane->mPB = to;
+        pane->mpContextMenuAnalyser = new QAction(pane);
+        pane->slot_analyseSelection();
+        return pane->mpContextMenuAnalyser->toolTip();
+    }
+
+    int printedLineNumber(const QString& text)
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(text + QChar::LineFeed);
+        for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
+            if (console->buffer.line(i) == text) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     QPointF cellInMiddleRow(TTextEdit* pane, int column) const
     {
         const int row = (pane->height() / 2) / pane->mFontHeight;
@@ -358,6 +387,65 @@ private slots:
 
         QCOMPARE(highlightedText(), line);
         QCOMPARE(copiedText(pane), line);
+    }
+
+    void test_characterAnalysisDescribesEveryCodePoint()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const int line = printedLineNumber(analysedLine());
+        QVERIFY2(line >= 0, "the line to analyse never reached the buffer");
+
+        const QString analysis = analysisOf(pane, QPoint(0, line), QPoint(analysedLine().size() - 1, line));
+
+        // '<' would otherwise open an HTML tag in the tooltip, both where it is
+        // drawn and where it is given as a Lua character
+        QVERIFY2(analysis.contains(qsl("<td colspan=\"1\"><center>&lt;</center></td>")), "'<' was not escaped where it is drawn");
+        QVERIFY2(analysis.contains(qsl("<td><center>&lt;</center></td>")), "'<' was not escaped where it is given as a Lua character");
+        for (const QString& name : {qsl("{tab}"), qsl("{space}"), qsl("{non-breaking space}"), qsl("{zero width joiner}"), qsl("{FitzPatrick modifier 1 or 2}"), qsl("{noncharacter}")}) {
+            QVERIFY2(analysis.contains(name), qPrintable(qsl("%1 is missing from the analysis").arg(name)));
+        }
+        QVERIFY2(analysis.contains(qsl("<td><center>\\009</center></td>")), "the tab is not given as the decimal escape Lua would use");
+
+        // U+20AC is three bytes of UTF-8, which is what a Lua string holds
+        QVERIFY2(analysis.contains(qsl("<td><center>0xe2</center></td><td><center>0x82</center></td><td><center>0xac</center></td>")), "the euro sign's UTF-8 bytes are wrong");
+        QVERIFY2(analysis.contains(qsl("<td><center>\\226</center></td><td><center>\\130</center></td><td><center>\\172</center></td>")), "the euro sign's Lua escapes are wrong");
+
+        // U+1F600 is a surrogate pair: two UTF-16 indexes, one code point, four bytes
+        QVERIFY2(analysis.contains(qsl("<center>8 & 9</center>")), "the surrogate pair was not given both of its UTF-16 indexes");
+        QVERIFY2(analysis.contains(qsl("<center>1F600</center>&#8232;<center>(0xd83d:0xde00)</center>")), "the surrogate pair was not reported as a single code point");
+        QVERIFY2(analysis.contains(qsl("<td><center>\\240</center></td><td><center>\\159</center></td><td><center>\\152</center></td><td><center>\\128</center></td>")),
+                 "the emoji's Lua escapes are wrong");
+
+        // UTF-8 indexes count bytes, so everything before the 'a' adds up to 24:
+        // 1 + 1 + 1 + 2 + 3 + 2 + 3 + 4 + 4 + 3
+        QVERIFY2(analysis.contains(qsl("<th><center>25</center></th>")), qPrintable(qsl("the UTF-8 index of the first letter does not count the bytes before it:\n%1").arg(analysis)));
+        // and the ten letters that follow end on 34, which pins the count from
+        // both sides - an undercount shifts some other letter onto 25
+        QVERIFY2(analysis.contains(qsl("<th><center>34</center></th>")), "the UTF-8 index of the last letter undercounts the bytes before it");
+        QVERIFY2(!analysis.contains(qsl("<th><center>35</center></th>")), "the UTF-8 index of the last letter overcounts the bytes before it");
+        QVERIFY2(analysis.contains(qsl("<td colspan=\"1\"><center>j</center></td>")), "the analysis lost the end of the line");
+        QVERIFY2(analysis.count(qsl("<table")) > 1, "a line of over 16 code points was not split into more than one table");
+    }
+
+    // Past the first line only the first line's tail counts, and indexes are
+    // still counted from the start of the line rather than of the selection.
+    void test_characterAnalysisOfAMultiLineSelectionCoversTheRestOfTheFirstLine()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const int line = printedLineNumber(analysedLine());
+        QVERIFY2(line >= 0, "the line to analyse never reached the buffer");
+        QVERIFY2(printedLineNumber(qsl("QQQ")) == line + 1, "the second line did not land straight after the first");
+
+        const int euroColumn = static_cast<int>(analysedLine().indexOf(QChar(0x20AC)));
+        const QString analysis = analysisOf(pane, QPoint(euroColumn, line), QPoint(1, line + 1));
+
+        QVERIFY2(analysis.contains(qsl("<th colspan=\"3\"><center>7</center></th>")), "the euro sign's UTF-16 index is not counted from the start of the line");
+        QVERIFY2(analysis.contains(qsl("<th><center>11</center></th>")), "the euro sign's UTF-8 index is not counted from the start of the line");
+        QVERIFY2(!analysis.contains(qsl("{tab}")), "a character before the selection was analysed");
+        QVERIFY2(analysis.contains(qsl("<td colspan=\"1\"><center>j</center></td>")), "the analysis stopped short of the end of the first line");
+        QVERIFY2(!analysis.contains(qsl("<center>Q</center>")), "the second line of the selection was analysed");
     }
 
     // Upwards as well as downwards: above the anchor line the pointer is the

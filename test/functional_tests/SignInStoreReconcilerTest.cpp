@@ -52,13 +52,14 @@ struct FakeStore
         Operation op;
         QString payload;
         SignInStoreReconciler::Done done;
+        bool everyCopy = false;
     };
     std::vector<Call> calls;
 
     SignInStoreReconciler::Performer performer()
     {
-        return [this](Operation op, QString payload, SignInStoreReconciler::Done done) {
-            calls.push_back({op, std::move(payload), std::move(done)});
+        return [this](Operation op, QString payload, bool everyCopy, SignInStoreReconciler::Done done) {
+            calls.push_back({op, std::move(payload), std::move(done), everyCopy});
         };
     }
 
@@ -115,7 +116,7 @@ struct SyncStore
 
     SignInStoreReconciler::Performer performer()
     {
-        return [this](Operation op, QString payload, SignInStoreReconciler::Done done) {
+        return [this](Operation op, QString payload, bool, SignInStoreReconciler::Done done) {
             calls.push_back({op, payload});
             done(true, QString());
         };
@@ -220,6 +221,33 @@ private slots:
     }
 
     // ---- Failure stops the sequence -----------------------------------------
+
+    // Only the player's own forget asks for every copy: the removals the client makes by itself - a
+    // hint over a dead token, or the whole entry dropped - are the store's to answer alone.
+    void onlyAForgottenIntentAsksForEveryCopy()
+    {
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int id = 0;
+
+        id = reconciler.setIntent(Intent::forgotten(), outcomes.recorder(&id));
+        store.release(0);
+        store.release(1);
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::RemoveToken, Operation::RemoveMetadata}));
+        QVERIFY2(store.calls[0].everyCopy && store.calls[1].everyCopy, "a forget did not ask for every copy of the entry to go");
+
+        id = reconciler.setIntent(absentIntent(), outcomes.recorder(&id));
+        store.release(2);
+        store.release(3);
+        id = reconciler.setIntent(hintIntent(), outcomes.recorder(&id));
+        store.release(4);
+        store.release(5);
+        QCOMPARE(store.calls.size(), std::size_t(6));
+        for (std::size_t call = 2; call < store.calls.size(); ++call) {
+            QVERIFY2(!store.calls[call].everyCopy, qPrintable(qsl("a removal the client made by itself asked for every copy, at step %1").arg(call)));
+        }
+    }
 
     void metadataFailureNeverWritesTheToken()
     {
@@ -1054,7 +1082,7 @@ private slots:
         Outcome resultA = Outcome::Failed;
         Outcome resultB = Outcome::Failed;
 
-        auto performer = [&](Operation op, QString payload, SignInStoreReconciler::Done done) {
+        auto performer = [&](Operation op, QString payload, bool, SignInStoreReconciler::Done done) {
             ops.push_back(op);
             if (!triggered && op == Operation::WriteMetadata) {
                 triggered = true;

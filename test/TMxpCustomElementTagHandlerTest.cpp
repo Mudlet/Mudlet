@@ -101,8 +101,8 @@ private slots:
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 2);
-        QCOMPARE(stub.mHrefs[0], "send([[examine inv##10]])");
-        QCOMPARE(stub.mHrefs[1], "send([[drop inv##10]])");
+        QCOMPARE(stub.mHrefs[0], "send([[\nexamine inv##10]])");
+        QCOMPARE(stub.mHrefs[1], "send([[\ndrop inv##10]])");
 
         QCOMPARE(stub.mHints.size(), 2);
         QCOMPARE(stub.mHints[0], "examine");
@@ -141,7 +141,7 @@ private slots:
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[follow map of the newbie jungle to P8x7]])");
+        QCOMPARE(stub.mHrefs[0], "send([[\nfollow map of the newbie jungle to P8x7]])");
 
         QCOMPARE(stub.mHints.size(), 1);
         QCOMPARE(stub.mHints[0], "go here");
@@ -157,7 +157,7 @@ private slots:
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[follow map of the south forest to P42]])");
+        QCOMPARE(stub.mHrefs[0], "send([[\nfollow map of the south forest to P42]])");
 
         QCOMPARE(stub.mHints.size(), 1);
         QCOMPARE(stub.mHints[0], "go here");
@@ -255,9 +255,9 @@ private slots:
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 3);
-        QCOMPARE(stub.mHrefs[0], "printCmdLine([[whisper playerid ]])");
-        QCOMPARE(stub.mHrefs[1], "printCmdLine([[finger playerid ]])");
-        QCOMPARE(stub.mHrefs[2], "printCmdLine([[tell playerid ]])");
+        QCOMPARE(stub.mHrefs[0], "printCmdLine([[\nwhisper playerid ]])");
+        QCOMPARE(stub.mHrefs[1], "printCmdLine([[\nfinger playerid ]])");
+        QCOMPARE(stub.mHrefs[2], "printCmdLine([[\ntell playerid ]])");
 
         QCOMPARE(stub.mHints.size(), 3);
         QCOMPARE(stub.mHints[0], "whisper playerid");
@@ -271,9 +271,9 @@ private slots:
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 3);
-        QCOMPARE(stub.mHrefs[0], "printCmdLine([[whisper someone ]])");
-        QCOMPARE(stub.mHrefs[1], "printCmdLine([[finger someone ]])");
-        QCOMPARE(stub.mHrefs[2], "printCmdLine([[tell someone ]])");
+        QCOMPARE(stub.mHrefs[0], "printCmdLine([[\nwhisper someone ]])");
+        QCOMPARE(stub.mHrefs[1], "printCmdLine([[\nfinger someone ]])");
+        QCOMPARE(stub.mHrefs[2], "printCmdLine([[\ntell someone ]])");
 
         QCOMPARE(stub.mHints.size(), 3);
         QCOMPARE(stub.mHints[0], "whisper someone");
@@ -308,7 +308,7 @@ private slots:
         
         // Verify the attributes were passed through correctly
         QCOMPARE(stub.mHrefs.size(), 1);
-        QCOMPARE(stub.mHrefs[0], "send([[north]])");
+        QCOMPARE(stub.mHrefs[0], "send([[\nnorth]])");
         QCOMPARE(stub.mHints.size(), 1);
         QCOMPARE(stub.mHints[0], "north");
         QCOMPARE(stub.mExpireName, "Exits");

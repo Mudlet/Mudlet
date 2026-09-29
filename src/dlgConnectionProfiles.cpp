@@ -26,6 +26,7 @@
 
 #include <pugixml.hpp>
 
+#include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
@@ -2080,6 +2081,13 @@ void dlgConnectionProfiles::slot_copyProfile()
             mProfileList << profile_name;
         }
 
+        // The copy takes every file in the profile directory, and the saved sign-in's record is one
+        // of them now that it lives there. Its token is not: that is filed under the profile it was
+        // saved for, so the copy would carry an account and a provider with nothing behind them and
+        // ask the game to sign that account in again. A copy starts with no saved sign-in, which is
+        // what it had before the record moved out of the credential store.
+        QFile::remove(GMCPAuthenticator::savedSignInRecordPath(profile_name));
+
         // The dialog stays usable while the copy runs, and switching the games
         // tab calls fillout_form(), which destroys every item - including the
         // one made for this copy. Hence look it up by name rather than hold it.
@@ -3053,6 +3061,19 @@ void dlgConnectionProfiles::passwordArrivedLate(const QString& profileName, bool
 
 void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name)
 {
+    // The profile's own "password" file first, because that is where this dialog
+    // writes it when passwords are kept in the profile (slot_updatePassword), and
+    // where Host reads it back. The settings below are the older location, from
+    // before there were profile data files at all: reading only those left the
+    // field blank for everyone whose password lives in the file, which is everyone
+    // who has chosen profile storage since that choice existed.
+    const QString fromProfile = readProfileData(profile_name, qsl("password"));
+    if (!fromProfile.isEmpty()) {
+        const QSignalBlocker blocker(character_password_entry);
+        character_password_entry->setText(fromProfile);
+        return;
+    }
+
     auto& settings = *MudletApp::getQSettings();
     settings.beginGroup(qsl("profiles/%1").arg(profile_name));
 

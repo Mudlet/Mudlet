@@ -293,6 +293,8 @@ public:
     void setHostID(int id) { mHostID = id; }
 
     TLuaInterpreter* getLuaInterpreter() { return &mLuaInterpreter; }
+    void setLazyCaptureGlobals(const bool state) { mLuaInterpreter.setLazyCaptureGlobals(state); }
+    bool lazyCaptureGlobals() const { return mLuaInterpreter.lazyCaptureGlobals(); }
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);
@@ -408,6 +410,9 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     void printToMainConsole(const QString& msg);
     void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
+    // What echo() and insertHTML() write; false when there is no main console to write it to.
+    bool echoToMainConsole(const QString& text);
+    bool insertHtmlInMainConsole(const QString& text);
     void printSystemMessage(const QString& msg);
     void printOnDisplay(std::string& data, bool isFromServer);
     void finalizeMainConsole();
@@ -570,6 +575,11 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
+    // The profile's own colours, which the main console draws with, applied to
+    // it at once - unlike setMainConsoleBgColor(), which paints a selection.
+    void setProfileBackgroundColor(const QColor& color);
+    void setProfileCommandBackgroundColor(const QColor& color);
+    void setProfileCommandForegroundColor(const QColor& color);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
     bool resetBackgroundImage(const QString& name, bool fullWindow = false);
