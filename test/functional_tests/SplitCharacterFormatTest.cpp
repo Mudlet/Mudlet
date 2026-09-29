@@ -189,11 +189,13 @@ private slots:
     {
         QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
         feed(QByteArray("\033[31m") + QByteArray::fromHex("a4") + "\r");
-        feed("local\n", false);
+        feed("\033[34mlocal\033[0m\n", false);
         feed(QByteArray("\033[32m") + QByteArray::fromHex("a4") + "\n");
         const int line = lastTextLine();
         QCOMPARE(buffer().line(line), qsl("中"));
         QVERIFY(buffer().buffer.at(line).front().hasSplitFormat());
+        QCOMPARE(buffer().buffer.at(line).front().foreground(), QColor(128, 0, 0));
+        QCOMPARE(buffer().buffer.at(line).front().rightHalfFormat().foreground(), QColor(0, 128, 0));
     }
 
     void compactStoragePreservesCopiesAndMoves()
