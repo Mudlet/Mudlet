@@ -5569,12 +5569,9 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
         // Character at a time because insertInLine() applies a single TChar to
         // the whole run it is given, and every character here can differ
         QPoint P_current(x + cx, y);
-        insertInLine(P_current,
-                     QString(chunk.lineBuffer.at(0).at(cx)),
-                     TChar(chunk.buffer.at(0).at(cx).foreground(),
-                           chunk.buffer.at(0).at(cx).background(),
-                           chunk.buffer.at(0).at(cx).mFlags,
-                           remapLinkId(chunk.mLinkStore, chunk.buffer.at(0).at(cx).linkIndex(), remappedLinkIds)));
+        TChar format(chunk.buffer.at(0).at(cx));
+        format.mLinkIndex = remapLinkId(chunk.mLinkStore, format.linkIndex(), remappedLinkIds);
+        insertInLine(P_current, QString(chunk.lineBuffer.at(0).at(cx)), format);
     }
 }
 

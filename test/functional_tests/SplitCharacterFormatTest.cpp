@@ -284,6 +284,24 @@ private slots:
         QVERIFY(!character.rightHalfFormat().isFound());
     }
 
+    void pastePreservesSplitFormat()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
+        feed(QByteArray("\033[31m") + QByteArray::fromHex("a4") + "\033[32m" + QByteArray::fromHex("a4") + "X\n");
+        const int line = lastTextLine();
+        QPoint start(0, line);
+        QPoint end(1, line);
+        TBuffer copied = buffer().copy(start, end);
+        const TChar expected = copied.buffer.front().front();
+        QVERIFY(expected.hasSplitFormat());
+        QPoint destination(1, line);
+        buffer().paste(destination, copied);
+        QCOMPARE(buffer().line(line), qsl("中中X"));
+        QVERIFY(buffer().buffer.at(line).at(1) == expected);
+        buffer().appendBuffer(copied);
+        QVERIFY(buffer().buffer.at(lastTextLine()).front() == expected);
+    }
+
     void resettingTheParserDropsThePendingCharacter()
     {
         QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
