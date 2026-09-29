@@ -37,6 +37,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AsciiLineBreakTest.cpp
     ConsoleModelExtractionTest.cpp
     CopyAsImageTest.cpp
+    SplitCharacterFormatTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     CommandLineKeyHandlingTest.cpp

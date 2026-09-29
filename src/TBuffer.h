@@ -157,6 +157,7 @@ public:
     , mBgColor(copy.mBgColor)
     , mFlags(copy.mFlags & ~Selected)
     , mLinkIndex(copy.mLinkIndex)
+    , mRightHalf(copy.mRightHalf)
     {
     }
     // Under the rule of three, because we have a user defined copy-constructor,
@@ -173,21 +174,58 @@ public:
     TChar& operator=(TChar&&) = default;
     ~TChar() = default;
 
-    bool operator==(const TChar&);
+    bool operator==(const TChar&) const;
+    // Every setter restyles the whole character, so a split right half (see
+    // setRightHalf()) takes the same change:
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor)
     {
         mFgColor = newForeGroundColor.rgba();
         mBgColor = newBackGroundColor.rgba();
+        if (Q_UNLIKELY(mRightHalf)) {
+            restyleRightHalf(&mFgColor, &mBgColor, None, None);
+        }
     }
     // Only considers the flags within TestMask - so not Echo or Found:
-    void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
-    void setForeground(const QColor& newColor) { mFgColor = newColor.rgba(); }
-    void setBackground(const QColor& newColor) { mBgColor = newColor.rgba(); }
+    void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes)
+    {
+        mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask);
+        if (Q_UNLIKELY(mRightHalf)) {
+            restyleRightHalf(nullptr, nullptr, TestMask, newDisplayAttributes);
+        }
+    }
+    // Sets or clears just the given flags, which may include non-display ones such as Found:
+    void setAttributes(const AttributeFlags attributes, const bool state)
+    {
+        mFlags = state ? (mFlags | attributes) : (mFlags & ~attributes);
+        if (Q_UNLIKELY(mRightHalf) && (attributes & TestMask)) {
+            restyleRightHalf(nullptr, nullptr, attributes & TestMask, state ? attributes : None);
+        }
+    }
+    void setForeground(const QColor& newColor)
+    {
+        mFgColor = newColor.rgba();
+        if (Q_UNLIKELY(mRightHalf)) {
+            restyleRightHalf(&mFgColor, nullptr, None, None);
+        }
+    }
+    void setBackground(const QColor& newColor)
+    {
+        mBgColor = newColor.rgba();
+        if (Q_UNLIKELY(mRightHalf)) {
+            restyleRightHalf(nullptr, &mBgColor, None, None);
+        }
+    }
     void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes)
     {
         setColors(newFgColor, newBgColor);
         setAllDisplayAttributes(newDisplayAttributes);
     }
+    // A legacy double-byte character whose two bytes arrived with different
+    // renditions paints its right half in the colours and display attributes of
+    // `right`; everything else (link, selection, search highlight) is shared:
+    void setRightHalf(const TChar& right) { setRightHalf(right.mFgColor, right.mBgColor, right.mFlags); }
+    bool hasSplitFormat() const { return mRightHalf; }
+    TChar rightHalf() const;
 
     QColor foreground() const { return QColor::fromRgba(mFgColor); }
     QColor background() const { return QColor::fromRgba(mBgColor); }
@@ -301,9 +339,17 @@ private:
     QRgb mFgColor = 0;
     QRgb mBgColor = 0;
     AttributeFlags mFlags = None;
-    int mLinkIndex = 0;
+    // TLinkStore ids never exceed TLinkStore::scmMaxLinks:
+    quint16 mLinkIndex = 0;
+    // 0, or the index of this character's right-half rendition in a process-wide
+    // table that interns each distinct one - so a split costs no extra memory per
+    // character and needs no remapping when a character moves between buffers:
+    quint16 mRightHalf = 0;
     // Note: Decoration colors (underline/overline/strikeout) are stored in TLinkStore
     // for memory efficiency - they are looked up via linkIndex() at render time.
+
+    void setRightHalf(QRgb foreground, QRgb background, AttributeFlags flags);
+    void restyleRightHalf(const QRgb* foreground, const QRgb* background, AttributeFlags mask, AttributeFlags flags);
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 // std::vector only relocates by moving if the move cannot throw; otherwise it
@@ -493,6 +539,10 @@ private:
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processEUC_KRSequence(const std::string&, bool, size_t, size_t&, bool&);
+    bool processDoubleByteSequence(const std::string&, bool, size_t, size_t&, bool&);
+    static bool doubleByteLead(Decoder, quint8);
+    static bool doubleByteTrail(Decoder, quint8);
+    void flushPendingLead();
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
     void decodeSGR(QStringView);
@@ -644,6 +694,11 @@ private:
     // and is not generated locally {because both pass through
     // translateToPlainText()}:
     std::string mIncompleteSequenceBytes;
+    // The lead byte of a double-byte character that the game restyled before
+    // sending its trail byte, with the rendition that paints its left half;
+    // 0 when there is none, as no encoding uses that as a lead byte:
+    char mPendingLead = 0;
+    TChar mPendingLeadFormat;
 
     // The parser sequence state (the mGot... latches and
     // mIncompleteSequenceBytes) for whichever of the two data channels - Game
@@ -657,6 +712,8 @@ private:
     bool mLocalGotOSC = false;
     bool mLocalGotString = false;
     std::string mLocalIncompleteSequenceBytes;
+    char mLocalPendingLead = 0;
+    TChar mLocalPendingLeadFormat;
     // Set whilst a locally generated feed is being processed, so a nested feed
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
     bool mProcessingLocalFeed = false;

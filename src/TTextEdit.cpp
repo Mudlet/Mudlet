@@ -588,7 +588,7 @@ void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout) co
 {
     for (const GraphemeRun& run : layout) {
         if (run.fillsBackground) {
-            painter.fillRect(run.textRect, run.bgColor);
+            painter.fillRect(run.halfRect.isNull() ? run.textRect : run.halfRect, run.bgColor);
         }
     }
 }
@@ -603,9 +603,18 @@ void TTextEdit::paintForegrounds(QPainter& painter, const LineLayout& layout, co
         painter.setClipRect(clip);
     }
     for (const GraphemeRun& run : layout) {
-        if (run.style) {
-            paintGraphemeForeground(painter, run);
+        if (!run.style) {
+            continue;
         }
+        if (Q_LIKELY(run.halfRect.isNull())) {
+            paintGraphemeForeground(painter, run, *run.style);
+            continue;
+        }
+        painter.save();
+        // Clipped sideways only, so ink overflowing the line above or below still shows:
+        painter.setClipRect(QRect(run.halfRect.x(), painter.window().y(), run.halfRect.width(), painter.window().height()), Qt::IntersectClip);
+        paintGraphemeForeground(painter, run, run.rightHalf ? run.style->rightHalf() : *run.style);
+        painter.restore();
     }
     if (!clip.isNull()) {
         painter.restore();
@@ -928,6 +937,20 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QS
         run.textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     }
     const bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    resolveRunColors(run, charStyle, caretIsHere);
+    if (Q_UNLIKELY(charStyle.hasSplitFormat()) && charWidth == 2) {
+        run.halfRect = QRect(run.textRect.x(), run.textRect.y(), mFontWidth, mFontHeight);
+        layout.push_back(run);
+        run.rightHalf = true;
+        run.halfRect.translate(mFontWidth, 0);
+        resolveRunColors(run, charStyle.rightHalf(), caretIsHere);
+    }
+    layout.push_back(std::move(run));
+    return charWidth;
+}
+
+void TTextEdit::resolveRunColors(GraphemeRun& run, const TChar& charStyle, const bool caretIsHere) const
+{
     const bool swapColors = charStyle.isReversed() != (charStyle.isSelected() != caretIsHere);
     if (Q_UNLIKELY(charStyle.isFound())) {
         if (Q_UNLIKELY(swapColors)) {
@@ -970,16 +993,13 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QS
     // console types skip cells matching the console background so that the
     // widget underneath shows through.
     run.fillsBackground = !run.textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole || run.bgColor != mpConsole->getConsoleBgColor());
-    layout.push_back(std::move(run));
-    return charWidth;
 }
 
-void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& run) const
+void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& run, const TChar& charStyle) const
 {
     const QColor& fgColor = run.fgColor;
     const QRect& textRect = run.textRect;
     const QString& grapheme = run.grapheme;
-    const TChar& charStyle = *run.style;
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
