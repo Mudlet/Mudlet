@@ -168,6 +168,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 # -DENABLE_STATIC_ANALYSIS=ON (see cmake/StaticAnalysis.cmake for details)
 include(StaticAnalysis)
 
+# Profile-guided optimisation - inactive unless configured with -DMUDLET_PGO=GENERATE
+# or USE (see cmake/ProfileGuidedOptimization.cmake for the steps)
+include(ProfileGuidedOptimization)
+
 include(IncludeOptionalModule)
 
 include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
