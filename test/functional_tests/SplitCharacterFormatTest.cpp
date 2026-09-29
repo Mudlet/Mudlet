@@ -85,7 +85,9 @@ private slots:
         QVERIFY(QDir().mkpath(mConfigDir.path() + qsl("/mudlet/profiles")));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+#ifdef INCLUDE_FONTS
         QVERIFY(QFontDatabase::addApplicationFont(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf")) >= 0);
+#endif
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
@@ -97,9 +99,11 @@ private slots:
         mpHost = TestProfile::create(qsl("Test-SplitCharacterFormat"), qsl("localhost"), QString::number(mpServer->serverPort()));
         QVERIFY(mpHost);
         QVERIFY(mpHost->mpConsole);
+#ifdef INCLUDE_FONTS
         QFont font(qsl("Bitstream Vera Sans Mono"), 18);
         QCOMPARE(QFontInfo(font).family(), font.family());
         mpHost->mpConsole->mUpperPane->setFont(font);
+#endif
     }
 
     void cleanupTestCase()
@@ -216,6 +220,75 @@ private slots:
         QVERIFY(!buffer().buffer.at(lastTextLine()).front().hasSplitFormat());
     }
 
+    void oscLinkDecorationsReachBothHalves()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
+        mpHost->mEnableOSC8Hyperlinks = true;
+        const QByteArray open = "\033]8;;https://example.com/?config={\"style\":{\"bold\":true,\"italic\":true,\"underline\":\"wavy\",\"overline\":true,\"strikethrough\":true}}\033\\";
+        feed(open + "\033[31m" + QByteArray::fromHex("a4") + "\033[32m" + QByteArray::fromHex("a4") + "\033]8;;\033\\\n");
+        QCOMPARE(buffer().line(lastTextLine()), qsl("中"));
+        const TChar character = buffer().buffer.at(lastTextLine()).front();
+        QVERIFY(character.linkIndex() > 0);
+        const auto decorations = TChar::Bold | TChar::Italic | TChar::Underline | TChar::UnderlineWavy | TChar::Overline | TChar::StrikeOut;
+        QCOMPARE(character.allDisplayAttributes() & decorations, decorations);
+        QCOMPARE(character.rightHalfFormat().allDisplayAttributes() & decorations, decorations);
+        QVERIFY(character.foreground() != character.rightHalfFormat().foreground());
+    }
+
+    void linkStateDecorationsReachBothHalves()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
+        mpHost->mEnableOSC8Hyperlinks = true;
+        feed(QByteArray("\033]8;;https://example.com/\033\\\033[31;7m") + QByteArray::fromHex("a4") + "\033[27;32;5m" + QByteArray::fromHex("a4") + "\033]8;;\033\\\n");
+        const int line = lastTextLine();
+        const int link = buffer().buffer.at(line).front().linkIndex();
+        QVERIFY(link > 0);
+        QVERIFY(!buffer().buffer.at(line).front().rightHalfFormat().isBold());
+        Mudlet::HyperlinkStyling styling;
+        styling.hasCustomStyling = true;
+        styling.hoverStyle.hasCustomStyling = true;
+        styling.hoverStyle.isBold = true;
+        styling.hoverStyle.isItalic = true;
+        styling.hoverStyle.isOverlined = true;
+        styling.hoverStyle.isStrikeOut = true;
+        styling.hoverStyle.isUnderlined = true;
+        styling.hoverStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
+        mpHost->mpConsole->getLinkStore().setStyling(link, styling);
+        buffer().setLinkState(link, Mudlet::HyperlinkStyling::StateHover);
+        buffer().updateLinkCharacters(link);
+        const TChar styled = buffer().buffer.at(line).front();
+        QVERIFY(styled.isBold());
+        QVERIFY(styled.rightHalfFormat().isBold());
+        const auto decorations = TChar::Bold | TChar::Italic | TChar::Underline | TChar::UnderlineDotted | TChar::Overline | TChar::StrikeOut;
+        QCOMPARE(styled.allDisplayAttributes() & decorations, decorations);
+        QCOMPARE(styled.rightHalfFormat().allDisplayAttributes() & decorations, decorations);
+        buffer().setLinkState(link, Mudlet::HyperlinkStyling::StateDefault);
+        buffer().updateLinkCharacters(link);
+        const TChar cleared = buffer().buffer.at(line).front();
+        QVERIFY(!cleared.isBold());
+        QVERIFY(!cleared.rightHalfFormat().isBold());
+        QVERIFY(!cleared.rightHalfFormat().isUnderlined());
+        QCOMPARE(cleared.allDisplayAttributes(), TChar::AttributeFlags(TChar::Reverse));
+        QCOMPARE(cleared.rightHalfFormat().allDisplayAttributes(), TChar::AttributeFlags(TChar::Blink));
+        QVERIFY(styled.rightHalfFormat().isBold());
+        QCOMPARE(cleared.foreground(), styled.foreground());
+        QCOMPARE(cleared.rightHalfFormat().foreground(), styled.rightHalfFormat().foreground());
+    }
+
+    void mxpLinkUnderlineReachesBothHalves()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
+        mpHost->setForceMXPProcessorOn(true);
+        feed(QByteArray("<SEND \"test\">\033[31m") + QByteArray::fromHex("a4") + "\033[32m" + QByteArray::fromHex("a4") + "</SEND>\n");
+        mpHost->setForceMXPProcessorOn(false);
+        QCOMPARE(buffer().line(lastTextLine()), qsl("中"));
+        const TChar character = buffer().buffer.at(lastTextLine()).front();
+        QVERIFY(character.linkIndex() > 0);
+        QVERIFY(character.isUnderlined());
+        QVERIFY(character.rightHalfFormat().isUnderlined());
+        QVERIFY(character.foreground() != character.rightHalfFormat().foreground());
+    }
+
     void sgrResetPreservesHalfAttributes()
     {
         QVERIFY(mpHost->mTelnet.setEncoding("BIG5", false).first);
@@ -300,6 +373,9 @@ private slots:
 
     void blinkingOnlyChangesTheBlinkingHalf()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Rendering checks require bundled fonts (WITH_FONTS=YES)");
+#endif
         auto* pane = mpHost->mpConsole->mUpperPane;
         pane->mEnableBlinkText = true;
         for (const auto flag : {TChar::Blink, TChar::FastBlink}) {
@@ -309,9 +385,15 @@ private slots:
             const QImage before = render(split);
             QVERIFY(pane->mHasBlinkingContent);
             mudlet::self()->registerBlinkClient();
-            QTest::qWait(500);
-            const QImage after = render(split);
+            QImage after;
+            const bool changed = QTest::qWaitFor(
+                    [&]() {
+                        after = render(split);
+                        return after != before;
+                    },
+                    3000);
             mudlet::self()->unregisterBlinkClient();
+            QVERIFY(changed);
             const int width = pane->mFontWidth;
             QCOMPARE(before.copy(width, 0, width, before.height()), after.copy(width, 0, width, after.height()));
             QVERIFY(before.copy(2 * width, 0, width, before.height()) != after.copy(2 * width, 0, width, after.height()));
@@ -346,6 +428,9 @@ private slots:
 
     void paintingMatchesEachHalfOfTheUnsplitGlyph()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Rendering checks require bundled fonts (WITH_FONTS=YES)");
+#endif
         QFETCH(bool, selected);
         QFETCH(TChar::AttributeFlags, attributes);
         QFETCH(bool, blinkEnabled);

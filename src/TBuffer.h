@@ -185,7 +185,8 @@ public:
     void setForeground(const QColor& newColor);
     void setBackground(const QColor& newColor);
     void setRightHalfFormat(const TChar& format);
-    bool hasSplitFormat() const { return bool(mRightHalfFormat); }
+    void setDisplayAttributes(AttributeFlags attributes, bool enabled);
+    bool hasSplitFormat() const { return static_cast<bool>(mRightHalfFormat); }
     TChar rightHalfFormat() const;
     void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes)
     {

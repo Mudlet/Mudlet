@@ -507,6 +507,15 @@ void TChar::setAllDisplayAttributes(const AttributeFlags attributes)
     }
 }
 
+void TChar::setDisplayAttributes(const AttributeFlags attributes, const bool enabled)
+{
+    const AttributeFlags displayAttributes = attributes & TestMask;
+    mFlags = (mFlags & ~displayAttributes) | (enabled ? displayAttributes : None);
+    if (mRightHalfFormat) {
+        mRightHalfFormat->flags = (mRightHalfFormat->flags & ~displayAttributes) | (enabled ? displayAttributes : None);
+    }
+}
+
 void TChar::setRightHalfFormat(const TChar& format)
 {
     if (mFgColor == format.mFgColor && mBgColor == format.mBgColor && allDisplayAttributes() == format.allDisplayAttributes()) {
@@ -1830,22 +1839,22 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     c.setBackground(effectiveStyling.backgroundColor);
                 }
                 if (effectiveStyling.isBold) {
-                    c.mFlags |= TChar::Bold;
+                    c.setDisplayAttributes(TChar::Bold, true);
                 }
                 if (effectiveStyling.isItalic) {
-                    c.mFlags |= TChar::Italic;
+                    c.setDisplayAttributes(TChar::Italic, true);
                 }
                 if (effectiveStyling.isUnderlined) {
-                    c.mFlags |= TChar::Underline;
+                    c.setDisplayAttributes(TChar::Underline, true);
                     switch (effectiveStyling.underlineStyle) {
                     case Mudlet::HyperlinkStyling::UnderlineWavy:
-                        c.mFlags |= TChar::UnderlineWavy;
+                        c.setDisplayAttributes(TChar::UnderlineWavy, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineDotted:
-                        c.mFlags |= TChar::UnderlineDotted;
+                        c.setDisplayAttributes(TChar::UnderlineDotted, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineDashed:
-                        c.mFlags |= TChar::UnderlineDashed;
+                        c.setDisplayAttributes(TChar::UnderlineDashed, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineSolid:
                     case Mudlet::HyperlinkStyling::UnderlineNone:
@@ -1854,10 +1863,10 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     }
                 }
                 if (effectiveStyling.isOverlined) {
-                    c.mFlags |= TChar::Overline;
+                    c.setDisplayAttributes(TChar::Overline, true);
                 }
                 if (effectiveStyling.isStrikeOut) {
-                    c.mFlags |= TChar::StrikeOut;
+                    c.setDisplayAttributes(TChar::StrikeOut, true);
                 }
             }
 
@@ -1865,17 +1874,17 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // This prevents base decoration flags from overriding pseudo-class cascade decisions
             if (!effectiveStyling.hasCustomStyling) {
                 if (mCurrentHyperlinkStyling.isUnderlined) {
-                    c.mFlags |= TChar::Underline;
+                    c.setDisplayAttributes(TChar::Underline, true);
 
                     switch (mCurrentHyperlinkStyling.underlineStyle) {
                     case Mudlet::HyperlinkStyling::UnderlineWavy:
-                        c.mFlags |= TChar::UnderlineWavy;
+                        c.setDisplayAttributes(TChar::UnderlineWavy, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineDotted:
-                        c.mFlags |= TChar::UnderlineDotted;
+                        c.setDisplayAttributes(TChar::UnderlineDotted, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineDashed:
-                        c.mFlags |= TChar::UnderlineDashed;
+                        c.setDisplayAttributes(TChar::UnderlineDashed, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineSolid:
                     case Mudlet::HyperlinkStyling::UnderlineNone:
@@ -1885,19 +1894,19 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 }
 
                 if (mCurrentHyperlinkStyling.isOverlined) {
-                    c.mFlags |= TChar::Overline;
+                    c.setDisplayAttributes(TChar::Overline, true);
                 }
 
                 if (mCurrentHyperlinkStyling.isStrikeOut) {
-                    c.mFlags |= TChar::StrikeOut;
+                    c.setDisplayAttributes(TChar::StrikeOut, true);
                 }
 
                 if (mCurrentHyperlinkStyling.isBold) {
-                    c.mFlags |= TChar::Bold;
+                    c.setDisplayAttributes(TChar::Bold, true);
                 }
 
                 if (mCurrentHyperlinkStyling.isItalic) {
-                    c.mFlags |= TChar::Italic;
+                    c.setDisplayAttributes(TChar::Italic, true);
                 }
             }
 
@@ -1907,7 +1916,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
         if (mpHost->mMxpClient.isInLinkMode()) {
             c.mLinkIndex = mLinkStore.getCurrentLinkID();
-            c.mFlags |= TChar::Underline;
+            c.setDisplayAttributes(TChar::Underline, true);
         }
 
         if (mpHost->mMxpClient.hasFgColor()) {
@@ -9039,53 +9048,53 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 
                 // Update text decorations (only for CSS styling, not ANSI-base)
                 if (effectiveStyling.isUnderlined) {
-                    tchar.mFlags |= TChar::Underline;
+                    tchar.setDisplayAttributes(TChar::Underline, true);
 
                     // Apply underline style
                     // First clear any existing underline style flags
-                    tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
+                    tchar.setDisplayAttributes(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed, false);
 
                     switch (effectiveStyling.underlineStyle) {
                     case Mudlet::HyperlinkStyling::UnderlineWavy:
-                        tchar.mFlags |= TChar::UnderlineWavy;
+                        tchar.setDisplayAttributes(TChar::UnderlineWavy, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineDotted:
-                        tchar.mFlags |= TChar::UnderlineDotted;
+                        tchar.setDisplayAttributes(TChar::UnderlineDotted, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineDashed:
-                        tchar.mFlags |= TChar::UnderlineDashed;
+                        tchar.setDisplayAttributes(TChar::UnderlineDashed, true);
                         break;
                     default:
                         break;
                     }
                 } else {
-                    tchar.mFlags &= ~TChar::Underline;
-                    tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
+                    tchar.setDisplayAttributes(TChar::Underline, false);
+                    tchar.setDisplayAttributes(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed, false);
                 }
 
                 if (effectiveStyling.isOverlined) {
-                    tchar.mFlags |= TChar::Overline;
+                    tchar.setDisplayAttributes(TChar::Overline, true);
                 } else {
-                    tchar.mFlags &= ~TChar::Overline;
+                    tchar.setDisplayAttributes(TChar::Overline, false);
                 }
 
                 if (effectiveStyling.isStrikeOut) {
-                    tchar.mFlags |= TChar::StrikeOut;
+                    tchar.setDisplayAttributes(TChar::StrikeOut, true);
                 } else {
-                    tchar.mFlags &= ~TChar::StrikeOut;
+                    tchar.setDisplayAttributes(TChar::StrikeOut, false);
                 }
 
                 // Update bold and italic
                 if (effectiveStyling.isBold) {
-                    tchar.mFlags |= TChar::Bold;
+                    tchar.setDisplayAttributes(TChar::Bold, true);
                 } else {
-                    tchar.mFlags &= ~TChar::Bold;
+                    tchar.setDisplayAttributes(TChar::Bold, false);
                 }
 
                 if (effectiveStyling.isItalic) {
-                    tchar.mFlags |= TChar::Italic;
+                    tchar.setDisplayAttributes(TChar::Italic, true);
                 } else {
-                    tchar.mFlags &= ~TChar::Italic;
+                    tchar.setDisplayAttributes(TChar::Italic, false);
                 }
             }
         }
