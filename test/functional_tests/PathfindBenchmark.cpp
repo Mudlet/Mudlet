@@ -600,7 +600,8 @@ private slots:
         const int reps = qEnvironmentVariableIsSet("MUDLET_BENCH_REPS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_REPS") : 5;
         const int pairCount = qEnvironmentVariableIsSet("MUDLET_BENCH_PAIRS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_PAIRS") : 300;
         const QString mutate = qEnvironmentVariable("MUDLET_BENCH_MUTATE");
-        const QHash<int, QString> names{{0, qsl("current")}, {1, qsl("zero")}, {2, qsl("scaled")}, {3, qsl("cheb")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}, {6, qsl("alt")}, {7, qsl("altnotie")}};
+        const QHash<int, QString> names{
+                {0, qsl("current")}, {1, qsl("zero")}, {2, qsl("scaled")}, {3, qsl("cheb")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}, {6, qsl("alt")}, {7, qsl("altnotie")}, {8, qsl("altgeo")}};
 
         const int areaId = chooseArea(pMap);
         TArea* pArea = pMap->mpRoomDB->getArea(areaId);
@@ -654,6 +655,11 @@ private slots:
         emitMetric("alt_largest_scc", gAltLargestScc);
         emitMetric("alt_components", gAltComponents);
         emitMetric("alt_components_with_landmarks", gAltComponentsWithLandmarks);
+        emitMetric("geo_pass_ms", gGeoPassMs);
+        emitMetric("geo_areas", gGeoAreas);
+        emitMetric("geo_sealed_areas", gGeoSealedAreas);
+        emitMetric("geo_scc_skipped", gGeoSccSkipped);
+        emitMetric("geo_rooms_skipped", gGeoRoomsSkipped);
         emitMetric("alt_select_random", static_cast<qint64>(qEnvironmentVariable("MUDLET_ALT_SELECT") == qsl("random") ? 1 : 0));
         const int n = static_cast<int>(pMap->locations.size());
         emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));
@@ -708,7 +714,9 @@ private slots:
             for (auto it = spacing.cbegin(); it != spacing.cend(); ++it) {
                 ranked.append({it.value(), it.key()});
             }
-            std::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+            std::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
+                return a.first > b.first;
+            });
             for (int i = 0; i < std::min<int>(3, ranked.size()); ++i) {
                 emitMetric(qsl("ns_ew_spacing_rank%1_dx%2_dy%3_count").arg(i).arg(ranked[i].second.first).arg(ranked[i].second.second), static_cast<qint64>(ranked[i].first));
             }
@@ -727,7 +735,9 @@ private slots:
             }
             return total;
         };
-        auto sameCost = [](double a, double b) { return std::abs(a - b) <= 1e-5 * std::max(1.0, std::abs(b)) + 1e-3; };
+        auto sameCost = [](double a, double b) {
+            return std::abs(a - b) <= 1e-5 * std::max(1.0, std::abs(b)) + 1e-3;
+        };
         QRandomGenerator orderRng(99);
 
         struct Stats
@@ -941,7 +951,7 @@ advResult = string.format("exitWeightAfterSet0=%s roomWeightAfterSet0=%s", tostr
             std::printf("ADV api %s\n", out.readAll().constData());
         }
         pMap->mMapGraphNeedsUpdate = true;
-        for (const int m : {0, 1, 4, 5, 6}) {
+        for (const int m : {0, 1, 4, 5, 6, 8}) {
             gHeuristicMode = m;
             const bool found = pMap->findPath(200, 110);
             double total = 0;
@@ -1070,7 +1080,7 @@ f:close()
         }
         const int goals = qEnvironmentVariableIsSet("MUDLET_AUDIT_GOALS") ? qEnvironmentVariableIntValue("MUDLET_AUDIT_GOALS") : 30;
         const QList<int> modes = modesFromEnv();
-        const QHash<int, QString> names{{0, qsl("current")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}, {6, qsl("alt")}, {7, qsl("altnotie")}, {1, qsl("zero")}};
+        const QHash<int, QString> names{{0, qsl("current")}, {4, qsl("chebarea")}, {5, qsl("chebtie")}, {6, qsl("alt")}, {7, qsl("altnotie")}, {8, qsl("altgeo")}, {1, qsl("zero")}};
         QHash<int, qint64> admissibleChecked, admissibleViolations, consistencyChecked, consistencyViolations, consistencyViolationsOnRoutes;
         QHash<int, double> worstExcess, worstInconsistency;
         QRandomGenerator rng(4242);
@@ -1098,7 +1108,7 @@ f:close()
             }
             for (const int m : modes) {
                 gHeuristicMode = m;
-                if ((m == 6 || m == 7) && gAltK > 0) {
+                if ((m == 6 || m == 7 || m == 8) && gAltK > 0) {
                     gAltScc = pMap->mAltScc.data();
                     gAltGoalScc = pMap->mAltScc[goal];
                     gAltFrom = pMap->mAltFrom.data();
@@ -1161,16 +1171,21 @@ f:close()
         QVERIFY2(pMap->restore(mMapPath), "could not restore map");
         const int cycles = qEnvironmentVariableIsSet("MUDLET_MAPPING_CYCLES") ? qEnvironmentVariableIntValue("MUDLET_MAPPING_CYCLES") : 10;
         const QByteArray altK = qgetenv("MUDLET_ALT_K");
+        const QByteArray geo = qgetenv("MUDLET_GEO");
+        const int altMode = qEnvironmentVariableIsSet("MUDLET_MAPPING_MODE") ? qEnvironmentVariableIntValue("MUDLET_MAPPING_MODE") : 6;
         gHeuristicMode = 0;
         pMap->initGraph();
         const int n = static_cast<int>(pMap->locations.size());
         QRandomGenerator rng(777);
         QElapsedTimer timer;
-        for (const bool withAlt : {false, true}) {
-            qputenv("MUDLET_ALT_K", withAlt ? altK : QByteArray("0"));
-            gHeuristicMode = withAlt ? 6 : 0;
-            std::vector<double> times;
-            for (int c = 0; c < cycles; ++c) {
+        std::vector<double> timesFor[2];
+        std::vector<double> altPass;
+        for (int c = 0; c < cycles; ++c) {
+            for (const bool withAlt : {c % 2 == 1, c % 2 == 0}) {
+                qputenv("MUDLET_ALT_K", withAlt ? altK : QByteArray("0"));
+                qputenv("MUDLET_GEO", withAlt ? geo : QByteArray("0"));
+                gHeuristicMode = withAlt ? altMode : 0;
+                std::vector<double>& times = timesFor[withAlt];
                 const int anchor = pMap->locations[rng.bounded(n)].id;
                 const int from = pMap->locations[rng.bounded(n)].id;
                 const QString script = qsl("local a = %1; local id = createRoomID(); addRoom(id); setRoomArea(id, getRoomArea(a)); "
@@ -1186,13 +1201,22 @@ f:close()
                 timer.restart();
                 pMap->findPath(from, newRoom);
                 times.push_back(timer.nsecsElapsed() / 1.0e6);
+                if (withAlt) {
+                    altPass.push_back(gAltPassMs + gGeoPassMs);
+                }
             }
+        }
+        std::sort(altPass.begin(), altPass.end());
+        emitMetric(qsl("mapping_alt_pass_median_ms"), altPass[altPass.size() / 2]);
+        for (const bool withAlt : {false, true}) {
+            std::vector<double>& times = timesFor[withAlt];
             std::sort(times.begin(), times.end());
             const QString p = withAlt ? qsl("mapping_alt") : qsl("mapping_current");
             emitMetric(qsl("%1_median_ms").arg(p), times[times.size() / 2]);
             emitMetric(qsl("%1_max_ms").arg(p), times.back());
         }
         qputenv("MUDLET_ALT_K", altK);
+        qputenv("MUDLET_GEO", geo);
         gHeuristicMode = 0;
     }
 
@@ -1384,10 +1408,7 @@ private:
         return 0;
     }
 
-    void deleteProfileDirectory()
-    {
-        TestProfile::removeProfileDirectory(mHostname);
-    }
+    void deleteProfileDirectory() { TestProfile::removeProfileDirectory(mHostname); }
 };
 
 static void initializeQRCResources()

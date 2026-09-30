@@ -976,7 +976,7 @@ void TMap::initGraph()
     // EXPERIMENT: largest k with k * euclidean(u, v) <= cost(u, v) for every same-area edge
     QElapsedTimer scalePass;
     scalePass.start();
-    {
+    if (qEnvironmentVariableIntValue("MUDLET_SKIP_SCALE_PASSES") != 1) {
         float k = std::numeric_limits<float>::max();
         for (auto it = edgeHash.cbegin(); it != edgeHash.cend(); ++it) {
             TRoom* a = mpRoomDB->getRoom(it.key().first);
@@ -1023,10 +1023,79 @@ void TMap::initGraph()
         gChebPassMs = chebPass.nsecsElapsed() / 1.0e6;
     }
     gScalePassMs = scalePass.nsecsElapsed() / 1.0e6;
+    computeSealedAreas();
     computeLandmarks();
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
+}
+
+// EXPERIMENT (#3334): per area, the largest s with s x Chebyshev(u, v) <= cost(u, v) for every
+// edge inside it, kept only for sealed areas (no in-edges from other areas, or no out-edges to
+// them): a path between two rooms of such an area never leaves it, so s x Chebyshev is admissible.
+void TMap::computeSealedAreas()
+{
+    QElapsedTimer timer;
+    timer.start();
+    std::vector<qint32>().swap(mGeoArea);
+    std::vector<float>().swap(mGeoScale);
+    std::vector<float>().swap(mGeoMinCost);
+    gGeoArea = nullptr;
+    gGeoScale = nullptr;
+    gGeoAreas = 0;
+    gGeoSealedAreas = 0;
+    const std::size_t n = boost::num_vertices(g);
+    if (qEnvironmentVariableIntValue("MUDLET_GEO") != 1 || n == 0) {
+        gGeoPassMs = timer.nsecsElapsed() / 1.0e6;
+        return;
+    }
+    QHash<int, qint32> denseArea;
+    mGeoArea.resize(n);
+    for (std::size_t v = 0; v < n; ++v) {
+        const int area = locations[v].pR->getArea();
+        auto found = denseArea.constFind(area);
+        if (found == denseArea.cend()) {
+            found = denseArea.insert(area, static_cast<qint32>(denseArea.size()));
+        }
+        mGeoArea[v] = found.value();
+    }
+    const std::size_t areas = denseArea.size();
+    constexpr float none = std::numeric_limits<float>::infinity();
+    mGeoScale.assign(areas, none);
+    mGeoMinCost.assign(areas, none);
+    std::vector<char> hasIn(areas, 0), hasOut(areas, 0);
+    const WeightMap weights = boost::get(boost::edge_weight, g);
+    for (std::size_t v = 0; v < n; ++v) {
+        const qint32 a = mGeoArea[v];
+        const TRoom* from = locations[v].pR;
+        for (const auto& e : boost::make_iterator_range(boost::out_edges(v, g))) {
+            const std::size_t t = boost::target(e, g);
+            const qint32 b = mGeoArea[t];
+            if (a != b) {
+                hasOut[a] = 1;
+                hasIn[b] = 1;
+                continue;
+            }
+            const float w = boost::get(weights, e);
+            mGeoMinCost[a] = std::min(mGeoMinCost[a], w);
+            const TRoom* to = locations[t].pR;
+            const int cheb = std::max({std::abs(from->x() - to->x()), std::abs(from->y() - to->y()), std::abs(from->z() - to->z())});
+            if (cheb > 0) {
+                mGeoScale[a] = std::min(mGeoScale[a], w / cheb);
+            }
+        }
+    }
+    for (std::size_t a = 0; a < areas; ++a) {
+        if ((hasIn[a] && hasOut[a]) || mGeoScale[a] == none) {
+            mGeoScale[a] = 0;
+        } else {
+            ++gGeoSealedAreas;
+        }
+    }
+    gGeoAreas = static_cast<qint64>(areas);
+    gGeoArea = mGeoArea.data();
+    gGeoScale = mGeoScale.data();
+    gGeoPassMs = timer.nsecsElapsed() / 1.0e6;
 }
 
 // Refill rather than only resize, or stale values below the old room count survive a shrink.
@@ -1222,6 +1291,12 @@ void TMap::computeLandmarks()
         }
     };
 
+    // EXPERIMENT: a component inside one sealed area whose Chebyshev scale is at least
+    // MUDLET_GEO_SKIP x its cheapest edge gets no landmarks - the geometric bound is already tight.
+    const bool geoSkip = !mGeoArea.empty() && qEnvironmentVariableIsSet("MUDLET_GEO_SKIP");
+    const float geoSkipRatio = qEnvironmentVariable("MUDLET_GEO_SKIP").toFloat();
+    gGeoSccSkipped = 0;
+    gGeoRoomsSkipped = 0;
     const bool randomSelection = qEnvironmentVariable("MUDLET_ALT_SELECT") == qsl("random");
     QRandomGenerator selectionRng(31337);
     mAltFrom.assign(n * k, inf);
@@ -1236,8 +1311,20 @@ void TMap::computeLandmarks()
         if (size < 2) {
             continue;
         }
-        ++componentsWithLandmarks;
         const quint32* memberBegin = members.data() + sccStart[c];
+        if (geoSkip) {
+            const qint32 area = mGeoArea[memberBegin[0]];
+            bool oneArea = true;
+            for (quint32 i = 1; i < size && oneArea; ++i) {
+                oneArea = mGeoArea[memberBegin[i]] == area;
+            }
+            if (oneArea && mGeoScale[area] > 0 && mGeoScale[area] >= geoSkipRatio * mGeoMinCost[area]) {
+                ++gGeoSccSkipped;
+                gGeoRoomsSkipped += size;
+                continue;
+            }
+        }
+        ++componentsWithLandmarks;
         quint32 seed = memberBegin[0];
         for (quint32 i = 1; i < size; ++i) {
             if (locations[memberBegin[i]].id < locations[seed].id) {
@@ -1326,7 +1413,7 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
     std::priority_queue<frontierEntry, std::vector<frontierEntry>, std::greater<frontierEntry>> frontier;
 
     gExpandedF.clear();
-    if ((gHeuristicMode == 6 || gHeuristicMode == 7) && gAltK > 0 && !mAltFrom.empty()) {
+    if ((gHeuristicMode == 6 || gHeuristicMode == 7 || gHeuristicMode == 8) && gAltK > 0 && !mAltFrom.empty()) {
         gAltFrom = mAltFrom.data();
         gAltTo = mAltTo.empty() ? nullptr : mAltTo.data();
         gAltScc = mAltScc.data();
@@ -1339,7 +1426,7 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
     mSearchDistance[start] = 0;
     mSearchState[start] = stateFrontier;
     mSearchTouched.push_back(start);
-    frontier.push({heuristic(start), (gHeuristicMode == 5 || gHeuristicMode == 6) ? heuristic(start) : 0, start});
+    frontier.push({heuristic(start), (gHeuristicMode == 5 || gHeuristicMode == 6 || gHeuristicMode == 8) ? heuristic(start) : 0, start});
 
     while (!frontier.empty()) {
         const vertex current = std::get<2>(frontier.top());
@@ -1373,7 +1460,7 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
             // disagree and a better route to an expanded room can appear (boost does the same).
             mSearchState[neighbour] = stateFrontier;
             const cost h = heuristic(neighbour);
-            frontier.push({throughCurrent + h, (gHeuristicMode == 5 || gHeuristicMode == 6) ? h : 0, neighbour});
+            frontier.push({throughCurrent + h, (gHeuristicMode == 5 || gHeuristicMode == 6 || gHeuristicMode == 8) ? h : 0, neighbour});
         }
     }
 

@@ -138,10 +138,14 @@ public:
     bool restore(QString location);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
-    void computeLandmarks(); // EXPERIMENT
-    std::vector<cost> mAltFrom; // EXPERIMENT
-    std::vector<cost> mAltTo;   // EXPERIMENT
-    std::vector<qint32> mAltScc; // EXPERIMENT: strongly connected component of each vertex
+    void computeLandmarks();        // EXPERIMENT
+    std::vector<cost> mAltFrom;     // EXPERIMENT
+    std::vector<cost> mAltTo;       // EXPERIMENT
+    std::vector<qint32> mAltScc;    // EXPERIMENT: strongly connected component of each vertex
+    void computeSealedAreas();      // EXPERIMENT
+    std::vector<qint32> mGeoArea;   // EXPERIMENT
+    std::vector<float> mGeoScale;   // EXPERIMENT
+    std::vector<float> mGeoMinCost; // EXPERIMENT
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
     QString connectExitStubByToId(const int fromRoomId, const int toRoomId);
     QString connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId);
@@ -429,10 +433,10 @@ private:
     std::vector<cost> mSearchDistance;
     std::vector<quint8> mSearchState;
     std::vector<vertex> mSearchTouched;
+
 public:
     std::size_t mLastSearchTouched = 0; // EXPERIMENT
 private:
-
     // Held for the whole of a map operation that pumps the event loop, so that
     // mapOperationInProgress() can tell anything re-entered from that pump that
     // this map is on the stack. Nested operations are counted, not flagged: an

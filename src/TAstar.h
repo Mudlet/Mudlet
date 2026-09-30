@@ -44,8 +44,8 @@ using namespace boost;
 // auxiliary types
 struct location
 {
-    int id;    // Typically 4 bytes
-    TRoom* pR; // 4 or 8 bytes? - so may have reduced size from 20 to 8 or 12 plus padding...?
+    int id;                       // Typically 4 bytes
+    TRoom* pR;                    // 4 or 8 bytes? - so may have reduced size from 20 to 8 or 12 plus padding...?
     float areaChebyshevScale = 0; // EXPERIMENT
 };
 
@@ -81,6 +81,15 @@ inline qint64 gAltComponentsWithLandmarks = 0;
 inline const qint32* gAltScc = nullptr;
 inline qint32 gAltGoalScc = -1;
 inline std::vector<int> gAltLandmarkRooms;
+// 8 = max(ALT, Chebyshev x area scale) where the goal's area is sealed: no in-edges from other
+// areas or no out-edges to them, so a path between two of its rooms never leaves it.
+inline const qint32* gGeoArea = nullptr; // dense area index per vertex
+inline const float* gGeoScale = nullptr; // per dense area, 0 when unsealed
+inline double gGeoPassMs = 0;
+inline qint64 gGeoAreas = 0;
+inline qint64 gGeoSealedAreas = 0;
+inline qint64 gGeoSccSkipped = 0;
+inline qint64 gGeoRoomsSkipped = 0;
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route
@@ -88,7 +97,7 @@ struct route
 #ifdef MUDLET_EXPERIMENT_DOUBLE_COST
     double cost;
 #else
-    float cost;              // Needed during establishing the best parallel edge
+    float cost; // Needed during establishing the best parallel edge
 #endif
     quint8 direction;        // Use DIR_xxx values to code exit direction
     QString specialExitName; // If direction is DIR_OTHER then this is needed
@@ -106,7 +115,8 @@ public:
     distance_heuristic(const LocMap& l, Vertex goal)
     : m_location(l)
     , m_goal(goal)
-    {}
+    {
+    }
 
     // A temporary would leave m_location dangling.
     distance_heuristic(const LocMap&&, Vertex) = delete;
@@ -116,26 +126,21 @@ public:
         if (gHeuristicMode == 1) {
             return 0;
         }
+        if (gHeuristicMode == 8) {
+            CostType geo = 0;
+            if (gGeoArea && gGeoArea[u] == gGeoArea[m_goal]) {
+                const float scale = gGeoScale[gGeoArea[u]];
+                if (scale > 0) {
+                    const CostType dx = m_location[m_goal].pR->x() - m_location[u].pR->x();
+                    const CostType dy = m_location[m_goal].pR->y() - m_location[u].pR->y();
+                    const CostType dz = m_location[m_goal].pR->z() - m_location[u].pR->z();
+                    geo = std::max({std::abs(dx), std::abs(dy), std::abs(dz)}) * scale;
+                }
+            }
+            return std::max(geo, altBound(u));
+        }
         if (gHeuristicMode == 6 || gHeuristicMode == 7) {
-            // slots name the room's own component's landmarks, so they only compare with the goal's
-            if (gAltK == 0 || !gAltFrom || !gAltScc || gAltScc[u] != gAltGoalScc) {
-                return 0;
-            }
-            constexpr cost inf = std::numeric_limits<cost>::infinity();
-            const cost* fromLandmark = gAltFrom + static_cast<std::size_t>(u) * gAltK;
-            const cost* toLandmark = gAltUseTo ? gAltTo + static_cast<std::size_t>(u) * gAltK : nullptr;
-            CostType best = 0;
-            for (int k = 0; k < gAltK; ++k) {
-                // d(u, g) >= d(L, g) - d(L, u), valid only when L reaches u
-                if (fromLandmark[k] < inf && gAltGoalFrom[k] < inf) {
-                    best = std::max(best, gAltGoalFrom[k] - fromLandmark[k]);
-                }
-                // d(u, g) >= d(u, L) - d(g, L), valid only when g reaches L
-                if (toLandmark && toLandmark[k] < inf && gAltGoalTo[k] < inf) {
-                    best = std::max(best, toLandmark[k] - gAltGoalTo[k]);
-                }
-            }
-            return best;
+            return altBound(u);
         }
         if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea()) {
             return gHeuristicMode >= 2 ? 0 : 1;
@@ -157,6 +162,29 @@ public:
     }
 
 private:
+    CostType altBound(Vertex u) const
+    {
+        // slots name the room's own component's landmarks, so they only compare with the goal's
+        if (gAltK == 0 || !gAltFrom || !gAltScc || gAltScc[u] != gAltGoalScc) {
+            return 0;
+        }
+        constexpr cost inf = std::numeric_limits<cost>::infinity();
+        const cost* fromLandmark = gAltFrom + static_cast<std::size_t>(u) * gAltK;
+        const cost* toLandmark = gAltUseTo ? gAltTo + static_cast<std::size_t>(u) * gAltK : nullptr;
+        CostType best = 0;
+        for (int k = 0; k < gAltK; ++k) {
+            // d(u, g) >= d(L, g) - d(L, u), valid only when L reaches u
+            if (fromLandmark[k] < inf && gAltGoalFrom[k] < inf) {
+                best = std::max(best, gAltGoalFrom[k] - fromLandmark[k]);
+            }
+            // d(u, g) >= d(u, L) - d(g, L), valid only when g reaches L
+            if (toLandmark && toLandmark[k] < inf && gAltGoalTo[k] < inf) {
+                best = std::max(best, toLandmark[k] - gAltGoalTo[k]);
+            }
+        }
+        return best;
+    }
+
     const LocMap& m_location;
     Vertex m_goal;
 };
@@ -174,10 +202,12 @@ class astar_goal_visitor : public boost::default_astar_visitor
 public:
     explicit astar_goal_visitor(Vertex goal)
     : m_goal(goal)
-    {}
+    {
+    }
 
     template <class Graph>
-    void examine_vertex(Vertex u, Graph& g) {
+    void examine_vertex(Vertex u, Graph& g)
+    {
         Q_UNUSED(g)
         if (u == m_goal) {
             throw found_goal();
