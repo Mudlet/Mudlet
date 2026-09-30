@@ -244,7 +244,7 @@ private slots:
 
         QElapsedTimer timer;
         timer.start();
-        QVERIFY2(pMap->restore(mMapPath), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));
+        QVERIFY2(loadBenchMap(pMap), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));
         emitMetric("map_restore_seconds", timer.nsecsElapsed() / 1.0e9);
 
         emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));
@@ -457,7 +457,7 @@ private slots:
         QVERIFY2(connected.wait(3000), "could not connect to the stub");
         host->showHideOrCreateMapper(false);
         TMap* pMap = host->mpMap.data();
-        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        QVERIFY2(loadBenchMap(pMap), "could not restore map");
         gHeuristicMode = 0;
         pMap->initGraph();
         const int n = static_cast<int>(pMap->locations.size());
@@ -580,6 +580,18 @@ private slots:
         return host;
     }
 
+    bool loadBenchMap(TMap* pMap) const
+    {
+        if (mMapPath.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            const auto [ok, message] = pMap->readJsonMapFile(mMapPath);
+            if (!ok) {
+                qWarning().noquote() << "readJsonMapFile:" << message;
+            }
+            return ok;
+        }
+        return pMap->restore(mMapPath);
+    }
+
     static QList<int> modesFromEnv()
     {
         QList<int> modes;
@@ -595,7 +607,7 @@ private slots:
         Host* host = openBenchHost();
         QVERIFY(host);
         TMap* pMap = host->mpMap.data();
-        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        QVERIFY2(loadBenchMap(pMap), "could not restore map");
         const QList<int> modes = modesFromEnv();
         const int reps = qEnvironmentVariableIsSet("MUDLET_BENCH_REPS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_REPS") : 5;
         const int pairCount = qEnvironmentVariableIsSet("MUDLET_BENCH_PAIRS") ? qEnvironmentVariableIntValue("MUDLET_BENCH_PAIRS") : 300;
@@ -977,7 +989,7 @@ advResult = string.format("exitWeightAfterSet0=%s roomWeightAfterSet0=%s", tostr
         Host* host = openBenchHost();
         QVERIFY(host);
         TMap* pMap = host->mpMap.data();
-        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        QVERIFY2(loadBenchMap(pMap), "could not restore map");
         pMap->mMapGraphNeedsUpdate = true;
         const QString script = qsl(R"LUA(
 local ids = {}
@@ -1053,7 +1065,7 @@ f:close()
         Host* host = openBenchHost();
         QVERIFY(host);
         TMap* pMap = host->mpMap.data();
-        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        QVERIFY2(loadBenchMap(pMap), "could not restore map");
         if (qEnvironmentVariable("MUDLET_BENCH_MUTATE") == qsl("teleport")) {
             const int areaId = chooseArea(pMap);
             TArea* pArea = pMap->mpRoomDB->getArea(areaId);
@@ -1168,7 +1180,7 @@ f:close()
         Host* host = openBenchHost();
         QVERIFY(host);
         TMap* pMap = host->mpMap.data();
-        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        QVERIFY2(loadBenchMap(pMap), "could not restore map");
         const int cycles = qEnvironmentVariableIsSet("MUDLET_MAPPING_CYCLES") ? qEnvironmentVariableIntValue("MUDLET_MAPPING_CYCLES") : 10;
         const QByteArray altK = qgetenv("MUDLET_ALT_K");
         const QByteArray geo = qgetenv("MUDLET_GEO");
@@ -1227,7 +1239,7 @@ f:close()
         Host* host = openBenchHost();
         QVERIFY(host);
         TMap* pMap = host->mpMap.data();
-        QVERIFY2(pMap->restore(mMapPath), "could not restore map");
+        QVERIFY2(loadBenchMap(pMap), "could not restore map");
         qputenv("MUDLET_ALT_K", "0");
         pMap->initGraph();
         const std::size_t n = boost::num_vertices(pMap->g);
