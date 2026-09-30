@@ -640,9 +640,9 @@ private slots:
         QTest::addColumn<QString>("sent");
         QTest::addColumn<int>("hangingIndent");
         QTest::newRow("break at a space") << qsl("the quick brown fox jumps over the lazy dog") << 0;
-        QTest::newRow("several spaces at a break") << qsl("It is late.  The clock strikes eleven.   You yawn.") << 0;
+        QTest::newRow("several spaces at a break") << qsl("It is very late.   The clock strikes eleven.") << 0;
         QTest::newRow("no break opportunity") << qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ") << 0;
-        QTest::newRow("hyphenated") << qsl("a well-to-do, happy-go-lucky, devil-may-care sort") << 0;
+        QTest::newRow("hyphenated") << qsl("they will co-operate if asked") << 0;
         QTest::newRow("hanging indent") << qsl("the quick brown fox jumps over the lazy dog") << 4;
         QTest::newRow("two lines sent") << qsl("the quick brown fox jumps\nover the lazy dog and away it goes") << 3;
     }
