@@ -701,12 +701,21 @@ private slots:
     // is being taken apart.
     void test_closingTheProfileDropsAHeldServerWrappedLine()
     {
+        // The close saves the profile before it drops anything, and
+        // Host::waitForProfileSave() runs the event loop with the profile still
+        // live - so text from the game arriving meanwhile commits the held line,
+        // as does the posting timer any text from it starts, and so does the
+        // flush timer if the save outlasts it, as it can on a slow disk. None of
+        // those is the close dropping the line, so this game says nothing and
+        // the timer is given longer than any save takes.
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
+        host->mServerWrapFlushTimer.setInterval(std::chrono::minutes(1));
 
         const QString heldLine = QString(64, QChar('y')) + qsl(" omega");
         std::string data = heldLine.toStdString() + "\n";
