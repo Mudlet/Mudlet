@@ -7,9 +7,9 @@
 # pulls in, directly or through Mudlet's own headers. None of them may bring in
 # windows.h, whose macros - interface, min, max - would then reach every file.
 #
-# -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON turns all of this off. CI's push-only
-# ubuntu / clang job does so, to catch a missing #include the precompiled
-# header would otherwise supply.
+# -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON turns all of this off. CI's ubuntu /
+# clang jobs, on pull requests and on push, do so to catch a missing #include
+# the precompiled header would otherwise supply.
 
 if(ENABLE_STATIC_ANALYSIS)
   # clang-tidy would warn about, and then ignore, a GCC precompiled header - and
