@@ -344,6 +344,39 @@ private slots:
         QCOMPARE(console->actionToolBar(floating), toolBar.data());
     }
 
+    // Undoing the addition of a group deletes it with its host still set. Its
+    // children then go too, and each one redraws the bar the group is a menu
+    // on - which must not happen once the group itself is half destroyed.
+    void test_aGroupDeletedWithItsEntriesIsNotRecordedAgain()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* root = makeRootBar(host, qsl("placementMenuHome"), 0, false);
+        auto* group = new TAction(root, host);
+        group->setName(qsl("placementMenu"));
+        group->setIsFolder(true);
+        group->setIsActive(true);
+        host->getActionUnit()->registerAction(group);
+        auto* entry = new TAction(group, host);
+        entry->setName(qsl("placementMenuEntry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        host->getActionUnit()->updateAllToolbars();
+        QVERIFY2(console->actionEasyButtonBar(group), "the group has to be recorded against the bar first, or deleting it proves nothing");
+
+        // As EditorAddItemCommand::undo() does
+        host->getActionUnit()->unregisterAction(group);
+        delete group;
+
+        // The freed pointer is only looked up as a key, never followed
+        QVERIFY(!console->actionEasyButtonBar(group));
+        QVERIFY(console->actionEasyButtonBar(root));
+    }
+
     void cleanup()
     {
         if (auto* self = mudlet::self()) {

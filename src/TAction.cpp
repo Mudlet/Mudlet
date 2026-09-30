@@ -55,6 +55,12 @@ TAction::TAction(const QString& name, Host* pHost)
 TAction::~TAction()
 {
     if (mpHost) {
+        // Each child's removal redraws the bars, which draw this action as a
+        // menu of its children; ~Tree() would delete them only once this
+        // action's own members and QObject were gone.
+        while (!mpMyChildrenList->empty()) {
+            delete mpMyChildrenList->front();
+        }
         mpHost->getActionUnit()->unregisterAction(this);
 
         if (isTemporary()) {
