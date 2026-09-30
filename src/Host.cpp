@@ -2367,6 +2367,7 @@ bool Host::copyToClipboard(const QString& name)
 void Host::cutMainConsoleToClipboard()
 {
     *mpClipboard = mpMainConsoleModel->buffer.cut(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end);
+    markSelectionDirty(*mpMainConsoleModel);
 }
 
 bool Host::pasteClipboard(const QString& name)

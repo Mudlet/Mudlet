@@ -491,6 +491,36 @@ private slots:
         QCOMPARE(mini->model().buffer.line(line), qsl("seYXcond"));
     }
 
+    // A view keeps what it last painted of a line until told the line changed,
+    // so without this the cut text stayed on screen
+    void test_cuttingFromTheMainConsoleRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamCut keep\\nthird\\n')\n")), "the main console could not be written to");
+        int line = -1;
+        for (int i = console->buffer.size() - 1; i >= 0; --i) {
+            if (console->buffer.line(i).contains(qsl("seamCut"))) {
+                line = i;
+                break;
+            }
+        }
+        QVERIFY2(line > 0, "the line to cut from is not below the first line, so a redraw of line 0 would pass");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("moveCursor('main', 0, %1)\nselectString('seamCut', 1)\n").arg(line)), "the text to cut could not be selected");
+        for (TTextEdit* pane : {console->mUpperPane, console->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("cut()")), "cut() failed");
+
+        QCOMPARE(console->buffer.line(line), qsl("keep  keep"));
+        QVERIFY2(console->mUpperPane->mDirtyFirstLine == line && console->mUpperPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the upper pane to redraw");
+        QVERIFY2(console->mLowerPane->mDirtyFirstLine == line && console->mLowerPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the lower pane to redraw");
+    }
+
 private:
     // Answers the link's index, or 0 when the link never landed.
     int feedSpoilerLink(Host* host, const QString& marker)
