@@ -2128,6 +2128,48 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         QCOMPARE(mpServer->nawsUpdates().constLast(), QSize(std::min(host->mScreenWidth, host->mWrapAt), host->mScreenHeight));
     }
 
+    // With no view, timestamps turned on or off from Lua still change the width
+    // the game is told by their gutter, as they do with one.
+    void test_luaTimeStampsResendNawsWithNoView()
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        writeProfileSave(qsl("%1profileNaws.xml").arg(saveFolder), QString());
+
+        Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        const auto sizeWithGutter = [host](const int gutter) {
+            return QSize(std::min(host->mScreenWidth, host->mWrapAt) - gutter, host->mScreenHeight);
+        };
+        const auto nawsReaches = [this, &sizeWithGutter](const int gutter) {
+            return QTest::qWaitFor(
+                    [this, &sizeWithGutter, gutter]() {
+                        return !mpServer->nawsUpdates().isEmpty() && mpServer->nawsUpdates().constLast() == sizeWithGutter(gutter);
+                    },
+                    5000);
+        };
+
+        host->mTelnet.connectIt(mLocalhost, mPort.toInt());
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+                         },
+                         5000),
+                 "The view-less profile did not connect.");
+        // IAC DO NAWS
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        QVERIFY2(nawsReaches(0), "The view-less profile never reported its size with no timestamps.");
+
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+        QVERIFY2(nawsReaches(TBuffer::smTimeStampFormat.size()), "Timestamps turned on from Lua with no view left the game's width alone.");
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY2(nawsReaches(0), "Timestamps turned off from Lua with no view left the game's width alone.");
+    }
+
     // A profile that never had a view, whose changeColors() would otherwise
     // hand the model the profile's wrap, still wraps as its save says.
     void test_profileLoadSeedsTheWrapWithNoView()
