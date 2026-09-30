@@ -1,0 +1,170 @@
+=== MAIN per-SCC (results8) vs largest-SCC (results6), K=8
+
+sendar: rooms 174, SCCs 1, with landmarks 1, landmarks 8 (old 8); build 0.2ms (old 0.2) of initGraph 0.5ms (old 0.5); tables 0.0MB (old 0.0); peak RSS 115MB; busy 5/11
+  uniform       current  /300 sub 73 worst 2.000 fail 0 | med 0.004 p95 0.011 max 0.022 ms (med x1.00 p95 x1.00) touched x1.000
+  uniform       zero     /300 sub 0 worst 1.000 fail 0 | med 0.006 p95 0.009 max 0.012 ms (med x1.50 p95 x0.82) touched x2.312
+  uniform       chebtie  /300 sub 0 worst 1.000 fail 0 | med 0.006 p95 0.009 max 0.013 ms (med x1.50 p95 x0.82) touched x1.935
+  uniform       alt      /300 sub 0 worst 1.000 fail 0 | med 0.008 p95 0.017 max 0.034 ms (med x2.00 p95 x1.55) touched x1.698
+  uniform       OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.007 p95 0.016 max 0.031 ms (med x2.33 p95 x1.45) touched x1.696
+  samearea      current  /300 sub 73 worst 2.000 fail 0 | med 0.003 p95 0.011 max 0.022 ms (med x1.00 p95 x1.00) touched x1.000
+  samearea      zero     /300 sub 0 worst 1.000 fail 0 | med 0.006 p95 0.008 max 0.010 ms (med x2.00 p95 x0.73) touched x2.312
+  samearea      chebtie  /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.008 max 0.010 ms (med x1.67 p95 x0.73) touched x1.935
+  samearea      alt      /300 sub 0 worst 1.000 fail 0 | med 0.008 p95 0.016 max 0.034 ms (med x2.67 p95 x1.45) touched x1.698
+  samearea      OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.007 p95 0.015 max 0.031 ms (med x2.33 p95 x1.36) touched x1.696
+
+achaea: rooms 30173, SCCs 593, with landmarks 270, landmarks 1817 (old 8); build 60.7ms (old 48.2) of initGraph 165.4ms (old 147.6); tables 1.9MB (old 1.9); peak RSS 192MB; busy 5/6
+  uniform       current  /300 sub 34 worst 1.125 fail 0 | med 2.002 p95 4.778 max 5.695 ms (med x1.00 p95 x1.00) touched x1.000
+  uniform       zero     /300 sub 0 worst 1.000 fail 0 | med 1.415 p95 3.036 max 3.444 ms (med x0.71 p95 x0.64) touched x0.982
+  uniform       chebtie  /300 sub 0 worst 1.000 fail 0 | med 1.913 p95 4.688 max 5.605 ms (med x0.96 p95 x0.98) touched x0.982
+  uniform       alt      /300 sub 0 worst 1.000 fail 0 | med 0.186 p95 1.012 max 3.093 ms (med x0.09 p95 x0.21) touched x0.155
+  uniform       OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.128 p95 1.013 max 1.926 ms (med x0.06 p95 x0.20) touched x0.130
+  samearea      current  /300 sub 22 worst 1.500 fail 0 | med 0.004 p95 0.026 max 3.422 ms (med x1.00 p95 x1.00) touched x1.000
+  samearea      zero     /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.029 max 2.125 ms (med x1.25 p95 x1.12) touched x1.345
+  samearea      chebtie  /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.031 max 3.366 ms (med x1.00 p95 x1.19) touched x1.232
+  samearea      alt      /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.022 max 0.339 ms (med x1.00 p95 x0.85) touched x0.321
+  samearea      OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.017 max 0.056 ms (med x1.25 p95 x1.13) touched x0.332
+
+aetolia: rooms 31082, SCCs 679, with landmarks 411, landmarks 2710 (old 8); build 58.3ms (old 44.8) of initGraph 166.6ms (old 145.5); tables 2.0MB (old 2.0); peak RSS 178MB; busy 8/5
+  uniform       current  /300 sub 20 worst 1.393 fail 0 | med 1.513 p95 3.562 max 4.265 ms (med x1.00 p95 x1.00) touched x1.000
+  uniform       zero     /300 sub 0 worst 1.000 fail 0 | med 1.242 p95 2.452 max 2.897 ms (med x0.82 p95 x0.69) touched x0.975
+  uniform       chebtie  /300 sub 0 worst 1.000 fail 0 | med 1.496 p95 3.625 max 4.280 ms (med x0.99 p95 x1.02) touched x0.974
+  uniform       alt      /300 sub 0 worst 1.000 fail 0 | med 0.124 p95 0.745 max 1.346 ms (med x0.08 p95 x0.21) touched x0.129
+  uniform       OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.088 p95 0.562 max 1.332 ms (med x0.06 p95 x0.14) touched x0.098
+  samearea      current  /300 sub 22 worst 1.667 fail 0 | med 0.004 p95 0.025 max 2.412 ms (med x1.00 p95 x1.00) touched x1.000
+  samearea      zero     /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.030 max 1.707 ms (med x1.25 p95 x1.20) touched x1.330
+  samearea      chebtie  /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.032 max 2.516 ms (med x1.25 p95 x1.28) touched x1.257
+  samearea      alt      /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.022 max 0.701 ms (med x1.25 p95 x0.88) touched x0.371
+  samearea      OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.023 max 0.530 ms (med x1.25 p95 x0.92) touched x0.412
+
+imperian: rooms 19905, SCCs 259, with landmarks 144, landmarks 931 (old 8); build 39.9ms (old 36.3) of initGraph 98.1ms (old 93.4); tables 1.3MB (old 1.3); peak RSS 156MB; busy 5/10
+  uniform       current  /300 sub 18 worst 1.237 fail 0 | med 1.270 p95 2.880 max 3.914 ms (med x1.00 p95 x1.00) touched x1.000
+  uniform       zero     /300 sub 0 worst 1.000 fail 0 | med 1.064 p95 2.130 max 2.801 ms (med x0.84 p95 x0.74) touched x0.982
+  uniform       chebtie  /300 sub 0 worst 1.000 fail 0 | med 1.262 p95 2.777 max 3.945 ms (med x0.99 p95 x0.96) touched x0.982
+  uniform       alt      /300 sub 0 worst 1.000 fail 0 | med 0.076 p95 0.609 max 0.886 ms (med x0.06 p95 x0.21) touched x0.104
+  uniform       OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.080 p95 0.462 max 0.953 ms (med x0.06 p95 x0.15) touched x0.095
+  samearea      current  /300 sub 13 worst 1.625 fail 0 | med 0.004 p95 0.045 max 2.808 ms (med x1.00 p95 x1.00) touched x1.000
+  samearea      zero     /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.030 max 0.746 ms (med x1.00 p95 x0.67) touched x0.935
+  samearea      chebtie  /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.033 max 0.912 ms (med x1.00 p95 x0.73) touched x0.898
+  samearea      alt      /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.015 max 0.033 ms (med x1.00 p95 x0.33) touched x0.197
+  samearea      OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.016 max 0.032 ms (med x1.00 p95 x0.52) touched x0.348
+
+lusternia: rooms 21150, SCCs 475, with landmarks 319, landmarks 2074 (old 8); build 45.7ms (old 35.1) of initGraph 119.1ms (old 99.0); tables 1.3MB (old 1.3); peak RSS 161MB; busy 5/6
+  uniform       current  /300 sub 28 worst 1.667 fail 0 | med 1.252 p95 2.525 max 3.071 ms (med x1.00 p95 x1.00) touched x1.000
+  uniform       zero     /300 sub 0 worst 1.000 fail 0 | med 1.037 p95 1.952 max 2.203 ms (med x0.83 p95 x0.77) touched x0.979
+  uniform       chebtie  /300 sub 0 worst 1.000 fail 0 | med 1.196 p95 2.513 max 2.984 ms (med x0.96 p95 x1.00) touched x0.979
+  uniform       alt      /300 sub 0 worst 1.000 fail 0 | med 0.064 p95 0.733 max 2.105 ms (med x0.05 p95 x0.29) touched x0.116
+  uniform       OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.078 p95 0.634 max 1.654 ms (med x0.06 p95 x0.25) touched x0.107
+  samearea      current  /300 sub 27 worst 9.500 fail 0 | med 0.004 p95 0.075 max 2.569 ms (med x1.00 p95 x1.00) touched x1.000
+  samearea      zero     /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.046 max 0.967 ms (med x1.25 p95 x0.61) touched x1.135
+  samearea      chebtie  /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.054 max 1.075 ms (med x1.00 p95 x0.72) touched x1.033
+  samearea      alt      /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.019 max 0.081 ms (med x1.00 p95 x0.25) touched x0.210
+  samearea      OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.017 max 0.112 ms (med x1.25 p95 x0.61) touched x0.300
+
+starmourn: rooms 6193, SCCs 75, with landmarks 51, landmarks 330 (old 8); build 12.1ms (old 11.4) of initGraph 27.0ms (old 24.6); tables 0.4MB (old 0.4); peak RSS 128MB; busy 5/6
+  uniform       current  /300 sub 10 worst 1.050 fail 0 | med 0.336 p95 0.665 max 0.775 ms (med x1.00 p95 x1.00) touched x1.000
+  uniform       zero     /300 sub 0 worst 1.000 fail 0 | med 0.258 p95 0.588 max 0.630 ms (med x0.77 p95 x0.88) touched x0.977
+  uniform       chebtie  /300 sub 0 worst 1.000 fail 0 | med 0.294 p95 0.667 max 0.731 ms (med x0.87 p95 x1.00) touched x0.974
+  uniform       alt      /300 sub 0 worst 1.000 fail 0 | med 0.055 p95 0.264 max 0.615 ms (med x0.16 p95 x0.40) touched x0.223
+  uniform       OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.051 p95 0.241 max 0.501 ms (med x0.15 p95 x0.35) touched x0.208
+  samearea      current  /300 sub 11 worst 1.250 fail 0 | med 0.003 p95 0.014 max 0.052 ms (med x1.00 p95 x1.00) touched x1.000
+  samearea      zero     /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.022 max 0.044 ms (med x1.33 p95 x1.57) touched x1.780
+  samearea      chebtie  /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.023 max 0.050 ms (med x1.33 p95 x1.64) touched x1.577
+  samearea      alt      /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.014 max 0.033 ms (med x1.33 p95 x1.00) touched x0.712
+  samearea      OLD-alt  /300 sub 0 worst 1.000 fail 0 | med 0.004 p95 0.012 max 0.026 ms (med x1.33 p95 x1.50) touched x0.837
+
+aetherspace: rooms 2330079, SCCs 5, with landmarks 5, landmarks 40 (old 8); build 23204.4ms (old 9679.6) of initGraph 68413.3ms (old 55593.1); tables 149.1MB (old 149.1); peak RSS 5809MB; busy 6/7
+  uniform       current  /100 sub 0 worst 1.000 fail 0 | med 0.246 p95 0.662 max 5.394 ms (med x1.00 p95 x1.00) touched x1.000
+  uniform       zero     /100 sub 0 worst 1.000 fail 0 | med 308.627 p95 715.463 max 743.097 ms (med x1254.58 p95 x1080.76) touched x253.114
+  uniform       chebtie  /100 sub 0 worst 1.000 fail 0 | med 0.251 p95 0.695 max 1.053 ms (med x1.02 p95 x1.05) touched x1.139
+  uniform       alt      /100 sub 0 worst 1.000 fail 0 | med 0.347 p95 56.162 max 114.556 ms (med x1.41 p95 x84.84) touched x4.198
+  uniform       OLD-alt  /100 sub 0 worst 1.000 fail 0 | med 0.774 p95 506.689 max 602.027 ms (med x2.50 p95 x674.69) touched x55.901
+  samearea      current  /100 sub 0 worst 1.000 fail 0 | med 0.192 p95 0.623 max 16.308 ms (med x1.00 p95 x1.00) touched x1.000
+  samearea      zero     /100 sub 0 worst 1.000 fail 0 | med 177.235 p95 674.261 max 766.739 ms (med x923.10 p95 x1082.28) touched x199.646
+  samearea      chebtie  /100 sub 0 worst 1.000 fail 0 | med 0.223 p95 0.687 max 12.233 ms (med x1.16 p95 x1.10) touched x1.100
+  samearea      alt      /100 sub 0 worst 1.000 fail 0 | med 0.285 p95 22.091 max 65.533 ms (med x1.48 p95 x35.46) touched x2.270
+  samearea      OLD-alt  /100 sub 0 worst 1.000 fail 0 | med 92.455 p95 550.247 max 584.606 ms (med x393.43 p95 x527.56) touched x109.960
+  scen_adjacent current  /0 sub 0 worst 1.000 fail 0 | med 0.003 p95 0.003 max 0.003 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_adjacent zero     /0 sub 0 worst 1.000 fail 0 | med 0.003 p95 0.003 max 0.003 ms (med x1.00 p95 x1.00) touched x2.000
+  scen_adjacent chebtie  /0 sub 0 worst 1.000 fail 0 | med 0.003 p95 0.003 max 0.003 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_adjacent alt      /0 sub 0 worst 1.000 fail 0 | med 0.003 p95 0.003 max 0.003 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_adjacent OLD-alt  /0 sub 0 worst 1.000 fail 0 | med 0.003 p95 0.003 max 0.003 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_near     current  /0 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.005 max 0.005 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_near     zero     /0 sub 0 worst 1.000 fail 0 | med 0.049 p95 0.049 max 0.049 ms (med x9.80 p95 x9.80) touched x9.648
+  scen_near     chebtie  /0 sub 0 worst 1.000 fail 0 | med 0.005 p95 0.005 max 0.005 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_near     alt      /0 sub 0 worst 1.000 fail 0 | med 0.007 p95 0.007 max 0.007 ms (med x1.40 p95 x1.40) touched x1.000
+  scen_near     OLD-alt  /0 sub 0 worst 1.000 fail 0 | med 0.007 p95 0.007 max 0.007 ms (med x1.40 p95 x1.40) touched x1.000
+  scen_mid      current  /0 sub 0 worst 1.000 fail 0 | med 0.049 p95 0.049 max 0.049 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_mid      zero     /0 sub 0 worst 1.000 fail 0 | med 30.362 p95 30.362 max 30.362 ms (med x619.63 p95 x619.63) touched x81.190
+  scen_mid      chebtie  /0 sub 0 worst 1.000 fail 0 | med 0.035 p95 0.035 max 0.035 ms (med x0.71 p95 x0.71) touched x1.000
+  scen_mid      alt      /0 sub 0 worst 1.000 fail 0 | med 0.062 p95 0.062 max 0.062 ms (med x1.27 p95 x1.27) touched x1.000
+  scen_mid      OLD-alt  /0 sub 0 worst 1.000 fail 0 | med 0.060 p95 0.060 max 0.060 ms (med x1.71 p95 x1.71) touched x1.000
+  scen_far      current  /0 sub 0 worst 1.000 fail 0 | med 0.278 p95 0.278 max 0.278 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_far      zero     /0 sub 0 worst 1.000 fail 0 | med 498.640 p95 498.640 max 498.640 ms (med x1793.67 p95 x1793.67) touched x320.805
+  scen_far      chebtie  /0 sub 0 worst 1.000 fail 0 | med 0.312 p95 0.312 max 0.312 ms (med x1.12 p95 x1.12) touched x1.000
+  scen_far      alt      /0 sub 0 worst 1.000 fail 0 | med 0.366 p95 0.366 max 0.366 ms (med x1.32 p95 x1.32) touched x1.000
+  scen_far      OLD-alt  /0 sub 0 worst 1.000 fail 0 | med 0.342 p95 0.342 max 0.342 ms (med x1.13 p95 x1.13) touched x1.000
+  scen_corner   current  /0 sub 0 worst 1.000 fail 0 | med 0.422 p95 0.422 max 0.422 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_corner   zero     /0 sub 0 worst 1.000 fail 0 | med 773.463 p95 773.463 max 773.463 ms (med x1832.85 p95 x1832.85) touched x399.760
+  scen_corner   chebtie  /0 sub 0 worst 1.000 fail 0 | med 0.360 p95 0.360 max 0.360 ms (med x0.85 p95 x0.85) touched x1.000
+  scen_corner   alt      /0 sub 0 worst 1.000 fail 0 | med 0.513 p95 0.513 max 0.513 ms (med x1.22 p95 x1.22) touched x1.000
+  scen_corner   OLD-alt  /0 sub 0 worst 1.000 fail 0 | med 0.631 p95 0.631 max 0.631 ms (med x1.83 p95 x1.83) touched x1.000
+
+=== AUDIT
+  sendar                 current: adm 3761/5220 (+37.84) cons 3836/11340 goalReach 3836 | chebtie: adm 0/5220 (+0.00) cons 0/11340 goalReach 0 | alt: adm 0/5220 (+0.00) cons 0/11340 goalReach 0
+  achaea                 current: adm 1154/442555 (+16.17) cons 1154/2288700 goalReach 1128 | chebtie: adm 0/442555 (+0.00) cons 92/2288700 goalReach 89 | alt: adm 0/442555 (+0.00) cons 1559/2288700 goalReach 0
+  aetolia                current: adm 2087/301356 (+31.68) cons 2423/2299380 goalReach 2026 | chebtie: adm 0/301356 (+0.00) cons 63/2299380 goalReach 61 | alt: adm 0/301356 (+0.00) cons 122/2299380 goalReach 0
+  imperian               current: adm 1240/403811 (+17.93) cons 1119/1482600 goalReach 1082 | chebtie: adm 0/403811 (+0.00) cons 89/1482600 goalReach 82 | alt: adm 0/403811 (+0.00) cons 100/1482600 goalReach 0
+  lusternia              current: adm 2778/304662 (+92.04) cons 4601/1609110 goalReach 4055 | chebtie: adm 0/304662 (+0.00) cons 90/1609110 goalReach 81 | alt: adm 0/304662 (+0.00) cons 436/1609110 goalReach 0
+  starmourn              current: adm 1080/152998 (+11.20) cons 1069/446700 goalReach 1050 | chebtie: adm 0/152998 (+0.00) cons 36/446700 goalReach 35 | alt: adm 0/152998 (+0.00) cons 335/446700 goalReach 0
+  aetherspace            current: adm 1810377/1841647 (+297.82) cons 1740578/55786770 goalReach 1740578 | chebtie: adm 0/1841647 (+0.00) cons 0/55786770 goalReach 0 | alt: adm 0/1841647 (+0.00) cons 0/55786770 goalReach 0
+  aetherspace-teleport   current: adm 2697210/2743970 (+288.54) cons 2609343/55786773 goalReach 2609343 | chebtie: adm 0/2743970 (+0.00) cons 0/55786773 goalReach 0 | alt: adm 0/2743970 (+0.00) cons 0/55786773 goalReach 0
+
+=== TELEPORT aetherspace
+  alt build 23272ms
+  uniform   current  sub 3 worst 1.534 fail 0 | med 0.274 p95 0.732 max 0.797 ms (med x1.00 p95 x1.00) touched x1.000
+  uniform   chebtie  sub 0 worst 1.000 fail 0 | med 276.336 p95 890.319 max 903.062 ms (med x1008.53 p95 x1216.28) touched x203.791
+  uniform   alt      sub 0 worst 1.000 fail 0 | med 0.346 p95 33.212 max 66.170 ms (med x1.26 p95 x45.37) touched x3.737
+  samearea  current  sub 3 worst 1.471 fail 0 | med 0.211 p95 0.788 max 19.209 ms (med x1.00 p95 x1.00) touched x1.000
+  samearea  chebtie  sub 0 worst 1.000 fail 0 | med 1.167 p95 768.130 max 820.622 ms (med x5.53 p95 x974.78) touched x100.896
+  samearea  alt      sub 0 worst 1.000 fail 0 | med 0.332 p95 39.238 max 65.432 ms (med x1.57 p95 x49.79) touched x2.466
+  scen_mid  current  sub 0 worst 1.000 fail 0 | med 0.037 p95 0.037 max 0.037 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_mid  chebtie  sub 0 worst 1.000 fail 0 | med 44.587 p95 44.587 max 44.587 ms (med x1205.05 p95 x1205.05) touched x99.804
+  scen_mid  alt      sub 0 worst 1.000 fail 0 | med 0.074 p95 0.074 max 0.074 ms (med x2.00 p95 x2.00) touched x1.000
+  scen_far  current  sub 0 worst 1.000 fail 0 | med 0.047 p95 0.047 max 0.047 ms (med x1.00 p95 x1.00) touched x1.000
+  scen_far  chebtie  sub 0 worst 1.000 fail 0 | med 46.509 p95 46.509 max 46.509 ms (med x989.55 p95 x989.55) touched x100.404
+  scen_far  alt      sub 0 worst 1.000 fail 0 | med 0.065 p95 0.065 max 0.065 ms (med x1.38 p95 x1.38) touched x1.000
+
+=== K variants (alt vs current, same run)
+ k4:
+   sendar      unif sub 0 med 0.008 (x2.00) p95 0.016 (x1.45) max 0.0 | same sub 0 med 0.008 (x2.00) p95 0.013 (x1.18) max 0.0 ; build 0.2ms ; 0.0MB ; lm 4
+   achaea      unif sub 0 med 0.294 (x0.14) p95 1.869 (x0.30) max 4.1 | same sub 0 med 0.004 (x1.00) p95 0.024 (x1.33) max 0.7 ; build 36.2ms ; 1.0MB ; lm 1037
+   aetolia     unif sub 0 med 0.128 (x0.08) p95 0.780 (x0.22) max 1.5 | same sub 0 med 0.004 (x1.00) p95 0.016 (x0.55) max 0.5 ; build 33.9ms ; 1.0MB ; lm 1541
+   imperian    unif sub 0 med 0.089 (x0.07) p95 0.670 (x0.23) max 1.1 | same sub 0 med 0.004 (x1.00) p95 0.012 (x0.36) max 0.2 ; build 25.9ms ; 0.6MB ; lm 555
+   lusternia   unif sub 0 med 0.095 (x0.07) p95 0.979 (x0.34) max 1.9 | same sub 0 med 0.004 (x1.00) p95 0.016 (x0.42) max 0.3 ; build 24.5ms ; 0.7MB ; lm 1206
+   starmourn   unif sub 0 med 0.048 (x0.14) p95 0.454 (x0.63) max 0.7 | same sub 0 med 0.004 (x1.33) p95 0.010 (x1.00) max 0.0 ; build 7.6ms ; 0.2MB ; lm 191
+   aetherspace unif sub 0 med 0.266 (x1.16) p95 115.672 (x184.19) max 266.3 | same sub 0 med 0.240 (x1.21) p95 91.950 (x143.67) max 197.5 ; build 13845.0ms ; 74.6MB ; lm 20
+ main:
+   sendar      unif sub 0 med 0.008 (x2.00) p95 0.017 (x1.55) max 0.0 | same sub 0 med 0.008 (x2.67) p95 0.016 (x1.45) max 0.0 ; build 0.2ms ; 0.0MB ; lm 8
+   achaea      unif sub 0 med 0.186 (x0.09) p95 1.012 (x0.21) max 3.1 | same sub 0 med 0.004 (x1.00) p95 0.022 (x0.85) max 0.3 ; build 60.7ms ; 1.9MB ; lm 1817
+   aetolia     unif sub 0 med 0.124 (x0.08) p95 0.745 (x0.21) max 1.3 | same sub 0 med 0.005 (x1.25) p95 0.022 (x0.88) max 0.7 ; build 58.3ms ; 2.0MB ; lm 2710
+   imperian    unif sub 0 med 0.076 (x0.06) p95 0.609 (x0.21) max 0.9 | same sub 0 med 0.004 (x1.00) p95 0.015 (x0.33) max 0.0 ; build 39.9ms ; 1.3MB ; lm 931
+   lusternia   unif sub 0 med 0.064 (x0.05) p95 0.733 (x0.29) max 2.1 | same sub 0 med 0.004 (x1.00) p95 0.019 (x0.25) max 0.1 ; build 45.7ms ; 1.3MB ; lm 2074
+   starmourn   unif sub 0 med 0.055 (x0.16) p95 0.264 (x0.40) max 0.6 | same sub 0 med 0.004 (x1.33) p95 0.014 (x1.00) max 0.0 ; build 12.1ms ; 0.4MB ; lm 330
+   aetherspace unif sub 0 med 0.347 (x1.41) p95 56.162 (x84.84) max 114.6 | same sub 0 med 0.285 (x1.48) p95 22.091 (x35.46) max 65.5 ; build 23204.4ms ; 149.1MB ; lm 40
+ k16:
+   sendar      unif sub 0 med 0.006 (x1.50) p95 0.023 (x1.92) max 0.0 | same sub 0 med 0.006 (x2.00) p95 0.022 (x2.00) max 0.0 ; build 0.5ms ; 0.0MB ; lm 16
+   achaea      unif sub 0 med 0.123 (x0.06) p95 0.734 (x0.14) max 3.7 | same sub 0 med 0.006 (x1.50) p95 0.035 (x1.75) max 0.3 ; build 119.6ms ; 3.9MB ; lm 2923
+   aetolia     unif sub 0 med 0.093 (x0.06) p95 0.470 (x0.13) max 0.8 | same sub 0 med 0.006 (x1.50) p95 0.054 (x1.86) max 0.6 ; build 107.5ms ; 4.0MB ; lm 4463
+   imperian    unif sub 0 med 0.074 (x0.07) p95 0.392 (x0.12) max 0.9 | same sub 0 med 0.005 (x1.25) p95 0.021 (x1.17) max 0.1 ; build 77.3ms ; 2.5MB ; lm 1469
+   lusternia   unif sub 0 med 0.056 (x0.05) p95 0.459 (x0.16) max 2.1 | same sub 0 med 0.005 (x1.25) p95 0.020 (x0.87) max 0.1 ; build 76.3ms ; 2.7MB ; lm 3225
+   starmourn   unif sub 0 med 0.060 (x0.22) p95 0.274 (x0.42) max 0.6 | same sub 0 med 0.005 (x1.67) p95 0.015 (x2.14) max 0.0 ; build 22.1ms ; 0.8MB ; lm 499
+   aetherspace unif sub 0 med 0.478 (x2.03) p95 9.478 (x14.67) max 46.7 | same sub 0 med 0.382 (x2.05) p95 6.338 (x10.60) max 27.5 ; build 42003.9ms ; 298.3MB ; lm 80
+
+=== MAPPING LOOP (edit then getPath) per-SCC | old
+  sendar      current med 0.3 max 0.3 | alt med 0.5 max 0.6 (x1.79) | old x2.15
+  achaea      current med 100.7 max 102.8 | alt med 160.2 max 174.2 (x1.59) | old x1.49
+  aetolia     current med 104.0 max 124.9 | alt med 162.5 max 164.8 (x1.56) | old x1.36
+  imperian    current med 61.7 max 67.6 | alt med 98.3 max 104.6 (x1.59) | old x1.51
+  lusternia   current med 64.3 max 69.1 | alt med 103.9 max 106.8 (x1.62) | old x1.61
+  starmourn   current med 13.6 max 15.0 | alt med 26.8 max 28.9 (x1.96) | old x1.95
+  aetherspace MISSING
