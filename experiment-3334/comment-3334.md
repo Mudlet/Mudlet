@@ -56,12 +56,6 @@ The max of two bounds that never overestimate never overestimates either.
 - **Memory:** 8 landmarks x 2 directions x 4 bytes = 64 bytes per room, 0.4-2.0MB on the crowdmaps. The prototype still allocates the table for rooms that got no landmarks (149MB on Aetherspace) - easy to avoid, not done yet.
 - **Different routes of the same cost.** Where today's route was already the cheapest, the new one often picks another route of the same cost: 35/216 on the reporter's map, 45-211 out of ~280 on the crowdmaps, and 99/100 on Aetherspace, where a grid has many equally short routes. Speedwalks on grid maps will visibly take different routes, even though none of them are longer.
 
-**Questions for you:**
-
-1. Is +40-60ms on the first `getPath` after an edit acceptable on 20-30k-room maps, or should the landmark build be deferred or made incremental?
-2. Does the sealed-area argument hold up? It's computed on the graph `initGraph()` builds, so locked rooms and locked exits are already out of it - is there anything else that could let a path leave an area and come back that I've missed?
-3. Are you OK with the equal-cost route changes?
-
 Side note: with `float` costs, a weight near `INT_MAX` can't be told apart from its neighbours, so extreme weights change routing even under plain Dijkstra. Switching to `double` fixes it, but that's #10673's territory rather than this one.
 
 The prototype and the benchmark harness are on the `BRANCH-LINK` branch.
