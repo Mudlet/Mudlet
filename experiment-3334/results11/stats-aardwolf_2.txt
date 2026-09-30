@@ -1,0 +1,23 @@
+METRIC gate_waited_s 13
+METRIC machine_busy_pct_before 8
+METRIC loadavg_before 1.64
+METRIC build_asan 0
+METRIC stats_vertices 32414
+METRIC stats_sinks_no_exit 1091
+METRIC stats_sources_no_entrance 575
+METRIC stats_wcc_count 540
+METRIC stats_wcc_size_rank0 29621
+METRIC stats_wcc_size_rank1 1271
+METRIC stats_wcc_size_rank2 227
+METRIC stats_wcc_size_rank3 95
+METRIC stats_wcc_size_rank4 60
+METRIC stats_wcc_singletons 436
+METRIC stats_scc_count 1618
+METRIC stats_scc_size_rank0 26150
+METRIC stats_scc_size_rank1 1243
+METRIC stats_scc_size_rank2 227
+METRIC stats_scc_size_rank3 191
+METRIC stats_scc_size_rank4 97
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 841ms
+METRIC machine_busy_pct_after 6
+METRIC loadavg_after 1.59
