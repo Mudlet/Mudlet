@@ -509,6 +509,11 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         mudlet::self()->attachDebugArea(host->getName());
+        // Only closing the profile or the application takes the parentless debug area
+        // down, and cleanup() does neither, so it would outlive this Host into the next method.
+        const auto tidyUp = qScopeGuard([]() {
+            delete mudlet::smpDebugArea.data();
+        });
         const QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
         QVERIFY2(debugConsole, "The central debug console was not created.");
 
