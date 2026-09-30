@@ -192,6 +192,8 @@ bool TMxpFrameManager::closeFrame(const QString& name)
     mFrameOrder.removeOne(frame);
     if (auto* widgets = frameWidgets()) {
         widgets->destroyFrame(name);
+        // a toolbar can change the main window size without a resize to report it
+        widgets->reportSize();
     }
     delete frame;
 
