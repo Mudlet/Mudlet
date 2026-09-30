@@ -27,6 +27,7 @@
  * Run with: ctest -R IrcLuaClientTest -V
  */
 
+#include <IrcConnection>
 #include <QTemporaryDir>
 #include <QTextDocument>
 #include <QtNetwork/QTcpServer>
@@ -445,17 +446,37 @@ private slots:
     void test_closingTheWindowRunsNoneOfItsSlots()
     {
         QVERIFY(openRegisteredClient());
-        QPointer<QTextDocument> shownDocument = mpHost->mpDlgIRC->ircBrowser->document();
+        dlgIRC* window = mpHost->mpDlgIRC;
+        QVERIFY2(window->isVisible(), "SETUP: the window was never shown");
+        QPointer<QTextDocument> shownDocument = window->ircBrowser->document();
         int changes = 0;
         QObject probe;
         connect(shownDocument, &QTextDocument::contentsChanged, &probe, [&changes]() {
             ++changes;
         });
+        // Connected after the window's own, so each runs after the window's slot would
+        TIrcClient* session = mpHost->getOrCreateIrcClient();
+        bool sessionDisconnected = false;
+        QString textAtDisconnect;
+        connect(session->connection(), &IrcConnection::disconnected, &probe, [&]() {
+            sessionDisconnected = true;
+            textAtDisconnect = window->ircBrowser->toPlainText();
+        });
+        bool sessionEnded = false;
+        bool visibleAtSessionEnd = false;
+        connect(session, &QObject::destroyed, &probe, [&]() {
+            sessionEnded = true;
+            visibleAtSessionEnd = window->isVisible();
+        });
 
-        delete mpHost->mpDlgIRC;
+        delete window;
 
+        QVERIFY2(sessionDisconnected, "SETUP: closing the window did not disconnect the session");
+        QVERIFY2(sessionEnded, "SETUP: closing the window did not end the session");
         QVERIFY2(!shownDocument, "SETUP: the shown document outlived its session");
         QCOMPARE(changes, 0);
+        QVERIFY2(!textAtDisconnect.contains(qsl("! Disconnected")), "the window heard its session disconnect");
+        QVERIFY2(visibleAtSessionEnd, "the window heard its session go");
     }
 
     // With no frontend to start it, openIRC() leaves a session that never
