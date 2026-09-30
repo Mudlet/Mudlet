@@ -135,8 +135,9 @@ private:
         return pane->mpContextMenuAnalyser->toolTip();
     }
 
-    // Prints text wrapped at the given width, and selects all of it
-    TTextEdit* paneWithWrappedText(const QString& text, int wrapAt, int hangingIndent)
+    // A profile whose main console wraps at the given width, with a line
+    // "before" above wherever the text under test goes
+    TConsole* consoleWrappingAt(int wrapAt, int hangingIndent)
     {
         mpServer->setWelcomeMessage(qsl("ready\r\n"));
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -144,24 +145,58 @@ private:
             return nullptr;
         }
         auto console = mudlet::self()->getActiveHost()->mpConsole;
-        const int firstLine = printedLineNumber(qsl("before")) + 1;
+        console->print(qsl("before\n"));
         console->setWrapAt(wrapAt);
         console->setHangingIndentCount(hangingIndent);
-        console->print(text + QChar::LineFeed);
-        int lastLine = console->buffer.getLastLineNumber();
-        while (lastLine > firstLine && console->buffer.line(lastLine).isEmpty()) {
-            --lastLine;
-        }
-        if (firstLine <= 0 || lastLine - firstLine < text.count(QChar::LineFeed) + 1) {
-            qWarning() << "the text did not wrap, so there is no wrapped line to rejoin";
+        return console;
+    }
+
+    // Prints text, which has to wrap, and selects all of it
+    TTextEdit* paneWithWrappedText(TConsole* console, const QString& text)
+    {
+        const TBuffer& buffer = console->buffer;
+        const int firstLine = static_cast<int>(buffer.lineBuffer.size()) - 1;
+        if (!buffer.lineBuffer.at(firstLine).isEmpty()) {
+            qWarning() << "the text would be appended to a line already there";
             return nullptr;
         }
-
+        console->print(text);
         TTextEdit* pane = upperPane();
         pane->mPA = QPoint(0, firstLine);
-        pane->mPB = QPoint(static_cast<int>(console->buffer.line(lastLine).size()) - 1, lastLine);
+        selectToTheEnd(pane);
         pane->mSelectedRegion = QRegion(0, 0, 1, 1);
-        return pane;
+        for (int y = firstLine + 1; y <= pane->mPB.y(); ++y) {
+            if (buffer.wrapsFromPreviousLine(y)) {
+                return pane;
+            }
+        }
+        qWarning() << "the text did not wrap, so there is no wrapped line to rejoin";
+        return nullptr;
+    }
+
+    TTextEdit* paneWithWrappedText(const QString& text, int wrapAt, int hangingIndent)
+    {
+        TConsole* console = consoleWrappingAt(wrapAt, hangingIndent);
+        return console ? paneWithWrappedText(console, text) : nullptr;
+    }
+
+    int lineNumberOf(const QString& text)
+    {
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        return static_cast<int>(buffer.lineBuffer.lastIndexOf(text));
+    }
+
+    void runLua(const QString& script) { QVERIFY2(mudlet::self()->getActiveHost()->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script)); }
+
+    // Moves the end of the selection to the last character in the buffer
+    void selectToTheEnd(TTextEdit* pane)
+    {
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        int lastLine = static_cast<int>(buffer.lineBuffer.size()) - 1;
+        while (lastLine > 0 && buffer.lineBuffer.at(lastLine).isEmpty()) {
+            --lastLine;
+        }
+        pane->mPB = QPoint(static_cast<int>(buffer.lineBuffer.at(lastLine).size()) - 1, lastLine);
     }
 
     int printedLineNumber(const QString& text)
@@ -228,6 +263,9 @@ private:
     // Each copy starts from a marker, so a slot that returns early cannot pass
     // on what an earlier copy left on the clipboard.
     const QString mNothingCopied = qsl("nothing was copied");
+
+    // Wraps at 16 columns straight after "late.", dropping all three spaces
+    const QString mSeveralSpaces = qsl("It is very late.   The clock strikes eleven.");
 
     QString copiedText(TTextEdit* pane) const
     {
@@ -631,19 +669,21 @@ private slots:
     }
 
     // Word wrapping only breaks a line to fit the console, so a copy has to put
-    // the pieces back together as the game sent them: the spaces a break at a
+    // the pieces back together as they were printed: the spaces a break at a
     // space dropped go back in, the hanging indent stays out, and a break with
     // no space at it - part way through a word, or after a hyphen - joins with
-    // nothing between. Lines the game itself ended stay apart.
+    // nothing between. Lines that were ended stay apart.
     void test_copyRejoinsLinesSplitByWordWrapping_data()
     {
         QTest::addColumn<QString>("sent");
         QTest::addColumn<int>("hangingIndent");
-        QTest::newRow("break at a space") << qsl("the quick brown fox jumps over the lazy dog") << 0;
-        QTest::newRow("several spaces at a break") << qsl("It is very late.   The clock strikes eleven.") << 0;
+        QTest::newRow("break at a space") << qsl("a quick brownish fox jumps over it") << 0;
+        QTest::newRow("break before a word") << qsl("the quick brown fox jumps over the lazy dog") << 0;
+        QTest::newRow("several spaces at a break") << mSeveralSpaces << 0;
         QTest::newRow("no break opportunity") << qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ") << 0;
         QTest::newRow("hyphenated") << qsl("they will co-operate if asked") << 0;
         QTest::newRow("hanging indent") << qsl("the quick brown fox jumps over the lazy dog") << 4;
+        QTest::newRow("several spaces and a hanging indent") << mSeveralSpaces << 4;
         QTest::newRow("two lines sent") << qsl("the quick brown fox jumps\nover the lazy dog and away it goes") << 3;
     }
 
@@ -652,18 +692,17 @@ private slots:
         QFETCH(QString, sent);
         QFETCH(int, hangingIndent);
 
-        TTextEdit* pane = paneWithWrappedText(sent, 16, hangingIndent);
+        TTextEdit* pane = paneWithWrappedText(sent + QChar::LineFeed, 16, hangingIndent);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
 
         QCOMPARE(copiedText(pane), sent);
     }
 
     // Selecting from inside a wrapped line's hanging indent must not copy the
-    // indent, which the game never sent, nor the line break before it.
+    // indent, which was never printed.
     void test_copyFromInsideAHangingIndentLeavesTheIndentOut()
     {
-        const QString sent = qsl("the quick brown fox jumps over the lazy dog");
-        TTextEdit* pane = paneWithWrappedText(sent, 16, 4);
+        TTextEdit* pane = paneWithWrappedText(mSeveralSpaces + QChar::LineFeed, 16, 4);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
         auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
         const int continuation = pane->mPA.y() + 1;
@@ -672,7 +711,133 @@ private slots:
         pane->mPA = QPoint(2, continuation);
         const QString continuationText = buffer.line(continuation).trimmed();
 
-        QCOMPARE(copiedText(pane), sent.mid(sent.indexOf(continuationText)));
+        QCOMPARE(copiedText(pane), mSeveralSpaces.mid(mSeveralSpaces.indexOf(continuationText)));
+    }
+
+    // Part of a wrapped paragraph, and a single word inside one of its wrapped
+    // lines, come out as just what was selected.
+    void test_copyPartOfAWrappedLine()
+    {
+        TTextEdit* pane = paneWithWrappedText(mSeveralSpaces + QChar::LineFeed, 16, 4);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        const int firstLine = pane->mPA.y();
+        const int clockColumn = static_cast<int>(buffer.line(firstLine + 1).indexOf(qsl("clock")));
+        QVERIFY2(clockColumn > 4, qPrintable(buffer.line(firstLine + 1)));
+
+        pane->mPA = QPoint(3, firstLine);
+        pane->mPB = QPoint(clockColumn + 4, firstLine + 1);
+        QCOMPARE(copiedText(pane), qsl("is very late.   The clock"));
+
+        pane->mPA = QPoint(clockColumn, firstLine + 1);
+        QCOMPARE(copiedText(pane), qsl("clock"));
+    }
+
+    // Echoing onto a line that has already wrapped rewraps the last part of
+    // it, which has to keep the spaces its own break dropped.
+    void test_copyRejoinsTextEchoedOntoAWrappedLine()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, qsl("It is very late.   The clock"));
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        console->print(qsl(" strikes eleven.\n"));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces);
+    }
+
+    // A space that one echo ends on, right where the line wraps, still stands
+    // between it and what the next echo carries on with.
+    void test_copyRejoinsEchoesSplitAtTheWrapColumn()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy "));
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        console->print(qsl("zzz\n"));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy zzz"));
+    }
+
+    // The spaces each wrapped line dropped are kept line by line, so they have
+    // to stay with their lines when other lines come and go around them.
+    void test_copyRejoinsWrappedLinesAfterAnEarlierLineIsDeleted()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        runLua(qsl("moveCursor(0, %1) deleteLine()").arg(lineNumberOf(qsl("ready"))));
+        TTextEdit* pane = paneWithWrappedText(console, mSeveralSpaces + QChar::LineFeed);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces);
+    }
+
+    void test_copyRejoinsWrappedLinesAfterTheOldestLinesAreTrimmed()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        // an odd batch, so wrapped lines out of step with their dropped spaces
+        // do not happen to line up with another break's
+        console->buffer.setBufferSize(100, 7);
+        for (int previousSize = 0; console->buffer.size() > previousSize;) {
+            previousSize = console->buffer.size();
+            console->print(qsl("filler\n"));
+        }
+        TTextEdit* pane = paneWithWrappedText(console, mSeveralSpaces + QChar::LineFeed);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces);
+    }
+
+    void test_copyRejoinsWrappedLinesAfterALineFeedIsInsertedAboveThem()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, mSeveralSpaces + QChar::LineFeed);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        runLua(qsl("moveCursor(2, %1) insertText('X\\n')").arg(lineNumberOf(qsl("before"))));
+        QCOMPARE(lineNumberOf(qsl("fore")), pane->mPA.y());
+        pane->mPA.ry() += 1;
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces);
+    }
+
+    // A line feed a script inserts into a wrapped line starts a line of its
+    // own, so what follows it is neither joined back on nor stripped of its
+    // leading spaces as though they were a hanging indent.
+    void test_copyKeepsALineFeedInsertedIntoAWrappedLine()
+    {
+        TTextEdit* pane = paneWithWrappedText(qsl("the quick brown fox jumps over the lazy dog\n"), 16, 0);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        const int continuation = pane->mPA.y() + 1;
+        QVERIFY2(buffer.line(continuation).startsWith(qsl("fox ")), qPrintable(buffer.line(continuation)));
+
+        runLua(qsl("moveCursor(3, %1) insertText('\\n  ')").arg(continuation));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("the quick brown fox\n   jumps over the lazy dog"));
+    }
+
+    // Once the line a wrapped one was split off is deleted, the rest of it
+    // follows whatever line is left above, which it must not be joined onto.
+    void test_copyDoesNotJoinWhatWasWrappedOffADeletedLine()
+    {
+        TTextEdit* pane = paneWithWrappedText(qsl("the quick brown fox jumps over the lazy dog\n"), 16, 0);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+        const int firstLine = pane->mPA.y();
+
+        runLua(qsl("moveCursor(0, %1) deleteLine()").arg(firstLine));
+        pane->mPA = QPoint(0, firstLine - 1);
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("before\nfox jumps over the lazy dog"));
     }
 
     // A double-click leaves mMouseTrackLevel at 2, which must not widen a
