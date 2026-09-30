@@ -30,6 +30,7 @@
 
 
 #include "EAction.h"
+#include "FontManager.h"
 #include "Host.h"
 #include "MudletApp.h"
 #include "TAlias.h"
@@ -9152,7 +9153,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         // Match case-insensitively but store the family as the font database
         // spells it, so that getConfig() reads back a canonical name:
         QString matchedFontName;
-        for (const QString& availableFont : mudlet::self()->getAvailableFonts()) {
+        for (const QString& availableFont : FontManager::availableFonts()) {
             if (!availableFont.compare(fontName, Qt::CaseInsensitive)) {
                 matchedFontName = availableFont;
                 break;

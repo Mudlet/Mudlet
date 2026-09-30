@@ -7764,11 +7764,6 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
     }
 }
 
-QStringList mudlet::getAvailableFonts()
-{
-    return QFontDatabase::families(QFontDatabase::Any);
-}
-
 // Helper function to check if current version is >= specified version
 // Returns true if current version is >= minVersion, false otherwise
 bool mudlet::isVersionAtLeast(const QString& minVersion)

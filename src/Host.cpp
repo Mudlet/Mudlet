@@ -31,6 +31,7 @@
 #include "dlgMapper.h"
 #include "dlgNotepad.h"
 #include "dlgTriggerEditor.h"
+#include "FontManager.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "HostManager.h"
@@ -60,6 +61,7 @@
 #include "XMLimport.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
+#include "ShortcutsManager.h"
 
 #include <chrono>
 #include <cstring>
@@ -455,10 +457,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
 
-    auto i = mudlet::self()->mpShortcutsManager->iterator();
-    while (i.hasNext()) {
-        auto entry = i.next();
-        profileShortcuts[entry] = std::make_unique<QKeySequence>(*mudlet::self()->mpShortcutsManager->getSequence(entry));
+    if (auto* shortcuts = ShortcutsManager::self()) {
+        auto i = shortcuts->iterator();
+        while (i.hasNext()) {
+            auto entry = i.next();
+            profileShortcuts[entry] = std::make_unique<QKeySequence>(*shortcuts->getSequence(entry));
+        }
     }
 
     auto settings = MudletApp::getQSettings();
@@ -1733,7 +1737,7 @@ static QString installedFamily(const QStringList& availableFonts, const QString&
 
 Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
 {
-    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+    const QStringList availableFonts = FontManager::availableFonts();
 
     if (const QString installed = installedFamily(availableFonts, requested); !installed.isEmpty()) {
         return {installed, QFont::Normal, true};
@@ -3154,7 +3158,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (!registeredFromArchive) {
             // the fonts were registered up front for the scripts' sake, and nothing
             // got installed that could own them - take them back out again
-            mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
+            if (auto* fonts = FontManager::self()) {
+                fonts->unloadFonts(getName(), packageName);
+            }
             takeBackWhatTheManifestOverwrote();
             if (!discardTheFolderThisInstallMade()) {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
@@ -3496,7 +3502,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
-    mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
+    if (auto* fonts = FontManager::self()) {
+        fonts->unloadFonts(getName(), packageName);
+    }
     if (isModule) {
         mInstalledModules.remove(packageName);
         mModulesLoadedOk.remove(packageName);
@@ -3912,6 +3920,10 @@ QString Host::readProfileData(const QString& item)
 // does not install font system-wide
 void Host::installPackageFonts(const QString& packageName)
 {
+    auto* fonts = FontManager::self();
+    if (!fonts) {
+        return;
+    }
     auto packagePath = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
@@ -3920,7 +3932,7 @@ void Host::installPackageFonts(const QString& packageName)
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-            mudlet::self()->mFontManager.loadFont(filePath, getName(), packageName);
+            fonts->loadFont(filePath, getName(), packageName);
         }
     }
 }

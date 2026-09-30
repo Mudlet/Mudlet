@@ -29,6 +29,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "CredentialManager.h"
+#include "ShortcutsManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -690,8 +691,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
-    {
-        auto iterator = mudlet::self()->mpShortcutsManager->iterator();
+    if (auto* shortcuts = ShortcutsManager::self()) {
+        auto iterator = shortcuts->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
             auto shortcut = host.append_child("profileShortcut");
