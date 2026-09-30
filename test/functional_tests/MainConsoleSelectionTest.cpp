@@ -135,6 +135,35 @@ private:
         return pane->mpContextMenuAnalyser->toolTip();
     }
 
+    // Prints text wrapped at the given width, and selects all of it
+    TTextEdit* paneWithWrappedText(const QString& text, int wrapAt, int hangingIndent)
+    {
+        mpServer->setWelcomeMessage(qsl("ready\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        if (QTest::currentTestFailed() || !waitForTextInBuffer(qsl("ready"))) {
+            return nullptr;
+        }
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        const int firstLine = printedLineNumber(qsl("before")) + 1;
+        console->setWrapAt(wrapAt);
+        console->setHangingIndentCount(hangingIndent);
+        console->print(text + QChar::LineFeed);
+        int lastLine = console->buffer.getLastLineNumber();
+        while (lastLine > firstLine && console->buffer.line(lastLine).isEmpty()) {
+            --lastLine;
+        }
+        if (firstLine <= 0 || lastLine - firstLine < text.count(QChar::LineFeed) + 1) {
+            qWarning() << "the text did not wrap, so there is no wrapped line to rejoin";
+            return nullptr;
+        }
+
+        TTextEdit* pane = upperPane();
+        pane->mPA = QPoint(0, firstLine);
+        pane->mPB = QPoint(static_cast<int>(console->buffer.line(lastLine).size()) - 1, lastLine);
+        pane->mSelectedRegion = QRegion(0, 0, 1, 1);
+        return pane;
+    }
+
     int printedLineNumber(const QString& text)
     {
         auto console = mudlet::self()->getActiveHost()->mpConsole;
@@ -601,6 +630,51 @@ private slots:
         QCOMPARE(copiedText(pane), expected);
     }
 
+    // Word wrapping only breaks a line to fit the console, so a copy has to put
+    // the pieces back together as the game sent them: the spaces a break at a
+    // space dropped go back in, the hanging indent stays out, and a break with
+    // no space at it - part way through a word, or after a hyphen - joins with
+    // nothing between. Lines the game itself ended stay apart.
+    void test_copyRejoinsLinesSplitByWordWrapping_data()
+    {
+        QTest::addColumn<QString>("sent");
+        QTest::addColumn<int>("hangingIndent");
+        QTest::newRow("break at a space") << qsl("the quick brown fox jumps over the lazy dog") << 0;
+        QTest::newRow("several spaces at a break") << qsl("It is late.  The clock strikes eleven.   You yawn.") << 0;
+        QTest::newRow("no break opportunity") << qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ") << 0;
+        QTest::newRow("hyphenated") << qsl("a well-to-do, happy-go-lucky, devil-may-care sort") << 0;
+        QTest::newRow("hanging indent") << qsl("the quick brown fox jumps over the lazy dog") << 4;
+        QTest::newRow("two lines sent") << qsl("the quick brown fox jumps\nover the lazy dog and away it goes") << 3;
+    }
+
+    void test_copyRejoinsLinesSplitByWordWrapping()
+    {
+        QFETCH(QString, sent);
+        QFETCH(int, hangingIndent);
+
+        TTextEdit* pane = paneWithWrappedText(sent, 16, hangingIndent);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        QCOMPARE(copiedText(pane), sent);
+    }
+
+    // Selecting from inside a wrapped line's hanging indent must not copy the
+    // indent, which the game never sent, nor the line break before it.
+    void test_copyFromInsideAHangingIndentLeavesTheIndentOut()
+    {
+        const QString sent = qsl("the quick brown fox jumps over the lazy dog");
+        TTextEdit* pane = paneWithWrappedText(sent, 16, 4);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        const int continuation = pane->mPA.y() + 1;
+        QVERIFY2(buffer.line(continuation).startsWith(qsl("    ")), qPrintable(qsl("the second line was not indented: '%1'").arg(buffer.line(continuation))));
+
+        pane->mPA = QPoint(2, continuation);
+        const QString continuationText = buffer.line(continuation).trimmed();
+
+        QCOMPARE(copiedText(pane), sent.mid(sent.indexOf(continuationText)));
+    }
+
     // A double-click leaves mMouseTrackLevel at 2, which must not widen a
     // selection a screen reader makes afterwards.
     void test_screenReaderSelectionAfterADoubleClickIsNotWidenedToWords()
@@ -753,11 +827,10 @@ private slots:
         // the buffer
         const int blankRowY = overTheLink.y() + pane->mFontHeight;
         const int blankRowLine = (blankRowY / pane->mFontHeight) + pane->imageTopLine();
-        QVERIFY2(blankRowLine < static_cast<int>(pane->mpBuffer->buffer.size()),
-                 "the row below the link is past the buffer, which is the case the test above covers rather than this one");
+        QVERIFY2(blankRowLine < static_cast<int>(pane->mpBuffer->buffer.size()), "the row below the link is past the buffer, which is the case the test above covers rather than this one");
         QVERIFY2(pane->mpBuffer->buffer.at(blankRowLine).empty(),
-                 qPrintable(qsl("the row below the link holds %1 characters rather than none, so the character check is not what has to reject it")
-                                    .arg(pane->mpBuffer->buffer.at(blankRowLine).size())));
+                 qPrintable(
+                         qsl("the row below the link holds %1 characters rather than none, so the character check is not what has to reject it").arg(pane->mpBuffer->buffer.at(blankRowLine).size())));
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(overTheLink.x(), blankRowY));
 
         QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);

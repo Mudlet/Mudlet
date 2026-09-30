@@ -57,6 +57,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <utility>
 #include <chrono>
@@ -590,6 +591,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lineBuffer(other.lineBuffer)
 , timeBuffer(other.timeBuffer)
 , promptBuffer(other.promptBuffer)
+, wrapGapBuffer(other.wrapGapBuffer)
 , mLinkStore(other.mLinkStore)
 , mLinesLimit(other.mLinesLimit)
 , mBatchDeleteSize(other.mBatchDeleteSize)
@@ -688,6 +690,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lineBuffer = other.lineBuffer;
         timeBuffer = other.timeBuffer;
         promptBuffer = other.promptBuffer;
+        wrapGapBuffer = other.wrapGapBuffer;
         mLinkStore = other.mLinkStore;
         mLinesLimit = other.mLinesLimit;
         mBatchDeleteSize = other.mBatchDeleteSize;
@@ -2107,6 +2110,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         } else {
             promptBuffer.append(false);
         }
+        wrapGapBuffer.append(0);
     } else {
         if (!line.isEmpty()) {
             // The last line is empty, so this is the whole of it
@@ -2208,6 +2212,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         lineBuffer.push_back(QString());
         timeBuffer.push_back(QString());
         promptBuffer << false;
+        wrapGapBuffer.append(0);
     }
 
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
@@ -5408,6 +5413,7 @@ void TBuffer::appendEmptyLine()
     lineBuffer.push_back(QString());
     timeBuffer << currentTimeStamp();
     promptBuffer << false;
+    wrapGapBuffer.append(0);
 }
 
 // This was called "insert" but that is commonly used for built in methods and
@@ -5862,6 +5868,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QStringList tempList;
     QStringList timeList;
     QList<bool> promptList;
+    QList<quint16> wrapGapList;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
@@ -5874,6 +5881,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             queue.push(std::move(newBufferLine));
             timeList.append(time);
             promptList.append(false);
+            wrapGapList.append(0);
             continue;
         }
 
@@ -5896,6 +5904,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             queue.push(std::move(buffer[i]));
             timeList.append(time);
             promptList.append(isPrompt);
+            wrapGapList.append(wrapGapBuffer.value(i));
             continue;
         }
         const QString qIndent(indent, QChar::Space);
@@ -5907,6 +5916,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         // off the back of the buffer, which is what discards it.
         const std::vector<TChar>& sourceChars = buffer[i];
         const int sourceSize = static_cast<int>(sourceChars.size());
+        int previousSegmentEnd = -1;
         for (const WrapInfo w : std::as_const(lineBreaks)) {
             // skip TChars as needed
             if (newBufferCharPosition < w.firstChar) {
@@ -5941,6 +5951,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             }
             queue.push(std::move(newBufferLine));
             promptList.append(isPrompt);
+            // getWrapInfo() only ever skips spaces between the segments of a
+            // line, and the first segment carries over the source line's own gap
+            int wrapGap = 0;
+            if (!w.isNewline) {
+                wrapGap = (previousSegmentEnd < 0) ? wrapGapBuffer.value(i) : w.firstChar - previousSegmentEnd;
+            }
+            wrapGapList.append(static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())));
+            previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
         }
@@ -5950,6 +5968,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         lineBuffer.pop_back();
         timeBuffer.pop_back();
         promptBuffer.pop_back();
+        wrapGapBuffer.pop_back();
     }
 
     const int rewrappedLines = static_cast<int>(queue.size());
@@ -5963,6 +5982,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             lineBuffer.append(tempList[i]);
             timeBuffer.append(timeList[i]);
             promptBuffer.push_back(promptList[i]);
+            wrapGapBuffer.append(wrapGapList[i]);
         }
     }
 
@@ -5997,6 +6017,35 @@ bool TBuffer::moveCursor(QPoint& where)
 // Needed, at least, as a filler for missing lines past end of the lineBuffer
 // requested by lua function getLines(...):
 QString badLineError = qsl("ERROR: invalid line number");
+
+bool TBuffer::wrapsFromPreviousLine(const int lineNumber) const
+{
+    // a blank timestamp is what marks a line wrapLine() split off another
+    return lineNumber > 0 && lineNumber < timeBuffer.size() && timeBuffer.at(lineNumber) == TBuffer::smBlankTimeStamp;
+}
+
+// How many spaces word wrapping dropped at the break before this line - only
+// meaningful when wrapsFromPreviousLine() is true
+int TBuffer::wrapGapBefore(const int lineNumber) const
+{
+    return wrapGapBuffer.value(lineNumber);
+}
+
+// How many columns at the start of a wrapped line are padding rather than text.
+// getWrapInfo() skips the spaces a wrapped segment would otherwise start with,
+// so every space leading one is hanging indent.
+int TBuffer::wrapIndentWidth(const int lineNumber) const
+{
+    if (lineNumber < 0 || lineNumber >= lineBuffer.size()) {
+        return 0;
+    }
+    const QString& text = lineBuffer.at(lineNumber);
+    int width = 0;
+    while (width < text.size() && text.at(width) == QChar::Space) {
+        ++width;
+    }
+    return width;
+}
 
 QString& TBuffer::line(int lineNumber)
 {
@@ -6297,6 +6346,7 @@ void TBuffer::clear()
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
+    wrapGapBuffer.append(0);
 }
 
 void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
@@ -6410,6 +6460,7 @@ void TBuffer::shrinkBuffer()
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
+        wrapGapBuffer.pop_front();
         buffer.pop_front();
         mCursorY--;
     }
@@ -6484,6 +6535,7 @@ bool TBuffer::deleteLines(int from, int to)
             lineBuffer.removeAt(i);
             timeBuffer.removeAt(i);
             promptBuffer.removeAt(i);
+            wrapGapBuffer.removeAt(i);
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
