@@ -35,7 +35,6 @@
 #include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
-#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
