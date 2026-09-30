@@ -313,10 +313,14 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
     model().toggleLogging(isMessageEnabled);
 }
 
+QString TMainConsole::loggingAnnouncementText(const bool isLogging, const QString& logFileName)
+{
+    return isLogging ? tr("Logging has started. Log file is %1").arg(logFileName) : tr("Logging has been stopped. Log file is %1").arg(logFileName);
+}
+
 void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
-    const QString message = isLogging ? tr("Logging has started. Log file is %1").arg(logFileName) : tr("Logging has been stopped. Log file is %1").arg(logFileName);
-    printSystemMessage(qsl("%1\n").arg(message));
+    printSystemMessage(qsl("%1\n").arg(loggingAnnouncementText(isLogging, logFileName)));
 }
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)

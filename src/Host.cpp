@@ -2594,9 +2594,7 @@ void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFile
     if (!mpConsole) {
         // Written where TMainConsole::slot_loggingAnnouncement() would print it,
         // so that a view built later shows it
-        const QString message = isLogging ? QCoreApplication::translate("TMainConsole", "Logging has started. Log file is %1").arg(logFileName)
-                                          : QCoreApplication::translate("TMainConsole", "Logging has been stopped. Log file is %1").arg(logFileName);
-        const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(message));
+        const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(TMainConsole::loggingAnnouncementText(isLogging, logFileName)));
         mpMainConsoleModel->buffer.append(text, 0, text.size(), QColorConstants::Red, QColorConstants::Transparent);
     }
     emit signal_loggingAnnouncement(isLogging, logFileName);
