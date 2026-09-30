@@ -21,7 +21,6 @@
 #include "mapInfoContributorManager.h"
 #include "TArea.h"
 #include "TRoomDB.h"
-#include "dlgMapper.h"
 
 extern "C" {
 #include <lauxlib.h>

@@ -24,7 +24,6 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TDebug.h"
-#include "mudlet.h"
 
 #include <QCoreApplication>
 #include <QDateTime>

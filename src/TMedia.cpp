@@ -27,6 +27,7 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 #include <QDir>
 #include <QFileInfo>
