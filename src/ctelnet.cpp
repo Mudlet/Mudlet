@@ -6420,13 +6420,15 @@ void cTelnet::checkCharacterModePattern()
     raiseProtocolEvent("sysCharacterModeDetected", "");
     qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA persisted past a submitted line)";
 
-    if (mudlet::self()->showCharacterModeWarning()) {
-        mudlet::self()->showedCharacterModeWarning();
-        //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
-        postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
-                       "which Mudlet does not support. Input may not work as expected. "
-                       "Consider using keybindings for immediate key response instead."));
-    }
+    emit signal_characterModeDetected();
+}
+
+void cTelnet::postCharacterModeWarning()
+{
+    //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
+    postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
+                   "which Mudlet does not support. Input may not work as expected. "
+                   "Consider using keybindings for immediate key response instead."));
 }
 
 bool cTelnet::checkEchoAnomalyPattern()

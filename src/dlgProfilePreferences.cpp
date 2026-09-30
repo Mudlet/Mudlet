@@ -2878,7 +2878,7 @@ void dlgProfilePreferences::applyShellStyle()
     const QColor cardColor = themePalette.color(QPalette::Base);
     const QColor textColor = themePalette.color(QPalette::WindowText);
     const QColor accentColor = themePalette.color(QPalette::Highlight);
-    // From the palette rather than mudlet::inDarkMode(), so a dark system theme under "follow the system" counts
+    // From the palette rather than MudletApp::darkMode(), so a dark system theme under "follow the system" counts
     const bool darkPage = cardColor.lightness() < 128;
 
     // Mixed from card and text, the one pair a usable palette keeps apart: Mudlet's light appearance has
@@ -3325,7 +3325,7 @@ void dlgProfilePreferences::setupPasswordsMigration()
         hidePasswordMigrationLabelTimer->start(10s);
     });
 
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         comboBox_store_passwords_in->setCurrentIndex(0);
     } else {
         comboBox_store_passwords_in->setCurrentIndex(1);
@@ -4609,7 +4609,7 @@ void dlgProfilePreferences::updateShortcutConflictWarning()
         return;
     }
 
-    label_shortcutsConflictWarning->setStyleSheet(qsl("color: %1; font-weight: bold;").arg(mudlet::self()->inDarkMode() ? qsl("#ff8080") : qsl("#aa0000")));
+    label_shortcutsConflictWarning->setStyleSheet(qsl("color: %1; font-weight: bold;").arg(MudletApp::darkMode() ? qsl("#ff8080") : qsl("#aa0000")));
     if (!label_shortcutsConflictWarning->isHidden() && warningText == label_shortcutsConflictWarning->text()) {
         return;
     }
@@ -6557,7 +6557,7 @@ void dlgProfilePreferences::applyAll()
             pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
         }
         if (mSnapshot.dirty(code_editor_theme_selection_combobox)) {
-            if (pMudlet->inDarkMode()) {
+            if (MudletApp::darkMode()) {
                 pHost->mEditorThemeDark = code_editor_theme_selection_combobox->currentText();
                 pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
             } else {
@@ -6578,7 +6578,7 @@ void dlgProfilePreferences::applyAll()
         if (pHost->mpEditorDialog
             && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
             // From the Host, which the write above updated, not a box a script may have moved on from
-            pHost->mpEditorDialog->setThemeAndOtherSettings(pMudlet->inDarkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
+            pHost->mpEditorDialog->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
         }
 
         if (mSnapshot.dirty(script_preview_combobox)) {
@@ -8030,13 +8030,13 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
 // muted amber in dark mode
 QString dlgProfilePreferences::certificateWarningCheckBoxStyle() const
 {
-    const bool darkMode = mudlet::self()->inDarkMode();
+    const bool darkMode = MudletApp::darkMode();
     return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("rgb(230, 230, 230)") : qsl("black"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
 }
 
 QString dlgProfilePreferences::certificateWarningLabelStyle() const
 {
-    const bool darkMode = mudlet::self()->inDarkMode();
+    const bool darkMode = MudletApp::darkMode();
     return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("lightsalmon") : qsl("red"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
 }
 
@@ -8060,9 +8060,9 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
         comboBox_appearance->setCurrentIndex(state);
     }
 
-    const bool wasDarkMode = mudlet::self()->inDarkMode();
+    const bool wasDarkMode = MudletApp::darkMode();
     mudlet::self()->setAppearance(state);
-    const bool isDarkMode = mudlet::self()->inDarkMode();
+    const bool isDarkMode = MudletApp::darkMode();
 
     if (wasDarkMode == isDarkMode) {
         return;

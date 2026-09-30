@@ -1765,7 +1765,7 @@ static bool anyProfilesExist(const QString& profilesPath);
 
 void mudlet::init()
 {
-    smFirstLaunch = !anyProfilesExist(MudletApp::getMudletPath(enums::profilesPath));
+    MudletApp::setFirstLaunch(!anyProfilesExist(MudletApp::getMudletPath(enums::profilesPath)));
     // Must be after setupConfig() has settled the config root and before anything of this run is written
     rememberFirstLaunch(*MudletApp::getQSettings(), MudletApp::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
@@ -3923,6 +3923,12 @@ void mudlet::addConsoleForNewHost(Host* pH)
             QApplication::beep();
         }
     });
+    connect(&pH->mTelnet, &cTelnet::signal_characterModeDetected, this, [this, pTelnet = &pH->mTelnet]() {
+        if (showCharacterModeWarning()) {
+            showedCharacterModeWarning();
+            pTelnet->postCharacterModeWarning();
+        }
+    });
 
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadStarted, pConsole, &TMainConsole::showPackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
@@ -4869,7 +4875,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     TMap::smShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
-    mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
+    MudletApp::setStorePasswordsSecurely(settings.value("storePasswordsSecurely", QVariant(true)).toBool());
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
@@ -5095,7 +5101,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", TMap::smShowMapAuditErrors);
     settings.setValue("invertMapZoom", mInvertMapZoom);
-    settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
+    settings.setValue("storePasswordsSecurely", MudletApp::storingPasswordsSecurely());
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
@@ -7799,6 +7805,11 @@ bool mudlet::isVersionAtLeast(const QString& minVersion)
     return true; // Versions are equal
 }
 
+void mudlet::setStorePasswordsSecurely(const bool storeSecurely)
+{
+    MudletApp::setStorePasswordsSecurely(storeSecurely);
+}
+
 bool mudlet::migratePasswordsToSecureStorage()
 {
     if (!mProfilePasswordsToMigrate.isEmpty()) {
@@ -7806,7 +7817,7 @@ bool mudlet::migratePasswordsToSecureStorage()
         return false;
     }
 
-    mStorePasswordsSecurely = true;
+    MudletApp::setStorePasswordsSecurely(true);
 
     const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -7855,7 +7866,7 @@ bool mudlet::migratePasswordsToProfileStorage()
         qWarning() << "mudlet::migratePasswordsToProfileStorage() WARNING - password migration is already in progress, so not starting a duplicate action.";
         return false;
     }
-    mStorePasswordsSecurely = false;
+    MudletApp::setStorePasswordsSecurely(false);
 
     const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -8065,13 +8076,10 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
     // Only read the scheme after the override above has been replaced -
     // before that, colorScheme() still reports the previous explicit
     // choice, so systemSetting would inherit it instead of the OS setting.
-    mDarkMode = false;
-    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark)) {
-        mDarkMode = true;
-    }
+    MudletApp::setDarkMode(state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark));
 
     if (needsCustomDarkTheme()) {
-        if (mDarkMode) {
+        if (MudletApp::darkMode()) {
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
             qApp->setStyle(new DarkTheme);
         } else {

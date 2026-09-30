@@ -21,7 +21,7 @@
 
 #include "dlgAliasMainArea.h"
 #include "TrailingWhitespaceMarker.h"
-#include "mudlet.h"
+#include "MudletApp.h"
 
 dlgAliasMainArea::dlgAliasMainArea(QWidget* pParentWidget)
 : QWidget(pParentWidget)
@@ -32,7 +32,7 @@ dlgAliasMainArea::dlgAliasMainArea(QWidget* pParentWidget)
     connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editingNameFinished);
     connect(lineEdit_alias_pattern, &QLineEdit::textChanged, this, &dlgAliasMainArea::slot_changedPattern);
 
-    if (mudlet::self()->smFirstLaunch) {
+    if (MudletApp::firstLaunch()) {
         //: This text is shown as placeholder in the pattern box when no real pattern was entered, yet.
         lineEdit_alias_pattern->setPlaceholderText(tr("for example, ^myalias$ to match 'myalias'"));
     }

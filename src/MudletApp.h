@@ -158,6 +158,17 @@ public:
     // later by the preferences dialog.
     static QString getInterfaceLanguage();
 
+    // Preferences and facts about this run that the main window settles and
+    // profiles consult. Read and written on the main thread only.
+
+    // Whether profile passwords are kept in the system's credential store rather
+    // than in each profile's own files
+    static bool storingPasswordsSecurely();
+    // No profiles existed when this run started
+    static bool firstLaunch();
+    // The interface is drawn dark, whether chosen or by following a dark system theme
+    static bool darkMode();
+
     // Which build of Mudlet this is, and how it names itself to the outside world.
 
     // The suffix CMake writes into :/app-build.txt: empty for an official release,
@@ -173,9 +184,10 @@ public:
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
 private:
-    // Only the main window moves the config root or the language in a running
-    // Mudlet: setupConfig() installs the root it has settled, and the language
-    // follows the preferences dialog through mudlet::setInterfaceLanguage()
+    // Only the main window moves the config root, the language or the
+    // preferences below in a running Mudlet: setupConfig() installs the root it
+    // has settled, and the language follows the preferences dialog through
+    // mudlet::setInterfaceLanguage()
     friend class mudlet;
     // Resolving the root once is the point, so the only way to test it is to be
     // able to forget the answer - which setConfigPath(QString()) does
@@ -188,6 +200,9 @@ private:
     // portable.txt that was honoured.
     static void setConfigPath(const QString& path, bool portable = false);
     static void setInterfaceLanguage(const QString& language);
+    static void setStorePasswordsSecurely(bool);
+    static void setFirstLaunch(bool);
+    static void setDarkMode(bool);
 };
 
 #endif // MUDLET_MUDLETAPP_H
