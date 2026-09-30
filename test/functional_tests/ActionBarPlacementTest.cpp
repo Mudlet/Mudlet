@@ -377,6 +377,41 @@ private slots:
         QVERIFY(console->actionEasyButtonBar(root));
     }
 
+    // Redoing a deletion from the editor that was undone deletes the restored
+    // group while it is still switched on, with its host cleared first but not
+    // its children's, so they still redraw the bar the group is a menu on.
+    void test_aGroupDeletedFromTheEditorIsNotRecordedAgain()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* root = makeRootBar(host, qsl("placementDeletedMenuHome"), 0, false);
+        auto* group = new TAction(root, host);
+        group->setName(qsl("placementDeletedMenu"));
+        group->setIsFolder(true);
+        group->setIsActive(true);
+        host->getActionUnit()->registerAction(group);
+        auto* entry = new TAction(group, host);
+        entry->setName(qsl("placementDeletedMenuEntry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        host->getActionUnit()->updateAllToolbars();
+        QVERIFY2(console->actionEasyButtonBar(group), "the group has to be recorded against the bar first, or deleting it proves nothing");
+
+        // As EditorDeleteItemCommand::redo() does - the editor switches an
+        // action off before deleting it only the first time
+        host->getActionUnit()->unregisterAction(group);
+        group->mpHost = nullptr;
+        delete group;
+
+        // The freed pointer is only looked up as a key, never followed
+        QVERIFY(!console->actionEasyButtonBar(group));
+        QVERIFY(console->actionEasyButtonBar(root));
+    }
+
     void cleanup()
     {
         if (auto* self = mudlet::self()) {
