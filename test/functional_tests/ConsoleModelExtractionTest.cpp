@@ -3747,8 +3747,6 @@ private:
                    "registerAnonymousEventHandler('sysBufferShrinkEvent', 'onModelBufferShrink')\n"));
     }
 
-    // Utility function appending one whole line - only a line feed starts a new
-    // buffer line - and handing back the index it landed on.
     // Utility function checking a line was rewrapped at 20 columns with an
     // indent of 2 and a hanging indent of 4.
     void verifyRewrappedTo20(TBuffer& buffer, int lineNumber, const QString& start)
@@ -3760,6 +3758,8 @@ private:
         QVERIFY2(secondLine.startsWith(qsl("    ")), qPrintable(qsl("The second line did not get the profile's hanging indent: '%1'").arg(secondLine)));
     }
 
+    // Utility function appending one whole line - only a line feed starts a new
+    // buffer line - and handing back the index it landed on.
     int appendModelLine(TBuffer& buffer, const QString& text, const QColor& fgColor = QColorConstants::LightGray, const QColor& bgColor = QColorConstants::Black)
     {
         const QString line = text + QChar::LineFeed;
