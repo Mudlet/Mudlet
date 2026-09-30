@@ -2373,6 +2373,10 @@ std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool sh
     if (wasShown != shown) {
         pModel->mShowTimeStamps = shown;
         emit pModel->mNotifier.timeStampsToggled();
+        if (!mpConsole && pModel == mpMainConsoleModel.get()) {
+            // the width NAWS reports leaves out the main console's timestamp gutter
+            updateDisplayDimensions();
+        }
     }
     return {wasShown};
 }
