@@ -31,7 +31,7 @@ jobs:
         listed=$(jq '[.[][]] | length' <<< "$pulls")
         changed=${{ github.event.pull_request.changed_files }}
         # A renamed file counts under its old name too, so moving code into docs/
-        # still reads as a code change
+        # still reads as a code change - as it does to the build workflows' filter
         files=$(jq -r '.[][] | .filename, (.previous_filename // empty)' <<< "$pulls")
         echo "Changed files (${listed} of ${changed} listed):"
         printf '%s\n' "$files"
@@ -39,11 +39,15 @@ jobs:
         # grep reads a here-string rather than a pipe: it exits at the first match,
         # and a writer killed by SIGPIPE would turn into a false "docs only" under
         # pipefail
-        if [ "$listed" -eq "$changed" ] && [ "$listed" -lt 3000 ] && [ -n "$files" ] \
-            && ! grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)' <<< "$files"; then
+        if [ -z "$files" ] || grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)' <<< "$files"; then
+          echo "docs_only=false" >> "$GITHUB_OUTPUT"
+        elif [ "$listed" -eq "$changed" ] && [ "$listed" -lt 3000 ]; then
           echo "docs_only=true" >> "$GITHUB_OUTPUT"
         else
-          echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          # The build workflows' path filter also stops at 3000 files, so it has
+          # skipped them, and nothing here can say the rest is documentation
+          echo "::error::This pull request changes ${changed} files. GitHub checks only the first 3000 to decide whether to build, and those are all documentation, so the required build checks cannot run. Split it into pull requests of fewer than 3000 files each."
+          exit 1
         fi
 
   report:
