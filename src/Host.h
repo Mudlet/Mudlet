@@ -51,6 +51,7 @@
 #include <QRect>
 #include <QStack>
 #include <QTextStream>
+#include <QTimer>
 
 #include <memory>
 #include <string>
