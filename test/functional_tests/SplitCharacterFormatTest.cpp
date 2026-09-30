@@ -370,6 +370,28 @@ private slots:
         QVERIFY(character.foreground() != character.rightHalf().foreground());
     }
 
+    // A lead byte the game never completed still belongs to the link it was sent in:
+    void brokenCharacterStaysInItsLink()
+    {
+        mpHost->mEnableOSC8Hyperlinks = true;
+        feed("\033]8;;https://example.com/\033\\A\xa4\033[31m\033[2KB\033]8;;\033\\\033[0m\n");
+        const int line = lastTextLine();
+        QCOMPARE(buffer().line(line), qsl("A\uFFFDB"));
+        const auto& characters = buffer().buffer.at(line);
+        QVERIFY(characters.at(0).linkIndex() > 0);
+        QCOMPARE(characters.at(1).linkIndex(), characters.at(0).linkIndex());
+        QCOMPARE(characters.at(2).linkIndex(), characters.at(0).linkIndex());
+
+        mpHost->setForceMXPProcessorOn(true);
+        feed("<SEND \"test\">A\xa4\033[31m\033[2KB</SEND>\033[0m\n");
+        mpHost->setForceMXPProcessorOn(false);
+        const auto& mxpCharacters = buffer().buffer.at(lastTextLine());
+        QCOMPARE(buffer().line(lastTextLine()), qsl("A\uFFFDB"));
+        QVERIFY(mxpCharacters.at(0).linkIndex() > 0);
+        QCOMPARE(mxpCharacters.at(1).linkIndex(), mxpCharacters.at(0).linkIndex());
+        QVERIFY(mxpCharacters.at(1).isUnderlined());
+    }
+
     void japaneseAsciiKeepsCodecMappings_data()
     {
         QTest::addColumn<QByteArray>("encoding");

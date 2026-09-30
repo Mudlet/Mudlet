@@ -543,6 +543,7 @@ private:
     bool processDoubleByteSequence(const std::string&, bool, size_t, size_t&, bool&);
     static bool doubleByteLead(Decoder, quint8);
     static bool doubleByteTrail(Decoder, quint8);
+    void styleForCurrentLink(TChar&);
     void flushPendingLead();
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
