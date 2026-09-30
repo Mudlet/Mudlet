@@ -51,7 +51,7 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 
 public:
     Q_DISABLE_COPY(TCommandLine)
-    explicit TCommandLine(Host*, const QString&, enums::CommandLineType type = enums::UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
+    explicit TCommandLine(Host*, const QString&, enums::CommandLineType type = enums::UnknownCommandLine, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
@@ -119,7 +119,7 @@ private:
     void positionPasswordToggleButton();
 
     QPointer<Host> mpHost;
-    enums::CommandLineType mType = enums::UnknownType;
+    enums::CommandLineType mType = enums::UnknownCommandLine;
     KeyUnit* mpKeyUnit = nullptr;
     QPointer<TConsole> mpConsole;
     QString mLastCompletion;
@@ -168,7 +168,7 @@ inline QDebug& operator<<(QDebug& debug, const enums::CommandLineType& type)
     QString text;
     QDebugStateSaver saver(debug);
     switch (type) {
-    case enums::UnknownType:
+    case enums::UnknownCommandLine:
         text = qsl("Unknown");
         break;
     case enums::SubCommandLine:

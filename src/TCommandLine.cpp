@@ -1602,7 +1602,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case enums::UnknownType:
+    case enums::UnknownCommandLine:
         Q_UNREACHABLE();
     }
 }
