@@ -313,6 +313,8 @@ private slots:
         QVERIFY(writer.write(scmMapXml) == scmMapXml.size());
         writer.close();
         mpMapper->hide();
+        QSignalSpy loaded(map(), &TMap::signal_mapLoaded);
+        QSignalSpy showRequested(map(), &TMap::signal_mapperShowRequested);
 
         QFile reader(fileName);
         QVERIFY(reader.open(QIODevice::ReadOnly));
@@ -321,6 +323,35 @@ private slots:
 
         QCOMPARE(areaListOf(mpMapper), QStringList{qsl("Imported Area")});
         QVERIFY2(!mpMapper->isHidden(), "importing a map did not show the mapper");
+        // XMLimport::importPackage() cues the mapper once it has read the <map>,
+        // and readXmlMapFile() cues it again with the import's outcome. Either
+        // pair alone would satisfy the checks above, so count both.
+        QCOMPARE(loaded.count(), 2);
+        QCOMPARE(loaded.last().at(0).toBool(), true);
+        QCOMPARE(showRequested.count(), 2);
+    }
+
+    // Only readXmlMapFile() knows the import failed, so this is the cue that
+    // XMLimport cannot stand in for.
+    void test_aFailedXmlMapImportCuesTheMapperWithTheFailure()
+    {
+        const QString fileName = qsl("%1/broken.xml").arg(mMapDir.path());
+        QFile writer(fileName);
+        QVERIFY(writer.open(QIODevice::WriteOnly));
+        const QByteArray brokenXml = QByteArrayLiteral("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<map>\n <areas>\n </rooms>\n</map>\n");
+        QVERIFY(writer.write(brokenXml) == brokenXml.size());
+        writer.close();
+        mpMapper->hide();
+        QSignalSpy loaded(map(), &TMap::signal_mapLoaded);
+
+        QFile reader(fileName);
+        QVERIFY(reader.open(QIODevice::ReadOnly));
+        QString errMsg;
+        QVERIFY2(!map()->readXmlMapFile(reader, &errMsg), "a map file with mismatched tags was imported");
+
+        QVERIFY(!loaded.isEmpty());
+        QCOMPARE(loaded.last().at(0).toBool(), false);
+        QVERIFY2(!mpMapper->isHidden(), "a failed import did not show the mapper");
     }
 
     // A second mapper of the same profile - one in a detached window, say -
