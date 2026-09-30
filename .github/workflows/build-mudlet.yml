@@ -806,14 +806,17 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHE_REF: ${{ github.ref }}
       run: |
+        # Overlapping builds can save out of order, so keep the newest commit's
+        # entry rather than the newest save; older commits fall back to save order
+        recent="$(gh api "repos/${GITHUB_REPOSITORY}/commits?sha=${CACHE_REF}&per_page=100" --jq '[.[].sha]')"
         # jq -s rather than gh's --slurp: --paginate applies --jq per page, and
         # the grouping has to see every page at once
         gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100&ref=${CACHE_REF}&key=ccache-" \
           --jq '.actions_caches[]' \
-          | jq -rs '
+          | jq -rs --argjson recent "${recent}" '
               map(select(.key | test("^ccache-.+-sha-[0-9a-f]{40}$")))
               | group_by(.key | sub("-sha-[0-9a-f]{40}$"; ""))
-              | map(sort_by(.created_at) | .[:-1][])
+              | map(sort_by([-(. as $c | $recent | index($c.key[-40:]) // 100), .created_at]) | .[:-1][])
               | .[] | "\(.id) \(.key)"' \
           | while read -r id key; do
               echo "deleting ${key}"
