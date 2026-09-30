@@ -761,6 +761,20 @@ private slots:
         QVERIFY2(!mpHost->mpDlgIRC, "SETUP: something still opened the IRC window");
         QVERIFY2(waitForConnection(connectionsBefore + 1), "sendIrc() with no frontend did not connect");
     }
+
+    // A listener that shows no window, such as this spy, is no frontend to start the session
+    void test_withNoFrontendAnotherListenerLeavesTheSessionRunning()
+    {
+        QVERIFY(storeSettings(mNick, mChannel));
+        QObject::disconnect(mpHost, &Host::signal_showIrcClient, nullptr, nullptr);
+        QSignalSpy showRequests(mpHost, &Host::signal_showIrcClient);
+        const int connectionsBefore = mpIrcServer->connectionCount();
+
+        QCOMPARE(luaValues(qsl("openIRC()")), qsl("true"));
+        QCOMPARE(showRequests.count(), 1);
+        QVERIFY2(!mpHost->mpDlgIRC, "SETUP: something still opened the IRC window");
+        QVERIFY2(waitForConnection(connectionsBefore + 1), "openIRC() with a listener that opens no window did not connect");
+    }
 };
 
 #include "IrcLuaClientTest.moc"

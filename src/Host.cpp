@@ -77,7 +77,6 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QKeyEvent>
-#include <QMetaMethod>
 #include <QNetworkProxy>
 #include <QRandomGenerator>
 #include <QRegularExpression>
@@ -2667,13 +2666,13 @@ TIrcClient* Host::getOrCreateIrcClient()
 
 void Host::showIrcClient()
 {
-    TIrcClient* client = getOrCreateIrcClient();
-    if (isSignalConnected(QMetaMethod::fromSignal(&Host::signal_showIrcClient))) {
-        emit signal_showIrcClient();
-        return;
+    QPointer<TIrcClient> client = getOrCreateIrcClient();
+    // A window starts the session as it is shown, so it sees it connect. Whoever else is
+    // listening, or nobody at all, the session still starts: start() does nothing twice.
+    emit signal_showIrcClient();
+    if (client) {
+        client->start();
     }
-    // with no window to show it, the session runs without one
-    client->start();
 }
 
 void Host::enableTimer(const QString& name)
