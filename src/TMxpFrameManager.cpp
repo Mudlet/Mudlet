@@ -799,8 +799,15 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
 {
     switch (frame.shown) {
     case TMxpFrame::Shown::Placed:
-    case TMxpFrame::Shown::Window:
         return frame.geometry;
+    case TMxpFrame::Shown::Window: {
+        // deleteMiniConsole() can take the window away without the frame closing
+        const auto* widgets = frameWidgets();
+        if (!widgets || !widgets->frameWidget(frame.name)) {
+            return std::nullopt;
+        }
+        return frame.geometry;
+    }
     case TMxpFrame::Shown::Tab: {
         // Asked each time, as the header's frame is moved by relayouts
         const auto* widgets = frameWidgets();

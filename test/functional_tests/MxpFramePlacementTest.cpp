@@ -807,6 +807,23 @@ private slots:
         QCOMPARE(frameGeometry(qsl("footer")), QRect(0, 190, 400, 50));
     }
 
+    // A script deleting an EXTERNAL frame's window leaves the frame open, so a
+    // frame later opened inside it is shown on the main window instead
+    void test_frameNestedInADeletedExternalFrameIsShownOnTheMainWindow()
+    {
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QVERIFY(frameWidget(qsl("popup")));
+        runLua(qsl("deleteMiniConsole('popup')"));
+        settle();
+        QVERIFY(!frameWidget(qsl("popup")));
+
+        mpHost->mMxpFrameManager.setDestination(qsl("popup"), false, false);
+        QVERIFY(createFrame(qsl("inpopup"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        QVERIFY(frameWidget(qsl("inpopup")));
+        QVERIFY(frameConsole(qsl("inpopup")));
+    }
+
     // Inside a tab it is shown on the tab's page, against the space the header
     // gives that page, which follows the header's frame across a relayout
     void test_frameNestedInATabIsShownInsideIt()
