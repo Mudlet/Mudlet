@@ -2158,9 +2158,9 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         QCOMPARE(mpServer->nawsUpdates().constLast(), QSize(std::min(host->mScreenWidth, host->mWrapAt), host->mScreenHeight));
     }
 
-    // With no view, timestamps turned on or off from Lua still change the width
-    // the game is told by their gutter, as they do with one.
-    void test_luaTimeStampsResendNawsWithNoView()
+    // With no view no timestamp gutter is drawn, so timestamps turned on or off
+    // from Lua leave the width the game is told as it was.
+    void test_luaTimeStampsLeaveTheReportedWidthAloneWithNoView()
     {
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
         QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
@@ -2192,12 +2192,26 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
         QVERIFY2(nawsReaches(0), "The view-less profile never reported its size with no timestamps.");
 
+        const auto onlyFullWidthSince = [this, &sizeWithGutter](const qsizetype from) {
+            const auto updates = mpServer->nawsUpdates();
+            for (qsizetype i = from; i < updates.size(); ++i) {
+                if (updates.at(i) != sizeWithGutter(0)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        qsizetype reported = mpServer->nawsUpdates().size();
         runLua(host, qsl("enableTimeStamps()\n"));
         QVERIFY(host->mainConsoleShowsTimeStamps());
-        QVERIFY2(nawsReaches(TBuffer::smTimeStampFormat.size()), "Timestamps turned on from Lua with no view left the game's width alone.");
+        QTest::qWait(500);
+        QVERIFY2(onlyFullWidthSince(reported), "Timestamps turned on from Lua with no view took a gutter off the game's width.");
 
+        reported = mpServer->nawsUpdates().size();
         runLua(host, qsl("disableTimeStamps()\n"));
-        QVERIFY2(nawsReaches(0), "Timestamps turned off from Lua with no view left the game's width alone.");
+        QTest::qWait(500);
+        QVERIFY2(onlyFullWidthSince(reported), "Timestamps turned off from Lua with no view changed the game's width.");
     }
 
     // A profile that never had a view, whose changeColors() would otherwise
