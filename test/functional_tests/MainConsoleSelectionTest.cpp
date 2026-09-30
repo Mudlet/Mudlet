@@ -763,6 +763,54 @@ private slots:
         QCOMPARE(copiedText(pane), qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy zzz"));
     }
 
+    // The spaces the next echo starts with fall at that same break, so they
+    // are dropped from the line and kept for the copy just as the one space is.
+    void test_copyKeepsTheSpacesAnEchoAfterTheWrapColumnStartsWith()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy "));
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        console->print(qsl("  zzz\n"));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy   zzz"));
+    }
+
+    // A game line is over once its line feed arrives, even one that wrapped
+    // in the spaces it ended on, so what is printed next starts a new line.
+    void test_copyDoesNotJoinWhatFollowsAGameLineThatWrappedInItsLastSpaces()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        const int firstLine = static_cast<int>(console->buffer.lineBuffer.size()) - 1;
+        runLua(qsl("feedTriggers('xxxxxxxxxxxx yyyyyyyyyyyyyyyy \\n')"));
+        console->print(qsl("zzz\n"));
+        TTextEdit* pane = upperPane();
+        pane->mPA = QPoint(0, firstLine);
+        selectToTheEnd(pane);
+        pane->mSelectedRegion = QRegion(0, 0, 1, 1);
+
+        QCOMPARE(copiedText(pane), qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy\nzzz"));
+    }
+
+    // MXP's <DEST EOL> discards the last line to print a new one in its place,
+    // which is no part of the line above even when the discarded one was.
+    void test_copyDoesNotJoinWhatReplacesADiscardedWrappedLine()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, qsl("the quick brown fox jumps"));
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        console->discardLastLine();
+        console->print(qsl("zzz\n"));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("the quick brown \nzzz"));
+    }
+
     // The spaces each wrapped line dropped are kept line by line, so they have
     // to stay with their lines when other lines come and go around them.
     void test_copyRejoinsWrappedLinesAfterAnEarlierLineIsDeleted()

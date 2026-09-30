@@ -2198,6 +2198,11 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(lineIndex, lastValidLine) : 0;
     const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    // The line feed ended this line, so an empty wrapped line left by the
+    // spaces it ended on is where the next line starts, not more of this one
+    if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
+        timeBuffer.back() = QString();
+    }
 
     // Skip logging if a trigger deleted the line that was being committed;
     // deleteLines() has already adjusted the deferred logging state
@@ -5258,6 +5263,9 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             appendEmptyLine();
             continue;
         }
+        if (firstChar && dropSpaceAtWrap(ch)) {
+            continue;
+        }
 
         const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
 
@@ -5391,6 +5399,9 @@ void TBuffer::appendLine(const QString& text,
         if (thisChar == QChar::LineFeed) {
             firstChar = true;
             appendEmptyLine();
+            continue;
+        }
+        if (firstChar && dropSpaceAtWrap(thisChar)) {
             continue;
         }
 
@@ -6034,6 +6045,20 @@ bool TBuffer::moveCursor(QPoint& where)
 // requested by lua function getLines(...):
 QString badLineError = qsl("ERROR: invalid line number");
 
+// Wrapping drops the spaces a wrapped line would start with, so the ones that
+// text echoed onto an empty wrapped line starts with are dropped the same way,
+// and counted for a copy to put back
+bool TBuffer::dropSpaceAtWrap(const QChar c)
+{
+    if (c != QChar::Space || !lineBuffer.back().isEmpty() || timeBuffer.back() != TBuffer::smBlankTimeStamp) {
+        return false;
+    }
+    if (wrapGapBuffer.back() < std::numeric_limits<quint16>::max()) {
+        ++wrapGapBuffer.back();
+    }
+    return true;
+}
+
 bool TBuffer::wrapsFromPreviousLine(const int lineNumber) const
 {
     // a blank timestamp is what marks a line wrapLine() split off another
@@ -6453,6 +6478,10 @@ void TBuffer::clearLastLine()
         buffer.back().clear();
         if (!lineBuffer.isEmpty()) {
             lineBuffer.back().clear();
+        }
+        // what goes in its place starts a line rather than carrying on one
+        if (!timeBuffer.isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
+            timeBuffer.back() = QString();
         }
     }
 }
