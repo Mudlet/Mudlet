@@ -48,6 +48,7 @@
 #include <QScopeGuard>
 #include <QTableWidget>
 
+#include "FontManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -142,7 +143,7 @@ private:
     QString anotherFontFamily() const
     {
         const QString inUse = map()->getSymbolFont().family();
-        QStringList families = mudlet::self()->getAvailableFonts();
+        QStringList families = FontManager::availableFonts();
         families.sort();
         for (const QString& family : families) {
             if (family.compare(inUse, Qt::CaseInsensitive)) {

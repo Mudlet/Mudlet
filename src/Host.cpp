@@ -31,6 +31,7 @@
 #include "dlgMapper.h"
 #include "dlgNotepad.h"
 #include "dlgTriggerEditor.h"
+#include "FontManager.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "HostManager.h"
@@ -60,8 +61,10 @@
 #include "XMLimport.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
+#include "ShortcutsManager.h"
 
 #include <chrono>
+#include <cstring>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
@@ -388,7 +391,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         loadSecuredPassword();
     } else {
         QString password{readProfileData(qsl("password"))};
@@ -402,7 +405,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         thankForUsingPTB();
     }
 
-    if (mudlet::self()->smFirstLaunch) {
+    if (MudletApp::firstLaunch()) {
         QTimer::singleShot(0ms, this, [this]() {
             if (mpConsole) {
                 mpConsole->setCommandLinePlaceholderText(tr("Text to send to the game"));
@@ -454,10 +457,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
 
-    auto i = mudlet::self()->mpShortcutsManager->iterator();
-    while (i.hasNext()) {
-        auto entry = i.next();
-        profileShortcuts[entry] = std::make_unique<QKeySequence>(*mudlet::self()->mpShortcutsManager->getSequence(entry));
+    if (auto* shortcuts = ShortcutsManager::self()) {
+        auto i = shortcuts->iterator();
+        while (i.hasNext()) {
+            auto entry = i.next();
+            profileShortcuts[entry] = std::make_unique<QKeySequence>(*shortcuts->getSequence(entry));
+        }
     }
 
     auto settings = MudletApp::getQSettings();
@@ -1732,7 +1737,7 @@ static QString installedFamily(const QStringList& availableFonts, const QString&
 
 Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
 {
-    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+    const QStringList availableFonts = FontManager::availableFonts();
 
     if (const QString installed = installedFamily(availableFonts, requested); !installed.isEmpty()) {
         return {installed, QFont::Normal, true};
@@ -2349,6 +2354,28 @@ void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor
     mpConsole->print(msg, fgColor, bgColor);
 }
 
+// The echoed-text mark is buffer state, so it is set on the model rather than through the view.
+bool Host::echoToMainConsole(const QString& text)
+{
+    if (!mpConsole) {
+        return false;
+    }
+    TBuffer& buffer = mpMainConsoleModel->buffer;
+    buffer.mEchoingText = true;
+    mpConsole->echo(text);
+    buffer.mEchoingText = false;
+    return true;
+}
+
+bool Host::insertHtmlInMainConsole(const QString& text)
+{
+    if (!mpConsole) {
+        return false;
+    }
+    mpConsole->insertHTML(text);
+    return true;
+}
+
 void Host::printSystemMessage(const QString& msg)
 {
     mpConsole->printSystemMessage(msg);
@@ -2397,14 +2424,17 @@ void Host::runTriggers(int line)
     const QPoint previousUserCursor = consoleModel.mUserCursor;
     const int previousEngineCursor = consoleModel.mEngineCursor;
     const bool previousIsPromptLine = consoleModel.mIsPromptLine;
-    const QString previousLine = consoleModel.mCurrentLine;
+    QString previousLine;
+    if (nested) {
+        previousLine = consoleModel.mCurrentLine;
+    }
 
     consoleModel.mUserCursor.setY(line);
     consoleModel.mIsPromptLine = consoleModel.buffer.promptBuffer.at(line);
     consoleModel.mEngineCursor = line;
     consoleModel.mUserCursor.setX(0);
     consoleModel.mCurrentLine = consoleModel.buffer.line(line);
-    getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
+    getLuaInterpreter()->setLineGlobal(consoleModel.mCurrentLine);
     // The matchers take the haystack by reference all the way down, so it must be
     // a local: a nested pass reassigns mCurrentLine under them. The buffer is moved out of
     // the Host to reuse its capacity; a nested pass finds the member empty and grows its
@@ -2416,10 +2446,11 @@ void Host::runTriggers(int line)
         }
         mTriggerHaystack = std::move(haystack);
     });
-    haystack.resize(0);
-    haystack.reserve(consoleModel.mCurrentLine.size() + 1);
-    haystack.append(QStringView{consoleModel.mCurrentLine});
-    haystack.append(u'\n');
+    const qsizetype lineLength = consoleModel.mCurrentLine.size();
+    haystack.resize(lineLength + 1);
+    QChar* const haystackData = haystack.data();
+    memcpy(haystackData, consoleModel.mCurrentLine.constData(), lineLength * sizeof(QChar));
+    haystackData[lineLength] = u'\n';
 
     if (TDebug::wants(TDebug::Category::GameLine)) {
         TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
@@ -2437,7 +2468,7 @@ void Host::runTriggers(int line)
         consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
         consoleModel.mIsPromptLine = previousIsPromptLine;
         consoleModel.mCurrentLine = previousLine;
-        getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, previousLine);
+        getLuaInterpreter()->setLineGlobal(previousLine);
     } else {
         consoleModel.mIsPromptLine = false;
     }
@@ -2450,14 +2481,28 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 {
     mTriggerUnit.processDataStream(data, line);
 
-    mAliasUnit.doCleanup();
-    mTimerUnit.doCleanup();
-    mTriggerUnit.doCleanup();
-    mKeyUnit.doCleanup();
-    mActionUnit.doCleanup();
+    // Every unit's doCleanup() starts by asking this, and on nearly every line
+    // all six answer no; asking here keeps the six calls off the per-line path.
     // ScriptUnit defers deletes too (a package script uninstalling its own package
     // mid-compile or mid-event-dispatch), so flush it here alongside the others:
-    mScriptUnit.doCleanup();
+    if (mAliasUnit.hasPendingDeletes()) {
+        mAliasUnit.doCleanup();
+    }
+    if (mTimerUnit.hasPendingDeletes()) {
+        mTimerUnit.doCleanup();
+    }
+    if (mTriggerUnit.hasPendingDeletes()) {
+        mTriggerUnit.doCleanup();
+    }
+    if (mKeyUnit.hasPendingDeletes()) {
+        mKeyUnit.doCleanup();
+    }
+    if (mActionUnit.hasPendingDeletes()) {
+        mActionUnit.doCleanup();
+    }
+    if (mScriptUnit.hasPendingDeletes()) {
+        mScriptUnit.doCleanup();
+    }
 }
 
 void Host::slot_timerFires()
@@ -3113,7 +3158,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (!registeredFromArchive) {
             // the fonts were registered up front for the scripts' sake, and nothing
             // got installed that could own them - take them back out again
-            mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
+            if (auto* fonts = FontManager::self()) {
+                fonts->unloadFonts(getName(), packageName);
+            }
             takeBackWhatTheManifestOverwrote();
             if (!discardTheFolderThisInstallMade()) {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
@@ -3455,7 +3502,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
-    mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
+    if (auto* fonts = FontManager::self()) {
+        fonts->unloadFonts(getName(), packageName);
+    }
     if (isModule) {
         mInstalledModules.remove(packageName);
         mModulesLoadedOk.remove(packageName);
@@ -3871,6 +3920,10 @@ QString Host::readProfileData(const QString& item)
 // does not install font system-wide
 void Host::installPackageFonts(const QString& packageName)
 {
+    auto* fonts = FontManager::self();
+    if (!fonts) {
+        return;
+    }
     auto packagePath = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
@@ -3879,7 +3932,7 @@ void Host::installPackageFonts(const QString& packageName)
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-            mudlet::self()->mFontManager.loadFont(filePath, getName(), packageName);
+            fonts->loadFont(filePath, getName(), packageName);
         }
     }
 }
@@ -5631,6 +5684,33 @@ bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, i
     return mpConsole->setSubConsoleCommandForegroundColor(name, QColor(r, g, b, alpha));
 }
 
+void Host::setProfileBackgroundColor(const QColor& color)
+{
+    mBgColor = color;
+    // Host outlives its main console; with no view, the buffer's colours must still follow:
+    if (mpConsole) {
+        mpConsole->setConsoleBgColor(color.red(), color.green(), color.blue(), color.alpha());
+    } else {
+        refreshMainConsoleColors();
+    }
+}
+
+void Host::setProfileCommandBackgroundColor(const QColor& color)
+{
+    mCommandBgColor = color;
+    if (mpConsole) {
+        mpConsole->setCommandBgColor(color);
+    }
+}
+
+void Host::setProfileCommandForegroundColor(const QColor& color)
+{
+    mCommandFgColor = color;
+    if (mpConsole) {
+        mpConsole->setCommandFgColor(color);
+    }
+}
+
 // Returns true when a script has claimed the built-in map buttons for this
 // profile via setConfig("mapperButton", ...): "disabled" swallows the request
 // outright, "scripted" turns it into a sysMapperButtonAction event so the
@@ -6134,7 +6214,7 @@ void Host::setCommandLineHistorySaveSize(const int lines)
 
 QString Host::getEditorTheme() const
 {
-    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
+    if (MudletApp::darkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
         return mEditorThemeDark;
     }
     return mEditorTheme;
@@ -6142,7 +6222,7 @@ QString Host::getEditorTheme() const
 
 QString Host::getEditorThemeFile() const
 {
-    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
+    if (MudletApp::darkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
         return mEditorThemeFileDark;
     }
     return mEditorThemeFile;

@@ -34,7 +34,9 @@ endif()
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
+    AsciiLineBreakTest.cpp
     ConsoleModelExtractionTest.cpp
+    ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
@@ -42,6 +44,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     DockWidgetWithoutProfileTest.cpp
+    GlyphCacheTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
@@ -136,6 +139,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
+    MMCPIncomingCallTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
     TelnetOptionsReportTest.cpp

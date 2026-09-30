@@ -82,7 +82,6 @@ public slots:
     void slot_togglePanel();
     void slot_setMapperPanelVisible(bool panelVisible);
     void slot_roomSize(int size);
-    void slot_exitSize(int size);
     void slot_setShowRoomIds(bool showRoomIds);
     void slot_setShowGrid(bool showGrid);
     void slot_updateInfoContributors();

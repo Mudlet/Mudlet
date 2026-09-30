@@ -1,8 +1,8 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win-pr.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache save step below: only builds of development write
+# ccache trim and save steps below: only builds of development write
 # this shared cache, every other build restores read-only, so
-# build-mudlet-win-pr.yml has no equivalent save step at all.
+# build-mudlet-win-pr.yml has no equivalent steps at all.
 name: 🔨 Build Mudlet (windows)
 on:
   push:
@@ -95,6 +95,7 @@ jobs:
       run: |
         ccache --recompress 19
         ccache --show-compression
+        echo "CCACHE_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -109,6 +110,17 @@ jobs:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         WITH_SENTRY: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+
+    # A hit refreshes an entry's timestamp, so whatever this build left untouched
+    # is an object it no longer compiles. Dropping it saves one build's working
+    # set - under half of the 500M cap it would otherwise fill. Skipped after a
+    # failed build, which stops early and would leave most of that looking stale.
+    - name: Trim the ccache to what this build used
+      if: success() && env.CCACHE_BUILD_START
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+      run: ccache --evict-older-than "$(( $(date +%s) - CCACHE_BUILD_START + 60 ))s"
 
     - name: check ccache stats post build
       shell: msys2 {0}

@@ -31,31 +31,20 @@
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
-#include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
-#include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
-#include "TTextEdit.h"
 #include "TTimer.h"
 #include "ctelnet.h"
-#include "dlgComposer.h"
 #include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 #include "MudletApp.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <algorithm>
 #include <limits>

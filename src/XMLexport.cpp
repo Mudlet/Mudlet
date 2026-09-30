@@ -29,6 +29,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "CredentialManager.h"
+#include "ShortcutsManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -36,7 +37,6 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 #include "VarUnit.h"
-#include "mudlet.h"
 
 #include <QSaveFile>
 #include <QRegularExpression>
@@ -49,6 +49,40 @@
 
 #include <sstream>
 #include <utility>
+
+namespace {
+// "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
+// (1000ths, range 0 to 999) that is used as a "version" attribute number when
+// writing the <MudletPackage ...> element of all (but maps if I ever get around
+// to doing a Map Xml file exporter/writer) Xml files used to export/save Mudlet
+// button/menu/toolbars; aliases. keys, scripts, timers, triggers and variables
+// and collections of these as modules/packages and entire profiles as "game
+// saves".  Mudlet versions up to 3.0.1 never bothered checking the version
+// detail and it had been hard coded as "1.0" back as far as history can
+// determine.  From that version a check was coded to test that the version
+// was less than 2.000f with the intention to loudly and clearly fail if a
+// higher version was encountered. Values above 1.001f have not yet been
+// codified but should be accepted so it should be possible to raise the number
+// a little and to use that to extend the Xml data format in a manner that older
+// versions ignore (possibly with some noise) but which they can still get the
+// details they can handle yet allow a later upgraded version to get extra
+// information they want.
+//
+// Taking this number to 2.000f or more WILL prevent old versions from reading
+// Xml files and should be considered a step associated with a major version
+// number change in the Mudlet application itself and SHOULD NOT BE DONE WITHOUT
+// agreement and consideration from the Project management, even a minor part
+// increment should not be done without justification...!
+// XML version Change history (what and why):
+// 1.001    Added method to allow XML format to permit ASCII control codes
+//          0x01-0x08, 0x0b, 0x0c, 0x0e-0x1f, 0x7f to be stored as part of the
+//          "script" element for a Mudlet "item" (0x09, 0x0a, 0x0d are the only
+//          ones that ARE permitted) - this is wanted so that, for instance
+//          ANSI ESC codes can be included in a Lua script without breaking
+//          the XML format used to store it - prior to this embedding such
+//          codes would break or destroy the script that used it.
+const QString scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
+} // namespace
 
 XMLexport::XMLexport(Host* pH)
 : mpHost(pH)
@@ -541,6 +575,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
+    host.append_attribute("lazyCaptureGlobals") = pHost->lazyCaptureGlobals() ? "yes" : "no";
     host.append_attribute("announceIncomingText") = pHost->mAnnounceIncomingText ? "yes" : "no";
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
     host.append_attribute("enableOSC8Hyperlinks") = pHost->mEnableOSC8Hyperlinks ? "yes" : "no";
@@ -689,8 +724,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
-    {
-        auto iterator = mudlet::self()->mpShortcutsManager->iterator();
+    if (auto* shortcuts = ShortcutsManager::self()) {
+        auto iterator = shortcuts->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
             auto shortcut = host.append_child("profileShortcut");
@@ -1009,7 +1044,7 @@ pugi::xml_node XMLexport::writeXmlHeader()
     mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
 
     auto mudletPackage = mExportDoc.append_child("MudletPackage");
-    mudletPackage.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
+    mudletPackage.append_attribute("version") = scmMudletXmlDefaultVersion.toUtf8().constData();
 
     return mudletPackage;
 }

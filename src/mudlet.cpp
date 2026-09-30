@@ -269,6 +269,25 @@ bool mudlet::claimMicrophoneFor(Host* pHost)
         if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting())) {
             mpSpeechRecognizer->stopListening();
         }
+
+        // Asked again, because the state to test is the one the stop left behind
+        // rather than the one before it. A backend that finalises the last phrase
+        // asynchronously - AppleSpeechRecognizer does - returns from the stop
+        // while still Processing, so the guard above saw only Listening and had
+        // nothing to catch. Moving the owner now would hand that phrase to the
+        // profile taking the microphone instead of the one that spoke it.
+        //
+        // The caller gets the same "try again in a moment" it gets above. The
+        // losing profile has already been told of the handover, and that stands:
+        // its session really has ended, and it keeps the microphone only until
+        // its phrase lands, when the session's end releases it. The retry then
+        // finds nobody holding it and announces nothing, so the handover is told
+        // once. Announcing it after the stop instead would put it behind the
+        // state change, and docs/stt-api.md tells a script the state change is
+        // what follows sysSTTHandover.
+        if (mpSpeechRecognizer && mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing) {
+            return false;
+        }
     }
 
     mpMicrophoneOwner = pHost;
@@ -1746,7 +1765,7 @@ static bool anyProfilesExist(const QString& profilesPath);
 
 void mudlet::init()
 {
-    smFirstLaunch = !anyProfilesExist(MudletApp::getMudletPath(enums::profilesPath));
+    MudletApp::setFirstLaunch(!anyProfilesExist(MudletApp::getMudletPath(enums::profilesPath)));
     // Must be after setupConfig() has settled the config root and before anything of this run is written
     rememberFirstLaunch(*MudletApp::getQSettings(), MudletApp::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
@@ -3904,6 +3923,12 @@ void mudlet::addConsoleForNewHost(Host* pH)
             QApplication::beep();
         }
     });
+    connect(&pH->mTelnet, &cTelnet::signal_characterModeDetected, this, [this, pTelnet = &pH->mTelnet]() {
+        if (showCharacterModeWarning()) {
+            showedCharacterModeWarning();
+            pTelnet->postCharacterModeWarning();
+        }
+    });
 
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadStarted, pConsole, &TMainConsole::showPackageDownloadProgress, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_packageDownloadProgress, pConsole, &TMainConsole::updatePackageDownloadProgress, Qt::UniqueConnection);
@@ -4850,7 +4875,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     TMap::smShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
-    mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
+    MudletApp::setStorePasswordsSecurely(settings.value("storePasswordsSecurely", QVariant(true)).toBool());
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
@@ -5076,7 +5101,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", TMap::smShowMapAuditErrors);
     settings.setValue("invertMapZoom", mInvertMapZoom);
-    settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
+    settings.setValue("storePasswordsSecurely", MudletApp::storingPasswordsSecurely());
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
@@ -7671,7 +7696,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     }
 
     if (preInstallPackages) {
-        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name);
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name, pHost->mAcceptServerGUI && pHost->mEnableGMCP);
         pHost->setupIreDriverBugfix();
     }
 
@@ -7745,11 +7770,6 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
     }
 }
 
-QStringList mudlet::getAvailableFonts()
-{
-    return QFontDatabase::families(QFontDatabase::Any);
-}
-
 // Helper function to check if current version is >= specified version
 // Returns true if current version is >= minVersion, false otherwise
 bool mudlet::isVersionAtLeast(const QString& minVersion)
@@ -7785,6 +7805,11 @@ bool mudlet::isVersionAtLeast(const QString& minVersion)
     return true; // Versions are equal
 }
 
+void mudlet::setStorePasswordsSecurely(const bool storeSecurely)
+{
+    MudletApp::setStorePasswordsSecurely(storeSecurely);
+}
+
 bool mudlet::migratePasswordsToSecureStorage()
 {
     if (!mProfilePasswordsToMigrate.isEmpty()) {
@@ -7792,7 +7817,7 @@ bool mudlet::migratePasswordsToSecureStorage()
         return false;
     }
 
-    mStorePasswordsSecurely = true;
+    MudletApp::setStorePasswordsSecurely(true);
 
     const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -7841,7 +7866,7 @@ bool mudlet::migratePasswordsToProfileStorage()
         qWarning() << "mudlet::migratePasswordsToProfileStorage() WARNING - password migration is already in progress, so not starting a duplicate action.";
         return false;
     }
-    mStorePasswordsSecurely = false;
+    MudletApp::setStorePasswordsSecurely(false);
 
     const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -8051,13 +8076,10 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
     // Only read the scheme after the override above has been replaced -
     // before that, colorScheme() still reports the previous explicit
     // choice, so systemSetting would inherit it instead of the OS setting.
-    mDarkMode = false;
-    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark)) {
-        mDarkMode = true;
-    }
+    MudletApp::setDarkMode(state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark));
 
     if (needsCustomDarkTheme()) {
-        if (mDarkMode) {
+        if (MudletApp::darkMode()) {
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
             qApp->setStyle(new DarkTheme);
         } else {
@@ -8451,7 +8473,7 @@ void mudlet::refreshTabBar()
 
 //NOLINT(readability-convert-member-functions-to-static)
 // doesn't make sense to make it static since it modifies a class variable
-void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName)
+void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& profileName, const bool serverGuiAccepted)
 {
     if (mSkipDefaultPackageInstall) {
         return;
@@ -8515,12 +8537,17 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     }
 
     // A modest starter UI that adapts to whatever any game provides.
-    // Games whose bundled loader above fetches the game's own full interface
-    // (flagged in TGameDetails) are skipped: the starter UI would only fight
-    // it for the same screen space. Games that push a GUI via Client.GUI at
-    // connect time are handled at runtime instead - the starter UI stands
-    // aside when one installs.
-    if (!TGameDetails::gameProvidesOwnUi(gameUrl)) {
+    // Games known to install their own full interface, by a bundled loader
+    // above or by Client.GUI (flagged in TGameDetails), are skipped: the
+    // starter UI would only fight it for the same screen space, and would
+    // build and announce itself before a post-login Client.GUI package lands.
+    // Other games that push a GUI via Client.GUI are handled at runtime
+    // instead - the starter UI stands aside when one installs.
+    // A Client.GUI package only arrives if the profile lets it in, and a
+    // profile copied with its settings can already refuse it.
+    const auto ownUi = TGameDetails::gameOwnUi(gameUrl);
+    const bool ownUiArrives = ownUi == GameDetail::OwnUi::BundledLoader || (ownUi == GameDetail::OwnUi::ClientGui && serverGuiAccepted);
+    if (!ownUiArrives) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
     }
 

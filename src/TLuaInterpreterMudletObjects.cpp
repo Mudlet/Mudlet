@@ -35,6 +35,7 @@
 #include "EventLoopPump.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "TAction.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
@@ -44,26 +45,20 @@
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
+#include "TKey.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TTabBar.h"
-#include "TTextEdit.h"
 #include "TTimer.h"
 #include "TriggerMatchPool.h"
-#include "dlgComposer.h"
 #include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 #include "TGameDetails.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <QScopeGuard>
 
@@ -92,7 +87,6 @@
 #endif // MUDLET_MEMORY_TRACKING
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -727,6 +721,10 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
         lua_pushstring(L, "prescans");
         lua_pushnumber(L, static_cast<double>(TriggerMatchPool::instance().prescanCount()));
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "rootFilterEpoch");
+        lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->rootFilterEpoch()));
         lua_settable(L, -3);
     }
 

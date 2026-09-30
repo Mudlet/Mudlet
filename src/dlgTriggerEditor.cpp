@@ -10938,7 +10938,7 @@ void dlgTriggerEditor::showInfo(const QString& text)
 // black, so the theme's text colour has to be spelled out explicitly
 static QString themedBannerLinkColor()
 {
-    return mudlet::self()->inDarkMode() ? qsl("rgb(230, 230, 230)") : qsl("black");
+    return MudletApp::darkMode() ? qsl("rgb(230, 230, 230)") : qsl("black");
 }
 
 void dlgTriggerEditor::showIntro(const QString& desiredOption)
@@ -14414,7 +14414,7 @@ void dlgTriggerEditor::hideSystemMessageArea()
 // The grey arrows the .ui file gives the extra controls toggle are all but invisible
 // against a dark background, so use the brighter green ones (which the .ui file already
 // uses for the hovered-over state) there instead. The background colour is what matters,
-// so go by the palette rather than by mudlet::inDarkMode() - the latter is only set when
+// so go by the palette rather than by MudletApp::darkMode() - the latter is only set when
 // Mudlet itself applies its dark theme, yet a dark system theme darkens the editor as well.
 // The application palette is the one to read: when this runs in response to a style change
 // the widgets have not had the new palette propagated down to them yet
