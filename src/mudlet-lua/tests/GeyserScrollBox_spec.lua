@@ -234,7 +234,7 @@ describe("Tests functionality of Geyser.ScrollBox", function()
   describe("Geyser.ScrollBox scroll bars", function()
     -- A scroll box scrolls by being a QScrollArea (TScrollBox.h), not by being
     -- a console, so Mudlet's scroll bar API cannot reach it: TMainConsole::consoleNamed
-    -- only looks through the sub-console map, and a scroll box is not in it.
+    -- finds only the main console and the sub-console map, and a scroll box is in neither.
     -- Geyser.ScrollBox descends from Geyser.Window rather than
     -- Geyser.MiniConsole, so it offers no scroll bar method of its own either.
     -- Its scroll bars are Qt's, and appear on their own when a child overflows.
