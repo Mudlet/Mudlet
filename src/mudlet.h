@@ -631,9 +631,9 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
-    HostManager mHostManager;
-    // After mHostManager, so it is gone before the profiles that reach it are
+    // Before mHostManager, so it is destroyed after the profiles that reach it
     MudletMedia mMedia;
+    HostManager mHostManager;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
