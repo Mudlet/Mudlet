@@ -1036,6 +1036,8 @@ describe("Tests a double-byte character restyled between its bytes", function()
     {"GBK", bytes(0xD6, 0xD0), "中"},
     {"GB18030", bytes(0xD6, 0xD0), "中"},
     {"EUC-KR", bytes(0xC7, 0xD1), "한"},
+    {"SHIFT_JIS", bytes(0x93, 0xFA), "日"},
+    {"EUC-JP", bytes(0xC6, 0xFC), "日"},
   }
 
   local function split(pair)

@@ -458,6 +458,35 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
     return parameters;
 }
 
+// Looking a codec up by name costs more than decoding a character with it, so
+// the double-byte decoders keep the one for the encoding in use. Main thread only.
+struct LegacyCodec
+{
+    QByteArray name;
+    QStringDecoder decoder;
+    bool available = false;
+
+    QString decode(const QByteArrayView bytes)
+    {
+        if (!decoder.isValid()) {
+            return TEncodingHelper::decode(bytes.toByteArray(), name);
+        }
+        decoder.resetState();
+        return decoder.decode(bytes);
+    }
+};
+
+LegacyCodec& legacyCodec(const QByteArray& encoding)
+{
+    static LegacyCodec codec;
+    if (codec.name != encoding) {
+        codec.name = encoding;
+        codec.decoder = QStringDecoder(encoding.constData());
+        codec.available = TEncodingHelper::isEncodingAvailable(encoding);
+    }
+    return codec;
+}
+
 } // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
@@ -7601,8 +7630,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, gbSequenceLength), mEncoding);
+        if (legacyCodec(mEncoding).available) {
+            codePoint = legacyCodec(mEncoding).decode(QByteArrayView(bufferData.data() + pos, gbSequenceLength));
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or gbSequenceLength wrong
@@ -7716,8 +7745,8 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, big5SequenceLength), mEncoding);
+        if (legacyCodec(mEncoding).available) {
+            codePoint = legacyCodec(mEncoding).decode(QByteArrayView(bufferData.data() + pos, big5SequenceLength));
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or big5SequenceLength wrong
@@ -7838,8 +7867,8 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, eucSequenceLength), mEncoding);
+        if (legacyCodec(mEncoding).available) {
+            codePoint = legacyCodec(mEncoding).decode(QByteArrayView(bufferData.data() + pos, eucSequenceLength));
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or eucSequenceLength wrong
@@ -7910,13 +7939,17 @@ bool TBuffer::processDoubleByteSequence(const std::string& data, const bool isFr
         return processEUC_KRSequence(data, isFromServer, length, position, isNonBmpCharacter);
     case Decoder::Big5:
         return processBig5Sequence(data, isFromServer, length, position, isNonBmpCharacter);
+    case Decoder::ShiftJis:
+    case Decoder::EucJp:
+        return processJapaneseSequence(data, isFromServer, length, position, isNonBmpCharacter);
     default:
         Q_UNREACHABLE_RETURN(true);
     }
 }
 
 // The widest ranges the double-byte decoders accept, which decide the validity
-// of the pair; GB18030's four-byte sequences are not split:
+// of the pair. Only full-width characters are split: not GB18030's four-byte
+// sequences, EUC-JP's three-byte ones, nor half-width katakana.
 bool TBuffer::doubleByteLead(const Decoder decoder, const quint8 byte)
 {
     switch (decoder) {
@@ -7924,7 +7957,10 @@ bool TBuffer::doubleByteLead(const Decoder decoder, const quint8 byte)
     case Decoder::Gb18030:
     case Decoder::Big5:
         return byte >= 0x81 && byte <= 0xFE;
+    case Decoder::ShiftJis:
+        return (byte >= 0x81 && byte <= 0x9F) || (byte >= 0xE0 && byte <= 0xFC);
     case Decoder::EucKr:
+    case Decoder::EucJp:
         return byte >= 0xA1 && byte <= 0xFE;
     default:
         return false;
@@ -7939,11 +7975,65 @@ bool TBuffer::doubleByteTrail(const Decoder decoder, const quint8 byte)
         return byte >= 0x40 && byte <= 0xFE && byte != 0x7F;
     case Decoder::Big5:
         return (byte >= 0x40 && byte <= 0x7E) || (byte >= 0xA1 && byte <= 0xFE);
+    case Decoder::ShiftJis:
+        return byte >= 0x40 && byte <= 0xFC && byte != 0x7F;
     case Decoder::EucKr:
+    case Decoder::EucJp:
         return byte >= 0xA1 && byte <= 0xFE;
     default:
         return false;
     }
+}
+
+bool TBuffer::processJapaneseSequence(const std::string& data, const bool isFromServer, const size_t length, size_t& position, bool& isNonBmpCharacter)
+{
+    isNonBmpCharacter = false;
+    const auto lead = static_cast<quint8>(data[position]);
+    // Printable ASCII is itself in both encodings; C0 and DEL go through the codec, which may remap them:
+    if (lead >= 0x20 && lead < 0x7F) {
+        mMudLine.append(QChar::fromLatin1(lead));
+        return true;
+    }
+    size_t count = 1;
+    if (mDecoder == Decoder::ShiftJis) {
+        if (doubleByteLead(Decoder::ShiftJis, lead)) {
+            count = 2;
+        }
+    } else if (lead == 0x8F) {
+        count = 3;
+    } else if (lead == 0x8E || doubleByteLead(Decoder::EucJp, lead)) {
+        count = 2;
+    }
+    for (size_t offset = 1; offset < count; ++offset) {
+        if (position + offset >= length) {
+            if (isFromServer) {
+                mIncompleteSequenceBytes = data.substr(position, length - position);
+                return false;
+            }
+            mMudLine.append(QChar::ReplacementCharacter);
+            position = length - 1;
+            return true;
+        }
+        const auto trail = static_cast<quint8>(data[position + offset]);
+        // EUC-JP's half-width katakana follow 0x8E:
+        const bool valid = (mDecoder == Decoder::EucJp && lead == 0x8E) ? (trail >= 0xA1 && trail <= 0xDF) : doubleByteTrail(mDecoder, trail);
+        if (!valid) {
+            // The byte that broke the sequence starts the next one:
+            mMudLine.append(QChar::ReplacementCharacter);
+            position += offset - 1;
+            return true;
+        }
+    }
+    auto& codec = legacyCodec(mEncoding);
+    const QString decoded = codec.available ? codec.decode(QByteArrayView(data.data() + position, count)) : QString();
+    if (decoded.isEmpty() || decoded.contains(QChar::ReplacementCharacter)) {
+        mMudLine.append(QChar::ReplacementCharacter);
+    } else {
+        mMudLine.append(decoded);
+        isNonBmpCharacter = decoded.size() == 2;
+    }
+    position += count - 1;
+    return true;
 }
 
 void TBuffer::flushPendingLead()
@@ -7974,6 +8064,12 @@ TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
     if (encoding == "BIG5" || encoding == "BIG5-HKSCS") {
         return Decoder::Big5;
     }
+    if (encoding == "SHIFT_JIS") {
+        return Decoder::ShiftJis;
+    }
+    if (encoding == "EUC-JP") {
+        return Decoder::EucJp;
+    }
     return Decoder::Ascii;
 }
 
@@ -7982,7 +8078,7 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
-        if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
+        if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR" || mEncoding == "SHIFT_JIS" || mEncoding == "EUC-JP") {
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {

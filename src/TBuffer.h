@@ -495,7 +495,7 @@ public:
     void injectOSC8DocumentationExamples();
 
     // Resolved from the encoding name when it changes, not in the per-byte loop:
-    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, Utf8 };
+    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, ShiftJis, EucJp, Utf8 };
     static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
@@ -539,6 +539,7 @@ private:
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processEUC_KRSequence(const std::string&, bool, size_t, size_t&, bool&);
+    bool processJapaneseSequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processDoubleByteSequence(const std::string&, bool, size_t, size_t&, bool&);
     static bool doubleByteLead(Decoder, quint8);
     static bool doubleByteTrail(Decoder, quint8);
