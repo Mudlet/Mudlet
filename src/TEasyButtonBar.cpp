@@ -208,7 +208,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
             pEAction->setChecked(false);
         }
 
-        pAction->mpHost->mpConsole->replaceActionMenuEntry(pTAction, pEAction);
+        mpTAction->mpHost->mpConsole->replaceActionMenuEntry(pTAction, pEAction);
 
         //FIXME: Heiko April 2012 -> addActionButtons()
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
