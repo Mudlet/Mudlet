@@ -11,7 +11,7 @@ jobs:
   changes:
     name: detect buildable changes
     runs-on: ubuntu-latest
-    if: ${{ (github.repository_owner == 'Mudlet' || github.repository_owner == 'vadi2') }}
+    if: ${{ github.repository_owner == 'Mudlet' }}
     outputs:
       build: ${{steps.filter.outputs.build}}
     steps:
@@ -39,7 +39,7 @@ jobs:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     needs: changes
-    if: ${{ (github.repository_owner == 'Mudlet' || github.repository_owner == 'vadi2') && needs.changes.outputs.build == 'true' }}
+    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
