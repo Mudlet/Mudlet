@@ -833,6 +833,31 @@ private slots:
         QVERIFY2(frameTabs(qsl("status")), "the frame was opened without its header");
     }
 
+    // A button that widens a side toolbar narrows the main window without
+    // resizing the console, so nothing reports the new size: closing a frame
+    // has to measure it, or what is left moves back against the old one
+    void test_closingAFrameAfterAToolbarWidensPlacesTheRestInTheNarrowerWindow()
+    {
+        runLua(qsl("tempButtonToolbar('mxpTestBar', 1, 1) tempButton('mxpTestBar', 'a', 1) showToolBar('mxpTestBar')"));
+        const auto hideBar = qScopeGuard([this]() {
+            runLua(qsl("hideToolBar('mxpTestBar')"));
+            settle();
+        });
+        settle();
+        QVERIFY(createFrame(qsl("pin"), qsl("left"), qsl("100px"), qsl("100px"), {{qsl("LEFT"), qsl("10")}, {qsl("TOP"), qsl("10")}}));
+        QVERIFY(createFrame(qsl("status"), qsl("right"), qsl("200px"), qsl("100%")));
+        const int widthBefore = area().width();
+
+        runLua(qsl("tempButton('mxpTestBar', 'a caption long enough to widen the toolbar', 1)"));
+        settle();
+        QVERIFY2(area().width() < widthBefore, "the toolbar did not narrow the main window");
+
+        QVERIFY(mpHost->mMxpFrameManager.closeFrame(qsl("pin")));
+        settle();
+
+        QCOMPARE(frameGeometry(qsl("status")).x(), area().right() + 1 - 200);
+    }
+
     // How the base UI reserves its space, so this is #9698 as reported. Declared
     // last on purpose: an adjustable container leaves deferred timers of its own
     // behind that resize the main window out from under whatever runs next, so
