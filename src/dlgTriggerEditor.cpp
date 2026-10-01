@@ -69,6 +69,7 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaEnum>
@@ -1421,10 +1422,18 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpHost, &Host::signal_itemsChangedByScript, this, [this]() {
         mNeedUpdateData = true;
     });
-    connect(mpHost, &Host::signal_keyTakenWarning, this, [this](const QString& warning) {
-        // Read out only when it can also be seen: a closed editor replaces it
-        // when it opens, and a script making its bindings on connect would have
-        // it read out at every connect. Selecting the binding shows it again.
+    connect(mpHost, &Host::signal_keyBoundByScript, this, [this](const int id) {
+        const QString warning = takenKeyWarning(mpHost->getKeyUnit()->getKey(id));
+        if (warning.isEmpty()) {
+            return;
+        }
+        // Here rather than on the main screen, for the reason
+        // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
+        // bindings at profile load would repeat it at every startup, and a line
+        // the player learns to ignore is worse than no line. Read out only when
+        // it can also be seen: a closed editor replaces it when it opens, and a
+        // script making its bindings on connect would have it read out at every
+        // connect. Selecting the binding shows it again.
         showWarning(warning, isVisible());
     });
     connect(mpHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& fgColor, const QColor& bgColor) {
@@ -6991,6 +7000,42 @@ void dlgTriggerEditor::updatePackageItemAccessibility(QTreeWidgetItem* pItem, co
     pItem->setData(0, Qt::AccessibleDescriptionRole, newDescription);
 }
 
+// Qt matches Mudlet's own shortcuts and add-on menu shortcuts before the command line sees the
+// key, so a binding on one of their keys never fires. It is still accepted, only warned about.
+// Empty when the binding will fire. The strings keep the KeyUnit context they were translated in.
+QString dlgTriggerEditor::takenKeyWarning(const TKey* pKey) const
+{
+    auto* pMudlet = mudlet::self();
+    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
+        return {};
+    }
+    // A keypad or group-switch binding cannot be written as a key sequence, so
+    // no shortcut can be the one holding it
+    constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
+    if (pKey->getKeyModifiers() & ~sequenceModifiers) {
+        return {};
+    }
+
+    const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
+    const QString keyText = sequence.toString(QKeySequence::NativeText);
+    // Not either/or: addCommand() refuses a key Mudlet holds, but the preferences can move a
+    // Mudlet shortcut onto a command's key
+    QStringList warnings;
+    if (const QString action = pMudlet->ownShortcutUsingKey(pKey->getKeyCode(), pKey->getKeyModifiers()); !action.isEmpty()) {
+        // "while that is available": a greyed-out menu item doesn't get the key, so the binding fires then
+        //: Warning shown in the editor when a key binding is given a key one of Mudlet's own shortcuts already uses. %1 is a key such as "Alt+M", %2 the name of the Mudlet action holding it, as the Shortcuts tab of the preferences shows it.
+        warnings.append(QCoreApplication::translate("KeyUnit",
+                                                    "%1 is already used by Mudlet for \"%2\", which will get the key first, so this key binding will not fire while that is available. "
+                                                    "Mudlet's own shortcuts can be changed in the preferences, under Shortcuts.")
+                                .arg(keyText, action));
+    }
+    if (const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost); !holders.isEmpty()) {
+        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
+        warnings.append(QCoreApplication::translate("KeyUnit", "%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
+    }
+    return warnings.join(QChar::Space);
+}
+
 // Also kept in the item's accessible description, heard on landing on it, so announcing is optional
 void dlgTriggerEditor::showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, const bool announce)
 {
@@ -8213,7 +8258,7 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
             }
             // A warning given while the editor was closed is replaced when it opens, so a script-made binding
             // is only warned about here. Not announced, or arrowing through the keys would be talked over.
-            showKeyTakenWarning(pItem, mpHost->getKeyUnit()->takenKeyWarning(pT), false);
+            showKeyTakenWarning(pItem, takenKeyWarning(pT), false);
         }
     } else {
         clearKeyForm();
@@ -13389,7 +13434,7 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             pT->setKeyModifiers(modifier);
             QString newStateXML = exportKeyToXML(pT);
 
-            showKeyTakenWarning(pItem, pKeyUnit->takenKeyWarning(pT), true);
+            showKeyTakenWarning(pItem, takenKeyWarning(pT), true);
 
             pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("keyBinding"), oldStateXML, newStateXML);
         }

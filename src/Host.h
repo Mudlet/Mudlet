@@ -161,7 +161,6 @@ class Host : public QObject
 
     friend class XMLexport;
     friend class XMLimport;
-    friend class dlgProfilePreferences;
     // Allows the functional test to set the Discord username restriction:
     friend class TDiscordModeTest;
     // Allows the functional test to call closeChildren() on its own:
@@ -239,6 +238,8 @@ public:
     const QString& getDiscordApplicationID();
     void setDiscordInviteURL(const QString& s);
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
+    const QString& getRequiredDiscordUserName() const { return mRequiredDiscordUserName; }
+    void setRequiredDiscordUserName(const QString& userName) { mRequiredDiscordUserName = userName; }
     void setSpellDic(const QString&);
     void setEnableSpellCheck(const bool enable);
     bool getEnableSpellCheck() const { return mEnableSpellCheck; }
@@ -446,6 +447,11 @@ public:
     bool getMMCPAddChatMessageNewline();
     bool getMMCPAutoAcceptCalls();
     bool getMMCPShowSnoopInMainConsole();
+    void setMMCPChatPrefix(const QString&);
+    void setMMCPPort(const quint16);
+    void setMMCPPrefixEmotes(const bool);
+    void setMMCPAddChatMessageNewline(const bool);
+    void setMMCPShowSnoopInMainConsole(const bool);
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -504,6 +510,11 @@ public:
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
+    void setPlayerRoomStyle(const quint8 styleCode) { mPlayerRoomStyle = styleCode; }
+    void setPlayerRoomOuterDiameter(const quint8 outerDiameter) { mPlayerRoomOuterDiameterPercentage = outerDiameter; }
+    void setPlayerRoomInnerDiameter(const quint8 innerDiameter) { mPlayerRoomInnerDiameterPercentage = innerDiameter; }
+    void setPlayerRoomOuterColor(const QColor& outerColor) { mPlayerRoomOuterColor = outerColor; }
+    void setPlayerRoomInnerColor(const QColor& innerColor) { mPlayerRoomInnerColor = innerColor; }
     void setSearchOptions(const enums::EditorSearchOptions);
     void setBufferSearchOptions(const enums::BufferSearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
@@ -651,6 +662,7 @@ public:
     }
     void sendCmdLine(const QString& cmd);
     bool fontsAntiAlias() const { return !mNoAntiAlias; }
+    void setFontsAntiAlias(const bool antiAlias) { mNoAntiAlias = !antiAlias; }
 
 private:
     QSettings& profileIni();
@@ -1078,9 +1090,9 @@ signals:
     void signal_closeProfileDialogs();
     void signal_destroyProfileDialogs();
     // For the profile's script editor, if it has one: a script toggled an item,
-    // rewrote a script's code, changed items behind the editor's trees or gave
-    // a key binding a key something else holds; or there is a Lua error or
-    // debug line, or a map error, for the editor's error console.
+    // rewrote a script's code, changed items behind the editor's trees or made
+    // a key binding, whose key something else may hold; or there is a Lua
+    // error or debug line, or a map error, for the editor's error console.
     void signal_triggerToggled(int id);
     void signal_aliasToggled(int id);
     void signal_timerToggled(int id);
@@ -1088,7 +1100,7 @@ signals:
     void signal_scriptToggled(int id);
     void signal_scriptCodeChanged(int id);
     void signal_itemsChangedByScript();
-    void signal_keyTakenWarning(const QString& warning);
+    void signal_keyBoundByScript(int id);
     void signal_errorConsolePrint(const QString& text, const QColor& fgColor, const QColor& bgColor);
     // For the profile's module manager, if it has one: a script installed or
     // uninstalled a module, or turned a module's sync on or off.

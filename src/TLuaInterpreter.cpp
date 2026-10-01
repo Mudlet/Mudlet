@@ -7704,7 +7704,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
     pT->setName(name);
-    mpHost->getKeyUnit()->warnIfKeyIsTaken(pT);
+    emit mpHost->signal_keyBoundByScript(pT->getID());
     updateEditor();
     return {pT->getID(), QString()};
 }
@@ -7725,7 +7725,7 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
     }
     const int id = pT->getID();
     pT->setName(QString::number(id));
-    mpHost->getKeyUnit()->warnIfKeyIsTaken(pT);
+    emit mpHost->signal_keyBoundByScript(pT->getID());
     return id;
 }
 
