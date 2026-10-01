@@ -75,9 +75,9 @@ struct TMxpFrame {
     };
     Shown shown = Shown::Not;
     QString hostFrame;
-    // Where a Placed frame was last put, which frames nested in it are placed
-    // against. A Tab's or a Window's inside is whatever its header or the
-    // player gives it at the time.
+    // Where a Placed frame was last put, or the inside of a Window as the view
+    // last reported it, which frames nested in it are placed against. A Tab's
+    // inside is whatever its header gives it at the time.
     QRect geometry;
     
     // Hierarchy tracking (non-owning references - see ownership model above)
@@ -134,6 +134,9 @@ public:
     // Reposition every frame on the main window against the last reported size
     // and the current borders
     void relayoutFrames();
+    // What the view measures of an EXTERNAL frame's window whenever the player
+    // or a script resizes it; the frames open inside it are placed again
+    void setWindowSize(const QString& name, const QSize& size);
 
     // Configuration
     static constexpr int MAX_FRAMES = 20;

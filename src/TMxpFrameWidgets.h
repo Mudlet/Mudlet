@@ -45,14 +45,13 @@ public:
     // A frame on the main window, or inside hostName's frame when that is set,
     // with its title on a tab header when showHeader
     void createInternalFrame(const QString& name, const QString& hostName, const QString& title, const QRect& geometry, bool showHeader, bool scrolling);
-    // A frame in a window of its own; false when no console could be made for it
-    bool createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling);
+    // A frame in a window of its own, whose resizes are reported to the frame
+    // manager from then on. The size the window is shown at, or nothing when no
+    // console could be made for it.
+    std::optional<QSize> createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling);
     // The space a tab added to parentName's header has, or nothing when that
     // frame has no header to add one to
     std::optional<QSize> tabAreaSize(const QString& parentName) const;
-    // The inside of name's EXTERNAL window as the player has sized it, or
-    // nothing when name is not shown in a window of its own
-    std::optional<QSize> windowAreaSize(const QString& name) const;
     void createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select);
     // False, leaving everything alone, when name is not a tab in parentName's header
     bool removeFromParentTabs(const QString& name, const QString& parentName);
