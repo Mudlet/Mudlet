@@ -94,6 +94,7 @@ set(mudlet_SRCS
     GifTracker.cpp
     GMCPAuthenticator.cpp
     Host.cpp
+    HostDialogs.cpp
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
@@ -370,6 +371,7 @@ set(mudlet_HDRS
     GifTracker.h
     GMCPAuthenticator.h
     Host.h
+    HostDialogs.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
