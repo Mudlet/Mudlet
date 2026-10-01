@@ -179,6 +179,33 @@ if _VERSION == "Lua 5.1" then
   end
 end
 
+-- What a {} block's free names resolve to is decided by walking the stack when
+-- it runs, not by anything about the call that compiled it, so one environment
+-- serves every expression and each expression need only be compiled once.
+local fstring_outer_env = _ENV or getfenv(1)
+local function fstring_lookup(_, k)
+  local stack_level = 5
+  while debug.getinfo(stack_level, "") ~= nil do
+    local i = 1
+    repeat
+      local name, value = debug.getlocal(stack_level, i)
+      if name == k then
+        return value
+      end
+      i = i + 1
+    until name == nil
+    stack_level = stack_level + 1
+  end
+  -- Mudlet leaves these out of the globals table until they are first read
+  if k == "matches" or k == "multimatches" or k == "line" then
+    return fstring_outer_env[k]
+  end
+  return rawget(fstring_outer_env, k)
+end
+local fstring_env = setmetatable({}, { __index = fstring_lookup })
+-- weak, so expressions built from changing text cannot pile up
+local fstring_compiled = setmetatable({}, { __mode = "v" })
+
 -- long and inconvenient variable name is to help avoid collisions
 -- str (what it was before) was causing f("Hello {str}") to return "Hello Hello {str}"
 function f(supersecretstringvariablenocollision)
@@ -186,36 +213,30 @@ function f(supersecretstringvariablenocollision)
   if supersecretstringvariablenocollisiontype ~= "string" then
     error("f: bad argument #1 type (str as string expected, got " .. supersecretstringvariablenocollisiontype .. ")")
   end
-  local outer_env = _ENV or getfenv(1)
   return (supersecretstringvariablenocollision:gsub("%b{}", function(block)
     local code = block:match("{(.*)}")
-    local exp_env = {}
-    setmetatable(exp_env, {
-      __index = function(_, k)
-        local stack_level = 5
-        while debug.getinfo(stack_level, "") ~= nil do
-          local i = 1
-          repeat
-            local name, value = debug.getlocal(stack_level, i)
-            if name == k then
-              return value
-            end
-            i = i + 1
-          until name == nil
-          stack_level = stack_level + 1
-        end
-        -- Mudlet leaves these out of the globals table until they are first read
-        if k == "matches" or k == "multimatches" or k == "line" then
-          return outer_env[k]
-        end
-        return rawget(outer_env, k)
-      end,
-    })
-    local fn, err = load("return " .. code, "expression `" .. code .. "`", "t", exp_env)
-    if fn then
-      return tostring(fn())
-    else
-      error(err, 0)
+    local fn = fstring_compiled[code]
+    if not fn then
+      -- an expression that defines a function, or reaches for its environment,
+      -- can write globals into the environment it runs in, so it gets one of
+      -- its own every time rather than the shared one
+      local private = code:find("function", 1, true) or code:find("fenv", 1, true)
+      local err
+      fn, err = load("return " .. code, "expression `" .. code .. "`", "t", private and setmetatable({}, { __index = fstring_lookup }) or fstring_env)
+      if not fn then
+        error(err, 0)
+      end
+      if not private then
+        fstring_compiled[code] = fn
+      end
     end
+    -- code an expression calls can still reach the shared environment with
+    -- getfenv(), so it starts every evaluation empty, as each one's own did
+    if next(fstring_env) ~= nil then
+      for k in pairs(fstring_env) do
+        fstring_env[k] = nil
+      end
+    end
+    return tostring(fn())
   end))
 end
