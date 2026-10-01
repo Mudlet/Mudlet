@@ -25,8 +25,10 @@
 #include "TMainConsole.h"
 
 #include <QCoreApplication>
+#include <QDebug>
 #include <QFrame>
 #include <QSizePolicy>
+#include <QStackedWidget>
 #include <QTabWidget>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -37,15 +39,21 @@ TMxpFrameWidgets::TMxpFrameWidgets(TMainConsole* pMainConsole)
 {
 }
 
-void TMxpFrameWidgets::createInternalFrame(const QString& name, const QString& title, const QRect& geometry, bool showHeader, bool scrolling)
+void TMxpFrameWidgets::createInternalFrame(const QString& name, const QString& hostName, const QString& title, const QRect& geometry, bool showHeader, bool scrolling)
 {
+    QWidget* host = hostName.isEmpty() ? mpMainConsole->mpMainFrame : frameWidget(hostName);
+    if (!host) {
+        qWarning().nospace() << "TMxpFrameWidgets::createInternalFrame() WARNING - frame \"" << name << "\" was to be shown inside frame \"" << hostName << "\", which has no widget";
+        return;
+    }
+
     const int frameWidth = geometry.width();
     const int frameHeight = geometry.height();
     const int tabBarHeight = showHeader ? 30 : 0; // Tab widget overhead including margins
     destroyStaleFrame(name);
 
     // Create the container widget for the frame - use WA_DontShowOnScreen to prevent any rendering
-    auto* containerWidget = new QFrame(mpMainConsole->mpMainFrame);
+    auto* containerWidget = new QFrame(host);
     containerWidget->setAttribute(Qt::WA_DontShowOnScreen, true);
     containerWidget->setObjectName(name + qsl("_container"));
     containerWidget->setGeometry(geometry);
@@ -193,7 +201,20 @@ std::optional<QSize> TMxpFrameWidgets::tabAreaSize(const QString& parentName) co
     if (!tabWidget) {
         return std::nullopt;
     }
+    // Every page gets the inside of the header's page stack
+    if (const auto* pages = tabWidget->findChild<QStackedWidget*>(QString(), Qt::FindDirectChildrenOnly)) {
+        return pages->contentsRect().size();
+    }
     return tabWidget->size();
+}
+
+std::optional<QSize> TMxpFrameWidgets::windowAreaSize(const QString& name) const
+{
+    const QWidget* window = frameWidget(name);
+    if (!window || !window->isWindow()) {
+        return std::nullopt;
+    }
+    return window->size();
 }
 
 void TMxpFrameWidgets::createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select)
@@ -288,16 +309,6 @@ void TMxpFrameWidgets::focusFrame(const QString& name)
         widget->raise();
         widget->setFocus();
     }
-}
-
-std::optional<QRect> TMxpFrameWidgets::placementArea(const QString& name) const
-{
-    const QWidget* widget = frameWidget(name);
-    if (!widget) {
-        return std::nullopt;
-    }
-    // pos() rather than geometry().topLeft(), which differ for a window
-    return QRect(widget->pos(), widget->size());
 }
 
 void TMxpFrameWidgets::setGeometry(const QString& name, const QRect& geometry)

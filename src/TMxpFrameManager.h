@@ -29,6 +29,7 @@
 #include <QSize>
 #include <QString>
 #include <QStringList>
+#include <optional>
 
 class Host;
 class TMxpFrameWidgets;
@@ -61,10 +62,22 @@ struct TMxpFrame {
     bool floating = false;  // When true, frame has no title bar/header (borderless)
     QString dockFrame;      // For tab support - name of frame to dock into
 
-    // Set once the view shows the frame on the main window, where relayouts
-    // move it; a tab is placed by its header and an EXTERNAL frame by the player
-    bool onMainWindow = false;
-    // Where such a frame was last put, which frames nested in it are placed against
+    // How the view shows the frame, once it does
+    enum class Shown {
+        Not,
+        // On the main window, or inside the Tab or Window frame named by
+        // hostFrame; relayouts move it
+        Placed,
+        // A page of its parent's header, which places it
+        Tab,
+        // A window of its own, which the player places
+        Window,
+    };
+    Shown shown = Shown::Not;
+    QString hostFrame;
+    // Where a Placed frame was last put, which frames nested in it are placed
+    // against. A Tab's or a Window's inside is whatever its header or the
+    // player gives it at the time.
     QRect geometry;
     
     // Hierarchy tracking (non-owning references - see ownership model above)
@@ -142,6 +155,8 @@ private:
     void layoutTabFrame(TMxpFrame* frame);
     QRect availableFrameArea() const;
     QRect calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* parentFrame);
+    // Nothing while the view shows nothing the frame could hold
+    std::optional<QRect> nestingArea(const TMxpFrame& frame) const;
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
     // Null while the profile has no main console
     TMxpFrameWidgets* frameWidgets();

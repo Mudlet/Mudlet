@@ -158,6 +158,15 @@ bool TMxpFrameManager::closeFrame(const QString& name)
         clearDestination();
     }
 
+    // Close children first - make a copy since closeFrame modifies the list.
+    // Before a tab goes too, as frames nested in it are shown inside it.
+    const QList<TMxpFrame*> childrenCopy = frame->childFrames;
+    for (auto* child : childrenCopy) {
+        if (child) {
+            closeFrame(child->name);
+        }
+    }
+
     // Special handling for frames that are tabs in a parent frame
     if (frame->parentFrame) {
         TMxpFrameWidgets* widgets = frameWidgets();
@@ -174,15 +183,6 @@ bool TMxpFrameManager::closeFrame(const QString& name)
 
             // No need to recalculate borders for tab frames since they don't affect main window borders
             return true;
-        }
-    }
-
-    // Close children first - make a copy since closeFrame modifies the list
-    QList<TMxpFrame*> childrenCopy = frame->childFrames;
-
-    for (auto* child : childrenCopy) {
-        if (child) {
-            closeFrame(child->name);
         }
     }
 
@@ -359,13 +359,8 @@ QRect TMxpFrameManager::calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* pare
     int containerY = 0;
     QRect area;
     std::optional<QRect> parentArea;
-    if (parentFrame && parentFrame->onMainWindow) {
-        parentArea = parentFrame->geometry;
-    } else if (parentFrame) {
-        // only the view knows where it put a tab or an EXTERNAL frame
-        if (const auto* widgets = frameWidgets()) {
-            parentArea = widgets->placementArea(parentFrame->name);
-        }
+    if (parentFrame) {
+        parentArea = nestingArea(*parentFrame);
     }
 
     if (parentArea) {
@@ -569,13 +564,19 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
     if (parentFrame) {
         frame->parentFrame = parentFrame;
         parentFrame->childFrames.append(frame);
+        // MXP puts an INTERNAL frame inside the window it is opened in, so one
+        // nested in a tab or an EXTERNAL frame is shown inside that, while one
+        // nested in a Placed frame is shown on the same widget as its parent
+        if (nestingArea(*parentFrame)) {
+            frame->hostFrame = parentFrame->shown == TMxpFrame::Shown::Placed ? parentFrame->hostFrame : parentFrame->name;
+        }
     }
 
     // Before the view builds it, as building it runs the event loop, and a
-    // relayout from there has to find this frame already on the main window
-    frame->onMainWindow = true;
+    // relayout from there has to find this frame already placed
+    frame->shown = TMxpFrame::Shown::Placed;
     frame->geometry = shownGeometry(geometry);
-    widgets->createInternalFrame(frame->name, frame->title, geometry, showHeader, frame->scrolling);
+    widgets->createInternalFrame(frame->name, frame->hostFrame, frame->title, geometry, showHeader, frame->scrolling);
 }
 
 void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
@@ -594,7 +595,9 @@ void TMxpFrameManager::layoutExternalFrame(TMxpFrame* frame)
 
     if (!widgets->createExternalFrame(frame->name, frame->title, QSize(frameWidth, frameHeight), frame->scrolling)) {
         qWarning() << "TMxpFrameManager::layoutExternalFrame: Failed to create console";
+        return;
     }
+    frame->shown = TMxpFrame::Shown::Window;
 }
 
 void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
@@ -630,6 +633,7 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
 
     frame->parentFrame = parentFrame;
     parentFrame->childFrames.append(frame);
+    frame->shown = TMxpFrame::Shown::Tab;
 
     // If this is the first child tab, select it
     // (The parent frame's own tab at index 0 is typically unused for content)
@@ -760,7 +764,7 @@ void TMxpFrameManager::relayoutFrames()
     }
 
     for (auto* frame : std::as_const(mFrameOrder)) {
-        if (!frame->onMainWindow) {
+        if (frame->shown != TMxpFrame::Shown::Placed) {
             continue;
         }
 
@@ -770,6 +774,41 @@ void TMxpFrameManager::relayoutFrames()
     }
 
     mpHost->setMxpBorders(mMxpBorders);
+}
+
+std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
+{
+    switch (frame.shown) {
+    case TMxpFrame::Shown::Placed:
+        return frame.geometry;
+    case TMxpFrame::Shown::Window: {
+        // Asked each time, as the player sizes the window
+        const auto* widgets = frameWidgets();
+        if (!widgets) {
+            return std::nullopt;
+        }
+        const std::optional<QSize> size = widgets->windowAreaSize(frame.name);
+        if (!size) {
+            return std::nullopt;
+        }
+        return QRect(QPoint(0, 0), *size);
+    }
+    case TMxpFrame::Shown::Tab: {
+        // Asked each time, as the header's frame is moved by relayouts
+        const auto* widgets = frameWidgets();
+        if (!widgets || !frame.parentFrame) {
+            return std::nullopt;
+        }
+        const std::optional<QSize> size = widgets->tabAreaSize(frame.parentFrame->name);
+        if (!size) {
+            return std::nullopt;
+        }
+        return QRect(QPoint(0, 0), *size);
+    }
+    case TMxpFrame::Shown::Not:
+        break;
+    }
+    return std::nullopt;
 }
 
 TMxpFrameWidgets* TMxpFrameManager::frameWidgets()
