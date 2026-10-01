@@ -107,6 +107,10 @@ struct TConsoleModel
     // The format text is written into the buffer with.
     TChar mFormatCurrent;
     bool mIsPromptLine = false;
+    // Set while triggers run on incoming text, so that script writes treat the
+    // matched line as still open - see the branches on it in TConsole and
+    // TBuffer::addLink(). Only ever raised on the main console's model.
+    bool mTriggerEngineMode = false;
     // Last pressed toolbar button's state for getButtonState(): 1 = up, 2 = down (0 invalid); a plain button
     // resets it to 1.
     int mButtonState = 1;

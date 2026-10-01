@@ -46,6 +46,7 @@
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "TIrcClient.h"
 #include "TLabelModel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -2388,7 +2389,9 @@ void Host::printOnDisplay(std::string& data, bool isFromServer)
 
 void Host::finalizeMainConsole()
 {
-    mpConsole->finalize();
+    if (mpConsole) {
+        mpConsole->finalize();
+    }
 }
 
 bool Host::mainConsoleShowsTimeStamps() const
@@ -2653,6 +2656,25 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
     event.mArgumentList << a << b << c;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     raiseEvent(event);
+}
+
+TIrcClient* Host::getOrCreateIrcClient()
+{
+    if (!mpIrcClient) {
+        mpIrcClient = new TIrcClient(this);
+    }
+    return mpIrcClient;
+}
+
+void Host::showIrcClient()
+{
+    QPointer<TIrcClient> client = getOrCreateIrcClient();
+    // A window starts the session as it is shown, so it sees it connect. Whoever else is
+    // listening, or nobody at all, the session still starts: start() does nothing twice.
+    emit signal_showIrcClient();
+    if (client) {
+        client->start();
+    }
 }
 
 void Host::enableTimer(const QString& name)
@@ -4865,14 +4887,8 @@ QPointer<TConsole> Host::findConsole(QString name)
 
 QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
 {
-    if (!mpConsole) {
-        QStringList failMessage;
-        failMessage << qsl("internal error: no main TConsole - please report").arg(windowName);
-        return qMakePair(false, failMessage);
-    }
-
     if (windowName.isEmpty() || windowName == QLatin1String("main")) {
-        return qMakePair(true, mpConsole->getLines(lineFrom, lineTo));
+        return qMakePair(true, mainConsoleModel().lines(lineFrom, lineTo));
     }
 
     auto pModel = mWindowRegistry.subConsoleModel(windowName);

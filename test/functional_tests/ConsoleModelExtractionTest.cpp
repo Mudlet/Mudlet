@@ -162,6 +162,7 @@ private slots:
         QCOMPARE(&console->mEngineCursor, &model.mEngineCursor);
         QCOMPARE(&console->mUserCursor, &model.mUserCursor);
         QCOMPARE(&console->mIsPromptLine, &model.mIsPromptLine);
+        QCOMPARE(&console->mTriggerEngineMode, &model.mTriggerEngineMode);
         QCOMPARE(&console->mLogFile, &model.mLogFile);
         QCOMPARE(&console->mLogFileName, &model.mLogFileName);
         QCOMPARE(&console->mLogStream, &model.mLogStream);
@@ -314,6 +315,63 @@ private slots:
         QCOMPARE(model->mCurrentLine, qsl("ViewlessPipeline gamma"));
         QCOMPARE(model->mEngineCursor, fedLine);
         QVERIFY2(!model->mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
+    }
+
+    // isPrompt() and getLines() read only the model, so they answer with no view.
+    void test_triggerContextQueriesAnswerWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host,
+               qsl("viewlessPrompt = 'none'\n"
+                   "tempRegexTrigger('^ViewlessContext', [[viewlessPrompt = tostring(isPrompt())]], 10)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->reenableAllTriggers();
+
+        // Both answers from the prompt flag of the line under the cursor; the
+        // trigger-context fallback is the next test's
+        const int promptLine = appendModelLine(model->buffer, qsl("ViewlessContext prompt>"));
+        model->buffer.promptBuffer[promptLine] = true;
+        host->runTriggers(promptLine);
+        QCOMPARE(luaGlobalString(host, "viewlessPrompt"), qsl("true"));
+
+        const int fedLine = appendModelLine(model->buffer, qsl("ViewlessContext delta"));
+        host->runTriggers(fedLine);
+        QCOMPARE(luaGlobalString(host, "viewlessPrompt"), qsl("false"));
+
+        const auto [success, lines] = host->getLines(qsl("main"), fedLine, fedLine + 1);
+        QVERIFY2(success, qPrintable(lines.join(QChar::LineFeed)));
+        QCOMPARE(lines, QStringList{qsl("ViewlessContext delta")});
+    }
+
+    // With the cursor past the prompt flags, isPrompt() falls back to the
+    // model's trigger-context flag, and reads it with no view.
+    void test_isPromptFallsBackToTheModelsTriggerContextWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        model->mUserCursor.setY(model->buffer.promptBuffer.size());
+        model->mIsPromptLine = true;
+
+        model->mTriggerEngineMode = true;
+        runLua(host, qsl("viewlessFallback = tostring(isPrompt())"));
+        QCOMPARE(luaGlobalString(host, "viewlessFallback"), qsl("true"));
+
+        model->mTriggerEngineMode = false;
+        runLua(host, qsl("viewlessFallback = tostring(isPrompt())"));
+        QCOMPARE(luaGlobalString(host, "viewlessFallback"), qsl("false"));
+        model->mIsPromptLine = false;
     }
 
     // A colorizer trigger recolors its match by selecting a run of the line and
@@ -1261,11 +1319,9 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QCOMPARE(countLine.toInt(), lines.count());
     }
 
-    // selectCaptureGroup() only reaches the view from inside a trigger that
-    // captured something, and a selection needs a widget to live in - so with no
-    // window it has to answer the -1 it already answers for a group that is not
-    // there.
-    void test_selectCaptureGroupAnswersMinusOneWithNoView()
+    // The selection lives in the model, so a trigger with no window can still
+    // select what it captured, and gets back the success a view would give it.
+    void test_selectCaptureGroupSelectsInTheModelWithNoView()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
@@ -1273,15 +1329,52 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         QVERIFY2(host->mpConsole, "The active host has no main console.");
         runLua(host,
                qsl("captureGroupResult = 'the trigger did not run'\n"
-                   "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(1))]], 10)\n"));
+                   "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(2))]], 10)\n"));
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         host->reenableAllTriggers();
+        host->deselectMainConsole();
 
-        host->runTriggers(appendModelLine(model->buffer, qsl("NoViewCapture alpha")));
+        const int fedLine = appendModelLine(model->buffer, qsl("NoViewCapture alpha"));
+        host->runTriggers(fedLine);
 
-        QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("-1"));
+        QCOMPARE(luaGlobalString(host, "captureGroupResult"), qsl("1"));
+        QCOMPARE(model->P_begin, QPoint(14, fedLine));
+        QCOMPARE(model->P_end, QPoint(19, fedLine));
+    }
+
+    // What a view-less selectCaptureGroup() selects is what the model's
+    // selection-based calls then act on: painting after it colours exactly the
+    // captured word.
+    void test_selectCaptureGroupSelectionIsPaintedWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        runLua(host,
+               qsl("noViewPaintRan = 'no'\n"
+                   "tempRegexTrigger([[^NoViewPaint (\\w+) after]], [[noViewPaintRan = 'yes'; selectCaptureGroup(2)]], 10)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->reenableAllTriggers();
+        host->deselectMainConsole();
+
+        const int fedLine = appendModelLine(model->buffer, qsl("NoViewPaint beta after"));
+        host->runTriggers(fedLine);
+        QVERIFY2(luaGlobalString(host, "noViewPaintRan") == qsl("yes"), "The capture group trigger never ran, so there is no selection to paint.");
+
+        const QColor paint(13, 57, 91);
+        host->setMainConsoleFgColor(paint);
+
+        const auto& chars = model->buffer.buffer.at(fedLine);
+        QVERIFY2(chars.size() == static_cast<std::size_t>(qsl("NoViewPaint beta after").size()), "The fed line did not reach the view-less buffer whole.");
+        for (int i = 0; i < static_cast<int>(chars.size()); ++i) {
+            const bool captured = i >= 12 && i < 16;
+            QVERIFY2((chars.at(i).foreground() == paint) == captured, qPrintable(qsl("Character %1 of \"NoViewPaint beta after\" is %2 painted.").arg(i).arg(captured ? qsl("not") : qsl("wrongly"))));
+        }
     }
 
     // The main console's background is the model's, so a script can still read

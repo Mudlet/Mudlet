@@ -44,7 +44,6 @@
 #include "TTabBar.h"
 #include "TTimer.h"
 #include "discord.h"
-#include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 

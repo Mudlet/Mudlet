@@ -65,18 +65,19 @@ TAlias::TAlias(const QString& name, Host* pHost)
 
 TAlias::~TAlias()
 {
-    if (!mpHost) {
-        return;
-    }
-    mpHost->getAliasUnit()->unregisterAlias(this);
+    if (mpHost) {
+        mpHost->getAliasUnit()->unregisterAlias(this);
 
-    if (isTemporary()) {
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
-        } else {
-            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(this);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
         }
     }
+
+    deleteChildren();
 }
 
 void TAlias::setName(const QString& name)

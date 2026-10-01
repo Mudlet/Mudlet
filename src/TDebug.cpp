@@ -24,14 +24,10 @@
 
 #include "TDebug.h"
 
+#include "Host.h"
 #include "TBuffer.h"
-#include "TDebugFilterBar.h"
-#include "TTabBar.h"
-#include "mudlet.h"
 
-#include <chrono>
-
-using namespace std::chrono_literals;
+#include <QTime>
 
 /* static */ const TDebug::Categories TDebug::csmNoisyCategories = {Category::GameLine, Category::TriggerDetail, Category::LuaSuccess, Category::Selection};
 
@@ -157,13 +153,6 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
         return;
     }
 
-    if (smPausedDroppedCount) {
-        // Ahead of the replay: the cap drops the OLDEST messages, so the gap is at the top:
-        //: Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.
-        smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed, QString());
-        smPausedDroppedCount = 0;
-    }
-
     while (!smPausedQueue.isEmpty()) {
         if (!smpSink) {
             return;
@@ -171,6 +160,14 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
         const auto message = smPausedQueue.dequeue();
         // Already composed when it arrived, profile marking and all:
         smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
+    }
+
+    if (smPausedDroppedCount && smpSink) {
+        // After the replay, not ahead of it: a full queue is as many lines as the console
+        // keeps, so its own trimming would take a notice printed first straight back out:
+        //: Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.
+        smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed, QString());
+        smPausedDroppedCount = 0;
     }
 }
 
@@ -265,6 +262,10 @@ bool TDebug::passesFilters(const Host* pHost)
     if (Q_UNLIKELY(!smpSink)) {
         if (Q_LIKELY(!line.isEmpty())) {
             // Don't enqueue empty messages
+            if (smMessageQueue.count() >= csmMessageQueueLimit) {
+                smMessageQueue.dequeue();
+                ++smMessageQueueDroppedCount;
+            }
             // Stamped here rather than when the sink turns up, so that a
             // backlog replayed minutes later still reads as when it happened:
             smMessageQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(TBuffer::smTimeStampFormat)));
@@ -278,6 +279,14 @@ bool TDebug::passesFilters(const Host* pHost)
         while (!smMessageQueue.isEmpty() && smpSink) {
             const auto message = smMessageQueue.dequeue();
             smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
+        }
+        if (smMessageQueueDroppedCount && smpSink) {
+            // After the backlog, not ahead of it: a full backlog is as many lines as the console
+            // keeps, so its own trimming would take a notice printed first straight back out:
+            //: Shown in the Central Debug Console when it opens, after the messages kept for it, if more arrived while it was closed than could be kept.
+            smpSink->printDebugLine(
+                    csmTagSystemMessage % tr("%n older message(s) were dropped while the Central Debug Console was closed.\n", "", smMessageQueueDroppedCount), Qt::white, Qt::darkRed, QString());
+            smMessageQueueDroppedCount = 0;
         }
     }
 
@@ -394,9 +403,9 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     if (pHost) {
         QPair<QString, QString>& pair = TDebug::smIdentifierMap[pHost];
         pair.first = newName;
-        mudlet::self()->mpTabBar->applyPrefixToDisplayedText(newName, pair.second);
-        if (mudlet::smpDebugFilterBar) {
-            mudlet::smpDebugFilterBar->refreshProfiles();
+        if (smpProfileObserver) {
+            smpProfileObserver->profileRenamed(newName, pair.second);
+            smpProfileObserver->profilesChanged();
         }
     }
 }
@@ -423,21 +432,15 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         newIdentifier = qMakePair(hostName, smAvailableIdentifiers.dequeue());
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     }
-    if (mudlet::smpDebugFilterBar) {
-        mudlet::smpDebugFilterBar->refreshProfiles();
+    if (smpProfileObserver) {
+        smpProfileObserver->profilesChanged();
     }
     TDebug localMessage(Qt::blue, Qt::white, Category::System);
     localMessage << qsl("Profile '%1' started.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black, Category::System);
     tableMessage << TDebug::displayNewTable() >> nullptr;
-    if (smDebugMode) {
-        // Can't use TTabBar::applyPrefixToDisplayedText(hostName, newIdentifier.second)
-        // here as the profile's tab has not been added to the tabbar yet.
-        // Instead arrange for all the tabs to be refreshed when we are next
-        // idle:
-        QTimer::singleShot(0ms, mudlet::self(), []() {
-            mudlet::self()->refreshTabBar();
-        });
+    if (smDebugMode && smpProfileObserver) {
+        smpProfileObserver->profileAddedInDebugMode();
     }
 }
 
@@ -480,8 +483,8 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         stillActive.insert(it.key());
     }
     smDisabledHosts.intersect(stillActive);
-    if (mudlet::smpDebugFilterBar) {
-        mudlet::smpDebugFilterBar->refreshProfiles();
+    if (smpProfileObserver) {
+        smpProfileObserver->profilesChanged();
     }
 
     TDebug localMessage(Qt::darkGray, Qt::white, Category::System);

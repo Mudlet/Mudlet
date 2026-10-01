@@ -45,7 +45,6 @@
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TTimer.h"
-#include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
 
 #include <chrono>
