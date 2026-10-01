@@ -202,13 +202,44 @@ function db:safe_name(name)
 end
 
 
+function db:_database_path(safe_name)
+  return getMudletHomeDir() .. "/Database_" .. safe_name .. ".db"
+end
+
+
+-- [^%ad] is letters plus a literal d, so the previous safe_name dropped every
+-- digit and Database_stats.db is where "stats1" and "stats2" were both stored.
+-- A blank legacy name is not a file we can fall back to.
+function db:_legacy_safe_name(safe_name)
+  return (safe_name:gsub("%d", ""))
+end
+
+
+function db:_resolve_database_path(safe_name)
+  local current = db:_database_path(safe_name)
+  if io.exists(current) then
+    return current
+  end
+
+  local legacy_name = db:_legacy_safe_name(safe_name)
+  if legacy_name ~= "" and legacy_name ~= safe_name then
+    local legacy = db:_database_path(legacy_name)
+    if io.exists(legacy) then
+      return legacy
+    end
+  end
+
+  return current
+end
+
+
 function db:_isActiveDBName(db_name)
   db_name = db:safe_name(db_name)
 
   return (
     db.__conn[db_name]
     and db.__conn[db_name] ~= 'SQLite3 connection (closed)'
-    and io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+    and io.exists(db:_resolve_database_path(db_name))
   )
 end
 
@@ -398,7 +429,10 @@ local lua_reserved_words = {
 --- on echoing Lua errors. <br/><br/>
 ---
 --- The database will be called Database_<sanitized database name>.db and will be stored in the
---- Mudlet configuration directory. <br/><br/>
+--- Mudlet configuration directory. If that file is not there yet but an older Mudlet stored the
+--- same name with its digits removed (Database_stats.db for "stats1"), that older file is opened
+--- so the rows are still readable. Two names that used to share that file still open it, until
+--- each name has a file of its own. <br/><br/>
 ---
 --- Database 'tables' are called 'sheets' consistently throughout this documentation, to avoid confusion
 --- with Lua tables. <br/><br/>
@@ -755,7 +789,7 @@ function db:create(db_name, sheets, force)
     -- the driver answers nil plus a reason for a file it can not open, which a
     -- read-only profile directory or a full disk both produce: without this the
     -- setautocommit below is the nil index instead
-    local conn, err = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+    local conn, err = db.__env:connect(db:_resolve_database_path(db_name))
     if not conn then
       error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
     end
