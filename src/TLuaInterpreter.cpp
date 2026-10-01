@@ -5721,8 +5721,10 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     } else {
         error = luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
         if (!error) {
-            // Script names come and go with renames, so keep this from growing without bound:
-            if (mEventHandlerLookupRefs.size() >= 1024) {
+            // Script names come and go with renames, so keep this from growing
+            // without bound - but far above the handler count of any real
+            // profile, as starting over drops the lookups every event uses:
+            if (mEventHandlerLookupRefs.size() >= 16384) {
                 for (const int ref : std::as_const(mEventHandlerLookupRefs)) {
                     luaL_unref(L, LUA_REGISTRYINDEX, ref);
                 }
