@@ -39,6 +39,7 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMxpFrameWidgets.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
@@ -911,12 +912,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
     } else if (mType & ~(SubConsole | UserWindow)) {
         // does nothing for SubConsole or UserWindows
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
-    }
-
-    // MXP frames are positioned by hand against the space the borders leave, so
-    // they have to be moved whenever the window or those borders change
-    if ((mType & MainConsole) && !mpHost.isNull()) {
-        mpHost->mMxpFrameManager.scheduleRelayout();
     }
 
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
@@ -2712,6 +2707,10 @@ void TConsole::syncHiddenScreenDimensions()
         return;
     }
     syncHostScreenDimensions(upperPaneWidthFor(container->width()), upperPaneHeightFor(container->height()));
+    // so that an MXP frame opened meanwhile is placed in the window it comes back to
+    if (mpHost->mpConsole) {
+        mpHost->mpConsole->mxpFrameWidgets().reportSize();
+    }
 }
 
 QSize TConsole::getMainWindowSize() const

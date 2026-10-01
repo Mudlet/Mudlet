@@ -60,6 +60,12 @@ struct TMxpFrame {
     bool scrolling = true;
     bool floating = false;  // When true, frame has no title bar/header (borderless)
     QString dockFrame;      // For tab support - name of frame to dock into
+
+    // Set once the view shows the frame on the main window, where relayouts
+    // move it; a tab is placed by its header and an EXTERNAL frame by the player
+    bool onMainWindow = false;
+    // Where such a frame was last put, which frames nested in it are placed against
+    QRect geometry;
     
     // Hierarchy tracking (non-owning references - see ownership model above)
     TMxpFrame* parentFrame = nullptr;
@@ -105,9 +111,16 @@ public:
     bool frameExists(const QString& name) const { return mFrames.contains(name); }
     int frameCount() const { return mFrames.size(); }
 
-    // Reposition every frame on the next event loop turn, once the space they
-    // are laid out in has changed. Does nothing while no frames are open.
-    void scheduleRelayout();
+    // What the view measures of the main console after each resize, and while
+    // a tab switch hides it, whenever the window it will come back to changes:
+    // mainWindowSize is getMainWindowSize()'s, the space frames on the main
+    // window are laid out in, and consoleSize the console's own, which EXTERNAL
+    // frames are sized against. Frames already open stay where they are until
+    // relayoutFrames().
+    void setMainConsoleSize(const QSize& mainWindowSize, const QSize& consoleSize);
+    // Reposition every frame on the main window against the last reported size
+    // and the current borders
+    void relayoutFrames();
 
     // Configuration
     static constexpr int MAX_FRAMES = 20;
@@ -120,7 +133,8 @@ private:
     QList<TMxpFrame*> mFrameOrder;
     QString mCurrentDestination;  // Current output target (empty = main console)
     QMargins mMxpBorders;         // MXP-specific borders, separate from Host::mBorders
-    bool mRelayoutPending = false;
+    QSize mMainWindowSize;
+    QSize mMainConsoleSize;
 
     // Layout and sizing helpers
     void layoutInternalFrame(TMxpFrame* frame);
@@ -129,7 +143,6 @@ private:
     QRect availableFrameArea() const;
     QRect calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* parentFrame);
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
-    void relayoutFrames();
     // Null while the profile has no main console
     TMxpFrameWidgets* frameWidgets();
     const TMxpFrameWidgets* frameWidgets() const;

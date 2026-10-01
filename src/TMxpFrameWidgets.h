@@ -58,13 +58,17 @@ public:
     void showFrame(const QString& name);
     void focusFrame(const QString& name);
 
-    // What frames nested inside this one are placed against
+    // Where a tab or an EXTERNAL frame is, which frames nested inside it are
+    // placed against
     std::optional<QRect> placementArea(const QString& name) const;
-    // Only these are placed by a relayout: a tab is placed by its header, an
-    // external frame by the player
-    bool placedOnMainWindow(const QString& name) const;
     void setGeometry(const QString& name, const QRect& geometry);
-    QSize mainConsoleSize() const;
+
+    // Tells the frame manager the main console's size on the next event loop
+    // turn, and has it reposition the frames if relayout was set on any call
+    // before then while frames were open
+    void scheduleSizeReport(bool relayout);
+    // Tells the frame manager the main console's size now
+    void reportSize();
     // Null for a frame without a console, and for one that would print back
     // into the main console
     TPrintSink* sink(const QString& name) const;
@@ -89,6 +93,8 @@ private:
 
     TMainConsole* mpMainConsole;
     QMap<QString, Widgets> mFrames;
+    bool mSizeReportPending = false;
+    bool mRelayoutPending = false;
 };
 
 #endif // MUDLET_TMXPFRAMEWIDGETS_H
