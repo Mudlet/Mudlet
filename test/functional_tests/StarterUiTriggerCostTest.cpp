@@ -29,6 +29,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
 #include "TTrigger.h"
@@ -531,7 +532,7 @@ private:
     // same XML export/import as a package, so this covers both.
     QTreeWidget* triggerTreeWidget(Host* host)
     {
-        dlgTriggerEditor* editor = host->mpEditorDialog;
+        dlgTriggerEditor* editor = HostDialogs::of(host).mpEditorDialog;
         if (!editor) {
             return nullptr;
         }

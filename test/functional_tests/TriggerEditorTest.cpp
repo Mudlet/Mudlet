@@ -34,6 +34,7 @@
 #include <QMenu>
 #include <QScopeGuard>
 
+#include "HostDialogs.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -240,7 +241,7 @@ private slots:
   void test_luaToggleRepaintsTheTreeItem() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -303,7 +304,7 @@ private slots:
   void test_luaToggleRepaintsAliasTimerScriptKeyIcons() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -433,7 +434,7 @@ private slots:
   void test_luaToggleGreysScriptUnderADeactivatedGroup() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -475,7 +476,7 @@ private slots:
   void test_luaToggleQueuedWhileHiddenIsNotDroppedOnReshow() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -525,7 +526,7 @@ private slots:
   void test_luaToggleOfFolderDoesNotClearNotificationOfUnrelatedSelectedDescendant() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -572,7 +573,7 @@ private slots:
   void test_errorAndDebugLinesReachTheErrorConsole() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
 
@@ -606,7 +607,7 @@ private slots:
   void test_setScriptRewritesTheScriptTheEditorShows() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -638,7 +639,7 @@ private slots:
   void test_scriptMadeItemsLeaveTheEditorStale() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
 
     pEditor->mNeedUpdateData = false;

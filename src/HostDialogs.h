@@ -20,12 +20,40 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-class Host;
+#include <QObject>
+#include <QPointer>
 
-namespace HostDialogs {
-// Makes the frontend answer the profile's requests to close or destroy the
-// dialogs it opened for it. Call once per Host.
-void connectTeardown(Host*);
-} // namespace HostDialogs
+class Host;
+class dlgModuleManager;
+class dlgNotepad;
+class dlgPackageManager;
+class dlgProfilePreferences;
+class dlgTriggerEditor;
+
+// The dialogs the frontend has opened for one profile, at most one of each. It
+// is a child of the profile's Host, so it goes when the Host does.
+class HostDialogs : public QObject
+{
+    Q_OBJECT
+
+public:
+    Q_DISABLE_COPY(HostDialogs)
+    // Makes the profile's set on first use
+    static HostDialogs& of(Host*);
+    // Only looks: nullptr when the frontend has opened nothing for the profile yet
+    static HostDialogs* find(const Host*);
+    // Makes the frontend answer the profile's requests to close or destroy the
+    // dialogs it opened for it. Call once per Host.
+    static void connectTeardown(Host*);
+
+    QPointer<dlgTriggerEditor> mpEditorDialog;
+    QPointer<dlgNotepad> mpNotePad;
+    QPointer<dlgPackageManager> mpPackageManager;
+    QPointer<dlgModuleManager> mpModuleManager;
+    QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+
+private:
+    explicit HostDialogs(Host*);
+};
 
 #endif // MUDLET_HOSTDIALOGS_H

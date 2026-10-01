@@ -29,22 +29,23 @@ namespace {
 
 void closeDialogs(Host* pHost)
 {
-    if (pHost->mpEditorDialog) {
-        pHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-        pHost->mpEditorDialog->close();
+    HostDialogs& dialogs = HostDialogs::of(pHost);
+    if (dialogs.mpEditorDialog) {
+        dialogs.mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialogs.mpEditorDialog->close();
         // close() only posts the deletion, so the dialog outlives this release.
         // Cutting the signals with the pointer is what keeps an emit from
         // reaching an editor the Host has already let go of:
-        QObject::disconnect(pHost, nullptr, pHost->mpEditorDialog, nullptr);
-        pHost->mpEditorDialog = nullptr;
+        QObject::disconnect(pHost, nullptr, dialogs.mpEditorDialog, nullptr);
+        dialogs.mpEditorDialog = nullptr;
     }
 
-    if (pHost->mpNotePad) {
-        pHost->mpNotePad->save();
-        pHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-        pHost->mpNotePad->close();
-        QObject::disconnect(pHost, nullptr, pHost->mpNotePad, nullptr);
-        pHost->mpNotePad = nullptr;
+    if (dialogs.mpNotePad) {
+        dialogs.mpNotePad->save();
+        dialogs.mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+        dialogs.mpNotePad->close();
+        QObject::disconnect(pHost, nullptr, dialogs.mpNotePad, nullptr);
+        dialogs.mpNotePad = nullptr;
     }
 
     if (pHost->mpDlgIRC) {
@@ -56,22 +57,23 @@ void closeDialogs(Host* pHost)
 
 void destroyDialogs(Host* pHost)
 {
+    HostDialogs& dialogs = HostDialogs::of(pHost);
     // The editor is a parentless top-level window, so delete it here while the
     // units it references are still alive. Null the QPointer first: it only
     // clears itself once ~QObject is reached, so anything looking at
     // mpEditorDialog mid-teardown would find a half-destroyed widget:
-    if (auto* pEditor = pHost->mpEditorDialog.data()) {
-        pHost->mpEditorDialog = nullptr;
+    if (auto* pEditor = dialogs.mpEditorDialog.data()) {
+        dialogs.mpEditorDialog = nullptr;
         QObject::disconnect(pHost, nullptr, pEditor, nullptr);
         delete pEditor;
     }
 
-    if (auto* pNotePad = pHost->mpNotePad.data()) {
+    if (auto* pNotePad = dialogs.mpNotePad.data()) {
         if (mudlet::self()) {
             pNotePad->save();
             pNotePad->close();
         }
-        pHost->mpNotePad = nullptr;
+        dialogs.mpNotePad = nullptr;
         QObject::disconnect(pHost, nullptr, pNotePad, nullptr);
         delete pNotePad;
     }
@@ -83,6 +85,25 @@ void destroyDialogs(Host* pHost)
 }
 
 } // namespace
+
+HostDialogs::HostDialogs(Host* pHost)
+: QObject(pHost)
+{
+}
+
+HostDialogs& HostDialogs::of(Host* pHost)
+{
+    auto* pDialogs = find(pHost);
+    if (!pDialogs) {
+        pDialogs = new HostDialogs(pHost);
+    }
+    return *pDialogs;
+}
+
+HostDialogs* HostDialogs::find(const Host* pHost)
+{
+    return pHost->findChild<HostDialogs*>(QString(), Qt::FindDirectChildrenOnly);
+}
 
 void HostDialogs::connectTeardown(Host* pHost)
 {

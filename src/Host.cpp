@@ -270,7 +270,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBufferSearchOptions(enums::BufferSearchOptionNone)
 , mpDlgIRC(nullptr)
 , mMMCPServer(nullptr)
-, mpDlgProfilePreferences(nullptr)
 , mMMCPChatPort(csDefaultMMCPHostPort)
 , mMMCPChatPrefix(csDefaultChatPrefix)
 , mMMCPAutostartServer(false)

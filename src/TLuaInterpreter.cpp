@@ -55,7 +55,6 @@
 #include "TTimer.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
-#include "dlgModuleManager.h"
 #include "mudlet.h"
 #include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
@@ -2780,10 +2779,7 @@ int TLuaInterpreter::installModule(lua_State* L)
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
-    auto moduleManager = host.mpModuleManager;
-    if (moduleManager && moduleManager->moduleTable->isVisible()) {
-        moduleManager->layoutModules();
-    }
+    emit host.signal_moduleListChangedByScript();
     return pushInstallSucceeded(L, message);
 }
 
@@ -2796,10 +2792,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
         lua_pushboolean(L, false);
         return 1;
     }
-    auto moduleManager = host.mpModuleManager;
-    if (moduleManager && moduleManager->moduleTable->isVisible()) {
-        moduleManager->layoutModules();
-    }
+    emit host.signal_moduleListChangedByScript();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2822,14 +2815,7 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    auto moduleManager = host.mpModuleManager;
-    if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        const int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleManager->moduleTable->item(row, 2);
-        if (checkItem) {
-            checkItem->setCheckState(Qt::Checked);
-        }
-    }
+    emit host.signal_moduleSyncChangedByScript(module, true);
 
     lua_pushboolean(L, true);
     return 1;
@@ -2844,14 +2830,7 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    auto moduleManager = host.mpModuleManager;
-    if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        const int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleManager->moduleTable->item(row, 2);
-        if (checkItem) {
-            checkItem->setCheckState(Qt::Unchecked);
-        }
-    }
+    emit host.signal_moduleSyncChangedByScript(module, false);
 
     lua_pushboolean(L, true);
     return 1;

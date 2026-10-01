@@ -28,6 +28,7 @@
 #include "CredentialManager.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "TAction.h"
@@ -6574,10 +6575,11 @@ void dlgProfilePreferences::applyAll()
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
-        if (pHost->mpEditorDialog
-            && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
+        auto* pDialogs = HostDialogs::find(pHost);
+        if (auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr;
+            pEditor && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
             // From the Host, which the write above updated, not a box a script may have moved on from
-            pHost->mpEditorDialog->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
+            pEditor->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
         }
 
         if (mSnapshot.dirty(script_preview_combobox)) {
