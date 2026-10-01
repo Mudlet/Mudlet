@@ -5976,23 +5976,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     return 0;
 }
 
+// Any column is accepted, even one past the end of the line: insertInLine() pads the gap when text lands there.
 bool TBuffer::moveCursor(QPoint& where)
 {
-    const int x = where.x();
     const int y = where.y();
-    if (y < 0) {
-        return false;
-    }
-    if (y >= static_cast<int>(buffer.size())) {
-        return false;
-    }
-
-    if (static_cast<int>(buffer[y].size()) - 1 > x) {
-        TChar c(mpConsole);
-        // CHECKME: should "buffer[cookedY].size() - 1" be bracketed - which would change the -1 to +1 in the following:
-        expandLine(y, x - buffer[y].size() - 1, c);
-    }
-    return true;
+    return y >= 0 && y < static_cast<int>(buffer.size());
 }
 
 // Needed, at least, as a filler for missing lines past end of the lineBuffer
