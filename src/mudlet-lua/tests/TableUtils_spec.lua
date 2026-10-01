@@ -532,6 +532,20 @@ describe("Tests TableUtils.lua functions", function()
       assert.is_false(table.contains(tbl, "five"))
     end)
 
+    it("should stop at the first nil among the values to look for", function()
+      local tbl = {"one"}
+      assert.is_true(table.contains(tbl, "two", "one"))
+      assert.is_false(table.contains(tbl, "two", nil, "one"))
+    end)
+
+    it("should search a table reached by two routes", function()
+      local shared = {needle = "deep"}
+      local tbl = {a = {shared}, b = {shared}}
+      assert.is_true(table.contains(tbl, "deep"))
+      assert.is_true(table.contains(tbl, "needle"))
+      assert.is_false(table.contains(tbl, "absent"))
+    end)
+
     it("should cope with a table that holds itself", function()
       local tbl = {one = 1}
       tbl.self = tbl

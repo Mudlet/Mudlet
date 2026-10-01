@@ -285,6 +285,18 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("", ("   "):trim())
     end)
 
+    it("should keep long runs of whitespace inside the string", function()
+      local inner = "HP: 100" .. string.rep(" ", 200) .. "MP:\t\t50" .. string.rep(" ", 200) .. "EP: 9"
+      assert.equals(inner, ("   " .. inner .. string.rep(" ", 300)):trim())
+      assert.equals("", (string.rep(" \t\n", 500)):trim())
+      assert.equals("", (""):trim())
+      assert.equals("x", (string.rep(" ", 500) .. "x"):trim())
+    end)
+
+    it("should trim a number the way it trims its string form", function()
+      assert.equals("42", string.trim(42))
+    end)
+
     it("should return only the trimmed string, not gsub's replacement count", function()
       assert.equals(1, select("#", ("  a  "):trim()))
       assert.equals(1, select("#", ("a"):trim()))
