@@ -28,7 +28,6 @@
 #include "TConsoleModel.h"
 #include "TTrigger.h"
 #include "TriggerMatchPool.h"
-#include "dlgTriggerEditor.h"
 
 #include <QScopeGuard>
 
@@ -806,9 +805,7 @@ bool TriggerUnit::enableTrigger(const QString& name)
         }
         it.value()->setIsActive(true);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
-        }
+        emit mpHost->signal_triggerToggled(it.value()->getID());
     }
     return found;
 }
@@ -822,9 +819,7 @@ bool TriggerUnit::disableTrigger(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
-        }
+        emit mpHost->signal_triggerToggled(it.value()->getID());
     }
     return found;
 }

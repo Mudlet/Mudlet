@@ -33,6 +33,7 @@
 #include "FontManager.h"
 #include "Host.h"
 #include "MudletApp.h"
+#include "TAction.h"
 #include "TAlias.h"
 #include "TBuffer.h"
 #include "TConsole.h"
@@ -42,10 +43,12 @@
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TGameDetails.h"
+#include "TKey.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TTextEdit.h"
 #include "TEncodingHelper.h"
 #include "TIrcClient.h"
@@ -53,7 +56,6 @@
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
@@ -1671,11 +1673,9 @@ int TLuaInterpreter::errorc(lua_State* L)
     }
     luaFunctionInfo.append(QChar::LineFeed);
     luaErrorText.append(QChar::LineFeed);
-    if (host.mpEditorDialog) {
-        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[ERROR:] "), QColor(Qt::blue), QColor(Qt::black));
-        host.mpEditorDialog->mpErrorConsole->print(luaFunctionInfo, QColor(Qt::green), QColor(Qt::black));
-        host.mpEditorDialog->mpErrorConsole->print(qsl("         %1").arg(luaErrorText), QColor(Qt::red), QColor(Qt::black));
-    }
+    emit host.signal_errorConsolePrint(QLatin1String("[ERROR:] "), QColor(Qt::blue), QColor(Qt::black));
+    emit host.signal_errorConsolePrint(luaFunctionInfo, QColor(Qt::green), QColor(Qt::black));
+    emit host.signal_errorConsolePrint(qsl("         %1").arg(luaErrorText), QColor(Qt::red), QColor(Qt::black));
 
     if (host.mEchoLuaErrors) {
         const TBuffer& buffer = host.mainConsoleModel().buffer;
@@ -1693,7 +1693,7 @@ int TLuaInterpreter::errorc(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#debugc -- not #debug - compare GlobalLua
 int TLuaInterpreter::debug(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     const int n = lua_gettop(L);
     if (!n) {
         // Nothing to show
@@ -1711,10 +1711,8 @@ int TLuaInterpreter::debug(lua_State* L)
     }
     luaDebugText.append(QChar::LineFeed);
 
-    if (host.mpEditorDialog) {
-        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[DEBUG:]"), QColor(Qt::blue), QColor(Qt::black));
-        host.mpEditorDialog->mpErrorConsole->print(luaDebugText, QColor(Qt::green), QColor(Qt::black));
-    }
+    emit host.signal_errorConsolePrint(QLatin1String("[DEBUG:]"), QColor(Qt::blue), QColor(Qt::black));
+    emit host.signal_errorConsolePrint(luaDebugText, QColor(Qt::green), QColor(Qt::black));
 
     return 0;
 }
@@ -5325,20 +5323,18 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
 void TLuaInterpreter::logError(std::string& e, const QString& name, const QString& function)
 {
     // Log error to Editor's Errors TConsole:
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" %1:<%2> %3:<%4>\n")
-                                                              .arg(
-                                                                      //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
-                                                                      tr("object"),
-                                                                      name,
-                                                                      //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
-                                                                      tr("function"),
-                                                                      function),
-                                                      QColor(Qt::green),
-                                                      QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
-    }
+    emit mpHost->signal_errorConsolePrint(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
+    emit mpHost->signal_errorConsolePrint(qsl(" %1:<%2> %3:<%4>\n")
+                                                  .arg(
+                                                          //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
+                                                          tr("object"),
+                                                          name,
+                                                          //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
+                                                          tr("function"),
+                                                          function),
+                                          QColor(Qt::green),
+                                          QColor(Qt::black));
+    emit mpHost->signal_errorConsolePrint(qsl("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
@@ -5365,11 +5361,9 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 void TLuaInterpreter::logEventError(const QString& event, const QString& error)
 {
     // Log error to Editor's Errors TConsole:
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" event handler for %1:\n").arg(event), QColor(Qt::green), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("        <%1>\n").arg(error), QColor(Qt::red), QColor(Qt::black));
-    }
+    emit mpHost->signal_errorConsolePrint(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
+    emit mpHost->signal_errorConsolePrint(qsl(" event handler for %1:\n").arg(event), QColor(Qt::green), QColor(Qt::black));
+    emit mpHost->signal_errorConsolePrint(qsl("        <%1>\n").arg(error), QColor(Qt::red), QColor(Qt::black));
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
@@ -7596,9 +7590,7 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
         pS->setScript(oldCode);
         return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->writeScript(id);
-    }
+    emit mpHost->signal_scriptCodeChanged(id);
     return {id, QString()};
 }
 
@@ -9841,7 +9833,5 @@ int TLuaInterpreter::getConfig(lua_State* L)
 
 void TLuaInterpreter::updateEditor()
 {
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mNeedUpdateData = true;
-    }
+    emit mpHost->signal_itemsChangedByScript();
 }
