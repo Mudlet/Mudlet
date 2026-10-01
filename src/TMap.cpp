@@ -1297,6 +1297,14 @@ void TMap::computeLandmarks()
     const float geoSkipRatio = qEnvironmentVariable("MUDLET_GEO_SKIP").toFloat();
     gGeoSccSkipped = 0;
     gGeoRoomsSkipped = 0;
+    // EXPERIMENT: the measured rule - skip when scale x Chebyshev from the seed covers at least
+    // MUDLET_GEO_TIGHT of the true distances from it, summed over the component.
+    const bool geoTight = !mGeoArea.empty() && qEnvironmentVariableIsSet("MUDLET_GEO_TIGHT");
+    const double geoTightRatio = qEnvironmentVariable("MUDLET_GEO_TIGHT").toDouble();
+    gGeoTightMin = 2;
+    gGeoTightMax = -1;
+    gGeoTightLargest = -1;
+    quint32 largestConsidered = 0;
     const bool randomSelection = qEnvironmentVariable("MUDLET_ALT_SELECT") == qsl("random");
     QRandomGenerator selectionRng(31337);
     mAltFrom.assign(n * k, inf);
@@ -1312,26 +1320,56 @@ void TMap::computeLandmarks()
             continue;
         }
         const quint32* memberBegin = members.data() + sccStart[c];
-        if (geoSkip) {
-            const qint32 area = mGeoArea[memberBegin[0]];
-            bool oneArea = true;
-            for (quint32 i = 1; i < size && oneArea; ++i) {
-                oneArea = mGeoArea[memberBegin[i]] == area;
-            }
-            if (oneArea && mGeoScale[area] > 0 && mGeoScale[area] >= geoSkipRatio * mGeoMinCost[area]) {
-                ++gGeoSccSkipped;
-                gGeoRoomsSkipped += size;
-                continue;
-            }
-        }
-        ++componentsWithLandmarks;
         quint32 seed = memberBegin[0];
         for (quint32 i = 1; i < size; ++i) {
             if (locations[memberBegin[i]].id < locations[seed].id) {
                 seed = memberBegin[i];
             }
         }
-        localDijkstra(fOff, fTo, fW, seed, dist);
+        bool seedForwardDone = false;
+        if (geoSkip || geoTight) {
+            const qint32 area = mGeoArea[memberBegin[0]];
+            bool oneArea = true;
+            for (quint32 i = 1; i < size && oneArea; ++i) {
+                oneArea = mGeoArea[memberBegin[i]] == area;
+            }
+            const float scale = mGeoScale[area];
+            if (geoSkip && oneArea && scale > 0 && scale >= geoSkipRatio * mGeoMinCost[area]) {
+                ++gGeoSccSkipped;
+                gGeoRoomsSkipped += size;
+                continue;
+            }
+            if (geoTight && oneArea && scale > 0) {
+                localDijkstra(fOff, fTo, fW, seed, dist);
+                seedForwardDone = true;
+                const TRoom* from = locations[seed].pR;
+                double bound = 0;
+                double actual = 0;
+                for (quint32 i = 0; i < size; ++i) {
+                    if (dist[i] < inf) {
+                        const TRoom* to = locations[memberBegin[i]].pR;
+                        bound += static_cast<double>(scale) * std::max({std::abs(from->x() - to->x()), std::abs(from->y() - to->y()), std::abs(from->z() - to->z())});
+                        actual += dist[i];
+                    }
+                }
+                const double tightness = actual > 0 ? bound / actual : 1.0;
+                gGeoTightMin = std::min(gGeoTightMin, tightness);
+                gGeoTightMax = std::max(gGeoTightMax, tightness);
+                if (size > largestConsidered) {
+                    largestConsidered = size;
+                    gGeoTightLargest = tightness;
+                }
+                if (tightness >= geoTightRatio) {
+                    ++gGeoSccSkipped;
+                    gGeoRoomsSkipped += size;
+                    continue;
+                }
+            }
+        }
+        ++componentsWithLandmarks;
+        if (!seedForwardDone) {
+            localDijkstra(fOff, fTo, fW, seed, dist);
+        }
         localDijkstra(rOff, rTo, rW, seed, back);
         quint32 next = seed;
         cost farthest = -1;

@@ -589,7 +589,23 @@ private slots:
             }
             return ok;
         }
-        return pMap->restore(mMapPath);
+        if (!pMap->restore(mMapPath)) {
+            return false;
+        }
+        qint64 locked = 0, badId = 0;
+        QHash<int, int> roomsPerArea;
+        for (auto it = pMap->mpRoomDB->getRoomMap().cbegin(); it != pMap->mpRoomDB->getRoomMap().cend(); ++it) {
+            if (it.key() < 1 || !it.value()) {
+                ++badId;
+                continue;
+            }
+            locked += it.value()->isLocked ? 1 : 0;
+            ++roomsPerArea[it.value()->getArea()];
+        }
+        emitMetric("rooms_locked", locked);
+        emitMetric("rooms_bad_id", badId);
+        emitMetric("areas_with_rooms", static_cast<qint64>(roomsPerArea.size()));
+        return true;
     }
 
     static QList<int> modesFromEnv()
@@ -672,6 +688,9 @@ private slots:
         emitMetric("geo_sealed_areas", gGeoSealedAreas);
         emitMetric("geo_scc_skipped", gGeoSccSkipped);
         emitMetric("geo_rooms_skipped", gGeoRoomsSkipped);
+        emitMetric("geo_tight_min", gGeoTightMin);
+        emitMetric("geo_tight_max", gGeoTightMax);
+        emitMetric("geo_tight_largest", gGeoTightLargest);
         emitMetric("alt_select_random", static_cast<qint64>(qEnvironmentVariable("MUDLET_ALT_SELECT") == qsl("random") ? 1 : 0));
         const int n = static_cast<int>(pMap->locations.size());
         emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));

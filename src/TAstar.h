@@ -90,6 +90,9 @@ inline qint64 gGeoAreas = 0;
 inline qint64 gGeoSealedAreas = 0;
 inline qint64 gGeoSccSkipped = 0;
 inline qint64 gGeoRoomsSkipped = 0;
+inline double gGeoTightMin = 2;
+inline double gGeoTightMax = -1;
+inline double gGeoTightLargest = -1;
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route
