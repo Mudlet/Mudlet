@@ -51,6 +51,7 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <algorithm>
 #include <limits>
 #include <math.h>
 
@@ -3311,8 +3312,9 @@ int TLuaInterpreter::searchRoom(lua_State* L)
     const bool useMatcher = !exactMatch && (caseSensitive || !beyondBmp);
     const QStringMatcher matcher(useMatcher ? room : QString(), sensitivity);
     // Pushed only once the walk is over: pushing can run a Lua finalizer, which
-    // could add or delete rooms under the iterator
-    QList<std::pair<int, QString>> found;
+    // could add, delete or rename rooms under the iterator - so each is also
+    // looked up afresh when it is pushed, as it always was
+    QList<int> found;
     for (const TRoom* pR : host.mpMap->mpRoomDB->getRoomMap()) {
         if (!pR) {
             continue;
@@ -3326,14 +3328,16 @@ int TLuaInterpreter::searchRoom(lua_State* L)
             matches = useMatcher ? matcher.indexIn(pR->name) != -1 : pR->name.contains(room, sensitivity);
         }
         if (matches) {
-            found.append({pR->getId(), pR->name});
+            found.append(pR->getId());
         }
     }
     lua_newtable(L);
-    for (const auto& [roomId, name] : found) {
-        lua_pushnumber(L, roomId);
-        lua_pushstring(L, name.toUtf8().constData());
-        lua_settable(L, -3);
+    for (const int roomId : found) {
+        if (const TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId)) {
+            lua_pushnumber(L, roomId);
+            lua_pushstring(L, pR->name.toUtf8().constData());
+            lua_settable(L, -3);
+        }
     }
     return 1;
 }
