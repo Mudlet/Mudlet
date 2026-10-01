@@ -153,6 +153,7 @@ set(TELNET_GROUP_TEST_SOURCES
     MudletAppVersionTest.cpp
     IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
+    IrcLuaClientTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them
