@@ -27,6 +27,7 @@
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 
 #include <QGridLayout>
 #include <QIcon>
@@ -198,7 +199,9 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
         if (!pTAction->isActive()) {
             continue;
         }
-        pAction->mpEasyButtonBar = this;
+        // Through the bar's own action: the editor clears the host of an
+        // action it deletes, which still has its entries drawn as they go
+        mpTAction->mpHost->mpConsole->setActionEasyButtonBar(pAction, this);
         auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pTAction->getName(), pTAction->mID);
         pEAction->setStatusTip(pTAction->getName());
         pEAction->setCheckable(pTAction->isPushDownButton());

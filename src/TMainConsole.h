@@ -27,6 +27,7 @@
 
 #include "TConsole.h"
 #include <QFile>
+#include <QHash>
 #include <QPointer>
 #include <QTextStream>
 #include <QWidget>
@@ -202,13 +203,32 @@ public:
     bool hideMapWidget();
     // Brings the bars in line with the root actions (for a package, with the
     // toolbars in it): makes, fills and places each, and destroys any left from
-    // an action that has switched between docked and floating. The lists are
-    // the ActionUnit's record of the bars made for it.
-    void regenerateToolBars(const std::list<TAction*>& rootActions, std::list<QPointer<TToolBar>>& toolBars);
-    void regenerateEasyButtonBars(const std::list<TAction*>& rootActions, std::list<QPointer<TEasyButtonBar>>& easyButtonBars);
+    // an action that has switched between docked and floating.
+    void regenerateToolBars(const std::list<TAction*>& rootActions);
+    void regenerateEasyButtonBars(const std::list<TAction*>& rootActions);
     // Takes an action's bars out of the window without destroying them, for an
     // action that is being removed or has stopped being a root one.
     void detachActionBars(TAction* pAction);
+    // Each action's bars, looked up by the action. An action shown as a menu on
+    // another's bar (on a floating toolbar, any entry of such a menu) is
+    // recorded against that bar too, so what is asked of its bar here is done
+    // to the whole bar.
+    bool hasEasyButtonBar(TAction* pAction) const;
+    TToolBar* actionToolBar(TAction* pAction) const;
+    TEasyButtonBar* actionEasyButtonBar(TAction* pAction) const;
+    void setActionToolBar(TAction* pAction, TToolBar* pToolBar);
+    void setActionEasyButtonBar(TAction* pAction, TEasyButtonBar* pBar);
+    // For a child moved out from under pOldParent: the child no longer belongs
+    // to whichever of its bars it shared with its old parent.
+    void releaseParentActionBars(TAction* pOldParent, TAction* pChild);
+    void renameActionToolBar(TAction* pAction, const QString& name);
+    void setActionToolBarVisible(TAction* pAction, bool visible);
+    void hideActionEasyButtonBar(TAction* pAction);
+    // Floating toolbars are the main window's children rather than this
+    // console's, so the profile has to delete them itself.
+    const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }
+    void deleteActionToolBars();
+    void deleteActionToolBarsLater();
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();
@@ -271,8 +291,14 @@ private:
     void detachEasyButtonBar(TEasyButtonBar* pBar, int location);
     void dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area);
     void undockToolBar(TToolBar* pToolBar);
-    void constructToolbar(TAction* pAction, TToolBar* pToolBar, std::list<QPointer<TToolBar>>& toolBars);
-    void constructToolbar(TAction* pA, TEasyButtonBar* pTB, std::list<QPointer<TEasyButtonBar>>& easyButtonBars);
+    void constructToolbar(TAction* pAction, TToolBar* pToolBar);
+    void constructToolbar(TAction* pA, TEasyButtonBar* pTB);
+    struct ActionBars
+    {
+        QPointer<TToolBar> mpToolBar;
+        QPointer<TEasyButtonBar> mpEasyButtonBar;
+    };
+    ActionBars& actionBarsFor(TAction* pAction);
     // The latency box repaints on every setText(), so a flood of packets is
     // shown at most once per pace interval - the same cap the panes paint at.
     static constexpr int csmLatencyBoxPaceMs = 16;
@@ -311,6 +337,12 @@ private:
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
+
+    // An entry lasts as long as its action, so an address a later action is
+    // given never inherits its bars.
+    QHash<TAction*, ActionBars> mActionBars;
+    std::list<QPointer<TToolBar>> mToolBarList;
+    std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
 
     bool mEnableClose = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;

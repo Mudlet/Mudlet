@@ -32,9 +32,7 @@
 #include "MudletApp.h"
 #include "TConsole.h"
 #include "TDebug.h"
-#include "TEasyButtonBar.h"
 #include "TTextEdit.h"
-#include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
 #include "XMLexport.h"
@@ -4756,12 +4754,8 @@ void dlgTriggerEditor::activeToggle_action()
     // Capture new state after toggle
     bool newState = pT->isActive();
 
-    if (pT->mpToolBar) {
-        if (!pT->isActive()) {
-            pT->mpToolBar->hide();
-        } else {
-            pT->mpToolBar->show();
-        }
+    if (mpHost->mpConsole) {
+        mpHost->mpConsole->setActionToolBarVisible(pT, pT->isActive());
     }
 
     const bool itemActive = pT->isActive();
@@ -6759,17 +6753,18 @@ void dlgTriggerEditor::saveAction()
             pA->setDataChanged();
         }
 
-        // if the action has a TToolBar instance with a script error, hide that toolbar.
-        if (pA->mpToolBar && !pA->state()) {
-            pA->mpToolBar->hide();
-        }
+        if (auto* pConsole = mpHost->mpConsole.data()) {
+            // if the action has a TToolBar instance with a script error, hide that toolbar.
+            if (!pA->state()) {
+                pConsole->setActionToolBarVisible(pA, false);
+            }
 
-        // if the action location is changed, make sure the old toolbar instance is hidden.
-        if (pA->mLocation == 4 && pA->mpEasyButtonBar) {
-            pA->mpEasyButtonBar->hide();
-        }
-        if (pA->mLocation != 4 && pA->mpToolBar) {
-            pA->mpToolBar->hide();
+            // if the action location is changed, make sure the old toolbar instance is hidden.
+            if (pA->mLocation == 4) {
+                pConsole->hideActionEasyButtonBar(pA);
+            } else {
+                pConsole->setActionToolBarVisible(pA, false);
+            }
         }
 
         // Capture NEW state after modifications (for redo)

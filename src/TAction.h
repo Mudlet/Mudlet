@@ -41,10 +41,8 @@
 class EAction;
 class Host;
 class mudlet;
-class TEasyButtonBar;
 class TFlipButton;
 class TLuaInterpreter;
-class TToolBar;
 
 
 class TAction : public Tree<TAction>, public QObject
@@ -164,8 +162,6 @@ public:
     QString moduleName(TAction* pAction) const;
 
 
-    QPointer<TToolBar> mpToolBar;
-    QPointer<TEasyButtonBar> mpEasyButtonBar;
     QPointer<EAction> mpEAction;
     QPointer<TFlipButton> mpFButton;
     /* The following was an int but there was confusion over:

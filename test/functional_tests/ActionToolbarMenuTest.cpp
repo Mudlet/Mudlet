@@ -30,6 +30,7 @@
 #include "TAction.h"
 #include "TEasyButtonBar.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 #include "TToolBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -136,10 +137,7 @@ private:
         }
     }
 
-    static void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    static void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 
     static QStringList entryNames(const QMenu* menu)
     {
@@ -313,6 +311,41 @@ private slots:
         auto* inner = intermediate->menu();
         QVERIFY(inner);
         QCOMPARE(entryNames(inner), QStringList({qsl("menuTestEntry"), qsl("menuTestSubGroup")}));
+    }
+
+    // A group drawn as a menu is recorded against the bar it is drawn on, so
+    // what is done to the group's bar by action is done to that whole bar.
+    void test_aButtonBarMenuGroupIsRecordedAgainstItsBar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* group = buildNestedGroup(host, 0);
+        host->getActionUnit()->updateAllToolbars();
+
+        auto* console = host->mpConsole.data();
+        auto* bar = console->actionEasyButtonBar(actionNamed(host, qsl("menuTestToolbar")));
+        QVERIFY(bar);
+        QCOMPARE(console->actionEasyButtonBar(group), bar);
+        QCOMPARE(console->actionEasyButtonBar(actionNamed(host, qsl("menuTestSubGroup"))), bar);
+    }
+
+    // The floating toolbar records every entry of its menus, not only groups.
+    void test_aFloatingToolbarMenuEntryIsRecordedAgainstItsToolbar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* group = buildNestedGroup(host, 4);
+        host->getActionUnit()->updateAllToolbars();
+
+        auto* console = host->mpConsole.data();
+        auto* toolBar = console->actionToolBar(actionNamed(host, qsl("menuTestToolbar")));
+        QVERIFY(toolBar);
+        QCOMPARE(console->actionToolBar(group), toolBar);
+        QCOMPARE(console->actionToolBar(actionNamed(host, qsl("menuTestSubEntry"))), toolBar);
     }
 
     void cleanup()

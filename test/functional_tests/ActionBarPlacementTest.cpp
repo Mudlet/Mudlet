@@ -134,12 +134,12 @@ private slots:
         auto* right = makeRootBar(host, qsl("placementRight"), 3);
         host->getActionUnit()->updateAllToolbars();
 
-        QVERIFY2(top->mpEasyButtonBar && left->mpEasyButtonBar && right->mpEasyButtonBar, "every docked location should have been given a button bar");
-        QVERIFY(laidOutIn(console->mpTopToolBar, top->mpEasyButtonBar));
-        QVERIFY(laidOutIn(console->mpLeftToolBar, left->mpEasyButtonBar));
-        QVERIFY2(!laidOutIn(console->mpTopToolBar, left->mpEasyButtonBar), "a bar is made in the top strip, and should have moved out of it to its own");
-        QVERIFY(laidOutIn(console->mpRightToolBar, right->mpEasyButtonBar));
-        QVERIFY(!top->mpToolBar);
+        QVERIFY2(console->actionEasyButtonBar(top) && console->actionEasyButtonBar(left) && console->actionEasyButtonBar(right), "every docked location should have been given a button bar");
+        QVERIFY(laidOutIn(console->mpTopToolBar, console->actionEasyButtonBar(top)));
+        QVERIFY(laidOutIn(console->mpLeftToolBar, console->actionEasyButtonBar(left)));
+        QVERIFY2(!laidOutIn(console->mpTopToolBar, console->actionEasyButtonBar(left)), "a bar is made in the top strip, and should have moved out of it to its own");
+        QVERIFY(laidOutIn(console->mpRightToolBar, console->actionEasyButtonBar(right)));
+        QVERIFY(!console->actionToolBar(top));
     }
 
     void test_aFloatingToolbarIsDockedWhereItWasLastDocked()
@@ -151,10 +151,10 @@ private slots:
         auto* floating = makeRootBar(host, qsl("placementFloating"), 4);
         host->getActionUnit()->updateAllToolbars();
 
-        QVERIFY2(floating->mpToolBar, "a floating location should have been given a toolbar");
-        QVERIFY(!floating->mpEasyButtonBar);
-        QCOMPARE(mudlet::self()->dockWidgetArea(floating->mpToolBar), Qt::RightDockWidgetArea);
-        QVERIFY(host->getActionUnit()->getToolBarList().size() == 1);
+        QVERIFY2(host->mpConsole->actionToolBar(floating), "a floating location should have been given a toolbar");
+        QVERIFY(!host->mpConsole->actionEasyButtonBar(floating));
+        QCOMPARE(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)), Qt::RightDockWidgetArea);
+        QVERIFY(host->mpConsole->actionToolBars().size() == 1);
     }
 
     void test_aDeactivatedFloatingToolbarIsTakenOffTheWindow()
@@ -165,16 +165,16 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementDeactivated"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QVERIFY(floating->mpToolBar);
-        QVERIFY2(mudlet::self()->dockWidgetArea(floating->mpToolBar) != Qt::NoDockWidgetArea, "the toolbar has to be docked first, or undocking it proves nothing");
+        QVERIFY(host->mpConsole->actionToolBar(floating));
+        QVERIFY2(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)) != Qt::NoDockWidgetArea, "the toolbar has to be docked first, or undocking it proves nothing");
 
         floating->setIsActive(false);
         floating->setDataChanged();
         host->getActionUnit()->updateAllToolbars();
 
-        QVERIFY2(floating->mpToolBar, "a deactivated toolbar is taken down, not destroyed");
-        QCOMPARE(mudlet::self()->dockWidgetArea(floating->mpToolBar), Qt::NoDockWidgetArea);
-        QVERIFY(floating->mpToolBar->isHidden());
+        QVERIFY2(host->mpConsole->actionToolBar(floating), "a deactivated toolbar is taken down, not destroyed");
+        QCOMPARE(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)), Qt::NoDockWidgetArea);
+        QVERIFY(host->mpConsole->actionToolBar(floating)->isHidden());
     }
 
     void test_aButtonBarMovedUnderAnotherActionLeavesItsStrip()
@@ -188,7 +188,7 @@ private slots:
         auto* moved = makeRootBar(host, qsl("placementMoved"), 0);
         auto* newParent = makeRootBar(host, qsl("placementNewParent"), 0);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TEasyButtonBar> bar = moved->mpEasyButtonBar;
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(moved);
         QVERIFY(bar);
         QVERIFY(laidOutIn(console->mpTopToolBar, bar));
 
@@ -196,7 +196,7 @@ private slots:
 
         QVERIFY(bar);
         QVERIFY2(!laidOutIn(console->mpTopToolBar, bar), "a bar whose action is no longer a root one should be out of the strip");
-        QVERIFY(laidOutIn(console->mpTopToolBar, newParent->mpEasyButtonBar));
+        QVERIFY(laidOutIn(console->mpTopToolBar, console->actionEasyButtonBar(newParent)));
     }
 
     void test_aFloatingToolbarMovedUnderAnotherActionIsUndocked()
@@ -208,7 +208,7 @@ private slots:
         auto* moved = makeRootBar(host, qsl("placementMovedFloating"), 4);
         auto* newParent = makeRootBar(host, qsl("placementFloatingParent"), 0);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = moved->mpToolBar;
+        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(moved);
         QVERIFY(toolBar);
         toolBar->setFloating(true);
 
@@ -230,7 +230,7 @@ private slots:
         // Childless, so deleting it runs no unregisterAction() but its own
         auto* removed = makeRootBar(host, qsl("placementRemoved"), 0, false);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TEasyButtonBar> bar = removed->mpEasyButtonBar;
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(removed);
         QVERIFY(bar);
         QVERIFY(laidOutIn(console->mpTopToolBar, bar));
 
@@ -238,6 +238,178 @@ private slots:
 
         QVERIFY2(bar, "removing the action takes the bar out of the strip without destroying it");
         QVERIFY(!laidOutIn(console->mpTopToolBar, bar));
+    }
+
+    // Titled after its action at creation, and kept in step with its renames.
+    void test_renamingAFloatingToolbarsActionRetitlesIt()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* floating = makeRootBar(host, qsl("placementNamed"), 4);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TToolBar> toolBar = console->actionToolBar(floating);
+        QVERIFY(toolBar);
+        QCOMPARE(toolBar->objectName(), qsl("dockToolBar_%1_placementNamed").arg(host->getName()));
+
+        floating->setName(qsl("placementRenamed"));
+
+        QCOMPARE(toolBar->objectName(), qsl("dockToolBar_%1_placementRenamed").arg(host->getName()));
+        QVERIFY(toolBar->windowTitle().endsWith(qsl(" - placementRenamed")));
+    }
+
+    // What the trigger editor asks for when an action is switched off, has a
+    // script error, or has moved between docked and floating.
+    void test_theBarsOfAnActionCanBeHiddenAndShownByAction()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* floating = makeRootBar(host, qsl("placementShownFloating"), 4);
+        auto* docked = makeRootBar(host, qsl("placementShownDocked"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TToolBar> toolBar = console->actionToolBar(floating);
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(docked);
+        QVERIFY(toolBar && bar);
+        QVERIFY2(!toolBar->isHidden() && !bar->isHidden(), "both bars have to be showing first, or hiding them proves nothing");
+
+        console->setActionToolBarVisible(floating, false);
+        console->hideActionEasyButtonBar(docked);
+        QVERIFY(toolBar->isHidden());
+        QVERIFY(bar->isHidden());
+
+        console->setActionToolBarVisible(floating, true);
+        QVERIFY(!toolBar->isHidden());
+    }
+
+    // The console keeps an action's bars by the action's address, which a later
+    // action can be given once this one is freed.
+    void test_aDeletedActionsBarsAreNotPassedOnToItsAddress()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* removed = makeRootBar(host, qsl("placementForgotten"), 4, false);
+        host->getActionUnit()->updateAllToolbars();
+        QVERIFY(console->actionToolBar(removed));
+
+        delete removed;
+
+        // The freed pointer is only looked up as a key, never followed
+        QVERIFY(!console->actionToolBar(removed));
+    }
+
+    // A group on a floating toolbar is drawn as a menu on that toolbar and is
+    // recorded against it; moving the group out to the top level must not take
+    // the toolbar with it.
+    void test_aGroupMovedOffAFloatingToolbarLeavesTheToolbarAlone()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* floating = makeRootBar(host, qsl("placementGroupHome"), 4);
+        auto* group = new TAction(floating, host);
+        group->setName(qsl("placementGroup"));
+        group->setIsFolder(true);
+        group->setIsActive(true);
+        host->getActionUnit()->registerAction(group);
+        auto* entry = new TAction(group, host);
+        entry->setName(qsl("placementGroupEntry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TToolBar> toolBar = console->actionToolBar(floating);
+        QVERIFY(toolBar);
+        QVERIFY2(console->actionToolBar(group) == toolBar, "the group has to be recorded against the toolbar first, or moving it proves nothing");
+
+        host->getActionUnit()->reParentAction(group->getID(), floating->getID(), 0);
+        host->getActionUnit()->updateAllToolbars();
+        // A toolbar taken down is only queued for deletion
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY(!console->actionToolBar(group));
+        QVERIFY2(toolBar, "moving the group out destroyed the toolbar it had been drawn on");
+        QCOMPARE(console->actionToolBar(floating), toolBar.data());
+    }
+
+    // Undoing the addition of a group deletes it with its host still set. Its
+    // children then go too, and each one redraws the bar the group is a menu
+    // on - which must not happen once the group itself is half destroyed.
+    void test_aGroupDeletedWithItsEntriesIsNotRecordedAgain()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* root = makeRootBar(host, qsl("placementMenuHome"), 0, false);
+        auto* group = new TAction(root, host);
+        group->setName(qsl("placementMenu"));
+        group->setIsFolder(true);
+        group->setIsActive(true);
+        host->getActionUnit()->registerAction(group);
+        auto* entry = new TAction(group, host);
+        entry->setName(qsl("placementMenuEntry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        host->getActionUnit()->updateAllToolbars();
+        QVERIFY2(console->actionEasyButtonBar(group), "the group has to be recorded against the bar first, or deleting it proves nothing");
+
+        // As EditorAddItemCommand::undo() does
+        host->getActionUnit()->unregisterAction(group);
+        delete group;
+
+        // The freed pointer is only looked up as a key, never followed
+        QVERIFY(!console->actionEasyButtonBar(group));
+        QVERIFY(console->actionEasyButtonBar(root));
+    }
+
+    // Redoing a deletion from the editor that was undone deletes the restored
+    // group while it is still switched on, with its host cleared first but not
+    // its children's, so they still redraw the bar the group is a menu on.
+    void test_aGroupDeletedFromTheEditorIsNotRecordedAgain()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* root = makeRootBar(host, qsl("placementDeletedMenuHome"), 0, false);
+        auto* group = new TAction(root, host);
+        group->setName(qsl("placementDeletedMenu"));
+        group->setIsFolder(true);
+        group->setIsActive(true);
+        host->getActionUnit()->registerAction(group);
+        auto* entry = new TAction(group, host);
+        entry->setName(qsl("placementDeletedMenuEntry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        host->getActionUnit()->updateAllToolbars();
+        QVERIFY2(console->actionEasyButtonBar(group), "the group has to be recorded against the bar first, or deleting it proves nothing");
+
+        // As EditorDeleteItemCommand::redo() does - the editor switches an
+        // action off before deleting it only the first time
+        host->getActionUnit()->unregisterAction(group);
+        group->mpHost = nullptr;
+        delete group;
+
+        // The freed pointer is only looked up as a key, never followed
+        QVERIFY(!console->actionEasyButtonBar(group));
+        QVERIFY(console->actionEasyButtonBar(root));
     }
 
     void cleanup()

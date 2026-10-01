@@ -77,6 +77,7 @@ class CredentialManager;
 class TRoom;
 class TConsole;
 class TMainConsole;
+class TToolBar;
 struct TConsoleModel;
 class TMap;
 class MMCPServer;

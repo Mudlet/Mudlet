@@ -28,6 +28,7 @@
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 #include "mudlet.h"
 
 #include <QIcon>
@@ -225,7 +226,7 @@ void TToolBar::addActionButtons(TAction* pAction)
 // item to which the sub-menu is added.
 void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
 {
-    pAction->mpToolBar = this;
+    mpHost->mpConsole->setActionToolBar(pAction, this);
     auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
     pEAction->setCheckable(pAction->isPushDownButton());
     pEAction->setStatusTip(pAction->getName());

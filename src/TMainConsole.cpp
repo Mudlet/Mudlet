@@ -191,6 +191,15 @@ TMainConsole::~TMainConsole()
     if (mpUnpackingDialog) {
         mpUnpackingDialog->deleteLater();
     }
+
+    // The actions outlive this console, so their destroyed() handlers have the same unsafe window.
+    const QList<TAction*> actionsWithBars = mActionBars.keys();
+    for (TAction* pAction : actionsWithBars) {
+        disconnect(pAction, &QObject::destroyed, this, nullptr);
+    }
+    // Normally the Host has deleted these already; a Host whose console goes first
+    // would otherwise leave them on the main window pointing at its actions.
+    deleteActionToolBars();
 }
 
 std::pair<bool, QString> TMainConsole::setLabelStyleSheet(const QString& name, const QString& stylesheet)
@@ -657,18 +666,18 @@ void TMainConsole::undockToolBar(TToolBar* pToolBar)
     mudlet::self()->removeDockWidget(pToolBar);
 }
 
-void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions, std::list<QPointer<TToolBar>>& toolBars)
+void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions)
 {
     for (auto& action : rootActions) {
         if (action->mLocation != 4) {
             // This TAction is not set to be a floating/dockable widget type toolbar
-            if (action->mpToolBar) {
+            if (TToolBar* pOldToolBar = actionToolBar(action)) {
                 // But it has a TToolBar type toolbar so we need to
                 // remove the ToolBar from the list of TToolBars:
-                toolBars.remove(action->mpToolBar);
+                mToolBarList.remove(pOldToolBar);
                 // And destroy it:
-                action->mpToolBar->deleteLater();
-                action->mpToolBar = nullptr;
+                pOldToolBar->deleteLater();
+                setActionToolBar(action, nullptr);
             }
             continue; // skip over any root action node that is NOT going to be a TToolBar.
         }
@@ -676,62 +685,62 @@ void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions, st
             for (auto* childActionNode : *action->mpMyChildrenList) {
                 auto* childAction = static_cast<TAction*>(childActionNode);
                 QPointer<TToolBar> pTB = nullptr;
-                for (auto& toolBar : toolBars) {
-                    if (toolBar == childAction->mpToolBar) {
+                for (auto& toolBar : mToolBarList) {
+                    if (toolBar == actionToolBar(childAction)) {
                         pTB = toolBar;
                         break;
                     }
                 }
                 if (!pTB) {
                     pTB = createToolBar(childAction, childAction->getName());
-                    toolBars.push_back(pTB);
+                    mToolBarList.push_back(pTB);
                 }
                 if (childAction->mOrientation == 1) {
                     pTB->setVerticalOrientation();
                 } else {
                     pTB->setHorizontalOrientation();
                 }
-                constructToolbar(childAction, pTB, toolBars);
-                childAction->mpToolBar = pTB;
+                constructToolbar(childAction, pTB);
+                setActionToolBar(childAction, pTB);
                 pTB->setStyleSheet(pTB->mpTAction->css);
             }
             continue; //action package
         }
 
         QPointer<TToolBar> pTB = nullptr;
-        for (auto& toolBar : toolBars) {
-            if (toolBar == action->mpToolBar) {
+        for (auto& toolBar : mToolBarList) {
+            if (toolBar == actionToolBar(action)) {
                 pTB = toolBar;
                 break;
             }
         }
         if (!pTB) {
             pTB = createToolBar(action, action->getName());
-            toolBars.push_back(pTB);
+            mToolBarList.push_back(pTB);
         }
         if (action->mOrientation == 1) {
             pTB->setVerticalOrientation();
         } else {
             pTB->setHorizontalOrientation();
         }
-        constructToolbar(action, pTB, toolBars);
-        action->mpToolBar = pTB;
+        constructToolbar(action, pTB);
+        setActionToolBar(action, pTB);
         pTB->setStyleSheet(pTB->mpTAction->css);
     }
 }
 
-void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActions, std::list<QPointer<TEasyButtonBar>>& easyButtonBars)
+void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActions)
 {
     for (auto& rootAction : rootActions) {
         if (rootAction->mLocation == 4) {
             // This TAction is set to be a floating/dockable widget
-            if (rootAction->mpEasyButtonBar) {
+            if (TEasyButtonBar* pOldBar = actionEasyButtonBar(rootAction)) {
                 // But it has a TEasyButtonBar type toolbar so we need to
                 // remove the TEasyButtonBar from the list of TEasyButtonBars:
-                easyButtonBars.remove(rootAction->mpEasyButtonBar);
+                mEasyButtonBarList.remove(pOldBar);
                 // And destroy it:
-                rootAction->mpEasyButtonBar->deleteLater();
-                rootAction->mpEasyButtonBar = nullptr;
+                pOldBar->deleteLater();
+                setActionEasyButtonBar(rootAction, nullptr);
             }
             continue; // skip over any root action node that IS going to be a TToolBar.
         }
@@ -741,53 +750,53 @@ void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActio
             for (auto* childActionNode : *rootAction->mpMyChildrenList) {
                 auto* childAction = static_cast<TAction*>(childActionNode);
                 TEasyButtonBar* pTB = nullptr;
-                for (auto& easyButtonBar : easyButtonBars) {
-                    if (easyButtonBar == childAction->mpEasyButtonBar) {
+                for (auto& easyButtonBar : mEasyButtonBarList) {
+                    if (easyButtonBar == actionEasyButtonBar(childAction)) {
                         pTB = easyButtonBar;
                         break;
                     }
                 }
                 if (!pTB) {
                     pTB = createEasyButtonBar(rootAction, childAction->getName());
-                    easyButtonBars.emplace_back(pTB);
-                    childAction->mpEasyButtonBar = pTB; // needed for drag&drop
+                    mEasyButtonBarList.emplace_back(pTB);
+                    setActionEasyButtonBar(childAction, pTB); // needed for drag&drop
                 }
                 if (childAction->mOrientation == 1) {
                     pTB->setVerticalOrientation();
                 } else {
                     pTB->setHorizontalOrientation();
                 }
-                constructToolbar(childAction, pTB, easyButtonBars);
-                childAction->mpEasyButtonBar = pTB;
+                constructToolbar(childAction, pTB);
+                setActionEasyButtonBar(childAction, pTB);
                 pTB->setStyleSheet(pTB->mpTAction->css);
             }
             continue; //rootAction package
         }
 
         TEasyButtonBar* pTB = nullptr;
-        for (auto& easyButtonBar : easyButtonBars) {
-            if (easyButtonBar == rootAction->mpEasyButtonBar) {
+        for (auto& easyButtonBar : mEasyButtonBarList) {
+            if (easyButtonBar == actionEasyButtonBar(rootAction)) {
                 pTB = easyButtonBar;
                 break;
             }
         }
         if (!pTB) {
             pTB = createEasyButtonBar(rootAction, rootAction->getName());
-            easyButtonBars.emplace_back(pTB);
-            rootAction->mpEasyButtonBar = pTB; // needed for drag&drop
+            mEasyButtonBarList.emplace_back(pTB);
+            setActionEasyButtonBar(rootAction, pTB); // needed for drag&drop
         }
         if (rootAction->mOrientation == 1) {
             pTB->setVerticalOrientation();
         } else {
             pTB->setHorizontalOrientation();
         }
-        constructToolbar(rootAction, pTB, easyButtonBars);
-        rootAction->mpEasyButtonBar = pTB;
+        constructToolbar(rootAction, pTB);
+        setActionEasyButtonBar(rootAction, pTB);
         pTB->setStyleSheet(pTB->mpTAction->css);
     }
 }
 
-void TMainConsole::constructToolbar(TAction* pAction, TToolBar* pToolBar, std::list<QPointer<TToolBar>>& toolBars)
+void TMainConsole::constructToolbar(TAction* pAction, TToolBar* pToolBar)
 {
     if (!pAction->isDataChanged()) {
         return;
@@ -799,12 +808,12 @@ void TMainConsole::constructToolbar(TAction* pAction, TToolBar* pToolBar, std::l
         // if we get here then the TAction has just been changed to be one of
         // those; we might still have a TToolBar associated with the
         // (owner) TAction and if so we need to dispose of it:
-        if (pAction->mpToolBar) {
+        if (TToolBar* pOldToolBar = actionToolBar(pAction)) {
             // We need to remove the TToolBar from the list of TToolBars
-            toolBars.remove(pAction->mpToolBar);
+            mToolBarList.remove(pOldToolBar);
             // before we get rid of it:
-            pAction->mpToolBar->deleteLater();
-            pAction->mpToolBar = nullptr;
+            pOldToolBar->deleteLater();
+            setActionToolBar(pAction, nullptr);
         }
     }
 
@@ -853,7 +862,7 @@ void TMainConsole::constructToolbar(TAction* pAction, TToolBar* pToolBar, std::l
     pAction->setDataSaved();
 }
 
-void TMainConsole::constructToolbar(TAction* pA, TEasyButtonBar* pTB, std::list<QPointer<TEasyButtonBar>>& easyButtonBars)
+void TMainConsole::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 {
     pTB->clear();
     if (pA->mLocation == 4) {
@@ -861,12 +870,12 @@ void TMainConsole::constructToolbar(TAction* pA, TEasyButtonBar* pTB, std::list<
         // if we get here then the TAction has just been changed to be one of
         // those; we might still have a TEasyButtonBar associated with the
         // (owner) TAction and if so we need to dispose of it:
-        if (pA->mpEasyButtonBar) {
+        if (TEasyButtonBar* pOldBar = actionEasyButtonBar(pA)) {
             // We need to remove the TEasyButtonBar from the list of TEasyButtonBars
-            easyButtonBars.remove(pA->mpEasyButtonBar);
+            mEasyButtonBarList.remove(pOldBar);
             // before we get rid of it:
-            pA->mpEasyButtonBar->deleteLater();
-            pA->mpEasyButtonBar = nullptr;
+            pOldBar->deleteLater();
+            setActionEasyButtonBar(pA, nullptr);
         }
         return;
     }
@@ -895,12 +904,119 @@ void TMainConsole::constructToolbar(TAction* pA, TEasyButtonBar* pTB, std::list<
 
 void TMainConsole::detachActionBars(TAction* pAction)
 {
-    if (pAction->mpEasyButtonBar) {
-        detachEasyButtonBar(pAction->mpEasyButtonBar, pAction->mLocation);
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        detachEasyButtonBar(pBar, pAction->mLocation);
     }
-    if (pAction->mpToolBar && pAction->mLocation == 4) {
-        pAction->mpToolBar->setFloating(false);
-        undockToolBar(pAction->mpToolBar);
+    if (TToolBar* pToolBar = actionToolBar(pAction); pToolBar && pAction->mLocation == 4) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+    }
+}
+
+TMainConsole::ActionBars& TMainConsole::actionBarsFor(TAction* pAction)
+{
+    auto it = mActionBars.find(pAction);
+    if (it == mActionBars.end()) {
+        // Hides the bars as the action goes, straight after ~TAction()'s body.
+        // A signal, because an action being deleted by ~ActionUnit() can no
+        // longer reach this console through its Host.
+        connect(pAction, &QObject::destroyed, this, [this, pAction]() {
+            const ActionBars bars = mActionBars.take(pAction);
+            if (bars.mpToolBar) {
+                bars.mpToolBar->hide();
+            }
+            if (bars.mpEasyButtonBar) {
+                bars.mpEasyButtonBar->hide();
+            }
+        });
+        it = mActionBars.insert(pAction, ActionBars());
+    }
+    return it.value();
+}
+
+bool TMainConsole::hasEasyButtonBar(TAction* pAction) const
+{
+    return actionEasyButtonBar(pAction) != nullptr;
+}
+
+TToolBar* TMainConsole::actionToolBar(TAction* pAction) const
+{
+    return mActionBars.value(pAction).mpToolBar;
+}
+
+TEasyButtonBar* TMainConsole::actionEasyButtonBar(TAction* pAction) const
+{
+    return mActionBars.value(pAction).mpEasyButtonBar;
+}
+
+void TMainConsole::setActionToolBar(TAction* pAction, TToolBar* pToolBar)
+{
+    if (!pToolBar && !mActionBars.contains(pAction)) {
+        return;
+    }
+    actionBarsFor(pAction).mpToolBar = pToolBar;
+}
+
+void TMainConsole::setActionEasyButtonBar(TAction* pAction, TEasyButtonBar* pBar)
+{
+    if (!pBar && !mActionBars.contains(pAction)) {
+        return;
+    }
+    actionBarsFor(pAction).mpEasyButtonBar = pBar;
+}
+
+void TMainConsole::releaseParentActionBars(TAction* pOldParent, TAction* pChild)
+{
+    if (actionToolBar(pOldParent) == actionToolBar(pChild)) {
+        setActionToolBar(pChild, nullptr);
+    }
+    if (actionEasyButtonBar(pOldParent) == actionEasyButtonBar(pChild)) {
+        setActionEasyButtonBar(pChild, nullptr);
+    }
+}
+
+void TMainConsole::renameActionToolBar(TAction* pAction, const QString& name)
+{
+    // Revises the objectName, the title shown while it floats and its entry in
+    // the main window's context menu
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        pToolBar->setName(name);
+    }
+}
+
+void TMainConsole::setActionToolBarVisible(TAction* pAction, const bool visible)
+{
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        if (visible) {
+            pToolBar->show();
+        } else {
+            pToolBar->hide();
+        }
+    }
+}
+
+void TMainConsole::hideActionEasyButtonBar(TAction* pAction)
+{
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        pBar->hide();
+    }
+}
+
+void TMainConsole::deleteActionToolBars()
+{
+    const auto toolBars = mToolBarList;
+    for (const auto& pToolBar : toolBars) {
+        delete pToolBar.data();
+    }
+}
+
+void TMainConsole::deleteActionToolBarsLater()
+{
+    for (TToolBar* pToolBar : mToolBarList) {
+        if (pToolBar) {
+            pToolBar->setAttribute(Qt::WA_DeleteOnClose);
+            pToolBar->deleteLater();
+        }
     }
 }
 
