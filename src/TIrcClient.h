@@ -35,13 +35,18 @@
 #include "utils.h"
 
 class Host;
+class IrcBuffer;
+class IrcBufferModel;
+class IrcCommand;
 class IrcConnection;
 
-// A profile's IRC session: the connection, and the nick, server and channels it
-// is using. The Host owns it; the IRC window shows it.
+// A profile's IRC session: the connection, the buffers its lines are sorted
+// into, and the nick, server and channels it is using. The Host owns it; the
+// IRC window shows it.
 class TIrcClient : public QObject
 {
     Q_OBJECT
+    Q_MOC_INCLUDE(<IrcBuffer>)
 
 public:
     Q_DISABLE_COPY_MOVE(TIrcClient)
@@ -79,11 +84,18 @@ public:
     bool mReadyForSending = false;
 
     IrcConnection* connection() const { return mpConnection; }
-    // Queues the auto-join and opens the connection; later calls do nothing.
+    // One buffer per channel and query, and one for the server that takes
+    // every line no other buffer does. Null until start().
+    IrcBufferModel* bufferModel() const { return mpBufferModel; }
+    IrcBuffer* serverBuffer() const;
+    // Queues the auto-join, opens the connection and sets up the buffers; later
+    // calls do nothing.
     void start();
     // False, doing nothing, for a session that was never started
     bool restart(bool reloadConfigs = true);
     QPair<bool, QString> sendText(const QString& target, const QString& message);
+    // Takes ownership of a command the IRC window's parser built.
+    void sendCommand(IrcCommand* command);
     QString getHostName() const { return mHostName; }
     int getHostPort() const { return mHostPort; }
     bool getHostSecure() const { return mHostSecure; }
@@ -94,13 +106,14 @@ public:
 signals:
     void signal_nickNameChanged();
     void signal_nickNameReserved(const QString& reserved, const QString& replacement);
-    void signal_connectedHostChanged(const QString& hostName);
     // Raised before the old connection is quit, while getChannels() still
     // lists the channels it had joined.
     void signal_restarting(const QString& reason);
     void signal_restarted();
     // The server does not echo our own messages back.
     void signal_messageSent(IrcMessage* message);
+    // A line has reached one of the buffers, after any sysIrcMessage for it was raised.
+    void signal_messageReceived(IrcBuffer* buffer, IrcMessage* message);
 
 private slots:
     void slot_nickNameRequired(const QString& reserved, QString* alt);
@@ -108,14 +121,20 @@ private slots:
     void slot_joinedChannel(IrcJoinMessage* message);
     void slot_partedChannel(IrcPartMessage* message);
     void slot_receiveNumericMessage(IrcNumericMessage* message);
+    void slot_bufferAdded(IrcBuffer* buffer);
 
 private:
     static QString readAppDefaultIrcNick();
     static void writeAppDefaultIrcNick(const QString&);
+    void receiveBufferMessage(IrcBuffer* buffer, IrcMessage* message);
 
     QPointer<Host> mpHost;
     IrcConnection* mpConnection = nullptr;
+    IrcBufferModel* mpBufferModel = nullptr;
+    QPointer<IrcBuffer> mpServerBuffer;
     bool mStarted = false;
+    // When the last typed PING went out, for timing its PONG; 0 when none is awaited.
+    quint64 mPingStarted = 0;
     QString mConnectedHostName;
     QString mHostName;
     int mHostPort = 0;

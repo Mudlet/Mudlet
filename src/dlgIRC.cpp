@@ -76,10 +76,10 @@ dlgIRC::dlgIRC(Host* pHost)
     connect(connection, &IrcConnection::disconnected, this, &dlgIRC::slot_onDisconnected);
     connect(mpClient, &TIrcClient::signal_nickNameReserved, this, &dlgIRC::slot_nickNameReserved);
     connect(mpClient, &TIrcClient::signal_nickNameChanged, this, &dlgIRC::setClientWindowTitle);
-    connect(mpClient, &TIrcClient::signal_connectedHostChanged, this, &dlgIRC::slot_connectedHostChanged);
     connect(mpClient, &TIrcClient::signal_restarting, this, &dlgIRC::slot_restarting);
     connect(mpClient, &TIrcClient::signal_restarted, this, &dlgIRC::slot_restarted);
-    connect(mpClient, &TIrcClient::signal_messageSent, this, &dlgIRC::slot_receiveMessage);
+    connect(mpClient, &TIrcClient::signal_messageSent, this, &dlgIRC::slot_showOwnMessage);
+    connect(mpClient, &TIrcClient::signal_messageReceived, this, &dlgIRC::slot_showMessage);
     connect(mpClient, &QObject::destroyed, this, &dlgIRC::slot_clientDestroyed);
 
     // set the title here to pick up the previously loaded nick and host values.
@@ -171,12 +171,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         msg = command->toMessage(connection->nickName(), connection);
     }
 
-    // update ping-started time if this command was a ping
-    if (commandType == IrcCommand::Ping) {
-        mPingStarted = QDateTime::currentMSecsSinceEpoch();
-    }
-
-    connection->sendCommand(command);
+    mpClient->sendCommand(command);
 
     // if the command was a quit command we should close the IRC window.
     if (commandType == IrcCommand::Quit) {
@@ -186,7 +181,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
     }
 
     if (msg) {
-        slot_receiveMessage(msg);
+        slot_showOwnMessage(msg);
         delete msg;
     }
 
@@ -196,19 +191,10 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
 void dlgIRC::slot_restarting(const QString& reason)
 {
     ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(reason));
-
-    // remove the old buffers.
-    for (const QString& chName : mpClient->getChannels()) {
-        if (chName == serverBuffer->name()) {
-            continue; // skip the server-buffer.
-        }
-        bufferModel->remove(chName);
-    }
 }
 
 void dlgIRC::slot_restarted()
 {
-    serverBuffer->setName(mpClient->connection()->host());
     setClientWindowTitle();
 }
 
@@ -260,8 +246,7 @@ void dlgIRC::setupCommandParser()
 
 void dlgIRC::setupBuffers()
 {
-    IrcConnection* connection = mpClient->connection();
-    bufferModel = new IrcBufferModel(connection);
+    IrcBufferModel* bufferModel = mpClient->bufferModel();
     connect(bufferModel, &IrcBufferModel::added, this, &dlgIRC::slot_onBufferAdded);
     connect(bufferModel, &IrcBufferModel::removed, this, &dlgIRC::slot_onBufferRemoved);
     bufferList->setModel(bufferModel);
@@ -269,10 +254,10 @@ void dlgIRC::setupBuffers()
     connect(bufferModel, &IrcBufferModel::channelsChanged, commandParser, &IrcCommandParser::setChannels);
     // keep track of the current buffer, see also onBufferActivated()
     connect(bufferList->selectionModel(), &QItemSelectionModel::currentChanged, this, &dlgIRC::slot_onBufferActivated);
-    // create a server buffer for non-targeted messages...
-    serverBuffer = bufferModel->add(connection->host());
-    serverBuffer->setName(connection->host());
-    connect(bufferModel, &IrcBufferModel::messageIgnored, serverBuffer, &IrcBuffer::receiveMessage);
+    // the server buffer was added before there was anything here to see it
+    for (IrcBuffer* buffer : bufferModel->buffers()) {
+        slot_onBufferAdded(buffer);
+    }
 }
 
 bool dlgIRC::processCustomCommand(IrcCommand* cmd)
@@ -281,6 +266,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         return false;
     }
 
+    IrcBufferModel* bufferModel = mpClient->bufferModel();
     const QString cmdName = QString(cmd->parameters().at(0)).toUpper();
     if (cmdName == "CLEAR") {
         auto* buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
@@ -304,7 +290,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
                 buffer = bufferModel->find(bufferName);
             }
         }
-        if (buffer && buffer->title() != serverBuffer->title()) {
+        if (buffer && buffer->title() != mpClient->serverBuffer()->title()) {
             bufferList->setCurrentIndex(bufferModel->index(bufferModel->find(mpClient->connection()->host())));
             buffer->close();
         }
@@ -450,13 +436,8 @@ void dlgIRC::slot_onTextEntered()
             msg = command->toMessage(connection->nickName(), connection);
         }
 
-        // update ping-started time if this command was a ping
-        if (commandType == IrcCommand::Ping) {
-            mPingStarted = QDateTime::currentMSecsSinceEpoch();
-        }
-
         // send to the server.
-        connection->sendCommand(command);
+        mpClient->sendCommand(command);
 
         // if the command was a quit command we should close this window.
         if (commandType == IrcCommand::Quit) {
@@ -467,7 +448,7 @@ void dlgIRC::slot_onTextEntered()
 
         // echo own messages (servers do not send our own messages back)
         if (msg) {
-            slot_receiveMessage(msg);
+            slot_showOwnMessage(msg);
             delete msg;
         }
         lineEdit->clear();
@@ -511,8 +492,6 @@ void dlgIRC::slot_onHistoryCompletion()
 
 void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
 {
-    // joined a buffer - start listening to buffer specific messages
-    connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
     auto* document = new QTextDocument(buffer);
     document->setMaximumBlockCount(mMessageBufferLimit);
@@ -522,6 +501,7 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     userModel->setSortMethod(Irc::SortByTitle);
     userModels.insert(buffer, userModel);
     // activate the new buffer
+    IrcBufferModel* bufferModel = mpClient->bufferModel();
     const int idx = bufferModel->buffers().indexOf(buffer);
     if (idx != -1) {
         bufferList->setCurrentIndex(bufferModel->index(idx));
@@ -557,6 +537,7 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
         if (user->name() == mpClient->getNickName()) {
             return;
         }
+        IrcBufferModel* bufferModel = mpClient->bufferModel();
         IrcBuffer* buffer = bufferModel->add(user->name());
         // activate the new query
         const int idx = bufferModel->buffers().indexOf(buffer);
@@ -584,44 +565,34 @@ void dlgIRC::appendToDocument(QTextDocument* document, const QString& html)
     cursor.endEditBlock();
 }
 
-void dlgIRC::slot_receiveMessage(IrcMessage* message)
+// Our own lines, which the server does not echo back, go to the buffer on screen.
+void dlgIRC::slot_showOwnMessage(IrcMessage* message)
 {
-    // update timestamp of ping/pong messages.
-    if (message->type() == IrcMessage::Pong && mPingStarted) {
-        message->setTimeStamp(QDateTime::fromMSecsSinceEpoch(mPingStarted));
-        mPingStarted = 0;
-    }
+    slot_showMessage(bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>(), message);
+}
 
-    auto* buffer = qobject_cast<IrcBuffer*>(sender());
-    if (!buffer) {
-        buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
-    }
+void dlgIRC::slot_showMessage(IrcBuffer* buffer, IrcMessage* message)
+{
     QTextDocument* document = bufferTexts.value(buffer);
-    if (document) {
-        const QString html = IrcMessageFormatter::formatMessage(message);
-        if (!html.isEmpty()) {
-            // send a plain-text formatted copy of the message to Lua, as long as it isn't our own.
-            if (!message->isOwn()) {
-                const QString textToLua = IrcMessageFormatter::formatMessage(message, true);
-                if (!textToLua.isEmpty() && mpHost) {
-                    const QString from = message->nick();
-                    const QString to = getMessageTarget(message, buffer->title());
-                    mpHost->postIrcMessage(from, to, textToLua);
-                }
-            }
+    if (!document) {
+        return;
+    }
+    const QString html = IrcMessageFormatter::formatMessage(message);
+    if (html.isEmpty()) {
+        return;
+    }
 
-            appendToDocument(document, html);
+    appendToDocument(document, html);
 
-            // Being kicked makes IrcBufferModelPrivate::messageFilter() destroy the channel buffer,
-            // so copy the line to the never-destroyed server buffer. The nick test mirrors that
-            // filter's own destroy test: keep the two in step.
-            const bool kickedUs = message->type() == IrcMessage::Kick && !static_cast<IrcKickMessage*>(message)->user().compare(mpClient->connection()->nickName(), Qt::CaseInsensitive);
-            // a kick from a channel with no buffer already arrived on the server buffer (messageIgnored)
-            if (kickedUs && buffer != serverBuffer) {
-                if (QTextDocument* serverDocument = bufferTexts.value(serverBuffer)) {
-                    appendToDocument(serverDocument, html);
-                }
-            }
+    // Being kicked makes IrcBufferModelPrivate::messageFilter() destroy the channel buffer,
+    // so copy the line to the never-destroyed server buffer. The nick test mirrors that
+    // filter's own destroy test: keep the two in step.
+    const bool kickedUs = message->type() == IrcMessage::Kick && !static_cast<IrcKickMessage*>(message)->user().compare(mpClient->connection()->nickName(), Qt::CaseInsensitive);
+    // a kick from a channel with no buffer already arrived on the server buffer (messageIgnored)
+    IrcBuffer* serverBuffer = mpClient->serverBuffer();
+    if (kickedUs && buffer != serverBuffer) {
+        if (QTextDocument* serverDocument = bufferTexts.value(serverBuffer)) {
+            appendToDocument(serverDocument, html);
         }
     }
 }
@@ -636,37 +607,10 @@ void dlgIRC::slot_nickNameReserved(const QString& reserved, const QString& repla
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, replacement)));
 }
 
-void dlgIRC::slot_connectedHostChanged(const QString& hostName)
-{
-    serverBuffer->setName(hostName);
-}
-
 void dlgIRC::showEvent(QShowEvent* event)
 {
     startClient();
     event->ignore();
-}
-
-QString dlgIRC::getMessageTarget(IrcMessage* msg, const QString& bufferName)
-{
-    QString target = bufferName;
-    switch (msg->type()) {
-    case IrcMessage::Notice: {
-        auto* msgNotice = static_cast<IrcNoticeMessage*>(msg);
-        target = msgNotice->target();
-        break;
-    }
-    case IrcMessage::Private: {
-        auto* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
-        target = msgPrivate->target();
-        break;
-    }
-    default:
-        // Other message types are not expected - I hope - SlySven
-        qWarning().noquote().nospace() << "dlgIRC::getMessageTarget(..., \"" << bufferName << "\") WARNING - message of type: " << msg->type()
-                                       << " not explicitly handled, this needs fixing by Mudlet Makers...";
-    }
-    return target;
 }
 
 void dlgIRC::writeQSettings()

@@ -55,7 +55,6 @@
 #include "TTabBar.h"
 #include "TTimer.h"
 #include "TriggerMatchPool.h"
-#include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 #include "TGameDetails.h"

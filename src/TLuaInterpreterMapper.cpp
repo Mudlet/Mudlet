@@ -45,7 +45,6 @@
 #include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "TTimer.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "mapInfoContributorManager.h"
 #if defined(INCLUDE_3DMAPPER)

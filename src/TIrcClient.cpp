@@ -30,11 +30,14 @@
 #include "MudletApp.h"
 #include "ircmessageformatter.h"
 
+#include <IrcBuffer>
+#include <IrcBufferModel>
 #include <IrcCommand>
 #include <IrcConnection>
 
 #include <QCoreApplication>
 #include <QDataStream>
+#include <QDateTime>
 #include <QDebug>
 #include <QFile>
 #include <QSaveFile>
@@ -82,6 +85,30 @@ TIrcClient::~TIrcClient()
     }
 }
 
+// Who a line was sent to, for Lua: a notice or a message names its target, anything else is
+// reported against the buffer it arrived in.
+static QString messageTarget(IrcMessage* msg, const QString& bufferName)
+{
+    QString target = bufferName;
+    switch (msg->type()) {
+    case IrcMessage::Notice: {
+        auto* msgNotice = static_cast<IrcNoticeMessage*>(msg);
+        target = msgNotice->target();
+        break;
+    }
+    case IrcMessage::Private: {
+        auto* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
+        target = msgPrivate->target();
+        break;
+    }
+    default:
+        // Other message types are not expected - I hope - SlySven
+        qWarning().noquote().nospace() << "TIrcClient messageTarget(..., \"" << bufferName << "\") WARNING - message of type: " << msg->type()
+                                       << " not explicitly handled, this needs fixing by Mudlet Makers...";
+    }
+    return target;
+}
+
 void TIrcClient::start()
 {
     if (mStarted) {
@@ -91,6 +118,43 @@ void TIrcClient::start()
     mpConnection->sendCommand(IrcCommand::createJoin(mChannels));
     mpConnection->open();
     mStarted = true;
+
+    mpBufferModel = new IrcBufferModel(mpConnection);
+    connect(mpBufferModel, &IrcBufferModel::added, this, &TIrcClient::slot_bufferAdded);
+    mpServerBuffer = mpBufferModel->add(mpConnection->host());
+    mpServerBuffer->setName(mpConnection->host());
+    connect(mpBufferModel, &IrcBufferModel::messageIgnored, mpServerBuffer, &IrcBuffer::receiveMessage);
+}
+
+IrcBuffer* TIrcClient::serverBuffer() const
+{
+    return mpServerBuffer;
+}
+
+void TIrcClient::slot_bufferAdded(IrcBuffer* buffer)
+{
+    connect(buffer, &IrcBuffer::messageReceived, this, [this, buffer](IrcMessage* message) {
+        receiveBufferMessage(buffer, message);
+    });
+}
+
+void TIrcClient::receiveBufferMessage(IrcBuffer* buffer, IrcMessage* message)
+{
+    // the reply to a typed PING is formatted from its timestamp
+    if (message->type() == IrcMessage::Pong && mPingStarted) {
+        message->setTimeStamp(QDateTime::fromMSecsSinceEpoch(mPingStarted));
+        mPingStarted = 0;
+    }
+
+    // a plain-text copy for Lua, as long as it isn't our own
+    if (!message->isOwn() && mpHost) {
+        const QString textToLua = IrcMessageFormatter::formatMessage(message, true);
+        if (!textToLua.isEmpty()) {
+            mpHost->postIrcMessage(message->nick(), messageTarget(message, buffer->title()), textToLua);
+        }
+    }
+
+    emit signal_messageReceived(buffer, message);
 }
 
 // CR or LF ends an IRC command; NUL is forbidden in one.
@@ -175,6 +239,15 @@ QPair<bool, QString> TIrcClient::sendText(const QString& target, const QString& 
     return {true, QString()};
 }
 
+void TIrcClient::sendCommand(IrcCommand* command)
+{
+    if (command->type() == IrcCommand::Ping) {
+        mPingStarted = QDateTime::currentMSecsSinceEpoch();
+    }
+
+    mpConnection->sendCommand(command);
+}
+
 bool TIrcClient::restart(bool reloadConfigs)
 {
     // A session no frontend has started stays closed until one does
@@ -184,6 +257,16 @@ bool TIrcClient::restart(bool reloadConfigs)
 
     const QString reason = QCoreApplication::translate("dlgIRC", "Restarting IRC Client");
     emit signal_restarting(reason);
+
+    // the channels' buffers go, the server's stays.
+    if (mpBufferModel) {
+        for (const QString& chName : getChannels()) {
+            if (mpServerBuffer && chName == mpServerBuffer->name()) {
+                continue;
+            }
+            mpBufferModel->remove(chName);
+        }
+    }
 
     // issue a quit message to the network if we're connected.
     if (mpConnection->isConnected()) {
@@ -211,6 +294,9 @@ bool TIrcClient::restart(bool reloadConfigs)
     mpConnection->sendCommand(IrcCommand::createJoin(mChannels));
     mpConnection->open();
 
+    if (mpServerBuffer) {
+        mpServerBuffer->setName(mpConnection->host());
+    }
     emit signal_restarted();
     return true;
 }
@@ -278,7 +364,9 @@ void TIrcClient::slot_receiveNumericMessage(IrcNumericMessage* message)
 {
     if (message->code() == Irc::RPL_YOURHOST) {
         mConnectedHostName = message->nick();
-        emit signal_connectedHostChanged(mConnectedHostName);
+        if (mpServerBuffer) {
+            mpServerBuffer->setName(mConnectedHostName);
+        }
     }
 }
 
