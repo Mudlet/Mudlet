@@ -1,0 +1,25 @@
+METRIC gate_waited_s 13
+METRIC machine_busy_pct_before 6
+METRIC loadavg_before 0.70
+METRIC build_asan 0
+METRIC rooms_locked 0
+METRIC rooms_bad_id 0
+METRIC areas_with_rooms 240
+METRIC alt_k 8
+METRIC audit_current_admissible_checked 550465
+METRIC audit_current_admissible_violations 2766
+METRIC audit_current_worst_excess 150.262
+METRIC audit_current_consistency_checked 1583100
+METRIC audit_current_consistency_violations 3080
+METRIC audit_current_worst_inconsistency 784.464
+METRIC audit_current_consistency_violations_goal_reachable 2934
+METRIC audit_altgeo_admissible_checked 550465
+METRIC audit_altgeo_admissible_violations 0
+METRIC audit_altgeo_worst_excess 0.000
+METRIC audit_altgeo_consistency_checked 1583100
+METRIC audit_altgeo_consistency_violations 141
+METRIC audit_altgeo_worst_inconsistency 365.000
+METRIC audit_altgeo_consistency_violations_goal_reachable 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 802ms
+METRIC machine_busy_pct_after 4
+METRIC loadavg_after 0.73

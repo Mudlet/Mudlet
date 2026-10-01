@@ -1,0 +1,12 @@
+METRIC gate_waited_s 13
+METRIC machine_busy_pct_before 6
+METRIC loadavg_before 1.31
+METRIC build_asan 0
+METRIC mapping_alt_pass_median_ms 29.098
+METRIC mapping_current_median_ms 35.513
+METRIC mapping_current_max_ms 44.842
+METRIC mapping_alt_median_ms 58.306
+METRIC mapping_alt_max_ms 64.059
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 1519ms
+METRIC machine_busy_pct_after 7
+METRIC loadavg_after 1.29

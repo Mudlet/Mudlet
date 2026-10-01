@@ -1,7 +1,7 @@
 import os
 import glob
 T = "/home/vadi/.claude/jobs/3ae74264/tmp/results11/"
-MAPS = sorted(os.path.basename(f)[5:-4] for f in glob.glob(T + "main-*.txt"))
+MAPS = sorted(os.path.basename(f)[5:-4] for f in glob.glob(T + "main-*.txt") if "torilmud" not in f)
 
 
 def load(f):
@@ -43,6 +43,9 @@ for kind in ["main"]:
         classes = ["uniform", "samearea"] + [c for c in ["scen_near", "scen_mid", "scen_far", "scen_corner"] if f"{c}_current_suboptimal" in d]
         for c in classes:
             cur = row(d, c, "current")
+            if not cur:
+                print(f"  {c}: no pairs measured")
+                continue
             for mo in ["current", "alt", "altgeo"]:
                 r = row(d, c, mo)
                 if r:

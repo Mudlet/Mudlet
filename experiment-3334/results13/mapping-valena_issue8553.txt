@@ -1,0 +1,15 @@
+METRIC gate_waited_s 13
+METRIC machine_busy_pct_before 4
+METRIC loadavg_before 0.87
+METRIC build_asan 0
+METRIC rooms_locked 37
+METRIC rooms_bad_id 0
+METRIC areas_with_rooms 2
+METRIC mapping_alt_pass_median_ms 439.086
+METRIC mapping_current_median_ms 630.728
+METRIC mapping_current_max_ms 701.045
+METRIC mapping_alt_median_ms 1077.928
+METRIC mapping_alt_max_ms 1143.818
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 19615ms
+METRIC machine_busy_pct_after 6
+METRIC loadavg_after 1.11

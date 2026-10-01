@@ -1,0 +1,22 @@
+METRIC gate_waited_s 13
+METRIC machine_busy_pct_before 2
+METRIC loadavg_before 0.65
+METRIC build_asan 0
+METRIC alt_k 8
+METRIC audit_current_admissible_checked 357452
+METRIC audit_current_admissible_violations 6658
+METRIC audit_current_worst_excess 1741.758
+METRIC audit_current_consistency_checked 4757190
+METRIC audit_current_consistency_violations 16455
+METRIC audit_current_worst_inconsistency 1845.920
+METRIC audit_current_consistency_violations_goal_reachable 12740
+METRIC audit_altgeo_admissible_checked 357452
+METRIC audit_altgeo_admissible_violations 0
+METRIC audit_altgeo_worst_excess 0.000
+METRIC audit_altgeo_consistency_checked 4757190
+METRIC audit_altgeo_consistency_violations 2761
+METRIC audit_altgeo_worst_inconsistency 3137.000
+METRIC audit_altgeo_consistency_violations_goal_reachable 0
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 1409ms
+METRIC machine_busy_pct_after 2
+METRIC loadavg_after 0.59

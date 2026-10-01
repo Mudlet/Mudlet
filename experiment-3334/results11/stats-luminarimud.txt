@@ -1,0 +1,17 @@
+METRIC gate_waited_s 39
+METRIC machine_busy_pct_before 16
+METRIC loadavg_before 2.11
+METRIC build_asan 0
+METRIC stats_vertices 806
+METRIC stats_sinks_no_exit 0
+METRIC stats_sources_no_entrance 0
+METRIC stats_wcc_count 2
+METRIC stats_wcc_size_rank0 619
+METRIC stats_wcc_size_rank1 187
+METRIC stats_wcc_singletons 0
+METRIC stats_scc_count 2
+METRIC stats_scc_size_rank0 619
+METRIC stats_scc_size_rank1 187
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 396ms
+METRIC machine_busy_pct_after 15
+METRIC loadavg_after 2.10
