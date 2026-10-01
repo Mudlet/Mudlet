@@ -93,11 +93,10 @@ TTimer::~TTimer()
 
 void TTimer::setName(const QString& name)
 {
-    // temp timers do not need to check for names referring to multiple
-    // timer objects as names=ID -> much faster tempTimer creation
-    if (!isTemporary()) {
-        mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
-    }
+    // Temporary timers are renamed too (a package's from its id to the name it
+    // was saved with), and killTimer() trusts this table to hold only current
+    // names of live timers:
+    mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
     mName = name;
     // Merely for information if needed later:
     mpQTimer->setObjectName(qsl("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
