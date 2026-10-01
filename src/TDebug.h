@@ -169,6 +169,10 @@ private:
     inline static QQueue<TDebugMessage> smPausedQueue;
     inline static int smPausedDroppedCount = 0;
     static constexpr int csmPausedQueueLimit = 10000;
+    // The backlog has the same cap, or a run that never opens the console (headless, or a user who never
+    // turns on debugging) keeps every unguarded line - profile starts, connection steps - until it exits:
+    static constexpr int csmMessageQueueLimit = csmPausedQueueLimit;
+    inline static int smMessageQueueDroppedCount = 0;
 
     static Categories smEnabledCategories;
     inline static QSet<const Host*> smDisabledHosts;
@@ -235,6 +239,7 @@ public:
     static int pausedMessageCount() { return smPausedQueue.count(); }
     static int pausedDroppedCount() { return smPausedDroppedCount; }
     static int pausedMessageLimit() { return csmPausedQueueLimit; }
+    static int messageQueueLimit() { return csmMessageQueueLimit; }
     static void discardPausedMessages();
 
     // Used to flush/print out the accumulated message:

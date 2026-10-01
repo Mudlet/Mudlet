@@ -336,11 +336,10 @@ private slots:
     }
 
     // Past the cap the OLDEST held messages are discarded and counted, so that
-    // resuming can say how much of the history is missing. Asserted on the
-    // queue rather than the console: replaying a full queue is by definition
-    // enough to overflow the console's own line limit, so what survives in the
-    // buffer afterwards says more about TBuffer::shrinkBuffer() than about the
-    // cap being tested here.
+    // resuming can say how much of the history is missing. The cap is asserted
+    // on the queue rather than the console: replaying a full queue is by
+    // definition enough to overflow the console's own line limit, which is also
+    // why the notice has to come after the replay to survive in it.
     void test_pausedQueueDropsTheOldestPastItsCap()
     {
         auto* host = startDebuggingProfile();
@@ -363,6 +362,7 @@ private slots:
         QVERIFY2(!TDebug::pausedDroppedCount(), "The dropped count survived the replay that was supposed to report it");
         // The newest is at the tail of the replay, so it outlives any trimming:
         QVERIFY2(debugBufferContains(qsl("held message %1").arg(limit + 1)), "The newest held message did not survive the replay");
+        QVERIFY2(debugBufferContains(qsl("2 message(s) dropped while paused")), "The dropped-message notice was pushed out of the console by the replay it introduces");
     }
 
     // A message held back keeps the time it arrived, so a replayed burst does
@@ -615,6 +615,61 @@ private slots:
         }
         const QString window = qsl("%1- %2").arg(before.time().toString(TBuffer::smTimeStampFormat), after.time().toString(TBuffer::smTimeStampFormat));
         QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Backlog line was stamped %1, outside its arrival window %2").arg(sink.lines.at(0).timeStamp, window)));
+    }
+
+    // Lines written with no sink wait for one, but only as many as the console
+    // could show: a run that never opens it would otherwise keep them all for as
+    // long as it lasts. The oldest go first, and the sink that finally turns up
+    // is told how many - once.
+    void test_backlogDropsTheOldestPastItsCapAndSaysHowMany()
+    {
+        RecordingDebugSink sink;
+        installSink(sink);
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setSink(nullptr);
+
+        // Two more than the backlog can hold, so exactly the first two go:
+        const int limit = TDebug::messageQueueLimit();
+        for (int i = 0; i < limit + 2; ++i) {
+            TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << qsl("backlog message %1\n").arg(i) >> nullptr;
+        }
+
+        TDebug::setSink(&sink);
+        TDebug::flushMessageQueue();
+
+        QCOMPARE(sink.lines.size(), limit + 1);
+        QVERIFY2(sink.lines.at(0).text.endsWith(qsl("backlog message 2\n")), qPrintable(sink.lines.at(0).text));
+        QVERIFY2(sink.lines.at(limit - 1).text.endsWith(qsl("backlog message %1\n").arg(limit + 1)), qPrintable(sink.lines.at(limit - 1).text));
+        QVERIFY2(sink.lines.last().text.contains(qsl("2 older message(s) were dropped")), qPrintable(sink.lines.last().text));
+
+        sink.lines.clear();
+        TDebug::setSink(nullptr);
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "later backlog\n" >> nullptr;
+        TDebug::setSink(&sink);
+        TDebug::flushMessageQueue();
+        QCOMPARE(sink.lines.size(), 1);
+        QVERIFY2(sink.lines.at(0).text.endsWith(qsl("later backlog\n")), qPrintable(sink.lines.at(0).text));
+    }
+
+    // The notice has to survive the console it is replayed into: a full backlog
+    // is as many lines as that console keeps, so it must not push the notice out.
+    void test_droppedBacklogNoticeSurvivesAFullReplayIntoTheConsole()
+    {
+        startDebuggingProfile();
+        auto* console = mudlet::smpDebugConsole.data();
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setSink(nullptr);
+
+        const int limit = TDebug::messageQueueLimit();
+        for (int i = 0; i < limit + 2; ++i) {
+            TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << qsl("backlog message %1\n").arg(i) >> nullptr;
+        }
+
+        TDebug::setSink(console);
+        TDebug::flushMessageQueue();
+
+        QVERIFY2(debugBufferContains(qsl("backlog message %1").arg(limit + 1)), "The newest backlog line did not reach the console");
+        QVERIFY2(debugBufferContains(qsl("2 older message(s) were dropped while the Central Debug Console was closed")), "The dropped-message notice was pushed out of the console by the backlog it introduces");
     }
 
     // Resuming hands each held line to the sink stamped with the time it
