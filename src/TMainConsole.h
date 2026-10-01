@@ -200,12 +200,15 @@ public:
     std::optional<QString> mapWidgetTitle() const;
     std::optional<QRect> mapWidgetGeometry() const;
     bool hideMapWidget();
-    TToolBar* createToolBar(TAction* pAction, const QString& name);
-    TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
-    void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
-    void detachEasyButtonBar(TEasyButtonBar* pBar, int location);
-    void dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area);
-    void undockToolBar(TToolBar* pToolBar);
+    // Brings the bars in line with the root actions (for a package, with the
+    // toolbars in it): makes, fills and places each, and destroys any left from
+    // an action that has switched between docked and floating. The lists are
+    // the ActionUnit's record of the bars made for it.
+    void regenerateToolBars(const std::list<TAction*>& rootActions, std::list<QPointer<TToolBar>>& toolBars);
+    void regenerateEasyButtonBars(const std::list<TAction*>& rootActions, std::list<QPointer<TEasyButtonBar>>& easyButtonBars);
+    // Takes an action's bars out of the window without destroying them, for an
+    // action that is being removed or has stopped being a root one.
+    void detachActionBars(TAction* pAction);
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();
@@ -262,6 +265,14 @@ signals:
 
 
 private:
+    TToolBar* createToolBar(TAction* pAction, const QString& name);
+    TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
+    void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
+    void detachEasyButtonBar(TEasyButtonBar* pBar, int location);
+    void dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area);
+    void undockToolBar(TToolBar* pToolBar);
+    void constructToolbar(TAction* pAction, TToolBar* pToolBar, std::list<QPointer<TToolBar>>& toolBars);
+    void constructToolbar(TAction* pA, TEasyButtonBar* pTB, std::list<QPointer<TEasyButtonBar>>& easyButtonBars);
     // The latency box repaints on every setText(), so a flood of packets is
     // shown at most once per pace interval - the same cap the panes paint at.
     static constexpr int csmLatencyBoxPaceMs = 16;

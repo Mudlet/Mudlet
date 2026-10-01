@@ -75,12 +75,6 @@ public:
     int processingDepth() const { return mProcessingDepth; }
     void updateAllToolbars();
     std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
-    TAction* getHeadAction(TToolBar*);
-    TAction* getHeadAction(TEasyButtonBar*);
-    void regenerateToolBars();
-    void regenerateEasyButtonBars();
-    void constructToolbar(TAction*, TToolBar* pToolBar);
-    void constructToolbar(TAction*, TEasyButtonBar* pTB);
     std::pair<bool, QString> showToolBar(const QString&);
     std::pair<bool, QString> hideToolBar(const QString&);
 
