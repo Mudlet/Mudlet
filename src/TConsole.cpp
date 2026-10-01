@@ -1266,9 +1266,10 @@ void TConsole::changeColors()
         buffer.updateColors();
     }
     if (mType & (MainConsole | Buffer)) {
-        buffer.mWrapAt = mpHost->mWrapAt;
-        buffer.mWrapIndent = mpHost->mWrapIndentCount;
-        buffer.mWrapHangingIndent = mpHost->mWrapHangingIndentCount;
+        // the console's own copies too, as wrapLine() rewraps with those
+        setWrapAt(mpHost->mWrapAt);
+        setIndentCount(mpHost->mWrapIndentCount);
+        setHangingIndentCount(mpHost->mWrapHangingIndentCount);
     }
 
     updateScrollBarStyle();
