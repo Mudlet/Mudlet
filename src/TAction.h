@@ -38,10 +38,8 @@
 
 #include <algorithm>
 
-class EAction;
 class Host;
 class mudlet;
-class TFlipButton;
 class TLuaInterpreter;
 
 
@@ -161,9 +159,6 @@ public:
     QString packageName(TAction* pAction) const;
     QString moduleName(TAction* pAction) const;
 
-
-    QPointer<EAction> mpEAction;
-    QPointer<TFlipButton> mpFButton;
     /* The following was an int but there was confusion over:
      * EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down,
      * OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up.

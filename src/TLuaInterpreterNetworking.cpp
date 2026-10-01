@@ -26,14 +26,12 @@
 
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TIrcClient.h"
 #include "TMap.h"

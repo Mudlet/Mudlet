@@ -177,10 +177,7 @@ void TEasyButtonBar::addActionButtons(TAction* pAction)
             pTFlipButton->setMenu(pNewMenu);
         }
 
-        if (pTAction->mpFButton) {
-            pTAction->mpFButton->deleteLater();
-        }
-        pTAction->mpFButton = pTFlipButton;
+        pAction->mpHost->mpConsole->replaceActionButton(pTAction, pTFlipButton);
 
         // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
         // add the button to the toolbar AFTER any menu (children) items have
@@ -211,10 +208,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
             pEAction->setChecked(false);
         }
 
-        if (pTAction->mpEAction) {
-            pTAction->mpEAction->deleteLater();
-        }
-        pTAction->mpEAction = pEAction;
+        mpTAction->mpHost->mpConsole->replaceActionMenuEntry(pTAction, pEAction);
 
         //FIXME: Heiko April 2012 -> addActionButtons()
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {

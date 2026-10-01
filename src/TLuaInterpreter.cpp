@@ -29,7 +29,6 @@
 #include "TLuaInterpreter.h"
 
 
-#include "EAction.h"
 #include "FontManager.h"
 #include "Host.h"
 #include "MudletApp.h"
@@ -42,7 +41,6 @@
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TGameDetails.h"
 #include "TKey.h"

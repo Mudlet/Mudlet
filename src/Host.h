@@ -77,7 +77,6 @@ class CredentialManager;
 class TRoom;
 class TConsole;
 class TMainConsole;
-class TToolBar;
 struct TConsoleModel;
 class TMap;
 class MMCPServer;
@@ -608,7 +607,6 @@ public:
     void setupIreDriverBugfix();
 
     void setDockLayoutUpdated(const QString&);
-    void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height)
     {
@@ -1008,7 +1006,6 @@ public:
     QPointer<TIrcClient> mpIrcClient;
     QPointer<MMCPServer> mMMCPServer;
     QList<QString> mDockLayoutChanges;
-    QList<QPointer<TToolBar>> mToolbarLayoutChanges;
 
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
