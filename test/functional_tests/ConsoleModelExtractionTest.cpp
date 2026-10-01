@@ -162,6 +162,7 @@ private slots:
         QCOMPARE(&console->mEngineCursor, &model.mEngineCursor);
         QCOMPARE(&console->mUserCursor, &model.mUserCursor);
         QCOMPARE(&console->mIsPromptLine, &model.mIsPromptLine);
+        QCOMPARE(&console->mTriggerEngineMode, &model.mTriggerEngineMode);
         QCOMPARE(&console->mLogFile, &model.mLogFile);
         QCOMPARE(&console->mLogFileName, &model.mLogFileName);
         QCOMPARE(&console->mLogStream, &model.mLogStream);
@@ -314,6 +315,63 @@ private slots:
         QCOMPARE(model->mCurrentLine, qsl("ViewlessPipeline gamma"));
         QCOMPARE(model->mEngineCursor, fedLine);
         QVERIFY2(!model->mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
+    }
+
+    // isPrompt() and getLines() read only the model, so they answer with no view.
+    void test_triggerContextQueriesAnswerWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host,
+               qsl("viewlessPrompt = 'none'\n"
+                   "tempRegexTrigger('^ViewlessContext', [[viewlessPrompt = tostring(isPrompt())]], 10)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->reenableAllTriggers();
+
+        // Both answers from the prompt flag of the line under the cursor; the
+        // trigger-context fallback is the next test's
+        const int promptLine = appendModelLine(model->buffer, qsl("ViewlessContext prompt>"));
+        model->buffer.promptBuffer[promptLine] = true;
+        host->runTriggers(promptLine);
+        QCOMPARE(luaGlobalString(host, "viewlessPrompt"), qsl("true"));
+
+        const int fedLine = appendModelLine(model->buffer, qsl("ViewlessContext delta"));
+        host->runTriggers(fedLine);
+        QCOMPARE(luaGlobalString(host, "viewlessPrompt"), qsl("false"));
+
+        const auto [success, lines] = host->getLines(qsl("main"), fedLine, fedLine + 1);
+        QVERIFY2(success, qPrintable(lines.join(QChar::LineFeed)));
+        QCOMPARE(lines, QStringList{qsl("ViewlessContext delta")});
+    }
+
+    // With the cursor past the prompt flags, isPrompt() falls back to the
+    // model's trigger-context flag, and reads it with no view.
+    void test_isPromptFallsBackToTheModelsTriggerContextWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        model->mUserCursor.setY(model->buffer.promptBuffer.size());
+        model->mIsPromptLine = true;
+
+        model->mTriggerEngineMode = true;
+        runLua(host, qsl("viewlessFallback = tostring(isPrompt())"));
+        QCOMPARE(luaGlobalString(host, "viewlessFallback"), qsl("true"));
+
+        model->mTriggerEngineMode = false;
+        runLua(host, qsl("viewlessFallback = tostring(isPrompt())"));
+        QCOMPARE(luaGlobalString(host, "viewlessFallback"), qsl("false"));
+        model->mIsPromptLine = false;
     }
 
     // A colorizer trigger recolors its match by selecting a run of the line and

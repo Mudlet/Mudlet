@@ -200,7 +200,6 @@ public:
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void pasteWindow(const TBuffer&);
-    QStringList getLines(int from, int to);
     int getLineNumber();
     int getLineCount();
     bool deleteLine(int);
@@ -414,7 +413,7 @@ public:
 
     QElapsedTimer mProcessingTimer;
 
-    bool mTriggerEngineMode = false;
+    bool& mTriggerEngineMode;
 
     QPoint& mUserCursor;
     int mWrapAt = 100;
