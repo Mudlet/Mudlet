@@ -2668,8 +2668,13 @@ TIrcClient* Host::getOrCreateIrcClient()
 
 void Host::showIrcClient()
 {
-    getOrCreateIrcClient();
+    QPointer<TIrcClient> client = getOrCreateIrcClient();
+    // A window starts the session as it is shown, so it sees it connect. Whoever else is
+    // listening, or nobody at all, the session still starts: start() does nothing twice.
     emit signal_showIrcClient();
+    if (client) {
+        client->start();
+    }
 }
 
 void Host::enableTimer(const QString& name)

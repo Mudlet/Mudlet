@@ -234,6 +234,34 @@ private:
         return runLua(qsl("ircEvents = {}"));
     }
 
+    // As openJoinedClient(), with no frontend to show a window
+    bool openHeadlessJoinedClient()
+    {
+        QObject::disconnect(mpHost, &Host::signal_showIrcClient, nullptr, nullptr);
+        if (!storeSettings(mNick, mChannel)) {
+            return false;
+        }
+        const int connection = mpIrcServer->connectionCount();
+        if (luaValues(qsl("openIRC()")) != qsl("true") || mpHost->mpDlgIRC || !waitForConnection(connection + 1)) {
+            return false;
+        }
+        if (!welcome(mNick) || !waitForLine(connection, qsl("JOIN %1").arg(mChannel).toUtf8()) || !mpIrcServer->sendLine(qsl(":%1!u@h JOIN %2").arg(mNick, mChannel).toUtf8())) {
+            return false;
+        }
+        return waitForJoinEvent() && runLua(qsl("ircEvents = {}"));
+    }
+
+    // The channel list names the stored channels before any JOIN, so it can't
+    // tell that the server's JOIN has arrived; our own join reaching Lua can
+    bool waitForJoinEvent()
+    {
+        return QTest::qWaitFor(
+                [this]() {
+                    return events().contains(qsl("%1>%2:! You have joined %2 as %1").arg(mNick, mChannel));
+                },
+                5000);
+    }
+
     QStringList bufferTitles() const
     {
         QStringList titles;
@@ -312,6 +340,10 @@ private slots:
         if (mpHost && mpHost->mpDlgIRC) {
             delete mpHost->mpDlgIRC;
             // lets the stub read the QUIT before the next test looks at its lines
+            QTest::qWait(100);
+        }
+        if (mpHost && mpHost->mpIrcClient) {
+            delete mpHost->mpIrcClient.data();
             QTest::qWait(100);
         }
         if (mpHost) {
@@ -613,7 +645,7 @@ private slots:
         QVERIFY2(shownText().contains(qsl("! %1 replied in ").arg(mServerName)), qPrintable(shownText()));
     }
 
-    // Only a window starts a session, so one without a window never connects
+    // Creating a session does not start it, so one nothing has started never connects
     void test_aSessionWithoutAWindowDoesNotConnect()
     {
         QVERIFY(storeSettings(mNick, mChannel));
@@ -686,23 +718,62 @@ private slots:
         QVERIFY2(visibleAtSessionEnd, "the window heard its session go");
     }
 
-    // With no frontend to start it, openIRC() leaves a session that never
-    // connected, and restarting it must not connect it behind no window. Last,
-    // since it takes the frontend away for good.
-    void test_restartIrcLeavesASessionWithNoFrontendClosed()
+    // Without a frontend the session runs with no window: connected, joined, and
+    // reporting its channel's lines. These take the frontend away for good, so
+    // they come last.
+    void test_withNoFrontendOpenIrcRunsTheSession()
+    {
+        const int connection = mpIrcServer->connectionCount();
+        QVERIFY(openHeadlessJoinedClient());
+
+        QVERIFY(mpIrcServer->sendLine(qsl(":alice!u@h PRIVMSG %1 :hello there").arg(mChannel).toUtf8()));
+        QVERIFY2(waitForEvents(qsl("alice>%1:hello there").arg(mChannel)), qPrintable(events()));
+
+        QCOMPARE(luaValues(qsl("sendIrc('%1', 'hi back')").arg(mChannel)), qsl("true"));
+        QVERIFY(waitForLine(connection, qsl("PRIVMSG %1 :hi back").arg(mChannel).toUtf8()));
+    }
+
+    void test_withNoFrontendRestartIrcReconnectsTheSession()
+    {
+        QVERIFY(openHeadlessJoinedClient());
+        const int oldConnection = mpIrcServer->connectionCount() - 1;
+
+        QCOMPARE(luaValues(qsl("restartIrc()")), qsl("true"));
+        QVERIFY2(waitForLine(oldConnection, "QUIT :Restarting IRC Client"), "the old connection was not quit");
+        QVERIFY2(waitForConnection(oldConnection + 2), "the client did not reconnect");
+        QVERIFY(welcome(mNick));
+        QVERIFY(waitForLine(oldConnection + 1, qsl("JOIN %1").arg(mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1!u@h JOIN %2").arg(mNick, mChannel).toUtf8()));
+        QVERIFY2(waitForJoinEvent(), qPrintable(events()));
+        QVERIFY(runLua(qsl("ircEvents = {}")));
+
+        QVERIFY(mpIrcServer->sendLine(qsl(":alice!u@h PRIVMSG %1 :welcome back").arg(mChannel).toUtf8()));
+        QVERIFY2(waitForEvents(qsl("alice>%1:welcome back").arg(mChannel)), qPrintable(events()));
+    }
+
+    void test_withNoFrontendSendIrcStartsTheSession()
     {
         QVERIFY(storeSettings(mNick, mChannel));
-        QVERIFY(!mpHost->mpDlgIRC);
         QObject::disconnect(mpHost, &Host::signal_showIrcClient, nullptr, nullptr);
         const int connectionsBefore = mpIrcServer->connectionCount();
 
-        QCOMPARE(luaValues(qsl("openIRC()")), qsl("true"));
+        QCOMPARE(luaValues(qsl("sendIrc('%1', 'first')").arg(mChannel)), qsl("nil|not ready to send just yet"));
         QVERIFY2(!mpHost->mpDlgIRC, "SETUP: something still opened the IRC window");
-        QVERIFY2(mpHost->mpIrcClient, "SETUP: openIRC() made no session");
+        QVERIFY2(waitForConnection(connectionsBefore + 1), "sendIrc() with no frontend did not connect");
+    }
 
-        QCOMPARE(luaValues(qsl("restartIrc()")), qsl("false"));
-        QTest::qWait(500);
-        QCOMPARE(mpIrcServer->connectionCount(), connectionsBefore);
+    // A listener that shows no window, such as this spy, is no frontend to start the session
+    void test_withNoFrontendAnotherListenerLeavesTheSessionRunning()
+    {
+        QVERIFY(storeSettings(mNick, mChannel));
+        QObject::disconnect(mpHost, &Host::signal_showIrcClient, nullptr, nullptr);
+        QSignalSpy showRequests(mpHost, &Host::signal_showIrcClient);
+        const int connectionsBefore = mpIrcServer->connectionCount();
+
+        QCOMPARE(luaValues(qsl("openIRC()")), qsl("true"));
+        QCOMPARE(showRequests.count(), 1);
+        QVERIFY2(!mpHost->mpDlgIRC, "SETUP: something still opened the IRC window");
+        QVERIFY2(waitForConnection(connectionsBefore + 1), "openIRC() with a listener that opens no window did not connect");
     }
 };
 

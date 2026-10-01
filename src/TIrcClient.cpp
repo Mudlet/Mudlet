@@ -250,7 +250,7 @@ void TIrcClient::sendCommand(IrcCommand* command)
 
 bool TIrcClient::restart(bool reloadConfigs)
 {
-    // A session no frontend has started stays closed until one does
+    // a session that was never started stays closed
     if (!mStarted) {
         return false;
     }

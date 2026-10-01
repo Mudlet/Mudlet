@@ -329,7 +329,7 @@ public:
     void postIrcMessage(const QString&, const QString&, const QString&);
     // The running IRC session, creating one if there is none.
     TIrcClient* getOrCreateIrcClient();
-    // As getOrCreateIrcClient(), and asks the frontend to show it.
+    // As getOrCreateIrcClient(), asks the frontend to show it, and starts the session.
     void showIrcClient();
     void enableTimer(const QString&);
     void disableTimer(const QString&);
