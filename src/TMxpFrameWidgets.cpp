@@ -29,11 +29,40 @@
 #include <QFrame>
 #include <QResizeEvent>
 #include <QSizePolicy>
-#include <QStackedWidget>
 #include <QTabWidget>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <utility>
+
+namespace {
+
+// Only the page at the front of a header is resized with it, so every page
+// reports its resizes as the size of them all
+class TabPageWatcher : public QObject
+{
+public:
+    TabPageWatcher(QWidget* page, TMxpFrameWidgets* widgets, const QString& headerName)
+    : QObject(page)
+    , mpWidgets(widgets)
+    , mHeaderName(headerName)
+    {
+        page->installEventFilter(this);
+    }
+
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Resize) {
+            mpWidgets->reportTabAreaSize(mHeaderName, static_cast<QResizeEvent*>(event)->size());
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    TMxpFrameWidgets* mpWidgets;
+    QString mHeaderName;
+};
+
+} // namespace
 
 TMxpFrameWidgets::TMxpFrameWidgets(TMainConsole* pMainConsole)
 : mpMainConsole(pMainConsole)
@@ -114,6 +143,11 @@ void TMxpFrameWidgets::createInternalFrame(const QString& name, const QString& h
         int tabIndex = tabWidget->addTab(tabPage, title);
         tabWidget->setCurrentIndex(tabIndex); // Make this tab active
         containerLayout->addWidget(tabWidget);
+
+        // What the page is given until it is laid out, which a profile in a
+        // background tab has to wait for
+        reportTabAreaSize(name, console->size());
+        new TabPageWatcher(tabPage, this, name);
     } else {
         // Floating/borderless: console directly in container, no tab header
         console = mpMainConsole->createSubConsole(name, containerWidget);
@@ -202,19 +236,6 @@ std::optional<QSize> TMxpFrameWidgets::createExternalFrame(const QString& name, 
     return console->size();
 }
 
-std::optional<QSize> TMxpFrameWidgets::tabAreaSize(const QString& parentName) const
-{
-    const QTabWidget* tabWidget = frameTabs(parentName);
-    if (!tabWidget) {
-        return std::nullopt;
-    }
-    // Every page gets the inside of the header's page stack
-    if (const auto* pages = tabWidget->findChild<QStackedWidget*>(QString(), Qt::FindDirectChildrenOnly)) {
-        return pages->contentsRect().size();
-    }
-    return tabWidget->size();
-}
-
 void TMxpFrameWidgets::createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select)
 {
     QTabWidget* parentTabWidget = frameTabs(parentName);
@@ -239,6 +260,7 @@ void TMxpFrameWidgets::createTabFrame(const QString& name, const QString& title,
     console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     tabPageLayout->addWidget(console);
+    new TabPageWatcher(tabPage, this, parentName);
 
     mFrames.insert(name, {tabPage, console, nullptr});
 
@@ -352,6 +374,14 @@ void TMxpFrameWidgets::reportSize()
     // TConsole::resizeEvent() sets to the full console size until the layout
     // corrects it
     mpMainConsole->mpHost->mMxpFrameManager.setMainConsoleSize(mpMainConsole->getMainWindowSize(), mpMainConsole->size());
+}
+
+void TMxpFrameWidgets::reportTabAreaSize(const QString& headerName, const QSize& size)
+{
+    if (mpMainConsole->mpHost && mpMainConsole->mpHost->mMxpFrameManager.setTabAreaSize(headerName, size)) {
+        // Deferred, as a page is resized from inside the relayout that moves its header
+        scheduleSizeReport(true);
+    }
 }
 
 TPrintSink* TMxpFrameWidgets::sink(const QString& name) const

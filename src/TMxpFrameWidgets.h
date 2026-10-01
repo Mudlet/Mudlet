@@ -49,9 +49,6 @@ public:
     // manager from then on. The size the window is shown at, or nothing when no
     // console could be made for it.
     std::optional<QSize> createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling);
-    // The space a tab added to parentName's header has, or nothing when that
-    // frame has no header to add one to
-    std::optional<QSize> tabAreaSize(const QString& parentName) const;
     void createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select);
     // False, leaving everything alone, when name is not a tab in parentName's header
     bool removeFromParentTabs(const QString& name, const QString& parentName);
@@ -69,6 +66,9 @@ public:
     void scheduleSizeReport(bool relayout);
     // Tells the frame manager the main console's size now
     void reportSize();
+    // Tells the frame manager the space the pages of headerName's tabs have,
+    // and has it place what is nested in them again if that changed it
+    void reportTabAreaSize(const QString& headerName, const QSize& size);
     // Null for a frame without a console, and for one that would print back
     // into the main console
     TPrintSink* sink(const QString& name) const;

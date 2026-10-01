@@ -856,6 +856,38 @@ private slots:
         QCOMPARE(frameGeometry(qsl("footer")), QRect(0, page->height() - 30, page->width(), 30));
     }
 
+    // Every page of a header gets the same space, so a frame nested in a tab
+    // that is not at the front follows a resize as one at the front does
+    void test_frameNestedInATabBehindAnotherFollowsAResize()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("front"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        QVERIFY(createFrame(qsl("back"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        QTabWidget* tabs = frameTabs(qsl("titled"));
+        QWidget* front = frameWidget(qsl("front"));
+        QWidget* back = frameWidget(qsl("back"));
+        QVERIFY(tabs && front && back);
+        QCOMPARE(tabs->currentWidget(), front);
+
+        mpHost->mMxpFrameManager.setDestination(qsl("back"), false, false);
+        QVERIFY(createFrame(qsl("inback"), qsl("bottom"), qsl("100%"), qsl("30px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        QVERIFY2(front->height() > 100, "the tab's page was never laid out");
+        QCOMPARE(frameGeometry(qsl("inback")), QRect(0, front->height() - 30, front->width(), 30));
+
+        const QSize pageBefore = front->size();
+        mudlet::self()->resize(1000, 700);
+        settle();
+        const QSize page = front->size();
+        QVERIFY2(page != pageBefore, "the resize did not change the tab's page");
+        QCOMPARE(frameGeometry(qsl("inback")), QRect(0, page.height() - 30, page.width(), 30));
+
+        tabs->setCurrentWidget(back);
+        settle();
+        QCOMPARE(back->size(), page);
+        QCOMPARE(frameGeometry(qsl("inback")), QRect(0, page.height() - 30, page.width(), 30));
+    }
+
     // what is shown inside a tab goes with it
     void test_closingATabClosesTheFramesNestedInIt()
     {
@@ -935,6 +967,36 @@ private slots:
 
         showTab(mHostname);
         QCOMPARE(frameGeometry(qsl("status")), whileHidden);
+    }
+
+    // A header opened while its profile waits in a background tab is not laid
+    // out until the profile comes back, so what is nested in its tabs has to be
+    // placed again then, against the pages the header finally gives them
+    void test_frameNestedInATabOpenedInABackgroundTabFitsItsPage()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        // closed again here, as its tab bar would change the window every later case lays out in
+        const auto closeSecondProfile = qScopeGuard([this]() {
+            showTab(mHostname);
+            mudlet::self()->slot_closeProfileByName(mSecondHostname);
+            QTest::qWait(1000ms);
+        });
+        showTab(mSecondHostname);
+        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        mpHost->mMxpFrameManager.setDestination(qsl("tab"), false, false);
+        QVERIFY(createFrame(qsl("intab"), qsl("top"), qsl("100%"), qsl("40px")));
+        QVERIFY(createFrame(qsl("footer"), qsl("bottom"), qsl("100%"), qsl("30px")));
+        mpHost->mMxpFrameManager.clearDestination();
+
+        showTab(mHostname);
+        QWidget* page = frameWidget(qsl("tab"));
+        QVERIFY(page);
+        QVERIFY2(page->height() > 100, "the tab's page was never laid out");
+        QCOMPARE(frameGeometry(qsl("intab")), QRect(0, 0, page->width(), 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, page->height() - 30, page->width(), 30));
     }
 
     // The console reports its new size a turn after the resize, so a frame

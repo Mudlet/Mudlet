@@ -77,8 +77,11 @@ struct TMxpFrame {
     QString hostFrame;
     // Where a Placed frame was last put, or the inside of a Window as the view
     // last reported it, which frames nested in it are placed against. A Tab's
-    // inside is whatever its header gives it at the time.
+    // inside is its header's tabArea.
     QRect geometry;
+    // The space every page of this frame's tab header gets, as the view last
+    // reported it; nothing for a frame without a header
+    std::optional<QSize> tabArea;
     
     // Hierarchy tracking (non-owning references - see ownership model above)
     TMxpFrame* parentFrame = nullptr;
@@ -137,6 +140,10 @@ public:
     // What the view measures of an EXTERNAL frame's window whenever the player
     // or a script resizes it; the frames open inside it are placed again
     void setWindowSize(const QString& name, const QSize& size);
+    // What the view measures of the pages of name's tab header whenever they
+    // are resized. True when frames nested in its tabs have to be placed again,
+    // which is left to the caller as this is reported from inside a relayout.
+    bool setTabAreaSize(const QString& name, const QSize& size);
 
     // Configuration
     static constexpr int MAX_FRAMES = 20;
