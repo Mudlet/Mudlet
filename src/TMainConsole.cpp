@@ -771,6 +771,11 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
                 // child widget, so destroying the dock destroys the console with
                 // it. (No WA_DeleteOnClose - we delete programmatically here, not
                 // in response to a close event.)
+                // Out of the dock layout now, though: an event loop nested in
+                // this turn (pumpEvents(), a JSON map import) holds the deferred
+                // delete back, and until it runs the dock keeps its share of the
+                // dock area from every user window docked after it.
+                mudlet::self()->removeDockWidget(pDock);
                 pDock->deleteLater();
             } else {
                 pConsole->deleteLater();
