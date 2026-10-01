@@ -482,6 +482,42 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("local", f("{fstringSpecPlanted}"))
     end)
 
+    it("should keep what a helper wrote into an expression's environment through a nested f", function()
+      local setter = function(k, v)
+        getfenv(2)[k] = v
+        return ""
+      end
+      local nested = function()
+        return f("{1}")
+      end
+      assert.equals("1kept", f("{setter('fstringSpecHelperWrite', 'kept') .. nested() .. fstringSpecHelperWrite}"))
+    end)
+
+    it("should give every evaluation an environment whose lookup a helper cannot spoil for the next", function()
+      local spoiler = function()
+        setmetatable(getfenv(2), {})
+        return "spoilt"
+      end
+      assert.equals("spoilt", f("{spoiler() .. ''}"))
+      local hp = 42
+      assert.equals("42", f("{hp}"))
+    end)
+
+    it("should read globals from the environment f itself is given", function()
+      local sandbox = setmetatable({fstringSpecSandboxed = "inside"}, {__index = _G})
+      local original = getfenv(f)
+      _G.fstringSpecOutside = "outside"
+      setfenv(f, sandbox)
+      local ok, inside, outside = pcall(function()
+        return f("{fstringSpecSandboxed}"), f("{fstringSpecOutside}")
+      end)
+      setfenv(f, original)
+      _G.fstringSpecOutside = nil
+      assert.is_true(ok, tostring(inside))
+      assert.equals("inside", inside)
+      assert.equals("nil", outside)
+    end)
+
     it("should not treat % as a format directive", function()
       assert.equals("100% sure", f("100% sure"))
       assert.equals("50% of 4 is 2", f("50% of 4 is {4/2}"))
