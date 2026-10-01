@@ -27,6 +27,7 @@
 #include "HostManager.h"
 #include "mudlet.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "widgetutils.h"
 #include "utils.h"
 #include "dlgMapper.h"
@@ -3124,25 +3125,21 @@ void TDetachedWindow::slot_mudletDiscord()
 void TDetachedWindow::slot_muteMedia()
 {
     withCurrentProfileActive([this]() {
-        mudlet::self()->slot_muteMedia();
+        MudletMedia::self()->toggleAllMuted();
     });
 }
 
 void TDetachedWindow::slot_muteAPI()
 {
     withCurrentProfileActive([this]() {
-        // Toggle the current API mute state
-        bool currentState = mudlet::self()->muteAPI();
-        mudlet::self()->slot_muteAPI(!currentState);
+        MudletMedia::self()->setApiMuted(!MudletMedia::self()->apiMuted());
     });
 }
 
 void TDetachedWindow::slot_muteGame()
 {
     withCurrentProfileActive([this]() {
-        // Toggle the current game mute state
-        bool currentState = mudlet::self()->muteGame();
-        mudlet::self()->slot_muteGame(!currentState);
+        MudletMedia::self()->setGameMuted(!MudletMedia::self()->gameMuted());
     });
 }
 

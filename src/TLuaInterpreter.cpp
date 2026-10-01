@@ -33,6 +33,7 @@
 #include "FontManager.h"
 #include "Host.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TBuffer.h"
@@ -9300,11 +9301,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     if (key == qsl("muteMediaAPI")) {
-        mudlet::self()->slot_muteAPI(getVerifiedBool(L, __func__, 2, "value"));
+        MudletMedia::self()->setApiMuted(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("muteMediaGame")) {
-        mudlet::self()->slot_muteGame(getVerifiedBool(L, __func__, 2, "value"));
+        MudletMedia::self()->setGameMuted(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("enableBlinkText")) {
@@ -9740,11 +9741,11 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("muteMediaAPI"),
              [&]() {
-                 lua_pushboolean(L, mudlet::self()->muteAPI());
+                 lua_pushboolean(L, MudletMedia::self()->apiMuted());
              }},
             {qsl("muteMediaGame"),
              [&]() {
-                 lua_pushboolean(L, mudlet::self()->muteGame());
+                 lua_pushboolean(L, MudletMedia::self()->gameMuted());
              }},
             {qsl("ircHostName"),
              [&]() {

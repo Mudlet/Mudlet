@@ -29,6 +29,7 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
+#include "MudletMedia.h"
 #include "ShortcutsManager.h"
 #include "SpeechRecognizerFactory.h"
 #include "utils.h"
@@ -62,7 +63,6 @@ class QCloseEvent;
 class QDateTime;
 class QDockWidget;
 class QKeyEvent;
-class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
@@ -282,7 +282,6 @@ public:
     void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
     void setupPreInstallPackages(const QString&, const QString&, const bool);
-    void watchAudioOutputDevices();
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
@@ -341,10 +340,6 @@ public:
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
     void writeSettings();
-    bool muteAPI() const { return mMuteAPI; }
-    bool muteGame() const { return mMuteGame; }
-    bool mediaMuted() const { return mMuteAPI && mMuteGame; }
-    bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     bool profileExists(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
@@ -470,9 +465,6 @@ public slots:
     void slot_moduleManager();
     void slot_mudletDiscord();
     void slot_multiView(const bool);
-    void slot_muteMedia();
-    void slot_muteAPI(const bool);
-    void slot_muteGame(const bool);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
     void slot_notes();
     void slot_openMappingScriptsPage();
@@ -579,8 +571,8 @@ signals:
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
-    void slot_audioOutputDeviceChanged();
     void slot_compactInputLine(const bool);
+    void slot_muteSet(bool apiNotGame, bool muted);
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
 #if defined(INCLUDE_UPDATER)
@@ -617,7 +609,6 @@ private:
     bool toolBarShouldBeVisible();
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
-    void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
     static void showEditorRestoringWindowState(QWidget* editor);
 
@@ -640,6 +631,8 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
+    // Before mHostManager, so it is destroyed after the profiles that reach it
+    MudletMedia mMedia;
     HostManager mHostManager;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
@@ -673,9 +666,6 @@ private:
     std::optional<bool> mMenuVisibleState;
     QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
     bool mMultiView = false;
-    bool mMuteAPI = false;
-    bool mMuteGame = false;
-    QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
