@@ -146,6 +146,39 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
     return QObject::eventFilter(obj, event);
 }
 
+namespace {
+class DebugProfileObserver : public TDebug::ProfileObserver
+{
+public:
+    void profilesChanged() override
+    {
+        if (mudlet::smpDebugFilterBar) {
+            mudlet::smpDebugFilterBar->refreshProfiles();
+        }
+    }
+
+    // Installed before init() makes the tab bar, and it outlives mudlet:
+    void profileRenamed(const QString& newName, const QString& tag) override
+    {
+        if (auto* self = mudlet::self(); self && self->mpTabBar) {
+            self->mpTabBar->applyPrefixToDisplayedText(newName, tag);
+        }
+    }
+
+    void profileAddedInDebugMode() override
+    {
+        auto* self = mudlet::self();
+        if (!self) {
+            return;
+        }
+        // The profile's tab does not exist yet, so refresh them all once idle:
+        QTimer::singleShot(0ms, self, [self]() {
+            self->refreshTabBar();
+        });
+    }
+};
+} // namespace
+
 /*static*/ void mudlet::start()
 {
     smpSelf = new mudlet;
@@ -1758,6 +1791,10 @@ void mudlet::applyToolBarStyleToAddonCommands()
 mudlet::mudlet()
 : QMainWindow()
 {
+    // Stateless, reaching the GUI through mudlet::self() and the debug area
+    // statics, so one serves every mudlet instance and is never uninstalled:
+    static DebugProfileObserver debugProfileObserver;
+    TDebug::setProfileObserver(&debugProfileObserver);
     // Initialisation happens later in setupConfig() and init()
 }
 
