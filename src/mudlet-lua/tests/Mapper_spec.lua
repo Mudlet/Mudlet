@@ -4470,8 +4470,10 @@ describe("Tests closing another profile that opened a map widget", function()
     return condition()
   end
 
-  -- Opening the widget moves window activation about, so the main window
-  -- remembers the closing profile's command line to give focus back to
+  -- The new profile has no mapper script, so opening its map widget pops up the
+  -- mapper script reminder dialog, which takes activation from the main window;
+  -- the main window then remembers the closing profile's command line to give
+  -- focus back to once it is active again
   it("survives the main window being activated again after the close", function()
     if not os.getenv("MUDLET_TEST_MODE") then
       pending("waiting for the other profile needs pumpEvents()")
@@ -4479,6 +4481,21 @@ describe("Tests closing another profile that opened a map widget", function()
     end
     assert.is_true(lfs.attributes(profilesDirectory .. "/" .. name) == nil or io.exists(ownerMarker),
       "refusing to touch " .. profilesDirectory .. "/" .. name .. ", which this spec did not create")
+    -- closing a profile saves the shared window layout beside the profiles
+    -- directory, which the next Mudlet start reads, so put it back afterwards
+    local configurationDirectory = profilesDirectory:match("^(.*)[/\\]")
+    local layoutFiles = {
+      configurationDirectory .. "/windowLayout.dat",
+      configurationDirectory .. "/windowLayoutGeometry.dat",
+    }
+    local layoutBefore = {}
+    for _, path in ipairs(layoutFiles) do
+      local handle = io.open(path, "rb")
+      if handle then
+        layoutBefore[path] = handle:read("*a")
+        handle:close()
+      end
+    end
     local opened
     local handler = registerAnonymousEventHandler("mudletSpecMapWidgetOpened", function(_, result)
       opened = result
@@ -4490,6 +4507,15 @@ describe("Tests closing another profile that opened a map widget", function()
       end
       waitUntil(function() return not loaded() end)
       removeOwnedProfile()
+      for _, path in ipairs(layoutFiles) do
+        if layoutBefore[path] then
+          local handle = assert(io.open(path, "wb"))
+          handle:write(layoutBefore[path])
+          handle:close()
+        else
+          os.remove(path)
+        end
+      end
     end)
 
     -- left behind by a run that crashed or was killed
