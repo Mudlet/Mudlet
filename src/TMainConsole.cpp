@@ -34,7 +34,6 @@
 #include "TEasyButtonBar.h"
 #include "TEvent.h"
 #include "TFlipButton.h"
-#include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
@@ -2490,42 +2489,20 @@ bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, con
     return false;
 }
 
-void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
+bool TMainConsole::startIncomingText()
 {
-    Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mProcessingTimer.restart();
+    return mAlertOnNewData;
+}
 
-    // Notify visibility manager of incoming data (for output gap detection)
-    if (isFromServer) {
-        getHyperlinkVisibilityManager().onDataReceived();
-    }
+void TMainConsole::alertNewData()
+{
+    QApplication::alert(mudlet::self(), 0);
+}
 
-    // feedTriggers() lands here, so this runs nested inside an outer pass that
-    // is itself mid-translate; clearing the flag outright would take trigger
-    // context away from the rest of that pass.
-    const bool wasInTriggerEngineMode = mTriggerEngineMode;
-    mTriggerEngineMode = true;
-    const bool alertWanted = mAlertOnNewData && isFromServer;
-    const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
-    const QString beforeTranslateLastLine = alertWanted ? buffer.line(beforeTranslateLastLineNumber - 1) : QString();
-    buffer.translateToPlainText(incomingSocketData, isFromServer);
-    mTriggerEngineMode = wasInTriggerEngineMode;
-
-    if (alertWanted) {
-        const int lastLineNumber = buffer.getLastLineNumber();
-        if (lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine) {
-            QApplication::alert(mudlet::self(), 0);
-        }
-    }
-
-    // dequeues MXP events and raise them through the LuaInterpreter
-    // TODO: move this somewhere else more appropriate
-    auto& mxpEventQueue = mpHost->mMxpClient.mMxpEvents;
-    while (!mxpEventQueue.isEmpty()) {
-        const auto& event = mxpEventQueue.dequeue();
-        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions, event.caption);
-    }
-
+void TMainConsole::finishIncomingText()
+{
+    Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::finishIncomingText()", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mLatencyProcessT = mProcessingTimer.elapsed() / 1000.0;
     if (!mpLatencyBoxPacer->isActive()) {
         mpLatencyBoxPacer->start();
