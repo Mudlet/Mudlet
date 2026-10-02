@@ -1138,6 +1138,18 @@ bool Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    // A Lua API that spins a nested event loop delivers this while the script
+    // that asked for the reset is still running on the state closed below.
+    // A close that has come in meanwhile makes the reset moot.
+    if (mLuaInterpreter.luaOnStack()) {
+        QTimer::singleShot(50ms, this, [this]() {
+            if (!mIsClosingDown) {
+                resetProfile_phase2();
+            }
+        });
+        return;
+    }
+
     // The Lua state goes with the reset, taking every id a package was holding
     // with it, so the commands those ids named have to go too - otherwise a
     // package that places its command from a script adds another on every
