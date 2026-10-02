@@ -1595,7 +1595,6 @@ expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', '')
 expectRefusal('setTextFormat', setTextFormat('main', 0, 0, 0, 255, 255, 255, false, false, false))
 expectRefusal('isAnsiBgColor', isAnsiBgColor(1))
 expectRefusal('isAnsiFgColor', isAnsiFgColor(1))
-expectRefusal('cut', cut())
 expectRefusal('echo', echo('x'))
 expectRefusal('insertHTML', insertHTML('x'))
 expectRefusal('enableScrollBar', enableScrollBar())
@@ -1627,6 +1626,13 @@ expectRefusal('getFont main', getFont('main'))
 expectRefusal('setFont', setFont(anyFont))
 expectRefusal('getFontSize', getFontSize())
 expectRefusal('setFontSize', setFontSize(10))
+-- the main console's clipboard and buffer size are its model's, but there are
+-- no other consoles
+expectRefusal('copy', copy('noViewMini'))
+expectRefusal('paste', paste('noViewMini'))
+expectRefusal('appendBuffer', appendBuffer('noViewMini'))
+expectRefusal('getConsoleBufferSize', getConsoleBufferSize('noViewMini'))
+expectRefusal('setConsoleBufferSize', setConsoleBufferSize('noViewMini', 1000, 100))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1648,6 +1654,9 @@ expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, ge
 expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
 expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
+expectValue('copy reason', 'window "noViewMini" not found', select(2, copy('noViewMini')))
+-- the window is looked for before the maximum is refused for anything but the main console
+expectValue('setConsoleBufferSize reason', 'window "noViewMini" not found', select(2, setConsoleBufferSize('noViewMini', 1000, 100, true)))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())
@@ -1806,6 +1815,138 @@ noViewCursor = table.concat(results, '|')
             QCOMPARE(host->mWrapIndentCount, indent + offset);
             QCOMPARE(host->mWrapHangingIndentCount, hangingIndent + offset);
         }
+    }
+
+    // The main console's buffer size is also the profile's, which the
+    // preferences dialog shows and saves, so setting it by either name of the
+    // main console has to reach the profile, and setting another's must not.
+    void test_theMainConsoleBufferSizeIsTheProfiles()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniConsole = qsl("bufferSizeSpy");
+        runLua(host, qsl("createMiniConsole('%1', 0, 0, 100, 100)\n").arg(miniConsole));
+        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        QVERIFY2(pMiniConsole, "The mini console was not created.");
+        const int maxBufferSize = host->mpConsole->buffer.getMaxBufferSize();
+        QVERIFY(maxBufferSize > 1000);
+
+        host->setConsoleBufferSize(12345);
+        host->setUseMaxConsoleBufferSize(true);
+        runLua(host, qsl("setConsoleBufferSize('%1', 500, 50)\n").arg(miniConsole));
+        QCOMPARE(pMiniConsole->buffer.mLinesLimit, 500);
+        QCOMPARE(pMiniConsole->buffer.mBatchDeleteSize, 50);
+        runLua(host, qsl("setConsoleBufferSize('%1', 600, 60, true)\n").arg(miniConsole));
+        QCOMPARE(pMiniConsole->buffer.mLinesLimit, 500);
+        QCOMPARE(host->getConsoleBufferSize(), 12345);
+        QVERIFY(host->getUseMaxConsoleBufferSize());
+        QVERIFY(host->mpConsole->buffer.mLinesLimit != 500);
+
+        for (const QString& call : {qsl("setConsoleBufferSize(50, 10)"), qsl("setConsoleBufferSize('', 50, 10)"), qsl("setConsoleBufferSize('main', 50, 10)")}) {
+            host->setConsoleBufferSize(12345);
+            host->setUseMaxConsoleBufferSize(true);
+            runLua(host, call);
+            // the profile keeps the limit asked for, and the buffer the one it can have
+            QCOMPARE(host->getConsoleBufferSize(), 50);
+            QVERIFY(!host->getUseMaxConsoleBufferSize());
+            QCOMPARE(host->mpConsole->buffer.mLinesLimit, 100);
+            QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 10);
+        }
+
+        for (const QString& name : {QString(), qsl("main")}) {
+            host->setConsoleBufferSize(12345);
+            host->setUseMaxConsoleBufferSize(false);
+            runLua(host, qsl("setConsoleBufferSize('%1', 700, 70, true)\n").arg(name));
+            QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+            QVERIFY(host->getUseMaxConsoleBufferSize());
+            QCOMPARE(host->mpConsole->buffer.mLinesLimit, maxBufferSize);
+            QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 70);
+        }
+        QCOMPARE(pMiniConsole->buffer.mLinesLimit, 500);
+    }
+
+    // Pasting or appending the clipboard writes the console's model; its view
+    // only shows the new text once told to, which brings the upper pane's
+    // cursor, and the buffer's with it, down to the end.
+    void test_clipboardTextReachesTheView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString miniConsole = qsl("clipboardView");
+        runLua(host, qsl("createMiniConsole('%1', 0, 0, 300, 100)\necho('%1', 'one\\ntwo\\n')\nmoveCursor('%1', 0, 0)\nselectCurrentLine('%1')\ncopy('%1')\n").arg(miniConsole));
+        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        QVERIFY2(pMiniConsole, "The mini console was not created.");
+
+        const QStringList calls{qsl("appendBuffer('%1')"), qsl("moveCursorEnd('%1') paste('%1')"), qsl("moveCursor('%1', 0, 0) paste('%1')"), qsl("pasteWindow('%1')")};
+        for (const QString& call : calls) {
+            pMiniConsole->buffer.mCursorY = -1;
+            runLua(host, call.arg(miniConsole));
+            QVERIFY2(pMiniConsole->buffer.mCursorY == pMiniConsole->buffer.size(), qPrintable(call));
+        }
+        for (const QString& call : {qsl("appendBuffer('main')"), qsl("paste()")}) {
+            host->mpConsole->buffer.mCursorY = -1;
+            runLua(host, call);
+            QVERIFY2(host->mpConsole->buffer.mCursorY == host->mpConsole->buffer.size(), qPrintable(call));
+        }
+    }
+
+    // The clipboard and the main console's buffer size live in Host and the
+    // main console's model, so they answer with no view at all.
+    void test_theClipboardAndBufferSizeWorkWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const int line = appendModelLine(model->buffer, qsl("headless alpha beta"));
+        model->P_begin = QPoint(9, line);
+        model->P_end = QPoint(14, line);
+        model->mUserCursor = QPoint(0, line);
+        const int maxBufferSize = model->buffer.getMaxBufferSize();
+        host->setConsoleBufferSize(12345);
+        host->setUseMaxConsoleBufferSize(true);
+
+        runLua(host, qsl(R"LUA(
+headlessProblems = {}
+local function expectNothing(name, ...)
+    if select('#', ...) ~= 0 then
+        table.insert(headlessProblems, name .. ' answered ' .. tostring((...)) .. ', ' .. tostring((select(2, ...))))
+    end
+end
+expectNothing('copy', copy())
+expectNothing('appendBuffer', appendBuffer('main'))
+expectNothing('cut', cut())
+expectNothing('paste', paste(''))
+if not setConsoleBufferSize(700, 70) then
+    table.insert(headlessProblems, 'setConsoleBufferSize refused')
+end
+local lines, batch = getConsoleBufferSize()
+headlessBufferSize = tostring(lines) .. '/' .. tostring(batch)
+headlessProblems = table.concat(headlessProblems, '; ')
+)LUA"));
+
+        QCOMPARE(luaGlobalString(host, "headlessProblems"), QString());
+        // appended onto the line the feed left open after the fed one
+        QCOMPARE(model->buffer.line(line + 1), qsl("alpha"));
+        QCOMPARE(model->buffer.line(line), qsl("alphaheadless  beta"));
+        QCOMPARE(luaGlobalString(host, "headlessBufferSize"), qsl("700/70"));
+        QCOMPARE(model->buffer.mLinesLimit, 700);
+        QCOMPARE(host->getConsoleBufferSize(), 700);
+        QVERIFY(!host->getUseMaxConsoleBufferSize());
+
+        runLua(host, qsl("setConsoleBufferSize('main', 700, 70, true)\n"));
+        QCOMPARE(model->buffer.mLinesLimit, maxBufferSize);
+        QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+        QVERIFY(host->getUseMaxConsoleBufferSize());
     }
 
     // With no view the main console's wrap settings still belong to its model

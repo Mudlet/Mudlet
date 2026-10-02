@@ -150,13 +150,6 @@ static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double ad
         lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
     })
 
-#define CONSOLE_NIL(ARG_L, ARG_name)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        auto name_ = (ARG_name);                                                                                                                                                                       \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
-        console_;                                                                                                                                                                                      \
-    })
-
 #define CONSOLE(ARG_L, ARG_name)                                                                                                                                                                       \
     ({                                                                                                                                                                                                 \
         auto name_ = (ARG_name);                                                                                                                                                                       \
@@ -168,6 +161,13 @@ static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double ad
         }                                                                                                                                                                                              \
         console_;                                                                                                                                                                                      \
     })
+
+static int windowNotFound(lua_State* L, const QString& name)
+{
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_window_value, name.toUtf8().constData());
+    return 2;
+}
 
 static int commandLineNotFound(lua_State* L, const QString& name)
 {
@@ -636,12 +636,12 @@ int TLuaInterpreter::getConsoleBufferSize(lua_State* L)
         windowName = WINDOW_NAME(L, 1);
     }
 
-    // The macro will have returned with a nil + error message if the windowName
-    // was not found:
-    auto console = CONSOLE(L, windowName);
-    // Indicate success with two numeric return values:
-    lua_pushnumber(L, console->buffer.mLinesLimit);
-    lua_pushnumber(L, console->buffer.mBatchDeleteSize);
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushnumber(L, pModel->buffer.mLinesLimit);
+    lua_pushnumber(L, pModel->buffer.mBatchDeleteSize);
     return 2;
 }
 
@@ -1866,32 +1866,18 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
         useMaximum = lua_toboolean(L, s);
     }
 
-    // The macro will have returned with a nil + error message if the windowName
-    // was not found:
-    auto console = CONSOLE(L, QString{windowName});
+    const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-
-    if (useMaximum) {
-        // Maximum buffer size is only supported for the main console
-        if (console != host.mpConsole) {
-            return warnArgumentValue(L, __func__, "useMaximum parameter is only supported for the main console");
-        }
-
-        // Use system maximum buffer size instead of the provided linesLimit
-        const int maxBufferSize = console->buffer.getMaxBufferSize();
-        console->buffer.setBufferSize(maxBufferSize, sizeOfBatchDeletion);
-
-        // Update Host settings
-        host.setConsoleBufferSize(maxBufferSize);
-        host.setUseMaxConsoleBufferSize(true);
+    auto pModel = host.consoleModelNamed(consoleName);
+    if (!pModel) {
+        return windowNotFound(L, consoleName);
+    }
+    if (pModel == &host.mainConsoleModel()) {
+        host.setMainConsoleBufferSize(linesLimit, sizeOfBatchDeletion, useMaximum);
+    } else if (useMaximum) {
+        return warnArgumentValue(L, __func__, "useMaximum parameter is only supported for the main console");
     } else {
-        console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
-
-        // Update Host settings if this is the main console
-        if (console == host.mpConsole) {
-            host.setConsoleBufferSize(linesLimit);
-            host.setUseMaxConsoleBufferSize(false);
-        }
+        pModel->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
     }
 
     // Indicate success with a true return value:

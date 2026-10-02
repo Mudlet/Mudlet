@@ -316,6 +316,15 @@ public:
     // other a mini console's, user window's or buffer's. The main console's is
     // there with or without a view.
     TConsoleModel* consoleModelNamed(const QString& name);
+    // The one clipboard every console copies to and pastes from. Each answers
+    // whether it found the console.
+    bool copyToClipboard(const QString& name);
+    void cutMainConsoleToClipboard();
+    bool pasteClipboard(const QString& name);
+    bool appendClipboard(const QString& name);
+    // The main console's scrollback limit is also the profile's setting. With
+    // useMaximum the most this machine can hold stands in for the limit given.
+    void setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum);
     // Paint the named console's selection, and write what follows in the same
     // format. Each answers whether it found the console.
     bool setWindowFgColor(const QString& name, const QColor& color);
@@ -706,6 +715,9 @@ private:
     std::shared_ptr<TConsoleModel> mpMainConsoleModel;
     // Non-owning: the views own the models it indexes and keep it in step.
     TWindowRegistry mWindowRegistry;
+    // Built at the end of the constructor, as the main console's model is,
+    // because a TBuffer snapshots this Host's colours.
+    std::unique_ptr<TBuffer> mpClipboard;
 
     // Initialised ahead of mLuaInterpreter below, whose construction reads it:
     // initLuaGlobals() posts a message for each Lua module that fails to load, and
@@ -1141,6 +1153,8 @@ private slots:
     void slot_saveProfileAfterPackageChange();
 
 private:
+    // Inserts at the console's cursor, or appends when no line follows it.
+    void pasteClipboardInto(TConsoleModel& model);
     // Repaints the lines holding the console's selection, when it is on screen.
     void markSelectionDirty(TConsoleModel& model);
     // Stores a boolean setting and tells scripts about it.

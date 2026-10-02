@@ -494,6 +494,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mpMainConsoleModel->mTriggerEngineMode = false;
         finalizeMainConsole();
     });
+    mpClipboard = std::make_unique<TBuffer>(this);
     // a view does this in TConsole::changeColors(), but a profile need never get one
     mpMainConsoleModel->setWrapAt(mWrapAt);
     mpMainConsoleModel->setIndentCount(mWrapIndentCount);
@@ -2351,6 +2352,69 @@ bool Host::setWindowDisplayAttributes(const QString& name, const TChar::Attribut
         markSelectionDirty(*pModel);
     }
     return true;
+}
+
+bool Host::copyToClipboard(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    *mpClipboard = pModel->buffer.copy(pModel->P_begin, pModel->P_end);
+    return true;
+}
+
+void Host::cutMainConsoleToClipboard()
+{
+    *mpClipboard = mpMainConsoleModel->buffer.cut(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end);
+    markSelectionDirty(*mpMainConsoleModel);
+}
+
+bool Host::pasteClipboard(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pasteClipboardInto(*pModel);
+    return true;
+}
+
+void Host::pasteClipboardInto(TConsoleModel& model)
+{
+    const int line = model.mUserCursor.y();
+    const bool inPlace = model.buffer.size() - 1 > line;
+    if (inPlace) {
+        model.buffer.paste(model.mUserCursor, *mpClipboard);
+    } else {
+        model.buffer.appendBuffer(*mpClipboard);
+    }
+    if (inPlace) {
+        emit model.mNotifier.linesChanged(line, line);
+    }
+    emit model.mNotifier.newLinesWritten();
+}
+
+bool Host::appendClipboard(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pModel->buffer.appendBuffer(*mpClipboard);
+    emit pModel->mNotifier.newLinesWritten();
+    return true;
+}
+
+void Host::setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum)
+{
+    TBuffer& buffer = mpMainConsoleModel->buffer;
+    if (useMaximum) {
+        linesLimit = buffer.getMaxBufferSize();
+    }
+    buffer.setBufferSize(linesLimit, batchDeleteSize);
+    mConsoleBufferSize = linesLimit;
+    mUseMaxConsoleBufferSize = useMaximum;
 }
 
 // Hot: the trigger engine reads the model for every character of a colour
@@ -5506,11 +5570,13 @@ bool Host::echoWindow(const QString& name, const QString& text)
 
 bool Host::pasteWindow(const QString& name)
 {
-    if (!mpConsole) {
+    // unlike paste(), never the main console
+    auto pModel = mWindowRegistry.subConsoleModel(name);
+    if (!pModel) {
         return false;
     }
-
-    return mpConsole->pasteToSubConsole(name);
+    pasteClipboardInto(*pModel);
+    return true;
 }
 
 bool Host::setCmdLineAction(const QString& name, const int func)

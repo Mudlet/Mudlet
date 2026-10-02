@@ -186,15 +186,10 @@ public:
     const TConsoleModel& model() const { return *mpModel; }
     void insertHTML(const QString&);
     void insertText(const QString&);
-    void copy();
-    void cut();
-    void paste();
     void clear();
-    void appendBuffer();
     void appendBuffer(const TBuffer&);
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
-    void pasteWindow(const TBuffer&);
     int getLineNumber();
     bool deleteLine(int);
     void clearSelection() const;

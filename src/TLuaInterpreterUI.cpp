@@ -321,8 +321,9 @@ int TLuaInterpreter::alert(lua_State* L)
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->appendBuffer();
+    if (!getHostFromLua(L).appendClipboard(windowName)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
@@ -414,19 +415,16 @@ int TLuaInterpreter::copy(lua_State* L)
         windowName = WINDOW_NAME(L, 1);
     }
 
-    auto console = CONSOLE(L, windowName);
-    console->copy();
+    if (!getHostFromLua(L).copyToClipboard(windowName)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
 int TLuaInterpreter::cut(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    host.mpConsole->cut();
+    getHostFromLua(L).cutMainConsoleToClipboard();
     return 0;
 }
 
@@ -2505,8 +2503,9 @@ int TLuaInterpreter::paste(lua_State* L)
         windowName = WINDOW_NAME(L, 1);
     }
 
-    auto console = CONSOLE(L, windowName);
-    console->paste();
+    if (!getHostFromLua(L).pasteClipboard(windowName)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 

@@ -88,7 +88,6 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, qsl("main"), TConsole::MainConsole, parent)
-, mClipboard(pH)
 , mLogFile(model().mLogFile)
 , mLogFileName(model().mLogFileName)
 , mLogStream(model().mLogStream)
@@ -2554,16 +2553,6 @@ bool TMainConsole::reparentWindow(const QString& windowname, const QString& name
         return reparent(mpMapper);
     }
     return false;
-}
-
-bool TMainConsole::pasteToSubConsole(const QString& name)
-{
-    auto pC = mSubConsoleMap.value(name);
-    if (!pC) {
-        return false;
-    }
-    pC->pasteWindow(mClipboard);
-    return true;
 }
 
 std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const

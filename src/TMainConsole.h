@@ -163,7 +163,6 @@ public:
     bool resizeSubConsole(const QString& name, int width, int height);
     bool moveSubConsole(const QString& name, int x, int y);
     bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
-    bool pasteToSubConsole(const QString& name);
     std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
@@ -341,7 +340,6 @@ public:
 
 
     mutable QMap<QString, QSize> mCachedWindowSizes;
-    TBuffer mClipboard;
     // The log lifecycle lives in the core console model so a profile with no
     // view can run one; these four are references aliasing the model's fields,
     // the way buffer and mFgColor alias theirs. mLogToLogFile and mLogFileName
