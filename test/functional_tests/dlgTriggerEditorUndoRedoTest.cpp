@@ -27,6 +27,7 @@
 #include "ProfileTestHelper.h"
 #include "EditorUndoStack.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -153,7 +154,7 @@ private slots:
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
 
-    mpEditor = mpHost->mpEditorDialog;
+    mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
     QVERIFY2(mpEditor->mpUndoStack != nullptr, "Undo stack should exist");
 
