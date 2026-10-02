@@ -195,7 +195,9 @@ successes):
   kills only that run's fixture PIDs, and each run gets a private HOME so no two Mudlets — nor
   leftovers of an aborted run — share the self-test profile's saved state. Sharing a profile
   tree is not survivable: stale state fails ~38 Networking specs with "Expected objects to be
-  the same" at the `ensurePeer` assertion.
+  the same" at the `ensurePeer` assertion. The run is capped at 900s (set
+  `MUDLET_LUA_TESTS_TIMEOUT` in seconds to change it); a run the cap cuts short exits 124 and says its
+  results are incomplete, rather than passing it off as a spec failure.
 - The egress proxy blocks GitHub codeload tarballs (403), so `luarocks install` of rocks whose
   rockspecs point at tarballs fails; the hook falls back to `git clone` + `luarocks make`
   (git-protocol GitHub access is allowed). `LuaSQL-SQLite3` must stay pinned at 2.6.1 — 2.8.0

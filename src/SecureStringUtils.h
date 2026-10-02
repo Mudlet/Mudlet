@@ -113,13 +113,11 @@ public:
     /**
      * @brief Best-effort: set a file holding a secret to 0600
      *
-     * Called both when such a file is written and when one is read, so that a file left behind
-     * by an earlier Mudlet is narrowed as well. The permissions are read back afterwards,
-     * because a file system that cannot store them reports the change as having worked.
+     * Also called on read, to narrow files left by an earlier Mudlet. Permissions are read back, as a
+     * file system that can't store them reports success.
      * @param path Path of the file to restrict
      * @return false when other accounts on the machine can still read the file. On a platform
-     * with no permission bits of this kind there is nothing to set, so this answers true after
-     * saying once that the secret is protected only by the folder holding it.
+     * without such permission bits this returns true, warning once that only the folder protects it.
      */
     static bool restrictFileToOwner(const QString& path);
 
@@ -135,11 +133,9 @@ public:
     /**
      * @brief The secret that could not be narrowed, forgetting it as it is handed over
      *
-     * Lets a caller tell the user that a password it has just saved is readable by other
-     * accounts, without every caller in between having to carry the failure. What it holds
-     * belongs to no particular profile, so a caller that reports on one brackets its own
-     * write with this: ask once to discard what came before, and once afterwards for what
-     * that write left behind. CredentialManager::unprotectedSecretPath() is that answer.
+     * Lets a caller warn that a password it just saved is readable by other accounts. Process-wide, so
+     * a caller reporting on one write asks before it, to discard what came earlier, and again after.
+     * CredentialManager::unprotectedSecretPath() is that answer.
      * @return Path of that file or directory, empty when nothing failed since it was last asked
      */
     static QString takeUnprotectedSecretPath();

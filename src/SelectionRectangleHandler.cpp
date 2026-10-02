@@ -52,9 +52,7 @@ bool SelectionRectangleHandler::matches(const T2DMap::MapInteractionContext& con
         if (context.isSizingLabel) {
             return true;
         }
-        // A label that has been picked up follows the mouse, so the selection
-        // rectangle stands aside for it - the order the single mouse move
-        // handler used to run these two in.
+        // A picked-up label follows the mouse, so the selection rectangle yields to it.
         return context.isMultiSelectionActive && !context.isLabelHighlighted;
     case QEvent::MouseButtonRelease:
         return context.button == Qt::LeftButton && (context.isMultiSelectionActive || context.isSizingLabel);
@@ -161,8 +159,7 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
     }
 
     if (mMapWidget.mNewMoveAction) {
-        // A QRect from a point to itself is a pixel wide, and that pixel would
-        // stay on the far edge of the box as it is dragged out.
+        // Not QRect: QRect(p, p) is a pixel wide, and that pixel would stay on the dragged box's far edge.
         mMapWidget.mMultiRect = QRectF(context.widgetPosition, context.widgetPosition);
         mMapWidget.mNewMoveAction = false;
     } else {
