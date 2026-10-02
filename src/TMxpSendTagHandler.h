@@ -24,6 +24,8 @@
 #include "TMxpTagHandler.h"
 #include "utils.h"
 
+#include <QStringList>
+
 // <SEND [href=command] [hint=text] [prompt] [expire=name]>
 class TMxpSendTagHandler : public TMxpSingleTagHandler
 {
@@ -46,6 +48,7 @@ public:
 
 private:
     void updateHrefInLinks(TMxpClient& client) const;
+    QString actionFor(const QString& command) const;
     void resetCurrentTagContent(TMxpClient& client);
 
     inline static const QString ATTR_HREF = qsl("href");
@@ -57,6 +60,8 @@ private:
     bool mIsHrefInContent;
     QString mCurrentTagContent;
     QString mLastCaption;
+    QString mCommand;
+    QStringList mHrefs;
     int mLinkId;
 };
 

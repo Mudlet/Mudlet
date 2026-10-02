@@ -25,16 +25,19 @@
 #include "TConsole.h"
 
 
+#include "EAction.h"
 #include "Host.h"
+#include "TAction.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEasyButtonBar.h"
 #include "TEvent.h"
-#include "THyperlinkVisibilityManager.h"
+#include "TFlipButton.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "TMxpFrameWidgets.h"
 #include "TRoomDB.h"
 #include "TScrollBox.h"
 #include "TTextBox.h"
@@ -44,6 +47,7 @@
 #include "mudlet.h"
 #include "GifTracker.h"
 
+#include <QCursor>
 #include <QDataStream>
 #include <QDialog>
 #include <QDockWidget>
@@ -60,6 +64,7 @@
 #include <QShortcut>
 #include <QSizePolicy>
 #include <QTextCodec>
+#include <QTimer>
 #include <QPainter>
 #include <QVideoWidget>
 
@@ -83,11 +88,11 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, qsl("main"), TConsole::MainConsole, parent)
-, mClipboard(pH)
 , mLogFile(model().mLogFile)
 , mLogFileName(model().mLogFileName)
 , mLogStream(model().mLogStream)
 , mLogToLogFile(model().mLogToLogFile)
+, mpMxpFrameWidgets(std::make_unique<TMxpFrameWidgets>(this))
 {
     setFont(pH->getAndClearTempDisplayFont());
 
@@ -95,6 +100,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // and re-labelling the log button are the only parts of it that need a view.
     connect(pH, &Host::signal_loggingAnnouncement, this, &TMainConsole::slot_loggingAnnouncement, Qt::UniqueConnection);
     connect(pH, &Host::signal_loggingStateChanged, this, &TMainConsole::slot_loggingStateChanged, Qt::UniqueConnection);
+    // Host starts a saved log as the profile loads, before there is a view
+    slot_loggingStateChanged(mLogToLogFile);
 
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
@@ -126,6 +133,11 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
                 }
             },
             Qt::QueuedConnection);
+
+    mpLatencyBoxPacer = new QTimer(this);
+    mpLatencyBoxPacer->setSingleShot(true);
+    mpLatencyBoxPacer->setInterval(csmLatencyBoxPaceMs);
+    connect(mpLatencyBoxPacer, &QTimer::timeout, this, &TMainConsole::slot_refreshLatencyBox);
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
@@ -182,6 +194,15 @@ TMainConsole::~TMainConsole()
     if (mpUnpackingDialog) {
         mpUnpackingDialog->deleteLater();
     }
+
+    // The actions outlive this console, so their destroyed() handlers have the same unsafe window.
+    const QList<TAction*> actionsWithBars = mActionBars.keys();
+    for (TAction* pAction : actionsWithBars) {
+        disconnect(pAction, &QObject::destroyed, this, nullptr);
+    }
+    // Normally the Host has deleted these already; a Host whose console goes first
+    // would otherwise leave them on the main window pointing at its actions.
+    deleteActionToolBars();
 }
 
 std::pair<bool, QString> TMainConsole::setLabelStyleSheet(const QString& name, const QString& stylesheet)
@@ -292,95 +313,21 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
     model().toggleLogging(isMessageEnabled);
 }
 
+QString TMainConsole::loggingAnnouncementText(const bool isLogging, const QString& logFileName)
+{
+    return isLogging ? tr("Logging has started. Log file is %1").arg(logFileName) : tr("Logging has been stopped. Log file is %1").arg(logFileName);
+}
+
 void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
-    const QString message = isLogging ? tr("Logging has started. Log file is %1").arg(logFileName) : tr("Logging has been stopped. Log file is %1").arg(logFileName);
-    printSystemMessage(qsl("%1\n").arg(message));
+    printSystemMessage(qsl("%1\n").arg(loggingAnnouncementText(isLogging, logFileName)));
 }
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 {
-    // A click has already flipped the button; this is for logging toggled from Lua, and failed starts.
+    // A click has already flipped the button; this is for logging toggled from Lua, failed starts, and a new view.
     logButton->setChecked(isLogging);
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
-}
-
-void TMainConsole::selectCurrentLine(std::string& buf)
-{
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
-        TConsole::selectCurrentLine();
-        return;
-    }
-    auto pC = mSubConsoleMap.value(key);
-    if (pC) {
-        pC->selectCurrentLine();
-    }
-}
-
-std::list<int> TMainConsole::getFgColor(QString& buf)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        return TConsole::getFgColor();
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        return pC->getFgColor();
-    }
-
-    return {};
-}
-
-std::list<int> TMainConsole::getBgColor(QString& buf)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        return TConsole::getBgColor();
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        return pC->getBgColor();
-    }
-
-    return {};
-}
-
-QPair<quint8, TChar> TMainConsole::getTextAttributes(const QString& name) const
-{
-    if (name.isEmpty() || name == QLatin1String("main")) {
-        return TConsole::getTextAttributes();
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->getTextAttributes();
-    }
-
-    return qMakePair(1, TChar());
-}
-
-void TMainConsole::luaWrapLine(QString& buf, int line)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        TConsole::luaWrapLine(line);
-        return;
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        pC->luaWrapLine(line);
-    }
-}
-
-QString TMainConsole::getCurrentLine(const std::string& buf)
-{
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
-        return TConsole::getCurrentLine();
-    }
-    auto pC = mSubConsoleMap.value(key);
-    if (pC) {
-        return pC->getCurrentLine();
-    }
-    return qsl("ERROR: mini console does not exist");
 }
 
 
@@ -648,6 +595,398 @@ void TMainConsole::undockToolBar(TToolBar* pToolBar)
     mudlet::self()->removeDockWidget(pToolBar);
 }
 
+void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions)
+{
+    for (auto& action : rootActions) {
+        if (action->mLocation != 4) {
+            // This TAction is not set to be a floating/dockable widget type toolbar
+            if (TToolBar* pOldToolBar = actionToolBar(action)) {
+                // But it has a TToolBar type toolbar so we need to
+                // remove the ToolBar from the list of TToolBars:
+                mToolBarList.remove(pOldToolBar);
+                // And destroy it:
+                pOldToolBar->deleteLater();
+                setActionToolBar(action, nullptr);
+            }
+            continue; // skip over any root action node that is NOT going to be a TToolBar.
+        }
+        if (!action->mPackageName.isEmpty()) {
+            for (auto* childActionNode : *action->mpMyChildrenList) {
+                auto* childAction = static_cast<TAction*>(childActionNode);
+                QPointer<TToolBar> pTB = nullptr;
+                for (auto& toolBar : mToolBarList) {
+                    if (toolBar == actionToolBar(childAction)) {
+                        pTB = toolBar;
+                        break;
+                    }
+                }
+                if (!pTB) {
+                    pTB = createToolBar(childAction, childAction->getName());
+                    mToolBarList.push_back(pTB);
+                }
+                if (childAction->mOrientation == 1) {
+                    pTB->setVerticalOrientation();
+                } else {
+                    pTB->setHorizontalOrientation();
+                }
+                constructToolbar(childAction, pTB);
+                setActionToolBar(childAction, pTB);
+                pTB->setStyleSheet(pTB->mpTAction->css);
+            }
+            continue; //action package
+        }
+
+        QPointer<TToolBar> pTB = nullptr;
+        for (auto& toolBar : mToolBarList) {
+            if (toolBar == actionToolBar(action)) {
+                pTB = toolBar;
+                break;
+            }
+        }
+        if (!pTB) {
+            pTB = createToolBar(action, action->getName());
+            mToolBarList.push_back(pTB);
+        }
+        if (action->mOrientation == 1) {
+            pTB->setVerticalOrientation();
+        } else {
+            pTB->setHorizontalOrientation();
+        }
+        constructToolbar(action, pTB);
+        setActionToolBar(action, pTB);
+        pTB->setStyleSheet(pTB->mpTAction->css);
+    }
+}
+
+void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActions)
+{
+    for (auto& rootAction : rootActions) {
+        if (rootAction->mLocation == 4) {
+            // This TAction is set to be a floating/dockable widget
+            if (TEasyButtonBar* pOldBar = actionEasyButtonBar(rootAction)) {
+                // But it has a TEasyButtonBar type toolbar so we need to
+                // remove the TEasyButtonBar from the list of TEasyButtonBars:
+                mEasyButtonBarList.remove(pOldBar);
+                // And destroy it:
+                pOldBar->deleteLater();
+                setActionEasyButtonBar(rootAction, nullptr);
+            }
+            continue; // skip over any root action node that IS going to be a TToolBar.
+        }
+        if (!rootAction->mPackageName.isEmpty()) {
+            // It has a package name so it is actually the parent
+            // module/package item rather than the actual ToolBar
+            for (auto* childActionNode : *rootAction->mpMyChildrenList) {
+                auto* childAction = static_cast<TAction*>(childActionNode);
+                TEasyButtonBar* pTB = nullptr;
+                for (auto& easyButtonBar : mEasyButtonBarList) {
+                    if (easyButtonBar == actionEasyButtonBar(childAction)) {
+                        pTB = easyButtonBar;
+                        break;
+                    }
+                }
+                if (!pTB) {
+                    pTB = createEasyButtonBar(rootAction, childAction->getName());
+                    mEasyButtonBarList.emplace_back(pTB);
+                    setActionEasyButtonBar(childAction, pTB); // needed for drag&drop
+                }
+                if (childAction->mOrientation == 1) {
+                    pTB->setVerticalOrientation();
+                } else {
+                    pTB->setHorizontalOrientation();
+                }
+                constructToolbar(childAction, pTB);
+                setActionEasyButtonBar(childAction, pTB);
+                pTB->setStyleSheet(pTB->mpTAction->css);
+            }
+            continue; //rootAction package
+        }
+
+        TEasyButtonBar* pTB = nullptr;
+        for (auto& easyButtonBar : mEasyButtonBarList) {
+            if (easyButtonBar == actionEasyButtonBar(rootAction)) {
+                pTB = easyButtonBar;
+                break;
+            }
+        }
+        if (!pTB) {
+            pTB = createEasyButtonBar(rootAction, rootAction->getName());
+            mEasyButtonBarList.emplace_back(pTB);
+            setActionEasyButtonBar(rootAction, pTB); // needed for drag&drop
+        }
+        if (rootAction->mOrientation == 1) {
+            pTB->setVerticalOrientation();
+        } else {
+            pTB->setHorizontalOrientation();
+        }
+        constructToolbar(rootAction, pTB);
+        setActionEasyButtonBar(rootAction, pTB);
+        pTB->setStyleSheet(pTB->mpTAction->css);
+    }
+}
+
+void TMainConsole::constructToolbar(TAction* pAction, TToolBar* pToolBar)
+{
+    if (!pAction->isDataChanged()) {
+        return;
+    }
+
+    pToolBar->clear();
+    if (pAction->mLocation != 4) {
+        // EasyButtonBars are handled differently from ToolBars, and
+        // if we get here then the TAction has just been changed to be one of
+        // those; we might still have a TToolBar associated with the
+        // (owner) TAction and if so we need to dispose of it:
+        if (TToolBar* pOldToolBar = actionToolBar(pAction)) {
+            // We need to remove the TToolBar from the list of TToolBars
+            mToolBarList.remove(pOldToolBar);
+            // before we get rid of it:
+            pOldToolBar->deleteLater();
+            setActionToolBar(pAction, nullptr);
+        }
+    }
+
+    if (!pAction->isActive()) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+        return;
+    }
+
+    if (pAction->mLocation == 4) {
+        pToolBar->addActionButtons(pAction);
+        pToolBar->setTitleBarWidget(nullptr);
+    }
+
+    pToolBar->finalize();
+
+    if (pAction->mOrientation == 0) {
+        pToolBar->setHorizontalOrientation();
+    } else {
+        pToolBar->setVerticalOrientation();
+    }
+
+    pToolBar->setTitleBarWidget(nullptr);
+    if (pAction->mLocation == 4) {
+        if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
+            qWarning().nospace().noquote() << "TMainConsole::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
+                                           << "\"), for this toolbar forcing it to the Left one!";
+        }
+        dockToolBar(pToolBar, (pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea);
+        if (pAction->mToolbarLastFloatingState) {
+            pToolBar->setFloating(true);
+            const QPoint pos = QPoint(pAction->mPosX, pAction->mPosY);
+            pToolBar->show();
+            pToolBar->move(pos);
+        } else {
+            pToolBar->setFloating(false);
+            pToolBar->show();
+        }
+        pToolBar->mpTAction = pAction;
+        pToolBar->recordMove();
+    } else {
+        pToolBar->show();
+    }
+
+    pToolBar->setStyleSheet(pToolBar->mpTAction->css);
+    pAction->setDataSaved();
+}
+
+void TMainConsole::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
+{
+    pTB->clear();
+    if (pA->mLocation == 4) {
+        // Floating toolbars are handled differently from EasyButtonBars, and
+        // if we get here then the TAction has just been changed to be one of
+        // those; we might still have a TEasyButtonBar associated with the
+        // (owner) TAction and if so we need to dispose of it:
+        if (TEasyButtonBar* pOldBar = actionEasyButtonBar(pA)) {
+            // We need to remove the TEasyButtonBar from the list of TEasyButtonBars
+            mEasyButtonBarList.remove(pOldBar);
+            // before we get rid of it:
+            pOldBar->deleteLater();
+            setActionEasyButtonBar(pA, nullptr);
+        }
+        return;
+    }
+
+    // However, just because pA->mLocation != 4 does not mean that pA is for a
+    // TEasyButtonBar - it could be a menu or a button or a package/module
+    // (container)
+
+    if (!pA->isActive()) {
+        pTB->hide();
+        return;
+    }
+
+    pTB->addActionButtons(pA);
+    pTB->finalize();
+    if (pA->mOrientation == 0) {
+        pTB->setHorizontalOrientation();
+    } else {
+        pTB->setVerticalOrientation();
+    }
+    attachEasyButtonBar(pTB, pA->mLocation);
+
+    pTB->setStyleSheet(pTB->mpTAction->css);
+    pTB->show();
+}
+
+void TMainConsole::detachActionBars(TAction* pAction)
+{
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        detachEasyButtonBar(pBar, pAction->mLocation);
+    }
+    if (TToolBar* pToolBar = actionToolBar(pAction); pToolBar && pAction->mLocation == 4) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+    }
+}
+
+TMainConsole::ActionBars& TMainConsole::actionBarsFor(TAction* pAction)
+{
+    auto it = mActionBars.find(pAction);
+    if (it == mActionBars.end()) {
+        // Hides the bars as the action goes, straight after ~TAction()'s body.
+        // A signal, because an action being deleted by ~ActionUnit() can no
+        // longer reach this console through its Host.
+        connect(pAction, &QObject::destroyed, this, [this, pAction]() {
+            const ActionBars bars = mActionBars.take(pAction);
+            if (bars.mpToolBar) {
+                bars.mpToolBar->hide();
+            }
+            if (bars.mpEasyButtonBar) {
+                bars.mpEasyButtonBar->hide();
+            }
+        });
+        it = mActionBars.insert(pAction, ActionBars());
+    }
+    return it.value();
+}
+
+bool TMainConsole::hasEasyButtonBar(TAction* pAction) const
+{
+    return actionEasyButtonBar(pAction) != nullptr;
+}
+
+TToolBar* TMainConsole::actionToolBar(TAction* pAction) const
+{
+    return mActionBars.value(pAction).mpToolBar;
+}
+
+TEasyButtonBar* TMainConsole::actionEasyButtonBar(TAction* pAction) const
+{
+    return mActionBars.value(pAction).mpEasyButtonBar;
+}
+
+void TMainConsole::setActionToolBar(TAction* pAction, TToolBar* pToolBar)
+{
+    if (!pToolBar && !mActionBars.contains(pAction)) {
+        return;
+    }
+    actionBarsFor(pAction).mpToolBar = pToolBar;
+}
+
+void TMainConsole::setActionEasyButtonBar(TAction* pAction, TEasyButtonBar* pBar)
+{
+    if (!pBar && !mActionBars.contains(pAction)) {
+        return;
+    }
+    actionBarsFor(pAction).mpEasyButtonBar = pBar;
+}
+
+void TMainConsole::releaseParentActionBars(TAction* pOldParent, TAction* pChild)
+{
+    if (actionToolBar(pOldParent) == actionToolBar(pChild)) {
+        setActionToolBar(pChild, nullptr);
+    }
+    if (actionEasyButtonBar(pOldParent) == actionEasyButtonBar(pChild)) {
+        setActionEasyButtonBar(pChild, nullptr);
+    }
+}
+
+void TMainConsole::renameActionToolBar(TAction* pAction, const QString& name)
+{
+    // Revises the objectName, the title shown while it floats and its entry in
+    // the main window's context menu
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        pToolBar->setName(name);
+    }
+}
+
+void TMainConsole::setActionToolBarVisible(TAction* pAction, const bool visible)
+{
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        if (visible) {
+            pToolBar->show();
+        } else {
+            pToolBar->hide();
+        }
+    }
+}
+
+void TMainConsole::hideActionEasyButtonBar(TAction* pAction)
+{
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        pBar->hide();
+    }
+}
+
+void TMainConsole::replaceActionButton(TAction* pAction, TFlipButton* pButton)
+{
+    ActionBars& bars = actionBarsFor(pAction);
+    if (bars.mpButton) {
+        bars.mpButton->deleteLater();
+    }
+    bars.mpButton = pButton;
+}
+
+void TMainConsole::replaceActionMenuEntry(TAction* pAction, EAction* pEntry)
+{
+    ActionBars& bars = actionBarsFor(pAction);
+    if (bars.mpMenuEntry) {
+        bars.mpMenuEntry->deleteLater();
+    }
+    bars.mpMenuEntry = pEntry;
+}
+
+TFlipButton* TMainConsole::actionButton(TAction* pAction) const
+{
+    return mActionBars.value(pAction).mpButton;
+}
+
+EAction* TMainConsole::actionMenuEntry(TAction* pAction) const
+{
+    return mActionBars.value(pAction).mpMenuEntry;
+}
+
+void TMainConsole::setActionButtonChecked(TAction* pAction, const bool checked)
+{
+    if (EAction* pEntry = actionMenuEntry(pAction)) {
+        pEntry->setChecked(checked);
+    }
+    if (TFlipButton* pButton = actionButton(pAction)) {
+        pButton->setChecked(checked);
+    }
+}
+
+void TMainConsole::deleteActionToolBars()
+{
+    const auto toolBars = mToolBarList;
+    for (const auto& pToolBar : toolBars) {
+        delete pToolBar.data();
+    }
+}
+
+void TMainConsole::deleteActionToolBarsLater()
+{
+    for (TToolBar* pToolBar : mToolBarList) {
+        if (pToolBar) {
+            pToolBar->setAttribute(Qt::WA_DeleteOnClose);
+            pToolBar->deleteLater();
+        }
+    }
+}
+
 // This is a scrollBox overlaid on to the main console
 bool TMainConsole::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
@@ -765,6 +1104,11 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
                 // child widget, so destroying the dock destroys the console with
                 // it. (No WA_DeleteOnClose - we delete programmatically here, not
                 // in response to a close event.)
+                // Out of the dock layout now, though: an event loop nested in
+                // this turn (pumpEvents(), a JSON map import) holds the deferred
+                // delete back, and until it runs the dock keeps its share of the
+                // dock area from every user window docked after it.
+                mudlet::self()->removeDockWidget(pDock);
                 pDock->deleteLater();
             } else {
                 pConsole->deleteLater();
@@ -1147,6 +1491,369 @@ TCommandLine* TMainConsole::raiseCommandLine()
     return mpCommandLine;
 }
 
+TCommandLine* TMainConsole::commandLineNamed(const QString& name) const
+{
+    if (name.isEmpty() || !name.compare(qsl("main"))) {
+        return mpCommandLine;
+    }
+    return mSubCommandLineMap.value(name);
+}
+
+std::optional<QString> TMainConsole::getCommandLineText(const QString& name) const
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return {};
+    }
+    return {pN->toPlainText()};
+}
+
+// The caret goes to the end of the first line, with nothing selected.
+static void putTextOnCommandLine(TCommandLine* pN, const QString& text)
+{
+    pN->setPlainText(text);
+    QTextCursor cur = pN->textCursor();
+    cur.clearSelection();
+    cur.movePosition(QTextCursor::EndOfLine);
+    pN->setTextCursor(cur);
+    pN->adjustHeight();
+}
+
+bool TMainConsole::replaceCommandLineText(const QString& name, const QString& text)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    putTextOnCommandLine(pN, text);
+    return true;
+}
+
+bool TMainConsole::appendCommandLineText(const QString& name, const QString& text)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    putTextOnCommandLine(pN, pN->toPlainText() + text);
+    return true;
+}
+
+bool TMainConsole::clearCommandLine(const QString& name)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->clear();
+    pN->adjustHeight();
+    return true;
+}
+
+bool TMainConsole::selectCommandLineText(const QString& name)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->selectAll();
+    return true;
+}
+
+bool TMainConsole::addCommandLineSuggestion(const QString& name, const QString& word)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->addSuggestion(word);
+    return true;
+}
+
+bool TMainConsole::removeCommandLineSuggestion(const QString& name, const QString& word)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->removeSuggestion(word);
+    return true;
+}
+
+bool TMainConsole::clearCommandLineSuggestions(const QString& name)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->clearSuggestions();
+    return true;
+}
+
+bool TMainConsole::addCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->addBlacklist(word);
+    return true;
+}
+
+bool TMainConsole::removeCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->removeBlacklist(word);
+    return true;
+}
+
+bool TMainConsole::clearCommandLineBlacklist(const QString& name)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->clearBlacklist();
+    return true;
+}
+
+bool TMainConsole::addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->contextMenuItems.insert(label, eventName);
+    return true;
+}
+
+std::optional<bool> TMainConsole::removeCommandLineMenuItem(const QString& name, const QString& label)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return {};
+    }
+    return {pN->contextMenuItems.remove(label) != 0};
+}
+
+std::optional<bool> TMainConsole::getCommandLineSavesHistory(const QString& name) const
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return {};
+    }
+    return {pN->mSaveCommands};
+}
+
+bool TMainConsole::setCommandLineSavesHistory(const QString& name, bool savesHistory)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->mSaveCommands = savesHistory;
+    return true;
+}
+
+bool TMainConsole::setCommandLineVisible(const QString& name, bool visible)
+{
+    auto pN = commandLineNamed(name);
+    if (!pN) {
+        return false;
+    }
+    pN->setVisible(visible);
+    return true;
+}
+
+TConsole* TMainConsole::consoleNamed(const QString& name)
+{
+    if (name.isEmpty() || !name.compare(qsl("main"))) {
+        return this;
+    }
+    return mSubConsoleMap.value(name);
+}
+
+bool TMainConsole::setWindowScrollBarVisible(const QString& name, bool visible)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setScrollBarVisible(visible);
+    return true;
+}
+
+bool TMainConsole::setWindowHorizontalScrollBarVisible(const QString& name, bool visible)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setHorizontalScrollBar(visible);
+    return true;
+}
+
+std::optional<bool> TMainConsole::getWindowScrollBarVisible(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getScrollBarVisible()};
+}
+
+bool TMainConsole::setWindowScrolling(const QString& name, bool enabled)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setScrolling(enabled);
+    return true;
+}
+
+std::optional<bool> TMainConsole::getWindowScrolling(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getScrolling()};
+}
+
+std::optional<int> TMainConsole::getWindowScroll(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {std::max(std::min(pC->mUpperPane->mCursorY, pC->getLastLineNumber()), 0)};
+}
+
+bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+
+    const int numLines = pC->getLastLineNumber();
+    if (line >= numLines) {
+        toEnd = true;
+    } else if (line < 0) {
+        line = std::max(numLines + line, 0);
+    }
+
+    if (!toEnd) {
+        pC->scrollUp(pC->mUpperPane->mCursorY - line);
+        return true;
+    }
+    if (!pC->mUpperPane->mIsTailMode) {
+        pC->mLowerPane->mCursorY = pC->buffer.size();
+        pC->mLowerPane->hide();
+        pC->buffer.mCursorY = pC->buffer.size();
+        pC->mUpperPane->mCursorY = pC->buffer.size();
+        pC->mUpperPane->mCursorX = 0;
+        pC->mUpperPane->mIsTailMode = true;
+        pC->mUpperPane->updateScreenView();
+        pC->mUpperPane->forceUpdate();
+    }
+    return true;
+}
+
+std::optional<int> TMainConsole::getWindowColumnCount(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->mUpperPane->getColumnCount()};
+}
+
+std::optional<int> TMainConsole::getWindowRowCount(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->mUpperPane->getRowCount()};
+}
+
+std::optional<QFont> TMainConsole::getWindowFont(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    if (pC == this) {
+        return {mpHost->getDisplayFont()};
+    }
+    return {pC->mUpperPane->font()};
+}
+
+std::optional<int> TMainConsole::getWindowFontSize(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->mUpperPane->font().pointSize()};
+}
+
+std::optional<std::pair<bool, QString>> TMainConsole::setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    if (pC == this) {
+        QFont newFont = mpHost->createFontWithSettings(family, mpHost->getDisplayFont().pointSize());
+        if (weight != QFont::Normal) {
+            newFont.setWeight(weight);
+        }
+        auto result = mpHost->setDisplayFont(newFont, Host::DisplayFontChange::UserChoice);
+        if (result.first) {
+            refreshView();
+        }
+        return {result};
+    }
+
+    QFont newFont = mpHost->createFontWithSettings(family, pC->font().pointSize());
+    if (weight != QFont::Normal) {
+        newFont.setWeight(weight);
+    }
+    pC->setFont(newFont);
+    return {{true, QString()}};
+}
+
+bool TMainConsole::setWindowFontSize(const QString& name, int size)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    if (pC == this) {
+        // the way the profile preferences change it too
+        mpHost->setDisplayFontSize(size);
+    } else {
+        pC->setFontSize(size);
+    }
+    return true;
+}
+
+bool TMainConsole::setWindowCommandLineVisible(const QString& name, bool visible)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setCmdVisible(visible);
+    return true;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
@@ -1169,6 +1876,104 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
         return {true, QString()};
     }
     return {false, QLatin1String("couldn't create text edit")};
+}
+
+std::optional<QString> TMainConsole::getTextBoxText(const QString& name) const
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return {};
+    }
+    return {pT->toPlainText()};
+}
+
+bool TMainConsole::setTextBoxText(const QString& name, const QString& text)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setPlainText(text);
+    return true;
+}
+
+bool TMainConsole::clearTextBox(const QString& name)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->clear();
+    return true;
+}
+
+bool TMainConsole::setTextBoxReadOnly(const QString& name, bool readOnly)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setReadOnly(readOnly);
+    return true;
+}
+
+bool TMainConsole::setTextBoxPlaceholder(const QString& name, const QString& text)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setPlaceholderText(text);
+    return true;
+}
+
+bool TMainConsole::setTextBoxStyleSheet(const QString& name, const QString& styleSheet)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setStyleSheet(styleSheet);
+    return true;
+}
+
+std::optional<QFont> TMainConsole::getTextBoxFont(const QString& name) const
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return {};
+    }
+    return {pT->font()};
+}
+
+bool TMainConsole::setTextBoxFont(const QString& name, const QFont& font)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setFont(font);
+    return true;
+}
+
+bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus)
+{
+    auto pT = mTextBoxMap.value(name);
+    if (!pT) {
+        return false;
+    }
+    pT->setTabChangesFocus(tabMovesFocus);
+    return true;
+}
+
+QPoint TMainConsole::mousePosition() const
+{
+    return mapFromGlobal(QCursor::pos());
+}
+
+bool TMainConsole::hasKeyboardFocus() const
+{
+    return hasFocus();
 }
 
 bool TMainConsole::setLabelClickThrough(const QString& name, bool clickThrough)
@@ -1447,6 +2252,108 @@ std::optional<bool> TMainConsole::getLabelVisible(const QString& name) const
     return {pL->isVisibleTo(this)};
 }
 
+std::optional<QFont> TMainConsole::getLabelFont(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    return {pL->font()};
+}
+
+bool TMainConsole::setLabelFont(const QString& name, const QFont& font)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setFont(font);
+    return true;
+}
+
+std::optional<QString> TMainConsole::getLabelText(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    return {pL->text()};
+}
+
+// QLabel's movie rather than TLabel::mpMovie: setting a label's text drops the
+// movie from the QLabel while the label keeps it for reuse.
+std::optional<bool> TMainConsole::labelShowsMovie(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    return {pL->movie() != nullptr};
+}
+
+bool TMainConsole::startLabelMovie(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    movie->start();
+    return true;
+}
+
+bool TMainConsole::pauseLabelMovie(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    movie->setPaused(true);
+    return true;
+}
+
+bool TMainConsole::setLabelMovieFrame(const QString& name, int frame)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    return movie->jumpToFrame(frame);
+}
+
+bool TMainConsole::setLabelMovieSpeed(const QString& name, int percent)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    movie->setSpeed(percent);
+    return true;
+}
+
+bool TMainConsole::scaleLabelMovie(const QString& name, bool followLabelSize)
+{
+    auto pL = mLabelMap.value(name);
+    auto movie = pL ? pL->movie() : nullptr;
+    if (!movie) {
+        return false;
+    }
+    movie->setScaledSize(pL->size());
+    // only drop the movie-scaling connection, so that asking twice does not
+    // connect it twice; other consumers of the label's resized signal must
+    // stay connected
+    QObject::disconnect(pL, &TLabel::resized, movie, nullptr);
+    if (followLabelSize) {
+        connect(pL, &TLabel::resized, movie, [=] {
+            movie->setScaledSize(pL->size());
+        });
+    }
+    return true;
+}
+
 void TMainConsole::closeSubConsole(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
@@ -1565,16 +2472,6 @@ bool TMainConsole::reparentWindow(const QString& windowname, const QString& name
         return reparent(mpMapper);
     }
     return false;
-}
-
-bool TMainConsole::pasteToSubConsole(const QString& name)
-{
-    auto pC = mSubConsoleMap.value(name);
-    if (!pC) {
-        return false;
-    }
-    pC->pasteWindow(mClipboard);
-    return true;
 }
 
 std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
@@ -1763,6 +2660,38 @@ void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)
     }
 }
 
+void TMainConsole::setToolBarLayoutChanged(TToolBar* pToolBar)
+{
+    if (!mToolBarLayoutChanges.contains(pToolBar)) {
+        pToolBar->setProperty("layoutChanged", QVariant(true));
+        mToolBarLayoutChanges.append(pToolBar);
+    }
+}
+
+bool TMainConsole::commitToolBarLayoutChanges()
+{
+    bool updated = false;
+    for (const auto& pToolBar : std::as_const(mToolBarLayoutChanges)) {
+        if (!pToolBar) {
+            continue;
+        }
+        if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+            qWarning().nospace().noquote() << "TMainConsole::commitToolBarLayoutChanges() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+        } else if (pToolBar->property("layoutChanged").toBool()) {
+            pToolBar->setProperty("layoutChanged", QVariant(false));
+            updated = true;
+        }
+    }
+    mToolBarLayoutChanges.clear();
+    return updated;
+}
+
+// For a layout just restored: the flags stay raised but are no longer counted.
+void TMainConsole::discardToolBarLayoutChanges()
+{
+    mToolBarLayoutChanges.clear();
+}
+
 void TMainConsole::setDockLayoutChanged(const QString& name)
 {
     if (auto pD = mDockWidgetMap.value(name)) {
@@ -1896,21 +2825,6 @@ bool TMainConsole::hideWindow(const QString& name)
     return false;
 }
 
-bool TMainConsole::printWindow(const QString& name, const QString& text)
-{
-    auto pC = mSubConsoleMap.value(name);
-    auto pL = mLabelMap.value(name);
-    if (pC) {
-        pC->print(text);
-        return true;
-    }
-    if (pL) {
-        pL->setText(text);
-        return true;
-    }
-    return false;
-}
-
 //getUserWindowSize for resizing in Geyser
 QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
@@ -2025,76 +2939,51 @@ std::pair<bool, QString> TMainConsole::getUserWindowTitle(const QString& name) c
     return {true, pD->windowTitle()};
 }
 
-bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)
+bool TMainConsole::startIncomingText()
 {
-    if (name.isEmpty() || name.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
-        return true;
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        pC->mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
-        return true;
-    }
-
-    return false;
+    mProcessingTimer.restart();
+    return mAlertOnNewData;
 }
 
-void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
+void TMainConsole::alertNewData()
 {
-    Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
-    mProcessingTimer.restart();
+    QApplication::alert(mudlet::self(), 0);
+}
 
-    // Notify visibility manager of incoming data (for output gap detection)
-    if (isFromServer) {
-        getHyperlinkVisibilityManager().onDataReceived();
-    }
-
-    // feedTriggers() lands here, so this runs nested inside an outer pass that
-    // is itself mid-translate; clearing the flag outright would take trigger
-    // context away from the rest of that pass.
-    const bool wasInTriggerEngineMode = mTriggerEngineMode;
-    mTriggerEngineMode = true;
-    const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
-    const auto beforeTranslateLastLine = buffer.line(beforeTranslateLastLineNumber - 1);
-    buffer.translateToPlainText(incomingSocketData, isFromServer);
-    mTriggerEngineMode = wasInTriggerEngineMode;
-
-    const int lastLineNumber = buffer.getLastLineNumber();
-    const bool bufferChanged = lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine;
-    if (mAlertOnNewData && isFromServer && bufferChanged) {
-        QApplication::alert(mudlet::self(), 0);
-    }
-
-    // dequeues MXP events and raise them through the LuaInterpreter
-    // TODO: move this somewhere else more appropriate
-    auto& mxpEventQueue = mpHost->mMxpClient.mMxpEvents;
-    while (!mxpEventQueue.isEmpty()) {
-        const auto& event = mxpEventQueue.dequeue();
-        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions, event.caption);
-    }
-
-    const double processT = mProcessingTimer.elapsed() / 1000.0;
-    if (mpHost->mTelnet.mGA_Driver) {
-        /*:
-        The first argument 'N' represents the 'N'etwork latency; the second 'S' the
-        'S'ystem (processing) time
-        */
-        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2").arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3).arg(processT, 0, 'f', 3));
-    } else {
-        /*:
-        The argument 'S' represents the 'S'ystem (processing) time, in this situation
-        the Game Server is not sending \"GoAhead\" signals so we cannot deduce the
-        network latency...
-        */
-        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1").arg(processT, 0, 'f', 3));
+void TMainConsole::finishIncomingText()
+{
+    Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::finishIncomingText()", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
+    mLatencyProcessT = mProcessingTimer.elapsed() / 1000.0;
+    if (!mpLatencyBoxPacer->isActive()) {
+        mpLatencyBoxPacer->start();
     }
     // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending
     // on TConsole types:
 
     emit signal_newDataAlert(mProfileName);
+}
+
+void TMainConsole::slot_refreshLatencyBox()
+{
+    if (!mpHost || !mpLineEdit_networkLatency) {
+        return;
+    }
+
+    if (mpHost->mTelnet.mGA_Driver) {
+        /*:
+        The first argument 'N' represents the 'N'etwork latency; the second 'S' the
+        'S'ystem (processing) time
+        */
+        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2").arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3).arg(mLatencyProcessT, 0, 'f', 3));
+    } else {
+        /*:
+        The argument 'S' represents the 'S'ystem (processing) time, in this situation
+        the Game Server is not sending \"GoAhead\" signals so we cannot deduce the
+        network latency...
+        */
+        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1").arg(mLatencyProcessT, 0, 'f', 3));
+    }
 }
 
 void TMainConsole::finalize()
@@ -2141,6 +3030,13 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
 
     // Process the event like other TConsoles
     TConsole::resizeEvent(event);
+
+    // MXP frames are positioned by hand against the space the borders leave, so
+    // they have to be moved whenever the window or those borders change. The
+    // zero width a tab switch gives the console it hides moves none of them,
+    // but is still reported, as the main window size is then measured from the
+    // container the console comes back to.
+    mpMxpFrameWidgets->scheduleSizeReport(event->size().width() != 0);
 
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();

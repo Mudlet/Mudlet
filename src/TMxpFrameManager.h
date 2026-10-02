@@ -22,22 +22,17 @@
 
 #include "utils.h"
 
-#include <QBoxLayout>
-#include <QHBoxLayout>
+#include <QList>
 #include <QMap>
 #include <QMargins>
-#include <QPointer>
 #include <QRect>
 #include <QSize>
 #include <QString>
 #include <QStringList>
-#include <QTabWidget>
-#include <QVBoxLayout>
-#include <QWidget>
+#include <optional>
 
 class Host;
-class TConsole;
-class TDockWidget;
+class TMxpFrameWidgets;
 class TPrintSink;
 
 /**
@@ -50,6 +45,8 @@ class TPrintSink;
  *   does NOT delete children (to avoid double-deletion)
  * - During destruction, frames remove themselves from parent's childFrames list
  *   and orphan their children (set child->parentFrame = nullptr)
+ * - The frame's widgets are the view's, kept under the frame's name by
+ *   TMxpFrameWidgets
  */
 struct TMxpFrame {
     QString name;
@@ -64,12 +61,27 @@ struct TMxpFrame {
     bool scrolling = true;
     bool floating = false;  // When true, frame has no title bar/header (borderless)
     QString dockFrame;      // For tab support - name of frame to dock into
-    
-    // UI elements - using QPointer for automatic null on deletion
-    QPointer<QWidget> widget;           // The container widget (QFrame with title bar)
-    QPointer<TConsole> console;         // The actual TConsole for text output
-    QPointer<TDockWidget> dockWidget;   // Container for internal frames
-    QPointer<QTabWidget> tabWidget;     // For tab-based frames
+
+    // How the view shows the frame, once it does
+    enum class Shown {
+        Not,
+        // On the main window, or inside the Tab or Window frame named by
+        // hostFrame; relayouts move it
+        Placed,
+        // A page of its parent's header, which places it
+        Tab,
+        // A window of its own, which the player places
+        Window,
+    };
+    Shown shown = Shown::Not;
+    QString hostFrame;
+    // Where a Placed frame was last put, or the inside of a Window as the view
+    // last reported it, which frames nested in it are placed against. A Tab's
+    // inside is its header's tabArea.
+    QRect geometry;
+    // The space every page of this frame's tab header gets, as the view last
+    // reported it; nothing for a frame without a header
+    std::optional<QSize> tabArea;
     
     // Hierarchy tracking (non-owning references - see ownership model above)
     TMxpFrame* parentFrame = nullptr;
@@ -103,7 +115,6 @@ public:
     void setDestination(const QString& frameName, bool eol, bool eof);
     void clearDestination();
     QString getCurrentDestination() const { return mCurrentDestination; }
-    QWidget* getCurrentDestinationWidget() const;
     // Write-only so buffer translation never gets a view pointer back. Null when no destination
     // is set, its frame has gone, or it resolves to the main console (which would recurse).
     TPrintSink* currentDestinationSink() const;
@@ -116,9 +127,23 @@ public:
     bool frameExists(const QString& name) const { return mFrames.contains(name); }
     int frameCount() const { return mFrames.size(); }
 
-    // Reposition every frame on the next event loop turn, once the space they
-    // are laid out in has changed. Does nothing while no frames are open.
-    void scheduleRelayout();
+    // What the view measures of the main console after each resize, and while
+    // a tab switch hides it, whenever the window it will come back to changes:
+    // mainWindowSize is getMainWindowSize()'s, the space frames on the main
+    // window are laid out in, and consoleSize the console's own, which EXTERNAL
+    // frames are sized against. Frames already open stay where they are until
+    // relayoutFrames().
+    void setMainConsoleSize(const QSize& mainWindowSize, const QSize& consoleSize);
+    // Reposition every frame on the main window against the last reported size
+    // and the current borders
+    void relayoutFrames();
+    // What the view measures of an EXTERNAL frame's window whenever the player
+    // or a script resizes it; the frames open inside it are placed again
+    void setWindowSize(const QString& name, const QSize& size);
+    // What the view measures of the pages of name's tab header whenever they
+    // are resized. True when frames nested in its tabs have to be placed again,
+    // which is left to the caller as this is reported from inside a relayout.
+    bool setTabAreaSize(const QString& name, const QSize& size);
 
     // Configuration
     static constexpr int MAX_FRAMES = 20;
@@ -131,18 +156,21 @@ private:
     QList<TMxpFrame*> mFrameOrder;
     QString mCurrentDestination;  // Current output target (empty = main console)
     QMargins mMxpBorders;         // MXP-specific borders, separate from Host::mBorders
-    bool mRelayoutPending = false;
+    QSize mMainWindowSize;
+    QSize mMainConsoleSize;
 
     // Layout and sizing helpers
     void layoutInternalFrame(TMxpFrame* frame);
     void layoutExternalFrame(TMxpFrame* frame);
     void layoutTabFrame(TMxpFrame* frame);
-    void layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* targetFrame);
     QRect availableFrameArea() const;
     QRect calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* parentFrame);
+    // Nothing while the view shows nothing the frame could hold
+    std::optional<QRect> nestingArea(const TMxpFrame& frame) const;
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
-    void relayoutFrames();
-    Qt::DockWidgetArea alignmentToDockArea(const QString& align);
+    // Null while the profile has no main console
+    TMxpFrameWidgets* frameWidgets();
+    const TMxpFrameWidgets* frameWidgets() const;
 
     // Validation
     bool validateFrameName(const QString& name) const;
