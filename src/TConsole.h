@@ -201,11 +201,8 @@ public:
     void resizeEvent(QResizeEvent* event) override;
     void pasteWindow(const TBuffer&);
     int getLineNumber();
-    int getLineCount();
     bool deleteLine(int);
     void clearSelection() const;
-
-    int getColumnNumber();
 
     void setWrapAt(int pos) { mpModel->setWrapAt(pos); }
     int getWrapAt();
@@ -221,7 +218,6 @@ public:
     std::tuple<bool, QString, int, int> getSelection();
     void deselect();
     bool selectSection(int, int);
-    void skipLine();
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
@@ -264,7 +260,6 @@ public:
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
-    void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
     void refreshView() const;
@@ -298,7 +293,6 @@ public:
     std::list<int> getFgColor();
     std::list<int> getBgColor();
     void luaWrapLine(int line);
-    QString getCurrentLine();
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;

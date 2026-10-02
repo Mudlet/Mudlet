@@ -79,7 +79,6 @@ public:
     std::list<int> getBgColor(QString& buf);
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
     void luaWrapLine(QString& buf, int line);
-    QString getCurrentLine(const std::string&);
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
@@ -224,6 +223,9 @@ public:
     // Answers whether they were shown before, and leaves them alone when that
     // is already what was asked for.
     std::optional<bool> setWindowTimeStamps(const QString& name, bool shown);
+    // How many characters and lines fit in the named console's upper pane, from its size and font.
+    std::optional<int> getWindowColumnCount(const QString& name);
+    std::optional<int> getWindowRowCount(const QString& name);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.

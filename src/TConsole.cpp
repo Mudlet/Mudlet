@@ -1565,11 +1565,6 @@ void TConsole::replace(const QString& text)
     buffer.replaceInLine(P_begin, P_end, text, mFormatCurrent);
 }
 
-void TConsole::skipLine()
-{
-    deleteLine(mUserCursor.y());
-}
-
 bool TConsole::deleteLine(int y)
 {
     return buffer.deleteLine(y);
@@ -1603,19 +1598,9 @@ int TConsole::getLineNumber()
     return mUserCursor.y();
 }
 
-int TConsole::getColumnNumber()
-{
-    return mUserCursor.x();
-}
-
 int TConsole::getWrapAt()
 {
     return buffer.mWrapAt;
-}
-
-int TConsole::getLineCount()
-{
-    return buffer.getLastLineNumber();
 }
 
 void TConsole::selectCurrentLine()
@@ -1964,33 +1949,14 @@ void TConsole::setFontName(const QString& fontName)
     setFont(mDisplayFontDetails.makeFont(), true);
 }
 
-QString TConsole::getCurrentLine()
-{
-    return buffer.line(mUserCursor.y());
-}
-
 int TConsole::getLastLineNumber()
 {
     return buffer.getLastLineNumber();
 }
 
-void TConsole::moveCursorEnd()
-{
-    const int y = buffer.getLastLineNumber();
-    int x = buffer.line(y).size() - 1;
-    x = x >= 0 ? x : 0;
-    moveCursor(x, y);
-}
-
 bool TConsole::moveCursor(int x, int y)
 {
-    QPoint P(x, y);
-    if (buffer.moveCursor(P)) {
-        mUserCursor.setX(x);
-        mUserCursor.setY(y);
-        return true;
-    }
-    return false;
+    return mpModel->moveCursor(x, y);
 }
 
 int TConsole::select(const QString& text, int numOfMatch)

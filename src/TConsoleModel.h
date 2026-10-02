@@ -75,6 +75,11 @@ struct TConsoleModel
     // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
     void reportFailedLogStart(const QString& path, const QString& reason);
+    // The cursor scripts read and write through: moveCursor() leaves it where it was for a line
+    // outside the buffer, and moveCursorEnd() puts it on the last character of the last line.
+    bool moveCursor(int x, int y);
+    void moveCursorEnd();
+    void deleteLineAtCursor();
 
     // Half-open: lines(n, n) is empty. Not const because TBuffer::line() returns a mutable QString&.
     QStringList lines(int from, int to);

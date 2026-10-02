@@ -390,19 +390,6 @@ void TMainConsole::luaWrapLine(QString& buf, int line)
     }
 }
 
-QString TMainConsole::getCurrentLine(const std::string& buf)
-{
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
-        return TConsole::getCurrentLine();
-    }
-    auto pC = mSubConsoleMap.value(key);
-    if (pC) {
-        return pC->getCurrentLine();
-    }
-    return qsl("ERROR: mini console does not exist");
-}
-
 
 bool TMainConsole::createBuffer(const QString& name)
 {
@@ -1857,6 +1844,24 @@ std::optional<bool> TMainConsole::setWindowTimeStamps(const QString& name, bool 
         pC->slot_toggleTimeStamps(shown);
     }
     return {wasShown};
+}
+
+std::optional<int> TMainConsole::getWindowColumnCount(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->mUpperPane->getColumnCount()};
+}
+
+std::optional<int> TMainConsole::getWindowRowCount(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->mUpperPane->getRowCount()};
 }
 
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)

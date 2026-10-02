@@ -4998,11 +4998,7 @@ QPointer<TConsole> Host::findConsole(QString name)
 
 QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
 {
-    if (windowName.isEmpty() || windowName == QLatin1String("main")) {
-        return qMakePair(true, mainConsoleModel().lines(lineFrom, lineTo));
-    }
-
-    auto pModel = mWindowRegistry.subConsoleModel(windowName);
+    auto pModel = consoleModelNamed(windowName);
     if (!pModel) {
         QStringList failMessage;
         failMessage << qsl("mini console, user window or buffer '%1' not found").arg(windowName);

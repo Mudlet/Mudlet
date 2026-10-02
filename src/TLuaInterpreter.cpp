@@ -2274,28 +2274,12 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     }
 
     const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
-    QString name;
-    if (n > 1) {
-        name = lua_tostring(L, 1);
-        if (name == QLatin1String("main")) {
-            // clear it so it is treated as the main console below
-            name.clear();
-        }
-    }
+    const QString name = n > 1 ? QString{lua_tostring(L, 1)} : QString();
     if (luaLine < 1) {
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
 
-    Host& host = getHostFromLua(L);
-    if (name.isEmpty()) {
-        const TBuffer& buffer = host.mainConsoleModel().buffer;
-        if (luaLine < buffer.timeBuffer.size()) {
-            lua_pushstring(L, buffer.timeBuffer.at(luaLine).toUtf8().constData());
-            return 1;
-        }
-        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
-    }
-    auto pModel = host.windowRegistry().subConsoleModel(name);
+    auto pModel = getHostFromLua(L).consoleModelNamed(name);
     if (!pModel) {
         return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
     }
