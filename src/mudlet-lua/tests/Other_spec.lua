@@ -3153,14 +3153,73 @@ describe("Tests the script API", function()
       assert.are_not.equal("deleteFullMarker line", getCurrentLine())
     end)
 
-    it("Should arm a one line trigger that gags a following prompt", function()
-      local lineTrigger = spy.on(_G, "tempLineTrigger")
-      finally(function() lineTrigger:revert() end)
+    it("Should arm one line trigger covering just the next line", function()
+      local original = _G.tempLineTrigger
+      local calls = {}
+      _G.tempLineTrigger = function(...)
+        calls[#calls + 1] = {...}
+        return original(...)
+      end
+      finally(function() _G.tempLineTrigger = original end)
       local id = tempTrigger("deleteFullArmMarker", function() deleteFull() end)
       feedTriggers("deleteFullArmMarker line\n")
       killTrigger(id)
-      assert.spy(lineTrigger).was.called(1)
-      assert.spy(lineTrigger).was.called_with(1, 1, [[if isPrompt() then deleteLine() end]])
+      assert.are.equal(1, #calls)
+      assert.are.equal(1, calls[1][1])
+      assert.are.equal(1, calls[1][2])
+      assert.is_not_nil(calls[1][3])
+    end)
+
+    it("Should return nothing", function()
+      local count
+      local id = tempTrigger("deleteFullReturnMarker", function() count = select("#", deleteFull()) end)
+      feedTriggers("deleteFullReturnMarker line\n")
+      killTrigger(id)
+      assert.are.equal(0, count)
+    end)
+
+    local function bufferText()
+      return table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+    end
+
+    it("Should gag a prompt that arrives on the next line", function()
+      local id = tempTrigger("deleteFullGagMarker", function() deleteFull() end)
+      local ok, msg = feedTelnet("deleteFullGagMarker line\r\n")
+      feedTelnet("deleteFullGaggedPrompt> <T_IAC><T_GA>")
+      feedTelnet("\r\n")
+      killTrigger(id)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      local text = bufferText()
+      assert.is_falsy(text:find("deleteFullGagMarker", 1, true))
+      assert.is_falsy(text:find("deleteFullGaggedPrompt", 1, true))
+    end)
+
+    it("Should leave a next line that is not a prompt, and gag nothing after it", function()
+      local id = tempTrigger("deleteFullKeepMarker", function() deleteFull() end)
+      local ok, msg = feedTelnet("deleteFullKeepMarker line\r\n")
+      feedTelnet("deleteFullKeptLine\r\n")
+      feedTelnet("deleteFullKeptPrompt> <T_IAC><T_GA>")
+      feedTelnet("\r\n")
+      killTrigger(id)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      local text = bufferText()
+      assert.is_falsy(text:find("deleteFullKeepMarker", 1, true))
+      assert.is_truthy(text:find("deleteFullKeptLine", 1, true))
+      assert.is_truthy(text:find("deleteFullKeptPrompt", 1, true))
+    end)
+
+    it("Should ask the isPrompt() in effect when the next line arrives", function()
+      local id = tempTrigger("deleteFullLateMarker", function() deleteFull() end)
+      feedTriggers("deleteFullLateMarker line\n")
+      killTrigger(id)
+      local original = _G.isPrompt
+      local asked = 0
+      _G.isPrompt = function() asked = asked + 1; return true end
+      finally(function() _G.isPrompt = original end)
+      feedTriggers("deleteFullLateLine\n")
+      _G.isPrompt = original
+      assert.is_true(asked >= 1)
+      assert.is_falsy(bufferText():find("deleteFullLateLine", 1, true))
     end)
   end)
 
