@@ -41,6 +41,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TelnetServerStub.h"
+#include "TIrcClient.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
 
@@ -92,19 +93,19 @@ private:
     // have to be stored before it is built.
     dlgIRC* openClient()
     {
-        QPair<bool, QString> stored = dlgIRC::writeIrcHostName(mpHost, qsl("127.0.0.1"));
+        QPair<bool, QString> stored = TIrcClient::writeIrcHostName(mpHost, qsl("127.0.0.1"));
         if (!stored.first) {
             return nullptr;
         }
-        stored = dlgIRC::writeIrcHostPort(mpHost, mpIrcServer->serverPort());
+        stored = TIrcClient::writeIrcHostPort(mpHost, mpIrcServer->serverPort());
         if (!stored.first) {
             return nullptr;
         }
-        stored = dlgIRC::writeIrcNickName(mpHost, qsl("guardbot"));
+        stored = TIrcClient::writeIrcNickName(mpHost, qsl("guardbot"));
         if (!stored.first) {
             return nullptr;
         }
-        stored = dlgIRC::writeIrcChannels(mpHost, QStringList() << qsl("#guard"));
+        stored = TIrcClient::writeIrcChannels(mpHost, QStringList() << qsl("#guard"));
         if (!stored.first) {
             return nullptr;
         }
@@ -210,7 +211,7 @@ private slots:
         };
 
         for (const auto& [target, message] : accepted) {
-            const auto result = dlgIRC::validateMsgArguments(target, message);
+            const auto result = TIrcClient::validateMsgArguments(target, message);
             QVERIFY2(result.first, qPrintable(qsl("sending \"%1\" to \"%2\" was refused: %3").arg(message, target, result.second)));
             QVERIFY(result.second.isEmpty());
         }
@@ -237,7 +238,7 @@ private slots:
         };
 
         for (const auto& [target, message] : refused) {
-            const auto result = dlgIRC::validateMsgArguments(target, message);
+            const auto result = TIrcClient::validateMsgArguments(target, message);
             QVERIFY2(!result.first, qPrintable(qsl("sending \"%1\" to \"%2\" was accepted").arg(message, target)));
             QVERIFY2(!result.second.isEmpty(), "a refusal has to say why");
             // the reason quotes the offending text, so it must not break its own
@@ -269,7 +270,7 @@ private slots:
                 qsl("/quit :injected-quit"),
         };
         for (const QString& message : commandsThatAreNotCommandsHere) {
-            const auto result = client->sendText(qsl("#guard"), message);
+            const auto result = mpHost->mpIrcClient->sendText(qsl("#guard"), message);
             QVERIFY2(result.first, qPrintable(qsl("sending \"%1\" was refused: %2").arg(message, result.second)));
             QVERIFY2(waitForWireLine(qsl("PRIVMSG #guard :%1").arg(message).toUtf8()), qPrintable(qsl("\"%1\" did not reach the channel as text").arg(message)));
         }
@@ -296,7 +297,7 @@ private slots:
                          5000),
                  "the IRC client never reached the stub server");
         // what a joined channel leaves behind, without needing the server to say so
-        client->mReadyForSending = true;
+        mpHost->mpIrcClient->mReadyForSending = true;
 
         QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("ircResult, ircError = sendIrc(\"#guard\", \"/join #evil\")")));
         QVERIFY2(waitForWireLine("PRIVMSG #guard :/join #evil"), "sendIrc did not send the leading-slash message as text");
@@ -321,13 +322,13 @@ private slots:
                          5000),
                  "the IRC client never reached the stub server");
 
-        QVERIFY(!client->sendText(qsl("#guard"), qsl("MARK\r\nQUIT :injected-quit")).first);
+        QVERIFY(!mpHost->mpIrcClient->sendText(qsl("#guard"), qsl("MARK\r\nQUIT :injected-quit")).first);
         QVERIFY(!client->sendMsg(qsl("#guard"), qsl("MARK\r\nQUIT :injected-quit")).first);
         QVERIFY(!client->sendMsg(qsl("#guard\r\nJOIN #evil"), qsl("MARK")).first);
 
         // the one message that is allowed through is what proves the wait above
         // was long enough for a refused one to have arrived
-        QVERIFY(client->sendText(qsl("#guard"), qsl("MARK allowed")).first);
+        QVERIFY(mpHost->mpIrcClient->sendText(qsl("#guard"), qsl("MARK allowed")).first);
         QVERIFY2(waitForWireLine("PRIVMSG #guard :MARK allowed"), "the allowed message never reached the stub server");
 
         for (const QByteArray& line : wireLines()) {
@@ -366,17 +367,17 @@ private slots:
     // itself at registration, without passing through validateMsgArguments().
     void test_theNickAndThePasswordRefuseALineBreak()
     {
-        QVERIFY(!dlgIRC::writeIrcNickName(mpHost, qsl("bob\r\nQUIT :injected")).first);
-        QVERIFY(!dlgIRC::writeIrcNickName(mpHost, qsl("bob\nJOIN #evil")).first);
-        QVERIFY(!dlgIRC::writeIrcNickName(mpHost, qsl("bob and jane")).first);
-        QVERIFY(dlgIRC::writeIrcNickName(mpHost, qsl("bob")).first);
+        QVERIFY(!TIrcClient::writeIrcNickName(mpHost, qsl("bob\r\nQUIT :injected")).first);
+        QVERIFY(!TIrcClient::writeIrcNickName(mpHost, qsl("bob\nJOIN #evil")).first);
+        QVERIFY(!TIrcClient::writeIrcNickName(mpHost, qsl("bob and jane")).first);
+        QVERIFY(TIrcClient::writeIrcNickName(mpHost, qsl("bob")).first);
 
-        QVERIFY(!dlgIRC::writeIrcPassword(mpHost, qsl("hunter2\r\nPRIVMSG #evil :injected")).first);
+        QVERIFY(!TIrcClient::writeIrcPassword(mpHost, qsl("hunter2\r\nPRIVMSG #evil :injected")).first);
         // a password is a trailing parameter, so a space in one is its own business
-        QVERIFY(dlgIRC::writeIrcPassword(mpHost, qsl("hunter2 with spaces")).first);
+        QVERIFY(TIrcClient::writeIrcPassword(mpHost, qsl("hunter2 with spaces")).first);
 
         // and the refusal does not hand the password back to whoever is reading
-        const auto refusal = dlgIRC::writeIrcPassword(mpHost, qsl("hunter2\r\nPRIVMSG #evil :injected"));
+        const auto refusal = TIrcClient::writeIrcPassword(mpHost, qsl("hunter2\r\nPRIVMSG #evil :injected"));
         QVERIFY(!refusal.second.contains(qsl("hunter2")));
     }
 };

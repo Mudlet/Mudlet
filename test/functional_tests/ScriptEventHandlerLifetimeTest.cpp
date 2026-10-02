@@ -27,6 +27,7 @@
 #include "ProfileTestHelper.h"
 #include "EditorUndoStack.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "ScriptUnit.h"
 #include "TScript.h"
@@ -184,7 +185,7 @@ private slots:
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(200ms);
 
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->slot_showScripts();
         QTest::qWait(100ms);

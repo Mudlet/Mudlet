@@ -94,6 +94,7 @@ set(mudlet_SRCS
     GifTracker.cpp
     GMCPAuthenticator.cpp
     Host.cpp
+    HostDialogs.cpp
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
@@ -108,6 +109,8 @@ set(mudlet_SRCS
     mudlet.cpp
     MudletApp.cpp
     MudletInstanceCoordinator.cpp
+    MudletMedia.cpp
+    MudletReplay.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -155,6 +158,7 @@ set(mudlet_SRCS
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIrcClient.cpp
     TKey.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
@@ -189,6 +193,7 @@ set(mudlet_SRCS
     TMxpFormattingTagsHandler.cpp
     TMxpFrameManager.cpp
     TMxpFrameTagHandler.cpp
+    TMxpFrameWidgets.cpp
     TMxpHRTagHandler.cpp
     TMxpImageTagHandler.cpp
     TMxpLinkTagHandler.cpp
@@ -368,6 +373,7 @@ set(mudlet_HDRS
     GifTracker.h
     GMCPAuthenticator.h
     Host.h
+    HostDialogs.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
@@ -383,6 +389,8 @@ set(mudlet_HDRS
     mudlet.h
     MudletApp.h
     MudletInstanceCoordinator.h
+    MudletMedia.h
+    MudletReplay.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -416,6 +424,7 @@ set(mudlet_HDRS
     TCommandLine.h
     TConsole.h
     TConsoleModel.h
+    TConsoleModelNotifier.h
     TDebug.h
     TDebugFilterBar.h
     TDetachedWindow.h
@@ -436,6 +445,7 @@ set(mudlet_HDRS
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TimerUnit.h
+    TIrcClient.h
     TKey.h
     TKeySequenceEdit.h
     TLabel.h
@@ -466,6 +476,7 @@ set(mudlet_HDRS
     TMxpFormattingTagsHandler.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
+    TMxpFrameWidgets.h
     TMxpHRTagHandler.h
     TMxpImageTagHandler.h
     TMxpLinkTagHandler.h
