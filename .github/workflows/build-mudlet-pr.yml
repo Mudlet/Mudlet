@@ -602,8 +602,8 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
       # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes ~75s, and the rest is headroom for a slow runner stretching those.
-      timeout-minutes: 6
+      # takes 300-340s under ASan, and the rest is headroom for a slow runner.
+      timeout-minutes: 12
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -650,9 +650,9 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # ~100s on a healthy Intel runner and measured at 172s on a slow one, so a
-      # tighter limit fails on runner speed rather than on anything the suite did
-      timeout-minutes: 6
+      # 200-245s on arm64; a tighter limit fails on runner speed rather than on
+      # anything the suite did
+      timeout-minutes: 12
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
