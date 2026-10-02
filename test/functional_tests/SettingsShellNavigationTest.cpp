@@ -101,23 +101,6 @@ static QStyleOptionGroupBox groupBoxStyleOption(const QGroupBox* pGroupBox)
     return option;
 }
 
-// Brackets every string it is asked for, so that a case can tell what the
-// dialog re-read on a language change from what it is still showing from
-// before it - without depending on which translations this build shipped.
-class BracketingTranslator : public QTranslator
-{
-public:
-    QString translate(const char* context, const char* sourceText, const char* disambiguation, int n) const override
-    {
-        Q_UNUSED(context)
-        Q_UNUSED(disambiguation)
-        Q_UNUSED(n)
-        return qsl("[%1]").arg(QString::fromUtf8(sourceText));
-    }
-
-    bool isEmpty() const override { return false; }
-};
-
 class SettingsShellNavigationTest : public QObject
 {
     Q_OBJECT
@@ -575,7 +558,7 @@ private slots:
         QVERIFY2(mpPreferences->groupBox_mapperColors->parentWidget() == mpPreferences->findChild<QWidget*>(qsl("settingsColumn_searchResults")),
                  "the search borrowed no card, so sending them home proves nothing");
 
-        BracketingTranslator translator;
+        TestSettings::BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
         mpPreferences->slot_guiLanguageChanged(MudletApp::getInterfaceLanguage());
         QCoreApplication::removeTranslator(&translator);
@@ -594,7 +577,7 @@ private slots:
     {
         QCOMPARE(sidebar()->item(rowOf(qsl("general")))->text(), qsl("General"));
 
-        BracketingTranslator translator;
+        TestSettings::BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
         mpPreferences->slot_guiLanguageChanged(MudletApp::getInterfaceLanguage());
         // Read before the translator goes, so that a failure here cannot leave
