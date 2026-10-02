@@ -661,6 +661,20 @@ add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_UIS}
 )
 
+mudlet_precompile_headers(${LIB_MUDLET_TARGET})
+# Objective-C++ would need a precompiled header of its own for three files
+set_source_files_properties(AppleSpeechRecognizer.mm MacMicrophonePermission.mm sparkleupdater.mm
+  PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+if(USE_UPDATER)
+  # Its own target, so it keeps plain ccache: the precompiled-header launcher
+  # tells ccache to ignore __DATE__ and __TIME__, which this file embeds to order
+  # test builds
+  add_library(mudlet_build_time OBJECT updater/ReleaseBuildTime.cpp)
+  set_target_properties(mudlet_build_time PROPERTIES AUTOMOC OFF)
+  target_link_libraries(mudlet_build_time PRIVATE Qt6::Gui)
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE $<TARGET_OBJECTS:mudlet_build_time>)
+endif()
+
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
 # features of Mudlet, generally speaking they will not be '#define'd in

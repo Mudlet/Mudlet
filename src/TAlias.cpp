@@ -82,9 +82,8 @@ TAlias::~TAlias()
 
 void TAlias::setName(const QString& name)
 {
-    if (!isTemporary()) {
-        mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
-    }
+    // killAlias() trusts this table to hold only current names of live aliases
+    mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     mName = name;
     mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }

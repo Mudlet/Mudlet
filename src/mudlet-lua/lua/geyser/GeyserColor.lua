@@ -40,20 +40,8 @@ function Geyser.Color.hdeca (r, g, b, a)
   return string.format("<%d,%d,%d,%d>", Geyser.Color.parse(r, g, b, a))
 end
 
---- Returns 4 color components from (nearly any) acceptable format.  Colors can be
--- specified in two ways.  First: as a single word in english ("purple") or
--- hex ("#AA00FF", "|cAA00FF", or "0xAA00FF") or decimal ("<190,0,255>"). If
--- the hex or decimal representations contain a fourth element then alpha is
--- set too - otherwise alpha can't be set this way.  Second: by passing in
--- distinct components as unsigned integers (e.g. 23 or 0xA7).  When using the
--- second way, at least three values must be passed.  If only three are
--- passed, then alpha is 255.  Third: by passing in a table that has explicit
--- values for some, all or none of the keys r,g,b, and a.
--- @param red Either a valid string representation or the red component.
--- @param green The green component.
--- @param blue The blue component.
--- @param alpha The alpha component.
-function Geyser.Color.parse(red, green, blue, alpha)
+-- Geyser.Color.parse() as it always was, for the inputs it has no shortcut for
+local function parseAnyColor(red, green, blue, alpha)
   local r, g, b, a = 0, 0, 0, 255
 
   -- have to have something to set, else can't do anything!
@@ -145,6 +133,69 @@ function Geyser.Color.parse(red, green, blue, alpha)
   end
   assign_colors()
   return r, g, b, a
+end
+
+-- A hex or decimal colour string always means the same colour, so what it parses
+-- to is kept - every label echo parses its colour again. Bounded, as a script
+-- can make up any number of them.
+local parsedColorStrings = {}
+local parsedColorStringCount = 0
+
+--- Returns 4 color components from (nearly any) acceptable format.  Colors can be
+-- specified in two ways.  First: as a single word in english ("purple") or
+-- hex ("#AA00FF", "|cAA00FF", or "0xAA00FF") or decimal ("<190,0,255>"). If
+-- the hex or decimal representations contain a fourth element then alpha is
+-- set too - otherwise alpha can't be set this way.  Second: by passing in
+-- distinct components as unsigned integers (e.g. 23 or 0xA7).  When using the
+-- second way, at least three values must be passed.  If only three are
+-- passed, then alpha is 255.  Third: by passing in a table that has explicit
+-- values for some, all or none of the keys r,g,b, and a.
+-- @param red Either a valid string representation or the red component.
+-- @param green The green component.
+-- @param blue The blue component.
+-- @param alpha The alpha component.
+function Geyser.Color.parse(red, green, blue, alpha)
+  -- the common shapes take a direct route that builds no closures, giving the
+  -- same answers as parseAnyColor() would
+  if green and blue then
+    if not red then
+      return nil, "No color supplied"
+    end
+    local a = 255
+    if alpha then
+      a = tonumber(alpha, 10)
+    end
+    return tonumber(red, 10), tonumber(green, 10), tonumber(blue, 10), a
+  end
+  if type(red) ~= "string" then
+    return parseAnyColor(red, green, blue, alpha)
+  end
+  local parsed = parsedColorStrings[red]
+  if parsed then
+    return parsed[1], parsed[2], parsed[3], parsed[4]
+  end
+  if string.find(red, "^#") or string.find(red, "^[|0][cx]") or string.find(red, "^<") then
+    local r, g, b, a = parseAnyColor(red, green, blue, alpha)
+    if parsedColorStringCount >= 1000 then
+      parsedColorStrings = {}
+      parsedColorStringCount = 0
+    end
+    parsedColorStrings[red] = { r, g, b, a }
+    parsedColorStringCount = parsedColorStringCount + 1
+    return r, g, b, a
+  end
+  -- a name is looked up every time, as scripts can change color_table
+  local col = Geyser.Color.find_color_name(red)
+  if not col then
+    return
+  end
+  local components = color_table[col]
+  local n = #components
+  local a = 255
+  if n >= 4 and components[4] then
+    a = tonumber(components[4], 10)
+  end
+  return tonumber(n >= 1 and components[1] or nil, 10), tonumber(n >= 2 and components[2] or nil, 10), tonumber(n >= 3 and components[3] or nil, 10), a
 end
 
 -- Lower cased name -> the name as color_table spells it. color_table holds

@@ -107,8 +107,11 @@ set(UNIT_TESTS
     ProfileNameValidationTest
 )
 
+mudlet_add_test_pch_provider(mudlet_unit_test_pch)
+
 foreach(test_name ${UNIT_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
+    mudlet_reuse_test_pch(${test_name} mudlet_unit_test_pch)
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
     # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
