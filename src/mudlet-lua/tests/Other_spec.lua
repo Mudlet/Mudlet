@@ -3167,7 +3167,8 @@ describe("Tests the script API", function()
       assert.are.equal(1, #calls)
       assert.are.equal(1, calls[1][1])
       assert.are.equal(1, calls[1][2])
-      assert.is_not_nil(calls[1][3])
+      -- a function, so no gagged line compiles a script
+      assert.are.equal("function", type(calls[1][3]))
     end)
 
     it("Should return nothing", function()
