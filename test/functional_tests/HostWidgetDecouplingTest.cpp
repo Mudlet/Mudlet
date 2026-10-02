@@ -421,8 +421,8 @@ private slots:
         QVERIFY2(dialogWhileUnpacking.isNull(), "The unpacking dialog was taken down but never disposed of.");
     }
 
-    // A profile load installs every module through this path, so a dialog per
-    // archive that unzips in milliseconds is pure cost.
+    // A new profile installs its default packages through this path, so a dialog
+    // per archive that unzips in milliseconds is pure cost.
     void test_smallPackageInstallsWithoutUnpackingDialog()
     {
         startProfile(mHostname, mLocalhost, mPort);
