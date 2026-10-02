@@ -25,8 +25,10 @@
 #include "TMedia.h"
 
 #include "HostManager.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
+#include "MudletMedia.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -70,9 +72,8 @@ private:
     std::shared_ptr<TMediaPlayer> mPlayer;
 };
 
-// Tells a request that leaves the media type to the protocol's default - no "type" field, a null
-// one, or an empty string - from one that names a type. parseJSONByMediaType() answers
-// MediaTypeNotSet for both, and only the first of them may be defaulted.
+// parseJSONByMediaType() gives MediaTypeNotSet both for an absent/null/empty "type" and for an
+// unknown one; only the former may be defaulted.
 bool mediaTypeNamed(const QJsonObject& json)
 {
     const auto mediaTypeJSON = json.value(qsl("type"));
@@ -155,11 +156,8 @@ void TMedia::playMedia(TMediaData& mediaData)
 
             const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
 
-            // Whether there is a file to play, rather than merely something of that name: a name
-            // that resolves to a directory - "." and "./" name the media directory itself, "sub/."
-            // one below it - is something exists() answers true for, and the player handed a
-            // directory fails to load it and announces a sysMediaFinished for media that never
-            // played. Symlinks are followed, so a file linked into the media directory still plays.
+            // Not exists(): names like "." or "sub/." resolve to a directory, which the player fails
+            // to load and then raises sysMediaFinished for. isFile() follows symlinks.
             if (!QFileInfo(absolutePathFileName).isFile()) {
                 if (fileRelative) {
                     if (!TMedia::processUrl(mediaData)) {
@@ -309,6 +307,8 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
@@ -318,7 +318,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
@@ -337,10 +337,8 @@ void TMedia::stopMedia(TMediaData& mediaData)
         return;
     }
 
-    // MSP asks for a stop by naming the file "Off", which is not a file to match
-    // players against, and the request carries the priority every MSP request is
-    // given - which would then refuse to stop anything playing at that priority
-    // or above. Neither belongs on a stop, so take both off it.
+    // MSP stops with the file name "Off", which is no file to match; and the priority every MSP
+    // request carries would refuse to stop anything playing at or above it.
     if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.mediaFileName() == qsl("Off")) {
         mediaData.setMediaFileName(QString());
         mediaData.setMediaPriority(TMediaData::MediaPriorityNotSet);
@@ -365,12 +363,14 @@ void TMedia::stopMedia(TMediaData& mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (auto& pPlayer : mediaPlayerList) {
         if (!pPlayer) {
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
@@ -486,7 +486,7 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#purgeMediaCache
 std::pair<bool, QString> TMedia::purgeMediaCache()
 {
-    const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName());
+    const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName());
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
@@ -592,6 +592,30 @@ QList<std::shared_ptr<TMediaPlayer>> TMedia::findMediaPlayersByCriteria(const TM
     return {}; // Default empty list fallback
 }
 
+// A pause, stop or resume carries no input type of its own. An absolute path an API call names plays
+// from the copy transitionNonRelativeFile() made under its bare file name, its directories dropped,
+// so that is what a player of a file is matched against; a stream keeps the name it was given and
+// is matched against it as asked.
+TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData)
+{
+    TMediaData fileRequest = mediaData;
+    const QString& fileName = mediaData.mediaFileName();
+
+    if (mediaData.mediaProtocol() != TMediaData::MediaProtocolAPI || mediaData.mediaInput() == TMediaData::MediaInputStream || fileName.isEmpty() || QFileInfo(fileName).isRelative()) {
+        return fileRequest;
+    }
+
+    // A name ending in a separator has no file name to trim to, and an empty one would match every
+    // player, so it is left as given to match none.
+    const QString bareName = fileName.section(QLatin1Char('/'), -1);
+
+    if (!bareName.isEmpty()) {
+        fileRequest.setMediaFileName(bareName);
+    }
+
+    return fileRequest;
+}
+
 bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData)
 {
     if (!player) {
@@ -640,6 +664,8 @@ bool TMedia::resume(TMediaData mediaData)
         }
     }
 
+    const TMediaData fileRequest = requestForFilePlayers(mediaData);
+
     for (const auto& pPlayer : std::as_const(mediaPlayerList)) {
         if (!pPlayer) {
             continue;
@@ -649,7 +675,7 @@ bool TMedia::resume(TMediaData mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
             continue;
         }
 
@@ -777,13 +803,13 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
 
 void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 {
-    const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName());
+    const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()));
     } else {
-        const QString mediaFilePath = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), -1));
+        const QString mediaFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), -1));
         const QFile mediaFile(mediaFilePath);
 
         if (!mediaFile.exists() && !QFile::copy(mediaData.mediaFileName(), mediaFilePath)) {
@@ -854,7 +880,7 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
 
 bool TMedia::mediaFilePathEscapesMediaDir(TMediaData& mediaData) const
 {
-    return mediaFilePathEscapesMediaDir(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+    return mediaFilePathEscapesMediaDir(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
 }
 
 // Returns true if mediaFileName would resolve to a location outside mediaRoot. Two layers:
@@ -943,7 +969,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
             }
         }
 
-        fileNameList << qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+        fileNameList << qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
     }
 
     return fileNameList;
@@ -958,21 +984,21 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
     }
 
     if (mediaData.mediaInput() == TMediaData::MediaInputFile) {
-        const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName());
+        const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName());
         QDir mediaDir(mediaPath);
 
         if (!mediaDir.mkpath(mediaPath)) {
-            qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()));
+            qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()));
             return fileNameList;
         }
 
         if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaFileName().contains(QLatin1Char('/'))) {
-            const QString mediaSubPath = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
+            const QString mediaSubPath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
             QDir mediaSubDir(mediaSubPath);
 
             if (!mediaSubDir.mkpath(mediaSubPath)) {
                 qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1")
-                                      .arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
+                                      .arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
                 return fileNameList;
             }
 
@@ -1165,21 +1191,21 @@ void TMedia::downloadFile(TMediaData& mediaData)
         return;
     }
 
-    const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName());
+    const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()));
         return;
     }
 
     if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaFileName().contains(QLatin1Char('/'))) {
-        const QString mediaSubPath = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
+        const QString mediaSubPath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
         const QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
             qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1")
-                                  .arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
+                                  .arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
             return;
         }
     }
@@ -1218,7 +1244,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
     }
 
     QNetworkRequest request = QNetworkRequest(fileUrl);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, MudletApp::buildSuffix()).toUtf8().constData()));
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 #if !defined(QT_NO_SSL)
     if (fileUrl.scheme() == qsl("https")) {
@@ -1240,7 +1266,7 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
     QString absolutePathFileName;
 
     if (mediaData.mediaInput() == TMediaData::MediaInputFile) {
-        absolutePathFileName = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+        absolutePathFileName = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
     } else if (mediaData.mediaInput() == TMediaData::MediaInputStream) {
         absolutePathFileName = TMedia::getStreamUrl(mediaData);
     }
@@ -1250,10 +1276,8 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
     return absolutePathFileName;
 }
 
-// A start position can only be applied once the media is loaded, seekable and playing, which on a
-// backend that loads asynchronously is several signals after play() was called - seeking any
-// earlier is dropped without a word and the track plays from its beginning (#10459). Hooked to
-// both signals that can complete that set, so whichever arrives last performs the seek.
+// Seeking before the media is loaded, seekable and playing is silently dropped on async backends
+// (#10459), so this is hooked to both signals that can complete that set; the last one seeks.
 void TMedia::seekToMediaStart(const std::shared_ptr<TMediaPlayer>& player)
 {
     QMediaPlayer* mediaPlayer = player->mediaPlayer();
@@ -1274,19 +1298,15 @@ void TMedia::seekToMediaStart(const std::shared_ptr<TMediaPlayer>& player)
         return;
     }
 
-    // Seeking to or past the end leaves the player playing at its last frame forever - no
-    // EndOfMedia, so nothing releases the source or sends sysMediaFinished, and the profile runs
-    // out of players. A server is free to send a start longer than the track, so play it from the
-    // beginning instead, which is what an unseekable start did before.
+    // Seeking to or past the end never raises EndOfMedia, so the player is never released and the
+    // profile runs out of players. Servers may send such a start; play from the beginning instead.
     const qint64 duration = mediaPlayer->duration();
 
     if (duration > 0 && startPosition >= duration) {
         return;
     }
 
-    // Both signals fire again as the track buffers, and the position is what says the seek has
-    // already been made: without this a track would be dragged back to its start position each
-    // time one of them arrived.
+    // Both signals refire while buffering; don't drag the track back to its start each time.
     if (mediaPlayer->position() >= startPosition) {
         return;
     }
@@ -1593,7 +1613,9 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     }
 
     // No available player, create a new one
-    mudlet::self()->watchAudioOutputDevices();
+    if (auto* media = MudletMedia::self()) {
+        media->watchAudioOutputDevices();
+    }
     auto newPlayer = std::make_shared<TMediaPlayer>(mpHost, mediaData);
 
     if (!newPlayer || !newPlayer->mediaPlayer()) {
@@ -2153,11 +2175,11 @@ void TMedia::play(TMediaData& mediaData)
     if (audioOutput) {
         switch (mediaData.mediaProtocol()) {
         case TMediaData::MediaProtocolAPI:
-            audioOutput->setMuted(mudlet::self()->muteAPI());
+            audioOutput->setMuted(MudletMedia::self() && MudletMedia::self()->apiMuted());
             break;
         case TMediaData::MediaProtocolGMCP:
         case TMediaData::MediaProtocolMSP:
-            audioOutput->setMuted(mudlet::self()->muteGame());
+            audioOutput->setMuted(MudletMedia::self() && MudletMedia::self()->gameMuted());
             break;
         }
     } else {
@@ -2521,9 +2543,8 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
 
     if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
         if (mediaTypeNamed(json)) {
-            // Sound is the default for a request that names no type at all. One that names a type
-            // Mudlet does not know is refused rather than guessed at: played as a sound, the
-            // server's own stop for the type it meant would never reach it.
+            // An unknown type is refused, not played as the default sound: the server's stop for
+            // the type it meant would never reach it.
             qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
             return;
         }
@@ -2547,12 +2568,8 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
 
     if (mediaData.mediaFileName().isEmpty()) {
-        // Without the one required field there is nothing to play, and nothing below is going to
-        // find that out: an empty name resolves to the media directory, which playMedia() would
-        // otherwise send off to be downloaded over. A request carrying only a key or a tag is
-        // still how a server resumes what it paused, which playMedia() answers before it looks at
-        // the file at all, so that keeps its chance; anything else is refused here, in the same
-        // silence parseGMCP()'s empty-object guard gives a Client.Media.Play {}.
+        // An empty name resolves to the media directory, which playMedia() would try to download
+        // over. A key/tag-only request is still a valid resume, so try that first.
         if (!resume(mediaData)) {
             qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play carrying no usable media file name.");
         }

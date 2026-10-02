@@ -138,12 +138,31 @@ Sanitizers are not enabled on Windows, so there is no `-nosan` variant.
 ## Running the result
 
 ```bash
-# macOS
-./build/src/mudlet.app/Contents/MacOS/mudlet
+# macOS, through the build system - the preset has to be one this host has
+cmake --build --preset macos-debug-nosan --target run-mudlet
 
-# Linux
+# Linux, either way
+cmake --build --preset linux-debug --target run-mudlet
 ./build/src/mudlet
 ```
+
+On macOS, launch the **bundle** rather than the binary inside it. macOS attributes a
+permission request to the responsible process, which for anything started from a shell is
+the application owning the terminal - so the built-in speech backend asking for speech
+recognition kills Mudlet, blaming a usage description that Mudlet's `Info.plist` does
+carry. `run-mudlet` runs `open` and, because that detaches, keeps `qDebug()` and
+`qWarning()` output in `<build>/mudlet-run.log`. By hand:
+
+```bash
+open build/src/mudlet.app --stdout /tmp/mudlet.log --stderr /tmp/mudlet.log
+```
+
+A sanitizer build is the exception, and `run-mudlet` handles it: `open` hands the launch to
+launchd rather than passing the shell's environment on, so it runs the binary directly there
+and the sanitizer's options and reports work as usual. Speech declines to ask for permission
+in that case rather than dying - and since the plain `macos-debug` preset has
+AddressSanitizer on, exercising the built-in macOS speech backend means building
+`macos-debug-nosan` (or launching the bundle by hand).
 
 Mudlet is a graphical desktop application; launching it opens a window. Variant presets put the
 binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full build.
@@ -176,7 +195,9 @@ successes):
   kills only that run's fixture PIDs, and each run gets a private HOME so no two Mudlets — nor
   leftovers of an aborted run — share the self-test profile's saved state. Sharing a profile
   tree is not survivable: stale state fails ~38 Networking specs with "Expected objects to be
-  the same" at the `ensurePeer` assertion.
+  the same" at the `ensurePeer` assertion. The run is capped at 900s (set
+  `MUDLET_LUA_TESTS_TIMEOUT` in seconds to change it); a run the cap cuts short exits 124 and says its
+  results are incomplete, rather than passing it off as a spec failure.
 - The egress proxy blocks GitHub codeload tarballs (403), so `luarocks install` of rocks whose
   rockspecs point at tarballs fails; the hook falls back to `git clone` + `luarocks make`
   (git-protocol GitHub access is allowed). `LuaSQL-SQLite3` must stay pinned at 2.6.1 — 2.8.0

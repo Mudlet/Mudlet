@@ -312,7 +312,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
 endif()
 add_subdirectory(3rdparty/communi)
-add_subdirectory(3rdparty/qt-tags-widget)
+# Upstream ships a standalone library, so add_subdirectory() would adopt its install() rules and
+# put its dev files into every package. EXCLUDE_FROM_ALL keeps them out (observed, not documented
+# CMake behaviour, so the packaging scripts check the staged tree); mudlet_core still links it.
+add_subdirectory(3rdparty/qt-tags-widget EXCLUDE_FROM_ALL)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
 

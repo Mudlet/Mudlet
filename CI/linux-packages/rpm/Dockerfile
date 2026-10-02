@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
-# Compiles, packages and install-tests Mudlet as an .rpm. Run it through
-# CI/linux-packages/build, which passes the source checkout as the build context.
+# Builds, packages and install-tests an .rpm; run it via CI/linux-packages/build (source checkout as context).
 
 ARG BASE_IMAGE=fedora:44
 
@@ -15,7 +14,7 @@ RUN dnf install -y --setopt=install_weak_deps=False \
     mesa-libGLU-devel pcre2-devel pugixml-devel sqlite-devel yajl-devel \
     zlib-ng-compat-devel zziplib-devel \
     qt6-qt5compat-devel qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtspeech-devel \
-    qt6-qttools-devel qtkeychain-qt6-devel \
+    qt6-qtsvg-devel qt6-qttools-devel qtkeychain-qt6-devel \
  && dnf clean all
 
 # the ccache mount below repeats uid 2000 because a mount cannot read a build arg

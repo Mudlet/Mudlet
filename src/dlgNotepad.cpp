@@ -23,8 +23,9 @@
 
 #include "dlgNotepad.h"
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "utils.h"
 
 #include <QApplication>
@@ -199,9 +200,9 @@ void dlgNotepad::setTabsStyleSheet(const QString& styleSheet)
 
 dlgNotepad::~dlgNotepad()
 {
-    if (mpHost && mpHost->mpNotePad) {
+    if (auto* pDialogs = mpHost ? HostDialogs::find(mpHost) : nullptr; pDialogs && pDialogs->mpNotePad) {
         save();
-        mpHost->mpNotePad = nullptr;
+        pDialogs->mpNotePad = nullptr;
     }
 }
 
@@ -327,8 +328,8 @@ QPlainTextEdit* dlgNotepad::currentTextEdit() const
 
 void dlgNotepad::save()
 {
-    const QString directoryPath = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName());
-    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString directoryPath = MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName());
+    const QString fileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     const QDir dir;
     if (!dir.exists(directoryPath)) {
@@ -369,11 +370,11 @@ void dlgNotepad::save()
 
 bool dlgNotepad::migrateOldNotesFile()
 {
-    QString oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    QString oldFileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
     bool useUtf8 = true;
 
     if (!QFile::exists(oldFileName)) {
-        oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
+        oldFileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
         useUtf8 = false;
 
         if (!QFile::exists(oldFileName)) {
@@ -403,7 +404,7 @@ bool dlgNotepad::migrateOldNotesFile()
 
 void dlgNotepad::restore()
 {
-    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString fileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     if (QFile::exists(fileName)) {
         QFile file(fileName);
@@ -618,7 +619,7 @@ void dlgNotepad::closeEvent(QCloseEvent* event)
 // The grey arrows the .ui file gives the send controls toggle are all but invisible
 // against a dark background, so use the brighter green ones (which the .ui file already
 // uses for the hovered-over state) there instead. The background colour is what matters,
-// so go by the palette rather than by mudlet::inDarkMode() - the latter is only set when
+// so go by the palette rather than by MudletApp::darkMode() - the latter is only set when
 // Mudlet itself applies its dark theme, yet a dark system theme darkens the notepad as well.
 // The application palette is the one to read: when this runs in response to a style change
 // the widgets have not had the new palette propagated down to them yet

@@ -20,8 +20,9 @@
 #include "TMxpMudlet.h"
 #include "Host.h"
 #include "TMedia.h"
-#include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TLinkStore.h"
+#include "MudletApp.h"
 
 #include <QSet>
 #include <QStack>
@@ -31,7 +32,7 @@ static const QString PLACEHOLDER_TEXT = QLatin1String("&text;");
 
 QString TMxpMudlet::getVersion()
 {
-    return mudlet::self()->scmVersion;
+    return MudletApp::scmVersion();
 }
 
 void TMxpMudlet::sendToServer(QString& str)
@@ -53,11 +54,8 @@ void TMxpMudlet::popColor()
 
 void TMxpMudlet::pushColor(QList<QColor>& stack, const QString& color)
 {
-    // A name the client does not know gives an invalid QColor, which a TChar
-    // would store as opaque black - so treat it like an attribute that was not
-    // given at all and carry on with the color in force, as an empty name has
-    // always done. Repeating that color rather than not pushing is what keeps
-    // the stack in step with popColor().
+    // An unknown name gives an invalid QColor, which a TChar would store as opaque black, so
+    // repeat the color in force instead; still pushing keeps the stack in step with popColor().
     const QColor newColor(color);
     if (!newColor.isValid()) {
         if (!stack.isEmpty()) {
@@ -120,7 +118,7 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
             for (const auto& attrName : startTag->getAttributesNames()) {
                 event.attrs[attrName] = startTag->getAttributeValue(attrName);
             }
-            event.actions = getLinkStore().getCurrentLinks();
+            event.linkId = getLinkStore().getCurrentLinkID();
             event.caption.clear();
             mPendingSendEvents.push(event);
         }
@@ -160,9 +158,8 @@ void TMxpMudlet::setCaptionForSendEvent(const QString& caption)
     if (!mPendingSendEvents.isEmpty()) {
         TMxpEvent event = mPendingSendEvents.pop();
         event.caption = caption;
-        for (QString& act : event.actions) {
-            act.replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
-        }
+        // The handler has already quoted the wrapped text into these
+        event.actions = getLinkStore().getLinksConst(event.linkId);
         for (auto it = event.attrs.begin(); it != event.attrs.end(); ++it) {
             it.value().replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
         }
@@ -172,7 +169,7 @@ void TMxpMudlet::setCaptionForSendEvent(const QString& caption)
 
 TLinkStore& TMxpMudlet::getLinkStore()
 {
-    return mpHost->mpConsole->getLinkStore();
+    return mpHost->mainConsoleModel().buffer.mLinkStore;
 }
 
 // Handle 'stacks' of attribute settings:
@@ -306,9 +303,9 @@ void TMxpMudlet::insertText(const QString& text)
 {
     // Insert text by feeding it back through the MXP processing pipeline
     // This ensures it respects the current line buffer state
-    if (mpHost && mpHost->mpConsole) {
+    if (mpHost) {
         std::string textToInsert = text.toStdString();
-        mpHost->mpConsole->buffer.translateToPlainText(textToInsert, false);
+        mpHost->mainConsoleModel().buffer.translateToPlainText(textToInsert, false);
     }
 }
 
@@ -347,10 +344,10 @@ bool TMxpMudlet::setMxpDestination(const QString& frameName, bool eol, bool eof)
 
 void TMxpMudlet::clearMxpDestination()
 {
-    if (mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->buffer.flushPendingDestinationContent();
+    if (mpHost) {
+        mpHost->mainConsoleModel().buffer.flushPendingDestinationContent();
         // Reset text formatting to prevent color bleeding from frame content to main console
-        mpHost->mpConsole->buffer.resetCurrentTextFormat();
+        mpHost->mainConsoleModel().buffer.resetCurrentTextFormat();
         mpHost->mMxpFrameManager.clearDestination();
     }
 }

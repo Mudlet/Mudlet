@@ -21,7 +21,7 @@
 
 
 #include "FontManager.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "utils.h"
 
 #include <QDir>
@@ -29,9 +29,30 @@
 #include <QDesktopServices>
 #include <QFontDatabase>
 
+FontManager::FontManager()
+{
+    if (smpSelf) {
+        qWarning() << "FontManager::FontManager() WARNING - a FontManager already exists, so self() keeps pointing at that one.";
+        return;
+    }
+    smpSelf = this;
+}
+
+FontManager::~FontManager()
+{
+    if (smpSelf == this) {
+        smpSelf = nullptr;
+    }
+}
+
+QStringList FontManager::availableFonts()
+{
+    return QFontDatabase::families(QFontDatabase::Any);
+}
+
 void FontManager::addFonts()
 {
-    const QDir dir(MudletPaths::getMudletPath(enums::mainFontsPath));
+    const QDir dir(MudletApp::getMudletPath(enums::mainFontsPath));
 
     if (!dir.exists()) {
         return;

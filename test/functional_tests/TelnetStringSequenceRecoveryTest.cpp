@@ -41,7 +41,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -186,12 +186,12 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -459,13 +459,13 @@ private slots:
     void unterminatedSequenceInALocalFeedIsBounded()
     {
         std::string stuck{"BEFORE-LOCAL\x1bP0;SEQPAYLOAD"};
-        mpHost->mpConsole->printOnDisplay(stuck, false);
+        mpHost->printOnDisplay(stuck, false);
         // As on the Game Server channel, the line ending of this one is what
         // ends the sequence, so this feed is the one that is lost:
         std::string eaten{"EATEN-LOCAL\n"};
-        mpHost->mpConsole->printOnDisplay(eaten, false);
+        mpHost->printOnDisplay(eaten, false);
         std::string resumed{"VISIBLE-LOCAL\n"};
-        mpHost->mpConsole->printOnDisplay(resumed, false);
+        mpHost->printOnDisplay(resumed, false);
 
         QVERIFY2(waitForBufferText(qsl("VISIBLE-LOCAL")), qPrintable(qsl("Locally fed text stayed dark after an unterminated sequence: '%1'").arg(joinedBuffer())));
         QVERIFY2(!joinedBuffer().contains(qsl("SEQPAYLOAD")), qPrintable(qsl("Sequence payload was displayed: '%1'").arg(joinedBuffer())));
@@ -537,7 +537,7 @@ private slots:
         mpHost = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }

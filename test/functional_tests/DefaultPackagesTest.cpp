@@ -37,7 +37,7 @@
 #include <QTemporaryFile>
 #include <QXmlStreamReader>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -73,10 +73,10 @@ private:
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
 
-    QStringList preinstallsFor(const QString& gameUrl, const QString& profileName = qsl("test"))
+    QStringList preinstallsFor(const QString& gameUrl, const QString& profileName = qsl("test"), const bool serverGuiAccepted = true)
     {
         mudlet::self()->mPackagesToInstallList.clear();
-        mudlet::self()->setupPreInstallPackages(gameUrl, profileName);
+        mudlet::self()->setupPreInstallPackages(gameUrl, profileName, serverGuiAccepted);
         return mudlet::self()->mPackagesToInstallList;
     }
 
@@ -104,8 +104,8 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QVERIFY2(MudletApp::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -155,8 +155,8 @@ private slots:
         QVERIFY(!preinstallsFor(qsl("localhost"), qsl("some other profile")).contains(qsl(":/packages/mudlet-tutorial/mudlet-tutorial.mpackage")));
     }
 
-    // Games that install an interface of their own get a loader instead of the
-    // starter UI, which would otherwise fight it for the same screen space.
+    // Games that install an interface of their own, by a loader or by Client.GUI,
+    // skip the starter UI, which would otherwise fight it for the same screen space.
     void test_gamesWithTheirOwnUiSkipTheStarterUi()
     {
         QVERIFY(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
@@ -165,6 +165,18 @@ private slots:
         QVERIFY(!preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mg-loader/mg-loader.mpackage")));
         QVERIFY(!preinstallsFor(qsl("icesus.org")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+        // StickMUD has no loader - its Client.GUI only arrives after login, too
+        // late for the starter UI to stand aside before building itself
+        QVERIFY(!preinstallsFor(qsl("stickmud.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+    }
+
+    // A profile copied with its settings can refuse server GUIs or GMCP before the
+    // preinstall runs; a Client.GUI game's interface then never arrives, while a
+    // bundled loader fetches its own regardless.
+    void test_refusedServerGuiKeepsTheStarterUi()
+    {
+        QVERIFY(preinstallsFor(qsl("stickmud.com"), qsl("test"), false).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+        QVERIFY(!preinstallsFor(qsl("icesus.org"), qsl("test"), false).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
     }
 
     // Why mpkg cannot be in a test profile: see setupPreInstallPackages() in

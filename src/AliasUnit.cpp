@@ -27,7 +27,6 @@
 #include "TAlias.h"
 #include "TLuaInterpreter.h"
 #include "Tree.h"
-#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -392,9 +391,7 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshAliasIcon(pT->getID());
-        }
+        emit mpHost->signal_aliasToggled(pT->getID());
     }
     return found;
 }
@@ -408,9 +405,7 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshAliasIcon(it.value()->getID());
-        }
+        emit mpHost->signal_aliasToggled(it.value()->getID());
     }
     return found;
 }
@@ -485,8 +480,6 @@ void AliasUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
     if (!hasPendingDeletes()) {
         return;
     }
@@ -499,9 +492,8 @@ void AliasUnit::doCleanup()
         deletedAliases.insert(pAlias);
         delete pAlias;
     }
-    // Not a no-op: the drain above frees no buckets, so without this every later
-    // flush re-scans an array sized for the largest batch the set has ever held.
-    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
     mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting

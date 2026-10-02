@@ -66,7 +66,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TelnetServerStub.h"
@@ -252,7 +252,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
 
-    QString profileHome() const { return MudletPaths::getMudletPath(enums::profileHomePath, mProfileName); }
+    QString profileHome() const { return MudletApp::getMudletPath(enums::profileHomePath, mProfileName); }
 
     // The repository index the package manager caches beside the profile, which
     // its constructor reads to fill the Explore view. Seeding it is what puts a

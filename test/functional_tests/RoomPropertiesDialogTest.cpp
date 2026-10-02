@@ -44,7 +44,8 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
+#include "T2DMap.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -94,6 +95,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
+    T2DMap* mp2dMap = nullptr;
     const QString mProfileName = qsl("RoomPropertiesDialog-Test");
     int mAreaId = 0;
     QPointer<dlgRoomProperties> mpDialog;
@@ -114,7 +116,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -234,7 +236,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -245,6 +247,12 @@ private slots:
         mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
+
+        // The other end of signal_save_symbol, where the OK lands; these are the
+        // two things dlgMapper's constructor sets that the slot needs
+        mp2dMap = new T2DMap();
+        mp2dMap->mpMap = map();
+        mp2dMap->mpHost = mpHost;
     }
 
     // Runs after every case, a case QTest cut short at a failed QVERIFY
@@ -260,6 +268,8 @@ private slots:
 
     void cleanupTestCase()
     {
+        delete mp2dMap;
+        mp2dMap = nullptr;
         if (mudlet::self()) {
             deleteProfileDirectory();
         }
@@ -530,6 +540,33 @@ private slots:
 
         QVERIFY(mEmitted.changeSymbolColor);
         QVERIFY2(!mEmitted.newSymbolColor.isValid(), "a reset symbol colour has to be an invalid QColor so the default is used");
+    }
+
+    // The symbol and its colour are two decisions, and a selection that
+    // disagrees about the symbol leaves only the first of them undecided: the
+    // colour still has to reach every room, and the placeholder standing in for
+    // the symbols must not be written over them (#8394)
+    void aSymbolColourDecidedForRoomsWithDifferentSymbolsLeavesTheSymbolsAlone()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        room(scmFirstRoom)->mSymbol = qsl("!");
+        room(scmSecondRoom)->mSymbol = qsl("?");
+        room(scmFirstRoom)->mSymbolColor = QColor(Qt::red);
+        room(scmSecondRoom)->mSymbolColor = QColor(Qt::red);
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        QCOMPARE(pDlg->comboBox_roomSymbol->currentText(), scmMultipleValues);
+        pDlg->pushButton_resetSymbolColor->click();
+        pDlg->accept();
+
+        QVERIFY2(!mEmitted.changeSymbol, "the symbols disagree, so the dialog has no symbol to report");
+        QVERIFY2(mEmitted.changeSymbolColor, "the colour was reset, which is a decision about the colour alone");
+        QCOMPARE(room(scmFirstRoom)->mSymbol, qsl("!"));
+        QCOMPARE(room(scmSecondRoom)->mSymbol, qsl("?"));
+        QVERIFY(!room(scmFirstRoom)->mSymbolColor.isValid());
+        QVERIFY(!room(scmSecondRoom)->mSymbolColor.isValid());
     }
 };
 

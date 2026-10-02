@@ -40,10 +40,11 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -111,7 +112,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -1047,7 +1048,7 @@ private slots:
             vu->savedVars.insert(name);
         }
 
-        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/reload-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/reload-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
 
@@ -1085,7 +1086,7 @@ private slots:
         QCOMPARE(luaL_dostring(L, "secondSessionTable = {member = 'second session value', nest = {deep = 'second session deep value'}}"), 0);
         vu->savedVars.insert(qsl("secondSessionTable"));
 
-        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/second-session-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/second-session-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
         QCOMPARE(luaL_dostring(L, "secondSessionTable = nil"), 0);
@@ -1136,7 +1137,7 @@ private slots:
                  0);
         vu->savedVars.insert(qsl("bracketReload"));
 
-        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/bracket-reload-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/bracket-reload-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
         QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
@@ -1170,7 +1171,7 @@ private:
         if (!mpEditor) {
             mudlet::self()->slot_showScriptDialog();
             QTest::qWait(100);
-            mpEditor = mpHost->mpEditorDialog;
+            mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
             if (!mpEditor) {
                 return false;
             }
@@ -1182,7 +1183,7 @@ private:
 
     QString exportProfileXml()
     {
-        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/xmlexport-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/xmlexport-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         if (!writer->exportPackage(xmlPath, true, false)) {
             return {};
@@ -1212,7 +1213,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

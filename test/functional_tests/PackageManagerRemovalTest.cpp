@@ -22,7 +22,6 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TLuaInterpreter.h"
@@ -91,8 +90,8 @@ private slots:
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // The one a sibling's sysUninstall handler took away first. It is gone,
@@ -191,10 +190,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

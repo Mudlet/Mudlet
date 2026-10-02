@@ -34,22 +34,32 @@
  * reached from Host::setDisplayFont(), i.e. from changing the display font in
  * Preferences.
  *
+ * It also covers hiding one rather than deleting it: a sub command line hidden
+ * while it holds the keyboard focus has to pass that focus to the main command
+ * line.
+ *
+ * And the dock of a deleted user window, which has to leave the main window
+ * straight away rather than when its deferred delete gets round to it.
+ *
  * Bootstrap mirrors the other functional tests.
  */
 
 #include <QFileInfo>
+#include <QPointer>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TDockWidget.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -107,12 +117,12 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -121,7 +131,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -133,7 +143,7 @@ private slots:
         mpHost = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }
@@ -224,6 +234,34 @@ private slots:
         runDeferredDeletes();
     }
 
+    // A nested event loop (pumpEvents(), a JSON map import) can hold the dock's
+    // deferred delete back. Left in the dock layout until then, it keeps its share
+    // of the dock area from every user window docked after it, and left showing it
+    // is drawn over the main window.
+    void test_aDeletedUserWindowLeavesTheMainWindowAtOnce()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString windowName = qsl("undockedUserWindow");
+
+        auto [opened, openMsg] = mpHost->openWindow(windowName, /*loadLayout=*/false, /*autoDock=*/true, QString());
+        QVERIFY2(opened, qPrintable(openMsg));
+        const QPointer<TDockWidget> dock = console->dockWidget(windowName);
+        QVERIFY(dock);
+        QVERIFY2(mudlet::self()->layout()->indexOf(dock) != -1, "the user window was never docked, so it leaving the dock layout proves nothing");
+        QVERIFY2(!dock->isHidden(), "the user window was never shown, so it being hidden proves nothing");
+
+        auto [deleted, deleteMsg] = console->deleteMiniConsole(windowName);
+        QVERIFY2(deleted, qPrintable(deleteMsg));
+        // Deliberately no event loop turn here - the dock is still alive.
+        QVERIFY(dock);
+        const bool stillDocked = mudlet::self()->layout()->indexOf(dock) != -1;
+        const bool hidden = dock->isHidden();
+        runDeferredDeletes();
+
+        QVERIFY2(!stillDocked, "the deleted user window's dock was left in the main window's dock layout");
+        QVERIFY2(hidden, "the deleted user window's dock was left showing");
+    }
+
     // deleteCommandLine() must not leave the entry behind either - it takes the
     // entry itself, so the destructor has to cope with the name already gone.
     void test_deleteCommandLineDeregisters()
@@ -301,6 +339,41 @@ private slots:
         QVERIFY2(console->subCommandLineWidget(name) == replacement, "the old command line's deregistration took the replacement with it");
         console->deleteCommandLine(name);
         runDeferredDeletes();
+    }
+
+    // A sub command line that is hiding while it holds the keyboard focus has to
+    // hand that focus on, or the focus goes with the hidden widget and typing no
+    // longer reaches a command line at all (#8499)
+    void test_hidingAFocusedSubCommandLineHandsFocusToTheMainOne()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString name = qsl("hiddenWhileFocusedCmdLine");
+
+        auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(createMsg));
+        TCommandLine* subCommandLine = console->subCommandLineWidget(name);
+        QVERIFY(subCommandLine);
+        QVERIFY(console->mpCommandLine);
+
+        // a command line or a window left standing changes what the teardown at
+        // the end of this class exercises, so both go however this ends
+        const auto tidyUp = qScopeGuard([this, console, name]() {
+            console->deleteCommandLine(name);
+            runDeferredDeletes();
+            mudlet::self()->hide();
+        });
+
+        // Focus is only ever given to a widget in the active window, so the
+        // window has to be up and active before any of this means anything.
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::self()), "the main window never became active");
+        subCommandLine->setFocus();
+        QTRY_VERIFY2(subCommandLine->hasFocus(), "the sub command line never took the keyboard focus");
+
+        subCommandLine->hide();
+
+        QVERIFY2(console->mpCommandLine->hasFocus(), "hiding the focused sub command line left the keyboard focus nowhere");
     }
 
     // Kept last on purpose: it leaves a registered command line behind, so that

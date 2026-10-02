@@ -653,6 +653,52 @@ int TLuaInterpreter::sttStop(lua_State* L)
     return 1;
 }
 
+// stt.cancel()
+// Stop listening and throw away what has not been delivered yet.
+// Returns true on success, or nil + error message on failure.
+int TLuaInterpreter::sttCancel(lua_State* L)
+{
+    const char* funcName = "stt.cancel";
+
+    auto* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, funcName, "mudlet instance not available");
+    }
+
+    auto* pRecognizer = pMudlet->speechRecognizer();
+    if (!pRecognizer) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Refused in an error state and from a profile not holding the
+    // microphone, as stt.stop() is and for the same reasons.
+    // Both refusals are reported to the caller rather than through
+    // raiseSpeechEvent(): after a fault the claim is gone with the session, so
+    // routing by the owner would fall through to whichever profile is in front -
+    // raising sysSTTError in a game that asked for nothing, while the profile
+    // that did ask got only the nil return.
+    Host& host = getHostFromLua(L);
+    if (pRecognizer->state() == SpeechRecognizer::State::Error) {
+        const QString message = qsl("nothing was cancelled - speech recognition is in an error state; the sysSTTError event carries the reason");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+        const QString message = qsl("another profile is listening, and only the profile that started a session can cancel it");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // Processing included: a backend that finalises after its stop returns
+    // still has the phrase in flight, and abandoning that is what was asked.
+    pRecognizer->cancel();
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // stt.toggle()
 // Toggle speech recognition on/off.
 // Returns true if now listening, false if stopped, or nil + error on failure.
@@ -999,8 +1045,9 @@ int TLuaInterpreter::sttClose(lua_State* L)
             // listening() is false in Processing, so this used to fall straight
             // through and the phrase being decoded went with the engine - no
             // sysSTTResult, no sysSTTError, and nothing to tell it apart from
-            // the player never speaking. docs/stt-api.md rule 1 allows exactly
-            // one way to drop recognised speech, which is to report it.
+            // the player never speaking. docs/stt-api.md rule 1 lets speech be
+            // dropped silently only when the owning script asked for it; this
+            // phrase was already on its way, so its loss is reported.
             if (lostAPhraseBeingTranscribed) {
                 reportSpeechRefusalTo(*pOwner, qsl("speech recognition was closed while the last phrase was still being transcribed, so that phrase is lost"));
             }

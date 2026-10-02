@@ -1,51 +1,31 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/Lua/xcb-util-cursor/sentry-native handling: only builds of development
+# ccache/Lua/xcb-util-cursor handling: only builds of development
 # write these shared caches, so there are no save steps here at all - a pull
 # request never owns an entry of its own.
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
+    # Kept in step with docs-only-pr.yml, which reports this workflow's checks
+    # for the pull requests these paths leave it out of.
+    paths-ignore:
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '**.md'
 
 jobs:
-  changes:
-    name: detect buildable changes
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    outputs:
-      build: ${{steps.filter.outputs.build}}
-    steps:
-    - name: Check whether anything affecting the build changed
-      id: filter
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Only genuinely inert paths are listed - CI, CMake and packaging scripts
-        # all affect the build. Anything unexpected falls through to building.
-        files=$(gh api --paginate \
-          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
-          -q '.[].filename')
-        echo "Changed files:"
-        printf '%s\n' "$files"
-
-        if printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
-          echo "build=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "build=false" >> "$GITHUB_OUTPUT"
-          echo "::notice::Documentation-only change - skipping the build matrix"
-        fi
-
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    needs: changes
-    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
+    if: ${{ github.repository_owner == 'Mudlet' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       BUILD_TASK: 'PR'
       LUA_VERSION: '5.1.5'
+      CCACHE_MAXSIZE: 2G
+      CCACHE_COMPRESSLEVEL: 1
     strategy:
       fail-fast: false
       matrix:
@@ -68,9 +48,7 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
-          # Ships the Intel binary only: no test here branches on the host
-          # architecture, so the arm64 job below is the same coverage, and this
-          # is the slower pool.
+          # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64
@@ -91,7 +69,9 @@ jobs:
       uses: actions/checkout@v7
       with:
         submodules: recursive
-        fetch-depth: 0
+        # Enough for CI/generate-changelog.lua.
+        # MAX_COMMITS_PER_CHANGELOG (100) commits
+        fetch-depth: 100
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
@@ -159,7 +139,6 @@ jobs:
         done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
@@ -247,7 +226,6 @@ jobs:
         sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks --lua-version 5.1 install --local lua-yajl
@@ -366,20 +344,9 @@ jobs:
         echo "CC=clang" >> $GITHUB_ENV
 
     - name: check ccache stats prior to build
-      run: ccache --zero-stats --show-stats
-
-    - name: Get sentry-native commit hash
-      id: sentry-hash
-      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-    - name: Restore sentry-native cache
-      id: cache-sentry
-      uses: actions/cache/restore@v6
-      with:
-        path: |
-          3rdparty/sentry-native/install_without_transport
-          3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
+      run: |
+        ccache --zero-stats --show-stats -v
+        ccache --show-compression
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
@@ -399,7 +366,9 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: check ccache stats post build
-      run: ccache --show-stats
+      run: |
+        ccache --show-stats -v
+        ccache --show-compression
 
     - name: install dependencies for packaging/tests
       run: |
@@ -453,8 +422,7 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
-    # the full ctest run above already covers every functional-labelled test,
-    # and a BUILD_TESTING=OFF tree has no tests to find - bare ctest exits 8 there
+    # Skipped after the full ctest run, which covers these, and with BUILD_TESTING=OFF (bare ctest exits 8)
     - name: Run QTest
       if: matrix.run_tests != 'true' && matrix.build_tests != 'false'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
@@ -634,8 +602,8 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
       # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes ~75s, and the rest is headroom for a slow runner stretching those.
-      timeout-minutes: 6
+      # takes 300-340s under ASan, and the rest is headroom for a slow runner.
+      timeout-minutes: 12
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -682,9 +650,9 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # ~100s on a healthy Intel runner and measured at 172s on a slow one, so a
-      # tighter limit fails on runner speed rather than on anything the suite did
-      timeout-minutes: 6
+      # 200-245s on arm64; a tighter limit fails on runner speed rather than on
+      # anything the suite did
+      timeout-minutes: 12
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'

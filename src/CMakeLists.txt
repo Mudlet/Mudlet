@@ -94,6 +94,7 @@ set(mudlet_SRCS
     GifTracker.cpp
     GMCPAuthenticator.cpp
     Host.cpp
+    HostDialogs.cpp
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
@@ -106,8 +107,10 @@ set(mudlet_SRCS
     MMCPClient.cpp
     MMCPServer.cpp
     mudlet.cpp
+    MudletApp.cpp
     MudletInstanceCoordinator.cpp
-    MudletPaths.cpp
+    MudletMedia.cpp
+    MudletReplay.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -150,10 +153,12 @@ set(mudlet_SRCS
     TFeatureCallout.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
+    TGlyphCache.cpp
     THyperlinkCompactManager.cpp
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIrcClient.cpp
     TKey.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
@@ -188,6 +193,7 @@ set(mudlet_SRCS
     TMxpFormattingTagsHandler.cpp
     TMxpFrameManager.cpp
     TMxpFrameTagHandler.cpp
+    TMxpFrameWidgets.cpp
     TMxpHRTagHandler.cpp
     TMxpImageTagHandler.cpp
     TMxpLinkTagHandler.cpp
@@ -213,6 +219,7 @@ set(mudlet_SRCS
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
     TStringUtils.cpp
@@ -366,6 +373,7 @@ set(mudlet_HDRS
     GifTracker.h
     GMCPAuthenticator.h
     Host.h
+    HostDialogs.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
@@ -379,8 +387,10 @@ set(mudlet_HDRS
     MMCPClient.h
     MMCPServer.h
     mudlet.h
+    MudletApp.h
     MudletInstanceCoordinator.h
-    MudletPaths.h
+    MudletMedia.h
+    MudletReplay.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -414,6 +424,7 @@ set(mudlet_HDRS
     TCommandLine.h
     TConsole.h
     TConsoleModel.h
+    TConsoleModelNotifier.h
     TDebug.h
     TDebugFilterBar.h
     TDetachedWindow.h
@@ -428,11 +439,13 @@ set(mudlet_HDRS
     TFlipButton.h
     TForkedProcess.h
     TGameDetails.h
+    TGlyphCache.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TimerUnit.h
+    TIrcClient.h
     TKey.h
     TKeySequenceEdit.h
     TLabel.h
@@ -463,6 +476,7 @@ set(mudlet_HDRS
     TMxpFormattingTagsHandler.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
+    TMxpFrameWidgets.h
     TMxpHRTagHandler.h
     TMxpImageTagHandler.h
     TMxpLinkTagHandler.h
@@ -491,6 +505,7 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
     TStringUtils.h
@@ -756,12 +771,15 @@ if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
 
+# APP_VERSION is PUBLIC because the functional tests link ${LIB_MUDLET_TARGET}
+# and check the version identity it reports.
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSION}")
+
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
-    APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
     LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
@@ -1042,9 +1060,7 @@ if(UNIX AND NOT APPLE)
                                      WORLD_READ
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    # the map fixture the pathfinding specs need. It stays zipped rather than
-    # joining the *.xml above because unpacked it is 5.5MiB rather than 633KiB,
-    # and every package built from this tree would carry the difference
+    # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
     PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
@@ -1077,4 +1093,42 @@ if(UNIX AND NOT APPLE)
         GROUP_EXECUTE
         WORLD_READ
         WORLD_EXECUTE)
+endif()
+
+# `cmake --build <dir> --target run-mudlet` - build if needed, then launch.
+#
+# On macOS this goes through the bundle rather than the binary inside it. macOS
+# attributes a permission request to the responsible process, which for a binary
+# started from a shell is the application owning the terminal, not Mudlet: the
+# built-in speech backend then asks for speech recognition, the terminal's
+# application is required to carry the usage description, and TCC kills Mudlet
+# when it does not. See AppleSpeechRecognizer::doStartListening().
+#
+# `open` detaches, so qDebug() and qWarning() would go nowhere - hence the two
+# flags, which put both streams in a file beside the build.
+#
+# A sanitizer build is the exception, and runs the binary directly: ASAN_OPTIONS
+# and its siblings are read from the environment of the process, and `open`
+# hands the request to launchd rather than passing this shell's environment on,
+# so a sanitized run launched that way would silently ignore every option set
+# for it - and report to a terminal nothing is reading. That backend declines to
+# ask for permission rather than dying when it finds itself started this way, so
+# the trade is a message instead of a crash.
+if(APPLE AND NOT USE_SANITIZER)
+  add_custom_target(run-mudlet
+    # -n so a rebuild is actually what starts, rather than the running copy
+    # being brought to the front
+    COMMAND open -n "$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>"
+            --stdout "${CMAKE_BINARY_DIR}/mudlet-run.log"
+            --stderr "${CMAKE_BINARY_DIR}/mudlet-run.log"
+    COMMAND ${CMAKE_COMMAND} -E echo "Mudlet started; its output is in ${CMAKE_BINARY_DIR}/mudlet-run.log"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet as an application")
+else()
+  add_custom_target(run-mudlet
+    COMMAND "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet")
 endif()

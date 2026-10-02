@@ -79,6 +79,25 @@ local fixtureDirectory = specDirectory .. "/fixtures/packages"
 -- developer's interactive run.
 local testMode = os.getenv("MUDLET_TEST_MODE")
 
+-- A save another spec started can still be running, and saveProfile() then
+-- answers nil and a message rather than a path. That is the only refusal
+-- waiting clears, and only test mode can pump the event loop to wait for it;
+-- outside test mode, and for every other refusal, the answer goes straight back
+-- to the caller as it is rather than costing five seconds of pumping first. A
+-- refusal puts its message where the path goes, so callers have to look at the
+-- first value before treating the second as one.
+local function saveWaitingOutAnyOtherSave(folder, name)
+  local saved, pathOrRefusal
+  for _ = 1, 100 do
+    saved, pathOrRefusal = saveProfile(folder, name)
+    if saved or not testMode or not contains(tostring(pathOrRefusal), "a save is already in progress") then
+      break
+    end
+    pumpEvents(50)
+  end
+  return saved, pathOrRefusal
+end
+
 describe("Tests C++ functions in the Miscallaneous category", function()
     describe("Tests the functionality of sendMSDP", function()
       it("should return nil and an error message when MSDP cannot be sent", function()
@@ -138,6 +157,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       it("should return a string for a valid line number", function()
         echo("getTimestamp test line\n")
         assert.is_string(getTimestamp(1))
+      end)
+
+      it("should read the main console by an empty name or main", function()
+        local timestamp = getTimestamp(1)
+        assert.is_string(timestamp)
+        assert.are.equal(timestamp, getTimestamp("main", 1))
+        assert.are.equal(timestamp, getTimestamp("", 1))
       end)
 
       it("should return nil+msg for an out-of-range line number", function()
@@ -714,24 +740,6 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- history is silently never written again, which the user only discovers
       -- on the next launch.
       describe("Tests that an end of session save writes the command line histories", function()
-        -- A save another spec started can still be running, and saveProfile()
-        -- answers nil - without emitting anything - until it finishes.
-        local function saveWaitingOutAnyOtherSave()
-          local saved, message
-          for _ = 1, 100 do
-            saved, message = saveProfile()
-            -- Of the refusals saveProfile() can answer with, an already running
-            -- save is the only one waiting clears, and only test mode can pump
-            -- the event loop to let it. The rest are permanent, so they go back
-            -- as they are rather than costing five seconds of pumping first.
-            if saved or not testMode or not tostring(message):find("a save is already in progress", 1, true) then
-              break
-            end
-            pumpEvents(50)
-          end
-          return saved, message
-        end
-
         it("writes the main command line's history file out again", function()
           -- slot_saveHistory() returns without writing anything unless both of
           -- these are on, so they are what makes a missing file mean the signal
@@ -790,6 +798,117 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
           assert.is_false(fileExists(historyFile), "the history was written out despite saving being turned off for that command line")
         end)
+      end)
+    end)
+
+    -- saveProfile() hands the file it wrote back to the script, so the path it
+    -- reports has to be a tidy one. Two joins can double a separator: the one in
+    -- Host::saveProfile(), where the profile's own save directory already ends
+    -- in a separator, and the Lua binding's "save as" join, which is the one a
+    -- call with a file name as well as a folder takes.
+    describe("Tests the functionality of saveProfile", function()
+      -- The write runs on a pool thread, so the file only turns up some time
+      -- after saveProfile() has answered, and only test mode can pump the event
+      -- loop to wait for it. This is a smoke check that a save happened at all:
+      -- fileExists() asks the OS, which collapses "//", so it cannot tell a
+      -- doubled separator from a single one - the assertions on the string can.
+      local function assertSaveTurnedUp(path)
+        if not testMode then
+          return
+        end
+        for _ = 1, 200 do
+          if fileExists(path) then
+            return
+          end
+          pumpEvents(50)
+        end
+        assert.is_true(fileExists(path), "no profile save turned up at " .. tostring(path))
+      end
+
+      -- A directory of its own for the saves that go outside the profile's own
+      -- save directory, taken away again with whatever landed in it. The saves
+      -- below have all been waited for by the time this runs, so nothing is
+      -- taken out from under a write still on its way.
+      local function scratchFolder(name)
+        local folder = getMudletHomeDir() .. "/" .. name
+        lfs.mkdir(folder)
+        finally(function()
+          for entry in lfs.dir(folder) do
+            if entry ~= "." and entry ~= ".." then
+              os.remove(folder .. "/" .. entry)
+            end
+          end
+          lfs.rmdir(folder)
+        end)
+        return folder
+      end
+
+      it("reports the default save in the profile's own save directory with a single separator", function()
+        local saved, path = saveWaitingOutAnyOtherSave()
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.is_false(contains(path, "//"), "saveProfile() reported " .. tostring(path))
+        assert.equals(getMudletHomeDir() .. "/current", path:match("^(.*)/[^/]+$"))
+        assertSaveTurnedUp(path)
+      end)
+
+      it("reports a single separator for a save into a folder that ends in one", function()
+        local folder = scratchFolder("mudlet-spec-save-folder")
+
+        local saved, path = saveWaitingOutAnyOtherSave(folder .. "/")
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.is_false(contains(path, "//"), "saveProfile() reported " .. tostring(path))
+        assert.equals(folder, path:match("^(.*)/[^/]+$"))
+        assertSaveTurnedUp(path)
+      end)
+
+      it("reports a single separator for a named save into a folder that ends in one", function()
+        local folder = scratchFolder("mudlet-spec-save-as-folder")
+
+        local saved, path = saveWaitingOutAnyOtherSave(folder .. "/", "mudlet-spec-saved")
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.equals(folder .. "/mudlet-spec-saved.xml", path)
+        assertSaveTurnedUp(path)
+      end)
+
+      it("leaves a name that already ends in .xml with the one suffix", function()
+        local folder = scratchFolder("mudlet-spec-suffix-folder")
+
+        local saved, path = saveWaitingOutAnyOtherSave(folder, "mudlet-spec-saved.xml")
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.equals(folder .. "/mudlet-spec-saved.xml", path)
+        assertSaveTurnedUp(path)
+      end)
+
+      -- Where a ".." is resolved is the filesystem's business - a symbolic link
+      -- in front of one makes collapsing it here point somewhere else - so this
+      -- pins only what the fix is about: one separator, and a save really at the
+      -- path that came back. The way back in leaves the file in the scratch
+      -- folder, which is swept up either way.
+      it("reports a single separator for a folder with a .. in it", function()
+        local name = "mudlet-spec-dotdot-folder"
+        local folder = scratchFolder(name)
+
+        local saved, path = saveWaitingOutAnyOtherSave(folder .. "/../" .. name .. "/", "mudlet-spec-dotdot")
+        assert.is_true(saved, "saveProfile() refused the save: " .. tostring(path))
+        assert.is_false(contains(path, "//"), "saveProfile() reported " .. tostring(path))
+        assertSaveTurnedUp(path)
+      end)
+
+      -- A file name that names a place of its own wins the join outright: the
+      -- folder is dropped and the save lands at the root of the filesystem. It
+      -- is refused instead, with the nil and the message the binding answers any
+      -- other unusable argument with. Which names count is the platform's rule.
+      it("refuses a file name that is an absolute path instead of saving outside the folder it was given", function()
+        local absoluteName = getOS() == "windows" and "C:/mudlet-spec-absolute" or "/mudlet-spec-absolute"
+        local escapee = absoluteName .. ".xml"
+        finally(function()
+          os.remove(escapee)
+        end)
+
+        local saved, message = saveProfile(getMudletHomeDir(), absoluteName)
+        assert.is_nil(saved, "saveProfile() took the save and reported " .. tostring(message))
+        assert.is_true(contains(tostring(message), "absolute path"), "saveProfile() answered " .. tostring(message))
+        assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
     end)
 
@@ -984,6 +1103,48 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
           assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
         end)
+
+        it("gives text with a transparent background the console's colour (#10592)", function()
+          local logPath, triggerId, selectedAt
+          local htmlLogging = getConfig("logInHTML")
+          local red, green, blue, alpha = getBackgroundColor()
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            setConfig("logInHTML", htmlLogging)
+            setBackgroundColor(red, green, blue, alpha)
+            resetFormat()
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+          setBackgroundColor(12, 34, 56)
+
+          local started, _, path = startLogging(true)
+          assert.is_true(started, "the test did not open a log of its own")
+          logPath = path
+
+          -- the line's markup is rendered the moment the line commits, so only a
+          -- trigger on the line itself can recolour it in time
+          triggerId = tempTrigger("SpecHtmlTransparent", function()
+            selectedAt = selectString("SpecHtmlTransparent", 1)
+            setBgColor(0, 0, 0, 0)
+            deselect()
+          end)
+          feedTriggers("SpecHtmlTransparent\n")
+          -- ordinary text carries the console's background colour anyway, so
+          -- without the recolouring the assertions below prove nothing
+          assert.is_true((selectedAt or -1) >= 0, "the trigger did not select the text it had to make transparent")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+          assert.is_true(contains(contents, "background: rgb(12,34,56)"), "the transparent text did not take the console's background colour in the log")
+          assert.is_false(contains(contents, "background: rgb(0,0,0)"), "the transparent text was logged as black")
+        end)
       end)
 
       -- A received line is held back from the log until the next one commits.
@@ -1092,6 +1253,40 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(log, "Before the gag."), "the line before the gagged one is missing from the log")
           assert.is_false(contains(log, "Top secret plans"), "the gagged line leaked into the log")
           assert.is_true(contains(log, "After the gag."), "the line after the gagged one is missing from the log")
+        end)
+
+        it("keeps the pending line when a trigger deletes an older one (#9429)", function()
+          local logPath, triggerId, deletedLine
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            moveCursorEnd()
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          local started, _, path = startLogging(true)
+          assert.is_true(started, "the test did not open a log of its own")
+          logPath = path
+
+          feedTriggers("First of three.\n")
+          feedTriggers("Second of three.\n")
+          triggerId = tempTrigger("Third of three.", function()
+            moveCursor(0, getLineNumber() - 2)
+            deletedLine = getCurrentLine()
+            deleteLine()
+          end)
+          feedTriggers("Third of three.\n")
+          assert.are.equal("First of three.", deletedLine, "the trigger deleted a line other than the one two above it")
+
+          startLogging(false)
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.equals(1, occurrences(log, "First of three."), "the line that was written before it was deleted is not in the log exactly once")
+          assert.equals(1, occurrences(log, "Second of three."), "deleting an older line dropped the line that was still pending for logging")
+          assert.equals(1, occurrences(log, "Third of three."), "the line the deleting trigger fired on is missing from the log")
         end)
 
         it("does not replay the last line of one session into the next", function()
@@ -1694,7 +1889,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           os.remove(first)
           os.remove(second)
         end)
-        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
+        -- Two chunks, so that the second is still in the file when the refused
+        -- call comes, and would be lost if that call touched the file
+        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n") .. chunk(10, "mudlet-spec-first-replay-tail\r\n"))
         writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
         local mark = getLastLineNumber("main")
 
@@ -1704,6 +1901,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_nil(ok)
         assert.is_true(contains(err, "already be in progress"), tostring(err))
         assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
+        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-tail"), "refusing the second replay cut the first one short")
         assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
@@ -1821,6 +2019,45 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         insertHTML("<b>mudlet-spec-bold</b>")
 
         assert.equals("mudlet-spec-boldmudlet-spec-html-target", getCurrentLine())
+      end)
+    end)
+
+    describe("Tests the functionality of echo", function()
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() echo() end, "echo: bad argument #1 type")
+      end)
+
+      it("raises a Lua error for a console name that is not a string", function()
+        assertArgError(function() echo({}, "mudlet-spec-echo") end, "echo: bad argument #1 type")
+      end)
+
+      it("raises a Lua error for text that is not a string", function()
+        assertArgError(function() echo("main", {}) end, "echo: bad argument #2 type")
+      end)
+
+      it("writes to the main console and answers true, named or not", function()
+        local mark = getLastLineNumber("main")
+
+        assert.same({true}, {echo("mudlet-spec-echo-unnamed ")})
+        assert.same({true}, {echo("main", "mudlet-spec-echo-main ")})
+        assert.same({true}, {echo("", "mudlet-spec-echo-empty\n")})
+
+        assert.is_true(containsWrapped(textFrom(mark), "mudlet-spec-echo-unnamed mudlet-spec-echo-main mudlet-spec-echo-empty"), textFrom(mark))
+      end)
+
+      it("writes to a miniconsole and answers true", function()
+        local name = "mudlet-spec-echo-miniconsole"
+        createMiniConsole(name, 0, 0, 200, 100)
+        finally(function() deleteMiniConsole(name) end)
+
+        assert.same({true}, {echo(name, "mudlet-spec-echo-mini")})
+
+        local text = table.concat(getLines(name, 0, getLastLineNumber(name) + 1), "")
+        assert.is_true(contains(text, "mudlet-spec-echo-mini"), text)
+      end)
+
+      it("answers nil and a message for a console that does not exist", function()
+        assert.same({nil, "console/label 'mudlet-spec-echo-nowhere' does not exist"}, {echo("mudlet-spec-echo-nowhere", "text")})
       end)
     end)
 
@@ -2005,6 +2242,73 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(enableTrigger(parentGroup))
         assert.is_true(isAncestorsActive(childId, "trigger"))
       end)
+
+      -- The profile these run in is saved on exit and reused by the next run,
+      -- and Lua cannot delete a permanent item, so what an earlier run made is
+      -- reused rather than stacked up again under the same name.
+      local function nestedIn(groupName, groupKind, childName, childKind, makeChild)
+        local id = findItems(childName, childKind)[1]
+        if not id then
+          assert.is_true(permGroup(groupName, groupKind), "could not create the " .. groupKind .. " group")
+          id = makeChild()
+        end
+        assert.is_true(type(id) == "number" and id > 0, "could not nest a " .. childKind .. " in " .. groupName)
+        return id
+      end
+
+      it("follows the state of a nested alias's parent group", function()
+        local group = "mudletSpecIsActiveAliasGroup"
+        local childId = nestedIn(group, "alias", "mudletSpecIsActiveAliasChild", "alias", function()
+          return permAlias("mudletSpecIsActiveAliasChild", group, "^mudletSpecIsActiveNeverTyped$", "")
+        end)
+        finally(function() enableAlias(group) end)
+
+        assert.is_true(enableAlias(group))
+        assert.is_true(isAncestorsActive(childId, "alias"))
+        assert.is_true(disableAlias(group))
+        assert.is_false(isAncestorsActive(childId, "alias"))
+      end)
+
+      it("follows the state of a nested script's parent group", function()
+        local group = "mudletSpecIsActiveScriptGroup"
+        local childId = nestedIn(group, "script", "mudletSpecIsActiveScriptChild", "script", function()
+          return permScript("mudletSpecIsActiveScriptChild", group, "")
+        end)
+        -- script and timer groups are made switched off, unlike the others
+        finally(function() disableScript(group) end)
+
+        assert.is_true(enableScript(group))
+        assert.is_true(isAncestorsActive(childId, "script"))
+        assert.is_true(disableScript(group))
+        assert.is_false(isAncestorsActive(childId, "script"))
+      end)
+
+      it("follows whether the toolbar a button sits on is shown", function()
+        local toolbar = "mudletSpecIsActiveToolbar"
+        -- see "names the toolbar a button sits on" below for why it is hidden;
+        -- hiding it switches it off, and that is saved with the profile, so a
+        -- reused profile brings it back hidden and it has to be shown first
+        finally(function() hideToolBar(toolbar) end)
+        if exists(toolbar, "button") == 0 then
+          assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
+        end
+        local buttonId = findItems("mudletSpecIsActiveButton", "button")[1]
+            or tempButton(toolbar, "mudletSpecIsActiveButton", 0)
+        assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+
+        showToolBar(toolbar)
+        assert.is_true(isAncestorsActive(buttonId, "button"))
+        hideToolBar(toolbar)
+        assert.is_false(isAncestorsActive(buttonId, "button"))
+      end)
+
+      it("returns nil+msg for an item of any type that does not exist", function()
+        for _, itemType in ipairs({"button", "keybind", "script", "timer", "trigger"}) do
+          local ok, err = isAncestorsActive(9999999, itemType)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, itemType .. " item ID 9999999 does not exist"), tostring(err))
+        end
+      end)
     end)
 
     describe("Tests the functionality of ancestors", function()
@@ -2157,6 +2461,44 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
 
         assertNamesTheGroup(ancestors(buttonId, "button"), toolbar)
+      end)
+
+      -- A timer whose parent is another timer rather than a group is an offset
+      -- timer: it runs relative to its parent, and the parent is an item in
+      -- its own right, which is what the node says
+      it("calls an offset timer's parent an item, not a group", function()
+        local parentName = "mudletSpecAncestorOffsetParent"
+        local childName = "mudletSpecAncestorOffsetChild"
+        local childId = findItems(childName, "timer")[1]
+        if not childId then
+          assert.is_number(permTimer(parentName, "", 60, [[ ]]))
+          childId = permTimer(childName, parentName, 30, [[ ]])
+        end
+        assert.is_true(type(childId) == "number" and childId > 0, "could not make an offset timer under " .. parentName)
+
+        -- a permanent timer is made switched off, and is left that way
+        finally(function() disableTimer(parentName) end)
+        assert.is_true(disableTimer(parentName))
+
+        local list = ancestors(childId, "timer")
+        assert.is_table(list)
+        assert.equals(1, #list)
+        assert.equals(parentName, list[1].name)
+        assert.equals("item", list[1].node)
+        assert.is_false(list[1].isActive)
+        assert.is_false(isAncestorsActive(childId, "timer"))
+
+        assert.is_true(enableTimer(parentName))
+        assert.is_true(ancestors(childId, "timer")[1].isActive)
+        assert.is_true(isAncestorsActive(childId, "timer"))
+      end)
+
+      it("returns nil+msg for an item of any other type that does not exist", function()
+        for _, itemType in ipairs({"timer", "alias", "keybind", "script", "button"}) do
+          local ok, err = ancestors(9999999, itemType)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, itemType .. " item ID 9999999 does not exist"), tostring(err))
+        end
       end)
 
       it("is case insensitive about the item type", function()

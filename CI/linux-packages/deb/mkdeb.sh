@@ -14,15 +14,39 @@ mkdir -p "$STAGE" "$OUT"
 
 # shellcheck disable=SC1091
 . /etc/os-release
-# Every distribution gets its own suite, and the ~codename suffix keeps the
-# versions distinct should a package ever reach the wrong one. A snapshot takes
-# ~git rather than +git so it sorts before the release of its version.
+# A per-distribution ~codename suffix keeps versions distinct if a package reaches the wrong suite;
+# ~git (not +git) sorts a snapshot before its release.
 UPSTREAM="${PKG_VERSION}${PKG_SNAPSHOT:+~git${PKG_SNAPSHOT}}"
 VERSION="${UPSTREAM}-${PKG_RELEASE:-1}~${VERSION_CODENAME}"
 ARCH="$(dpkg --print-architecture)"
 echo "==> packaging ${PACKAGE} ${VERSION} (${ARCH})"
 
 cmake --install "$SRC/build" --prefix "$STAGE/usr"
+
+# add_subdirectory() adopts vendored projects' install() rules, which would ship their dev files (#10871).
+# EXCLUDE_FROM_ALL keeps them out, but that is undocumented CMake behaviour, so check the staged tree.
+# Drop rather than refuse: this also packages tags that predate that CMake fix.
+mapfile -d '' -t DEVELOPMENT_FILES < <(cd "$STAGE" && find . \( -path './usr/include' \
+  -o -name '*.a' -o -name '*.cmake' -o -name '*.h' -o -name '*.hpp' -o -name '*.la' \
+  -o -name '*.pc' -o -path '*/cmake/*' -o \( -type l -name '*.so' \) \) -prune -print0)
+if [[ ${#DEVELOPMENT_FILES[@]} -gt 0 ]]; then
+  echo "==> dropping development files staged into the package:" >&2
+  printf '      %s\n' "${DEVELOPMENT_FILES[@]}" >&2
+  echo "    a vendored project's install() rules reached this tree - add EXCLUDE_FROM_ALL to" >&2
+  echo "    its add_subdirectory() in CMakeLists.txt, as 3rdparty/qt-tags-widget has" >&2
+  (cd "$STAGE" && rm -rf -- "${DEVELOPMENT_FILES[@]}")
+  find "$STAGE" -mindepth 1 -type d -empty -delete
+else
+  echo "==> no development files staged"
+fi
+
+# EXCLUDE_FROM_ALL fails by silently dropping files, so also check what the install must produce.
+mapfile -t STAGED_TOP < <(cd "$STAGE/usr" && find . -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
+if [[ "${STAGED_TOP[*]}" != "bin share" || ! -x "$STAGE/usr/bin/mudlet" || ! -d "$STAGE/usr/share/mudlet/lua" ]]; then
+  echo "the install staged no usable Mudlet: expected bin/mudlet and share/mudlet/lua below" >&2
+  echo "bin and share only, found '${STAGED_TOP[*]}'" >&2
+  exit 1
+fi
 
 if [[ -d "$SRC/translations/lua" ]]; then
   mkdir -p "$STAGE/usr/share/mudlet/lua/translations"
@@ -53,8 +77,7 @@ while IFS= read -r -d '' f; do
     *) continue ;;
   esac
   strip --strip-unneeded "$f"
-  # luarocks links with an rpath to the system library directory, which lintian
-  # flags and which nothing needs
+  # luarocks adds an rpath to the system library dir, which lintian flags and nothing needs
   if [[ -n "$(patchelf --print-rpath "$f")" ]]; then
     patchelf --remove-rpath "$f"
   fi

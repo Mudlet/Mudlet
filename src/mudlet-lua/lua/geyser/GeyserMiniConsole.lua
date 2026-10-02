@@ -610,8 +610,11 @@ function Geyser.MiniConsole:new (cons, container)
   -- Now create the MiniConsole using primitives
   if not string.find(me.name, ".+Class$") then
     me.windowname = me.windowname or me.container.windowname or "main"
-    createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
+    local ok, err = createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
+    if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+      printError(string.format("Geyser.MiniConsole '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+    end
 
 -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
     if me.hidden or me.auto_hidden then

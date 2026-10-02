@@ -214,11 +214,17 @@ public:
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
+    bool replayPaused() const { return mReplayPaused; }
+    void pauseReplay();
+    void resumeReplay();
+    void stopReplay();
+    void endReplay(const QString& message);
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QByteArray& getEncoding() const { return mEncoding; }
     QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
+    void postCharacterModeWarning();
     const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
     std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
@@ -275,6 +281,10 @@ public:
     // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
+    // Called when a password turns up after the auto-login already reached the password step -
+    // a keychain read the user only answered by then. Sends it only while the game is provably
+    // still waiting at that prompt, see the definition.
+    void sendOutstandingAutoLoginPassword();
     void terminateConnection();
     bool currentlySecure() const
     {
@@ -335,6 +345,9 @@ signals:
     void signal_promptReceived();
 
     void signal_bell();
+    // Whether this player still needs telling is the frontend's call; it answers
+    // through postCharacterModeWarning()
+    void signal_characterModeDetected();
 
     void signal_packageDownloadStarted(const QString& title, const QString& cancelText);
     void signal_packageDownloadProgress(qint64 got, qint64 total);
@@ -353,15 +366,24 @@ private:
     // the in-flight reply, reproducing the dialog-swap cancellation cascade.
     friend class TelnetTlsPromptTest;
 
+    // Waits for the auto-login's password step to mark a password as owed, and
+    // checks that a game's greeting asked for SGA and that a late password
+    // starts the password-mask safety timeout.
+    friend class TelnetLatePasswordTest;
+
     // Needs to call processSocketData() with a buffer it laid out itself, which
     // the public loopbackTest() cannot express - see issue #1065 - and to seed
     // mDecompressionRecursionDepth so the over-limit refusal can be reached
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
 
-    // Calls reset() from its constructor. It has to be the Host that does that,
-    // and not cTelnet itself, because reset() clears Host members declared after
-    // cTelnet, which do not exist yet while cTelnet is being constructed.
+    // Reads the password-mode safety timer, the connection clock and the
+    // character-at-a-time detection timer and flags, which have no public face,
+    // and fires those timers early rather than waiting them out.
+    friend class TelnetPasswordMaskTimeoutTest;
+
+    // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
+    // cTelnet, which don't exist yet while cTelnet is constructed.
     friend class Host;
 
 #if defined(QT_NO_SSL)
@@ -435,6 +457,7 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
+    void slot_passwordMaskTimeout();
 
 private:
 #if !defined(QT_NO_SSL)
@@ -565,6 +588,16 @@ private:
 
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    // Set when the auto-login reached the password step with no password in hand, which is where
+    // an unanswered keychain prompt leaves it. It is the record of the game sitting at its
+    // password prompt that sendOutstandingAutoLoginPassword() needs to decide whether a password
+    // arriving later may still be typed for the player. Per-connection, so reset() clears it.
+    bool mAutoLoginPasswordOutstanding = false;
+    QElapsedTimer mAutoLoginPasswordOutstandingSince;
+    // Set by a WONT ECHO and cleared when the password step marks the prompt above: the mask the
+    // password was owed under has ended, so a mask a later WILL ECHO puts up belongs to another
+    // question and proves nothing about that prompt.
+    bool mAutoLoginPasswordMaskWithdrawn = false;
     QTimer* mTimerPasswordModeTimeout = nullptr;
     QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
@@ -594,6 +627,15 @@ private:
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
     bool loadingReplay = false;
+    // While set, no chunk is parsed and no chunk timer runs.
+    bool mReplayPaused = false;
+    // A chunk is in ctelnet.cpp's global buffer but not yet parsed. Defensive: stops resumeReplay()
+    // re-arming when a pause AND resume land inside one chunk's processing via a nested event loop.
+    bool mReplayChunkPending = false;
+    // The gap scaled by replay speed, or what was left of it when paused mid-wait.
+    int mReplayChunkDelay = 0;
+    // Not QTimer::singleShot, so pausing can stop it and keep the remaining time.
+    QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;
@@ -637,6 +679,7 @@ private:
 
     void checkCharacterModePattern();
     bool checkEchoAnomalyPattern();
+    void restartPasswordMaskTimeout();
 };
 
 #endif // MUDLET_CTELNET_H

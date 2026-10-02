@@ -3,8 +3,9 @@
 -- drive each path so LeakSanitizer fails the build if one starts stranding
 -- again, and pin the messages while doing it.
 --
--- Only the failing paths are exercised - a successful spawn would leave a real
--- child process behind for the rest of the suite.
+-- A spawn that actually starts must also be drained before its test ends: the
+-- C++ wrapper is freed from TLuaInterpreter's purge timer, which only ticks
+-- while the event loop runs, and the suite holds that loop shut.
 
 describe("spawn", function()
 
@@ -63,6 +64,42 @@ describe("spawn", function()
       local ok, err = pcall(spawn, function() end, "/nonexistent/mudlet-spawn-test", "one", "two", "three")
       assert.is_false(ok)
       assert.is_truthy(tostring(err):find("Failed to start process", 1, true))
+    end)
+
+  end)
+
+  describe("reading output", function()
+
+    -- A child that writes its lines in one go can produce a single readyRead
+    -- with every line already in the buffer, and nothing then arrives to signal
+    -- again, so a reader that took one line per signal lost the rest
+    it("should hand the callback every line of a burst, not just the first (#322)", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to write several lines in one go")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines = {}
+      spawn(function(line)
+        table.insert(lines, line)
+      end, "/bin/sh", "-c", "printf 'spawnBurstA\\nspawnBurstB\\nspawnBurstC\\n'")
+      finally(function()
+        -- one full period of the 2s purge timer that owns the wrapper's deletion
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 3 then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.are.same({"spawnBurstA\n", "spawnBurstB\n", "spawnBurstC\n"}, lines)
     end)
 
   end)

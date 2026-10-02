@@ -4,7 +4,7 @@ the free [Github for Desktop](https://desktop.github.com) app to contribute code
 
 # UI design guidelines
 
-Have a look at the [UI design philosophy](UI-design-philosophy.md) when improving Mudlet's interface.
+Have a look at the [UI design philosophy](../UI-design-philosophy.md) when improving Mudlet's interface.
 
 # Coding guidelines
 

@@ -37,7 +37,7 @@
 #include <QtNetwork/QTcpSocket>
 #include <memory>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -326,7 +326,7 @@ private slots:
         QVERIFY2(mpServer->start(), "KaVirServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -337,8 +337,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     // A game that lists several charsets it can speak must not pull a UTF-8
@@ -548,10 +548,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

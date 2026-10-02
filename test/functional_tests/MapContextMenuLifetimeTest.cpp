@@ -37,11 +37,12 @@
 #include <QPointer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QWindow>
 #include <QtTest/QtTest>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
@@ -87,7 +88,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -248,7 +249,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         // The context menu items are found by their text.
@@ -387,6 +388,50 @@ private slots:
         QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
         QVERIFY2(item.isNull(), "the menu's item outlived the menu");
         QCOMPARE(actionsUnderTheMap(), before);
+    }
+
+    // A menu put up over the map covers part of it, and the click that picks
+    // one of its items lands on both. It used to be read as a click on the map:
+    // the menu was closed and the click replayed underneath, so the item it was
+    // aimed at never fired (#8492)
+    void test_aClickOnTheMenuIsNotTakenForAClickOnTheMapBehindIt()
+    {
+        buildMap();
+        showMapper();
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QPointer<QMenu> menu = mp2dMap->mActiveContextMenu;
+        QVERIFY2(menu, "the right click on a room put up no menu");
+
+        // Right over the map, so that only the menu's own geometry can tell a
+        // click on the menu from a click on the map
+        menu->move(mp2dMap->mapToGlobal(viewCentre()));
+        menu->resize(200, 100);
+        const QRect menuGeometry(menu->mapToGlobal(QPoint(0, 0)), menu->size());
+        const QPoint insideTheMenu = menu->mapToGlobal(QPoint(10, 10));
+        QVERIFY2(mp2dMap->rect().contains(mp2dMap->mapFromGlobal(insideTheMenu)), "the click has to be over the map too, or there is nothing for the map to mistake it for");
+
+        // The filter sits on qApp, so a press meant for the menu arrives
+        // watched by the menu's own window - not the menu widget and not a
+        // child of it, so neither identity shortcut in the filter matches it
+        // and only the menu's geometry can say the click was not for the map.
+        QWindow* menuWindow = menu->windowHandle();
+        QVERIFY2(menuWindow, "the menu never got a window of its own for the press to arrive on");
+        QMouseEvent press(QEvent::MouseButtonPress, QPointF(10, 10), QPointF(insideTheMenu), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        const bool filtered = mp2dMap->eventFilter(menuWindow, &press);
+
+        QVERIFY2(!filtered, "the click was taken over by the map, so the menu item it was aimed at never saw it");
+        QVERIFY2(mp2dMap->mActiveContextMenu == menu, "the map closed the menu out from under the click meant for it");
+
+        // The control: a click on the map that misses the menu still has to be
+        // taken over, or the two assertions above would also hold with the
+        // whole forwarding mechanism gone
+        const QPoint pastTheMenu(menuGeometry.right() + 20, menuGeometry.bottom() + 20);
+        QVERIFY2(!menuGeometry.contains(pastTheMenu), "the control click has to miss the menu");
+        QVERIFY2(mp2dMap->rect().contains(mp2dMap->mapFromGlobal(pastTheMenu)), "the control click has to land on the map");
+        QMouseEvent pressPastTheMenu(QEvent::MouseButtonPress, QPointF(10, 10), QPointF(pastTheMenu), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QVERIFY2(mp2dMap->eventFilter(menuWindow, &pressPastTheMenu), "a click that missed the menu was not forwarded to the map");
+        QVERIFY2(!mp2dMap->mActiveContextMenu, "the menu was left open by a click that was not meant for it");
     }
 };
 

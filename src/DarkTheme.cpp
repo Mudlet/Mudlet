@@ -42,9 +42,8 @@ void DarkTheme::polish(QPalette& palette)
     palette.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
     palette.setColor(QPalette::ToolTipText, Qt::white);
     palette.setColor(QPalette::Text, Qt::white);
-    // Before Qt 6.10, Fusion hands polish() the light palette even in dark mode,
-    // leaving this role at #646464 - 2.9:1 against the Base set above, under the
-    // 4.5:1 AA floor. Newer Qt derives a dark value itself, so this is for 6.8/6.9
+    // Before Qt 6.10 Fusion polishes with the light palette even in dark mode, leaving this at #646464:
+    // 2.9:1 against Base, under the 4.5:1 AA floor. Only needed for Qt 6.8/6.9.
     QColor placeholderText(palette.color(QPalette::Text));
     placeholderText.setAlphaF(0.5f);
     palette.setColor(QPalette::PlaceholderText, placeholderText);

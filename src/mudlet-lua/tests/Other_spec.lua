@@ -465,6 +465,27 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the interface language Mudlet publishes", function()
+
+    -- mudlet.translations.interfacelanguage is what translateTable() and
+    -- loadTranslations() fall back to, and cTelnet sends it to the game server as
+    -- the NEW-ENVIRON LANG variable. Nothing else asserts it is set at all, so a
+    -- startup that stopped filling it would leave every caller with an empty
+    -- string and no test would notice.
+    it("names a language, and one the directions table was built under", function()
+      assert.is_table(mudlet.translations)
+      assert.is_string(mudlet.translations.interfacelanguage)
+      assert.is_truthy(#mudlet.translations.interfacelanguage > 0)
+      assert.is_table(mudlet.translations[mudlet.translations.interfacelanguage])
+    end)
+
+    it("is the language translateTable falls back to when none is given", function()
+      local directions = mudlet.translations[mudlet.translations.interfacelanguage]
+      local translated = translateTable({"north"})
+      assert.are.equal(directions["north"], translated[1])
+    end)
+  end)
+
   describe("Tests the functionality of getMudletVersion", function()
 
     it("answers each documented style with the piece of the version it names", function()
@@ -1043,6 +1064,116 @@ describe("Tests Other.lua functions", function()
       end)
     end)
 
+    describe("the exact refusals", function()
+      local unusedId = 900000
+      while getStopWatches()[unusedId] do
+        unusedId = unusedId + 1
+      end
+
+      it("reset, start and rename name an id with no stopwatch", function()
+        local expected = ("stopwatch with id %d not found"):format(unusedId)
+        for fname, call in pairs({
+          resetStopWatch = function() return resetStopWatch(unusedId) end,
+          startStopWatch = function() return startStopWatch(unusedId) end,
+          ["startStopWatch keeping the time"] = function() return startStopWatch(unusedId, false) end,
+          setStopWatchName = function() return setStopWatchName(unusedId, "stopwatchSpecNeverGiven") end,
+        }) do
+          local ok, err = call()
+          assert.is_nil(ok, fname)
+          assert.equals(expected, err, fname)
+        end
+      end)
+
+      it("say by id when a stopwatch was already reset or stopped", function()
+        local id = track(createStopWatch(false))
+        local ok, err = resetStopWatch(id)
+        assert.is_nil(ok)
+        assert.equals(("stopwatch with id %d was already reset"):format(id), err)
+        ok, err = stopStopWatch(id)
+        assert.is_nil(ok)
+        assert.equals(("stopwatch with id %d was already stopped"):format(id), err)
+      end)
+
+      it("say by name when a stopwatch was already running or reset", function()
+        local running = track(createStopWatch("stopwatchSpecExactRunning", true))
+        finally(function() stopStopWatch(running) end)
+        local ok, err = startStopWatch("stopwatchSpecExactRunning")
+        assert.is_nil(ok)
+        assert.equals(("stopwatch with name 'stopwatchSpecExactRunning' (id:%d) was already running"):format(running), err)
+
+        local fresh = track(createStopWatch("stopwatchSpecExactReset"))
+        ok, err = resetStopWatch("stopwatchSpecExactReset")
+        assert.is_nil(ok)
+        assert.equals(("stopwatch with name 'stopwatchSpecExactReset' (id:%d) was already reset"):format(fresh), err)
+      end)
+
+      it("setStopWatchName refuses a name another stopwatch has, by id or by name", function()
+        local takenId = track(createStopWatch("stopwatchSpecTakenName"))
+        local id = track(createStopWatch("stopwatchSpecWantsTakenName"))
+        local expected = ("the name 'stopwatchSpecTakenName' is already in use for another stopwatch (id:%d)"):format(takenId)
+
+        local ok, err = setStopWatchName(id, "stopwatchSpecTakenName")
+        assert.is_nil(ok)
+        assert.equals(expected, err)
+        ok, err = setStopWatchName("stopwatchSpecWantsTakenName", "stopwatchSpecTakenName")
+        assert.is_nil(ok)
+        assert.equals(expected, err)
+        assert.equals("stopwatchSpecWantsTakenName", getStopWatches()[id].name)
+      end)
+
+      it("setStopWatchName to the name a stopwatch already has is no change, and fine", function()
+        local id = track(createStopWatch("stopwatchSpecKeepsName"))
+        assert.is_true(setStopWatchName(id, "stopwatchSpecKeepsName"))
+        assert.is_true(setStopWatchName("stopwatchSpecKeepsName", "stopwatchSpecKeepsName"))
+        assert.equals("stopwatchSpecKeepsName", getStopWatches()[id].name)
+      end)
+    end)
+
+    -- The empty name stands for the first (lowest id) unnamed stopwatch. The
+    -- other specs here leave unnamed ones about until teardown, so these name
+    -- every unnamed one for the length of the test and give them back after.
+    describe("the empty name", function()
+      local function nameTheUnnamed()
+        local renamed = {}
+        for id, watch in pairs(getStopWatches()) do
+          if watch.name == "" then
+            assert.is_true(setStopWatchName(id, "stopwatchSpecWasUnnamed" .. id))
+            renamed[#renamed + 1] = id
+          end
+        end
+        finally(function()
+          for _, id in ipairs(renamed) do
+            setStopWatchName(id, "")
+          end
+        end)
+      end
+
+      it("finds nothing when every stopwatch has a name", function()
+        nameTheUnnamed()
+        for fname, call in pairs({
+          startStopWatch = function() return startStopWatch("") end,
+          stopStopWatch = function() return stopStopWatch("") end,
+          resetStopWatch = function() return resetStopWatch("") end,
+          setStopWatchName = function() return setStopWatchName("", "stopwatchSpecFromNothing") end,
+        }) do
+          local ok, err = call()
+          assert.is_nil(ok, fname)
+          assert.equals("no unnamed stopwatches found", err, fname)
+        end
+      end)
+
+      it("reaches the one unnamed stopwatch", function()
+        nameTheUnnamed()
+        local id = track(createStopWatch(false))
+        local ok, err = resetStopWatch("")
+        assert.is_nil(ok)
+        assert.equals(("the first unnamed stopwatch (id:%d) was already reset"):format(id), err)
+        adjustStopWatch(id, 7)
+        assert.is_true(resetStopWatch(""))
+        assert.equals(0, getStopWatchTime(id))
+      end)
+    end)
+
     describe("getStopWatches", function()
       it("reports name, running, persistent and elapsed time for each stopwatch", function()
         local id = track(createStopWatch("stopwatchSpecReport"))
@@ -1278,6 +1409,100 @@ describe("Tests Other.lua functions", function()
       assert.is_true(exercised > 0, "expected at least one string enum config option")
     end)
 
+    -- These keys go to the 2D map widget itself, so setConfig() only knows them
+    -- while the mapper is open - with it closed they are refused as unknown.
+    describe("the map keys that need an open mapper", function()
+      before_each(function()
+        assert.is_true(openMapWidget(), "these keys cannot be set without the map widget")
+      end)
+
+      it("round-trips mapExitSize", function()
+        snapshot("mapExitSize")
+        local target = getConfig("mapExitSize") == 4 and 6 or 4
+        assert.is_true(setConfig("mapExitSize", target))
+        assert.equals(target, getConfig("mapExitSize"))
+        restore("mapExitSize")
+      end)
+
+      it("shows and hides a map info contributor by name", function()
+        local name = "mudletSpecConfigMapInfo"
+        assert.is_true(registerMapInfo(name, function() return "" end))
+        finally(function() killMapInfo(name) end)
+        assert.is_false(getMapInfo()[name], "a newly registered map info should start hidden")
+
+        assert.is_true(setConfig("showMapInfo", name))
+        assert.is_true(getMapInfo()[name])
+
+        assert.is_true(setConfig("hideMapInfo", name))
+        assert.is_false(getMapInfo()[name])
+      end)
+
+      describe("mapInfoColor", function()
+        local original
+
+        before_each(function()
+          original = getConfig("mapInfoColor")
+        end)
+
+        after_each(function()
+          setConfig("mapInfoColor", original)
+        end)
+
+        it("round-trips a colour with and without its alpha", function()
+          assert.is_true(setConfig("mapInfoColor", {10, 20, 30, 40}))
+          assert.same({10, 20, 30, 40}, getConfig("mapInfoColor"))
+
+          assert.is_true(setConfig("mapInfoColor", {50, 60, 70}))
+          assert.same({50, 60, 70, 255}, getConfig("mapInfoColor"), "a colour given without alpha should be opaque")
+        end)
+
+        it("refuses anything that is not a table", function()
+          local ok, err = setConfig("mapInfoColor", "red")
+          assert.is_nil(ok)
+          assert.equals("mapInfoColor requires a table {r, g, b} or {r, g, b, a}", err)
+        end)
+
+        it("names the component that is missing", function()
+          local cases = {
+            {value = {}, message = "red component at index 1"},
+            {value = {1}, message = "green component at index 2"},
+            {value = {1, 2}, message = "blue component at index 3"},
+          }
+          for _, case in ipairs(cases) do
+            local ok, err = setConfig("mapInfoColor", case.value)
+            assert.is_nil(ok)
+            assert.is_truthy(tostring(err):find(case.message, 1, true), tostring(err))
+          end
+          assert.same(original, getConfig("mapInfoColor"), "a refused colour was applied anyway")
+        end)
+
+        it("names the component that is out of range", function()
+          local cases = {
+            {value = {256, 0, 0}, message = "red value 256"},
+            {value = {0, -1, 0}, message = "green value -1"},
+            {value = {0, 0, 300}, message = "blue value 300"},
+            {value = {0, 0, 0, 256}, message = "alpha value 256"},
+          }
+          for _, case in ipairs(cases) do
+            local ok, err = setConfig("mapInfoColor", case.value)
+            assert.is_nil(ok)
+            assert.is_truthy(tostring(err):find(case.message, 1, true), tostring(err))
+          end
+          assert.same(original, getConfig("mapInfoColor"), "a refused colour was applied anyway")
+        end)
+      end)
+    end)
+
+    it("refuses a mapSymbolFont that is only whitespace", function()
+      snapshot("mapSymbolFont")
+      local before = getConfig("mapSymbolFont")
+      local ok, err = setConfig("mapSymbolFont", "   ")
+      assert.is_nil(ok)
+      assert.equals("mapSymbolFont must not be empty", err)
+      assert.equals(before, getConfig("mapSymbolFont"))
+      restore("mapSymbolFont")
+    end)
+
     it("errors on a wrongly typed value for a boolean option", function()
       -- setConfig defers to getVerifiedBool, which raises rather than silently
       -- coercing; the flag is never assigned so there is nothing to restore.
@@ -1313,6 +1538,21 @@ describe("Tests Other.lua functions", function()
       restore("commandLineHistorySaveSize")
     end)
 
+    -- A script saving the settings it changes and putting them back afterwards
+    -- hands getConfig()'s answer straight back to setConfig(), so both have to
+    -- speak the same unit - otherwise the rooms shrink every time it does.
+    it("round-trips mapRoomSize in the unit setConfig takes", function()
+      openMapWidget()
+      snapshot("mapRoomSize")
+      local target = getConfig("mapRoomSize") == 7 and 8 or 7
+      assert.is_true(setConfig("mapRoomSize", target))
+      assert.equals(target, getConfig("mapRoomSize"))
+
+      assert.is_true(setConfig("mapRoomSize", getConfig("mapRoomSize")))
+      assert.equals(target, getConfig("mapRoomSize"), "handing getConfig's answer back to setConfig changed the room size")
+      restore("mapRoomSize")
+    end)
+
     it("validates the undoServerWrapWidth range when the option exists", function()
       if getConfig("undoServerWrapWidth") == nil then
         -- option not present in this build; setting it is rejected as unknown
@@ -1325,6 +1565,42 @@ describe("Tests Other.lua functions", function()
       assert.is_nil((setConfig("undoServerWrapWidth", 10)))  -- below the minimum of 20
       assert.is_nil((setConfig("undoServerWrapWidth", 600))) -- above the maximum of 500
       restore("undoServerWrapWidth")
+    end)
+
+    -- The preferences store the exit size as 50 divided by the spin box value,
+    -- 12.5 for a 4, and getConfig() answers that - so setConfig() has to take it
+    -- back as it is for a script restoring the settings it changed.
+    it("round-trips a mapExitSize that is not a whole number", function()
+      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      snapshot("mapExitSize")
+      finally(function() restore("mapExitSize") end)
+      assert.is_true(setConfig("mapExitSize", 12.5))
+      assert.equals(12.5, getConfig("mapExitSize"))
+
+      assert.is_true(setConfig("mapExitSize", getConfig("mapExitSize")))
+      assert.equals(12.5, getConfig("mapExitSize"), "handing getConfig's answer back to setConfig changed the exit size")
+    end)
+
+    -- The exit size divides the pen width, is saved with the profile to one
+    -- decimal place and is turned back into a spin box integer by the
+    -- preferences, so a value that is not a finite number of at least 1 must
+    -- never reach it.
+    it("rejects a mapExitSize that is not a finite number of at least 1", function()
+      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      snapshot("mapExitSize")
+      finally(function() restore("mapExitSize") end)
+      assert.is_true(setConfig("mapExitSize", 10))
+      assert.equals(10, getConfig("mapExitSize"))
+
+      for _, bad in ipairs({ 0/0, math.huge, -math.huge, 0, -1, 0.5, 1e-300 }) do
+        local ok, message = setConfig("mapExitSize", bad)
+        assert.is_nil(ok, "setConfig accepted a mapExitSize of " .. tostring(bad))
+        assert.is_truthy(tostring(message):find("at least 1", 1, true), tostring(message))
+        assert.equals(10, getConfig("mapExitSize"), "a rejected mapExitSize of " .. tostring(bad) .. " still changed the exit size")
+      end
+
+      assert.is_true(setConfig("mapExitSize", 1))
+      assert.equals(1, getConfig("mapExitSize"))
     end)
 
     it("returns nil and a message for an unknown key", function()
@@ -2220,6 +2496,88 @@ describe("Tests the timer API", function()
       settle(0.15)
       assert.equals(firedWhenDisabled, _G.W2aPermTimerFires,
         "a disabled permanent timer must not fire again")
+    end)
+
+    it("does not run with a time of zero", function()
+      -- it would fire on every pass of the event loop and keep a CPU core busy
+      assert.is_true(permTimer(trackPerm("W2aPermTimerZero"), "", 0,
+        [[_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1]]) > 0)
+      assert.is_true(enableTimer("W2aPermTimerZero"))
+      assert.equals(0, isActive("W2aPermTimerZero", "timer"))
+      settle(0.15)
+      assert.is_nil(_G.W2aPermTimerFires, "a permanent timer with no time must not fire")
+    end)
+
+    it("still fires an offset timer with a time of zero, once per firing of its parent", function()
+      -- an earlier run's parent of the same name would adopt this child and fire along with this one
+      local parent = trackPerm("W2aOffsetParent" .. getEpoch())
+      local child = trackPerm("W2aOffsetChild" .. getEpoch())
+      -- long enough that the parent cannot fire a second time before it is disabled below
+      assert.is_true(permTimer(parent, "", 0.5, [[raiseEvent("w2aOffsetParentFired")]]) > 0)
+      assert.is_true(permTimer(child, parent, 0, [[
+        _G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1
+        raiseEvent("w2aOffsetChildFired")
+      ]]) > 0)
+      assert.is_true(enableTimer(child))
+      assert.is_true(enableTimer(parent))
+      waitFor("w2aOffsetChildFired")
+      disableTimer(parent)
+      settle(0.15)
+      assert.equals(1, _G.W2aPermTimerFires)
+    end)
+
+    it("does not run with a time of zero when a package brings it in switched on", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+        return
+      end
+      local path = getMudletHomeDir() .. "/w2a-zero-timer.xml"
+      finally(function()
+        -- uninstallPackage() refuses while the profile save the install
+        -- started is still running
+        local removed = false
+        for _ = 1, 100 do
+          if uninstallPackage("w2a-zero-timer") == true then
+            removed = true
+            break
+          end
+          pumpEvents(50)
+        end
+        os.remove(path)
+        -- let the save the uninstall queues run now rather than during the next spec
+        pumpEvents(200)
+        assert.is_true(removed, "could not uninstall the zero timer package")
+      end)
+      local file = assert(io.open(path, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TimerPackage>
+		<Timer isActive="yes" isFolder="no" isTempTimer="no" isOffsetTimer="no">
+			<name>W2aZeroFromPackage</name>
+			<script>_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1</script>
+			<command></command>
+			<packageName></packageName>
+			<time>00:00:00.000</time>
+		</Timer>
+		<Timer isActive="yes" isFolder="no" isTempTimer="no" isOffsetTimer="no">
+			<name>W2aLiveFromPackage</name>
+			<script>-- never gets to run</script>
+			<command></command>
+			<packageName></packageName>
+			<time>00:00:30.000</time>
+		</Timer>
+	</TimerPackage>
+</MudletPackage>
+]])
+      file:close()
+      assert.is_true(installPackage(path))
+
+      -- the sibling shows that a package's timers do get switched on as they arrive
+      assert.equals(1, isActive("W2aLiveFromPackage", "timer"))
+      assert.equals(0, isActive("W2aZeroFromPackage", "timer"))
+      settle(0.15)
+      assert.is_nil(_G.W2aPermTimerFires, "a permanent timer with no time must not fire")
     end)
   end)
 

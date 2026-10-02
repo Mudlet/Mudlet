@@ -34,8 +34,14 @@
 //    pixmap. Only what is drawn is at stake: hit-testing reads
 //    TChar::linkIndex() out of the buffer, so a stale pixmap cannot leave a
 //    dead link clickable.
+//  - TConsoleModelNotifier::linkCharactersChanged, which the buffer emits once
+//    it has restyled a link's characters, reaches TConsole::repaintPanes().
+//    Cut it and the restyled text stays off screen until something else
+//    repaints. Its sibling spoilerRevealed only schedules a QWidget::update()
+//    of the console, which leaves nothing an observer can read and is not
+//    gated: other widgets repaint the console often enough to hide its loss.
 //
-// Both are read through a second observer attached to the same signal after the
+// All are read through a second observer attached to the same signal after the
 // production connect. Qt delivers to receivers in connection order, so what the
 // observer sees is the state the production consumer has just left behind, with
 // no event loop in between for anything else to interfere in.
@@ -47,12 +53,13 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TBuffer.h"
+#include "TConsoleModel.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -64,6 +71,37 @@
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
+
+// Counts the paint events one widget receives.
+class PaintCounter : public QObject
+{
+public:
+    explicit PaintCounter(QWidget* widget)
+    : mpWidget(widget)
+    {
+        widget->installEventFilter(this);
+    }
+    ~PaintCounter() override
+    {
+        if (mpWidget) {
+            mpWidget->removeEventFilter(this);
+        }
+    }
+
+    int mCount = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Paint) {
+            ++mCount;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    QPointer<QWidget> mpWidget;
+};
 
 // A game that accepts one connection and can drop it on demand, which is all
 // either test needs of a server.
@@ -164,7 +202,7 @@ private slots:
         mudlet::self()->setupConfig();
         // QtTest does not run cleanup() when init() fails, so a bare QCOMPARE
         // here would strand the singleton - and this test is leak-checked.
-        if (MudletPaths::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
+        if (MudletApp::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
             delete mudlet::self();
             delete mpServer;
             mpServer = nullptr;
@@ -189,7 +227,7 @@ private slots:
         if (mudlet::self()) {
             // Mudlet writes the profile out as it shuts down, so removing the
             // directory first only has it recreated.
-            const QString profileDir = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString profileDir = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(profileDir).removeRecursively();
         }
@@ -350,7 +388,172 @@ private slots:
         QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a hyperlink that had just been revealed");
     }
 
+    // repaintPanes() paints synchronously, so a paint landing on the upper pane
+    // between the call and the observer can only have come from this wire.
+    void test_restylingALinksCharactersRepaintsThePanes()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        const int linkId = feedSpoilerLink(host, qsl("OSCPAINT1"));
+        QVERIFY2(linkId > 0, "no spoiler link reached the buffer");
+
+        PaintCounter upperPaints(console->mUpperPane);
+        int paintsSeen = -1;
+        QObject observerContext;
+        connect(&console->model().mNotifier, &TConsoleModelNotifier::linkCharactersChanged, &observerContext, [&]() {
+            paintsSeen = upperPaints.mCount;
+        });
+
+        console->buffer.updateLinkCharacters(linkId);
+        QVERIFY2(paintsSeen >= 0, "restyling the link's characters raised no notification");
+        QVERIFY2(paintsSeen > 0, "the upper pane was not repainted for a link whose characters had just been restyled");
+    }
+
+    // The repaint half of restyling a selection by name. The console's model
+    // rewrites the characters and its view is only told which lines to redraw.
+    // ConsoleSelectionByName_spec.lua reads the restyled characters back from
+    // the buffer, which stays right with this wire cut or pointed at the wrong
+    // console.
+    void test_restylingANamedSelectionRedrawsThatConsolesLines()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('seamMini', 0, 0, 300, 200)\n"
+                                                                        "echo('seamMini', 'first\\nsecond\\nthird\\n')\n"
+                                                                        "moveCursor('seamMini', 0, 1)\n"
+                                                                        "selectString('seamMini', 'second', 1)\n")),
+                 "the mini console could not be set up");
+        TConsole* mini = console->subConsoleWidget(qsl("seamMini"));
+        QVERIFY(mini);
+        const int selectedLine = mini->model().P_begin.y();
+        QVERIFY2(selectedLine > 0 && mini->model().P_end.x() > mini->model().P_begin.x(), "nothing below the first line was selected, so a redraw of line 0 would pass");
+
+        const QStringList restyles{qsl("setBold('seamMini', true)"), qsl("setFgColor('seamMini', 1, 2, 3)"), qsl("setBgColor('seamMini', 4, 5, 6)")};
+        for (const QString& restyle : restyles) {
+            for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane, console->mUpperPane, console->mLowerPane}) {
+                pane->mDirtyFirstLine = -1;
+                pane->mDirtyLastLine = -1;
+            }
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(restyle), qPrintable(restyle));
+            QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mUpperPane->mDirtyLastLine == selectedLine,
+                     qPrintable(qsl("%1 did not mark the selected line for the mini console's upper pane to redraw").arg(restyle)));
+            QVERIFY2(mini->mLowerPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyLastLine == selectedLine,
+                     qPrintable(qsl("%1 did not mark the selected line for the mini console's lower pane to redraw").arg(restyle)));
+            QVERIFY2(console->mUpperPane->mDirtyFirstLine < 0 && console->mLowerPane->mDirtyFirstLine < 0, qPrintable(qsl("%1 redrew the main console, which it did not change").arg(restyle)));
+        }
+
+        // The redraw goes to the named console's own view, so it must not hang on the main console having one
+        for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+        const QPointer<TMainConsole> mainView = host->mpConsole;
+        host->mpConsole = nullptr;
+        const bool restyled = host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBold('seamMini', false)"));
+        host->mpConsole = mainView;
+        QVERIFY(restyled);
+        QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyFirstLine == selectedLine, "restyling a mini console redrew it only while the main console had a view");
+    }
+
+    void test_writingIntoANamedConsolesLineRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('seamWrite', 0, 0, 300, 200)\n"
+                                                                        "echo('seamWrite', 'first\\nsecond\\nthird\\n')\n"
+                                                                        "moveCursor('seamWrite', 2, 1)\n"
+                                                                        "selectString('seamWrite', 'second', 1)\n")),
+                 "the mini console could not be set up");
+        TConsole* mini = console->subConsoleWidget(qsl("seamWrite"));
+        QVERIFY(mini);
+        const int line = mini->model().mUserCursor.y();
+        QVERIFY2(line > 0 && mini->model().P_begin.y() == line, "the cursor and selection are not both below the first line, so a redraw of line 0 would pass");
+
+        const QStringList writes{qsl("setLink('seamWrite', 'cmd', 'hint')"), qsl("insertText('seamWrite', 'X')"), qsl("insertLink('seamWrite', 'Y', 'cmd', 'hint')")};
+        for (const QString& write : writes) {
+            for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane, console->mUpperPane, console->mLowerPane}) {
+                pane->mDirtyFirstLine = -1;
+                pane->mDirtyLastLine = -1;
+            }
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(write), qPrintable(write));
+            QVERIFY2(mini->mUpperPane->mDirtyFirstLine == line && mini->mUpperPane->mDirtyLastLine == line,
+                     qPrintable(qsl("%1 did not mark the line it changed for the mini console's upper pane to redraw").arg(write)));
+            QVERIFY2(mini->mLowerPane->mDirtyFirstLine == line && mini->mLowerPane->mDirtyLastLine == line,
+                     qPrintable(qsl("%1 did not mark the line it changed for the mini console's lower pane to redraw").arg(write)));
+            QVERIFY2(console->mUpperPane->mDirtyFirstLine < 0 && console->mLowerPane->mDirtyFirstLine < 0, qPrintable(qsl("%1 redrew the main console, which it did not change").arg(write)));
+        }
+        QCOMPARE(mini->model().buffer.line(line), qsl("seYXcond"));
+    }
+
+    // A view keeps what it last painted of a line until told the line changed,
+    // so without this the cut text stayed on screen
+    void test_cuttingFromTheMainConsoleRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamCut keep\\nthird\\n')\n")), "the main console could not be written to");
+        int line = -1;
+        for (int i = console->buffer.size() - 1; i >= 0; --i) {
+            if (console->buffer.line(i).contains(qsl("seamCut"))) {
+                line = i;
+                break;
+            }
+        }
+        QVERIFY2(line > 0, "the line to cut from is not below the first line, so a redraw of line 0 would pass");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("moveCursor('main', 0, %1)\nselectString('seamCut', 1)\n").arg(line)), "the text to cut could not be selected");
+        for (TTextEdit* pane : {console->mUpperPane, console->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("cut()")), "cut() failed");
+
+        QCOMPARE(console->buffer.line(line), qsl("keep  keep"));
+        QVERIFY2(console->mUpperPane->mDirtyFirstLine == line && console->mUpperPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the upper pane to redraw");
+        QVERIFY2(console->mLowerPane->mDirtyFirstLine == line && console->mLowerPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the lower pane to redraw");
+    }
+
 private:
+    // Answers the link's index, or 0 when the link never landed.
+    int feedSpoilerLink(Host* host, const QString& marker)
+    {
+        host->mEnableOSC8Hyperlinks = true;
+        // See test_aHyperlinkVisibilityChangeForcesBothPanesToRedraw on why
+        // these are real escape bytes.
+        const QString esc = QString(QChar(0x1B));
+        const QString stringTerminator = esc + QLatin1Char('\\');
+        const QString link = qsl("%1]8;;send:osc8paint?config={\"spoiler\":true}%2SECRETWORD%1]8;;%2").arg(esc, stringTerminator);
+        const QString feed = qsl("feedTriggers([==[%1(%2)%1\n]==])").arg(marker, link);
+        if (!host->getLuaInterpreter()->compileAndExecuteScript(feed)) {
+            return 0;
+        }
+        TMainConsole* console = host->mpConsole;
+        int lineNumber = -1;
+        const bool landed = QTest::qWaitFor(
+                [&]() {
+                    lineNumber = lineHolding(console, marker);
+                    return lineNumber >= 0;
+                },
+                8000);
+        if (!landed) {
+            return 0;
+        }
+        for (const auto& character : console->buffer.buffer.at(lineNumber)) {
+            if (character.linkIndex() > 0) {
+                return character.linkIndex();
+            }
+        }
+        return 0;
+    }
+
     static QString describe(const TabConnectionIndicator state)
     {
         switch (state) {
@@ -433,7 +636,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
         if (dir.exists()) {
             dir.removeRecursively();
         }

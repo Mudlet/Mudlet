@@ -20,20 +20,23 @@
 /*
  * Functional test for the way out of main() (#10460).
  *
- * Every other functional test links mudlet_core and builds its own
- * QApplication, so nothing in the tree runs src/main.cpp and nothing sees what
- * happens as it returns. main() hands the SSL warm-up to a thread and then
- * leaves, and leaving is where static destruction takes Qt's TLS backend mutex
- * and its library store out from under whatever is still running: the process
- * reports "QMutex: destroying locked mutex" and dies inside freed plugin
- * machinery.
+ * A test that links mudlet_core builds its own application object and never
+ * reaches src/main.cpp, so the shipped binary is run as a child here - as
+ * HeadlessVersionTest does for the options main() answers. main() hands the SSL
+ * warm-up to a thread and then leaves, and leaving is where static destruction
+ * takes Qt's TLS backend mutex and its library store out from under whatever is
+ * still running: the process reports "QMutex: destroying locked mutex" and dies
+ * inside freed plugin machinery.
  *
  * --version is the shortest path through main() that still starts the warm-up -
- * initSentry(), the QApplication, mudlet::start(), setupConfig() and the
- * translators, then an immediate return from the version branch - so it leaves
- * a background task the least room to finish and fails first. It stops short of
- * init(), so nothing here registers a telnet handler or writes a desktop file;
- * the sandbox below is for what setupConfig() reads, not for writes.
+ * initSentry(), the application object, the warm-up itself and the translators,
+ * then an immediate return from the version branch - so it leaves a background
+ * task the least room to finish and fails first. Since #10873 that path builds
+ * a QCoreApplication and runs neither mudlet::start() nor setupConfig(), which
+ * is why the warm-up sits outside main()'s `if (app)` guard: inside it, this
+ * case would spawn a process that starts no background task at all and would
+ * pass with the #10460 fix reverted. Nothing on the path writes to the config
+ * root; the sandbox below is for what it reads.
  *
  * It is a race, so one clean exit proves nothing; hence the repeats. The
  * regression this covers failed all six of six runs on a Linux debug build.
@@ -65,12 +68,11 @@ private:
 
     static QString appBinary() { return QString::fromUtf8(MUDLET_APP_BINARY); }
 
-    // setupConfig() consults portable.txt beside the executable, and
-    // $HOME/.config/mudlet/portable.txt, before it ever looks at
-    // XDG_CONFIG_HOME - so with either one present the child runs against the
-    // real portable config, and an invalid path there makes it qFatal() and
-    // read as exactly the crash this test hunts. DialogTeardownTest skips for
-    // the same reason; the executable here is the application, not this binary.
+    // A portable.txt beside the shipped binary, or in $HOME/.config/mudlet,
+    // outranks XDG_CONFIG_HOME (MudletApp::resolveConfigRoot()), so the child
+    // would read the real install's config instead of the sandbox's. Note the
+    // directory checked is the application's, not this test binary's.
+    // DialogTeardownTest and HeadlessVersionTest skip for the same reason.
     static bool portableMarkerWouldWin()
     {
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QFileInfo(appBinary()).absolutePath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
@@ -88,7 +90,7 @@ private slots:
             // A root of its own per run, so the child reads none of the
             // developer's profiles and leaves nothing behind. Creating
             // mudlet/profiles is what makes XDG_CONFIG_HOME outrank the legacy
-            // ~/.config/mudlet, see MudletPaths::xdgConfigDir()
+            // ~/.config/mudlet, see MudletApp::xdgConfigDir()
             QTemporaryDir sandbox;
             QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
             QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
@@ -100,10 +102,9 @@ private slots:
             environment.insert(qsl("XDG_CACHE_HOME"), qsl("%1/cache").arg(sandbox.path()));
             environment.insert(qsl("QT_QPA_PLATFORM"), qsl("offscreen"));
             environment.insert(qsl("MUDLET_TEST_MODE"), qsl("1"));
-            // The application deliberately never deletes its QApplication on
-            // this path, and Qt's CA store stays loaded for the process
-            // lifetime, so a leak check here would only ever report those.
-            // Appended rather than replacing what ctest set, since the runtime
+            // The warm-up leaves Qt's CA store loaded for the process lifetime,
+            // so a leak check here would only ever report that. Appended
+            // rather than replacing what ctest set, since the runtime
             // takes the last setting of a flag and the earlier ones stay.
             const QString inheritedSanitizerOptions = environment.value(qsl("ASAN_OPTIONS"));
             environment.insert(qsl("ASAN_OPTIONS"), inheritedSanitizerOptions.isEmpty() ? qsl("detect_leaks=0") : qsl("%1:detect_leaks=0").arg(inheritedSanitizerOptions));

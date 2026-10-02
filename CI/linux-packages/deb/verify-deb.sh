@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
-# Runs in a clean base image: installs /out/*.deb through apt and checks that
-# nothing Mudlet needs at runtime is missing.
+# Runs in a clean base image: installs /out/*.deb via apt and checks nothing needed at runtime is missing.
 set -euo pipefail
 
 DEB="$(find /out -name '*.deb' | head -n1)"
 [[ -n "$DEB" ]] || { echo "no .deb in /out" >&2; exit 1; }
 
 apt-get update
-# libssh reaches Mudlet only through Qt Multimedia's ffmpeg plugin, so install it
-# by name for the buffer_free check below
+# libssh reaches Mudlet only via Qt Multimedia's ffmpeg plugin; install it for the buffer_free check below
 apt-get install -y --no-install-recommends "$DEB" libssh-4
 
 [[ -x /usr/bin/mudlet ]] || { echo "the package installs no /usr/bin/mudlet" >&2; exit 1; }
+
+# Check the installed payload too: mkdeb.sh only sees what cmake --install staged (#10871)
+development_files="$(dpkg -L mudlet | grep -E '^/usr/include(/|$)|/cmake/|\.(a|cmake|h|hpp|la|pc)$' || true)"
+if [[ -n "$development_files" ]]; then
+  echo "the package ships development files:" >&2
+  echo "$development_files" >&2
+  exit 1
+fi
+
 missing="$(ldd /usr/bin/mudlet | grep 'not found' || true)"
 if [[ -n "$missing" ]]; then
   echo "mudlet has unresolved libraries:" >&2
@@ -19,9 +26,8 @@ if [[ -n "$missing" ]]; then
   exit 1
 fi
 
-# Every module the bundled Lua scripts require() must load from the package and
-# its Depends, so a new runtime dependency fails here rather than at launch.
-# The C++ side requires the first list, which no script mentions.
+# Every module the bundled Lua require()s must load from the package and its Depends, so a new
+# runtime dependency fails here, not at launch. The first list is required from C++ only.
 cd /usr/share/mudlet/lua
 missing=""
 for m in $({ printf '%s\n' lfs zip rex_pcre2 luasql.sqlite3 lua-utf8 yajl lpeg lcf.workshop.base

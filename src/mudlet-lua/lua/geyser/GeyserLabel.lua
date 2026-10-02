@@ -1081,12 +1081,16 @@ function Geyser.Label:new (cons, container)
 
   -- workaround for createLabel possibly being overwritten and not understanding the new parent argument
   -- see https://github.com/Mudlet/Mudlet/issues/3393
+  local ok, err
   if me.windowname == "main" then
-    createLabel(me.name, me:get_x(), me:get_y(),
+    ok, err = createLabel(me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   else
-    createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
+    ok, err = createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
+  end
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+    printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)
   end
 -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then

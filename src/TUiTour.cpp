@@ -23,7 +23,9 @@
 #include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "mudlet.h"
+#include "MudletApp.h"
 
+#include <QApplication>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -55,13 +57,15 @@ TUiTour::TUiTour(mudlet* pMainWindow, const bool skipIntroStep)
 {
     setObjectName(qsl("uiTour"));
     setAttribute(Qt::WA_DeleteOnClose);
-    // The overlay spans the whole window: without this, clicks and drags on it
-    // propagate to the main window underneath and still resize docks
+    // Without this, clicks and drags on the full-window overlay reach the main window and resize docks
     setAttribute(Qt::WA_NoMousePropagation);
     setFocusPolicy(Qt::StrongFocus);
     //: Name of the interface tour overlay, announced by screen readers
     setAccessibleName(tr("Mudlet interface tour"));
-    parentWidget()->installEventFilter(this);
+    // App-wide, not on the overlay or its parent: an arrow key on a focused card button moves focus
+    // to a covered widget, from where nothing propagates back to the tour. This install also
+    // delivers the parent's Resize/LayoutRequest events below
+    qApp->installEventFilter(this);
 
     createCard();
     buildSteps();
@@ -74,12 +78,12 @@ bool TUiTour::shouldShowOnFirstProfile()
     if (mudlet::self()->experiencedMudletPlayer()) {
         return false;
     }
-    return !mudlet::getQSettings()->value(settingsKeyTourShown, false).toBool();
+    return !MudletApp::getQSettings()->value(settingsKeyTourShown, false).toBool();
 }
 
 void TUiTour::rememberShown()
 {
-    auto* settings = mudlet::getQSettings();
+    auto* settings = MudletApp::getQSettings();
     settings->setValue(settingsKeyTourShown, true);
     settings->sync();
 }
@@ -120,11 +124,14 @@ void TUiTour::createCard()
 
     //: Button on the interface tour that dismisses the tour
     mpSkipButton = new QPushButton(tr("Skip tour"), mpCard);
+    mpSkipButton->setObjectName(qsl("uiTourSkipButton"));
     mpSkipButton->setFlat(true);
     //: Button on the interface tour that goes back to the previous step
     mpBackButton = new QPushButton(tr("Back"), mpCard);
+    mpBackButton->setObjectName(qsl("uiTourBackButton"));
     //: Button on the interface tour that advances to the next step
     mpNextButton = new QPushButton(tr("Next"), mpCard);
+    mpNextButton->setObjectName(qsl("uiTourNextButton"));
     mpNextButton->setDefault(true);
 
     connect(mpSkipButton, &QPushButton::clicked, this, &TUiTour::slot_finish);
@@ -365,32 +372,77 @@ void TUiTour::paintEvent(QPaintEvent* event)
     }
 }
 
-void TUiTour::keyPressEvent(QKeyEvent* event)
+// True when the tour acted on the key, so the filter stops it here
+bool TUiTour::handleKey(const QKeyEvent* event)
 {
     const bool leftToRight = QGuiApplication::isLeftToRight();
     const Qt::Key nextKey = leftToRight ? Qt::Key_Right : Qt::Key_Left;
     const Qt::Key backKey = leftToRight ? Qt::Key_Left : Qt::Key_Right;
+    const int key = event->key();
 
-    if (event->key() == Qt::Key_Escape) {
-        event->accept();
+    if (key == Qt::Key_Escape) {
         slot_finish();
-    } else if (event->key() == backKey || event->key() == Qt::Key_PageUp) {
-        event->accept();
-        slot_back();
-    } else if (event->key() == nextKey || event->key() == Qt::Key_Space || event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter || event->key() == Qt::Key_PageDown) {
-        event->accept();
-        slot_next();
-    } else {
-        QWidget::keyPressEvent(event);
+        return true;
     }
+    if (key == backKey || key == Qt::Key_PageUp) {
+        slot_back();
+        return true;
+    }
+    if (key == nextKey || key == Qt::Key_PageDown) {
+        slot_next();
+        return true;
+    }
+    if (key != Qt::Key_Space && key != Qt::Key_Return && key != Qt::Key_Enter) {
+        return false;
+    }
+
+    // Space and Enter go to the focused card button (a click focuses it as Tab does), so Back and
+    // Skip do their job instead of advancing; only Next is the default button, so Enter alone would not
+    auto* pFocusedButton = qobject_cast<QPushButton*>(QApplication::focusWidget());
+    if (pFocusedButton && mpCard->isAncestorOf(pFocusedButton)) {
+        if (key == Qt::Key_Space) {
+            return false;
+        }
+        pFocusedButton->click();
+        return true;
+    }
+    slot_next();
+    return true;
 }
 
 bool TUiTour::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == parent() && (event->type() == QEvent::Resize || event->type() == QEvent::LayoutRequest)) {
+    const QEvent::Type type = event->type();
+    if (watched == parent() && (type == QEvent::Resize || type == QEvent::LayoutRequest)) {
         resizeToParent();
     }
-    return QWidget::eventFilter(watched, event);
+
+    // Key presses and IME commits only: shortcuts match before key events are delivered, so menu
+    // accelerators and the script editor's shortcut still work (filtering ShortcutOverride would not
+    // stop them: an unaccepted one still fires). isVisible() matters because the filter is installed
+    // before the tour shows and stays until the deferred delete, and the main window needs its keys then
+    if ((type != QEvent::KeyPress && type != QEvent::KeyRelease && type != QEvent::InputMethod) || !isVisible()) {
+        return QWidget::eventFilter(watched, event);
+    }
+    // Only the covered window: script editors, detached profiles, popups and modal dialogs keep their keys
+    auto* pReceiver = qobject_cast<QWidget*>(watched);
+    if (!pReceiver || pReceiver->window() != window()) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    if (type == QEvent::KeyPress && handleKey(static_cast<QKeyEvent*>(event))) {
+        return true;
+    }
+    // Tab and Space still work on the card's own buttons
+    if (isAncestorOf(pReceiver)) {
+        return QWidget::eventFilter(watched, event);
+    }
+    // Swallow the keyboard as well as the mouse, else e.g. PageUp reaches the command line behind and
+    // splits the console. Retake focus too, or Tab off the card's last button strands it on a hidden widget
+    if (type == QEvent::KeyPress) {
+        setFocus();
+    }
+    return true;
 }
 
 void TUiTour::resizeToParent()

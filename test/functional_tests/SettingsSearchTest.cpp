@@ -45,7 +45,7 @@
 #include <QTimer>
 #include <QToolButton>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -165,7 +165,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -235,6 +235,31 @@ private slots:
 
         QCOMPARE(mpPreferences->groupBox_protocols->parentWidget(), resultsColumn());
         QVERIFY2(mpPreferences->pushButton_chooseProtocols->property("searchMatch").toBool(), "the button carrying the protocol keywords was not highlighted");
+    }
+
+    // Players who remember the old "Special options" tab look for it by that
+    // name, and the two cards that carried it now live on different pages
+    void test_theOldSpecialOptionsNameFindsBothOfItsSuccessors()
+    {
+        search(qsl("special"));
+
+        QCOMPARE(mpPreferences->groupBox_specialOptions->parentWidget(), resultsColumn());
+        QCOMPARE(mpPreferences->groupBox_debug->parentWidget(), resultsColumn());
+        // "special" is a common enough word that some tooltip on either card
+        // could carry it, which would find the card without the synonym
+        QVERIFY2(mpPreferences->groupBox_specialOptions->property("searchMatch").toBool(), "the Compatibility card was not found by its own synonym");
+        QVERIFY2(mpPreferences->groupBox_debug->property("searchMatch").toBool(), "the Developer card was not found by its own synonym");
+    }
+
+    // A game workaround, so it is with the others rather than among the
+    // script-writing tools
+    void test_theColourSpaceWorkaroundIsOnTheCompatibilityCard()
+    {
+        search(qsl("SGR"));
+
+        QCOMPARE(mpPreferences->groupBox_specialOptions->parentWidget(), resultsColumn());
+        QVERIFY2(mpPreferences->groupBox_debug->parentWidget() != resultsColumn(), "the Developer card still holds the colour space workaround");
+        QVERIFY2(mpPreferences->checkBox_expectCSpaceIdInColonLessMColorCode->isVisible(), "the workaround was moved onto the card but left out of its layout");
     }
 
     // A lone Latin letter matches most of the dialog, and answering it means

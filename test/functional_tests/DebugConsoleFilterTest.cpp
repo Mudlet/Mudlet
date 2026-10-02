@@ -19,15 +19,21 @@
 
 #include <QtTest/QtTest>
 
+#include <algorithm>
+#include <utility>
+
 #include "GroupedTest.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "TBuffer.h"
 #include "TConsole.h"
 #include "TDebug.h"
+#include "TDebugFilterBar.h"
 #include "TLuaInterpreter.h"
+#include "TTabBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -65,6 +71,42 @@ public:
     }
 
     void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override { lines.append(Line{text, foreground, background, timeStamp}); }
+};
+
+class RecordingProfileObserver : public TDebug::ProfileObserver
+{
+public:
+    QStringList calls;
+
+    ~RecordingProfileObserver()
+    {
+        if (TDebug::profileObserver() == this) {
+            TDebug::setProfileObserver(nullptr);
+        }
+    }
+
+    void profilesChanged() override { calls.append(qsl("profilesChanged")); }
+    void profileRenamed(const QString& newName, const QString& tag) override { calls.append(qsl("profileRenamed %1 %2").arg(newName, tag)); }
+    void profileAddedInDebugMode() override { calls.append(qsl("profileAddedInDebugMode")); }
+};
+
+// TDebug only ever uses a Host* as a key, so any address will do. It unregisters
+// itself, so a check that fails part way through cannot leave a phantom profile
+// behind for the methods that run after it.
+class StandInHost
+{
+public:
+    ~StandInHost()
+    {
+        if (!TDebug::getTag(host()).isNull()) {
+            TDebug::removeHost(host(), QString());
+        }
+    }
+
+    Host* host() { return reinterpret_cast<Host*>(&mStorage); }
+
+private:
+    int mStorage = 0;
 };
 } // namespace
 
@@ -107,7 +149,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -294,11 +336,10 @@ private slots:
     }
 
     // Past the cap the OLDEST held messages are discarded and counted, so that
-    // resuming can say how much of the history is missing. Asserted on the
-    // queue rather than the console: replaying a full queue is by definition
-    // enough to overflow the console's own line limit, so what survives in the
-    // buffer afterwards says more about TBuffer::shrinkBuffer() than about the
-    // cap being tested here.
+    // resuming can say how much of the history is missing. The cap is asserted
+    // on the queue rather than the console: replaying a full queue is by
+    // definition enough to overflow the console's own line limit, which is also
+    // why the notice has to come after the replay to survive in it.
     void test_pausedQueueDropsTheOldestPastItsCap()
     {
         auto* host = startDebuggingProfile();
@@ -321,6 +362,7 @@ private slots:
         QVERIFY2(!TDebug::pausedDroppedCount(), "The dropped count survived the replay that was supposed to report it");
         // The newest is at the tail of the replay, so it outlives any trimming:
         QVERIFY2(debugBufferContains(qsl("held message %1").arg(limit + 1)), "The newest held message did not survive the replay");
+        QVERIFY2(debugBufferContains(qsl("2 message(s) dropped while paused")), "The dropped-message notice was pushed out of the console by the replay it introduces");
     }
 
     // A message held back keeps the time it arrived, so a replayed burst does
@@ -575,6 +617,61 @@ private slots:
         QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Backlog line was stamped %1, outside its arrival window %2").arg(sink.lines.at(0).timeStamp, window)));
     }
 
+    // Lines written with no sink wait for one, but only as many as the console
+    // could show: a run that never opens it would otherwise keep them all for as
+    // long as it lasts. The oldest go first, and the sink that finally turns up
+    // is told how many - once.
+    void test_backlogDropsTheOldestPastItsCapAndSaysHowMany()
+    {
+        RecordingDebugSink sink;
+        installSink(sink);
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setSink(nullptr);
+
+        // Two more than the backlog can hold, so exactly the first two go:
+        const int limit = TDebug::messageQueueLimit();
+        for (int i = 0; i < limit + 2; ++i) {
+            TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << qsl("backlog message %1\n").arg(i) >> nullptr;
+        }
+
+        TDebug::setSink(&sink);
+        TDebug::flushMessageQueue();
+
+        QCOMPARE(sink.lines.size(), limit + 1);
+        QVERIFY2(sink.lines.at(0).text.endsWith(qsl("backlog message 2\n")), qPrintable(sink.lines.at(0).text));
+        QVERIFY2(sink.lines.at(limit - 1).text.endsWith(qsl("backlog message %1\n").arg(limit + 1)), qPrintable(sink.lines.at(limit - 1).text));
+        QVERIFY2(sink.lines.last().text.contains(qsl("2 older message(s) were dropped")), qPrintable(sink.lines.last().text));
+
+        sink.lines.clear();
+        TDebug::setSink(nullptr);
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "later backlog\n" >> nullptr;
+        TDebug::setSink(&sink);
+        TDebug::flushMessageQueue();
+        QCOMPARE(sink.lines.size(), 1);
+        QVERIFY2(sink.lines.at(0).text.endsWith(qsl("later backlog\n")), qPrintable(sink.lines.at(0).text));
+    }
+
+    // The notice has to survive the console it is replayed into: a full backlog
+    // is as many lines as that console keeps, so it must not push the notice out.
+    void test_droppedBacklogNoticeSurvivesAFullReplayIntoTheConsole()
+    {
+        startDebuggingProfile();
+        auto* console = mudlet::smpDebugConsole.data();
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setSink(nullptr);
+
+        const int limit = TDebug::messageQueueLimit();
+        for (int i = 0; i < limit + 2; ++i) {
+            TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << qsl("backlog message %1\n").arg(i) >> nullptr;
+        }
+
+        TDebug::setSink(console);
+        TDebug::flushMessageQueue();
+
+        QVERIFY2(debugBufferContains(qsl("backlog message %1").arg(limit + 1)), "The newest backlog line did not reach the console");
+        QVERIFY2(debugBufferContains(qsl("2 older message(s) were dropped while the Central Debug Console was closed")), "The dropped-message notice was pushed out of the console by the backlog it introduces");
+    }
+
     // Resuming hands each held line to the sink stamped with the time it
     // arrived, not the time it was let through.
     void test_resumingHandsHeldLinesToTheSinkWithTheirArrivalTimes()
@@ -669,6 +766,102 @@ private slots:
         QVERIFY2(late.lines.isEmpty(), qPrintable(late.lines.isEmpty() ? QString() : late.lines.at(0).text));
     }
 
+    // TDebug reports profile identifier changes rather than reaching into the
+    // GUI itself; the tab refresh is only asked for in debug mode.
+    void test_profileChangesAreReportedToTheObserver()
+    {
+        auto* previous = TDebug::profileObserver();
+        RecordingProfileObserver observer;
+        TDebug::setProfileObserver(&observer);
+        StandInHost standIn;
+        auto* pOther = standIn.host();
+
+        TDebug::smDebugMode = false;
+        TDebug::addHost(pOther, qsl("Observed profile"));
+        QCOMPARE(observer.calls, QStringList{qsl("profilesChanged")});
+
+        observer.calls.clear();
+        TDebug::removeHost(pOther, qsl("Observed profile"));
+        QCOMPARE(observer.calls, QStringList{qsl("profilesChanged")});
+
+        observer.calls.clear();
+        TDebug::smDebugMode = true;
+        TDebug::addHost(pOther, qsl("Observed profile"));
+        QCOMPARE(observer.calls, (QStringList{qsl("profilesChanged"), qsl("profileAddedInDebugMode")}));
+
+        observer.calls.clear();
+        TDebug::changeHostName(pOther, qsl("Renamed profile"));
+        QCOMPARE(observer.calls, (QStringList{qsl("profileRenamed Renamed profile %1").arg(TDebug::getTag(pOther)), qsl("profilesChanged")}));
+
+        TDebug::removeHost(pOther, qsl("Renamed profile"));
+        TDebug::setProfileObserver(previous);
+    }
+
+    // The GUI's observer is installed by mudlet's constructor, before init()
+    // makes the tab bar, and is never uninstalled, so it outlives mudlet too.
+    void test_aRenameBeforeTheTabBarExistsIsSafe()
+    {
+        StandInHost standIn;
+        TDebug::addHost(standIn.host(), qsl("Early profile"));
+        auto* tabBar = std::exchange(mudlet::self()->mpTabBar, nullptr);
+
+        TDebug::changeHostName(standIn.host(), qsl("Renamed early"));
+
+        mudlet::self()->mpTabBar = tabBar;
+        QCOMPARE(TDebug::getTag(standIn.host()).isNull(), false);
+    }
+
+    void test_aRenameAfterTheWindowIsGoneIsSafe()
+    {
+        StandInHost standIn;
+        TDebug::addHost(standIn.host(), qsl("Late profile"));
+        delete mudlet::self();
+
+        TDebug::changeHostName(standIn.host(), qsl("Renamed late"));
+
+        QCOMPARE(TDebug::getTag(standIn.host()).isNull(), false);
+    }
+
+    void test_aProfileAddedInDebugModeAfterTheWindowIsGoneIsSafe()
+    {
+        StandInHost standIn;
+        delete mudlet::self();
+        TDebug::smDebugMode = true;
+
+        TDebug::addHost(standIn.host(), qsl("Late profile"));
+        // the tab refresh is asked for once idle
+        QTest::qWait(50);
+
+        QCOMPARE(TDebug::getTag(standIn.host()).isNull(), false);
+    }
+
+    // The GUI's observer keeps the filter bar's profile menu and the profile
+    // tabs' identifier prefixes in step with those changes.
+    void test_profileChangesReachTheFilterBarAndTabs()
+    {
+        auto* host = startDebuggingProfile();
+        auto* tabBar = mudlet::self()->mpTabBar;
+        const int tab = tabBar->tabIndex(mHostname);
+        QVERIFY(tab > -1);
+        tabBar->applyPrefixToDisplayedText(tab, QString());
+        QCOMPARE(tabBar->tabText(tab), mHostname);
+        StandInHost standIn;
+        auto* pOther = standIn.host();
+
+        TDebug::addHost(pOther, qsl("Second profile"));
+        QVERIFY2(profileMenuLists(qsl("Second profile")), "Adding a profile did not refresh the filter bar's profile menu");
+        QTRY_COMPARE(tabBar->tabText(tab), TDebug::getTag(host) + mHostname);
+
+        // Taking this profile's name makes the stand-in's tag land on its tab,
+        // which tells it apart from the tag the tab already carries:
+        TDebug::changeHostName(pOther, mHostname);
+        QCOMPARE(tabBar->tabText(tab), TDebug::getTag(pOther) + mHostname);
+        QVERIFY2(!profileMenuLists(qsl("Second profile")), "Renaming a profile did not refresh the filter bar's profile menu");
+
+        TDebug::removeHost(pOther, mHostname);
+        QVERIFY2(profileMenuEntries().size() == 1, qPrintable(profileMenuEntries().join(qsl(", "))));
+    }
+
     // The find bar floats over the console rather than sitting in a layout, so
     // nothing but the console itself keeps it in the corner and inside the
     // window.
@@ -732,8 +925,8 @@ private slots:
         delete mudlet::smpDebugArea.data();
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
 private:
@@ -775,14 +968,34 @@ private:
 
     bool debugBufferContains(const QString& needle) { return joinedDebugBuffer().contains(needle); }
 
+    // The filter bar's profile menu is the one whose entries carry a "[A] "
+    // style identifier; the category menu's do not.
+    QStringList profileMenuEntries()
+    {
+        QStringList entries;
+        const auto menus = mudlet::smpDebugFilterBar->findChildren<QMenu*>();
+        for (const auto* menu : menus) {
+            const auto actions = menu->actions();
+            for (const auto* action : actions) {
+                if (action->text().startsWith(QLatin1Char('['))) {
+                    entries.append(action->text());
+                }
+            }
+        }
+        return entries;
+    }
+
+    bool profileMenuLists(const QString& profileName)
+    {
+        const auto entries = profileMenuEntries();
+        return std::any_of(entries.cbegin(), entries.cend(), [&profileName](const QString& entry) {
+            return entry.endsWith(profileName);
+        });
+    }
+
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 
     // Starts a profile by driving the connection dialog, as a user would.

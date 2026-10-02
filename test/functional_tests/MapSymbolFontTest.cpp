@@ -48,10 +48,12 @@
 #include <QScopeGuard>
 #include <QTableWidget>
 
-#include "MudletPaths.h"
+#include "FontManager.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
 #include "TelnetServerStub.h"
@@ -96,7 +98,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -114,11 +116,11 @@ private:
         mudlet::self()->showOptionsDialog(qsl("tab_mapper"), mpHost);
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
-                             return !mpHost->mpDlgProfilePreferences.isNull();
+                             return !HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull();
                          },
                          5000),
                  "Preferences dialog was not created");
-        mpPreferences = mpHost->mpDlgProfilePreferences.data();
+        mpPreferences = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(scalingSpinBox(), "The symbol scaling spin-box was not found in the Symbols group box");
     }
 
@@ -130,7 +132,7 @@ private:
         mpPreferences->close();
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
-                             return mpHost->mpDlgProfilePreferences.isNull();
+                             return HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull();
                          },
                          5000),
                  "Preferences dialog should have been destroyed by closing it");
@@ -142,7 +144,7 @@ private:
     QString anotherFontFamily() const
     {
         const QString inUse = map()->getSymbolFont().family();
-        QStringList families = mudlet::self()->getAvailableFonts();
+        QStringList families = FontManager::availableFonts();
         families.sort();
         for (const QString& family : families) {
             if (family.compare(inUse, Qt::CaseInsensitive)) {
@@ -211,7 +213,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -246,8 +248,8 @@ private slots:
     {
         // The whole class shares one profile, so a case that leaves the dialog
         // open or a setting changed would be writing the next one's fixture
-        if (!mpHost->mpDlgProfilePreferences.isNull()) {
-            delete mpHost->mpDlgProfilePreferences.data();
+        if (!HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull()) {
+            delete HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         }
         mpPreferences = nullptr;
         map()->setSymbolFont(mFontBefore);
