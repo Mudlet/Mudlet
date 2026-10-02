@@ -40,7 +40,6 @@
 #include <QPointer>
 #include <QWidget>
 
-#include <list>
 #include <map>
 #include <memory>
 #include <vector>
@@ -184,14 +183,10 @@ public:
     Host* getHost();
     TConsoleModel& model() { return *mpModel; }
     const TConsoleModel& model() const { return *mpModel; }
-    void insertHTML(const QString&);
     void insertText(const QString&);
     void clear();
-    void appendBuffer(const TBuffer&);
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
-    int getLineNumber();
-    bool deleteLine(int);
     void clearSelection() const;
 
     void setWrapAt(int pos) { mpModel->setWrapAt(pos); }
@@ -202,12 +197,7 @@ public:
     void setHangingIndentCount(int count) { mpModel->setHangingIndentCount(count); }
 
     TLinkStore& getLinkStore() { return buffer.mLinkStore; }
-    void echo(const QString&);
     bool moveCursor(int x, int y);
-    int select(const QString&, int numOfMatch = 1);
-    std::tuple<bool, QString, int, int> getSelection();
-    void deselect();
-    bool selectSection(int, int);
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
@@ -271,29 +261,17 @@ public:
     void setBorderColor(const QColor&);
     QColor borderColor() const { return mBorderColor; }
     void lowerMainDisplay();
-    // Cannot be called setAttributes as that would mask an inherited method
-    void setDisplayAttributes(const TChar::AttributeFlags, const bool);
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
     // Not used:    void setConsoleFgColor(int, int, int);
-    std::list<int> getFgColor();
-    std::list<int> getBgColor();
-    void luaWrapLine(int line);
-    void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
     // For a MainConsole hidden by a tab switch, which gets no resize events: NAWS-reports its restored size.
     void syncHiddenScreenDimensions();
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
-    // In the next function the first element in the return is an
-    // error code:
-    // 0 = Okay
-    // 1 = Window not found
-    // 2 = Selection not valid
-    QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
     void setSearchOptions(const enums::BufferSearchOptions);
     void setF3SearchEnabled(const bool enabled);

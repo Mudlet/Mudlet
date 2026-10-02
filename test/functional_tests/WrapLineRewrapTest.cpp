@@ -347,7 +347,7 @@ private slots:
         const int linesAt30 = nonEmptyLineCount(console);
 
         console->setWrapAt(8);
-        // TConsole::luaWrapLine() is the only production path that rewraps a
+        // wrapLine() is the only production path that rewraps a
         // scrollback at a new width - resizing the window does not
         runLua(qsl("wrapLine('%1', 0)").arg(mMiniConsole));
 

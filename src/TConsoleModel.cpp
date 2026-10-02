@@ -226,6 +226,21 @@ QPair<quint8, TChar> TConsoleModel::textAttributes() const
     return qMakePair(0, line.at(x));
 }
 
+const TChar* TConsoleModel::selectionStartChar() const
+{
+    const int x = P_begin.x();
+    const int y = P_begin.y();
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
+        return nullptr;
+    }
+
+    const auto& line = buffer.buffer.at(y);
+    if (x >= static_cast<int>(line.size())) {
+        return nullptr;
+    }
+    return &line.at(x);
+}
+
 void TConsoleModel::resetFormat()
 {
     deselect();
@@ -424,6 +439,30 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
         mUserCursor = QPoint(newX, line + down);
     }
     return {false, line, line + down};
+}
+
+bool TConsoleModel::echo(QString& text)
+{
+    // A \r would be kept in the buffer and drawn as a glyph, so \r\n becomes \n and a lone \r goes.
+    text.remove(QChar::CarriageReturn);
+    buffer.mEchoingText = true;
+    bool appended = false;
+    if (mTriggerEngineMode) {
+        // Line feeds are embedded in the trigger's line rather than starting new lines, so that
+        // later echoes and cechoes still land on it; wrapping breaks it at them.
+        const int y = buffer.size() - 1;
+        if (y >= 0) {
+            QPoint insertPoint(buffer.lineBuffer.at(y).size(), y);
+            buffer.insertInLine(insertPoint, text, mFormatCurrent);
+        } else {
+            buffer.appendLine(text, 0, text.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        }
+    } else {
+        buffer.append(text, 0, text.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        appended = true;
+    }
+    buffer.mEchoingText = false;
+    return appended;
 }
 
 TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
