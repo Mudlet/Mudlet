@@ -114,8 +114,33 @@ public:
     static void setSink(Sink* pSink) { smpSink = pSink; }
     static Sink* sink() { return smpSink; }
 
+    // Told when the profile identifiers change, so the GUI can keep what shows
+    // them - the Central Debug Console's profile menu and the "[A] " prefixes
+    // on the profile tabs - in step. With none installed nothing is told:
+    class ProfileObserver
+    {
+    public:
+        // A profile gained or lost its identifier, or was renamed:
+        virtual void profilesChanged() = 0;
+        virtual void profileRenamed(const QString& newName, const QString& tag) = 0;
+        // Only raised in debug mode, and before the new profile has a tab:
+        virtual void profileAddedInDebugMode() = 0;
+
+    protected:
+        ~ProfileObserver()
+        {
+            if (smpProfileObserver == this) {
+                smpProfileObserver = nullptr;
+            }
+        }
+    };
+
+    static void setProfileObserver(ProfileObserver* pObserver) { smpProfileObserver = pObserver; }
+    static ProfileObserver* profileObserver() { return smpProfileObserver; }
+
 private:
     inline static Sink* smpSink = nullptr;
+    inline static ProfileObserver* smpProfileObserver = nullptr;
 
     // A shared map that is uses to put a short identifier on each debug message
     // - the first value is used to create a table to display on changes and the
@@ -144,6 +169,10 @@ private:
     inline static QQueue<TDebugMessage> smPausedQueue;
     inline static int smPausedDroppedCount = 0;
     static constexpr int csmPausedQueueLimit = 10000;
+    // The backlog has the same cap, or a run that never opens the console (headless, or a user who never
+    // turns on debugging) keeps every unguarded line - profile starts, connection steps - until it exits:
+    static constexpr int csmMessageQueueLimit = csmPausedQueueLimit;
+    inline static int smMessageQueueDroppedCount = 0;
 
     static Categories smEnabledCategories;
     inline static QSet<const Host*> smDisabledHosts;
@@ -210,6 +239,7 @@ public:
     static int pausedMessageCount() { return smPausedQueue.count(); }
     static int pausedDroppedCount() { return smPausedDroppedCount; }
     static int pausedMessageLimit() { return csmPausedQueueLimit; }
+    static int messageQueueLimit() { return csmMessageQueueLimit; }
     static void discardPausedMessages();
 
     // Used to flush/print out the accumulated message:

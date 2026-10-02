@@ -41,6 +41,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TelnetServerStub.h"
+#include "TIrcClient.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
 
@@ -111,8 +112,8 @@ private:
     // have to be stored before it is built.
     dlgIRC* openClient()
     {
-        if (!dlgIRC::writeIrcHostName(mpHost, mServerHost).first || !dlgIRC::writeIrcHostPort(mpHost, mpIrcServer->serverPort()).first || !dlgIRC::writeIrcNickName(mpHost, mNick).first
-            || !dlgIRC::writeIrcChannels(mpHost, QStringList() << mChannel).first) {
+        if (!TIrcClient::writeIrcHostName(mpHost, mServerHost).first || !TIrcClient::writeIrcHostPort(mpHost, mpIrcServer->serverPort()).first || !TIrcClient::writeIrcNickName(mpHost, mNick).first
+            || !TIrcClient::writeIrcChannels(mpHost, QStringList() << mChannel).first) {
             return nullptr;
         }
 
