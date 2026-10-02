@@ -2,13 +2,47 @@
 -- @author guy
 -- @module Geyser.SetConstraints
 
+local function return_zero()
+  return 0
+end
+
+-- What each window's getters were last compiled from, so that laying the same
+-- constraints out again - which a resize does for every window in a box that
+-- holds a fixed size child, several times over - can keep the getters it has
+-- instead of parsing the constraints again. Weak keys, so a window that is
+-- gone takes its entry with it; and weak values inside each entry, because the
+-- getters there refer to the window, and Lua 5.1 would otherwise keep the
+-- window alive through its own entry. Anything collected from an entry only
+-- makes it stop matching.
+local compiled = setmetatable({}, {__mode = "k"})
+local weakValues = {__mode = "v"}
+
+-- Internal function: whether the getters on a window are still the ones that
+-- were compiled from these very constraints, against this very container
+local function unchanged(window, cons, container)
+  local last = compiled[window]
+  -- a getter collected from the entry reads as nil, which must not pass for a
+  -- window whose own getter has been taken away
+  return last ~= nil and last.container == container
+    and last.x == cons.x and last.y == cons.y and last.width == cons.width and last.height == cons.height
+    and last.get_x ~= nil and last.get_y ~= nil and last.get_width ~= nil and last.get_height ~= nil
+    and window.get_x == last.get_x and window.get_y == last.get_y
+    and window.get_width == last.get_width and window.get_height == last.get_height
+end
+
 function Geyser.calc_constraints (window, cons, container)
-  local oldlocale = os.setlocale(nil, "numeric")
-  os.setlocale("C", "numeric")
   -- If container is nil then by default it is the dimensions of the main window
   container = container or Geyser
-  container["return_zero"] = function() return 0 end
-  window["return_zero"] = function() return 0 end
+  container["return_zero"] = return_zero
+  window["return_zero"] = return_zero
+  if unchanged(window, cons, container) then
+    return
+  end
+  local oldlocale = os.setlocale(nil, "numeric")
+  os.setlocale("C", "numeric")
+  -- a character constraint reads the font size as it is parsed, so its getters
+  -- are not kept for next time
+  local readsFontSize = false
   
   -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
   -- Parse the position constraints to generate functions that will get
@@ -86,12 +120,13 @@ function Geyser.calc_constraints (window, cons, container)
       -- As is, font size is considered a constraint
       if string.find(num, "c") then
         x_mult, y_mult = calcFontSize(window.fontSize)
+        readsFontSize = true
       end
       
       local pos_func = "return_zero"
       local max = "return_zero"
       local min = "return_zero"
-      local func = function() return 0 end
+      local func = return_zero
       local pos = tonumber((string.gsub(num, "%a", "")))
       
       -- give func the function value if a function is given
@@ -143,6 +178,15 @@ function Geyser.calc_constraints (window, cons, container)
     --window[v] = window[getter]()
   end -- END for that generates POSITION FUNCTIONS
   os.setlocale(oldlocale, "numeric")
+  if not readsFontSize then
+    compiled[window] = setmetatable({
+      container = container,
+      x = cons.x, y = cons.y, width = cons.width, height = cons.height,
+      get_x = window.get_x, get_y = window.get_y, get_width = window.get_width, get_height = window.get_height,
+    }, weakValues)
+  else
+    compiled[window] = nil
+  end
 end
 
 --- This function sets the constraints of a window.
