@@ -980,7 +980,6 @@ public:
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
-    bool mTimeStampStatus = false;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;

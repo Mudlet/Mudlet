@@ -114,6 +114,7 @@ private:
     const QString mSpellHostname = "Test-ConsoleModelSpellDic";
     const QString mViewlessHostname = "Test-ConsoleModelViewless";
     const QString mNawsHostname = "Test-ConsoleModelNaws";
+    const QString mTimeStampHostname = "Test-ConsoleModelTimeStamps";
     const QString mWrapHostname = "Test-ConsoleModelWrap";
     const QString mLocalhost = "localhost";
     QString mPort;
@@ -166,6 +167,7 @@ private slots:
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
         deleteProfileDirectory(mNawsHostname);
+        deleteProfileDirectory(mTimeStampHostname);
         deleteProfileDirectory(mWrapHostname);
     }
 
@@ -1490,6 +1492,7 @@ private slots:
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
         deleteProfileDirectory(mNawsHostname);
+        deleteProfileDirectory(mTimeStampHostname);
         deleteProfileDirectory(mWrapHostname);
     }
 
@@ -2122,6 +2125,41 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         QVERIFY2(!QFile::exists(autoTimeStampPath), "Timestamps turned off with no view were not saved for the next load.");
         QCOMPARE(luaGlobalString(host, "noViewTimeStampReport"), QString());
         QCOMPARE(luaGlobalNumber(host, "noViewSizeReports"), 0);
+    }
+
+    // The saved choice is applied to the model as the profile loads, not by the
+    // view, so a profile loaded with no view starts with its timestamps on too.
+    void test_aProfileLoadedWithNoViewStartsWithItsSavedTimeStamps()
+    {
+        seedTimeStampProfile();
+        QFile autoTimeStamp(MudletApp::getMudletPath(enums::profileDataItemPath, mTimeStampHostname, qsl("autotimestamp")));
+        QVERIFY(autoTimeStamp.open(QIODevice::WriteOnly));
+        autoTimeStamp.close();
+
+        Host* host = mudlet::self()->loadProfile(mTimeStampHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(host->mainConsoleShowsTimeStamps(), "A profile loaded with no view ignored its saved timestamps.");
+        runLua(host, qsl("timeStampsShown = tostring(timeStampsEnabled())\n"));
+        QCOMPARE(luaGlobalString(host, "timeStampsShown"), qsl("true"));
+    }
+
+    // A view built for a profile that loads with timestamps on shows them and
+    // checks its button, and turns nothing on a second time: loading saves
+    // nothing. A directory in the file's place reads as "on" and makes any save
+    // attempt warn.
+    void test_aProfileLoadedWithAViewShowsItsSavedTimeStampsWithoutSavingThem()
+    {
+        seedTimeStampProfile();
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, mTimeStampHostname, qsl("autotimestamp"))));
+        QTest::failOnWarning(QRegularExpression(qsl("failed to open autotimestamp file")));
+
+        mudlet::self()->doAutoLogin(mTimeStampHostname, true);
+        Host* host = HostManager::self()->getHost(mTimeStampHostname);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole, "The profile was loaded with no view.");
+        QVERIFY2(host->mainConsoleShowsTimeStamps(), "A profile loaded with a view ignored its saved timestamps.");
+        QVERIFY2(host->mpConsole->timeStampButton->isChecked(), "The toolbar button does not show the timestamps the profile loaded with.");
     }
 
     // A profile with no view still tells the game its size when asked: the
@@ -4337,6 +4375,15 @@ private:
                          qsl("      <mFgColor>%1</mFgColor>\n"
                              "      <mBgColor alpha=\"%2\">%3</mBgColor>\n")
                                  .arg(mProfileFgColor.name(), QString::number(mProfileBgColor.alpha()), mProfileBgColor.name()));
+    }
+
+    // Utility function giving mTimeStampHostname a save of its own, or loading
+    // it goes off to install the default packages
+    void seedTimeStampProfile()
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mTimeStampHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        writeProfileSave(qsl("%1profileTimeStamps.xml").arg(saveFolder), QString());
     }
 
     // Utility function writing the smallest profile save readHost() accepts,
