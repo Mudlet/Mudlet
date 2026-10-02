@@ -1114,9 +1114,9 @@ function getHTMLformat(fmt)
   return result
 end
 
--- what getLabelFormat() reads out of a stylesheet, keyed by the stylesheet text so a
--- changed stylesheet is simply a new key; weak values let the collector bound its size
-local labelStyleSheetFormats = setmetatable({}, { __mode = "v" })
+-- what getLabelFormat() last read out of each label's stylesheet, by label name, kept
+-- with the stylesheet it was read from so a changed one is read afresh
+local labelStyleSheetFormats = {}
 
 local function parseLabelStyleSheet(stylesheet)
   local parsed = {
@@ -1178,10 +1178,13 @@ end
 function getLabelFormat(win)
   assert(win, "getLabelFormat: requires at least one argument")
   local stylesheet = getLabelStyleSheet(win)
-  local parsed = labelStyleSheetFormats[stylesheet]
-  if not parsed then
+  local cached = labelStyleSheetFormats[win]
+  local parsed
+  if cached and cached.stylesheet == stylesheet then
+    parsed = cached.parsed
+  else
     parsed = parseLabelStyleSheet(stylesheet)
-    labelStyleSheetFormats[stylesheet] = parsed
+    labelStyleSheetFormats[win] = { stylesheet = stylesheet, parsed = parsed }
   end
   -- a new table every call, as callers are free to change the one they get
   return {
