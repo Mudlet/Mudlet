@@ -201,7 +201,7 @@ private:
 
   void feedFromServer(const QString &data) {
     std::string bytes{data.toStdString()};
-    mpHost->mpConsole->printOnDisplay(bytes, true);
+    mpHost->printOnDisplay(bytes, true);
   }
 
   // Holds the next line back for joining, as a game that wraps its own output
@@ -365,13 +365,13 @@ private slots:
 
     // First server packet ends in a bare ESC...
     std::string part1{"Before\n\x1b"};
-    mpHost->mpConsole->printOnDisplay(part1, true);
+    mpHost->printOnDisplay(part1, true);
     // ...then locally generated text arrives in between...
     std::string localText{"local tick\n"};
-    mpHost->mpConsole->printOnDisplay(localText, false);
+    mpHost->printOnDisplay(localText, false);
     // ...then the server packet with the rest of the sequence:
     std::string part2{secondPacket.toStdString()};
-    mpHost->mpConsole->printOnDisplay(part2, true);
+    mpHost->printOnDisplay(part2, true);
 
     const QString allText = allBufferText();
     QVERIFY2(!allText.contains(mustNotContain),
@@ -394,9 +394,9 @@ private slots:
   // because the incomplete bytes are carried only when isFromServer is set.
   void test_SplitPrivateCsiSurvivesThePacketBoundary() {
     std::string part1{"PRIVSPLIT(\x1b[?25"};
-    mpHost->mpConsole->printOnDisplay(part1, true);
+    mpHost->printOnDisplay(part1, true);
     std::string part2{"l)PRIVSPLIT\n"};
-    mpHost->mpConsole->printOnDisplay(part2, true);
+    mpHost->printOnDisplay(part2, true);
 
     const QString allText = allBufferText();
     QVERIFY2(allText.contains(qsl("PRIVSPLIT()PRIVSPLIT")),
@@ -419,18 +419,18 @@ private slots:
     // payload is shaped like an OSC colour redefinition for ANSI colour 2 so
     // that wrongly feeding it to the OSC decoder is observable:
     std::string part1{"Before\n\x1bPP2665544"};
-    mpHost->mpConsole->printOnDisplay(part1, true);
+    mpHost->printOnDisplay(part1, true);
 
     // Interleaved local feed carrying a complete OSC colour redefinition for
     // ANSI colour 1 that must be decoded:
     std::string localText{"\x1b]P1223344\x07local tick\n"};
-    mpHost->mpConsole->printOnDisplay(localText, false);
+    mpHost->printOnDisplay(localText, false);
 
     // The server DCS terminator arrives; the payload must be consumed
     // without being decoded:
     std::string part2{"\x07"
                       "After\n"};
-    mpHost->mpConsole->printOnDisplay(part2, true);
+    mpHost->printOnDisplay(part2, true);
 
     const QColor redAfter = mpHost->mRed;
     const QColor greenAfter = mpHost->mGreen;

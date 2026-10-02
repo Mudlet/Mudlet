@@ -2012,8 +2012,7 @@ describe("Trigger processing", function()
         it("isActive rejects an invalid item type", function()
             local ok, err = isActive(1, "notarealtype")
             assert.is_nil(ok)
-            assert.is_string(err)
-            assert.is_truthy(err:find("invalid item type", 1, true), "got: " .. tostring(err))
+            assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "notarealtype"', err)
         end)
 
         it("isActive rejects a negative numeric ID", function()
@@ -2109,8 +2108,7 @@ describe("Trigger processing", function()
         it("exists rejects an invalid item type", function()
             local ok, err = exists(1, "notarealtype")
             assert.is_nil(ok)
-            assert.is_string(err)
-            assert.is_truthy(err:find("invalid item type", 1, true), "got: " .. tostring(err))
+            assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "notarealtype"', err)
         end)
 
     end)
@@ -5515,6 +5513,26 @@ describe("Trigger processing", function()
                 end
                 assert.are.equal(3, _G.TrigSpec.count, "a color trigger opened between lines did not fire on lines of another color")
             end)
+        end)
+    end)
+
+    -- A trigger's echo joins the line being processed instead of starting new
+    -- lines, and still does once the trigger has fed text of its own.
+    describe("echo from a trigger", function()
+        it("joins the trigger's line after a nested feedTriggers", function()
+            local addedLines
+            local innerId = tempExactMatchTrigger("nested echo inner", function() end)
+            local outerId = tempExactMatchTrigger("nested echo outer", function()
+                feedTriggers("nested echo inner\n")
+                local before = getLineCount()
+                echo(" joined\nstill joined")
+                addedLines = getLineCount() - before
+            end)
+            feedTriggers("nested echo outer\n")
+            killTrigger(innerId)
+            killTrigger(outerId)
+
+            assert.are.equal(0, addedLines)
         end)
     end)
 

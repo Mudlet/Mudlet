@@ -460,6 +460,7 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
+    QString takenKeyWarning(const TKey* pKey) const;
     void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
 
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);

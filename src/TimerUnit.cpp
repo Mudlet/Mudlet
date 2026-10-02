@@ -27,7 +27,6 @@
 #include "Host.h"
 #include "Tree.h"
 #include "TTimer.h"
-#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -126,10 +125,11 @@ void TimerUnit::stopAllTriggers()
 
 void TimerUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto timer : mTimerRootNodeList) {
-        if (timer->isActive()) {
-            timer->compileAll();
-        }
+        timer->compileAll();
     }
 }
 
@@ -402,9 +402,7 @@ bool TimerUnit::enableTimer(const QString& name)
         }
 
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTimerIcon(pT->getID());
-        }
+        emit mpHost->signal_timerToggled(pT->getID());
     }
     return found;
 }
@@ -425,9 +423,7 @@ bool TimerUnit::disableTimer(const QString& name)
 
         pT->disableTimer();
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTimerIcon(pT->getID());
-        }
+        emit mpHost->signal_timerToggled(pT->getID());
     }
     return found;
 }
