@@ -1058,6 +1058,12 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
 
 bool TMap::findPath(int from, int to)
 {
+    mPathList.clear();
+    mDirList.clear();
+    mWeightList.clear();
+    // Clear the previous path data here so that if the following test is
+    // passed, the data is empty - and valid for THAT case!
+
     if (mGraphBuildInProgress) {
         return false;
     }
@@ -1068,12 +1074,6 @@ bool TMap::findPath(int from, int to)
 
     QElapsedTimer t;
     t.start();
-
-    mPathList.clear();
-    mDirList.clear();
-    mWeightList.clear();
-    // Clear the previous path data here so that if the following test is
-    // passed, the data is empty - and valid for THAT case!
 
     if (from == to) {
         return true; // Take a short-cut for trivial "already there" case!

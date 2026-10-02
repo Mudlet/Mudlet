@@ -2406,7 +2406,7 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
 
     -- The filter runs while the graph is being built from raw room pointers, so
-    -- freeing a room from it used to leave the build reading freed memory.
+    -- freeing a room from it would leave the build reading freed memory.
     it("refuses to delete rooms or areas, or replace the map, from inside an exit weight filter", function()
       local victim = createRoomID()
       addRoom(victim)
@@ -2421,11 +2421,13 @@ describe("Tests mapper functions against a shared fixture", function()
       local refusals
       setExitWeightFilter(function(roomId)
         if roomId == victim and not refusals then
+          -- missing ids and files, so a guard that stops refusing fails here
+          -- rather than taking the shared fixture with it
           refusals = {
-            deleteRoom = {deleteRoom(victim)},
-            deleteArea = {deleteArea(areaGamma)},
+            deleteRoom = {deleteRoom(missingRoomId)},
+            deleteArea = {deleteArea(missingAreaId)},
             deleteMap = {deleteMap()},
-            loadMap = {loadMap()},
+            loadMap = {loadMap(getMudletHomeDir() .. "/no_such_map.xml")},
             loadJsonMap = {loadJsonMap(getMudletHomeDir() .. "/no_such_map.json")},
           }
         end
@@ -2442,8 +2444,8 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
     end)
 
-    -- Without the refusal each nested search rebuilt the graph the outer one was
-    -- still walking, and ran the filter again for every exit in it.
+    -- A nested search would rebuild the graph the outer one is still walking,
+    -- and run the filter again for every exit in it.
     it("refuses to find a path from inside an exit weight filter", function()
       local entered, inner = false, nil
       setExitWeightFilter(function()
@@ -2455,6 +2457,24 @@ describe("Tests mapper functions against a shared fixture", function()
 
       assert.is_true(getPath(rA1, rA3))
       assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+      assert.is_table(inner, "the exit weight filter never ran")
+      assert.is_nil(inner[1])
+      assert.is_truthy(inner[2]:find("from inside an exit weight filter", 1, true), tostring(inner[2]))
+    end)
+
+    it("refuses to speedwalk from inside an exit weight filter", function()
+      -- already there, so a gotoRoom that is not refused has nothing to send
+      assert.is_true(centerview(rA3))
+      local entered, inner = false, nil
+      setExitWeightFilter(function()
+        if not entered then
+          entered = true
+          inner = {gotoRoom(rA3)}
+        end
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_table(inner, "the exit weight filter never ran")
       assert.is_nil(inner[1])
       assert.is_truthy(inner[2]:find("from inside an exit weight filter", 1, true), tostring(inner[2]))
     end)
@@ -2853,16 +2873,16 @@ describe("Tests mapper functions against a shared fixture", function()
     end
 
     -- The paint holds raw room and area pointers across the callbacks, so
-    -- freeing either from one used to leave the paint reading freed memory.
+    -- freeing either from one would leave the paint reading freed memory.
     it("refuses to delete rooms or areas, or replace the map, from inside a map info callback", function()
       local refusals
       assert.is_true(registerMapInfo("MapperSpecWipe", function()
         if not refusals then
           refusals = {
-            deleteRoom = {deleteRoom(rA1)},
-            deleteArea = {deleteArea(areaAlpha)},
+            deleteRoom = {deleteRoom(missingRoomId)},
+            deleteArea = {deleteArea(missingAreaId)},
             deleteMap = {deleteMap()},
-            loadMap = {loadMap()},
+            loadMap = {loadMap(getMudletHomeDir() .. "/no_such_map.xml")},
           }
         end
         return "wipe"
@@ -2879,6 +2899,8 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_true(roomExists(rA2))
     end)
 
+    -- The paint walking a reallocated list reads freed memory but rarely faults,
+    -- so this only fails reliably under AddressSanitizer.
     it("survives a map info callback that registers and kills contributors while the map is painted", function()
       local churned = false
       assert.is_true(registerMapInfo("MapperSpecChurn", function()
@@ -2892,7 +2914,8 @@ describe("Tests mapper functions against a shared fixture", function()
         end
         return "churn"
       end))
-      -- so the paint still has a contributor left to reach once the churn is done
+      -- registered after the churning one so the paint's walk over the contributor
+      -- names goes on past the reallocation; it needs no enabling, as every name is read
       assert.is_true(registerMapInfo("MapperSpecChurnTail", function() return "tail" end))
       finally(function()
         killMapInfo("MapperSpecChurn")
