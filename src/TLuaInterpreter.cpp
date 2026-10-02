@@ -2720,7 +2720,9 @@ int TLuaInterpreter::getTime(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getEpoch
 int TLuaInterpreter::getEpoch(lua_State* L)
 {
-    lua_pushnumber(L, static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0));
+    // Not currentDateTime(), which works out the local time zone - on glibc a
+    // stat() of /etc/localtime per call - only for the epoch to discard it:
+    lua_pushnumber(L, static_cast<double>(QDateTime::currentMSecsSinceEpoch()) / 1000.0);
     return 1;
 }
 
