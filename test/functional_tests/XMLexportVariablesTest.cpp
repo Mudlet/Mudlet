@@ -44,6 +44,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -1170,7 +1171,7 @@ private:
         if (!mpEditor) {
             mudlet::self()->slot_showScriptDialog();
             QTest::qWait(100);
-            mpEditor = mpHost->mpEditorDialog;
+            mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
             if (!mpEditor) {
                 return false;
             }
