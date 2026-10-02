@@ -2363,6 +2363,25 @@ std::optional<bool> Host::getWindowTimeStamps(const QString& name)
     return {pModel->mShowTimeStamps};
 }
 
+// The "autotimestamp" sentinel file makes the profile load with the main
+// console's timestamps on.
+static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
+{
+    const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("autotimestamp"));
+    if (!shown) {
+        QFile::remove(filePath);
+        return;
+    }
+    QSaveFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Host: failed to open autotimestamp file for writing:" << file.errorString();
+        return;
+    }
+    if (!file.commit()) {
+        qWarning() << "Host: error saving timestamp state:" << file.errorString();
+    }
+}
+
 std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool shown)
 {
     auto pModel = consoleModelNamed(name);
@@ -2372,11 +2391,10 @@ std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool sh
     const bool wasShown = pModel->mShowTimeStamps;
     if (wasShown != shown) {
         pModel->mShowTimeStamps = shown;
-        emit pModel->mNotifier.timeStampsToggled();
-        if (!mpConsole && pModel == mpMainConsoleModel.get()) {
-            // the width NAWS reports leaves out the main console's timestamp gutter
-            updateDisplayDimensions();
+        if (pModel == mpMainConsoleModel.get()) {
+            saveMainConsoleTimeStamps(mHostName, shown);
         }
+        emit pModel->mNotifier.timeStampsToggled();
     }
     return {wasShown};
 }

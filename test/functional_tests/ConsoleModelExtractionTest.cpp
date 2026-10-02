@@ -1976,7 +1976,7 @@ headlessProblems = table.concat(headlessProblems, '; ')
 
     // The main console's timestamp flag lives in its model: the toolbar button and
     // Lua both set it there, the button and the autotimestamp file follow it, and
-    // NAWS can still read it once the view is gone.
+    // it outlives the view.
     void test_mainConsoleTimeStampsLiveInTheModel()
     {
         startProfile();
@@ -2008,6 +2008,33 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QVERIFY(QFile::exists(autoTimeStampPath));
 
         destroyTheView(host);
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+    }
+
+    // With a view, turning timestamps on from the toolbar button or from Lua saves
+    // the choice once, not once for the model and again for the view. A directory
+    // in the file's place makes every save attempt warn, so the warnings count them.
+    void test_timeStampsTurnedOnWithAViewAreSavedOnce()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
+        const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
+        QVERIFY(QDir().mkpath(autoTimeStampPath));
+        const QRegularExpression saveFailed(qsl("failed to open autotimestamp file"));
+        QTest::failOnWarning(saveFailed);
+
+        QTest::ignoreMessage(QtWarningMsg, saveFailed);
+        host->mpConsole->timeStampButton->click();
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+
+        QTest::ignoreMessage(QtWarningMsg, saveFailed);
+        runLua(host, qsl("enableTimeStamps()\n"));
         QVERIFY(host->mainConsoleShowsTimeStamps());
     }
 
@@ -2043,8 +2070,8 @@ headlessProblems = table.concat(headlessProblems, '; ')
     }
 
     // The timestamp functions set and read the console model's flag, so the main
-    // console answers them with no view, as it does with one. Only the flag
-    // changes: the autotimestamp file and the size report belong to the view.
+    // console answers them with no view, as it does with one, and the profile
+    // still loads next time as they left it. The size report belongs to the view.
     void test_timeStampFunctionsWorkWithNoView()
     {
         startProfile();
@@ -2077,7 +2104,7 @@ expectTimeStampAnswer('enableTimeStamps again', nil, 'timestamps were already en
 expectTimeStampAnswer('enableTimeStamps main again', nil, 'timestamps were already enabled for the "main" console', enableTimeStamps('main'))
 )LUA"));
         QVERIFY(host->mainConsoleShowsTimeStamps());
-        QVERIFY2(!QFile::exists(autoTimeStampPath), "A profile with no view wrote the view's autotimestamp file.");
+        QVERIFY2(QFile::exists(autoTimeStampPath), "Timestamps turned on with no view were not saved for the next load.");
 
         runLua(host, qsl(R"LUA(
 local unknown = 'noViewNoSuchConsole'
@@ -2092,12 +2119,14 @@ expectTimeStampAnswer('timeStampsEnabled unknown', nil, notFound, timeStampsEnab
 noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
 )LUA"));
         QVERIFY(!host->mainConsoleShowsTimeStamps());
+        QVERIFY2(!QFile::exists(autoTimeStampPath), "Timestamps turned off with no view were not saved for the next load.");
         QCOMPARE(luaGlobalString(host, "noViewTimeStampReport"), QString());
         QCOMPARE(luaGlobalNumber(host, "noViewSizeReports"), 0);
     }
 
     // A profile with no view still tells the game its size when asked: the
-    // character grid it would wrap to, with no timestamp gutter to leave out.
+    // character grid it would wrap to. Timestamps turned on leave out no gutter,
+    // as none is drawn.
     void test_nawsReportsTheCharacterGridWithNoView()
     {
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
@@ -2108,7 +2137,8 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
         QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
-        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
 
         host->mTelnet.connectIt(mLocalhost, mPort.toInt());
         QVERIFY2(QTest::qWaitFor(
@@ -2128,9 +2158,9 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         QCOMPARE(mpServer->nawsUpdates().constLast(), QSize(std::min(host->mScreenWidth, host->mWrapAt), host->mScreenHeight));
     }
 
-    // With no view, timestamps turned on or off from Lua still change the width
-    // the game is told by their gutter, as they do with one.
-    void test_luaTimeStampsResendNawsWithNoView()
+    // With no view no timestamp gutter is drawn, so timestamps turned on or off
+    // from Lua leave the width the game is told as it was.
+    void test_luaTimeStampsLeaveTheReportedWidthAloneWithNoView()
     {
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
         QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
@@ -2162,12 +2192,26 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
         QVERIFY2(nawsReaches(0), "The view-less profile never reported its size with no timestamps.");
 
+        const auto onlyFullWidthSince = [this, &sizeWithGutter](const qsizetype from) {
+            const auto updates = mpServer->nawsUpdates();
+            for (qsizetype i = from; i < updates.size(); ++i) {
+                if (updates.at(i) != sizeWithGutter(0)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        qsizetype reported = mpServer->nawsUpdates().size();
         runLua(host, qsl("enableTimeStamps()\n"));
         QVERIFY(host->mainConsoleShowsTimeStamps());
-        QVERIFY2(nawsReaches(TBuffer::smTimeStampFormat.size()), "Timestamps turned on from Lua with no view left the game's width alone.");
+        QTest::qWait(500);
+        QVERIFY2(onlyFullWidthSince(reported), "Timestamps turned on from Lua with no view took a gutter off the game's width.");
 
+        reported = mpServer->nawsUpdates().size();
         runLua(host, qsl("disableTimeStamps()\n"));
-        QVERIFY2(nawsReaches(0), "Timestamps turned off from Lua with no view left the game's width alone.");
+        QTest::qWait(500);
+        QVERIFY2(onlyFullWidthSince(reported), "Timestamps turned off from Lua with no view changed the game's width.");
     }
 
     // A profile that never had a view, whose changeColors() would otherwise

@@ -59,7 +59,6 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QProxyStyle>
-#include <QSaveFile>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -3047,6 +3046,11 @@ void TConsole::raiseMudletResizeEvent()
 
 void TConsole::slot_toggleTimeStamps(const bool state)
 {
+    if (mType == TConsole::MainConsole) {
+        // Host saves the choice for the next load, then has this view apply it
+        mpHost->setWindowTimeStamps(qsl("main"), state);
+        return;
+    }
     if (mpModel->mShowTimeStamps == state) {
         return;
     }
@@ -3064,20 +3068,6 @@ void TConsole::applyTimeStamps()
             // to be raised - which is why we use that rather than the
             // QAbstractButton::toggled one
             timeStampButton->setChecked(state);
-        }
-        const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
-        QSaveFile file(filePath);
-        if (state) {
-            if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                qWarning() << "TConsole: failed to open autotimestamp file for writing:" << file.errorString();
-                return;
-            }
-            QTextStream out(&file);
-            if (!file.commit()) {
-                qDebug() << "TConsole::slot_toggleTimeStamps: error saving timestamp state: " << file.errorString();
-            }
-        } else {
-            QFile::remove(filePath);
         }
     }
 
