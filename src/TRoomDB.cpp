@@ -1049,6 +1049,8 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Merge back in the renumbered rooms
             if (!replacementRoomsSet.isEmpty()) {
                 pA->rooms.unite(replacementRoomsSet);
+                // The area's indexes still file them under their old ids:
+                pA->mIsDirty = true;
             }
 
             // Now compare pA->rooms to areaRoomMultiHash.values(itArea.key()),
