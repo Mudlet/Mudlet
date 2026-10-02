@@ -28,6 +28,7 @@
 #include "utils.h"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QJsonObject>
 #include <QMap>
@@ -503,6 +504,8 @@ private:
     qsizetype mProgressDialogRoomsCount = 0;
     qsizetype mProgressDialogLabelsTotal = 0;
     qsizetype mProgressDialogLabelsCount = 0;
+    // When incrementJsonProgressDialog() last showed the counts; invalid until it first does:
+    QElapsedTimer mJsonProgressShown;
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
