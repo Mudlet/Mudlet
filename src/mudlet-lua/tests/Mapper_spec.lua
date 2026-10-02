@@ -4381,6 +4381,21 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(2, getDoors(roomA)["n"])
       assert.is_true(hasExitLock(roomA, "north"))
     end)
+
+    it("reads a room weight below one as one", function()
+      buildMap()
+      reimportWith(function(document)
+        findRoom(document, roomA).weight = -3
+        findRoom(document, roomB).weight = 0
+      end)
+
+      assert.are.equal(1, getRoomWeight(roomA))
+      assert.are.equal(1, getRoomWeight(roomB))
+      -- a zero cost step trips an assertion in the route builder of debug builds
+      local ok, weight = getPath(roomA, roomB)
+      assert.is_true(ok)
+      assert.are.equal(1, weight)
+    end)
   end)
 
   describe("Tests pathfinding in a map read by loadJsonMap", function()
