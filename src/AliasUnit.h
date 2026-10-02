@@ -43,7 +43,7 @@ class TAlias;
 
 class AliasUnit
 {
-    Q_DECLARE_TR_FUNCTIONS(AliasUnit) // Needed so we can use tr() even though AliasUnit is NOT derived from QObject
+    Q_DECLARE_TR_FUNCTIONS(AliasUnit)
 
     friend class XMLexport;
     friend class XMLimport;

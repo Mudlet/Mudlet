@@ -54,13 +54,12 @@ public:
     const QString& getName() const { return mName; }
     void setName(const QString& name);
     const QTime& getTime() const { return mTime; }
-    void compile();
     bool checkRestart();
     bool compileScript();
     void execute();
     void setTime(QTime time);
-    // Not part of setTime(): a new timer has no time yet, and whether it needs
-    // one depends on its parent, which a drag and drop can change later
+    // Not part of setTime(): a new timer has no time yet, and whether it needs one depends on its
+    // parent, which drag and drop can change
     void validateTime();
     const QString& getCommand() const { return mCommand; }
     void setCommand(const QString& cmd) { mCommand = cmd; }
@@ -72,8 +71,6 @@ public:
     void start();
     void enableTimer();
     void disableTimer();
-    void enableTimer(const QString&);
-    void disableTimer(const QString&);
     void enableTimer(int);
     void disableTimer(int);
     void killTimer();
@@ -106,8 +103,6 @@ public:
     // property into the QTimer that mpQTimer points to as well:
     void setID(int) override;
     QString packageName(TTimer* pTimer);
-    QString moduleName(TTimer* pTimer);
-
 
 
     // specifies whenever the payload is Lua code as a string
@@ -123,13 +118,10 @@ public:
 
 private:
     TTimer() = default;
-    // Whether this timer firing would do anything: run a script, send a command,
-    // or call the Lua function tempTimer() registered for it - that one lives in
-    // the Lua registry, so such a timer's script stays empty
+    // A tempTimer() Lua function lives in the Lua registry, so such a timer's script is empty
     bool hasPayload() const { return !mScript.isEmpty() || !mCommand.isEmpty() || mRegisteredAnonymousLuaFunction; }
-    // Hides Tree<TTimer>::activate(), which is not virtual: only calls made from
-    // TTimer validate the time, Tree's own one in setIsActive() does not, which
-    // is why setIsActive() validates for itself
+    // Hides the non-virtual Tree<TTimer>::activate(); Tree's call in setIsActive() skips the time
+    // validation, so setIsActive() validates for itself
     bool activate();
 
     QString mName;

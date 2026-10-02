@@ -474,6 +474,34 @@ protected:
     // right call instead of setVocabulary(vocabulary()).
     void noteVocabularyApplied() { mVocabularyApplied = true; }
 
+    // Bumped once a model load has committed, so a load can tell whether a
+    // handler reached from one of its own reports installed a model while it
+    // ran. endSessionForModelLoad() below raises the report that does it: it
+    // reaches Lua synchronously, and a handler is free to call stt.init() from
+    // there.
+    //
+    // Counted at the commit rather than as a load begins: a handler whose load
+    // fails has replaced nothing, and counting its attempt would have the load
+    // it interrupted stand down for it - leaving neither model installed. Kept
+    // here rather than in a backend because the hazard belongs to that report,
+    // which every backend that loads a model raises - the built-in macOS backend
+    // loads none and never calls it.
+    //
+    // replacedADifferentModel says whether this load actually put a different
+    // model in place of the one loaded before it. A rebuild of the model already
+    // in place counts as no replacement at all - which is how the sherpa backend
+    // applies setSensitivity() and setVocabulary(), both of which reach this
+    // commit through the same load path. Counting one made the stt.init() it
+    // interrupted stand down for a replacement that never happened: the old model
+    // stayed loaded, and the caller was told a handler had swapped it.
+    void noteModelLoaded(bool replacedADifferentModel)
+    {
+        if (replacedADifferentModel) {
+            ++mModelLoadGeneration;
+        }
+    }
+    unsigned int modelLoadGeneration() const { return mModelLoadGeneration; }
+
     // What a backend owes the player when loading a model ends a session that
     // was under way. Called once its capture device has been stopped and
     // before it frees the decoder: one engine means a session cannot survive
@@ -597,6 +625,7 @@ signals:
     void errorOccurred(const QString& errorMessage);
 
 private:
+    unsigned int mModelLoadGeneration = 0;
     State mState = State::Uninitialized;
 
     // Retained by setVocabulary() for every backend, so none has to remember

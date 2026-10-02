@@ -204,8 +204,8 @@ private slots:
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // installPackage() works out why an install failed and hands the reason back,
@@ -268,15 +268,15 @@ private slots:
         actionUnit->updateAllToolbars();
 
         TMainConsole* console = host->mpConsole;
-        QVERIFY2(topBar->mpEasyButtonBar, "The top-bar action should have been given a TEasyButtonBar");
-        QCOMPARE(topBar->mpEasyButtonBar->parentWidget(), console->mpTopToolBar);
-        QVERIFY2(leftBar->mpEasyButtonBar, "The left-bar action should have been given a TEasyButtonBar");
-        QCOMPARE(leftBar->mpEasyButtonBar->parentWidget(), console->mpLeftToolBar);
-        QVERIFY2(rightBar->mpEasyButtonBar, "The right-bar action should have been given a TEasyButtonBar");
-        QCOMPARE(rightBar->mpEasyButtonBar->parentWidget(), console->mpRightToolBar);
-        QVERIFY2(floatingBar->mpToolBar, "The floating action should have been given a TToolBar");
-        QCOMPARE(floatingBar->mpToolBar->parentWidget(), static_cast<QWidget*>(mudlet::self()));
-        QCOMPARE(mudlet::self()->dockWidgetArea(floatingBar->mpToolBar), Qt::LeftDockWidgetArea);
+        QVERIFY2(console->actionEasyButtonBar(topBar), "The top-bar action should have been given a TEasyButtonBar");
+        QCOMPARE(console->actionEasyButtonBar(topBar)->parentWidget(), console->mpTopToolBar);
+        QVERIFY2(console->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
+        QCOMPARE(console->actionEasyButtonBar(leftBar)->parentWidget(), console->mpLeftToolBar);
+        QVERIFY2(console->actionEasyButtonBar(rightBar), "The right-bar action should have been given a TEasyButtonBar");
+        QCOMPARE(console->actionEasyButtonBar(rightBar)->parentWidget(), console->mpRightToolBar);
+        QVERIFY2(console->actionToolBar(floatingBar), "The floating action should have been given a TToolBar");
+        QCOMPARE(console->actionToolBar(floatingBar)->parentWidget(), static_cast<QWidget*>(mudlet::self()));
+        QCOMPARE(mudlet::self()->dockWidgetArea(console->actionToolBar(floatingBar)), Qt::LeftDockWidgetArea);
     }
 
     // The bars are the console's widgets now, so ActionUnit has to cope with being
@@ -304,10 +304,10 @@ private slots:
         actionUnit->updateAllToolbars();
         host->mpConsole = console;
 
-        QVERIFY2(!floatingBar->mpToolBar, "No bar should have been built while the console was away");
+        QVERIFY2(!host->mpConsole->actionToolBar(floatingBar), "No bar should have been built while the console was away");
 
         actionUnit->updateAllToolbars();
-        QVERIFY2(floatingBar->mpToolBar, "The bar should be built once the console is back");
+        QVERIFY2(host->mpConsole->actionToolBar(floatingBar), "The bar should be built once the console is back");
     }
 
     // Removing a docked bar's action reaches the console to take the bar down.
@@ -327,8 +327,8 @@ private slots:
         leftBar->setIsActive(true);
         actionUnit->registerAction(leftBar);
         actionUnit->updateAllToolbars();
-        QVERIFY2(leftBar->mpEasyButtonBar, "The left-bar action should have been given a TEasyButtonBar");
-        QPointer<TEasyButtonBar> bar = leftBar->mpEasyButtonBar;
+        QVERIFY2(host->mpConsole->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
+        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(leftBar);
 
         QPointer<TMainConsole> console = host->mpConsole;
         host->mpConsole = nullptr;
@@ -361,8 +361,8 @@ private slots:
         folder->setIsActive(true);
         actionUnit->registerAction(folder);
         actionUnit->updateAllToolbars();
-        QVERIFY2(leftBar->mpEasyButtonBar, "The left-bar action should have been given a TEasyButtonBar");
-        QPointer<TEasyButtonBar> bar = leftBar->mpEasyButtonBar;
+        QVERIFY2(host->mpConsole->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
+        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(leftBar);
 
         QPointer<TMainConsole> console = host->mpConsole;
         host->mpConsole = nullptr;
@@ -398,10 +398,10 @@ private slots:
         actionUnit->updateAllToolbars();
 
         TMainConsole* console = host->mpConsole;
-        QPointer<TEasyButtonBar> bar = leftBar->mpEasyButtonBar;
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(leftBar);
         QVERIFY2(bar, "The left-bar action should have been given a TEasyButtonBar");
         QVERIFY2(console->mpLeftToolBar->layout()->indexOf(bar) != -1, "SETUP: the bar is not on the left toolbar to begin with");
-        QPointer<TToolBar> toolbar = floatingBar->mpToolBar;
+        QPointer<TToolBar> toolbar = console->actionToolBar(floatingBar);
         QVERIFY2(toolbar, "The floating action should have been given a TToolBar");
         QVERIFY2(mudlet::self()->dockWidgetArea(toolbar) != Qt::NoDockWidgetArea, "SETUP: the toolbar is not docked to begin with");
         QVERIFY2(!toolbar->isHidden(), "SETUP: the toolbar is hidden to begin with");
@@ -444,12 +444,7 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 
