@@ -15,6 +15,22 @@ describe("Tests how MXP reads the tags a game sends", function()
     return table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
   end
 
+  -- the format of the first character of the word, read off the main window
+  local function formatOf(word)
+    local lastLine = getLastLineNumber("main")
+    for lineNumber = lastLine, math.max(0, lastLine - 5), -1 do
+      local at = getLines("main", lineNumber, lineNumber + 1)[1]:find(word, 1, true)
+      if at then
+        moveCursor("main", 0, lineNumber)
+        selectSection("main", at - 1, 1)
+        local format = getTextFormat("main")
+        deselect("main")
+        return format
+      end
+    end
+    error(("no recent line holds %q"):format(word))
+  end
+
   local function sendEvent(data)
     if type(mxp) == "table" then
       mxp.send = nil
@@ -87,6 +103,40 @@ describe("Tests how MXP reads the tags a game sends", function()
 
       feed([[<!ELEMENT mxpParseGone DELETE>]])
       assert.are.equal("<mxpParseGone>mxpParseGoneAfter</mxpParseGone>", shown("<mxpParseGone>mxpParseGoneAfter</mxpParseGone>"))
+    end)
+
+    it("ignores a closing tag inside an element's definition", function()
+      finally(function() feed("<!ELEMENT mxpParseClosing DELETE>") end)
+      feed([[<!ELEMENT mxpParseClosing '<B>mxpParseClosingDefinition</B>'>]])
+      feed("<mxpParseClosing>mxpParseClosingIn</mxpParseClosing>mxpParseClosingOut")
+      assert.is_true(formatOf("mxpParseClosingIn").bold)
+      assert.is_false(formatOf("mxpParseClosingOut").bold)
+    end)
+
+    it("ignores a closing tag inside the definition of an element being closed", function()
+      finally(function() feed("<!ELEMENT mxpParseOnlyClosing DELETE>") end)
+      feed([[<!ELEMENT mxpParseOnlyClosing '</B>'>]])
+      assert.are.equal("mxpParseOnlyClosingText", shown("mxpParseOnlyClosingText</mxpParseOnlyClosing>"))
+    end)
+
+    it("does not expand an element defined as itself", function()
+      finally(function() feed("<!ELEMENT mxpParseSelf DELETE>") end)
+      feed([[<!ELEMENT mxpParseSelf '<B><mxpParseSelf>'>]])
+      feed("<mxpParseSelf>mxpParseSelfIn</mxpParseSelf>mxpParseSelfOut")
+      assert.is_true(formatOf("mxpParseSelfIn").bold)
+      assert.is_false(formatOf("mxpParseSelfOut").bold)
+    end)
+
+    it("does not expand elements defined as each other", function()
+      finally(function()
+        feed("<!ELEMENT mxpParseLoopA DELETE>")
+        feed("<!ELEMENT mxpParseLoopB DELETE>")
+      end)
+      feed([[<!ELEMENT mxpParseLoopA '<B><mxpParseLoopB>'>]])
+      feed([[<!ELEMENT mxpParseLoopB '<mxpParseLoopA>'>]])
+      feed("<mxpParseLoopA>mxpParseLoopIn</mxpParseLoopA>mxpParseLoopOut")
+      assert.is_true(formatOf("mxpParseLoopIn").bold)
+      assert.is_false(formatOf("mxpParseLoopOut").bold)
     end)
 
     it("shows a definition that names only the element as text", function()
