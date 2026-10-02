@@ -355,6 +355,10 @@ public:
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
+    // Whether word wrapping split this line off the end of the one before it
+    bool wrapsFromPreviousLine(int lineNumber) const;
+    int wrapGapBefore(int lineNumber) const;
+    int wrapIndentWidth(int lineNumber) const;
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
     // Colors of the current trigger-pass line as committed, before any
@@ -461,6 +465,9 @@ public:
     QStringList timeBuffer;
     // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
+    // stores, for a line that word wrapping split off the one before it, how
+    // many spaces the break dropped between the two - a copy puts them back
+    QList<quint16> wrapGapBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
     int mBatchDeleteSize = 1000;
@@ -500,6 +507,7 @@ private:
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
     void commitLineData(QString line, std::vector<TChar> chars, char ch);
+    bool dropSpaceAtWrap(QChar);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
     static bool segmentEndsSettledSentence(const QString& line);

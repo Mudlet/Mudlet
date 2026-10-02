@@ -2689,16 +2689,29 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         }
     }
 
-    if (showTimestamps) {
-        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
-        QStringList result;
-        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result), [](const QString& text, const QString& timestamp) {
-            return timestamp + text;
-        });
-        textLines = result;
+    // A line that word wrapping split off goes back on the end of the one
+    // before, as the game sent it, rather than being copied as a line of its own
+    QString text;
+    for (qsizetype i = 0; i < textLines.size(); ++i) {
+        const int y = static_cast<int>(startLine + i);
+        QStringView line = textLines.at(i);
+        if (mpBuffer->wrapsFromPreviousLine(y)) {
+            const qsizetype columnsNotSelected = (i == 0) ? startPos : 0;
+            line = line.sliced(std::clamp<qsizetype>(mpBuffer->wrapIndentWidth(y) - columnsNotSelected, 0, line.size()));
+            if (i > 0) {
+                text.append(QString(mpBuffer->wrapGapBefore(y), QChar::Space));
+            }
+        } else {
+            if (i > 0) {
+                text.append(newlineChar);
+            }
+            if (showTimestamps) {
+                text.append(mpBuffer->timeBuffer.at(y));
+            }
+        }
+        text.append(line);
     }
-
-    return textLines.join(newlineChar);
+    return text;
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
