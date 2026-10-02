@@ -23,6 +23,15 @@
 #include "TMxpClient.h"
 #include "TMxpTagParser.h"
 
+// Far deeper than any game nests its elements, and shallow enough for a 1MB main-thread stack
+static constexpr qsizetype maxElementExpansionDepth = 32;
+
+// A game can define an element that expands to itself, directly or through other elements, or a
+// chain of elements long enough to exhaust the stack
+bool TMxpCustomElementTagHandler::mayExpand(const QString& key) const
+{
+    return mElementsBeingExpanded.size() < maxElementExpansionDepth && !mElementsBeingExpanded.contains(key);
+}
 
 TMxpTagHandlerResult TMxpCustomElementTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
@@ -36,9 +45,8 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleStartTag(TMxpContext& ct
         }
     }
 
-    // A game can define an element that expands to itself, directly or through other elements
     const QString key = el.name.toUpper();
-    if (!el.definition.isEmpty() && !mElementsBeingExpanded.contains(key)) {
+    if (!el.definition.isEmpty() && mayExpand(key)) {
         mElementsBeingExpanded.insert(key);
         for (const QSharedPointer<MxpNode>& ptr : std::as_const(el.parsedDefinition)) {
             if (!ptr->isTag()) {
@@ -69,7 +77,7 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleEndTag(TMxpContext& ctx,
     }
 
     const QString key = el.name.toUpper();
-    if (mElementsBeingExpanded.contains(key)) {
+    if (!mayExpand(key)) {
         return MXP_TAG_HANDLED;
     }
 

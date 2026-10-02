@@ -117,6 +117,8 @@ describe("Tests how MXP reads the tags a game sends", function()
       finally(function() feed("<!ELEMENT mxpParseOnlyClosing DELETE>") end)
       feed([[<!ELEMENT mxpParseOnlyClosing '</B>'>]])
       assert.are.equal("mxpParseOnlyClosingText", shown("mxpParseOnlyClosingText</mxpParseOnlyClosing>"))
+      feed("<B>mxpParseOnlyClosingBefore<mxpParseOnlyClosing>mxpParseOnlyClosingIn</mxpParseOnlyClosing>mxpParseOnlyClosingAfter</B>")
+      assert.is_true(formatOf("mxpParseOnlyClosingAfter").bold)
     end)
 
     it("does not expand an element defined as itself", function()
@@ -137,6 +139,40 @@ describe("Tests how MXP reads the tags a game sends", function()
       feed("<mxpParseLoopA>mxpParseLoopIn</mxpParseLoopA>mxpParseLoopOut")
       assert.is_true(formatOf("mxpParseLoopIn").bold)
       assert.is_false(formatOf("mxpParseLoopOut").bold)
+    end)
+
+    local function defineChain(name, length)
+      local definitions = {}
+      for i = 1, length do
+        definitions[i] = ("<!ELEMENT %s%d '<%s%d>'>"):format(name, i, name, i + 1)
+      end
+      definitions[length + 1] = ("<!ELEMENT %s%d '<B>'>"):format(name, length + 1)
+      feed(table.concat(definitions))
+    end
+
+    local function deleteChain(name, length)
+      local deletions = {}
+      for i = 1, length + 1 do
+        deletions[i] = ("<!ELEMENT %s%d DELETE>"):format(name, i)
+      end
+      feed(table.concat(deletions))
+    end
+
+    it("expands an element through a short chain of others", function()
+      finally(function() deleteChain("mxpParseShortChain", 3) end)
+      defineChain("mxpParseShortChain", 3)
+      feed("<mxpParseShortChain1>mxpParseShortChainIn</mxpParseShortChain1>mxpParseShortChainOut")
+      assert.is_true(formatOf("mxpParseShortChainIn").bold)
+      assert.is_false(formatOf("mxpParseShortChainOut").bold)
+    end)
+
+    -- long enough to overflow an AddressSanitizer build's 8MB stack were every link expanded
+    it("stops expanding a chain of elements nested deeper than any game would", function()
+      local length = 10000
+      finally(function() deleteChain("mxpParseLongChain", length) end)
+      defineChain("mxpParseLongChain", length)
+      feed("<mxpParseLongChain1>mxpParseLongChainText</mxpParseLongChain1>")
+      assert.is_false(formatOf("mxpParseLongChainText").bold)
     end)
 
     it("shows a definition that names only the element as text", function()

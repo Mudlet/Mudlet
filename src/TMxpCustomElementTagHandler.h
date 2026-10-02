@@ -33,6 +33,7 @@ class TMxpCustomElementTagHandler : public TMxpTagHandler
     QMap<QString, QString> mCurrentFlagAttributes;
     QSet<QString> mElementsBeingExpanded;
 
+    bool mayExpand(const QString& key) const;
     MxpStartTag resolveElementDefinition(const TMxpElement& element, MxpStartTag* definitionTag, MxpStartTag* customTag) const;
     static QString mapAttributes(const TMxpElement& element, const QString& input, MxpStartTag* tag);
     void setFlag(TMxpClient& ctx, const MxpStartTag* tag, const TMxpElement& el);
