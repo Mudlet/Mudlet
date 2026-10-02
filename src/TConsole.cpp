@@ -1399,11 +1399,6 @@ void TConsole::scrollUp(int lines)
     slot_adjustAccessibleNames();
 }
 
-void TConsole::deselect()
-{
-    mpModel->deselect();
-}
-
 void TConsole::showEvent(QShowEvent* event)
 {
     if (mType & (MainConsole | Buffer)) {
@@ -1434,11 +1429,6 @@ void TConsole::reset()
     mpModel->resetFormat();
 }
 
-bool TConsole::deleteLine(int y)
-{
-    return buffer.deleteLine(y);
-}
-
 void TConsole::insertText(const QString& text)
 {
     const auto result = mpModel->insertText(text);
@@ -1450,91 +1440,9 @@ void TConsole::insertText(const QString& text)
     }
 }
 
-void TConsole::insertHTML(const QString& text)
-{
-    insertText(text);
-}
-
-int TConsole::getLineNumber()
-{
-    return mUserCursor.y();
-}
-
 int TConsole::getWrapAt()
 {
     return buffer.mWrapAt;
-}
-
-void TConsole::selectCurrentLine()
-{
-    mpModel->selectCurrentLine();
-}
-
-std::list<int> TConsole::getFgColor()
-{
-    std::list<int> result;
-    const int x = P_begin.x();
-    const int y = P_begin.y();
-    if (y < 0) {
-        return result;
-    }
-    if (x < 0) {
-        return result;
-    }
-    if (y >= static_cast<int>(buffer.buffer.size())) {
-        return result;
-    }
-
-    auto line = buffer.buffer.at(y);
-    const int len = static_cast<int>(line.size());
-    if (len - 1 >= x) {
-        const QColor color(line.at(x).foreground());
-        result.push_back(color.red());
-        result.push_back(color.green());
-        result.push_back(color.blue());
-    }
-
-    return result;
-}
-
-std::list<int> TConsole::getBgColor()
-{
-    std::list<int> result;
-    const int x = P_begin.x();
-    const int y = P_begin.y();
-    if (y < 0) {
-        return result;
-    }
-    if (x < 0) {
-        return result;
-    }
-    if (y >= static_cast<int>(buffer.buffer.size())) {
-        return result;
-    }
-
-    auto line = buffer.buffer.at(y);
-    const int len = static_cast<int>(line.size());
-    if (len - 1 >= x) {
-        const QColor color(line.at(x).background());
-        result.push_back(color.red());
-        result.push_back(color.green());
-        result.push_back(color.blue());
-    }
-
-    return result;
-}
-
-QPair<quint8, TChar> TConsole::getTextAttributes() const
-{
-    return mpModel->textAttributes();
-}
-
-void TConsole::luaWrapLine(int line)
-{
-    if (!mpHost) {
-        return;
-    }
-    buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount);
 }
 
 void TConsole::setFontSize(int size)
@@ -1821,21 +1729,6 @@ bool TConsole::moveCursor(int x, int y)
     return mpModel->moveCursor(x, y);
 }
 
-int TConsole::select(const QString& text, int numOfMatch)
-{
-    return mpModel->selectString(text, numOfMatch);
-}
-
-bool TConsole::selectSection(int from, int to)
-{
-    return mpModel->selectSection(from, to);
-}
-
-std::tuple<bool, QString, int, int> TConsole::getSelection()
-{
-    return mpModel->selection();
-}
-
 // The callers below rewrite the text of an existing selection rather than
 // appending to the buffer, so the lines they touched are all that has to be
 // redrawn. They used to force a whole-screen repaint of both panes, which cost a
@@ -1849,13 +1742,6 @@ void TConsole::markLinesDirty(const int firstLine, const int lastLine)
 {
     mUpperPane->markLinesDirty(firstLine, lastLine);
     mLowerPane->markLinesDirty(firstLine, lastLine);
-}
-
-void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, const bool b)
-{
-    if (mpModel->setSelectionDisplayAttributes(attributes, b)) {
-        markSelectionDirty();
-    }
 }
 
 void TConsole::setFgColor(int r, int g, int b)
@@ -2015,38 +1901,6 @@ void TConsole::printSystemMessage(const QString& msg)
 {
     mpModel->printSystemMessage(msg);
     showNewLines();
-}
-
-void TConsole::echo(const QString& msg)
-{
-    // Strip \r so that \r\n becomes \n and standalone \r disappears; without
-    // this, \r is stored literally in the buffer and rendered as a glyph.
-    QString normalizedMsg = msg;
-    normalizedMsg.remove(QChar::CarriageReturn);
-    if (mTriggerEngineMode) {
-        // Use insertInLine instead of appendLine so that newline characters
-        // are embedded in the trigger line rather than creating new buffer
-        // lines (which would cause subsequent echo/cecho calls to append to
-        // the wrong line). The embedded newlines are properly handled during
-        // wrapping by getWrapInfo.
-        const int y = buffer.size() - 1;
-        if (y >= 0) {
-            const int x = buffer.lineBuffer.at(y).size();
-            QPoint insertPoint(x, y);
-            buffer.insertInLine(insertPoint, normalizedMsg, mFormatCurrent);
-        } else {
-            buffer.appendLine(normalizedMsg, 0, normalizedMsg.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
-        }
-    } else {
-        print(normalizedMsg);
-    }
-}
-
-void TConsole::appendBuffer(const TBuffer& bufferSlice)
-{
-    buffer.appendBuffer(bufferSlice);
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
 }
 
 void TConsole::slot_stopAllItems(bool b)

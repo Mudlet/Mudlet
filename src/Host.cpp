@@ -2505,34 +2505,21 @@ void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor
     }
 }
 
-// The echoed-text mark is buffer state, so it is set on the model rather than through the view.
-bool Host::echoToMainConsole(const QString& text)
-{
-    if (!mpConsole) {
-        return false;
-    }
-    TBuffer& buffer = mpMainConsoleModel->buffer;
-    buffer.mEchoingText = true;
-    mpConsole->echo(text);
-    buffer.mEchoingText = false;
-    return true;
-}
-
-bool Host::insertHtmlInMainConsole(const QString& text)
-{
-    if (!mpConsole) {
-        return false;
-    }
-    mpConsole->insertHTML(text);
-    return true;
-}
-
 void Host::printSystemMessage(const QString& msg)
 {
     mpMainConsoleModel->printSystemMessage(msg);
     if (mpConsole) {
         mpConsole->showNewLines();
     }
+}
+
+void Host::echoMainConsole(QString text)
+{
+    if (!mpMainConsoleModel->echo(text)) {
+        return;
+    }
+    emit mpMainConsoleModel->mNotifier.newLinesWritten();
+    mpMainConsoleModel->mirrorToStdOut(text);
 }
 
 void Host::printOnDisplay(std::string& data, const bool isFromServer)
@@ -5605,11 +5592,15 @@ bool Host::closeWindow(const QString& name)
 
 bool Host::echoWindow(const QString& name, const QString& text)
 {
-    if (!mpConsole) {
-        return false;
+    // Not consoleModelNamed(): echoUserWindow() does not take "main" or "" for the main console.
+    if (auto pModel = mWindowRegistry.subConsoleModel(name)) {
+        const TChar& format = pModel->mFormatCurrent;
+        pModel->buffer.append(text, 0, text.size(), format.foreground(), format.background(), format.allDisplayAttributes());
+        emit pModel->mNotifier.newLinesWritten();
+        pModel->mirrorToStdOut(text);
+        return true;
     }
-
-    return mpConsole->printWindow(name, text);
+    return mpConsole && mpConsole->setLabelText(name, text);
 }
 
 bool Host::pasteWindow(const QString& name)
