@@ -53,6 +53,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class CommandLineScrollRangeTest : public QObject
 {
     Q_OBJECT
@@ -123,7 +125,7 @@ private slots:
         }
 
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connectedSpy.wait(8000)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connectedSpy.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }

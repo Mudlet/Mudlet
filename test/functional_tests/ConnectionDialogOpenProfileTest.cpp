@@ -80,7 +80,7 @@ private:
                     []() {
                         return mudlet::self()->mpConnectionDialog.isNull();
                     },
-                    5000)) {
+                    5s)) {
             return false;
         }
         mudlet::self()->slot_showConnectionDialog();
@@ -88,7 +88,7 @@ private:
                 []() {
                     return !mudlet::self()->mpConnectionDialog.isNull() && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000);
+                5s);
     }
 
     // picks the test profile the way a click on it does. slot_itemClicked()
@@ -130,7 +130,7 @@ private:
                     auto* pHost = mudlet::self()->getActiveHost();
                     return pHost && pHost->getName() == mProfileName;
                 },
-                15000);
+                15s);
     }
 
 private slots:
@@ -174,7 +174,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()
@@ -230,7 +230,7 @@ private slots:
                          [&connections]() {
                              return !connections.isEmpty();
                          },
-                         15000),
+                         15s),
                  "Asking for the open profile again did not reconnect it");
         QCOMPARE(loads.count(), 0);
     }

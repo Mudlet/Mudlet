@@ -3010,7 +3010,7 @@ void cTelnet::autoEnableTTYPEVersion()
     // encoding. Raise the flag before anything that could turn the event loop,
     // as that is all it takes for more of those bytes to arrive.
     mDeferredReconnect = true;
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         mDeferredReconnect = false;
         if (!mpHost || mpHost->isClosingDown() || !mpSocket) {
             // Nothing to replace by the time this ran: the player may have

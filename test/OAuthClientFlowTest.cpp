@@ -26,6 +26,8 @@
 #include <QTcpSocket>
 #include <QUrlQuery>
 
+using namespace std::chrono_literals;
+
 // Serves a static OpenID Connect discovery document over loopback HTTP so the
 // flow's QNetworkAccessManager fetch has something real to talk to.
 class MiniDiscoveryServer : public QObject
@@ -291,7 +293,7 @@ void OAuthClientFlowTest::testDiscoveryFetchFailureFailsFlow()
     // fetch fails deterministically, rather than relying on a host refusing a particular port.
     MiniClosingServer discovery;
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
-    QTRY_COMPARE_WITH_TIMEOUT(failedSpy.count(), 1, 15000);
+    QTRY_COMPARE_WITH_TIMEOUT(failedSpy.count(), 1, 15s);
     // A failed discovery fetch must not have produced an authorization URL.
     QVERIFY(mAuthorizationUrl.isEmpty());
 }

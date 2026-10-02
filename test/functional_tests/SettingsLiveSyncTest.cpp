@@ -56,6 +56,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class SettingsLiveSyncTest : public QObject
 {
     Q_OBJECT
@@ -363,7 +365,7 @@ private slots:
                          [this]() {
                              return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) != nullptr;
                          },
-                         2000),
+                         2s),
                  "the deep link never spotlighted anything, so this case is watching nothing");
 
         const int wrapFromAScript = mpHost->mWrapAt + 13;
@@ -377,7 +379,7 @@ private slots:
                          [this]() {
                              return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) == nullptr;
                          },
-                         5000),
+                         5s),
                  "the spotlight outlived its pulse once the settings had been re-read");
     }
 

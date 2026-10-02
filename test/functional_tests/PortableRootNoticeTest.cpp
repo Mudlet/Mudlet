@@ -42,6 +42,8 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
+using namespace std::chrono_literals;
+
 class PortableRootNoticeTest : public QObject
 {
     Q_OBJECT
@@ -110,7 +112,7 @@ private slots:
         MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
 
-        mProbe.setInterval(20);
+        mProbe.setInterval(20ms);
         connect(&mProbe, &QTimer::timeout, this, [this]() {
             QWidget* modal = QApplication::activeModalWidget();
             if (!modal) {
@@ -192,7 +194,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
 
         mDismissed.clear();
         mProbe.start();

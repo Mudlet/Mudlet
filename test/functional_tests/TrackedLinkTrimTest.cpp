@@ -49,6 +49,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class TrackedLinkTrimTest : public QObject
 {
     Q_OBJECT
@@ -93,7 +95,7 @@ private slots:
         auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(host, "no active host available for the test");
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectionSpy.wait(2000), "could not connect with the host");
+        QVERIFY2(connectionSpy.wait(2s), "could not connect with the host");
 
         mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
