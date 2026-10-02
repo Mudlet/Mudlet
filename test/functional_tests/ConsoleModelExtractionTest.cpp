@@ -2006,6 +2006,28 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QVERIFY(host->getUseMaxConsoleBufferSize());
     }
 
+    void test_clearWindowClearsTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        appendModelLine(model->buffer, qsl("headless one"));
+        appendModelLine(model->buffer, qsl("headless two"));
+        QVERIFY(model->buffer.size() > 2);
+
+        runLua(host, qsl("headlessClearAnswers = select('#', clearWindow('main'))"));
+
+        QCOMPARE(luaGlobalNumber(host, "headlessClearAnswers"), 0);
+        QCOMPARE(static_cast<int>(model->buffer.size()), 1);
+        QCOMPARE(model->buffer.line(0), QString());
+        QVERIFY(!host->clearWindow(qsl("noSuchWindow")));
+        QVERIFY(host->clearWindow(QString()));
+    }
+
     // A write past the end of a line pads it out in the model's current format,
     // which a profile with no view has as much as one with a view.
     void test_writingPastTheLineEndPadsInTheCurrentFormatWithNoView()

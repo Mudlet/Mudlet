@@ -71,7 +71,6 @@ public:
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
-    bool clear(const QString& name);
     void setProfileName(const QString&) override;
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);

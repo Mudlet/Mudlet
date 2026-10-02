@@ -3678,22 +3678,3 @@ void TMainConsole::closeEvent(QCloseEvent* event)
         event->accept();
     }
 }
-
-bool TMainConsole::clear(const QString& name)
-{
-    if (name.isEmpty() || !name.compare(QLatin1String("main"))) {
-        TConsole::clear();
-        mUpperPane->showNewLines();
-        mUpperPane->forceUpdate();
-        mLowerPane->forceUpdate();
-        return true;
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        pC->clear();
-        return true;
-    }
-
-    return false;
-}
