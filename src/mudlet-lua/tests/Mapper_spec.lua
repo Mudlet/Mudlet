@@ -4445,6 +4445,16 @@ describe("Tests closing another profile that opened a map widget", function()
     lfs.rmdir(path)
   end
 
+  -- Only a folder carrying this file was made by this spec, so a real profile
+  -- that happens to share the name is never deleted
+  local ownerMarker = profilesDirectory .. "/" .. name .. "/mudlet-spec-owned"
+
+  local function removeOwnedProfile()
+    if io.exists(ownerMarker) then
+      removeTree(profilesDirectory .. "/" .. name)
+    end
+  end
+
   local function loaded()
     local entry = getProfiles()[name]
     return entry ~= nil and entry.loaded
@@ -4467,6 +4477,8 @@ describe("Tests closing another profile that opened a map widget", function()
       pending("waiting for the other profile needs pumpEvents()")
       return
     end
+    assert.is_true(lfs.attributes(profilesDirectory .. "/" .. name) == nil or io.exists(ownerMarker),
+      "refusing to touch " .. profilesDirectory .. "/" .. name .. ", which this spec did not create")
     local opened
     local handler = registerAnonymousEventHandler("mudletSpecMapWidgetOpened", function(_, result)
       opened = result
@@ -4477,11 +4489,13 @@ describe("Tests closing another profile that opened a map widget", function()
         closeProfile(name)
       end
       waitUntil(function() return not loaded() end)
-      removeTree(profilesDirectory .. "/" .. name)
+      removeOwnedProfile()
     end)
 
-    removeTree(profilesDirectory .. "/" .. name)
+    -- left behind by a run that crashed or was killed
+    removeOwnedProfile()
     assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. name))
+    io.open(ownerMarker, "w"):close()
     assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. name .. "/current"))
     local file = assert(io.open(profilesDirectory .. "/" .. name .. "/current/2020-01-01#00-00-00.xml", "w"))
     file:write(table.concat({
