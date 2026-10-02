@@ -202,6 +202,8 @@ public:
     std::optional<bool> getCommandLineSavesHistory(const QString& name) const;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory);
     bool setCommandLineVisible(const QString& name, bool visible);
+    // Also used by Host to announce a log change for a view not yet built
+    static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
     // The scroll bar and scrolling operations the core forwards to this view by
     // name, never by widget. An empty name or "main" is this console, any other
     // a mini console, user window or buffer; each reports failure for a name

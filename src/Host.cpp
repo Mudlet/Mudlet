@@ -298,11 +298,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
-    // The "autolog" sentinel file controls whether logging the game's text as
-    // plain text or HTML is immediately resumed on profile loading. Do not
-    // confuse it with the "autologin" item, which controls whether the profile
-    // is automatically started when the Mudlet application is run!
-    mLogStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
@@ -2596,12 +2591,30 @@ bool Host::mainConsoleShowsTimeStamps() const
 
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
+    if (!mpConsole) {
+        // Written where TMainConsole::slot_loggingAnnouncement() would print it,
+        // so that a view built later shows it
+        const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(TMainConsole::loggingAnnouncementText(isLogging, logFileName)));
+        mpMainConsoleModel->buffer.append(text, 0, text.size(), QColorConstants::Red, QColorConstants::Transparent);
+    }
     emit signal_loggingAnnouncement(isLogging, logFileName);
 }
 
 void Host::raiseLoggingStateChanged(const bool isLogging)
 {
     emit signal_loggingStateChanged(isLogging);
+}
+
+void Host::startSavedLogging()
+{
+    // The "autolog" sentinel file controls whether logging the game's text as
+    // plain text or HTML is immediately resumed on profile loading. Do not
+    // confuse it with the "autologin" item, which controls whether the profile
+    // is automatically started when the Mudlet application is run!
+    if (mpMainConsoleModel->mLogToLogFile || !QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")))) {
+        return;
+    }
+    mpMainConsoleModel->toggleLogging(true);
 }
 
 // The per-line trigger orchestration used to live on the main-console widget

@@ -116,6 +116,7 @@ private:
     const QString mNawsHostname = "Test-ConsoleModelNaws";
     const QString mTimeStampHostname = "Test-ConsoleModelTimeStamps";
     const QString mWrapHostname = "Test-ConsoleModelWrap";
+    const QString mAutoLogHostname = "Test-ConsoleModelAutoLog";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
@@ -169,6 +170,7 @@ private slots:
         deleteProfileDirectory(mNawsHostname);
         deleteProfileDirectory(mTimeStampHostname);
         deleteProfileDirectory(mWrapHostname);
+        deleteProfileDirectory(mAutoLogHostname);
     }
 
     // The view's members must be the model's fields, not copies of them: same
@@ -1042,7 +1044,7 @@ private slots:
         const QString startAnnouncement = TMainConsole::tr("Logging has started. Log file is %1");
         const QString stopAnnouncement = TMainConsole::tr("Logging has been stopped. Log file is %1");
         // The sentinel is what makes logging resume at the next launch
-        // (Host::mLogStatus), so it has to appear and disappear with the log.
+        // (Host::startSavedLogging()), so it has to appear and disappear with the log.
         const QString sentinel = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
         QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging before one has been started.");
 
@@ -1494,6 +1496,7 @@ private slots:
         deleteProfileDirectory(mNawsHostname);
         deleteProfileDirectory(mTimeStampHostname);
         deleteProfileDirectory(mWrapHostname);
+        deleteProfileDirectory(mAutoLogHostname);
     }
 
     // Every one of these Lua functions used to reach through Host::mpConsole
@@ -2131,7 +2134,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
     // view, so a profile loaded with no view starts with its timestamps on too.
     void test_aProfileLoadedWithNoViewStartsWithItsSavedTimeStamps()
     {
-        seedTimeStampProfile();
+        seedSavedProfile(mTimeStampHostname);
         QFile autoTimeStamp(MudletApp::getMudletPath(enums::profileDataItemPath, mTimeStampHostname, qsl("autotimestamp")));
         QVERIFY(autoTimeStamp.open(QIODevice::WriteOnly));
         autoTimeStamp.close();
@@ -2150,7 +2153,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
     // attempt warn.
     void test_aProfileLoadedWithAViewShowsItsSavedTimeStampsWithoutSavingThem()
     {
-        seedTimeStampProfile();
+        seedSavedProfile(mTimeStampHostname);
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, mTimeStampHostname, qsl("autotimestamp"))));
         QTest::failOnWarning(QRegularExpression(qsl("failed to open autotimestamp file")));
 
@@ -2160,6 +2163,51 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         QVERIFY2(host->mpConsole, "The profile was loaded with no view.");
         QVERIFY2(host->mainConsoleShowsTimeStamps(), "A profile loaded with a view ignored its saved timestamps.");
         QVERIFY2(host->mpConsole->timeStampButton->isChecked(), "The toolbar button does not show the timestamps the profile loaded with.");
+    }
+
+    // The saved choice is acted on by Host as the profile loads, not by the
+    // view, so a profile loaded with no view starts its log too, and the
+    // announcement a view would print waits in the buffer for one.
+    void test_aProfileLoadedWithNoViewStartsItsSavedLog()
+    {
+        seedSavedProfile(mAutoLogHostname);
+        QFile autoLog(MudletApp::getMudletPath(enums::profileDataItemPath, mAutoLogHostname, qsl("autolog")));
+        QVERIFY(autoLog.open(QIODevice::WriteOnly));
+        autoLog.close();
+
+        Host* host = mudlet::self()->loadProfile(mAutoLogHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        TConsoleModel& model = host->mainConsoleModel();
+        QVERIFY2(model.mLogToLogFile, "A profile loaded with no view did not start its saved log.");
+        const QString logFileName = model.mLogFileName;
+        QVERIFY2(QFile::exists(logFileName), "A profile loaded with no view opened no log file.");
+        const QString startAnnouncement = TMainConsole::tr("Logging has started. Log file is %1").arg(logFileName);
+        QCOMPARE(announcementCount(model, startAnnouncement), 1);
+
+        // Stopping the log is what flushes it to the file
+        model.toggleLogging(true);
+        QVERIFY2(!logTextContains(readFile(logFileName), startAnnouncement), "The start announcement was logged into the file it announced.");
+    }
+
+    // A view built for a profile whose log has already started shows it on its
+    // button, and starts nothing a second time - which would stop the log.
+    void test_aProfileLoadedWithAViewStartsItsSavedLogOnce()
+    {
+        seedSavedProfile(mAutoLogHostname);
+        QFile autoLog(MudletApp::getMudletPath(enums::profileDataItemPath, mAutoLogHostname, qsl("autolog")));
+        QVERIFY(autoLog.open(QIODevice::WriteOnly));
+        autoLog.close();
+
+        mudlet::self()->doAutoLogin(mAutoLogHostname, true);
+        Host* host = HostManager::self()->getHost(mAutoLogHostname);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole, "The profile was loaded with no view.");
+        TConsoleModel& model = host->mainConsoleModel();
+        QVERIFY2(model.mLogToLogFile, "A profile loaded with a view did not start its saved log.");
+        QVERIFY2(host->mpConsole->logButton->isChecked(), "The log button does not show the log the profile loaded with.");
+        QVERIFY2(host->mpConsole->logButton->toolTip().contains(TMainConsole::tr("Stop logging game output to log file.")), "The log button offers to start a log that is already running.");
+        QCOMPARE(announcementCount(model, TMainConsole::tr("Logging has started. Log file is %1").arg(model.mLogFileName)), 1);
     }
 
     // A profile with no view still tells the game its size when asked: the
@@ -4377,13 +4425,21 @@ private:
                                  .arg(mProfileFgColor.name(), QString::number(mProfileBgColor.alpha()), mProfileBgColor.name()));
     }
 
-    // Utility function giving mTimeStampHostname a save of its own, or loading
-    // it goes off to install the default packages
-    void seedTimeStampProfile()
+    // Utility function giving a profile a save of its own, or loading it goes
+    // off to install the default packages
+    void seedSavedProfile(const QString& profileName)
     {
-        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mTimeStampHostname);
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName);
         QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
-        writeProfileSave(qsl("%1profileTimeStamps.xml").arg(saveFolder), QString());
+        writeProfileSave(qsl("%1profile.xml").arg(saveFolder), QString());
+    }
+
+    // Utility function: how many times the console announces this, ignoring
+    // where the console wrapped it
+    int announcementCount(TConsoleModel& model, const QString& announcement)
+    {
+        QString wanted = announcement;
+        return joinedBuffer(model.buffer).remove(QChar::Space).count(wanted.remove(QChar::Space));
     }
 
     // Utility function writing the smallest profile save readHost() accepts,
