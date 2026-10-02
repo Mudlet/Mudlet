@@ -98,9 +98,6 @@ signals:
     void signal_mapRepaintRequested();
     void signal_mapperSettingChanged(TMap::MapperSetting setting);
 
-    // The trigger editor prints these in its error console.
-    void signal_mapErrorLogged(const QString& text);
-
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
     // the frontend (TMainConsole) to render as a QProgressDialog. Cancellation

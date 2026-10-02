@@ -22,7 +22,7 @@
  * signals, and dlgMapper acts on them. Each case here is one of those cues and
  * what the drawing mapper does with it, plus the rule that a second mapper of
  * the same profile, which is not drawing the map, ignores them. The map's
- * error log reaches the trigger editor's error console the same way.
+ * error log reaches the trigger editor's error console too.
  *
  * What the mapper does - its area dropdown, its selection list, its repaints,
  * its palette - is widget state no Lua function reads, so this cannot be a
@@ -44,6 +44,7 @@
 #include <memory>
 
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
@@ -359,8 +360,8 @@ private slots:
 
     void test_aMapErrorIsPrintedInTheEditorsErrorConsole()
     {
-        QVERIFY2(mpHost->mpEditorDialog, "the profile has no trigger editor");
-        const TBuffer& errors = mpHost->mpEditorDialog->mpErrorConsole->buffer;
+        QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog, "the profile has no trigger editor");
+        const TBuffer& errors = HostDialogs::of(mpHost).mpEditorDialog->mpErrorConsole->buffer;
         const QString expected = qsl(R"([MAP ERROR:] Area not added. An area called "Ground" already exists!)");
 
         QCOMPARE(map()->mpRoomDB->addArea(qsl("Ground")), 0);

@@ -94,7 +94,7 @@ describe("Console operations on a buffer emptied by deleteLine()", function()
   end)
 
   describe("inserting", function()
-    -- with no line to insert into, TConsole::insertText() and insertLink()
+    -- with no line to insert into, TConsoleModel::insertText() and insertLink()
     -- both fall through to appending
     it("insertText appends instead", function()
       insertText(win, "spliced")
@@ -280,7 +280,7 @@ describe("The main console after deleteLine() empties its buffer", function()
   end)
 
   it("survives an echo from inside the trigger that emptied the buffer", function()
-    -- TConsole::echo() takes its own branch while a trigger is running, not
+    -- TConsoleModel::echo() takes its own branch while a trigger is running, not
     -- the one a top-level echo() reaches
     withTrigger("emptyingEcho", function()
       emptyMain()
