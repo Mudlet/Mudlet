@@ -1974,6 +1974,43 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QCOMPARE(luaGlobalNumber(host, "noViewWrap"), 23);
     }
 
+    // The main console's timestamp flag lives in its model: the toolbar button and
+    // Lua both set it there, the button and the autotimestamp file follow it, and
+    // NAWS can still read it once the view is gone.
+    void test_mainConsoleTimeStampsLiveInTheModel()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        TConsoleModel& model = host->mainConsoleModel();
+        const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
+        QVERIFY2(!model.mShowTimeStamps, "The profile started with timestamps on, so turning them on proves nothing.");
+        QVERIFY(!QFile::exists(autoTimeStampPath));
+
+        host->mpConsole->timeStampButton->click();
+        QVERIFY(model.mShowTimeStamps);
+        QVERIFY(host->mpConsole->showTimeStamps());
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+        QVERIFY(QFile::exists(autoTimeStampPath));
+        runLua(host, qsl("timeStampsShown = tostring(timeStampsEnabled())\n"));
+        QCOMPARE(luaGlobalString(host, "timeStampsShown"), qsl("true"));
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY(!model.mShowTimeStamps);
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        QVERIFY2(!host->mpConsole->timeStampButton->isChecked(), "The toolbar button did not follow timestamps turned off from Lua.");
+        QVERIFY(!QFile::exists(autoTimeStampPath));
+
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(model.mShowTimeStamps);
+        QVERIFY2(host->mpConsole->timeStampButton->isChecked(), "The toolbar button did not follow timestamps turned on from Lua.");
+        QVERIFY(QFile::exists(autoTimeStampPath));
+
+        destroyTheView(host);
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+    }
+
     // A profile that never had a view, whose changeColors() would otherwise
     // hand the model the profile's wrap, still wraps as its save says.
     void test_profileLoadSeedsTheWrapWithNoView()
