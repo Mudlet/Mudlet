@@ -28,9 +28,8 @@
 #include "Host.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
-#include "TEasyButtonBar.h"
 #include "TLuaInterpreter.h"
-#include "TToolBar.h"
+#include "TMainConsole.h"
 #include "utils.h"
 
 #include <QColor>
@@ -55,6 +54,13 @@ TAction::TAction(const QString& name, Host* pHost)
 
 TAction::~TAction()
 {
+    // Each child's removal redraws the bars, which draw this action as a menu
+    // of its children; ~Tree() would delete them only once this action's own
+    // members and QObject were gone. Done even without a host, as the editor
+    // clears only this action's before deleting it, not its children's.
+    while (!mpMyChildrenList->empty()) {
+        delete mpMyChildrenList->front();
+    }
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
 
@@ -67,13 +73,7 @@ TAction::~TAction()
         }
     }
 
-    if (mpToolBar) {
-        mpToolBar->hide();
-    }
-
-    if (mpEasyButtonBar) {
-        mpEasyButtonBar->hide();
-    }
+    deleteChildren();
 }
 
 bool TAction::registerAction()
@@ -191,10 +191,8 @@ void TAction::setName(const QString& name)
     if (name != mName) {
         setDataChanged();
         mName = name;
-        if (mpToolBar) {
-            // Need to revise the objectName and displayed name in the titlebar
-            // if floating and the main window context menu:
-            mpToolBar->setName(name);
+        if (mpHost && mpHost->mpConsole) {
+            mpHost->mpConsole->renameActionToolBar(this, name);
         }
     }
 }
