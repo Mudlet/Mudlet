@@ -2717,7 +2717,11 @@ end]], code)
         local telnetDir = os.getenv("MUDLET_TEST_TELNET_DIR")
         local portFile = telnetDir and io.open(telnetDir .. "/port", "r")
         if not portFile then
-          pending("needs the telnet fixture (CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)")
+          local reason = "needs the telnet fixture (CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+          if os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE") then
+            assert.is_true(false, "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but there is no fixture port file in " .. tostring(telnetDir))
+          end
+          pending(reason)
           return
         end
         local port = tonumber(portFile:read("*a"):match("%d+"))
@@ -2725,12 +2729,19 @@ end]], code)
         -- reconnect() only spins the event loop when there is a connection to drop
         local run = runInProfileBeingTornDown(string.format([[
 connectToServer("127.0.0.1", %d)
-tempTimer(1, function()
+local attempts = 0
+local function resetOnceConnected()
+  attempts = attempts + 1
   local _, _, connected = getConnectionInfo()
+  if not connected and attempts < 100 then
+    tempTimer(0.05, resetOnceConnected)
+    return
+  end
   resetProfile()
   reconnect()
   report(tostring(connected))
-end)]], port))
+end
+tempTimer(0.05, resetOnceConnected)]], port))
         assert.equals("true", run.result[1], "the profile never connected, so reconnect() had nothing to drop")
         assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
       end)
