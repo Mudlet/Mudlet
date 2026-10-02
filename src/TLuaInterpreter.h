@@ -1086,6 +1086,10 @@ private:
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
     void releaseNestedDispatchState(NestedDispatchState&);
+    // Registry references to the compiled "return <name>" chunk that
+    // callEventHandler() runs to find each handler, by handler name. They
+    // belong to pGlobalLua, so are dropped whenever it is replaced.
+    QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,
