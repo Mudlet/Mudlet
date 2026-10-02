@@ -237,6 +237,17 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    describe("Tests the functionality of getEpoch", function()
+      it("gives the seconds since the epoch, whatever the local time zone", function()
+        local before = os.time()
+        local epoch = getEpoch()
+        local after = os.time()
+        -- os.time() reads a coarser clock that can still be on the last second
+        -- for a few milliseconds after getEpoch()'s has moved on
+        assert.is_true(epoch >= before and epoch < after + 2, string.format("%f is not between %d and %d", epoch, before, after + 2))
+      end)
+    end)
+
     describe("Tests the functionality of getTime", function()
       it("raises a Lua error when the first argument is not a boolean", function()
         assertArgError(function() getTime("yes") end, "getTime: bad argument #1 type")
