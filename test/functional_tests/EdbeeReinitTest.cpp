@@ -35,6 +35,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -156,7 +157,7 @@ private slots:
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        QVERIFY2(mpHost->mpEditorDialog, "Script editor did not open on the reconstructed mudlet instance");
+        QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog, "Script editor did not open on the reconstructed mudlet instance");
     }
 };
 

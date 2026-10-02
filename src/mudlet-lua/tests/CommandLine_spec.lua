@@ -109,3 +109,196 @@ describe("Tests the functionality of addCmdLineSuggestion, removeCmdLineSuggesti
     end)
   end
 end)
+
+-- Every one of these finds its command line by name: an empty name or "main"
+-- is the main command line, and any other is one made by createCommandLine()
+-- or a mini console's own. Every kind of window shares the one name space, so
+-- a name that belongs to some other kind must not be taken for a command line.
+describe("Tests that the command line functions find their command line by name", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local cmdLine = "specByNameCmdLine" .. suffix
+  local unknown = "specByNameNoSuchLine" .. suffix
+  local menuLabel = "specByNameMenuLabel" .. suffix
+
+  -- an array rather than a keyed table so the specs are always generated in
+  -- the same order
+  local calls = {
+    {"getCmdLine", function(n) return getCmdLine(n) end},
+    {"printCmdLine", function(n) return printCmdLine(n, "text") end},
+    {"appendCmdLine", function(n) return appendCmdLine(n, "text") end},
+    {"clearCmdLine", function(n) return clearCmdLine(n) end},
+    {"selectCmdLineText", function(n) return selectCmdLineText(n) end},
+    {"addCmdLineSuggestion", function(n) return addCmdLineSuggestion(n, "word") end},
+    {"removeCmdLineSuggestion", function(n) return removeCmdLineSuggestion(n, "word") end},
+    {"clearCmdLineSuggestions", function(n) return clearCmdLineSuggestions(n) end},
+    {"addCmdLineBlacklist", function(n) return addCmdLineBlacklist(n, "word") end},
+    {"removeCmdLineBlacklist", function(n) return removeCmdLineBlacklist(n, "word") end},
+    {"clearCmdLineBlacklist", function(n) return clearCmdLineBlacklist(n) end},
+    {"addCommandLineMenuEvent", function(n) return addCommandLineMenuEvent(n, menuLabel, "event") end},
+    {"removeCommandLineMenuEvent", function(n) return removeCommandLineMenuEvent(n, menuLabel) end},
+    {"getSaveCommandHistory", function(n) return getSaveCommandHistory(n) end},
+    {"setSaveCommandHistory", function(n) return setSaveCommandHistory(n, true) end},
+    {"enableCommandLine", function(n) return enableCommandLine(n) end},
+    {"disableCommandLine", function(n) return disableCommandLine(n) end},
+  }
+
+  -- these two take a console's name for the command line at its foot, so a
+  -- mini console is not "some other kind of window" to them
+  local takesAConsole = {enableCommandLine = true, disableCommandLine = true}
+
+  local function assertRefusesAll(windowName, skip)
+    for _, entry in ipairs(calls) do
+      local functionName, call = entry[1], entry[2]
+      if not (skip and skip[functionName]) then
+        assert.are.equal(2, select("#", call(windowName)), functionName)
+        local ok, err = call(windowName)
+        assert.is_nil(ok, functionName)
+        assert.are.equal(('command line "%s" not found'):format(windowName), err, functionName)
+      end
+    end
+  end
+
+  setup(function()
+    createCommandLine(cmdLine, 10, 10, 150, 30)
+  end)
+
+  teardown(function()
+    deleteCommandLine(cmdLine)
+  end)
+
+  after_each(function()
+    clearCmdLine("main")
+    removeCommandLineMenuEvent("main", menuLabel)
+  end)
+
+  it("refuses a name that is no window at all", function()
+    assertRefusesAll(unknown)
+  end)
+
+  describe("with the name of another kind of window", function()
+    local otherName = "specByNameOtherWindow" .. suffix
+
+    after_each(function()
+      deleteLabel(otherName)
+      deleteScrollBox(otherName)
+      deleteTextEdit(otherName)
+      deleteMiniConsole(otherName)
+    end)
+
+    local kinds = {
+      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end},
+      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end},
+      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end},
+    }
+
+    for _, kind in ipairs(kinds) do
+      it("refuses every command line function for a " .. kind[1], function()
+        assert.is_true(kind[2]())
+        assertRefusesAll(otherName)
+      end)
+    end
+
+    it("refuses a mini console that has no command line of its own", function()
+      createMiniConsole(otherName, 0, 0, 50, 20)
+      assertRefusesAll(otherName, takesAConsole)
+    end)
+
+    it("reaches a mini console's own command line by the mini console's name", function()
+      createMiniConsole(otherName, 0, 0, 200, 50)
+      assert.is_true(enableCommandLine(otherName))
+      printCmdLine(otherName, "in the mini console")
+      appendCmdLine(otherName, "!")
+      assert.are.equal("in the mini console!", getCmdLine(otherName))
+      assert.are.equal("", getCmdLine("main"))
+      assert.is_true(selectCmdLineText(otherName))
+      clearCmdLine(otherName)
+      assert.are.equal("", getCmdLine(otherName))
+      assert.is_true(disableCommandLine(otherName))
+    end)
+  end)
+
+  it("takes an empty name, like \"main\", for the main command line", function()
+    printCmdLine("", "via the empty name")
+    assert.are.equal("via the empty name", getCmdLine("main"))
+    assert.are.equal("via the empty name", getCmdLine(""))
+    appendCmdLine("", "!")
+    assert.are.equal("via the empty name!", getCmdLine("main"))
+    assert.is_true(selectCmdLineText(""))
+    clearCmdLine("")
+    assert.are.equal("", getCmdLine("main"))
+
+    for _, name in ipairs({"addCmdLineSuggestion", "removeCmdLineSuggestion", "addCmdLineBlacklist", "removeCmdLineBlacklist"}) do
+      assert.are.equal(0, select("#", _G[name]("", "specByNameWord")), name)
+    end
+    assert.are.equal(0, select("#", clearCmdLineSuggestions("")))
+    assert.are.equal(0, select("#", clearCmdLineBlacklist("")))
+
+    assert.is_true(addCommandLineMenuEvent("", menuLabel, "event"))
+    assert.is_true(removeCommandLineMenuEvent("main", menuLabel))
+    assert.is_true(addCommandLineMenuEvent("main", menuLabel, "event"))
+    assert.is_true(removeCommandLineMenuEvent("", menuLabel))
+
+    local original = getSaveCommandHistory()
+    finally(function() setSaveCommandHistory("main", original) end)
+    assert.is_true(setSaveCommandHistory("", false))
+    assert.is_false((getSaveCommandHistory("main")))
+    assert.is_true(setSaveCommandHistory("main", true))
+    assert.is_true((getSaveCommandHistory("")))
+  end)
+
+  it("leaves the main command line alone when given another one's name", function()
+    printCmdLine("main", "main text")
+    printCmdLine(cmdLine, "named")
+    assert.are.equal("named", getCmdLine(cmdLine))
+    appendCmdLine(cmdLine, " text")
+    assert.are.equal("named text", getCmdLine(cmdLine))
+    clearCmdLine(cmdLine)
+    assert.are.equal("", getCmdLine(cmdLine))
+    assert.are.equal("main text", getCmdLine("main"))
+
+    assert.is_true(addCommandLineMenuEvent(cmdLine, menuLabel, "event"))
+    local ok, err = removeCommandLineMenuEvent("main", menuLabel)
+    assert.is_false(ok)
+    assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
+    assert.is_true(removeCommandLineMenuEvent(cmdLine, menuLabel))
+    ok, err = removeCommandLineMenuEvent(cmdLine, menuLabel)
+    assert.is_false(ok)
+    assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
+  end)
+
+  -- the arguments are all checked before the command line is looked for, so a
+  -- bad one is raised even for a command line that is not there
+  local badArguments = {
+    {"printCmdLine", function() return printCmdLine(unknown, {}) end},
+    {"appendCmdLine", function() return appendCmdLine(unknown, {}) end},
+    {"addCmdLineSuggestion", function() return addCmdLineSuggestion(unknown, {}) end},
+    {"removeCmdLineSuggestion", function() return removeCmdLineSuggestion(unknown, {}) end},
+    {"addCmdLineBlacklist", function() return addCmdLineBlacklist(unknown, {}) end},
+    {"removeCmdLineBlacklist", function() return removeCmdLineBlacklist(unknown, {}) end},
+    {"addCommandLineMenuEvent", function() return addCommandLineMenuEvent(unknown, {}, "event") end},
+    {"addCommandLineMenuEvent", function() return addCommandLineMenuEvent(unknown, "label", {}) end, 3},
+    {"removeCommandLineMenuEvent", function() return removeCommandLineMenuEvent(unknown, {}) end},
+    {"setSaveCommandHistory", function() return setSaveCommandHistory(unknown, "yes") end},
+  }
+  for _, entry in ipairs(badArguments) do
+    local functionName, call, position = entry[1], entry[2], entry[3] or 2
+    it(("%s raises a bad argument #%d ahead of an unknown command line"):format(functionName, position), function()
+      local ok, err = pcall(call)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find(("%s: bad argument #%d type"):format(functionName, position), 1, true), tostring(err))
+    end)
+  end
+
+  it("reports history saving turned off for the profile ahead of an unknown command line", function()
+    local savedLines = getConfig("commandLineHistorySaveSize")
+    finally(function() setConfig("commandLineHistorySaveSize", savedLines) end)
+    setConfig("commandLineHistorySaveSize", 0)
+
+    local saving, message = getSaveCommandHistory(unknown)
+    assert.is_false(saving)
+    assert.are.equal("disabled by profile global preference", message)
+    local ok, err = setSaveCommandHistory(unknown, true)
+    assert.is_nil(ok)
+    assert.are.equal("disabled by profile global preference", err)
+  end)
+end)
