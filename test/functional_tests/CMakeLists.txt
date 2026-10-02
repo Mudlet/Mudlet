@@ -153,6 +153,7 @@ set(TELNET_GROUP_TEST_SOURCES
     MudletAppVersionTest.cpp
     IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
+    IrcWindowMarkupTest.cpp
     IrcLuaClientTest.cpp
 )
 
