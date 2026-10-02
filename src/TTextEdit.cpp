@@ -268,7 +268,9 @@ void TTextEdit::updateScrollBar(int line)
     Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
     mScrollBarUpdatePending = false;
     int screenHeight{mScreenHeight};
-    if (mIsTailMode) {
+    // The upper pane is built first, and shows the lines a model already holds
+    // before the lower pane exists
+    if (mIsTailMode && mpConsole->mLowerPane) {
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
     }
     if (mpConsole->mpScrollBar) {
