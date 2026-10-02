@@ -156,7 +156,10 @@ private slots:
         mpHost->mMxpProcessor.getMxpTagBuilder().reset();
         mpHost->mMxpProcessor.setLastEntityValue(QString());
 
-        auto* pBuffer = new TBuffer(mpHost, mpHost->mpConsole);
+        auto* pBuffer = new TBuffer(mpHost);
+        // The watchdog only writes out a tag stalled in the main console's
+        // buffer, so this one has to pass for it:
+        pBuffer->mpModel = &mpHost->mainConsoleModel();
         std::string stalledTag{"<send"};
         pBuffer->translateToPlainText(stalledTag, true);
         QVERIFY2(mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag(), "the feed left no tag open, so no watchdog was armed");

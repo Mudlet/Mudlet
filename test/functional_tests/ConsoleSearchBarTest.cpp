@@ -362,6 +362,29 @@ private slots:
         QCOMPARE(markedCharactersOn(console, laterLine), 0);
     }
 
+    // Trimming the oldest lines moves every line up, so the search has to move
+    // with them or the next step starts from a line it has not searched yet.
+    void test_aTrimMovesTheSearchWithTheLineItFound()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+
+        const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
+        console->mpBufferSearchBox->setText(qsl("gorbash"));
+        console->slot_searchBufferUp();
+        QCOMPARE(console->mCurrentSearchResult, laterLine);
+
+        QVERIFY2(console->buffer.size() < 100, "the buffer is already past the smallest limit, so the trim below would take the fixture with it");
+        console->buffer.setBufferSize(100, 1);
+        for (int i = 0; i < 200 && lineHolding(console, qsl("GORBASH stirs")) == laterLine; ++i) {
+            console->print(qsl("filler\n"));
+        }
+        const int movedTo = lineHolding(console, qsl("GORBASH stirs"));
+        QVERIFY2(movedTo >= 0 && movedTo < laterLine, "the buffer was never trimmed, so nothing here was exercised");
+
+        QCOMPARE(console->mCurrentSearchResult, movedTo);
+    }
+
     void test_aTermThatIsNowhereInTheBufferSaysSo()
     {
         auto* console = startSearchableProfile();

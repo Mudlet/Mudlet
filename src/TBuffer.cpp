@@ -25,7 +25,6 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
-#include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
@@ -466,10 +465,9 @@ TChar::TChar(const QColor& foreground, const QColor& background, const TChar::At
 {
 }
 
-TChar::TChar(TConsole* pC)
-: mFgColor(pC ? pC->mFormatCurrent.mFgColor : QColorConstants::White.rgba())
-, mBgColor(pC ? pC->mFormatCurrent.mBgColor : QColorConstants::Black.rgba())
-, mFlags(pC ? pC->mFormatCurrent.allDisplayAttributes() : AttributeFlag::None)
+TChar::TChar()
+: mFgColor(QColorConstants::White.rgba())
+, mBgColor(QColorConstants::Black.rgba())
 {
 }
 
@@ -528,9 +526,8 @@ static quint64 colorFingerprint(const std::vector<TChar>& line)
 
 // Store for text and attributes (such as character color) to be drawn on screen
 // Contents are rendered by a TTextEdit
-TBuffer::TBuffer(Host* pH, TConsole* pConsole)
-: mpConsole(pConsole)
-, mBlack(pH->mBlack)
+TBuffer::TBuffer(Host* pH)
+: mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
 , mLightRed(pH->mLightRed)
@@ -577,11 +574,6 @@ TBuffer::~TBuffer()
         // timer with the buffer, just below, drops both:
         mTagWatchdog->stop();
     }
-    if (mpServerWrapFlushTimer) {
-        // The timeout lambda captures 'this':
-        mpServerWrapFlushTimer->stop();
-        QObject::disconnect(mpServerWrapFlushTimer, nullptr, nullptr, nullptr);
-    }
 }
 
 TBuffer::TBuffer(const TBuffer& other)
@@ -598,7 +590,6 @@ TBuffer::TBuffer(const TBuffer& other)
 , mWrapHangingIndent(other.mWrapHangingIndent)
 , mCursorY(other.mCursorY)
 , mEchoingText(other.mEchoingText)
-, mpConsole(other.mpConsole)
 , mGotESC(other.mGotESC)
 , mGotEscCharset(other.mGotEscCharset)
 , mGotCSI(other.mGotCSI)
@@ -696,7 +687,6 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mWrapHangingIndent = other.mWrapHangingIndent;
         mCursorY = other.mCursorY;
         mEchoingText = other.mEchoingText;
-        mpConsole = other.mpConsole;
         mGotESC = other.mGotESC;
         mGotEscCharset = other.mGotEscCharset;
         mGotCSI = other.mGotCSI;
@@ -2019,7 +2009,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
             mServerWrapPendingSegmentLength = segmentLength;
             mServerWrapPendingSegmentStart = segmentStart;
             mCurrentHyperlinkStartsAfterHeldText = mHyperlinkActive && mCurrentHyperlinkText.isEmpty();
-            startServerWrapFlushTimer();
+            if (mpModel) {
+                emit mpModel->mNotifier.serverWrapLineHeld();
+            }
             ++localBufferPosition;
             return true;
         }
@@ -2133,10 +2125,10 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
     if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
-        if (Q_LIKELY(!mpConsole.isNull())) {
+        if (Q_LIKELY(mpModel && mpModel->mNotifier.hasLineMirror())) {
             // Read back out of the buffer rather than from line, which every
             // path above has moved from by now
-            mpConsole->mirrorLineToStdOut(lineBuffer.back());
+            emit mpModel->mNotifier.lineCommitted(lineBuffer.back());
         } else {
             static bool mirrorWithoutConsoleReported = false;
             if (!mirrorWithoutConsoleReported) {
@@ -2490,36 +2482,6 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     }
 }
 
-void TBuffer::startServerWrapFlushTimer()
-{
-    if (!mpServerWrapFlushTimer) {
-        if (!mpConsole) {
-            return;
-        }
-        mpServerWrapFlushTimer = new QTimer(mpConsole);
-        // Named so that a test can find it on the console and observe the state
-        // it leaves behind, which no polling assertion can catch: the posting
-        // timer in cTelnet::slot_timerPosting() calls finalize() too and hides
-        // an unpainted line within a tick of it being committed
-        mpServerWrapFlushTimer->setObjectName(qsl("serverWrapFlushTimer"));
-        mpServerWrapFlushTimer->setSingleShot(true);
-        mpServerWrapFlushTimer->setInterval(csmServerWrapFlushDelayMs);
-        QObject::connect(mpServerWrapFlushTimer, &QTimer::timeout, mpConsole, [this]() {
-            TConsoleModel* pModel = mpHost ? mpHost->mainConsoleModelOrNull() : nullptr;
-            if (!pModel) {
-                return;
-            }
-            // Mimic TMainConsole::printOnDisplay() so that trigger-context
-            // functions behave the same as for any other committed line:
-            pModel->mTriggerEngineMode = true;
-            flushPendingServerWrapJoin();
-            pModel->mTriggerEngineMode = false;
-            mpHost->finalizeMainConsole();
-        });
-    }
-    mpServerWrapFlushTimer->start();
-}
-
 const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
 {
     if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
@@ -2587,22 +2549,23 @@ void TBuffer::processMxpWatchdogCallback()
         mWatchdogPhase = WatchdogPhase::Phase2_Unfreeze;
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
-        if (isMxpParserFrozen && mpConsole) {
+        // The continuation commits into this buffer and finalizes the main
+        // console's view, so it needs that view and this to be its buffer:
+        if (isMxpParserFrozen && !mpHost->mpConsole.isNull() && mpModel == &mpHost->mainConsoleModel()) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
-            QPointer<TConsole> consoleGuard = mpConsole;
             // The continuation writes into this buffer through the captured
             // 'this', so what has to cancel it is this buffer going away - not
             // the console going away, which is a different and longer life. The
             // watchdog timer is owned by the buffer, so naming it as the context
             // object ties the two together: destroying the buffer destroys the
             // timer, and that drops any continuation still queued against it.
-            QTimer::singleShot(0ms, mTagWatchdog.get(), [this, style, hostGuard, consoleGuard]() {
+            QTimer::singleShot(0ms, mTagWatchdog.get(), [this, style, hostGuard]() {
                 // commitLine() and finalize() below both reach the main console
                 // through the host, and that pointer empties on its own when the
                 // profile's console goes:
-                if (!hostGuard || !consoleGuard || !hostGuard->mpConsole) {
+                if (!hostGuard || hostGuard->mpConsole.isNull()) {
                     return;
                 }
                 QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
@@ -5272,8 +5235,8 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
         shrinkBuffer();
     }
 
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    if (mpModel) {
+        emit mpModel->mNotifier.linesAppended(lineBuffer.size());
     }
 }
 
@@ -5304,8 +5267,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     // want to check - for TConsoles that have been set to be "non-scrollable"
     // - that the content has not exceeded the number of lines that can be
     // shown in the upper pane and to raise an event if it has
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    if (mpModel) {
+        emit mpModel->mNotifier.linesAppended(lineBuffer.size());
     }
 }
 
@@ -6204,9 +6167,8 @@ void TBuffer::maskSpoilerText(const int linkId, QString& line, const int column,
     line.replace(column, length, QString(length, QChar::Space));
 }
 
-// Off the model rather than the view: a scratch buffer can carry a console
-// back-pointer, and reaching a manager on the strength of that alone would let
-// one buffer drop another's links.
+// A scratch buffer has no model, so it cannot reach - and drop - the links of
+// the buffer it was copied from.
 THyperlinkVisibilityManager* TBuffer::hyperlinkVisibilityManagerOrNull()
 {
     return mpModel ? &mpModel->mHyperlinkVisibilityManager : nullptr;
@@ -6394,9 +6356,9 @@ void TBuffer::shrinkBuffer()
         mCursorY--;
     }
     // We need to adjust the search result line as some lines have now gone
-    // away - there is nothing to adjust when the model has no view attached:
-    if (mpConsole) {
-        mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    // away:
+    if (mpModel) {
+        mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
     }
     mPreTriggerPassLineNumber = -1;
 
@@ -6436,18 +6398,13 @@ void TBuffer::shrinkBuffer()
     }
 
     // Scripts keep their own line-index bookkeeping, so they have to be told
-    // the indexes shifted whether or not anyone is watching the text. The
-    // console's name and type still live on the view, but a buffer without one
-    // can only be the main console's model - every other model is owned by the
-    // view built on it - and that console is always named "main":
-    const bool namedConsole =
-            mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) : (this == &mpHost->mainConsoleModel().buffer);
-    if (namedConsole) {
+    // the indexes shifted whether or not anyone is watching the text:
+    if (mpModel && mpModel->mScriptAddressable) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
         bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        bufferShrinkEvent.mArgumentList.append(mpConsole ? mpConsole->mConsoleName : qsl("main"));
+        bufferShrinkEvent.mArgumentList.append(mpModel->mConsoleName);
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -8470,8 +8427,8 @@ void TBuffer::revealSpoilerLink(int linkIndex)
 
     mLinkOriginalText.remove(linkIndex);
 
-    if (mpConsole) {
-        mpConsole->update();
+    if (mpModel) {
+        emit mpModel->mNotifier.spoilerRevealed();
     }
 }
 
@@ -8847,7 +8804,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     qDebug() << "[OSC] Character search completed for link" << linkIndex << "- Total characters searched:" << totalCharacters << "- Matching characters found:" << matchingCharacters;
 #endif
 
-    if (mpConsole) {
-        mpConsole->repaintPanes();
+    if (mpModel) {
+        emit mpModel->mNotifier.linkCharactersChanged();
     }
 }

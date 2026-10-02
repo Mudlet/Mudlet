@@ -469,10 +469,29 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     // Built here, at the end of the constructor, rather than on first use: the
     // model's buffer snapshots this Host's colours, so every one of them has to
-    // be initialised first. The view binds the buffer's back-pointer when it
-    // attaches (TConsole::TConsole) and unbinds it when it goes away, and
+    // be initialised first. The view subscribes to the model's notifier when
+    // it attaches (TConsole::TConsole) and unsubscribes when it goes away, and
     // TConsole::changeColors() refreshes the snapshot as it does so.
     mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
+    mpMainConsoleModel->mConsoleName = qsl("main");
+    mpMainConsoleModel->mScriptAddressable = true;
+
+    mServerWrapFlushTimer.setSingleShot(true);
+    mServerWrapFlushTimer.setInterval(TBuffer::csmServerWrapFlushDelayMs);
+    connect(&mpMainConsoleModel->mNotifier, &TConsoleModelNotifier::serverWrapLineHeld, &mServerWrapFlushTimer, qOverload<>(&QTimer::start));
+    connect(&mServerWrapFlushTimer, &QTimer::timeout, this, [this]() {
+        // The trigger-context flag still lives on the view, so with none the
+        // line stays held:
+        if (!mpConsole) {
+            return;
+        }
+        // Mimic TMainConsole::printOnDisplay() so that trigger-context
+        // functions behave the same as for any other committed line:
+        mpConsole->mTriggerEngineMode = true;
+        mpMainConsoleModel->buffer.flushPendingServerWrapJoin();
+        mpConsole->mTriggerEngineMode = false;
+        finalizeMainConsole();
+    });
 }
 
 Host::~Host()

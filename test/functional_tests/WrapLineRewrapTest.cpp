@@ -495,8 +495,8 @@ private slots:
         const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
         runLua(qsl("feedTelnet('%1\\n')").arg(heldLine));
 
-        auto* flushTimer = console->findChild<QTimer*>(qsl("serverWrapFlushTimer"));
-        QVERIFY2(flushTimer && flushTimer->isActive(), "the full-width line was not held back for a continuation");
+        QTimer* flushTimer = &host->mServerWrapFlushTimer;
+        QVERIFY2(flushTimer->isActive(), "the full-width line was not held back for a continuation");
 
         int sizeAtFlush = -1;
         int cursorAtFlush = -1;
