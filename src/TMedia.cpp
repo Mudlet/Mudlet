@@ -26,6 +26,7 @@
 
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "TDebug.h"
 #include "mudlet.h"
 
@@ -1612,7 +1613,9 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     }
 
     // No available player, create a new one
-    mudlet::self()->watchAudioOutputDevices();
+    if (auto* media = MudletMedia::self()) {
+        media->watchAudioOutputDevices();
+    }
     auto newPlayer = std::make_shared<TMediaPlayer>(mpHost, mediaData);
 
     if (!newPlayer || !newPlayer->mediaPlayer()) {
@@ -2172,11 +2175,11 @@ void TMedia::play(TMediaData& mediaData)
     if (audioOutput) {
         switch (mediaData.mediaProtocol()) {
         case TMediaData::MediaProtocolAPI:
-            audioOutput->setMuted(mudlet::self()->muteAPI());
+            audioOutput->setMuted(MudletMedia::self() && MudletMedia::self()->apiMuted());
             break;
         case TMediaData::MediaProtocolGMCP:
         case TMediaData::MediaProtocolMSP:
-            audioOutput->setMuted(mudlet::self()->muteGame());
+            audioOutput->setMuted(MudletMedia::self() && MudletMedia::self()->gameMuted());
             break;
         }
     } else {

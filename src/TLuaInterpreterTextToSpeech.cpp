@@ -30,14 +30,12 @@
 
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TMap.h"
 #include "TMapLabel.h"
@@ -45,7 +43,6 @@
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TTimer.h"
-#include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
 
 #include <chrono>
