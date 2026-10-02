@@ -29,6 +29,7 @@
 #include <zstd.h>
 
 #include "GroupedTest.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "TelnetServerStub.h"
@@ -559,7 +560,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName) const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
