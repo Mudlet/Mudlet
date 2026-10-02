@@ -1955,6 +1955,55 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QVERIFY(host->getUseMaxConsoleBufferSize());
     }
 
+    // A write past the end of a line pads it out in the model's current format,
+    // which a profile with no view has as much as one with a view.
+    void test_writingPastTheLineEndPadsInTheCurrentFormatWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor pastedFg(200, 0, 0);
+        const int clipLine = appendModelLine(model->buffer, qsl("gamma"), pastedFg);
+        const int first = appendModelLine(model->buffer, qsl("ab"));
+        appendModelLine(model->buffer, qsl("ab"));
+        appendModelLine(model->buffer, qsl("ab"));
+        appendModelLine(model->buffer, qsl("yyy"));
+
+        runLua(host,
+               qsl(R"LUA(
+moveCursor('main', 0, %1)
+selectString('main', 'gamma', 1)
+copy('main')
+deselect('main')
+setFgColor('main', 0, 200, 0)
+setBgColor('main', 0, 0, 128)
+moveCursor('main', 6, %2)
+insertText('main', 'X')
+moveCursor('main', 6, %2 + 1)
+insertLink('main', 'L', '', '', false)
+moveCursor('main', 6, %2 + 2)
+paste('main')
+)LUA")
+                       .arg(clipLine)
+                       .arg(first));
+
+        QCOMPARE(model->buffer.line(first), qsl("ab    X"));
+        QCOMPARE(model->buffer.line(first + 1), qsl("ab    L"));
+        QCOMPARE(model->buffer.line(first + 2), qsl("ab    gamma"));
+        for (int y = first; y <= first + 2; ++y) {
+            for (int x = 2; x < 6; ++x) {
+                const TChar& padded = model->buffer.buffer.at(y).at(x);
+                QCOMPARE(padded.foreground(), QColor(0, 200, 0));
+                QCOMPARE(padded.background(), QColor(0, 0, 128));
+            }
+        }
+        QCOMPARE(model->buffer.buffer.at(first + 2).at(6).foreground(), pastedFg);
+    }
+
     // With no view the main console's wrap settings still belong to its model
     // and to the profile, and wrapLine() then rewraps to them.
     void test_windowWrapReachesTheModelWithNoView()
