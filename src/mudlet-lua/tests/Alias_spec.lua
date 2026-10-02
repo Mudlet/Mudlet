@@ -708,12 +708,18 @@ describe("Alias processing", function()
 
         it("gives a child alias the command and its captures when its parent does not match", function()
             _G.AliasSpec = {}
-            permAlias("SpecParentNeverMatches", "", "^spec_parent_never_matches$", [[_G.AliasSpec.parent = true]])
-            permAlias("SpecChildOfNonMatching", "SpecParentNeverMatches", [[^spec_child (\w+) ü (\d+)$]], [==[
-                _G.AliasSpec.whole = matches[1]
-                _G.AliasSpec.word = matches[2]
-                _G.AliasSpec.number = matches[3]
-            ]==])
+            -- permanent aliases cannot be killed, so a profile that has run this
+            -- before already has them and only needs them switched back on
+            if exists("SpecParentNeverMatches", "alias") == 0 then
+                permAlias("SpecParentNeverMatches", "", "^spec_parent_never_matches$", [[_G.AliasSpec.parent = true]])
+                permAlias("SpecChildOfNonMatching", "SpecParentNeverMatches", [[^spec_child (\w+) ü (\d+)$]], [==[
+                    _G.AliasSpec.whole = matches[1]
+                    _G.AliasSpec.word = matches[2]
+                    _G.AliasSpec.number = matches[3]
+                ]==])
+            end
+            enableAlias("SpecParentNeverMatches")
+            enableAlias("SpecChildOfNonMatching")
             finally(function()
                 disableAlias("SpecChildOfNonMatching")
                 disableAlias("SpecParentNeverMatches")
