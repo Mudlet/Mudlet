@@ -99,6 +99,9 @@ struct TConsoleModel
     std::tuple<bool, QString, int, int> selection();
     // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
     QPair<quint8, TChar> textAttributes() const;
+    // The character the selection starts on, or nullptr when that is off the buffer. With no selection
+    // that is the buffer's first character: unlike textAttributes(), this does not fall back to the cursor.
+    const TChar* selectionStartChar() const;
     void resetFormat();
     bool setSelectionFgColor(const QColor& newColor);
     bool setSelectionBgColor(const QColor& newColor);
@@ -151,6 +154,10 @@ struct TConsoleModel
     void echoLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
     WriteResult insertLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
     WriteResult insertText(const QString& text);
+    // A script's echo(), marked as echoed text, with its carriage returns dropped from text. While
+    // triggers run over this console's line it goes onto that line, which is shown once they are
+    // done; otherwise it is appended, and this answers true for the view to show the new lines.
+    bool echo(QString& text);
     // Puts text in place of the selected run.
     void replace(const QString& text);
     // The WCAG contrast ratio, which link colours here and TConsole's scroll bar are both chosen by.
@@ -222,6 +229,7 @@ struct TConsoleModel
     int mWrapAt = 100;
     int mIndentCount = 0;
     int mHangingIndentCount = 0;
+    void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
 
     // The name scripts know this console by. Only the main console, user
     // windows, miniconsoles and buffers can be addressed by scripts, so only
