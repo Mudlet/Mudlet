@@ -4433,7 +4433,7 @@ describe("Tests closing another profile that opened a map widget", function()
   local name = "mudlet-spec-map-widget-close"
 
   local function removeTree(path)
-    if lfs.attributes(path, "mode") ~= "directory" then
+    if lfs.symlinkattributes(path, "mode") ~= "directory" then
       os.remove(path)
       return
     end
