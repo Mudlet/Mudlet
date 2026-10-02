@@ -2720,7 +2720,9 @@ int TLuaInterpreter::getTime(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getEpoch
 int TLuaInterpreter::getEpoch(lua_State* L)
 {
-    lua_pushnumber(L, static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0));
+    // Not currentDateTime(), which works out the local time zone - on glibc a
+    // stat() of /etc/localtime per call - only for the epoch to discard it:
+    lua_pushnumber(L, static_cast<double>(QDateTime::currentMSecsSinceEpoch()) / 1000.0);
     return 1;
 }
 
@@ -5706,7 +5708,36 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     // same stack, so only ever unwind back down to what we found:
     const int initialStackSize = lua_gettop(L);
 
-    int error = luaL_dostring(L, qsl("return %1").arg(function).toUtf8().constData());
+    // Compiling the lookup costs far more than running it, and every event
+    // pays for at least one - dispatchEventToFunctions is always registered -
+    // so each handler name is compiled once. Running the chunk still looks the
+    // name up afresh, so a handler that is redefined or removed is seen:
+    int error = 0;
+    if (const auto cached = mEventHandlerLookupRefs.constFind(function); cached != mEventHandlerLookupRefs.cend()) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, cached.value());
+        // A freshly loaded chunk would take whatever globals table the thread
+        // has now, which setfenv(0, ...) can have changed since this one was:
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
+        lua_setfenv(L, -2);
+    } else {
+        error = luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+        if (!error) {
+            // Script names come and go with renames, so keep this from growing
+            // without bound - but far above the handler count of any real
+            // profile, as starting over drops the lookups every event uses:
+            if (mEventHandlerLookupRefs.size() >= 16384) {
+                for (const int ref : std::as_const(mEventHandlerLookupRefs)) {
+                    luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                }
+                mEventHandlerLookupRefs.clear();
+            }
+            lua_pushvalue(L, -1);
+            mEventHandlerLookupRefs.insert(function, luaL_ref(L, LUA_REGISTRYINDEX));
+        }
+    }
+    if (!error) {
+        error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    }
     if (error) {
         std::string err;
         if (lua_isstring(L, -1)) {
@@ -6288,6 +6319,7 @@ void TLuaInterpreter::initLuaGlobals()
         // corrupt a freshly-issued registry index, which is what
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
+        mEventHandlerLookupRefs.clear();
         lua_close(pGlobalLua);
         forgetLazyGlobals();
     }

@@ -265,6 +265,9 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.equal(renumbered, getRoomExits(from)["east"])
       assert.are.equal(from, getRoomExits(renumbered)["west"])
       assert.are.equal(renumbered, getRoomIDbyHash("MapFileAuditSpecBadRoomHash"))
+      -- and is found where it stands, not under the ID it was loaded with
+      local x, y, z = getRoomCoordinates(renumbered)
+      assert.are.same({renumbered}, getRoomsByPosition1(area, x, y, z))
     end)
 
     it("renumbers a room whose ID is -1 without giving it every absent exit on the map", function()
