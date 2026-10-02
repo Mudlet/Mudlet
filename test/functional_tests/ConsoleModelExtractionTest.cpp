@@ -1594,8 +1594,6 @@ expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
 expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
-expectRefusal('echo', echo('x'))
-expectRefusal('insertHTML', insertHTML('x'))
 expectRefusal('enableScrollBar', enableScrollBar())
 expectRefusal('disableScrollBar', disableScrollBar())
 expectRefusal('enableHorizontalScrollBar', enableHorizontalScrollBar())
@@ -1658,6 +1656,44 @@ noViewReport = table.concat(noViewProblems, '; ')
 )LUA"));
 
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+    }
+
+    // echo(), insertHTML() and isPrompt() on the main console are its model's
+    // work, so they answer with no view as they do with one.
+    void test_mainConsoleEchoInsertAndPromptWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        appendModelLine(model->buffer, QString());
+        const int echoLine = model->buffer.getLastLineNumber();
+        runLua(host,
+               qsl("noViewEcho = {echo('NoViewEcho one\\r\\nNoViewEcho t\\rwo\\n')}\n"
+                   "noViewEchoMain = {echo('main', 'NoViewEcho main\\n')}\n"
+                   "noViewEchoAnswers = #noViewEcho .. tostring(noViewEcho[1]) .. #noViewEchoMain .. tostring(noViewEchoMain[1])\n"));
+        QCOMPARE(luaGlobalString(host, "noViewEchoAnswers"), qsl("1true1true"));
+        QCOMPARE(model->buffer.line(echoLine), qsl("NoViewEcho one"));
+        QCOMPARE(model->buffer.line(echoLine + 1), qsl("NoViewEcho two"));
+        QCOMPARE(model->buffer.line(echoLine + 2), qsl("NoViewEcho main"));
+        const TChar& format = model->mFormatCurrent;
+        TChar echoed = model->buffer.buffer.at(echoLine).at(0);
+        QVERIFY2(echoed == TChar(format.foreground(), format.background(), format.allDisplayAttributes() | TChar::Echo), "echo() did not write in the current format, marked as echoed.");
+
+        model->mUserCursor = QPoint(0, echoLine + 1);
+        runLua(host, qsl("noViewInsertAnswers = select('#', insertHTML('Inserted '))\n"));
+        QCOMPARE(luaGlobalNumber(host, "noViewInsertAnswers"), 0);
+        QCOMPARE(model->buffer.line(echoLine + 1), qsl("Inserted NoViewEcho two"));
+
+        model->buffer.promptBuffer[echoLine + 1] = true;
+        runLua(host, qsl("noViewPrompt = tostring(isPrompt())\n"));
+        QCOMPARE(luaGlobalString(host, "noViewPrompt"), qsl("true"));
+        model->mUserCursor = QPoint(0, echoLine);
+        runLua(host, qsl("noViewPrompt = tostring(isPrompt())\n"));
+        QCOMPARE(luaGlobalString(host, "noViewPrompt"), qsl("false"));
     }
 
     // The link and text functions write the console's model, so the main

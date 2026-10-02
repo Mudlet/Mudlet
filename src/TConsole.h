@@ -183,12 +183,10 @@ public:
     Host* getHost();
     TConsoleModel& model() { return *mpModel; }
     const TConsoleModel& model() const { return *mpModel; }
-    void insertHTML(const QString&);
     void insertText(const QString&);
     void clear();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
-    int getLineNumber();
     void clearSelection() const;
 
     void setWrapAt(int pos) { mpModel->setWrapAt(pos); }
@@ -199,7 +197,6 @@ public:
     void setHangingIndentCount(int count) { mpModel->setHangingIndentCount(count); }
 
     TLinkStore& getLinkStore() { return buffer.mLinkStore; }
-    void echo(const QString&);
     bool moveCursor(int x, int y);
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);

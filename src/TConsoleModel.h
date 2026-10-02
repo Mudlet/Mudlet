@@ -154,6 +154,10 @@ struct TConsoleModel
     void echoLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
     WriteResult insertLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
     WriteResult insertText(const QString& text);
+    // A script's echo(), marked as echoed text, with its carriage returns dropped from text. While
+    // triggers run over this console's line it goes onto that line, which is shown once they are
+    // done; otherwise it is appended, and this answers true for the view to show the new lines.
+    bool echo(QString& text);
     // Puts text in place of the selected run.
     void replace(const QString& text);
     // The WCAG contrast ratio, which link colours here and TConsole's scroll bar are both chosen by.

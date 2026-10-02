@@ -123,7 +123,7 @@ private:
         // cases are about is what is on the line, so the separator comes off
         // here rather than being asserted on. Nothing else can leave a carriage
         // return at the end of one: cTelnet strips those the game sends and
-        // TConsole::echo() those a script sends.
+        // TConsoleModel::echo() those a script sends.
         for (QString& line : lines) {
             if (line.endsWith(QChar::CarriageReturn)) {
                 line.chop(1);
