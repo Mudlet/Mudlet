@@ -112,6 +112,7 @@ private:
     const QString mColourHostname = "Test-ConsoleModelColours";
     const QString mSpellHostname = "Test-ConsoleModelSpellDic";
     const QString mViewlessHostname = "Test-ConsoleModelViewless";
+    const QString mWrapHostname = "Test-ConsoleModelWrap";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
@@ -162,6 +163,7 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
+        deleteProfileDirectory(mWrapHostname);
     }
 
     // The view's members must be the model's fields, not copies of them: same
@@ -190,6 +192,9 @@ private slots:
         QCOMPARE(&console->mLogFileName, &model.mLogFileName);
         QCOMPARE(&console->mLogStream, &model.mLogStream);
         QCOMPARE(&console->mLogToLogFile, &model.mLogToLogFile);
+        QCOMPARE(&console->mWrapAt, &model.mWrapAt);
+        QCOMPARE(&console->mIndentCount, &model.mIndentCount);
+        QCOMPARE(&console->mHangingIndentCount, &model.mHangingIndentCount);
 
         model.mFgColor = QColorConstants::Svg::orange;
         QCOMPARE(console->mFgColor, QColorConstants::Svg::orange);
@@ -1481,6 +1486,7 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
+        deleteProfileDirectory(mWrapHostname);
     }
 
     // Every one of these Lua functions used to reach through Host::mpConsole
@@ -1598,6 +1604,11 @@ expectRefusal('scrollingActive', scrollingActive())
 expectRefusal('getScroll', getScroll())
 expectRefusal('scrollTo', scrollTo(1))
 expectRefusal('scrollTo end', scrollTo())
+expectRefusal('enableTimeStamps', enableTimeStamps())
+expectRefusal('disableTimeStamps', disableTimeStamps())
+expectRefusal('timeStampsEnabled', timeStampsEnabled())
+expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
+expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1605,6 +1616,12 @@ expectValue('raiseWindow', false, raiseWindow('noViewUw'))
 -- both of these answer for "main" before they look for any console
 expectValue('scrollingActive main', true, scrollingActive('main'))
 expectValue('enableScrolling main', "scrolling cannot be enabled/disabled for the 'main' window", select(2, enableScrolling('main')))
+-- the main console's wrap is its model's, so it answers with no view
+expectValue('setWindowWrap', true, setWindowWrap(80))
+expectValue('getWindowWrap', 80, getWindowWrap())
+expectValue('setWindowWrapIndent', true, setWindowWrapIndent('main', 1))
+expectValue('setWindowWrapHangingIndent', true, setWindowWrapHangingIndent('main', 1))
+expectValue('setWindowWrap 0', 'wrapAt must be greater than zero, got 0', select(2, setWindowWrap(0)))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())
@@ -1613,6 +1630,130 @@ noViewReport = table.concat(noViewProblems, '; ')
 )LUA"));
 
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+    }
+
+    // The main console's wrap width and indents are also the profile's, which
+    // the preferences dialog shows and saves, so setting them by either name of
+    // the main console has to reach the profile, and setting another's must not.
+    void test_theMainConsoleWrapIsTheProfiles()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const int wrapAt = host->mWrapAt;
+        const int indent = host->mWrapIndentCount;
+        const int hangingIndent = host->mWrapHangingIndentCount;
+        const QString setAll = qsl("setWindowWrap('%1', %2)\nsetWindowWrapIndent('%1', %3)\nsetWindowWrapHangingIndent('%1', %4)\n");
+
+        const QString miniConsole = qsl("wrapSpy");
+        runLua(host, qsl("createMiniConsole('%1', 0, 0, 100, 100)\n").arg(miniConsole));
+        runLua(host, setAll.arg(miniConsole).arg(wrapAt + 1).arg(indent + 1).arg(hangingIndent + 1));
+        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        QVERIFY2(pMiniConsole, "The mini console was not created.");
+        QCOMPARE(pMiniConsole->getWrapAt(), wrapAt + 1);
+        QCOMPARE(host->mWrapAt, wrapAt);
+        QCOMPARE(host->mWrapIndentCount, indent);
+        QCOMPARE(host->mWrapHangingIndentCount, hangingIndent);
+
+        for (const auto& [name, offset] : {std::pair{QString(), 2}, std::pair{qsl("main"), 3}}) {
+            runLua(host, setAll.arg(name).arg(wrapAt + offset).arg(indent + offset).arg(hangingIndent + offset));
+            QCOMPARE(host->mpConsole->getWrapAt(), wrapAt + offset);
+            QCOMPARE(host->mWrapAt, wrapAt + offset);
+            QCOMPARE(host->mWrapIndentCount, indent + offset);
+            QCOMPARE(host->mWrapHangingIndentCount, hangingIndent + offset);
+        }
+    }
+
+    // With no view the main console's wrap settings still belong to its model
+    // and to the profile, and wrapLine() then rewraps to them.
+    void test_windowWrapReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        runLua(host, qsl("setWindowWrap('main', 23)\nsetWindowWrapIndent('', 2)\nsetWindowWrapHangingIndent('main', 3)\nnoViewWrap = getWindowWrap()\n"));
+
+        QCOMPARE(model->buffer.mWrapAt, 23);
+        QCOMPARE(model->buffer.mWrapIndent, 2);
+        QCOMPARE(model->buffer.mWrapHangingIndent, 3);
+        QCOMPARE(model->mWrapAt, 23);
+        QCOMPARE(model->mIndentCount, 2);
+        QCOMPARE(model->mHangingIndentCount, 3);
+        QCOMPARE(host->mWrapAt, 23);
+        QCOMPARE(host->mWrapIndentCount, 2);
+        QCOMPARE(host->mWrapHangingIndentCount, 3);
+        QCOMPARE(luaGlobalNumber(host, "noViewWrap"), 23);
+    }
+
+    // A profile that never had a view, whose changeColors() would otherwise
+    // hand the model the profile's wrap, still wraps as its save says.
+    void test_profileLoadSeedsTheWrapWithNoView()
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mWrapHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        const QString savePath = qsl("%1profileWrap.xml").arg(saveFolder);
+        writeProfileSave(savePath,
+                         qsl("      <wrapAt>57</wrapAt>\n"
+                             "      <wrapIndentCount>3</wrapIndentCount>\n"
+                             "      <wrapHangingIndentCount>5</wrapHangingIndentCount>\n"));
+        QVERIFY2(QFileInfo(savePath).size() > 0, "The seeded profile save is missing or empty.");
+
+        Host* host = mudlet::self()->loadProfile(mWrapHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QCOMPARE(host->mWrapAt, 57);
+
+        runLua(host, qsl("loadedWrap = getWindowWrap('main')\n"));
+        QCOMPARE(luaGlobalNumber(host, "loadedWrap"), 57);
+        const TConsoleModel& model = host->mainConsoleModel();
+        QCOMPARE(model.mWrapAt, 57);
+        QCOMPARE(model.mIndentCount, 3);
+        QCOMPARE(model.mHangingIndentCount, 5);
+        QCOMPARE(model.buffer.mWrapIndent, 3);
+        QCOMPARE(model.buffer.mWrapHangingIndent, 5);
+
+        // a profile with no save at all is never read by XMLimport
+        Host* freshHost = mudlet::self()->loadProfile(mHostname, false);
+        QVERIFY2(freshHost && freshHost != host, "The unsaved profile was not loaded.");
+        QVERIFY2(freshHost->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        runLua(freshHost, qsl("freshWrap = getWindowWrap('main')\n"));
+        QCOMPARE(luaGlobalNumber(freshHost, "freshWrap"), freshHost->mWrapAt);
+    }
+
+    // changeColors() hands the profile's wrap over without setWindowWrap(), and
+    // wrapLine('main') rewraps to it alike with a view and without one.
+    void test_wrapLineUsesTheProfilesWrapWithAndWithoutAView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        TConsoleModel& model = host->mainConsoleModel();
+
+        const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        QVERIFY2(model.buffer.mWrapAt > token.size() + 10, "The profile already wraps narrower than the test lines.");
+        // The view-less line goes first, so rewrapping the other cannot move it.
+        const int viewlessLine = appendModelLine(model.buffer, qsl("viewless-%1").arg(token));
+        const int viewLine = appendModelLine(model.buffer, qsl("view-%1").arg(token));
+
+        host->mWrapAt = 20;
+        host->mWrapIndentCount = 2;
+        host->mWrapHangingIndentCount = 4;
+        host->mpConsole->changeColors();
+
+        runLua(host, qsl("wrapLine('main', %1)\n").arg(viewLine));
+        verifyRewrappedTo20(model.buffer, viewLine, qsl("  view-"));
+
+        destroyTheView(host);
+        runLua(host, qsl("wrapLine('main', %1)\n").arg(viewlessLine));
+        verifyRewrappedTo20(model.buffer, viewlessLine, qsl("  viewless-"));
     }
 
     // A profile with no view owns its Hunspell handles and word set, so every
@@ -3604,6 +3745,17 @@ private:
                    "  shrinkCount = shrinkCount + 1\n"
                    "end\n"
                    "registerAnonymousEventHandler('sysBufferShrinkEvent', 'onModelBufferShrink')\n"));
+    }
+
+    // Utility function checking a line was rewrapped at 20 columns with an
+    // indent of 2 and a hanging indent of 4.
+    void verifyRewrappedTo20(TBuffer& buffer, int lineNumber, const QString& start)
+    {
+        const QString firstLine = buffer.line(lineNumber);
+        const QString secondLine = buffer.line(lineNumber + 1);
+        QVERIFY2(firstLine.size() <= 20, qPrintable(qsl("The line was not rewrapped to the profile's width: '%1'").arg(firstLine)));
+        QVERIFY2(firstLine.startsWith(start), qPrintable(qsl("The first line did not get the profile's indent: '%1'").arg(firstLine)));
+        QVERIFY2(secondLine.startsWith(qsl("    ")), qPrintable(qsl("The second line did not get the profile's hanging indent: '%1'").arg(secondLine)));
     }
 
     // Utility function appending one whole line - only a line feed starts a new

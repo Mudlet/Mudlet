@@ -1246,6 +1246,12 @@ void XMLimport::readHost(Host* pHost)
     // A package import comes through here too, into a profile that does have a
     // console - and that one needs the whole restyle, not just the model:
     pHost->applyMainConsoleColors();
+    if (!pHost->mpConsole) {
+        TConsoleModel& model = pHost->mainConsoleModel();
+        model.setWrapAt(pHost->mWrapAt);
+        model.setIndentCount(pHost->mWrapIndentCount);
+        model.setHangingIndentCount(pHost->mWrapHangingIndentCount);
+    }
 }
 
 bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)

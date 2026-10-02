@@ -207,24 +207,12 @@ public:
 
     int getColumnNumber();
 
-    void setWrapAt(int pos)
-    {
-        mWrapAt = pos;
-        buffer.setWrapAt(pos);
-    }
+    void setWrapAt(int pos) { mpModel->setWrapAt(pos); }
     int getWrapAt();
 
-    void setIndentCount(int count)
-    {
-        mIndentCount = count;
-        buffer.setWrapIndent(count);
-    }
+    void setIndentCount(int count) { mpModel->setIndentCount(count); }
 
-    void setHangingIndentCount(int count)
-    {
-        mHangingIndentCount = count;
-        buffer.setWrapHangingIndent(count);
-    }
+    void setHangingIndentCount(int count) { mpModel->setHangingIndentCount(count); }
 
     TLinkStore& getLinkStore() { return buffer.mLinkStore; }
     void echo(const QString&);
@@ -381,8 +369,8 @@ public:
     QString& mCurrentLine;
     int& mEngineCursor;
 
-    int mIndentCount = 0;
-    int mHangingIndentCount = 0;
+    int& mIndentCount;
+    int& mHangingIndentCount;
     QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;
@@ -409,7 +397,7 @@ public:
     bool& mTriggerEngineMode;
 
     QPoint& mUserCursor;
-    int mWrapAt = 100;
+    int& mWrapAt;
     QLineEdit* mpLineEdit_networkLatency = nullptr;
     QPoint& P_begin;
     QPoint& P_end;

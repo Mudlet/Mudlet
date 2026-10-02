@@ -494,6 +494,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mpMainConsoleModel->mTriggerEngineMode = false;
         finalizeMainConsole();
     });
+    // a view does this in TConsole::changeColors(), but a profile need never get one
+    mpMainConsoleModel->setWrapAt(mWrapAt);
+    mpMainConsoleModel->setIndentCount(mWrapIndentCount);
+    mpMainConsoleModel->setHangingIndentCount(mWrapHangingIndentCount);
 }
 
 Host::~Host()
