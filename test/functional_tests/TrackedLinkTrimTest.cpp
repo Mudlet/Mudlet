@@ -262,9 +262,9 @@ private slots:
     }
 
     // The main console's model outlives the view built on it and keeps taking
-    // lines meanwhile, so the tracked links have to follow a deletion whether or
-    // not anyone is watching. ~TConsole is what detaches it in production.
-    void test_deletingALineMovesTrackedLinksWithNoViewAttached()
+    // lines meanwhile, so the buffer moves the tracked links itself rather than
+    // leaving it to the view.
+    void test_deletingALineMovesTrackedLinks()
     {
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
@@ -285,9 +285,7 @@ private slots:
         manager.concealLink(linkId);
         QVERIFY2(lineContaining(buffer, mLinkText) < 0, "the link's text is still in the buffer, so a reveal would prove nothing");
 
-        buffer.detachConsole(pConsole);
         buffer.deleteLine(0);
-        buffer.setConsole(pConsole);
 
         manager.revealLink(linkId);
         qApp->processEvents();
@@ -315,11 +313,7 @@ private slots:
         TBuffer viewlessSlice(mpHost);
         QVERIFY2(manager.trackedLinkIds().contains(linkId), "building a viewless buffer dropped another buffer's links");
 
-        // a scratch buffer handed a console it does not belong to
-        TBuffer consoleBoundScratch(mpHost, pConsole);
-        QVERIFY2(manager.trackedLinkIds().contains(linkId), "building a scratch buffer dropped the console's links");
-
-        consoleBoundScratch.deleteLine(0);
+        viewlessSlice.deleteLine(0);
         QCOMPARE(manager.mTrackedLinks[linkId].lineNumber, registeredOn);
     }
 
@@ -366,7 +360,8 @@ private:
     {
         QStringList commands{mLinkCommand};
         QStringList hints{mLinkHint};
-        TChar format(pConsole);
+        const TChar& current = pConsole->mFormatCurrent;
+        TChar format(current.foreground(), current.background(), current.allDisplayAttributes());
         pConsole->buffer.addLink(false, mLinkText, commands, hints, format);
         pConsole->echo(qsl("\n"));
         return pConsole->getLinkStore().getCurrentLinkID();
