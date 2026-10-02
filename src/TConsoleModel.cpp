@@ -35,6 +35,26 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <cmath>
+
+namespace {
+double relativeLuminance(const QColor& color)
+{
+    const auto channel = [](const double value) {
+        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+}
+
+// Plain blue is barely legible against the dark background most profiles use,
+// so whichever of the two link blues stands out more against this console wins:
+TChar standardLinkFormat(const QColor& background)
+{
+    const QColor lightBlue(80, 160, 255);
+    const QColor linkColor = TConsoleModel::contrastRatio(QColor(Qt::blue), background) >= TConsoleModel::contrastRatio(lightBlue, background) ? QColor(Qt::blue) : lightBlue;
+    return TChar(linkColor, background, TChar::Underline);
+}
+} // namespace
 
 TConsoleModel::TConsoleModel(Host* pHost)
 : buffer(pHost)
@@ -345,6 +365,103 @@ bool TConsoleModel::setSelectionDisplayAttributes(const TChar::AttributeFlags at
 {
     mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (enabled ? attributes : TChar::None));
     return buffer.applyAttribute(P_begin, P_end, attributes, enabled);
+}
+
+bool TConsoleModel::setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    return buffer.applyLink(P_begin, P_end, commands, hints, luaReferences);
+}
+
+double TConsoleModel::contrastRatio(const QColor& first, const QColor& second)
+{
+    const double one = relativeLuminance(first);
+    const double other = relativeLuminance(second);
+    return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
+}
+
+void TConsoleModel::echoLink(const QString& text, QStringList& commands, QStringList& hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    if (useCurrentFormat) {
+        buffer.addLink(mTriggerEngineMode, text, commands, hints, mFormatCurrent, luaReferences);
+        return;
+    }
+    // the main console's links are coloured against the profile's own background
+    const QColor background = (mpHost && mpHost->mainConsoleModelOrNull() == this) ? mpHost->mBgColor : mBgColor;
+    buffer.addLink(mTriggerEngineMode, text, commands, hints, standardLinkFormat(background), luaReferences);
+}
+
+TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStringList& commands, QStringList& hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    const QPoint start = mUserCursor;
+    const QPoint end(start.x() + text.size(), start.y());
+    const TChar format = useCurrentFormat ? mFormatCurrent : standardLinkFormat(mBgColor);
+    if (mTriggerEngineMode) {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups(start.x(), text.size());
+        QPoint at = start;
+        buffer.insertInLine(at, text, format);
+        buffer.applyLink(start, end, commands, hints, luaReferences);
+        if (start.y() < mEngineCursor) {
+            return {false, mUserCursor.y(), mUserCursor.y()};
+        }
+        return {};
+    }
+    if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
+        buffer.addLink(mTriggerEngineMode, text, commands, hints, format, luaReferences);
+        return {true};
+    }
+
+    buffer.insertInLine(mUserCursor, text, format);
+    buffer.applyLink(start, end, commands, hints, luaReferences);
+    const int line = mUserCursor.y();
+    int newX = mUserCursor.x() + text.size();
+    int down = 0;
+    if (text.indexOf(QChar::LineFeed) != -1) {
+        down = buffer.wrapLine(line, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        newX = std::max(0, static_cast<int>(text.size() - text.lastIndexOf(QChar::LineFeed) - 1));
+    }
+    QPoint newCursor(newX, line + down);
+    if (buffer.moveCursor(newCursor)) {
+        mUserCursor = QPoint(newX, line + down);
+    }
+    return {false, line, line + down};
+}
+
+TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
+{
+    if (mTriggerEngineMode) {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups(mUserCursor.x(), text.size());
+        QPoint at = mUserCursor;
+        buffer.insertInLine(at, text, mFormatCurrent);
+        if (at.y() < mEngineCursor) {
+            return {false, mUserCursor.y(), mUserCursor.y()};
+        }
+        return {};
+    }
+    if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
+        buffer.append(text, 0, text.size(), mFormatCurrent);
+        return {true};
+    }
+
+    buffer.insertInLine(mUserCursor, text, mFormatCurrent);
+    const int line = mUserCursor.y();
+    int down = 0;
+    if (text.indexOf(QChar::LineFeed) != -1) {
+        down = buffer.wrapLine(line, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+    }
+    return {false, line, line + down};
+}
+
+void TConsoleModel::replace(const QString& text)
+{
+    if (mTriggerEngineMode) {
+        const int selected = P_end.x() - P_begin.x();
+        if (P_begin == P_end) {
+            mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size());
+        } else if (text.size() != selected) {
+            mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size() - selected);
+        }
+    }
+    buffer.replaceInLine(P_begin, P_end, text, mFormatCurrent);
 }
 
 // Two gotchas in here:

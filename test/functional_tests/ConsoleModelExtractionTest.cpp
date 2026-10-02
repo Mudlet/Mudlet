@@ -1658,6 +1658,78 @@ noViewReport = table.concat(noViewProblems, '; ')
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
     }
 
+    // The link and text functions write the console's model, so the main
+    // console takes them with no view at all.
+    void test_linksAndTextReachTheMainModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        destroyTheView(host);
+
+        TConsoleModel& model = host->mainConsoleModel();
+        const int line = appendModelLine(model.buffer, qsl("link popup"));
+        model.P_begin = QPoint(0, line);
+        model.P_end = QPoint(4, line);
+        runLua(host, qsl("noViewSetLink = tostring(setLink('cmd', 'hint'))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewSetLink"), qsl("true"));
+        const int linkId = model.buffer.getLinkIndexAt(line, 0);
+        QVERIFY2(linkId > 0, "setLink() put no link on the main model's selection.");
+        QCOMPARE(model.buffer.getLinkIndexAt(line, 3), linkId);
+        QCOMPARE(model.buffer.getLinkIndexAt(line, 4), 0);
+
+        model.P_begin = QPoint(5, line);
+        model.P_end = QPoint(10, line);
+        runLua(host, qsl("noViewSetPopup = tostring(setPopup('main', {'one', 'two'}, {'one', 'two'}))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewSetPopup"), qsl("true"));
+        const int popupId = model.buffer.getLinkIndexAt(line, 5);
+        QVERIFY2(popupId > 0 && popupId != linkId, "setPopup() put no link of its own on the main model's selection.");
+        QCOMPARE(model.buffer.mLinkStore.getLinksConst(popupId), QStringList({qsl("one"), qsl("two")}));
+
+        // replace() is wrapped in Lua by a function that reads the selection
+        // back through getSelection() first, so the one it wraps is called
+        runLua(host, qsl(R"LUA(
+for index = 1, math.huge do
+    local name, value = debug.getupvalue(replace, index)
+    if not name then
+        error('the function replace() wraps was not found')
+    end
+    if name == 'oldreplace' then
+        noViewReplace = value
+        break
+    end
+end
+)LUA"));
+        model.P_begin = QPoint(0, line);
+        model.P_end = QPoint(4, line);
+        runLua(host, qsl("noViewReplace('main', 'LINKED')\n"));
+        QCOMPARE(model.buffer.line(line), qsl("LINKED popup"));
+
+        model.mUserCursor = QPoint(6, line);
+        runLua(host, qsl("noViewInsertText = tostring(insertText(' and'))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewInsertText"), qsl("true"));
+        QCOMPARE(model.buffer.line(line), qsl("LINKED and popup"));
+        QCOMPARE(model.mUserCursor, QPoint(6, line));
+
+        runLua(host, qsl("noViewInsertLink = tostring(insertLink('', ' a', 'cmd', 'hint'))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewInsertLink"), qsl("true"));
+        QCOMPARE(model.buffer.line(line), qsl("LINKED a and popup"));
+        QVERIFY2(model.buffer.getLinkIndexAt(line, 7) > 0, "insertLink() put no link on the text it inserted.");
+        QCOMPARE(model.mUserCursor, QPoint(8, line));
+
+        const int echoLine = model.buffer.getLastLineNumber();
+        runLua(host,
+               qsl("noViewEchoLink = tostring(echoLink('echoed', 'cmd', 'hint'))\n"
+                   "noViewEchoPopup = tostring(echoPopup('main', ' popup', {'cmd'}, {'hint'}))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewEchoLink"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "noViewEchoPopup"), qsl("true"));
+        QCOMPARE(model.buffer.line(echoLine), qsl("echoed popup"));
+        const int echoId = model.buffer.getLinkIndexAt(echoLine, 0);
+        QVERIFY2(echoId > 0, "echoLink() put no link on the text it echoed.");
+        QVERIFY2(model.buffer.getLinkIndexAt(echoLine, 7) > 0 && model.buffer.getLinkIndexAt(echoLine, 7) != echoId, "echoPopup() put no link of its own on the text it echoed.");
+    }
+
     // The cursor and line functions work on the console's model, so on the
     // main console they answer for real with no view.
     void test_cursorAndLineFunctionsWorkWithNoView()

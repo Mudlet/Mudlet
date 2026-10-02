@@ -2314,7 +2314,7 @@ TConsoleModel* Host::consoleModelNamed(const QString& name)
 
 void Host::markSelectionDirty(TConsoleModel& model)
 {
-    emit model.mNotifier.linesRestyled(std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
+    emit model.mNotifier.linesChanged(std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
 }
 
 bool Host::setWindowFgColor(const QString& name, const QColor& color)
@@ -5005,6 +5005,54 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
         return qMakePair(false, failMessage);
     }
     return qMakePair(true, pModel->lines(lineFrom, lineTo));
+}
+
+// Hands the view the cue for what a console model write did: new lines to show, or lines to repaint.
+static void showConsoleWrite(TConsoleModel& model, const TConsoleModel::WriteResult& result)
+{
+    if (result.appended) {
+        emit model.mNotifier.newLinesWritten();
+    } else if (result.firstLine >= 0) {
+        emit model.mNotifier.linesChanged(result.firstLine, result.lastLine);
+    }
+}
+
+void Host::echoWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    model.echoLink(text, commands, hints, useCurrentFormat, luaReferences);
+    emit model.mNotifier.newLinesWritten();
+}
+
+void Host::insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    showConsoleWrite(model, model.insertLink(text, commands, hints, useCurrentFormat, luaReferences));
+}
+
+void Host::setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    if (model.setLink(commands, hints, luaReferences)) {
+        markSelectionDirty(model);
+    }
+}
+
+bool Host::insertWindowText(const QString& name, const QString& text)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    showConsoleWrite(*pModel, pModel->insertText(text));
+    return true;
+}
+
+bool Host::replaceWindowText(const QString& name, const QString& text)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pModel->replace(text);
+    return true;
 }
 
 std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)

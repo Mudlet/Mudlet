@@ -553,6 +553,19 @@ public:
     QPointer<TConsole> findConsole(QString name);
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
+    // Link writes to a console the caller already found by name, so it is looked
+    // up once per call and before any command becomes a Lua registry reference.
+    // The console takes over the references.
+    void echoWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    void insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    // Makes the console's selection a link.
+    void setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+    // Text writes to the named console, each false for a name that is no console's.
+    // Text or a link put into the main console's line while a trigger runs over
+    // it, or a replacement there, moves the trigger's captures to follow it.
+    bool insertWindowText(const QString& name, const QString& text);
+    // Puts text in place of the console's selection.
+    bool replaceWindowText(const QString& name, const QString& text);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     // Whether windowname can hold a new mini console, scroll box, command line, text edit or label:
     // "" or "main" (any case) is the main console, else it must be a registered user window or scroll box.
