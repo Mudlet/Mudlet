@@ -5592,11 +5592,15 @@ bool Host::closeWindow(const QString& name)
 
 bool Host::echoWindow(const QString& name, const QString& text)
 {
-    if (!mpConsole) {
-        return false;
+    // Not consoleModelNamed(): echoUserWindow() does not take "main" or "" for the main console.
+    if (auto pModel = mWindowRegistry.subConsoleModel(name)) {
+        const TChar& format = pModel->mFormatCurrent;
+        pModel->buffer.append(text, 0, text.size(), format.foreground(), format.background(), format.allDisplayAttributes());
+        emit pModel->mNotifier.newLinesWritten();
+        pModel->mirrorToStdOut(text);
+        return true;
     }
-
-    return mpConsole->printWindow(name, text);
+    return mpConsole && mpConsole->setLabelText(name, text);
 }
 
 bool Host::pasteWindow(const QString& name)

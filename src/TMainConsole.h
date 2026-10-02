@@ -71,7 +71,6 @@ public:
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
-    bool printWindow(const QString& name, const QString& text);
     bool clear(const QString& name);
     void setProfileName(const QString&) override;
     bool createBuffer(const QString& name);
