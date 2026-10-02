@@ -4836,7 +4836,7 @@ describe("Window and label state", function()
     it("rejects an unknown blink mode", function()
       local ok, err = setTextFormat(console, 0, 0, 0, 1, 2, 3, false, false, false, false, false, false, "sometimes")
       assert.is_nil(ok)
-      assert.are.equal('blink mode must be "none", "slow", or "fast", got "sometimes"', err)
+      assert.are.equal('blink mode must be "none", "slow" or "fast", got "sometimes"', err)
     end)
 
     it("takes numbers as well as booleans for the attribute flags", function()
@@ -7593,6 +7593,176 @@ describe("Colour getters on a console with nothing in it", function()
     assert.are.equal(0, getLineCount(console))
     assert.are.equal(0, select("#", getFgColor(console)))
     assert.are.equal(0, select("#", getBgColor(console)))
+  end)
+end)
+
+-- getFgColor, getBgColor, isAnsiFgColor and isAnsiBgColor read the character a
+-- selection starts on - with no selection that is the start of the buffer, not
+-- the cursor getTextFormat falls back to - and setTextFormat sets the format
+-- of what is written next.
+describe("Colour getters and setTextFormat by window name", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local console = "colourByNameConsole" .. suffix
+
+  before_each(function()
+    createMiniConsole("main", console, 0, 0, 300, 60)
+    setTextFormat(console, 1, 2, 3, 10, 20, 30, false, false, false)
+    echo(console, "abc")
+    setTextFormat(console, 4, 5, 6, 40, 50, 60, false, false, false)
+    echo(console, "def\n")
+    moveCursor(console, 0, 0)
+  end)
+
+  after_each(function()
+    deleteMiniConsole(console)
+  end)
+
+  -- the main console's line holding the word, selected from its start
+  local function selectOnMain(word)
+    moveCursorEnd()
+    for _ = 1, 10 do
+      if selectString(word, 1) == 0 then
+        return
+      end
+      moveCursorUp()
+    end
+    error(("could not find %s on the main console"):format(word))
+  end
+
+  local function restoreMain()
+    resetFormat()
+    deselect()
+    moveCursorEnd()
+  end
+
+  it("read the first character of a selection at the start of a line", function()
+    selectSection(console, 0, 3)
+    assert.are.same({10, 20, 30}, {getFgColor(console)})
+    assert.are.same({1, 2, 3}, {getBgColor(console)})
+  end)
+
+  it("read the first character of a selection that starts mid-line", function()
+    selectSection(console, 3, 3)
+    assert.are.same({40, 50, 60}, {getFgColor(console)})
+    assert.are.same({4, 5, 6}, {getBgColor(console)})
+    selectSection(console, 2, 3)
+    assert.are.same({10, 20, 30}, {getFgColor(console)})
+    assert.are.same({1, 2, 3}, {getBgColor(console)})
+  end)
+
+  it("read the start of the buffer rather than the cursor when nothing is selected", function()
+    moveCursor(console, 4, 0)
+    deselect(console)
+    assert.are.same({10, 20, 30}, {getFgColor(console)})
+    assert.are.same({1, 2, 3}, {getBgColor(console)})
+    assert.are.same({40, 50, 60}, getTextFormat(console).foreground)
+  end)
+
+  it("answer nothing for a selection that starts past the end of its line", function()
+    assert.is_true(selectSection(console, 6, 0))
+    assert.are.equal(0, select("#", getFgColor(console)))
+    assert.are.equal(0, select("#", getBgColor(console)))
+  end)
+
+  it("answer nothing for a window that does not exist", function()
+    local unknown = "colourByNameMissing" .. suffix
+    assert.are.equal(0, select("#", getFgColor(unknown)))
+    assert.are.equal(0, select("#", getBgColor(unknown)))
+  end)
+
+  it("setTextFormat changes what is written next and leaves what is there alone", function()
+    assert.is_true(setTextFormat(console, 7, 8, 9, 70, 80, 90, false, false, false))
+    selectSection(console, 0, 3)
+    assert.are.same({10, 20, 30}, {getFgColor(console)})
+    echo(console, "ghi\n")
+    moveCursor(console, 0, 1)
+    selectSection(console, 0, 3)
+    assert.are.same({70, 80, 90}, {getFgColor(console)})
+    assert.are.same({7, 8, 9}, {getBgColor(console)})
+  end)
+
+  it("take the main console by name, by an empty name and when it is left out", function()
+    finally(restoreMain)
+    local word = "colourByNameMain" .. suffix
+    assert.is_true(setTextFormat("main", 11, 12, 13, 21, 22, 23, false, false, false))
+    echo("\n" .. word)
+    assert.is_true(setTextFormat("", 31, 32, 33, 41, 42, 43, false, false, false))
+    echo("X")
+    assert.is_true(setTextFormat(nil, 51, 52, 53, 61, 62, 63, false, false, false))
+    echo("Y\n")
+    selectOnMain(word)
+    assert.are.same({21, 22, 23}, {getFgColor()})
+    assert.are.same({21, 22, 23}, {getFgColor("main")})
+    assert.are.same({21, 22, 23}, {getFgColor("")})
+    assert.are.same({11, 12, 13}, {getBgColor()})
+    assert.are.same({11, 12, 13}, {getBgColor("main")})
+    assert.are.same({11, 12, 13}, {getBgColor("")})
+    selectSection(#word, 1)
+    assert.are.same({41, 42, 43}, {getFgColor()})
+    assert.are.same({31, 32, 33}, {getBgColor()})
+    selectSection(#word + 1, 1)
+    assert.are.same({61, 62, 63}, {getFgColor()})
+    assert.are.same({51, 52, 53}, {getBgColor()})
+  end)
+
+  it("isAnsiFgColor and isAnsiBgColor answer for the main console's selection, not a mini console's", function()
+    finally(restoreMain)
+    local word = "colourByNameAnsi" .. suffix
+    feedTriggers(("\27[31;42m%s\27[0m\n"):format(word))
+    selectOnMain(word)
+    selectSection(console, 3, 3)
+    assert.is_true(isAnsiFgColor(4))
+    assert.is_true(isAnsiBgColor(6))
+    assert.is_false(isAnsiFgColor(6))
+    assert.is_false(isAnsiBgColor(4))
+  end)
+
+  it("isAnsiFgColor and isAnsiBgColor match no palette entry for an RGB colour outside it", function()
+    finally(restoreMain)
+    local word = "colourByNameRgb" .. suffix
+    feedTriggers(("\27[38;2;1;2;3;48;2;4;5;6m%s\27[0m\n"):format(word))
+    selectOnMain(word)
+    assert.are.same({1, 2, 3}, {getFgColor()})
+    assert.are.same({4, 5, 6}, {getBgColor()})
+    for index = 0, 16 do
+      assert.is_false(isAnsiFgColor(index), ("RGB foreground answered to ANSI colour %d"):format(index))
+      assert.is_false(isAnsiBgColor(index), ("RGB background answered to ANSI colour %d"):format(index))
+    end
+  end)
+
+  it("isAnsiFgColor and isAnsiBgColor refuse a selection past its line's end before the colour number", function()
+    finally(restoreMain)
+    local word = "colourByNameEnd" .. suffix
+    feedTriggers(word .. "\n")
+    selectOnMain(word)
+    assert.is_true(selectSection(#word, 0))
+    assert.are.equal(0, select("#", getFgColor()))
+    local ok, err = isAnsiFgColor(99)
+    assert.is_nil(ok)
+    assert.are.equal("current selection invalid in window 'main'", err)
+    ok, err = isAnsiBgColor(99)
+    assert.is_nil(ok)
+    assert.are.equal("current selection invalid in window 'main'", err)
+  end)
+
+  it("setTextFormat checks its arguments before it looks for the window", function()
+    local unknown = "colourByNameMissing" .. suffix
+    local ok, err = pcall(setTextFormat, {}, 0, 0, 0, 0, 0, 0, false, false, false)
+    assert.is_false(ok)
+    assert.is_truthy(err:find("bad argument #1 type", 1, true))
+    ok, err = pcall(setTextFormat, unknown, "red", 0, 0, 0, 0, 0, false, false, false)
+    assert.is_false(ok)
+    assert.is_truthy(err:find("setTextFormat: bad argument #2 type", 1, true))
+    ok, err = pcall(setTextFormat, unknown, 0, 0, 0, 0, 0, 0, "yes", false, false)
+    assert.is_false(ok)
+    assert.is_truthy(err:find("setTextFormat: bad argument #8 type", 1, true))
+    local result
+    result, err = setTextFormat(unknown, 0, 0, 0, 0, 0, 0, false, false, false, false, false, false, "sometimes")
+    assert.is_nil(result)
+    assert.are.equal('blink mode must be "none", "slow", or "fast", got "sometimes"', err)
+    result, err = setTextFormat(unknown, 0, 0, 0, 0, 0, 0, false, false, false)
+    assert.is_false(result)
+    assert.are.equal(("window '%s' does not exist"):format(unknown), err)
   end)
 end)
 
