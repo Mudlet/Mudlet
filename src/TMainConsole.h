@@ -215,13 +215,6 @@ public:
     // A negative line counts back from the end. One at or past the end, or
     // toEnd, puts the console back to following new lines.
     bool scrollWindowTo(const QString& name, int line, bool toEnd);
-    // Whether the named console shows timestamps, found by name in the same
-    // way. Only the view has this flag: the buffer records every line's time
-    // either way.
-    std::optional<bool> getWindowTimeStamps(const QString& name);
-    // Answers whether they were shown before, and leaves them alone when that
-    // is already what was asked for.
-    std::optional<bool> setWindowTimeStamps(const QString& name, bool shown);
     // How many characters and lines fit in the named console's upper pane, from its size and font.
     std::optional<int> getWindowColumnCount(const QString& name);
     std::optional<int> getWindowRowCount(const QString& name);

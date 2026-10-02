@@ -1611,9 +1611,6 @@ expectRefusal('scrollingActive', scrollingActive())
 expectRefusal('getScroll', getScroll())
 expectRefusal('scrollTo', scrollTo(1))
 expectRefusal('scrollTo end', scrollTo())
-expectRefusal('enableTimeStamps', enableTimeStamps())
-expectRefusal('disableTimeStamps', disableTimeStamps())
-expectRefusal('timeStampsEnabled', timeStampsEnabled())
 expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
 expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
 expectRefusal('moveCursor', moveCursor('noViewMc', 0, 0))
@@ -2014,6 +2011,91 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QVERIFY(host->mainConsoleShowsTimeStamps());
     }
 
+    // Timestamps turned on or off from Lua change the width the game is told,
+    // by the gutter they take, as the toolbar button does.
+    void test_luaTimeStampsOnTheMainConsoleResendNaws()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
+        const auto sizeWithGutter = [host](const int gutter) {
+            return QSize(std::min(host->mScreenWidth, host->mWrapAt) - gutter, host->mScreenHeight);
+        };
+        const auto nawsReaches = [this, &sizeWithGutter](const int gutter) {
+            return QTest::qWaitFor(
+                    [this, &sizeWithGutter, gutter]() {
+                        return !mpServer->nawsUpdates().isEmpty() && mpServer->nawsUpdates().constLast() == sizeWithGutter(gutter);
+                    },
+                    5000);
+        };
+
+        // IAC DO NAWS
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        QVERIFY2(nawsReaches(0), "The profile never reported its size with no timestamps.");
+
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY2(nawsReaches(TBuffer::smTimeStampFormat.size()), "Timestamps turned on from Lua left the game's width alone.");
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY2(nawsReaches(0), "Timestamps turned off from Lua left the game's width alone.");
+    }
+
+    // The timestamp functions set and read the console model's flag, so the main
+    // console answers them with no view, as it does with one. Only the flag
+    // changes: the autotimestamp file and the size report belong to the view.
+    void test_timeStampFunctionsWorkWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
+        destroyTheView(host);
+
+        runLua(host, qsl(R"LUA(
+noViewTimeStampProblems = {}
+noViewSizeReports = 0
+registerAnonymousEventHandler('sysConsoleSizeChanged', function() noViewSizeReports = noViewSizeReports + 1 end)
+
+-- the answer is one value, or nil and a reason
+function expectTimeStampAnswer(name, first, reason, ...)
+    local count, actualFirst, actualReason = select('#', ...), ...
+    if count ~= (reason and 2 or 1) or actualFirst ~= first or actualReason ~= reason then
+        table.insert(noViewTimeStampProblems, name .. ' returned ' .. count .. ' values: ' .. tostring(actualFirst) .. ', ' .. tostring(actualReason))
+    end
+end
+
+byEmptyName = 'timestamps were not enabled for the main console'
+byMain = 'timestamps were not enabled for the "main" console'
+expectTimeStampAnswer('timeStampsEnabled before', false, nil, timeStampsEnabled())
+expectTimeStampAnswer('enableTimeStamps', true, nil, enableTimeStamps())
+expectTimeStampAnswer('timeStampsEnabled on', true, nil, timeStampsEnabled('main'))
+expectTimeStampAnswer('enableTimeStamps again', nil, 'timestamps were already enabled for the main console', enableTimeStamps())
+expectTimeStampAnswer('enableTimeStamps main again', nil, 'timestamps were already enabled for the "main" console', enableTimeStamps('main'))
+)LUA"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+        QVERIFY2(!QFile::exists(autoTimeStampPath), "A profile with no view wrote the view's autotimestamp file.");
+
+        runLua(host, qsl(R"LUA(
+local unknown = 'noViewNoSuchConsole'
+local notFound = 'window "' .. unknown .. '" not found'
+expectTimeStampAnswer('disableTimeStamps', true, nil, disableTimeStamps('main'))
+expectTimeStampAnswer('timeStampsEnabled off', false, nil, timeStampsEnabled(''))
+expectTimeStampAnswer('disableTimeStamps again', nil, byEmptyName, disableTimeStamps(''))
+expectTimeStampAnswer('disableTimeStamps main again', nil, byMain, disableTimeStamps('main'))
+expectTimeStampAnswer('enableTimeStamps unknown', nil, notFound, enableTimeStamps(unknown))
+expectTimeStampAnswer('disableTimeStamps unknown', nil, notFound, disableTimeStamps(unknown))
+expectTimeStampAnswer('timeStampsEnabled unknown', nil, notFound, timeStampsEnabled(unknown))
+noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
+)LUA"));
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        QCOMPARE(luaGlobalString(host, "noViewTimeStampReport"), QString());
+        QCOMPARE(luaGlobalNumber(host, "noViewSizeReports"), 0);
+    }
+
     // A profile with no view still tells the game its size when asked: the
     // character grid it would wrap to, with no timestamp gutter to leave out.
     void test_nawsReportsTheCharacterGridWithNoView()
@@ -2044,6 +2126,48 @@ headlessProblems = table.concat(headlessProblems, '; ')
                          5000),
                  "The view-less profile never answered IAC DO NAWS.");
         QCOMPARE(mpServer->nawsUpdates().constLast(), QSize(std::min(host->mScreenWidth, host->mWrapAt), host->mScreenHeight));
+    }
+
+    // With no view, timestamps turned on or off from Lua still change the width
+    // the game is told by their gutter, as they do with one.
+    void test_luaTimeStampsResendNawsWithNoView()
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        writeProfileSave(qsl("%1profileNaws.xml").arg(saveFolder), QString());
+
+        Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        const auto sizeWithGutter = [host](const int gutter) {
+            return QSize(std::min(host->mScreenWidth, host->mWrapAt) - gutter, host->mScreenHeight);
+        };
+        const auto nawsReaches = [this, &sizeWithGutter](const int gutter) {
+            return QTest::qWaitFor(
+                    [this, &sizeWithGutter, gutter]() {
+                        return !mpServer->nawsUpdates().isEmpty() && mpServer->nawsUpdates().constLast() == sizeWithGutter(gutter);
+                    },
+                    5000);
+        };
+
+        host->mTelnet.connectIt(mLocalhost, mPort.toInt());
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+                         },
+                         5000),
+                 "The view-less profile did not connect.");
+        // IAC DO NAWS
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        QVERIFY2(nawsReaches(0), "The view-less profile never reported its size with no timestamps.");
+
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+        QVERIFY2(nawsReaches(TBuffer::smTimeStampFormat.size()), "Timestamps turned on from Lua with no view left the game's width alone.");
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY2(nawsReaches(0), "Timestamps turned off from Lua with no view left the game's width alone.");
     }
 
     // A profile that never had a view, whose changeColors() would otherwise
@@ -4329,10 +4453,7 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()

@@ -2354,6 +2354,33 @@ bool Host::setWindowDisplayAttributes(const QString& name, const TChar::Attribut
     return true;
 }
 
+std::optional<bool> Host::getWindowTimeStamps(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    return {pModel->mShowTimeStamps};
+}
+
+std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool shown)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    const bool wasShown = pModel->mShowTimeStamps;
+    if (wasShown != shown) {
+        pModel->mShowTimeStamps = shown;
+        emit pModel->mNotifier.timeStampsToggled();
+        if (!mpConsole && pModel == mpMainConsoleModel.get()) {
+            // the width NAWS reports leaves out the main console's timestamp gutter
+            updateDisplayDimensions();
+        }
+    }
+    return {wasShown};
+}
+
 bool Host::copyToClipboard(const QString& name)
 {
     auto pModel = consoleModelNamed(name);
