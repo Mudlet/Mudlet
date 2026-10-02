@@ -42,6 +42,7 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "TIrcClient.h"
 #include "TelnetServerStub.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
@@ -115,8 +116,8 @@ private:
     // showing it is what starts the client
     dlgIRC* openClient(const QString& host, const QString& nick, const QString& channel)
     {
-        if (!dlgIRC::writeIrcHostName(mpHost, host).first || !dlgIRC::writeIrcHostPort(mpHost, mpIrcServer->serverPort()).first || !dlgIRC::writeIrcNickName(mpHost, nick).first
-            || !dlgIRC::writeIrcChannels(mpHost, QStringList() << channel).first) {
+        if (!TIrcClient::writeIrcHostName(mpHost, host).first || !TIrcClient::writeIrcHostPort(mpHost, mpIrcServer->serverPort()).first || !TIrcClient::writeIrcNickName(mpHost, nick).first
+            || !TIrcClient::writeIrcChannels(mpHost, QStringList() << channel).first) {
             return nullptr;
         }
         mpHost->mpDlgIRC = new dlgIRC(mpHost);
