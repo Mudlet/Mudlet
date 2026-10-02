@@ -1534,13 +1534,6 @@ local function expectValue(name, expected, ...)
     end
 end
 
--- an invalid selection has always returned no values at all
-local function expectNothing(name, ...)
-    if select('#', ...) ~= 0 then
-        table.insert(noViewProblems, name .. ' returned ' .. tostring((...)))
-    end
-end
-
 -- a family setFont() takes, which it checks for before it looks for a console
 local anyFont = next(getAvailableFonts())
 
@@ -1601,11 +1594,6 @@ expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
 expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
-expectRefusal('setTextFormat', setTextFormat('main', 0, 0, 0, 255, 255, 255, false, false, false))
-expectRefusal('isAnsiBgColor', isAnsiBgColor(1))
-expectRefusal('isAnsiFgColor', isAnsiFgColor(1))
-expectRefusal('echo', echo('x'))
-expectRefusal('insertHTML', insertHTML('x'))
 expectRefusal('enableScrollBar', enableScrollBar())
 expectRefusal('disableScrollBar', disableScrollBar())
 expectRefusal('enableHorizontalScrollBar', enableHorizontalScrollBar())
@@ -1664,13 +1652,76 @@ expectValue('copy reason', 'window "noViewMini" not found', select(2, copy('noVi
 -- the window is looked for before the maximum is refused for anything but the main console
 expectValue('setConsoleBufferSize reason', 'window "noViewMini" not found', select(2, setConsoleBufferSize('noViewMini', 1000, 100, true)))
 
-expectNothing('getBgColor', getBgColor())
-expectNothing('getFgColor', getFgColor())
-
 noViewReport = table.concat(noViewProblems, '; ')
 )LUA"));
 
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+    }
+
+    // echo(), insertHTML() and isPrompt() on the main console are its model's
+    // work, so they answer with no view as they do with one.
+    void test_mainConsoleEchoInsertAndPromptWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        appendModelLine(model->buffer, QString());
+        const int echoLine = model->buffer.getLastLineNumber();
+        runLua(host,
+               qsl("noViewEcho = {echo('NoViewEcho one\\r\\nNoViewEcho t\\rwo\\n')}\n"
+                   "noViewEchoMain = {echo('main', 'NoViewEcho main\\n')}\n"
+                   "noViewEchoAnswers = #noViewEcho .. tostring(noViewEcho[1]) .. #noViewEchoMain .. tostring(noViewEchoMain[1])\n"));
+        QCOMPARE(luaGlobalString(host, "noViewEchoAnswers"), qsl("1true1true"));
+        QCOMPARE(model->buffer.line(echoLine), qsl("NoViewEcho one"));
+        QCOMPARE(model->buffer.line(echoLine + 1), qsl("NoViewEcho two"));
+        QCOMPARE(model->buffer.line(echoLine + 2), qsl("NoViewEcho main"));
+        const TChar& format = model->mFormatCurrent;
+        TChar echoed = model->buffer.buffer.at(echoLine).at(0);
+        QVERIFY2(echoed == TChar(format.foreground(), format.background(), format.allDisplayAttributes() | TChar::Echo), "echo() did not write in the current format, marked as echoed.");
+
+        model->mUserCursor = QPoint(0, echoLine + 1);
+        runLua(host, qsl("noViewInsertAnswers = select('#', insertHTML('Inserted '))\n"));
+        QCOMPARE(luaGlobalNumber(host, "noViewInsertAnswers"), 0);
+        QCOMPARE(model->buffer.line(echoLine + 1), qsl("Inserted NoViewEcho two"));
+
+        model->buffer.promptBuffer[echoLine + 1] = true;
+        runLua(host, qsl("noViewPrompt = tostring(isPrompt())\n"));
+        QCOMPARE(luaGlobalString(host, "noViewPrompt"), qsl("true"));
+        model->mUserCursor = QPoint(0, echoLine);
+        runLua(host, qsl("noViewPrompt = tostring(isPrompt())\n"));
+        QCOMPARE(luaGlobalString(host, "noViewPrompt"), qsl("false"));
+    }
+
+    // echo() to a sub-console writes its model, so it reaches one that no view
+    // shows, as a frontend without widgets would register.
+    void test_subConsoleEchoWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        destroyTheView(host);
+
+        const QString name = qsl("noViewEchoMini");
+        TConsoleModel model(host);
+        host->windowRegistry().registerSubConsole(name, &model, TWindowRegistry::SubConsoleKind::MiniConsole);
+        const auto deregister = qScopeGuard([host, &name, &model]() {
+            host->windowRegistry().deregisterSubConsole(name, &model);
+        });
+        const QColor foreground(12, 34, 56);
+        model.mFormatCurrent.setForeground(foreground);
+
+        runLua(host,
+               qsl("noViewSubEcho = {echo('noViewEchoMini', 'NoViewSubEcho one\\nNoViewSubEcho open')}\n"
+                   "noViewSubEchoAnswers = #noViewSubEcho .. tostring(noViewSubEcho[1]) .. select('#', echoUserWindow('noViewEchoMini', ', closed\\n'))\n"));
+        QCOMPARE(luaGlobalString(host, "noViewSubEchoAnswers"), qsl("1true0"));
+        QCOMPARE(model.buffer.line(0), qsl("NoViewSubEcho one"));
+        QCOMPARE(model.buffer.line(1), qsl("NoViewSubEcho open, closed"));
+        QCOMPARE(model.buffer.buffer.at(1).at(0).foreground(), foreground);
     }
 
     // The link and text functions write the console's model, so the main
@@ -1953,6 +2004,55 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QCOMPARE(model->buffer.mLinesLimit, maxBufferSize);
         QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
         QVERIFY(host->getUseMaxConsoleBufferSize());
+    }
+
+    // A write past the end of a line pads it out in the model's current format,
+    // which a profile with no view has as much as one with a view.
+    void test_writingPastTheLineEndPadsInTheCurrentFormatWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor pastedFg(200, 0, 0);
+        const int clipLine = appendModelLine(model->buffer, qsl("gamma"), pastedFg);
+        const int first = appendModelLine(model->buffer, qsl("ab"));
+        appendModelLine(model->buffer, qsl("ab"));
+        appendModelLine(model->buffer, qsl("ab"));
+        appendModelLine(model->buffer, qsl("yyy"));
+
+        runLua(host,
+               qsl(R"LUA(
+moveCursor('main', 0, %1)
+selectString('main', 'gamma', 1)
+copy('main')
+deselect('main')
+setFgColor('main', 0, 200, 0)
+setBgColor('main', 0, 0, 128)
+moveCursor('main', 6, %2)
+insertText('main', 'X')
+moveCursor('main', 6, %2 + 1)
+insertLink('main', 'L', '', '', false)
+moveCursor('main', 6, %2 + 2)
+paste('main')
+)LUA")
+                       .arg(clipLine)
+                       .arg(first));
+
+        QCOMPARE(model->buffer.line(first), qsl("ab    X"));
+        QCOMPARE(model->buffer.line(first + 1), qsl("ab    L"));
+        QCOMPARE(model->buffer.line(first + 2), qsl("ab    gamma"));
+        for (int y = first; y <= first + 2; ++y) {
+            for (int x = 2; x < 6; ++x) {
+                const TChar& padded = model->buffer.buffer.at(y).at(x);
+                QCOMPARE(padded.foreground(), QColor(0, 200, 0));
+                QCOMPARE(padded.background(), QColor(0, 0, 128));
+            }
+        }
+        QCOMPARE(model->buffer.buffer.at(first + 2).at(6).foreground(), pastedFg);
     }
 
     // With no view the main console's wrap settings still belong to its model
@@ -2653,7 +2753,13 @@ else
     expectValues('getTextFormat', {true, true, false, 1, 2, 3, 4, 5, 6}, format.bold, format.underline, format.italic,
         format.foreground[1], format.foreground[2], format.foreground[3], format.background[1], format.background[2], format.background[3])
 end
+expectValues('getFgColor', {1, 2, 3}, getFgColor())
+expectValues('getBgColor', {4, 5, 6}, getBgColor('main'))
+expectValues('isAnsiFgColor', {false}, isAnsiFgColor(1))
+expectValues('isAnsiBgColor', {false}, isAnsiBgColor(1))
+expectValues('isAnsiFgColor out of range', {nil, 'ANSI color 99 out of range (0 to 16)'}, isAnsiFgColor(99))
 expectValues('resetFormat', {true}, resetFormat())
+expectValues('setTextFormat', {true}, setTextFormat('main', 7, 8, 9, 10, 11, 12, false, false, false))
 
 expectMissing('deselect', deselect('nosuchwindow'))
 expectMissing('selectCurrentLine', selectCurrentLine('nosuchwindow'))
@@ -2665,6 +2771,8 @@ expectMissing('setBold', setBold('nosuchwindow', true))
 expectMissing('setFgColor', setFgColor('nosuchwindow', 1, 2, 3))
 expectMissing('setBgColor', setBgColor('nosuchwindow', 1, 2, 3))
 expectMissing('resetFormat', resetFormat('nosuchwindow'))
+expectValues('getFgColor of a missing window', {}, getFgColor('nosuchwindow'))
+expectValues('setTextFormat of a missing window', {false, "window 'nosuchwindow' does not exist"}, setTextFormat('nosuchwindow', 0, 0, 0, 0, 0, 0, false, false, false))
 
 noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 )LUA"));
@@ -2678,6 +2786,8 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY(!model->buffer.buffer.at(line).at(6).isBold());
         QCOMPARE(model->P_begin, QPoint());
         QCOMPARE(model->P_end, QPoint());
+        QCOMPARE(model->mFormatCurrent.foreground(), QColor(10, 11, 12));
+        QCOMPARE(model->mFormatCurrent.background(), QColor(7, 8, 9));
     }
 
     // The main console's background is the model's, so a script can still read

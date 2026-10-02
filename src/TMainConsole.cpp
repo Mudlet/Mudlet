@@ -330,71 +330,6 @@ void TMainConsole::slot_loggingStateChanged(const bool isLogging)
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
 }
 
-void TMainConsole::selectCurrentLine(std::string& buf)
-{
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
-        TConsole::selectCurrentLine();
-        return;
-    }
-    auto pC = mSubConsoleMap.value(key);
-    if (pC) {
-        pC->selectCurrentLine();
-    }
-}
-
-std::list<int> TMainConsole::getFgColor(QString& buf)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        return TConsole::getFgColor();
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        return pC->getFgColor();
-    }
-
-    return {};
-}
-
-std::list<int> TMainConsole::getBgColor(QString& buf)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        return TConsole::getBgColor();
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        return pC->getBgColor();
-    }
-
-    return {};
-}
-
-QPair<quint8, TChar> TMainConsole::getTextAttributes(const QString& name) const
-{
-    if (name.isEmpty() || name == QLatin1String("main")) {
-        return TConsole::getTextAttributes();
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->getTextAttributes();
-    }
-
-    return qMakePair(1, TChar());
-}
-
-void TMainConsole::luaWrapLine(QString& buf, int line)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        TConsole::luaWrapLine(line);
-        return;
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        pC->luaWrapLine(line);
-    }
-}
-
 
 bool TMainConsole::createBuffer(const QString& name)
 {
@@ -2890,21 +2825,6 @@ bool TMainConsole::hideWindow(const QString& name)
     return false;
 }
 
-bool TMainConsole::printWindow(const QString& name, const QString& text)
-{
-    auto pC = mSubConsoleMap.value(name);
-    auto pL = mLabelMap.value(name);
-    if (pC) {
-        pC->print(text);
-        return true;
-    }
-    if (pL) {
-        pL->setText(text);
-        return true;
-    }
-    return false;
-}
-
 //getUserWindowSize for resizing in Geyser
 QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
@@ -3017,22 +2937,6 @@ std::pair<bool, QString> TMainConsole::getUserWindowTitle(const QString& name) c
     }
 
     return {true, pD->windowTitle()};
-}
-
-bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)
-{
-    if (name.isEmpty() || name.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
-        return true;
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        pC->mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
-        return true;
-    }
-
-    return false;
 }
 
 bool TMainConsole::startIncomingText()
