@@ -445,6 +445,18 @@ private slots:
                      qPrintable(qsl("%1 did not mark the selected line for the mini console's lower pane to redraw").arg(restyle)));
             QVERIFY2(console->mUpperPane->mDirtyFirstLine < 0 && console->mLowerPane->mDirtyFirstLine < 0, qPrintable(qsl("%1 redrew the main console, which it did not change").arg(restyle)));
         }
+
+        // The redraw goes to the named console's own view, so it must not hang on the main console having one
+        for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+        const QPointer<TMainConsole> mainView = host->mpConsole;
+        host->mpConsole = nullptr;
+        const bool restyled = host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBold('seamMini', false)"));
+        host->mpConsole = mainView;
+        QVERIFY(restyled);
+        QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyFirstLine == selectedLine, "restyling a mini console redrew it only while the main console had a view");
     }
 
 private:
