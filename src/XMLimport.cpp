@@ -30,7 +30,6 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
@@ -1049,6 +1048,8 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
+    // On unless saved off, so a profile from before the setting existed gets it
+    pHost->setLazyCaptureGlobals(attributes().value(qsl("lazyCaptureGlobals")) != qsl("no"));
 
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
@@ -1244,10 +1245,12 @@ void XMLimport::readHost(Host* pHost)
     pHost->loadPackageInfo();
     // A package import comes through here too, into a profile that does have a
     // console - and that one needs the whole restyle, not just the model:
-    if (pHost->mpConsole) {
-        pHost->mpConsole->changeColors();
-    } else {
-        pHost->refreshMainConsoleColors();
+    pHost->applyMainConsoleColors();
+    if (!pHost->mpConsole) {
+        TConsoleModel& model = pHost->mainConsoleModel();
+        model.setWrapAt(pHost->mWrapAt);
+        model.setIndentCount(pHost->mWrapIndentCount);
+        model.setHangingIndentCount(pHost->mWrapHangingIndentCount);
     }
 }
 
