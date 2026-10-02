@@ -280,7 +280,7 @@ describe("The main console after deleteLine() empties its buffer", function()
   end)
 
   it("survives an echo from inside the trigger that emptied the buffer", function()
-    -- TConsole::echo() takes its own branch while a trigger is running, not
+    -- TConsoleModel::echo() takes its own branch while a trigger is running, not
     -- the one a top-level echo() reaches
     withTrigger("emptyingEcho", function()
       emptyMain()

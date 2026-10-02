@@ -363,7 +363,7 @@ private:
         const TChar& current = pConsole->mFormatCurrent;
         TChar format(current.foreground(), current.background(), current.allDisplayAttributes());
         pConsole->buffer.addLink(false, mLinkText, commands, hints, format);
-        pConsole->echo(qsl("\n"));
+        pConsole->print(qsl("\n"));
         return pConsole->getLinkStore().getCurrentLinkID();
     }
 
@@ -382,7 +382,7 @@ private:
     void fill(TConsole* pConsole, const QString& tag, const int lines) const
     {
         for (int i = 0; i < lines; ++i) {
-            pConsole->echo(qsl("%1 line %2\n").arg(tag).arg(i));
+            pConsole->print(qsl("%1 line %2\n").arg(tag).arg(i));
         }
     }
 

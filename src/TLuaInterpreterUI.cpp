@@ -1034,11 +1034,7 @@ int TLuaInterpreter::echo(lua_State* L)
     const QString displayText{lua_tostring(L, s)};
 
     if (isMain(consoleName)) {
-        if (!host.echoToMainConsole(displayText)) {
-            return warnArgumentValue(L, __func__, no_main_window_value);
-        }
-        // Writing to the main window must always succeed, but for consistent
-        // results, we now return a true for that
+        host.echoMainConsole(displayText);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -2179,10 +2175,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 int TLuaInterpreter::insertHTML(lua_State* L)
 {
     const QString sendText = getVerifiedString(L, __func__, 1, "sendText");
-    Host& host = getHostFromLua(L);
-    if (!host.insertHtmlInMainConsole(sendText)) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
+    getHostFromLua(L).insertWindowText(QString(), sendText);
     return 0;
 }
 
