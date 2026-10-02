@@ -907,9 +907,8 @@ describe("Alias processing", function()
         end)
 
         it("killAlias finds a temporary alias behind a same-named permanent one", function()
-            -- killAlias walks the root node list in creation order, so a permanent
-            -- alias restored from the profile sits in front of this session's
-            -- temporaries: it must be scanned past, not reported as a failure
+            -- a permanent alias can share a temporary's name (its id), and must
+            -- be passed over rather than reported as a failure
             local seed = tempAlias("^spec_kill_order_seed$", [[]])
             killAlias(seed)
             -- permAlias itself takes seed + 1, so the next temporary takes seed + 2
