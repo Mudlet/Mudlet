@@ -246,6 +246,15 @@ describe("Tests functionality of Geyser.Container", function()
         box = track(Geyser.Container:new({name = "gcsAgainBox", x = 100, y = 50, width = 400, height = 200}))
       end)
 
+      it("keeps the getters of a window whose constraints have not changed", function()
+        local label = laidOut({name = "gcsAgainSame", x = "50%", y = 0, width = "50%", height = "20px"})
+        local getters = {label.get_x, label.get_y, label.get_width, label.get_height}
+        label:set_constraints()
+        box:move(110, 60)
+        assert.are.same(getters, {label.get_x, label.get_y, label.get_width, label.get_height})
+        assert.are.same({x = 310, y = 60, width = 200, height = 20}, geometry("gcsAgainSame"))
+      end)
+
       it("re-resolves a constraint assigned to the window directly", function()
         local label = laidOut({name = "gcsAgainField", x = "50%", y = 0, width = "50%", height = 20})
         assert.are.same({x = 300, y = 50, width = 200, height = 20}, geometry("gcsAgainField"))
