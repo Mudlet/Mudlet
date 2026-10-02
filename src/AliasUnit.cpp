@@ -27,7 +27,6 @@
 #include "TAlias.h"
 #include "TLuaInterpreter.h"
 #include "Tree.h"
-#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -112,10 +111,11 @@ void AliasUnit::uninstall(const QString& packageName)
 
 void AliasUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto alias : mAliasRootNodeList) {
-        if (alias->isActive()) {
-            alias->compileAll();
-        }
+        alias->compileAll();
     }
 }
 
@@ -392,9 +392,7 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshAliasIcon(pT->getID());
-        }
+        emit mpHost->signal_aliasToggled(pT->getID());
     }
     return found;
 }
@@ -408,9 +406,7 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshAliasIcon(it.value()->getID());
-        }
+        emit mpHost->signal_aliasToggled(it.value()->getID());
     }
     return found;
 }
@@ -485,7 +481,6 @@ void AliasUnit::doCleanup()
         return;
     }
 
-    // Runs per unit on every line of game text and next to never has work queued.
     if (!hasPendingDeletes()) {
         return;
     }

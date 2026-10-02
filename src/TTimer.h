@@ -54,7 +54,6 @@ public:
     const QString& getName() const { return mName; }
     void setName(const QString& name);
     const QTime& getTime() const { return mTime; }
-    void compile();
     bool checkRestart();
     bool compileScript();
     void execute();
@@ -72,8 +71,6 @@ public:
     void start();
     void enableTimer();
     void disableTimer();
-    void enableTimer(const QString&);
-    void disableTimer(const QString&);
     void enableTimer(int);
     void disableTimer(int);
     void killTimer();
@@ -106,8 +103,6 @@ public:
     // property into the QTimer that mpQTimer points to as well:
     void setID(int) override;
     QString packageName(TTimer* pTimer);
-    QString moduleName(TTimer* pTimer);
-
 
 
     // specifies whenever the payload is Lua code as a string

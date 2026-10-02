@@ -204,6 +204,10 @@ function f(supersecretstringvariablenocollision)
           until name == nil
           stack_level = stack_level + 1
         end
+        -- Mudlet leaves these out of the globals table until they are first read
+        if k == "matches" or k == "multimatches" or k == "line" then
+          return outer_env[k]
+        end
         return rawget(outer_env, k)
       end,
     })
