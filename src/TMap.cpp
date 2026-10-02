@@ -3742,6 +3742,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     // This is it - the point at which the new map gets activated:
     mpRoomDB = std::move(pNewRoomDB);
+    // The routing graph holds pointers to the rooms just destroyed, and the bulk
+    // deletion skipped the per-room cleanup that would otherwise have flagged it:
+    roomidToIndex.clear();
+    edgeHash.clear();
+    locations.clear();
+    mMapGraphNeedsUpdate = true;
     // Need to update the master copy of these details in the Host class:
     mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
     // And redraw the indicator if a 2D map is being shown:
