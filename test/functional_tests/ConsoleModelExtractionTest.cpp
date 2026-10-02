@@ -44,6 +44,7 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "FontManager.h"
 #include "GifTracker.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -1499,6 +1500,7 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!FontManager::availableFonts().isEmpty(), "No font is installed, so setFont() refuses every family before it looks for a console.");
         destroyTheView(host);
 
         runLua(host, qsl(R"LUA(
@@ -1529,6 +1531,9 @@ local function expectNothing(name, ...)
         table.insert(noViewProblems, name .. ' returned ' .. tostring((...)))
     end
 end
+
+-- a family setFont() takes, which it checks for before it looks for a console
+local anyFont = next(getAvailableFonts())
 
 expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
 expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
@@ -1617,6 +1622,11 @@ expectRefusal('getColumnNumber', getColumnNumber('noViewMc'))
 expectRefusal('getColumnCount', getColumnCount())
 expectRefusal('getRowCount', getRowCount())
 expectRefusal('deleteLine', deleteLine('noViewMc'))
+expectRefusal('getFont', getFont())
+expectRefusal('getFont main', getFont('main'))
+expectRefusal('setFont', setFont(anyFont))
+expectRefusal('getFontSize', getFontSize())
+expectRefusal('setFontSize', setFontSize(10))
 
 expectValue('hasFocus', false, hasFocus())
 expectValue('lowerWindow', false, lowerWindow('noViewUw'))
@@ -1634,6 +1644,10 @@ expectValue('setWindowWrap 0', 'wrapAt must be greater than zero, got 0', select
 expectValue('getLastLineNumber', -1, getLastLineNumber('noViewMc'))
 expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine('noViewMc'))
 expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, getCurrentLine('noViewMc')))
+-- whereas the font and the size are checked before any console is looked for
+expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
+expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
+expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
 
 expectNothing('getBgColor', getBgColor())
 expectNothing('getFgColor', getFgColor())

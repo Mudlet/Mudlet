@@ -226,6 +226,17 @@ public:
     // How many characters and lines fit in the named console's upper pane, from its size and font.
     std::optional<int> getWindowColumnCount(const QString& name);
     std::optional<int> getWindowRowCount(const QString& name);
+    // The font operations, found by name in the same way. The main console's
+    // font is the profile's display font, which Host keeps and tells scripts
+    // about when it changes.
+    std::optional<QFont> getWindowFont(const QString& name);
+    std::optional<int> getWindowFontSize(const QString& name);
+    // The console keeps its point size. Answers whether the font was taken
+    // and, when not, why.
+    std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight);
+    bool setWindowFontSize(const QString& name, int size);
+    // Creates the console's own command line the first time it is shown.
+    bool setWindowCommandLineVisible(const QString& name, bool visible);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.

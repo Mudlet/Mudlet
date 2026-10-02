@@ -1864,6 +1864,78 @@ std::optional<int> TMainConsole::getWindowRowCount(const QString& name)
     return {pC->mUpperPane->getRowCount()};
 }
 
+std::optional<QFont> TMainConsole::getWindowFont(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    if (pC == this) {
+        return {mpHost->getDisplayFont()};
+    }
+    return {pC->mUpperPane->font()};
+}
+
+std::optional<int> TMainConsole::getWindowFontSize(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->mUpperPane->font().pointSize()};
+}
+
+std::optional<std::pair<bool, QString>> TMainConsole::setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    if (pC == this) {
+        QFont newFont = mpHost->createFontWithSettings(family, mpHost->getDisplayFont().pointSize());
+        if (weight != QFont::Normal) {
+            newFont.setWeight(weight);
+        }
+        auto result = mpHost->setDisplayFont(newFont, Host::DisplayFontChange::UserChoice);
+        if (result.first) {
+            refreshView();
+        }
+        return {result};
+    }
+
+    QFont newFont = mpHost->createFontWithSettings(family, pC->font().pointSize());
+    if (weight != QFont::Normal) {
+        newFont.setWeight(weight);
+    }
+    pC->setFont(newFont);
+    return {{true, QString()}};
+}
+
+bool TMainConsole::setWindowFontSize(const QString& name, int size)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    if (pC == this) {
+        // the way the profile preferences change it too
+        mpHost->setDisplayFontSize(size);
+    } else {
+        pC->setFontSize(size);
+    }
+    return true;
+}
+
+bool TMainConsole::setWindowCommandLineVisible(const QString& name, bool visible)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setCmdVisible(visible);
+    return true;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
