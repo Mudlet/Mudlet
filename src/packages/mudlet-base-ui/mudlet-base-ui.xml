@@ -1014,8 +1014,9 @@ local function scoreRow(stat, pair)
 end
 -- a vital label sitting right after a table border is a score cell wherever
 -- the row itself starts ("| Race: Undead Atavian | Health: 4252/4252 |")
+local scoreCellLead = [=[(?i)[|│┃║]]=]
 local function scoreCell(stat, pair)
-  return [=[(?i)[|│┃║]\s*]=] .. scoreLabels[stat] .. pairLeadIn .. pair
+  return scoreCellLead .. [=[\s*]=] .. scoreLabels[stat] .. pairLeadIn .. pair
 end
 -- no anchor at all: only trusted inside the short window after a "score"
 -- command actually went to the game (see BaseUI.noteCommandSent) - which is
@@ -1117,36 +1118,36 @@ local vitalsLinePatterns = {
   -- scoreRow decides what counts as a row): "Health: 3600/3600  Mana:
   -- 3400/3400" (IRE), "| Level: 201 ... Hit Points: 500/500 |" (Aardwolf),
   -- "Hp: 143 (167) Gp: 240 (240)" (LPMud/Discworld)
-  { stat = "hp", kind = "curmax", regex = scoreRow("hp", slashPair) },
-  { stat = "mp", kind = "curmax", regex = scoreRow("mp", slashPair) },
-  { stat = "mv", kind = "curmax", regex = scoreRow("mv", slashPair) },
-  { stat = "xp", kind = "curmax", regex = scoreRow("xp", slashPair) },
-  { stat = "hp", kind = "curmax", regex = scoreRow("hp", parenPair) },
-  { stat = "mp", kind = "curmax", regex = scoreRow("mp", parenPair) },
-  { stat = "mv", kind = "curmax", regex = scoreRow("mv", parenPair) },
-  { stat = "hp", kind = "curmax", regex = scoreRow("hp", ofPair) },
-  { stat = "mp", kind = "curmax", regex = scoreRow("mp", ofPair) },
-  { stat = "mv", kind = "curmax", regex = scoreRow("mv", ofPair) },
+  { stat = "hp", kind = "curmax", regex = scoreRow("hp", slashPair), prefix = scoreRowAnchor },
+  { stat = "mp", kind = "curmax", regex = scoreRow("mp", slashPair), prefix = scoreRowAnchor },
+  { stat = "mv", kind = "curmax", regex = scoreRow("mv", slashPair), prefix = scoreRowAnchor },
+  { stat = "xp", kind = "curmax", regex = scoreRow("xp", slashPair), prefix = scoreRowAnchor },
+  { stat = "hp", kind = "curmax", regex = scoreRow("hp", parenPair), prefix = scoreRowAnchor },
+  { stat = "mp", kind = "curmax", regex = scoreRow("mp", parenPair), prefix = scoreRowAnchor },
+  { stat = "mv", kind = "curmax", regex = scoreRow("mv", parenPair), prefix = scoreRowAnchor },
+  { stat = "hp", kind = "curmax", regex = scoreRow("hp", ofPair), prefix = scoreRowAnchor },
+  { stat = "mp", kind = "curmax", regex = scoreRow("mp", ofPair), prefix = scoreRowAnchor },
+  { stat = "mv", kind = "curmax", regex = scoreRow("mv", ofPair), prefix = scoreRowAnchor },
   -- bordered cells (IRE, Aardwolf): the label follows a "|" mid-line
-  { stat = "hp", kind = "curmax", regex = scoreCell("hp", slashPair) },
-  { stat = "mp", kind = "curmax", regex = scoreCell("mp", slashPair) },
-  { stat = "mv", kind = "curmax", regex = scoreCell("mv", slashPair) },
-  { stat = "xp", kind = "curmax", regex = scoreCell("xp", slashPair) },
-  { stat = "hp", kind = "curmax", regex = scoreCell("hp", parenPair) },
-  { stat = "mp", kind = "curmax", regex = scoreCell("mp", parenPair) },
-  { stat = "mv", kind = "curmax", regex = scoreCell("mv", parenPair) },
-  { stat = "hp", kind = "curmax", regex = scoreCell("hp", ofPair) },
-  { stat = "mp", kind = "curmax", regex = scoreCell("mp", ofPair) },
-  { stat = "mv", kind = "curmax", regex = scoreCell("mv", ofPair) },
+  { stat = "hp", kind = "curmax", regex = scoreCell("hp", slashPair), prefix = scoreCellLead },
+  { stat = "mp", kind = "curmax", regex = scoreCell("mp", slashPair), prefix = scoreCellLead },
+  { stat = "mv", kind = "curmax", regex = scoreCell("mv", slashPair), prefix = scoreCellLead },
+  { stat = "xp", kind = "curmax", regex = scoreCell("xp", slashPair), prefix = scoreCellLead },
+  { stat = "hp", kind = "curmax", regex = scoreCell("hp", parenPair), prefix = scoreCellLead },
+  { stat = "mp", kind = "curmax", regex = scoreCell("mp", parenPair), prefix = scoreCellLead },
+  { stat = "mv", kind = "curmax", regex = scoreCell("mv", parenPair), prefix = scoreCellLead },
+  { stat = "hp", kind = "curmax", regex = scoreCell("hp", ofPair), prefix = scoreCellLead },
+  { stat = "mp", kind = "curmax", regex = scoreCell("mp", ofPair), prefix = scoreCellLead },
+  { stat = "mv", kind = "curmax", regex = scoreCell("mv", ofPair), prefix = scoreCellLead },
   -- Diku/Merc/ROM and Circle/tbaMUD score sentences: "You have 100/100
   -- hit, 90/90 mana, and 100/100 movement points." (Diku and Circle write
   -- "100(100)" instead of "100/100")
-  { stat = "hp", kind = "curmax", regex = scoreSentence("hp", slashPair) },
-  { stat = "mp", kind = "curmax", regex = scoreSentence("mp", slashPair) },
-  { stat = "mv", kind = "curmax", regex = scoreSentence("mv", slashPair) },
-  { stat = "hp", kind = "curmax", regex = scoreSentence("hp", parenPair) },
-  { stat = "mp", kind = "curmax", regex = scoreSentence("mp", parenPair) },
-  { stat = "mv", kind = "curmax", regex = scoreSentence("mv", parenPair) },
+  { stat = "hp", kind = "curmax", regex = scoreSentence("hp", slashPair), prefix = youHave },
+  { stat = "mp", kind = "curmax", regex = scoreSentence("mp", slashPair), prefix = youHave },
+  { stat = "mv", kind = "curmax", regex = scoreSentence("mv", slashPair), prefix = youHave },
+  { stat = "hp", kind = "curmax", regex = scoreSentence("hp", parenPair), prefix = youHave },
+  { stat = "mp", kind = "curmax", regex = scoreSentence("mp", parenPair), prefix = youHave },
+  { stat = "mv", kind = "curmax", regex = scoreSentence("mv", parenPair), prefix = youHave },
   { stat = "hp", kind = "curmax",
     regex = [=[(?i)]=] .. slashPair .. [=[\s*hit points\b]=] },
   -- LPMud 2.4.5 writes current, label, then the max: "50 hit points(50)."
@@ -1183,6 +1184,11 @@ local vitalsLinePatterns = {
 local compiledPattern = setmetatable({}, {
   __index = function(cache, regex)
     local ok, compiled = pcall(rex.new, regex)
+    -- matched against most lines, so JIT-compiled where the rex_pcre2 in use
+    -- can; the matches are the same either way, only found faster
+    if ok then
+      pcall(function() compiled:jit_compile() end)
+    end
     if not ok then
       -- keep the string so rex.match still raises on it rather than the shape
       -- vanishing; the error is only precise here, not once per line
@@ -1200,6 +1206,17 @@ function BaseUI.vitalsShapeCount()
   return #vitalsLinePatterns
 end
 
+-- for the test suite: parseVitalsLine skips a shape whose prefix misses, which
+-- is only sound while the prefix is where the shape's own regex starts
+function BaseUI.prefixesLeadTheirShapes()
+  for _, pattern in ipairs(vitalsLinePatterns) do
+    if pattern.prefix and pattern.regex:sub(1, #pattern.prefix) ~= pattern.prefix then
+      return false
+    end
+  end
+  return true
+end
+
 -- for the test suite: the shapes chatLikeLine() walks, so a corpus can be held
 -- to cover them all
 function BaseUI.chatShapeRegexes()
@@ -1215,7 +1232,8 @@ end
 function BaseUI.shapesArePrecompiled()
   for _, list in ipairs({ chatPatterns, vitalsLinePatterns }) do
     for _, pattern in ipairs(list) do
-      if type(compiledPattern[pattern.regex]) ~= "userdata" then
+      if type(compiledPattern[pattern.regex]) ~= "userdata"
+         or (pattern.prefix and type(compiledPattern[pattern.prefix]) ~= "userdata") then
         return false
       end
     end
@@ -1262,14 +1280,26 @@ local maxOverhealFactor = 10
 -- windowed rows the post-"score" window). Chat-shaped lines yield nothing.
 -- Nonsense readings - a max of zero, a wildly overhealed current, absurd
 -- magnitudes - are dropped here so a score-screen misread can never paint a
--- broken gauge.
-function BaseUI.parseVitalsLine(text)
+-- broken gauge. skipWindowed leaves out the windowed rows, for a caller that
+-- would only throw them away.
+function BaseUI.parseVitalsLine(text, skipWindowed)
   local readings = {}
   if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
     return readings
   end
+  -- a shape's prefix is the start of its own regex, so a line the prefix
+  -- misses cannot match the shape, and one match answers for every shape
+  -- sharing it
+  local prefixMatched = {}
   for index, pattern in ipairs(vitalsLinePatterns) do
-    local first, second = rex.match(text, compiledPattern[pattern.regex])
+    local prefix = pattern.prefix
+    if prefix and prefixMatched[prefix] == nil then
+      prefixMatched[prefix] = rex.match(text, compiledPattern[prefix]) ~= nil
+    end
+    local first, second
+    if (not prefix or prefixMatched[prefix]) and not (skipWindowed and pattern.windowed) then
+      first, second = rex.match(text, compiledPattern[pattern.regex])
+    end
     local reading
     if pattern.kind == "curmax" and first then
       local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
@@ -1313,7 +1343,7 @@ function BaseUI.onVitalsLine()
   BaseUI.lastVitalsLine = lineNumber
   local updates = {}
   local windowOpen = BaseUI.scoreWindowOpen()
-  for _, reading in ipairs(BaseUI.parseVitalsLine(line)) do
+  for _, reading in ipairs(BaseUI.parseVitalsLine(line, not windowOpen)) do
     local live = true
     if reading.windowed then
       live = windowOpen
