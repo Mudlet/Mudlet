@@ -78,4 +78,4 @@ In short: 1.5-25x faster on the median and 1.1-9x on p95 for every map over 5k r
 
 Side note: TorilMUD's public map (46k rooms) has every room but one locked, so pathfinding skips it entirely - left it out.
 
-The prototype and the benchmark harness are on the `BRANCH-LINK` branch.
+The prototype and the benchmark harness are on the [`experiment-pathfinding-3334`](https://github.com/Mudlet/Mudlet/tree/experiment-pathfinding-3334) branch, with the raw results and scripts under `experiment-3334/`.
