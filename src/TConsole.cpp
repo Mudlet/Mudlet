@@ -1470,65 +1470,6 @@ void TConsole::selectCurrentLine()
     mpModel->selectCurrentLine();
 }
 
-std::list<int> TConsole::getFgColor()
-{
-    std::list<int> result;
-    const int x = P_begin.x();
-    const int y = P_begin.y();
-    if (y < 0) {
-        return result;
-    }
-    if (x < 0) {
-        return result;
-    }
-    if (y >= static_cast<int>(buffer.buffer.size())) {
-        return result;
-    }
-
-    auto line = buffer.buffer.at(y);
-    const int len = static_cast<int>(line.size());
-    if (len - 1 >= x) {
-        const QColor color(line.at(x).foreground());
-        result.push_back(color.red());
-        result.push_back(color.green());
-        result.push_back(color.blue());
-    }
-
-    return result;
-}
-
-std::list<int> TConsole::getBgColor()
-{
-    std::list<int> result;
-    const int x = P_begin.x();
-    const int y = P_begin.y();
-    if (y < 0) {
-        return result;
-    }
-    if (x < 0) {
-        return result;
-    }
-    if (y >= static_cast<int>(buffer.buffer.size())) {
-        return result;
-    }
-
-    auto line = buffer.buffer.at(y);
-    const int len = static_cast<int>(line.size());
-    if (len - 1 >= x) {
-        const QColor color(line.at(x).background());
-        result.push_back(color.red());
-        result.push_back(color.green());
-        result.push_back(color.blue());
-    }
-
-    return result;
-}
-
-QPair<quint8, TChar> TConsole::getTextAttributes() const
-{
-    return mpModel->textAttributes();
-}
-
 void TConsole::luaWrapLine(int line)
 {
     if (!mpHost) {

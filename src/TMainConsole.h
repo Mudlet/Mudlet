@@ -75,16 +75,12 @@ public:
     bool clear(const QString& name);
     void setProfileName(const QString&) override;
     void selectCurrentLine(std::string&);
-    std::list<int> getFgColor(QString& buf);
-    std::list<int> getBgColor(QString& buf);
-    QPair<quint8, TChar> getTextAttributes(const QString&) const;
     void luaWrapLine(QString& buf, int line);
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
     std::pair<bool, QString> getUserWindowTitle(const QString& name) const;
-    bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
     bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);

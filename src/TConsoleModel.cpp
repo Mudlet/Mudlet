@@ -226,6 +226,21 @@ QPair<quint8, TChar> TConsoleModel::textAttributes() const
     return qMakePair(0, line.at(x));
 }
 
+const TChar* TConsoleModel::selectionStartChar() const
+{
+    const int x = P_begin.x();
+    const int y = P_begin.y();
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
+        return nullptr;
+    }
+
+    const auto& line = buffer.buffer.at(y);
+    if (x >= static_cast<int>(line.size())) {
+        return nullptr;
+    }
+    return &line.at(x);
+}
+
 void TConsoleModel::resetFormat()
 {
     deselect();
