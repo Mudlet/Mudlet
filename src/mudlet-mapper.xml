@@ -366,9 +366,15 @@ disableTrigger"Mudlet Mapper prompt trigger"</script>
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>No wormhole</name>
 				<script>if mmp.speedWalkDir and mmp.speedWalkDir[mmp.speedWalkCounter] and mmp.speedWalkDir[mmp.speedWalkCounter]=="worm warp" then
-  mmp.echo("Missing wormhole detected, locking wormhole and trying new path...")
+  mmp.echo("Missing wormhole detected, removing wormhole and trying new path...")
 
-  lockSpecialExit(mmp.currentroom, mmp.speedWalkPath[mmp.speedWalkCounter], "worm warp", true)
+  local wormholeDestination = mmp.speedWalkPath[mmp.speedWalkCounter]
+  removeSpecialExit(mmp.currentroom, "worm warp")
+  local reverseExits = getSpecialExits(wormholeDestination) or {}
+  local reverseExit = reverseExits[mmp.currentroom]
+  if reverseExit == "worm warp" or (type(reverseExit) == "table" and reverseExit["worm warp"]) then
+    removeSpecialExit(wormholeDestination, "worm warp")
+  end
 
   local destination = mmp.speedWalkPath[#mmp.speedWalkPath]
 
@@ -5640,76 +5646,39 @@ tempTimer(10, [[disableTrigger'Parse wholist']])</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Add Room Mark</name>
-				<script>local tmp = getRoomUserData(1, "gotoMapping")
-local maptable = {}
-
-if tmp ~= "" then
-  maptable = yajl.to_value(tmp)
-end
-
+				<script>local visibility, first, second = matches[2], matches[3], matches[4]
+visibility = visibility ~= "" and visibility or "private"
+second = second ~= "" and second or nil
 local location, markname
-if not matches[3] then
-  markname = matches[2]
-  location = mmp.currentroom
-elseif tonumber(matches[2]) then
-  location = matches[2]; markname = matches[3]
+if not second then
+  markname, location = first, mmp.currentroom
+elseif tonumber(first) then
+  location, markname = first, second
 else
-  location = matches[3]; markname = matches[2]
+  location, markname = second, first
 end
-
--- can't allow mark name to ne a number - yajl then generates a giant table of null's
-if tonumber(markname) then
-  mmp.echo("The mark name can't be a number.") return
-end
-
-maptable[markname] = location
-local tmp2 = yajl.to_string(maptable)
-
-if not mmp.roomexists(1) then
-  addRoom(1)
-end
-
-setRoomUserData(1, "gotoMapping", tmp2)
-mmp.echo(string.format("Room mark for '%s' set to room %s.", markname, location))</script>
+mmp.setRoomMark(markname, location, visibility)</script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^room mark (\w+)(?: (\w+))?$</regex>
+				<regex>^room mark (?:(private|public) )?(\w+)(?: (\w+))?$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Remove Room Mark</name>
-				<script>local tmp= getRoomUserData(1, "gotoMapping")
-if tmp~="" then
-  local maptable=yajl.to_value(tmp)
-  if not maptable[matches[2]] then mmp.echo("Don't have such a mark in the db.") return end
-
-  maptable[matches[2]]=nil
-  local tmp2=yajl.to_string(maptable)
-  setRoomUserData(1, "gotoMapping", tmp2)
-  mmp.echo("Removed the "..matches[2].." mark.")
-else
-  mmp.echo("We don't have any marks stored anyway.")
-end</script>
+				<script>mmp.removeRoomMark(matches[3], matches[2] ~= "" and matches[2] or "private")</script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^room unmark (\w+)$</regex>
+				<regex>^room unmark (?:(private|public) )?(\w+)$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Display Room Marks</name>
-				<script>local tmp= getRoomUserData(1, "gotoMapping")
-if tmp~="" then
-	local maptable = yajl.to_value(tmp) or {}
-    local sortedkeys = {}
-    for k in pairs(maptable) do sortedkeys[#sortedkeys+1] = k end
-    table.sort(sortedkeys)
-
-    mmp.echo("Known marks in this map:")
-    if next(maptable) then
-      for i = 1, #sortedkeys do echo(string.format("  %-21s  %s\n", tostring(sortedkeys[i]), tostring(maptable[sortedkeys[i]]))) end
-    else
-      echo("  (none)\n")
-    end
+				<script>local marks = mmp.getAllRoomMarks()
+mmp.echo("Known marks in this map:")
+if #marks == 0 then
+  echo("  (none)\n")
 else
-	mmp.echo("No marks are recorded in this map.")
+  for _, mark in ipairs(marks) do
+    echo(string.format("  %-21s  %s (%s)\n", tostring(mark.name), tostring(mark.location), mark.visibility))
+  end
 end</script>
 				<command></command>
 				<packageName></packageName>
@@ -5857,17 +5826,19 @@ end
 if not gmcp.Room.Info.area:find("(manse)") then
 	mmp.echo("You are not in a manse")
 else
-	if	searchRoom(gmcp.Room.Info.num):sub(0,11)=="searchRoom:" then
-		addRoom(gmcp.Room.Info.num)
-	end
-	if getRoomArea(gmcp.Room.Info.num)==-1 then
-		setRoomArea(gmcp.Room.Info.num,addAreaName(manse:title().." Manse"))
-	end
-	setRoomChar(gmcp.Room.Info.num,"A")
-	addSpecialExit(portalRooms[city],gmcp.Room.Info.num,"Portal enter "..manse)
-	addSpecialExit(portalRooms["aetherplex"],gmcp.Room.Info.num,"Portal enter "..manse)
-	addSpecialExit(gmcp.Room.Info.num,portalRooms["aetherplex"],"portal exit aetherplex")
-	addSpecialExit(gmcp.Room.Info.num,portalRooms[city],"portal exit "..city)
+	mmp.localMapChanges(function()
+		if searchRoom(gmcp.Room.Info.num):sub(0,11)=="searchRoom:" then
+			addRoom(gmcp.Room.Info.num)
+		end
+		if getRoomArea(gmcp.Room.Info.num)==-1 then
+			setRoomArea(gmcp.Room.Info.num,addAreaName(manse:title().." Manse"))
+		end
+		setRoomChar(gmcp.Room.Info.num,"A")
+		addSpecialExit(portalRooms[city],gmcp.Room.Info.num,"Portal enter "..manse)
+		addSpecialExit(portalRooms["aetherplex"],gmcp.Room.Info.num,"Portal enter "..manse)
+		addSpecialExit(gmcp.Room.Info.num,portalRooms["aetherplex"],"portal exit aetherplex")
+		addSpecialExit(gmcp.Room.Info.num,portalRooms[city],"portal exit "..city)
+	end)
 	mmp.echo(city:title().." has been linked to the Aetherplex through "..manse:title())
 end</script>
 						<command></command>
@@ -5910,6 +5881,17 @@ mmp =
     ferry_rooms = {},
   }
 mmp.speedWalkWatch = createStopWatch()
+
+function mmp.roomDetails()
+  local info = gmcp and gmcp.Room and gmcp.Room.Info
+  return info and type(info.details) == "table" and info.details or nil
+end
+
+function mmp.hasRoomDetail(detail)
+  local details = mmp.roomDetails()
+  return details and table.contains(details, detail) or false
+end
+
 -- speedWalkPath and speedWalkDir populated by Mudlet from getPath() and gotoRoom()
 speedWalkPath = speedWalkPath or {}
 speedWalkDir = speedWalkDir or {}
@@ -5927,7 +5909,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "25.5.4"
+local newversion = "26.9.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -5938,15 +5920,24 @@ end
 mmp.version = newversion
 
 function mmp.startup()
-  if not mmp.firstRun then
-    return
-  end
+  local firstRun = mmp.firstRun
+  local previousSettings = mmp.settings
+  local previousValues = previousSettings and previousSettings.getAllOptions and previousSettings:getAllOptions() or nil
+  local customOptions = previousSettings and rawget(previousSettings, "_customOptions") or nil
   local private_settings = {}
+  local crowdmapGames = {achaea = true, starmourn = true, lusternia = true, stickmud = true, ashyria = true, asteria = true, imperian = true, aetolia = true}
 
   --General settings
 
   private_settings["echocolour"] = mmp.createOption("cyan", mmp.changeEchoColour, {"string"}, "Set the color for room number echos?", function(newSetting) return color_table[newSetting] ~= nil end)
-  private_settings["crowdmap"] = mmp.createOption(false, mmp.changeMapSource, {"boolean"}, "Use a crowd-sourced map instead of games default?", nil, {achaea = true, starmourn = true, lusternia = true, stickmud = true, ashyria = true, asteria = true, imperian = true, aetolia = true})
+  private_settings["mapsource"] = mmp.createOption("game", mmp.changeMapSource, {"string"}, "Map source: game, published, or service.", function(value) return value == "game" or value == "published" or value == "service" end, crowdmapGames)
+  private_settings["crowdmapservicesend"] = mmp.createOption(false, function(name, option)
+    mmp.changeBoolFunc(name, option)
+    if option and mmp.crowdmapService then mmp.crowdmapService.sendNext() end
+  end, {"boolean"}, "Send local map changes to the service?", nil, crowdmapGames, function() return mmp.settings.mapsource == "service" end)
+  private_settings["gmcpmapupdates"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Apply safe GMCP room information to existing map rooms, even when mapping mode is off?")
+  private_settings["crowdmapserviceurl"] = mmp.createOption("https://&lt;game&gt;.mudmaps.community", mmp.changeCrowdmapServiceMapOption, {"string"}, "Crowdmap service endpoint URL. Use &lt;game&gt; to derive the subdomain from the connected game.", function(value) return value:match("^https?://") ~= nil end, crowdmapGames, function() return mmp.settings.mapsource == "service" end)
+  private_settings["crowdmapservicereports"] = mmp.createOption(2, mmp.changeCrowdmapServiceMapOption, {"number"}, "Required independent reports for changes sourced from the service.", function(value) return value >= 0 and value == math.floor(value) end, crowdmapGames, function() return mmp.settings.mapsource == "service" end)
   private_settings["showcmds"] = mmp.createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
   private_settings["laglevel"] = mmp.createOption(1, mmp.changeLaglevel, {"number"}, "How laggy is your connection, (fast 1&lt;-&gt;5 slow)?", mmp.verifyLaglevel)
   private_settings["slowwalk"] = mmp.createOption(false, mmp.setSlowWalk, {"boolean"}, "Walk slowly instead of as quick as possible?")
@@ -5974,9 +5965,13 @@ function mmp.startup()
   private_settings["removewings"] = mmp.createOption(true, mmp.setWingsRemoval, {"boolean"}, "Remove Wings after using them?", nil, {achaea = true, imperian = true})
   private_settings["harness"] = mmp.createOption(false, mmp.setHarness, {"boolean"}, "Use Stratospheric Harness?", nil, {achaea = true})
   private_settings["duantahar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Chenubian Wings?", nil, {achaea = true})
+  private_settings["duantaharid"] = mmp.createOption("", nil, {"string", "number"}, "Item ID of your Chenubian Wings, if you own more than one pair of wings?", nil, {achaea = true})
   private_settings["duanatharan"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Atavian Wings?", nil, {achaea = true, aetolia = true})
+  private_settings["duanatharanid"] = mmp.createOption("", nil, {"string", "number"}, "Item ID of your Atavian Wings, if you own more than one pair of wings?", nil, {achaea = true, aetolia = true})
   private_settings["duanathar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Eagle Wings?", nil, {achaea = true, aetolia = true})
+  private_settings["duanatharid"] = mmp.createOption("", nil, {"string", "number"}, "Item ID of your Eagle Wings, if you own more than one pair of wings?", nil, {achaea = true, aetolia = true})
   private_settings["duanatharic"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Island Wings?", nil, {achaea = true})
+  private_settings["duanatharicid"] = mmp.createOption("", nil, {"string", "number"}, "Item ID of your Island Wings, if you own more than one pair of wings?", nil, {achaea = true})
   private_settings["soar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Aero Soar?", nil, {achaea = true})
   private_settings["shackle"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Take off shackle?", nil, {achaea = true})
   private_settings["universe"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Universe Tarot?", nil, {achaea = true})
@@ -6064,9 +6059,15 @@ function mmp.startup()
 
 
 
+  if previousValues and mmp.migrateOptions then mmp.migrateOptions(previousValues) end
   mmp.settings = mmp.createOptionsTable(private_settings)
+  for name, value in pairs(previousValues or {}) do
+    if private_settings[name] then mmp.settings:setOption(name, value, true) end
+  end
+  for name, option in pairs(customOptions or {}) do
+    if not private_settings[name] then mmp.settings[name] = option end
+  end
   mmp.settings.disp = mmp.echo
-  mmp.game = false
   mmp.settings.dispOption =
     function(opt, val)
       cecho(
@@ -6084,6 +6085,8 @@ function mmp.startup()
     function()
       mmp.echo("Please use the mconfig alias to set options!")
     end
+  if not firstRun then return end
+  mmp.game = false
   raiseEvent("mmp areas changed")
   mmp.firstRun = false
   mmp.echon("Mudlet Mapper script for IREs (" .. tostring(mmp.version) .. ") loaded! (")
@@ -6095,6 +6098,667 @@ function mmp.startup()
   echo(")\n")
   raiseEvent("mapperScriptLoaded", "ire-mapping-script")
 end</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>Crowdmap service</name>
+				<packageName></packageName>
+				<script>mmp.crowdmapService = mmp.crowdmapService or {}
+local service = mmp.crowdmapService
+service.pendingChanges = service.pendingChanges or {}
+service.maxAttempts = 6
+service.maxPersistSeconds = 24 * 60 * 60
+service.unsentChanges = service.unsentChanges or 0
+service.retryPending = false
+
+local function endpoint(path)
+  local url = mmp.settings.crowdmapserviceurl
+  if url:find("&lt;game&gt;", 1, true) then
+    if type(mmp.game) ~= "string" then error("Cannot derive the crowdmap service URL before the game is known.") end
+    url = url:gsub("&lt;game&gt;", mmp.game)
+  end
+  return url:gsub("/+$", "") .. path
+end
+
+function service.baseUrl()
+  local ok, url = pcall(endpoint, "")
+  return ok and url or nil
+end
+
+function service.reporter()
+  if gmcp and gmcp.Char and gmcp.Char.Status and gmcp.Char.Status.name and gmcp.Char.Status.name ~= "" then
+    return gmcp.Char.Status.name
+  end
+end
+
+local function queryValue(value)
+  return tostring(value):gsub("([^%w%-_%.~])", function(character)
+    return string.format("%%%02X", string.byte(character))
+  end)
+end
+
+function service.sendNext()
+  if service.inFlight or service.retryPending or #service.pendingChanges == 0 then return end
+  -- Retain queued reports while sending is disabled or another map source is
+  -- selected; a later submission or enabling service sending retries them.
+  if service.suspended or not mmp.settings or mmp.settings.mapsource ~= "service" or not mmp.settings.crowdmapservicesend then return end
+  local reporterName = service.reporter()
+  if not reporterName then return end
+  local entry = service.pendingChanges[1]
+  -- Normalize entries that were queued by an earlier script load.
+  if not entry.change then
+    entry = { change = entry, attempts = 0 }
+    service.pendingChanges[1] = entry
+  end
+  entry.attempts = (entry.attempts or 0) + 1
+  local change = entry.change
+  change.reporter = reporterName
+  service.requestId = (service.requestId or 0) + 1
+  local requestId = service.requestId
+  local ok, url = pcall(endpoint, "/change?request=" .. requestId)
+  if not ok then
+    table.remove(service.pendingChanges, 1)
+    service.handleFailure(entry, "Could not send map change to crowdmap service: " .. url)
+    return
+  end
+  local posted, requestUrl = postHTTP(yajl.to_string(change), url, { ["Content-Type"] = "application/json" })
+  if not posted then
+    table.remove(service.pendingChanges, 1)
+    service.handleFailure(entry, "Could not send map change to crowdmap service.")
+    return
+  end
+  table.remove(service.pendingChanges, 1)
+  service.inFlight, service.requestUrl = true, requestUrl or url
+  service.inFlightEntry = entry
+  tempTimer(30, function()
+    if service.inFlight and service.requestId == requestId then
+      local timedOutEntry = service.inFlightEntry
+      service.inFlight, service.requestUrl, service.inFlightEntry = false, nil, nil
+      service.handleFailure(timedOutEntry, "Timed out sending map change to crowdmap service.")
+    end
+  end)
+end
+
+function service.submit(change)
+  if mmp.settings.mapsource ~= "service" or not mmp.settings.crowdmapservicesend or service.suspended then return end
+  table.insert(service.pendingChanges, { change = change, attempts = 0, expiresAt = os.time() + service.maxPersistSeconds })
+  service.sendNext()
+end
+
+function service.pendingForSave()
+  local result = {}
+  local function append(entry)
+    if type(entry) ~= "table" or type(entry.change) ~= "table" then return end
+    entry.expiresAt = tonumber(entry.expiresAt) or (os.time() + service.maxPersistSeconds)
+    table.insert(result, {
+      change = entry.change,
+      attempts = tonumber(entry.attempts) or 0,
+      expiresAt = entry.expiresAt
+    })
+  end
+  append(service.inFlightEntry)
+  for _, entry in ipairs(service.pendingChanges) do append(entry) end
+  return result
+end
+
+function service.restorePendingChanges(entries)
+  if type(entries) ~= "table" or service.inFlightEntry or #service.pendingChanges &gt; 0 then return end
+  local now = os.time()
+  for _, entry in ipairs(entries) do
+    local attempts = type(entry) == "table" and tonumber(entry.attempts) or nil
+    local expiresAt = type(entry) == "table" and tonumber(entry.expiresAt) or nil
+    if type(entry) == "table" and type(entry.change) == "table" and attempts and attempts &gt;= 0
+        and attempts &lt; service.maxAttempts and expiresAt and expiresAt &gt; now then
+      table.insert(service.pendingChanges, { change = entry.change, attempts = attempts, expiresAt = expiresAt })
+    elseif type(entry) == "table" and type(entry.change) == "table" then
+      service.unsentChanges = service.unsentChanges + 1
+    end
+  end
+end
+
+function service.promoteHashOnlyRoom(roomNumber)
+  service.submit({ type = "create-room", roomNumber = tonumber(roomNumber) })
+  local hash = getRoomHashByID(roomNumber)
+  if hash and hash ~= "" then
+    service.submit({ type = "set-room-hash", roomNumber = tonumber(roomNumber), hash = hash })
+  end
+end
+
+function service.localOnly(callback)
+  local wasSuspended = service.suspended
+  service.suspended = true
+  local result = {pcall(callback)}
+  service.suspended = wasSuspended
+  if not result[1] then error(result[2]) end
+  return unpack(result, 2)
+end
+
+mmp.localMapChanges = service.localOnly
+
+service.temporarySpecialExits = service.temporarySpecialExits or {}
+
+local function specialExitKey(destination, command)
+  return tostring(destination) .. "\0" .. tostring(command)
+end
+
+function service.trackTemporarySpecialExit(roomNumber, destination, command)
+  local roomKey = tostring(roomNumber)
+  service.temporarySpecialExits[roomKey] = service.temporarySpecialExits[roomKey] or {}
+  service.temporarySpecialExits[roomKey][specialExitKey(destination, command)] = true
+end
+
+function service.isTemporarySpecialExit(roomNumber, destination, command)
+  local roomExits = service.temporarySpecialExits[tostring(roomNumber)]
+  return roomExits and roomExits[specialExitKey(destination, command)] or false
+end
+
+function service.untrackTemporarySpecialExit(roomNumber, destination, command)
+  local roomKey = tostring(roomNumber)
+  local roomExits = service.temporarySpecialExits[roomKey]
+  if not roomExits then return end
+  roomExits[specialExitKey(destination, command)] = nil
+  if not next(roomExits) then service.temporarySpecialExits[roomKey] = nil end
+end
+
+function service.untrackTemporarySpecialExitCommand(roomNumber, command)
+  local roomKey = tostring(roomNumber)
+  local roomExits = service.temporarySpecialExits[roomKey]
+  if not roomExits then return false end
+  local suffix = "\0" .. tostring(command)
+  local found = false
+  for key in pairs(roomExits) do
+    if key:sub(-#suffix) == suffix then
+      roomExits[key] = nil
+      found = true
+    end
+  end
+  if not next(roomExits) then service.temporarySpecialExits[roomKey] = nil end
+  return found
+end
+
+function service.versionUrl()
+  local reporterName = service.reporter()
+  if not reporterName then return end
+  return endpoint("/map/version?timesSeen=" .. mmp.settings.crowdmapservicereports .. "&amp;reporter=" .. queryValue(reporterName))
+end
+
+function service.mapUrl()
+  local reporterName = service.reporter()
+  if not reporterName then return end
+  return endpoint("/map?format=binary&amp;timesSeen=" .. mmp.settings.crowdmapservicereports .. "&amp;reporter=" .. queryValue(reporterName))
+end
+
+registerNamedEventHandler("mapper", "crowdmapServiceReporterReady", "gmcp.Char.Status", function()
+  local reporterName = service.reporter()
+  if reporterName and reporterName ~= service.lastReporter then
+    service.lastReporter = reporterName
+    service.sendNext()
+    if service.waitingForReporter and mmp.checkforupdate then
+      service.waitingForReporter = nil
+      mmp.checkforupdate()
+    end
+  end
+end)
+registerNamedEventHandler("mapper", "crowdmapServiceReporterReset", "sysConnectionEvent", function()
+  service.lastReporter = nil
+end)
+
+local directions = {
+  [1] = "north", [2] = "northeast", [3] = "northwest", [4] = "east",
+  [5] = "west", [6] = "south", [7] = "southeast", [8] = "southwest",
+  [9] = "up", [10] = "down", [11] = "in", [12] = "out",
+  n = "north", ne = "northeast", nw = "northwest", e = "east",
+  w = "west", s = "south", se = "southeast", sw = "southwest",
+  u = "up", d = "down", north = "north", northeast = "northeast",
+  northwest = "northwest", east = "east", west = "west", south = "south",
+  southeast = "southeast", southwest = "southwest", up = "up", down = "down",
+  ["in"] = "in", out = "out"
+}
+
+local function pack(...)
+  return { n = select("#", ...), ... }
+end
+
+local function unpackResults(results)
+  return unpack(results, 1, results.n)
+end
+
+do
+  -- Keep the native functions across module reloads and always rebuild wrappers
+  -- against them, never against wrappers installed by a previous load.
+  if not service.original then
+    service.original = {
+      addAreaName = addAreaName, setAreaName = setAreaName, deleteArea = deleteArea,
+      addRoom = addRoom, deleteRoom = deleteRoom, setRoomName = setRoomName,
+      setRoomCoordinates = setRoomCoordinates, setRoomArea = setRoomArea,
+      setRoomWeight = setRoomWeight, setRoomChar = setRoomChar, setRoomEnv = setRoomEnv,
+      setRoomIDbyHash = setRoomIDbyHash,
+      setRoomUserData = setRoomUserData, clearRoomUserDataItem = clearRoomUserDataItem,
+      addSpecialExit = addSpecialExit, removeSpecialExit = removeSpecialExit,
+      clearSpecialExits = clearSpecialExits, lockSpecialExit = lockSpecialExit,
+      setExitWeight = setExitWeight, setDoor = setDoor,
+      setMapUserData = setMapUserData, clearMapUserDataItem = clearMapUserDataItem,
+      createMapLabel = createMapLabel, deleteMapLabel = deleteMapLabel
+    }
+  end
+  service.wrappersInstalled = true
+  local original = service.original
+
+  function addAreaName(name, ...)
+    local results = pack(original.addAreaName(name, ...))
+    local areaId = results[1]
+    if areaId then service.submit({ type = "create-area", areaId = areaId, name = name }) end
+    return unpackResults(results)
+  end
+
+  function setAreaName(areaId, name, ...)
+    local results = pack(original.setAreaName(areaId, name, ...))
+    if results[1] then service.submit({ type = "rename-area", areaId = areaId, name = name }) end
+    return unpackResults(results)
+  end
+
+  function deleteArea(areaId, ...)
+    local results = pack(original.deleteArea(areaId, ...))
+    if results[1] then service.submit({ type = "delete-area", areaId = tonumber(areaId) }) end
+    return unpackResults(results)
+  end
+
+  function addRoom(roomNumber, ...)
+    local results = pack(original.addRoom(roomNumber, ...))
+    if results[1] then
+      service.submit({ type = "create-room", roomNumber = tonumber(roomNumber) })
+      local areaId = select(1, ...)
+      if areaId ~= nil then
+        service.submit({ type = "set-room-area", roomNumber = tonumber(roomNumber), areaId = tonumber(areaId) })
+      end
+    end
+    return unpackResults(results)
+  end
+
+  function deleteRoom(roomNumber, ...)
+    local results = pack(original.deleteRoom(roomNumber, ...))
+    if results[1] then service.submit({ type = "delete-room", roomNumber = tonumber(roomNumber) }) end
+    return unpackResults(results)
+  end
+
+  function setRoomName(roomNumber, name, ...)
+    local results = pack(original.setRoomName(roomNumber, name, ...))
+    if results[1] then service.submit({ type = "room-name", roomNumber = tonumber(roomNumber), name = name }) end
+    return unpackResults(results)
+  end
+
+  function setRoomCoordinates(roomNumber, x, y, z, ...)
+    local results = pack(original.setRoomCoordinates(roomNumber, x, y, z, ...))
+    if results[1] then service.submit({ type = "set-room-coordinates", roomNumber = tonumber(roomNumber), x = x, y = y, z = z }) end
+    return unpackResults(results)
+  end
+
+  function setRoomArea(roomNumber, areaId, ...)
+    local results = pack(original.setRoomArea(roomNumber, areaId, ...))
+    if results[1] then service.submit({ type = "set-room-area", roomNumber = tonumber(roomNumber), areaId = tonumber(areaId) }) end
+    return unpackResults(results)
+  end
+
+  function setRoomWeight(roomNumber, weight, ...)
+    local results = pack(original.setRoomWeight(roomNumber, weight, ...))
+    if results[1] then service.submit({ type = "set-room-weight", roomNumber = tonumber(roomNumber), weight = weight }) end
+    return unpackResults(results)
+  end
+
+  function setRoomChar(roomNumber, symbol, ...)
+    local results = pack(original.setRoomChar(roomNumber, symbol, ...))
+    if results[1] then service.submit({ type = "set-room-symbol", roomNumber = tonumber(roomNumber), symbol = symbol }) end
+    return unpackResults(results)
+  end
+
+  function setRoomEnv(roomNumber, environmentId, ...)
+    local results = pack(original.setRoomEnv(roomNumber, environmentId, ...))
+    if results[1] then service.submit({ type = "set-room-environment", roomNumber = tonumber(roomNumber), environmentId = environmentId }) end
+    return unpackResults(results)
+  end
+
+  function setRoomIDbyHash(roomNumber, hash, ...)
+    local results = pack(original.setRoomIDbyHash(roomNumber, hash, ...))
+    if getRoomIDbyHash(hash) == tonumber(roomNumber) then
+      service.submit({ type = "set-room-hash", roomNumber = tonumber(roomNumber), hash = hash })
+    end
+    return unpackResults(results)
+  end
+
+  function setRoomUserData(roomNumber, key, value, ...)
+    local results = pack(original.setRoomUserData(roomNumber, key, value, ...))
+    -- hashonly is local bookkeeping for a placeholder room created to bind a
+    -- hash before the room itself is known; it is not map data.
+    if results[1] and key ~= "hashonly" then service.submit({ type = "modify-room-user-data", roomNumber = tonumber(roomNumber), key = key, value = value }) end
+    return unpackResults(results)
+  end
+
+  function clearRoomUserDataItem(roomNumber, key, ...)
+    local results = pack(original.clearRoomUserDataItem(roomNumber, key, ...))
+    if results[1] and key ~= "hashonly" then service.submit({ type = "delete-room-user-data", roomNumber = tonumber(roomNumber), key = key }) end
+    return unpackResults(results)
+  end
+
+  function addSpecialExit(roomNumber, destination, command, ...)
+    local results = pack(original.addSpecialExit(roomNumber, destination, command, ...))
+    if results[1] and command ~= mmp.whirlString then service.submit({ type = "modify-special-exit", roomNumber = tonumber(roomNumber), destination = tonumber(destination), exitCommand = command }) end
+    return unpackResults(results)
+  end
+
+  function removeSpecialExit(roomNumber, command, ...)
+    local results = pack(original.removeSpecialExit(roomNumber, command, ...))
+    local wasTemporary = service.untrackTemporarySpecialExitCommand(roomNumber, command)
+    if results[1] and command ~= mmp.whirlString and not wasTemporary then
+      service.submit({ type = "delete-special-exit", roomNumber = tonumber(roomNumber), exitCommand = command })
+    end
+    return unpackResults(results)
+  end
+
+  function clearSpecialExits(roomNumber, ...)
+    local exits = getSpecialExits(roomNumber) or {}
+    local results = pack(original.clearSpecialExits(roomNumber, ...))
+    if not next(getSpecialExits(roomNumber) or {}) then
+      local function submitExit(destination, command)
+        if command ~= mmp.whirlString and not service.isTemporarySpecialExit(roomNumber, destination, command) then
+          service.submit({ type = "delete-special-exit", roomNumber = tonumber(roomNumber), exitCommand = command })
+        end
+      end
+      for destination, commands in pairs(exits) do
+        if type(commands) == "table" then
+          for command in pairs(commands) do submitExit(destination, command) end
+        else
+          submitExit(destination, commands)
+        end
+      end
+      service.temporarySpecialExits[tostring(roomNumber)] = nil
+    end
+    return unpackResults(results)
+  end
+
+  function lockSpecialExit(roomNumber, destination, command, locked, ...)
+    local results = pack(original.lockSpecialExit(roomNumber, destination, command, locked, ...))
+    if results[1] then
+      service.submit({ type = locked and "lock-special-exit" or "unlock-special-exit", roomNumber = tonumber(roomNumber), destination = tonumber(destination), exitCommand = command })
+    end
+    return unpackResults(results)
+  end
+
+  function setExitWeight(roomNumber, exit, weight, ...)
+    local results = pack(original.setExitWeight(roomNumber, exit, weight, ...))
+    if results[1] then
+      local direction = directions[exit]
+      local change = { roomNumber = tonumber(roomNumber), weight = weight }
+      if direction then change.type, change.direction = "modify-exit-weight", direction
+      else change.type, change.exitCommand = "modify-special-exit-weight", tostring(exit) end
+      service.submit(change)
+    end
+    return unpackResults(results)
+  end
+
+  if original.setDoor then
+    function setDoor(roomNumber, exit, status, ...)
+      local results = pack(original.setDoor(roomNumber, exit, status, ...))
+      local direction = directions[exit]
+      if results[1] and direction then
+        service.submit({ type = "set-exit-door", roomNumber = tonumber(roomNumber), direction = direction, status = tonumber(status) })
+      end
+      return unpackResults(results)
+    end
+  end
+
+  if original.setMapUserData then
+    function setMapUserData(key, value, ...)
+      local results = pack(original.setMapUserData(key, value, ...))
+      if results[1] then service.submit({ type = "set-map-user-data", key = key, value = value }) end
+      return unpackResults(results)
+    end
+  end
+
+  if original.clearMapUserDataItem then
+    function clearMapUserDataItem(key, ...)
+      local results = pack(original.clearMapUserDataItem(key, ...))
+      if results[1] then service.submit({ type = "delete-map-user-data", key = key }) end
+      return unpackResults(results)
+    end
+  end
+
+  if original.createMapLabel and getMapLabel then
+    function createMapLabel(...)
+      local arguments = pack(...)
+      local areaId = arguments[1]
+      local results = pack(original.createMapLabel(unpack(arguments, 1, arguments.n)))
+      local labelId = results[1]
+      if labelId ~= false and labelId ~= nil then
+        local label = getMapLabel(areaId, labelId)
+        if label and label.FgColor and label.BgColor and not label.Temporary then
+          service.submit({
+            type = "set-map-label", areaId = tonumber(areaId), labelId = labelId,
+            label = {
+              text = label.Text, x = label.X, y = label.Y, z = label.Z,
+              width = label.Width, height = label.Height,
+              fgColor = { alpha = label.FgColor.alpha or 255, r = label.FgColor.r, g = label.FgColor.g, b = label.FgColor.b },
+              bgColor = { alpha = label.BgColor.alpha or 50, r = label.BgColor.r, g = label.BgColor.g, b = label.BgColor.b },
+              noScaling = label.Scaling == false,
+              showOnTop = label.OnTop == true
+            }
+          })
+        end
+      end
+      return unpackResults(results)
+    end
+  end
+
+  if original.deleteMapLabel then
+    function deleteMapLabel(areaId, labelId, ...)
+      local label = getMapLabel and getMapLabel(areaId, labelId)
+      local results = pack(original.deleteMapLabel(areaId, labelId, ...))
+      local remainingLabel = getMapLabel and getMapLabel(areaId, labelId)
+      if type(label) == "table" and next(label) and not label.Temporary and (type(remainingLabel) ~= "table" or not next(remainingLabel)) then
+        service.submit({ type = "delete-map-label", areaId = tonumber(areaId), labelId = tonumber(labelId) })
+      end
+      return unpackResults(results)
+    end
+  end
+
+  function service.wrapSetExit(originalSetExit)
+    service.originalMmpSetExit = service.originalMmpSetExit or originalSetExit
+    function mmp.setExit(roomNumber, destination, direction, ...)
+      local results = pack(service.originalMmpSetExit(roomNumber, destination, direction, ...))
+      if results[1] then
+        local change = { roomNumber = tonumber(roomNumber), direction = directions[direction] }
+        if tonumber(destination) == -1 then change.type = "delete-exit"
+        else change.type, change.destination = "modify-exit", tonumber(destination) end
+        service.submit(change)
+      end
+      return unpackResults(results)
+    end
+  end
+end
+
+function service.handleFailure(entry, message)
+  if entry.attempts &lt; service.maxAttempts then
+    table.insert(service.pendingChanges, 1, entry)
+    local delay = math.min(2 ^ (entry.attempts - 1), 30)
+    mmp.echo(message .. " Retrying in " .. delay .. " seconds (" .. entry.attempts .. "/" .. service.maxAttempts .. ").")
+    service.retryPending = true
+    tempTimer(delay, function()
+      service.retryPending = false
+      service.sendNext()
+    end)
+  else
+    service.unsentChanges = service.unsentChanges + 1
+    mmp.echo(message .. " Discarded after " .. service.maxAttempts .. " attempts. The local edit remains, but a later map download may overwrite it.")
+    tempTimer(0, function() service.sendNext() end)
+  end
+end
+
+function service.warnBeforeMapLoad()
+  local count = service.unsentCount()
+  if count &gt; 0 then
+    mmp.echo(string.format("Warning: %d local map edit%s have not been confirmed by the crowdmap service and may be overwritten by this map download.", count, count == 1 and "" or "s"))
+  end
+end
+
+function service.unsentCount()
+  return service.unsentChanges + #service.pendingChanges + (service.inFlightEntry and 1 or 0)
+end
+
+function service.mapLoaded()
+  service.unsentChanges = 0
+end
+
+local function completeRequest(url, error)
+  if service.inFlight and url == service.requestUrl then
+    local entry = service.inFlightEntry
+    service.inFlight, service.requestUrl, service.inFlightEntry = false, nil, nil
+    if error then
+      service.handleFailure(entry, "Could not send map change to crowdmap service: " .. error)
+      return
+    end
+    service.sendNext()
+  end
+end
+
+registerNamedEventHandler("mapper", "crowdmapServicePostError", "sysPostHttpError", function(_, error, url)
+  completeRequest(url, error)
+end)
+registerNamedEventHandler("mapper", "crowdmapServicePostDone", "sysPostHttpDone", function(_, url)
+  completeRequest(url)
+end)
+registerNamedEventHandler("mapper", "crowdmapServiceGetDone", "sysGetHttpDone", function(_, url)
+  completeRequest(url)
+end)</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>Room marks</name>
+				<packageName></packageName>
+				<script>mmp.roomMarkKeys = { public = "gotoMapping", private = "gotoMapping-private" }
+
+function mmp.getRoomMarks(visibility)
+  local key = mmp.roomMarkKeys[visibility]
+  assert(key, "Unknown room mark visibility: " .. tostring(visibility))
+  local raw = getRoomUserData(1, key)
+  if raw == "" then return {} end
+  local ok, marks = pcall(yajl.to_value, raw)
+  if not ok or type(marks) ~= "table" then
+    mmp.echo("Could not read " .. visibility .. " room marks because their map data is invalid.")
+    return {}
+  end
+  return marks
+end
+
+function mmp.getAllRoomMarks()
+  local marks = {}
+  for _, visibility in ipairs({"public", "private"}) do
+    for name, location in pairs(mmp.getRoomMarks(visibility)) do
+      marks[#marks + 1] = { name = name, location = location, visibility = visibility }
+    end
+  end
+  table.sort(marks, function(a, b) return a.name &lt; b.name end)
+  return marks
+end
+
+function mmp.setRoomMark(markname, location, visibility)
+  visibility = visibility or "private"
+  if tonumber(markname) then
+    return mmp.echo("The mark name can't be a number.")
+  end
+  local marks = mmp.getRoomMarks(visibility)
+  marks[markname] = location
+  local function writeMark()
+    if not mmp.roomexists(1) then addRoom(1) end
+    setRoomUserData(1, mmp.roomMarkKeys[visibility], yajl.to_string(marks))
+  end
+  if visibility == "private" then mmp.localMapChanges(writeMark) else writeMark() end
+  mmp.echo(string.format("%s room mark for '%s' set to room %s.", visibility:title(), markname, location))
+end
+
+function mmp.removeRoomMark(markname, visibility)
+  visibility = visibility or "private"
+  local marks = mmp.getRoomMarks(visibility)
+  if not marks[markname] then
+    return mmp.echo("Don't have such a " .. visibility .. " mark in the db.")
+  end
+  marks[markname] = nil
+  local function removeMark()
+    setRoomUserData(1, mmp.roomMarkKeys[visibility], yajl.to_string(marks))
+  end
+  if visibility == "private" then mmp.localMapChanges(removeMark) else removeMark() end
+  mmp.echo("Removed the " .. visibility .. " " .. markname .. " mark.")
+end</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>Sync safe Room.Info fields</name>
+				<packageName></packageName>
+				<script>function mmp.syncSafeRoomInfo(roomNumber, deferFeedback)
+  if not gmcp.Room or not gmcp.Room.Info then
+    return
+  end
+
+  local info = gmcp.Room.Info
+  roomNumber = roomNumber or tonumber(info.num)
+  if not roomNumber and info.roomhash then
+    roomNumber = getRoomIDbyHash(info.roomhash)
+  end
+  if not roomNumber or roomNumber == -1 or not mmp.roomexists(roomNumber) then
+    return
+  end
+  local updates = {}
+
+  if info.name then
+    local roomName = mmp.cleanroomname(info.name)
+    if getRoomName(roomNumber) ~= roomName then
+      setRoomName(roomNumber, roomName)
+      unHighlightRoom(roomNumber)
+      updates[#updates + 1] = "Updated room name to '" .. roomName .. "'."
+    end
+  end
+
+  if mmp.envids and info.environment and mmp.envids[info.environment] and mmp.envids[info.environment] ~= getRoomEnv(roomNumber) then
+    setRoomEnv(roomNumber, mmp.envids[info.environment])
+    updates[#updates + 1] = "Updated environment name to " .. info.environment .. "."
+  end
+
+  local details = mmp.roomDetails()
+  if details and mmp.game ~= "asteria" and mmp.game ~= "ashyria" then
+    local indoors = table.contains(details, "indoors")
+    if indoors and (getRoomUserData(roomNumber, "indoors") == "" or getRoomUserData(roomNumber, "outdoors") ~= "") then
+      setRoomUserData(roomNumber, "indoors", "y")
+      clearRoomUserDataItem(roomNumber, "outdoors")
+      updates[#updates + 1] = "Updated room to be indoors."
+    elseif not indoors and (getRoomUserData(roomNumber, "indoors") ~= "" or getRoomUserData(roomNumber, "outdoors") == "") then
+      clearRoomUserDataItem(roomNumber, "indoors")
+      setRoomUserData(roomNumber, "outdoors", "y")
+      updates[#updates + 1] = "Updated room to be outdoors."
+    end
+  end
+
+  if mmp.game == "achaea" and info.area and info.area ~= getRoomUserData(roomNumber, "Game Area") then
+    setRoomUserData(roomNumber, "Game Area", info.area)
+    updates[#updates + 1] = "Updated game area to " .. info.area .. "."
+  end
+
+  if details and getRoomChar(roomNumber) ~= "W" and table.contains(details, "wilderness") then
+    setRoomChar(roomNumber, "W")
+    updates[#updates + 1] = "Added the wilderness mark."
+  end
+  if #updates > 0 then
+    local message = table.concat(updates, " ")
+    if not deferFeedback then
+      mmp.echo(message)
+      centerview(mmp.currentroom)
+    end
+    return message
+  end
+end
+
+registerNamedEventHandler("mapper", "syncSafeRoomInfo", "gmcp.Room.Info", function()
+  if not mmp.editing and mmp.settings and mmp.settings.gmcpmapupdates then
+    mmp.syncSafeRoomInfo()
+  end
+end)</script>
 				<eventHandlerList />
 			</Script>
 			<Script isActive="yes" isFolder="no">
@@ -6123,7 +6787,7 @@ local spairs = spairs or function(tbl, order)
 end
 
 
-function mmp.createOption(startingValue, onChangeFunc, allowedVarTypes, use, checkOption, games)
+function mmp.createOption(startingValue, onChangeFunc, allowedVarTypes, use, checkOption, games, visibleWhen)
 	if allowedVarTypes then -- make sure our starting Value follows type rules
 		if not table.contains(allowedVarTypes, type(startingValue)) then
 			echo("Starting type is not of allowed type!\n")
@@ -6139,6 +6803,7 @@ function mmp.createOption(startingValue, onChangeFunc, allowedVarTypes, use, che
 		allowedVarTypes = allowedVarTypes,
 		use = use or "",
 		games = games,
+		visibleWhen = visibleWhen,
 		checkOption = checkOption or function() return true end
 	}
 
@@ -6167,7 +6832,7 @@ function mmp.createOptionsTable(defaultTable)
 	function proxyTable:showAllOptions(game)
 		proxyTable.disp("Available options: \n")
 		for k, v in spairs(self[index]) do
-			if not game or not v.games or v.games[game] then
+			if (not game or not v.games or v.games[game]) and (not v.visibleWhen or v.visibleWhen()) then
 				self.dispOption(k, v)
 			end
 		end
@@ -6187,7 +6852,25 @@ function mmp.createOptionsTable(defaultTable)
 		return t
 	end
 
-   function proxyTable:setOption(option, value, silent)
+  function proxyTable:setOption(option, value, silent)
+
+    if option:lower() == "crowdmap" then
+      option = "mapsource"
+      if value == true then
+        value = "published"
+      elseif value == false then
+        value = "game"
+      else
+        proxyTable.disp("'crowdmap' has been replaced by 'mapsource'. "..
+                        "Possible values: game | published | service ")
+        return
+      end
+      if not silent then
+        proxyTable.disp("'crowdmap' has been replaced by 'mapsource'. Using '" .. value .. "'. "  ..
+                        "(mconfig mapsource " .. value .. ")")
+      end
+    end
+
 		if self[option] == nil then
 			proxyTable.disp("No such option!\n")
 			return
@@ -6292,13 +6975,11 @@ function mmp.gotoArea(where, number, dashtype, exact)
   end
   local where = where:lower()
   number = tonumber(number)
-  local tmp = getRoomUserData(1, "gotoMapping")
-  if not tmp or tmp == '' then
-    tmp = "[]"
-  end
-  local temp, maptable = yajl.to_value(tmp), {}
-  for k, v in pairs(temp) do
-    maptable[k:lower()] = v
+  local maptable = {}
+  for _, visibility in ipairs({"public", "private"}) do
+    for markname, roomNumber in pairs(mmp.getRoomMarks(visibility)) do
+      maptable[markname:lower()] = roomNumber
+    end
   end
   local destinationRoom = maptable[where]
   if destinationRoom then
@@ -6684,7 +7365,7 @@ function mmp.speedwalking(event, num)
   -- Try to track if we're flying or not, for Imperian wings
   -- This is to avoid being "off path" if we FLY due to wings.
   local madeflight = false
-  if gmcp.Room then
+  if gmcp.Room and gmcp.Room.Info then
     local flying = false
     if string.find(gmcp.Room.Info.name, "^flying above") then
       flying = true
@@ -6703,13 +7384,14 @@ function mmp.speedwalking(event, num)
     mmp.flying = false
   end
   -- track if we're inside or outside, if possible
-  if gmcp.Room then
+  local details = mmp.roomDetails()
+  if gmcp.Room and gmcp.Room.Info and details then
     local areaID = getRoomArea(mmp.currentroom)
     if
       mmp.inside and
       not (
-        table.contains(gmcp.Room.Info.details, "indoors") or
-        table.contains(gmcp.Room.Info.details, "considered indoors")
+        table.contains(details, "indoors") or
+        table.contains(details, "considered indoors")
       ) and
       not mmp.orbed()
     then
@@ -6718,8 +7400,8 @@ function mmp.speedwalking(event, num)
     elseif
       not mmp.inside and
       (
-        table.contains(gmcp.Room.Info.details, "indoors") or
-        table.contains(gmcp.Room.Info.details, "considered indoors") or
+        table.contains(details, "indoors") or
+        table.contains(details, "considered indoors") or
         mmp.orbed()
       )
     then
@@ -6772,7 +7454,7 @@ function mmp.speedwalking(event, num)
   elseif
     #mmp.speedWalkPath &gt; 0 and
     not mmp.ferry_rooms[num] and
-    not (gmcp.Room.Info.details and table.contains(gmcp.Room.Info.details, "ferry"))
+    not mmp.hasRoomDetail("ferry")
   then
     -- ended up somewhere we didn't want to be, and this isn't a ferry room?
     speedWalkMoved = false
@@ -7109,11 +7791,13 @@ end</script>
 				<script>--genericized version of the went_outside event handlers.
 --when you go outside, it sees if a shorter path can be found using external links. If so, routes you on the new path instead.
 function mmp.wentOutside()
+  local details = mmp.roomDetails()
   if
     not mmp.autowalking or
     (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath]) or
-    table.contains(gmcp.Room.Info.details, "indoors") or
-    table.contains(gmcp.Room.Info.details, "considered indoors") or
+    not details or
+    table.contains(details, "indoors") or
+    table.contains(details, "considered indoors") or
     mmp.orbed(mmp.currentroom)
   then
     return
@@ -7165,18 +7849,25 @@ function mmp.tempSpecialExit(start, destination, command, weight)
     -- no start room given, so shift all arguments one to the right
     start, destination, command, weight = mmp.currentroom, start, destination, command
   end
-  table.insert(exitsCreated, {room = start, command = command})
-  addSpecialExit(start, destination, command)
-  if weight then
-    setExitWeight(start, command, weight)
+  local added
+  mmp.localMapChanges(function()
+    added = addSpecialExit(start, destination, command)
+    if weight then setExitWeight(start, command, weight) end
+  end)
+  if added then
+    table.insert(exitsCreated, {room = start, destination = destination, command = command})
+    mmp.crowdmapService.trackTemporarySpecialExit(start, destination, command)
   end
 end
 
 function mmp.removeWings()
   --remove all special exits that were created by addWings, then resets the table.
-  for _, exit in ipairs(exitsCreated) do
-    removeSpecialExit(exit.room, exit.command)
-  end
+  mmp.localMapChanges(function()
+    for _, exit in ipairs(exitsCreated) do
+      removeSpecialExit(exit.room, exit.command)
+      mmp.crowdmapService.untrackTemporarySpecialExit(exit.room, exit.destination, exit.command)
+    end
+  end)
   exitsCreated = {}
 end
 
@@ -7216,13 +7907,16 @@ local universeLocations = {
 function mmp.addWingsAchaea()
   --Trimmed down version of the original function, meant to only be used for wings. (Where the command varies based on several MCONFIGS)
 
-  local function getcmd(word)
+  local function getcmd(word, id)
+    local target = (id and id ~= "") and ("wings." .. tostring(id)) or "wings"
     return
       mmp.settings.removewings and
       string.format(
-        [[script:sendAll("wear wings", "say *%s %s", "remove wings", false)]],
+        [[script:sendAll("wear %s", "say *%s %s", "remove %s", false)]],
+        target,
         (mmp.settings.winglanguage and mmp.settings.winglanguage or ""),
-        word
+        word,
+        target
       ) or
       string.format(
         [[script:send("say *%s %s", false)]],
@@ -7244,24 +7938,28 @@ function mmp.addWingsAchaea()
     --Sarapis wings.
     if mmp.oncontinent(area, "Main") then
       if mmp.settings.duanatharan then
-        mmp.tempSpecialExit(4882, getcmd("duanatharan"))
-        mmp.tempSpecialExit(3885, getcmd("duanathar"))
+        local wid = mmp.settings.duanatharanid
+        mmp.tempSpecialExit(4882, getcmd("duanatharan", wid))
+        mmp.tempSpecialExit(3885, getcmd("duanathar", wid))
       elseif mmp.settings.duantahar then
-        mmp.tempSpecialExit(42319, getcmd("duanathar"))
-        mmp.tempSpecialExit(4882, getcmd("duanatharan"))
+        local wid = mmp.settings.duantaharid
+        mmp.tempSpecialExit(42319, getcmd("duanathar", wid))
+        mmp.tempSpecialExit(4882, getcmd("duanatharan", wid))
       else
-        mmp.tempSpecialExit(3885, getcmd("duanathar"))
+        mmp.tempSpecialExit(3885, getcmd("duanathar", mmp.settings.duanatharid))
       end
       --Meropis Wings
     elseif mmp.oncontinent(area, "Meropis") then
       if mmp.settings.duanatharan then
-        mmp.tempSpecialExit(51603, getcmd("duanatharan"))
-        mmp.tempSpecialExit(51188, getcmd("duanathar"))
+        local wid = mmp.settings.duanatharanid
+        mmp.tempSpecialExit(51603, getcmd("duanatharan", wid))
+        mmp.tempSpecialExit(51188, getcmd("duanathar", wid))
       elseif mmp.settings.duantahar then
-        mmp.tempSpecialExit(42319, getcmd("duanathar"))
-        mmp.tempSpecialExit(51603, getcmd("duanatharan"))
+        local wid = mmp.settings.duantaharid
+        mmp.tempSpecialExit(42319, getcmd("duanathar", wid))
+        mmp.tempSpecialExit(51603, getcmd("duanatharan", wid))
       else
-        mmp.tempSpecialExit(51188, getcmd("duanathar"))
+        mmp.tempSpecialExit(51188, getcmd("duanathar", mmp.settings.duanatharid))
       end
     end
   end
@@ -7275,7 +7973,7 @@ function mmp.addWingsAchaea()
       mmp.oncontinent(area, "Island") or
       mmp.oncontinent(area, "North")
     then
-      mmp.tempSpecialExit(47571, getcmd("duanatharic"))
+      mmp.tempSpecialExit(47571, getcmd("duanatharic", mmp.settings.duanatharicid))
     end
   end
   -- Stratospheric Harness support -- PapaGuacamole
@@ -7500,13 +8198,16 @@ end
 --of searching for a valid outdoors room.
 
 local function linkWingsRemote(room)
-  local function getcmd(word)
+  local function getcmd(word, id)
+    local target = (id and id ~= "") and ("wings." .. tostring(id)) or "wings"
     return
       mmp.settings.removewings and
       string.format(
-        [[script:sendAll("wear wings", "say *%s %s", "remove wings", false)]],
+        [[script:sendAll("wear %s", "say *%s %s", "remove %s", false)]],
+        target,
         (mmp.settings.winglanguage and mmp.settings.winglanguage or ""),
-        word
+        word,
+        target
       ) or
       string.format(
         [[script:send("say *%s %s", false)]],
@@ -7521,24 +8222,28 @@ local function linkWingsRemote(room)
   if (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) then
     if mmp.oncontinent(area, "Main") then
       if mmp.settings.duanatharan then
-        mmp.tempSpecialExit(room, 4882, getcmd("duanatharan"))
-        mmp.tempSpecialExit(room, 3885, getcmd("duanathar"))
+        local wid = mmp.settings.duanatharanid
+        mmp.tempSpecialExit(room, 4882, getcmd("duanatharan", wid))
+        mmp.tempSpecialExit(room, 3885, getcmd("duanathar", wid))
       elseif mmp.settings.duantahar then
-        mmp.tempSpecialExit(room, 42319, getcmd("duanathar"))
-        mmp.tempSpecialExit(room, 4882, getcmd("duanatharan"))
+        local wid = mmp.settings.duantaharid
+        mmp.tempSpecialExit(room, 42319, getcmd("duanathar", wid))
+        mmp.tempSpecialExit(room, 4882, getcmd("duanatharan", wid))
       else
-        mmp.tempSpecialExit(room, 3885, getcmd("duanathar"))
+        mmp.tempSpecialExit(room, 3885, getcmd("duanathar", mmp.settings.duanatharid))
       end
       --Meropis Wings
     elseif mmp.oncontinent(area, "Meropis") then
       if mmp.settings.duanatharan then
-        mmp.tempSpecialExit(room, 51603, getcmd("duanatharan"))
-        mmp.tempSpecialExit(room, 51188, getcmd("duanathar"))
+        local wid = mmp.settings.duanatharanid
+        mmp.tempSpecialExit(room, 51603, getcmd("duanatharan", wid))
+        mmp.tempSpecialExit(room, 51188, getcmd("duanathar", wid))
       elseif mmp.settings.duantahar then
-        mmp.tempSpecialExit(room, 42319, getcmd("duanathar"))
-        mmp.tempSpecialExit(room, 51603, getcmd("duanatharan"))
+        local wid = mmp.settings.duantaharid
+        mmp.tempSpecialExit(room, 42319, getcmd("duanathar", wid))
+        mmp.tempSpecialExit(room, 51603, getcmd("duanatharan", wid))
       else
-        mmp.tempSpecialExit(room, 51188, getcmd("duanathar"))
+        mmp.tempSpecialExit(room, 51188, getcmd("duanathar", mmp.settings.duanatharid))
       end
     end
   end
@@ -7554,7 +8259,7 @@ local function linkWingsRemote(room)
       mmp.oncontinent(area, "North")
     )
   then
-    mmp.tempSpecialExit(room, 47571, getcmd("duanatharic"))
+    mmp.tempSpecialExit(room, 47571, getcmd("duanatharic", mmp.settings.duanatharicid))
   end
   if mmp.settings.harness then
     -- eastern isles
@@ -7607,7 +8312,7 @@ function mmp.achaeaBetterWings()
   if
     (mmp.game ~= "achaea") or
     (not mmp.settings.betterwings) or
-    (not mmp.settings.crowdmap) or
+    (mmp.settings.mapsource == "game") or
     (getRoomUserData(mmp.currentroom, "outdoors") == "y" and orbedBlackList()(mmp.currentroom))
   then
     return
@@ -7760,7 +8465,7 @@ function mmp.addWingsLusternia()
       if mmp.usebubblix() then
         if table.contains(bubblix.areas, gmcp.Room.Info.area) then
           mmp.tempSpecialExit(mmp.currentroom, 6831, command)
-        elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
+        elseif mmp.roomDetails() and not mmp.hasRoomDetail("an Aetherbubble") then
           mmp.tempSpecialExit(mmp.currentroom, bubblix.room, command)
         end
       end
@@ -7784,8 +8489,8 @@ function mmp.addWingsLusternia()
       }
     local exitScript = [[script:sendAll("outr %sbutton", "touch %sbutton", false)]]
     if
-      table.contains(gmcp.Room.Info.details, "the Prime Material Plane") and
-      table.contains(gmcp.Room.Info.details, "outdoors")
+      mmp.hasRoomDetail("the Prime Material Plane") and
+      mmp.hasRoomDetail("outdoors")
     then
       for color, room in pairs(colors) do
         mmp.tempSpecialExit(mmp.currentroom, room, exitScript:format(color, color), 20)
@@ -7839,8 +8544,9 @@ function mmp.addWingsImperian()
   if
     (mmp.settings.shekinah or mmp.settings.suriel) and
     gmcp.Room and
-    not table.contains(gmcp.Room.Info.details, "indoors") and
-    not table.contains(gmcp.Room.Info.details, "considered indoors") and
+    mmp.roomDetails() and
+    not mmp.hasRoomDetail("indoors") and
+    not mmp.hasRoomDetail("considered indoors") and
     table.contains(mmp.imperian.wingAbleAreas, getRoomArea(mmp.currentroom))
   then
     if mmp.settings.shekinah then
@@ -8156,19 +8862,19 @@ end
 function mmp.usebix()
 	if mmp.game ~= "lusternia" then return end
 
-	if (table.contains(gmcp.Room.Info.details, "the Prime Material Plane") or
-		table.contains(gmcp.Room.Info.details, "the Ethereal Plane") or
-		table.contains(gmcp.Room.Info.details, "the Water Elemental Plane") or
-		table.contains(gmcp.Room.Info.details, "the Air Elemental Plane") or
-		table.contains(gmcp.Room.Info.details, "the Fire Elemental Plane") or
-		table.contains(gmcp.Room.Info.details, "the Earth Elemental Plane") or
-		table.contains(gmcp.Room.Info.details, "Celestia, Plane of Light") or
-		table.contains(gmcp.Room.Info.details, "the Tainted Plane of Nil") or
-		table.contains(gmcp.Room.Info.details, "the Cosmic Plane of Continuum") or
-		table.contains(gmcp.Room.Info.details, "the Cosmic Plane of Vortex") or
-		table.contains(gmcp.Room.Info.details, "the Astral Plane")) and
+	if (mmp.hasRoomDetail("the Prime Material Plane") or
+		mmp.hasRoomDetail("the Ethereal Plane") or
+		mmp.hasRoomDetail("the Water Elemental Plane") or
+		mmp.hasRoomDetail("the Air Elemental Plane") or
+		mmp.hasRoomDetail("the Fire Elemental Plane") or
+		mmp.hasRoomDetail("the Earth Elemental Plane") or
+		mmp.hasRoomDetail("Celestia, Plane of Light") or
+		mmp.hasRoomDetail("the Tainted Plane of Nil") or
+		mmp.hasRoomDetail("the Cosmic Plane of Continuum") or
+		mmp.hasRoomDetail("the Cosmic Plane of Vortex") or
+		mmp.hasRoomDetail("the Astral Plane")) and
         gmcp.Room.Info.area ~= "the City of Climanti" and
-		table.contains(gmcp.Room.Info.details, "outdoors") then
+		mmp.hasRoomDetail("outdoors") then
 		return true
 	end
 	return false
@@ -8176,14 +8882,14 @@ end
 
 function mmp.useprism()
 	if mmp.game ~= "lusternia" then return end
-	if (table.contains(gmcp.Room.Info.details, "the Prime Material Plane") or
-	table.contains(gmcp.Room.Info.details, "the Ethereal Plane") or
-	table.contains(gmcp.Room.Info.details, "the Water Elemental Plane") or
-	table.contains(gmcp.Room.Info.details, "the Air Elemental Plane") or
-	table.contains(gmcp.Room.Info.details, "the Fire Elemental Plane") or
-	table.contains(gmcp.Room.Info.details, "the Earth Elemental Plane")) and
+	if (mmp.hasRoomDetail("the Prime Material Plane") or
+	mmp.hasRoomDetail("the Ethereal Plane") or
+	mmp.hasRoomDetail("the Water Elemental Plane") or
+	mmp.hasRoomDetail("the Air Elemental Plane") or
+	mmp.hasRoomDetail("the Fire Elemental Plane") or
+	mmp.hasRoomDetail("the Earth Elemental Plane")) and
     gmcp.Room.Info.area ~= "the City of Climanti" and
-	table.contains(gmcp.Room.Info.details, "outdoors") then
+	mmp.hasRoomDetail("outdoors") then
 		return true
 	end
 	return false
@@ -8191,15 +8897,15 @@ end
 function mmp.usebubblix()
 	if mmp.game ~= "lusternia" then return end
 
-	if ((table.contains(gmcp.Room.Info.details, "the Prime Material Plane") or
-		table.contains(gmcp.Room.Info.details, "the Ethereal Plane") or
-		table.contains(gmcp.Room.Info.details, "the Water Elemental Plane") or
-		table.contains(gmcp.Room.Info.details, "the Air Elemental Plane") or
-		table.contains(gmcp.Room.Info.details, "the Fire Elemental Plane") or
-		table.contains(gmcp.Room.Info.details, "the Earth Elemental Plane")) and
+	if ((mmp.hasRoomDetail("the Prime Material Plane") or
+		mmp.hasRoomDetail("the Ethereal Plane") or
+		mmp.hasRoomDetail("the Water Elemental Plane") or
+		mmp.hasRoomDetail("the Air Elemental Plane") or
+		mmp.hasRoomDetail("the Fire Elemental Plane") or
+		mmp.hasRoomDetail("the Earth Elemental Plane")) and
         gmcp.Room.Info.area ~= "the City of Climanti" and
-		table.contains(gmcp.Room.Info.details, "outdoors")) or
-		table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
+		mmp.hasRoomDetail("outdoors")) or
+		mmp.hasRoomDetail("an Aetherbubble") then
 		return true
 	end
 	return false
@@ -9382,48 +10088,63 @@ end
 
 function mmp.lockPathways()
   local lock = mmp.settings.lockpathways and true or false
-  mmp.doLock("pathways", lock, "pathfind")
+  mmp.localMapChanges(function() mmp.doLock("pathways", lock, "pathfind") end)
 end
 
 function mmp.lockSewers()
   local lock = mmp.settings.locksewers and true or false
-  return mmp.doLock("sewer grates", lock, "enter grate")
+  return mmp.localMapChanges(function() return mmp.doLock("sewer grates", lock, "enter grate") end)
 end
 
 function mmp.lockWormholes()
   local lock = mmp.settings.lockwormholes and true or false
-  return mmp.doLock("wormholes", lock, "worm warp")
+  return mmp.localMapChanges(function() return mmp.doLock("wormholes", lock, "worm warp") end)
 end
 tempTimer(0, function() if mmp.firstRun then mmp.lockWormholes() end end)
 
 function mmp.lockPebble()
   local disabled = (not mmp.settings.pebble) and true or false
-  mmp.doLock(nil, disabled, "touch 116998")
-  mmp.doLock(nil, disabled, "touch 277930")
+  mmp.localMapChanges(function()
+    mmp.doLock(nil, disabled, "touch 116998")
+    mmp.doLock(nil, disabled, "touch 277930")
+  end)
 
   mmp.echo(string.format("Use of pebble %s.", disabled and "disabled" or "enabled"))
 end
 
 function mmp.lockSpecials()
   local lock = mmp.settings.lockspecials and true or false
-  mmp.doLock("special exits", lock)
+  mmp.localMapChanges(function() mmp.doLock("special exits", lock) end)
 end
 
 
+function mmp.changeCrowdmapServiceMapOption()
+  if mmp.settings.mapsource ~= "service" then return end
+  mmp.mapSourceGeneration = (mmp.mapSourceGeneration or 0) + 1
+  mmp.checkforupdate()
+end
+
 function mmp.changeMapSource()
-  local use = mmp.settings.crowdmap and true or false
-  if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud" or mmp.game == "ashyria" or mmp.game == "asteria" or mmp.game == "imperian" or mmp.game == "aetolia") then
-    mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia, StickMUD, Ashyria and Asteria. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
-    mmp.settings.crowdmap = false
-  elseif use and not loadMap then
+  local source = mmp.settings.mapsource
+  if source ~= mmp.lastMapSource then
+    mmp.lastMapSource = source
+    mmp.mapSourceGeneration = (mmp.mapSourceGeneration or 0) + 1
+  end
+  if source ~= "game" and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud" or mmp.game == "ashyria" or mmp.game == "asteria" or mmp.game == "imperian" or mmp.game == "aetolia") then
+    mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Aetolia, Imperian, Starmourn, Lusternia, StickMUD, Ashyria and Asteria. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
+    mmp.settings:setOption("mapsource", "game", true)
+  elseif source ~= "game" and not loadMap then
    mmp.echo("Sorry - your Mudlet is too old and can't load maps. Please update: http://forums.mudlet.org/viewtopic.php?f=5&amp;t=1874")
-   mmp.settings.crowdmap = false
-  elseif use then
-    mmp.echo("Will use the crowdsourced map for updates instead!")
-    mmp.checkforupdate()
+   mmp.settings:setOption("mapsource", "game", true)
+  elseif source == "published" then
+    mmp.echo("Will use the published crowdsourced map for updates instead!")
+  elseif source == "service" then
+    mmp.echo("Will use the live crowdmap service for updates instead!")
+    mmp.crowdmapService.sendNext()
   else
     mmp.echo("Will use the default game map for updates.")
   end
+  mmp.checkforupdate()
 end
 
 function mmp.setWingsLanguage()
@@ -9443,6 +10164,7 @@ function mmp.setSlowWalk()
 end
 
 function mmp.disableWaterWalk()
+  return mmp.localMapChanges(function()
   local c = 0
   local getRoomEnv, setRoomWeight = getRoomEnv, setRoomWeight
   for roomid, roomname in pairs(getRooms()) do
@@ -9453,9 +10175,11 @@ function mmp.disableWaterWalk()
   end
 
   return c
+  end)
 end
 
 function mmp.enableWaterWalk()
+  return mmp.localMapChanges(function()
   local c = 0
   local getRoomEnv, setRoomWeight = getRoomEnv, setRoomWeight
   for roomid, roomname in pairs(getRooms()) do
@@ -9466,6 +10190,7 @@ function mmp.enableWaterWalk()
   end
 
   return c
+  end)
 end
 
 function mmp.setWaterWalk()
@@ -10042,6 +10767,7 @@ end</script>
 					<name>mmp.wormholesfix</name>
 					<packageName></packageName>
 					<script>function mmp.wormholesfix()
+  return mmp.localMapChanges(function()
   local c = 0
   local weight = 10
   for _, area in pairs(getAreaTable()) do
@@ -10063,6 +10789,7 @@ end</script>
   end
 
   if c &gt; 0 then mmp.echo(string.format("%s wormholes weighted to %s (so we don't take them over too short distances).", c, weight)) end
+  end)
 end</script>
 					<eventHandlerList>
 						<string>mmapper updated map</string>
@@ -10188,6 +10915,7 @@ function mmp.setExit(from, to, direction)
 
   return oldsetExit(from, to, type(direction) == "string" and exitmap[direction] or direction)
 end
+mmp.crowdmapService.wrapSetExit(mmp.setExit)
 end</script>
 					<eventHandlerList />
 				</Script>
@@ -10422,11 +11150,15 @@ local function makeroom(oldid, newid, x, y, z)
   assert(oldid, "makeroom: need the ID of the original room")
   assert(newid, "makeroom: need the ID of the room to create")
   assert(x and y and z, "makeroom: need all 3 coordinates")
-  addRoom(newid)
+  local wasHashOnly = roomExists and roomExists(newid) and getRoomUserData(newid, "hashonly") == "true"
+  if wasHashOnly then
+    clearRoomUserDataItem(newid, "hashonly")
+    mmp.crowdmapService.promoteHashOnlyRoom(newid)
+  else
+    addRoom(newid)
+  end
   setRoomCoordinates(newid, x, y, z)
   setRoomArea(newid, getRoomArea(oldid))
-  -- in case we are in a hash-based game and the room ID already got created to store a hash, clear the flag
-  clearRoomUserDataItem(newid, "hashonly")
   local fgr, fgg, fgb = unpack(color_table.red)
   local bgr, bgg, bgb = unpack(color_table.blue)
   highlightRoom(newid, fgr, fgg, fgb, bgr, bgg, bgb, 1, 100, 100)
@@ -10513,9 +11245,11 @@ function mmp.roomidFromHash(hash)
   local id = getRoomIDbyHash(hash)
   if id == -1 then 
     id = createRoomID()
-    addRoom(id)
-    setRoomIDbyHash(id, hash)
-    setRoomUserData(id, "hashonly", "true")
+    mmp.localMapChanges(function()
+      addRoom(id)
+      setRoomIDbyHash(id, hash)
+      setRoomUserData(id, "hashonly", "true")
+    end)
   end
   
   return id
@@ -10571,14 +11305,6 @@ function mmp.mappingNewroom(_, num)
         end
         -- if we created it, and some data could be filled in
         if mmp.roomexists(num) then
-          -- cleanup the room name
-          local rootroomname = mmp.cleanroomname(gmcp.Room.Info.name)
-          -- match exact case, so mappers alertness' works properly
-          if getRoomName(num) ~= rootroomname then
-            setRoomName(num, rootroomname)
-            unHighlightRoom(num)
-            s = s .. (#s &gt; 0 and " " or "") .. "Updated room name to '" .. rootroomname .. "'."
-          end
           -- autolink exits
           if not inwilderness() then
             local x = getRoomExits(num) or {}
@@ -10716,45 +11442,9 @@ function mmp.mappingNewroom(_, num)
               end
             end
           end
-          -- check for environment update, if we have environments mapped out
-          if
-            mmp.envids[gmcp.Room.Info.environment] and
-            mmp.envids[gmcp.Room.Info.environment] ~= getRoomEnv(num)
-          then
-            setRoomEnv(num, mmp.envids[gmcp.Room.Info.environment])
-            s =
-              s ..
-              (#s &gt; 0 and " " or "") ..
-              "Updated environment name to " ..
-              gmcp.Room.Info.environment ..
-              "."
-          end
-          -- check indoors status
-          if mmp.game ~= "asteria" or mmp.game ~= "ashyria" then
-            local indoors = table.contains(gmcp.Room.Info.details, "indoors")
-            if indoors and (getRoomUserData(num, "indoors") == '' or getRoomUserData(num,"outdoors") ~= '') then
-            setRoomUserData(num, "indoors", "y")
-            clearRoomUserDataItem(num, "outdoors")
-            s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be indoors."
-          elseif not indoors and (getRoomUserData(num, "indoors") ~= '' or getRoomUserData(num, "outdoors") == '') then
-            clearRoomUserDataItem(num, "indoors")
-            setRoomUserData(num, "outdoors", "y")
-            s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be outdoors."
-          end
-        end
-
-          -- check server area name (Achaea only for now)
-          if mmp.game == "achaea" then
-            local serverArea = gmcp.Room.Info.area
-            if serverArea ~= getRoomUserData(num, "Game Area") then
-              setRoomUserData(num, "Game Area", serverArea)
-              s = s .. (#s &gt; 0 and " " or "") .. "Updated game area to " .. serverArea .. "."
-            end
-          end
-          -- check for wilderness exits
-          if getRoomChar(num) ~= "W" and table.contains(gmcp.Room.Info.details, "wilderness") then
-            setRoomChar(num, "W")
-            s = s .. (#s &gt; 0 and " " or "") .. "Added the wilderness mark."
+          local safeRoomUpdates = mmp.syncSafeRoomInfo(num, true)
+          if safeRoomUpdates then
+            s = s .. (#s > 0 and " " or "") .. safeRoomUpdates
           end
         end
         if #s &gt; 0 then
@@ -10787,7 +11477,9 @@ end</script>
 					<script>function mmp.saveOptions()
 	local saveTable = {
 		locked_areas = mmp.locked,
-		options = mmp.settings:getAllOptions()
+		options = mmp.settings:getAllOptions(),
+		unsent_crowdmap_changes = mmp.crowdmapService and mmp.crowdmapService.unsentChanges or 0,
+		pending_crowdmap_changes = mmp.crowdmapService and mmp.crowdmapService.pendingForSave() or {}
 	}
   local _sep
 	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
@@ -10802,14 +11494,46 @@ end</script>
 				<Script isActive="yes" isFolder="no">
 					<name>mmp.loadOptions</name>
 					<packageName></packageName>
-					<script>function mmp.loadOptions()
+					<script>function mmp.migrateOptions(options)
+	if type(options) ~= "table" then return end
+
+	-- Pre-PR profiles only know the published Crowdmap toggle. PR #202 added a
+	-- second service-source toggle. Fold both historical settings into one enum;
+	-- the live service wins if both were enabled, matching the former download
+	-- precedence. Remove old keys so later loads remain quiet and deterministic.
+	if options.mapsource == nil then
+		if options.crowdmapservicesource then
+			options.mapsource = "service"
+		elseif options.crowdmap then
+			options.mapsource = "published"
+		else
+			options.mapsource = "game"
+		end
+	end
+	options.crowdmap = nil
+	options.crowdmapservicesource = nil
+
+	-- PR #202 originally used this Achaea-specific endpoint as its default. Only
+	-- replace that exact value: every other value is a user-selected endpoint.
+	if options.crowdmapserviceurl == "https://achaea-crowdmap.schova.de" then
+		options.crowdmapserviceurl = "https://&lt;game&gt;.mudmaps.community"
+	end
+end
+
+function mmp.loadOptions()
 	local loadTable = mmp.loadLocks()
+	if mmp.crowdmapService then
+		mmp.crowdmapService.unsentChanges = tonumber(loadTable.unsent_crowdmap_changes) or 0
+		mmp.crowdmapService.restorePendingChanges(loadTable.pending_crowdmap_changes)
+	end
 
 	if loadTable.options then
+		mmp.migrateOptions(loadTable.options)
 		for k, v in pairs(loadTable.options) do
 			mmp.settings:setOption(k, v, true)
 		end
 	end
+	if mmp.crowdmapService then mmp.crowdmapService.sendNext() end
 end
 
 function mmp.loadLocks()
@@ -10934,10 +11658,12 @@ end</script>
 						<packageName></packageName>
 						<script>function mmp.achaeaGaiaWhirlpoolReset(event, game)
 	if game == "Achaea" then
-		mmp.whirlString = 'script: send("enter whirlpool") if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end if tempWhirlTimer then killTimer(killWhirlTimer) tempWhirlTimer = nil end tempWhirlTrigger = tempTrigger("What do you wish to enter?", [[if tempWhirlTimer then killTimer(tempWhirlTimer) tempWhirlTimer = nil end mmp.echo("Whirlpool not found here. Trying another room.") local x = {45817, 45780, 45903, 45868, 46254, 45866} if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end clearSpecialExits(]]..mmp.currentroom..[[) local y = table.index_of(x, ]]..mmp.currentroom..[[) + 1 if y &gt; #x then y = 1 end addSpecialExit(x[y], 793, mmp.whirlString) mmp.clearpathcache() mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath]) mmp.echo("Moved whirlpool to "..x[y]..".")]]) tempWhirlTimer = tempTimer(1, [[if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end if tempWhirlTimer then killTimer(tempWhirlTimer) tempWhirlTimer = nil end]])'
+		mmp.whirlString = 'script: send("enter whirlpool") if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end if tempWhirlTimer then killTimer(killWhirlTimer) tempWhirlTimer = nil end tempWhirlTrigger = tempTrigger("What do you wish to enter?", [[if tempWhirlTimer then killTimer(tempWhirlTimer) tempWhirlTimer = nil end mmp.echo("Whirlpool not found here. Trying another room.") local x = {45817, 45780, 45903, 45868, 46254, 45866} if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end local y = table.index_of(x, ]]..mmp.currentroom..[[) + 1 if y &gt; #x then y = 1 end mmp.localMapChanges(function() clearSpecialExits(]]..mmp.currentroom..[[) addSpecialExit(x[y], 793, mmp.whirlString) end) mmp.clearpathcache() mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath]) mmp.echo("Moved whirlpool to "..x[y]..".")]]) tempWhirlTimer = tempTimer(1, [[if tempWhirlTrigger then killTrigger(tempWhirlTrigger) tempWhirlTrigger = nil end if tempWhirlTimer then killTimer(tempWhirlTimer) tempWhirlTimer = nil end]])'
 		local x = {45817, 45780, 45903, 45868, 46254, 45866}
-		for i, v in ipairs(x) do clearSpecialExits(v) end
-		addSpecialExit(45868, 793, mmp.whirlString)
+		mmp.localMapChanges(function()
+			for i, v in ipairs(x) do clearSpecialExits(v) end
+			addSpecialExit(45868, 793, mmp.whirlString)
+		end)
 	end
 end</script>
 						<eventHandlerList>
@@ -10979,7 +11705,7 @@ registerAnonymousEventHandler("started speedwalk", "mmp.unwearShackle")</script>
 function mmp.getAchaeaOrbTable()
   return
   --first table is areas in each org for the crowdmap, second is for the game provided map.
-    mmp.settings.crowdmap and
+    mmp.settings.mapsource ~= "game" and
     {
       ashtan = {49, 53},
       cyrene = {57, 59, 62, 63, 68, 70},
@@ -11565,32 +12291,36 @@ function mmp.astroboots()
   local option = mmp.settings.astrojump
   mmp.echo("&lt;green&gt;" .. (option and "Set up" or "Removed") .. " &lt;white&gt;Astrojump &lt;green&gt;exits")
   local exitString = [[script:if gmcp.Room.Info.exits.%s then send("%s", false) else send("astrojump", false) end]]
-  for k, v in pairs(astralExits) do
-    if option then
-      addSpecialExit(v[1], v[2], string.format(exitString, v[3], v[3]))
-      addSpecialExit(v[2], v[1], string.format(exitString, mirror[v[3]], mirror[v[3]]))
-    else
-      removeSpecialExit(v[1], "astrojump")
-      removeSpecialExit(v[2], "astrojump")
-      removeSpecialExit(v[1], string.format(exitString, v[3], v[3]))
-      removeSpecialExit(v[2], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+  mmp.localMapChanges(function()
+    for k, v in pairs(astralExits) do
+      if option then
+        addSpecialExit(v[1], v[2], string.format(exitString, v[3], v[3]))
+        addSpecialExit(v[2], v[1], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+      else
+        removeSpecialExit(v[1], "astrojump")
+        removeSpecialExit(v[2], "astrojump")
+        removeSpecialExit(v[1], string.format(exitString, v[3], v[3]))
+        removeSpecialExit(v[2], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+      end
     end
-  end
+  end)
 end
 
 function mmp.wildnodes(create)
   if mmp.game ~= "lusternia" then
     return
   end
-  for k, v in pairs(astralExits) do
-    if create then
-      mmp.setExit(v[1], v[2], v[3])
-      mmp.setExit(v[2], v[1], mirrorExits[v[3]])
-    else
-      mmp.setExit(v[1], -1, v[3])
-      mmp.setExit(v[2], -1, mirrorExits[v[3]])
+  mmp.localMapChanges(function()
+    for k, v in pairs(astralExits) do
+      if create then
+        mmp.setExit(v[1], v[2], v[3])
+        mmp.setExit(v[2], v[1], mirrorExits[v[3]])
+      else
+        mmp.setExit(v[1], -1, v[3])
+        mmp.setExit(v[2], -1, mirrorExits[v[3]])
+      end
     end
-  end
+  end)
 end</script>
 						<eventHandlerList />
 					</Script>
@@ -11617,7 +12347,8 @@ function mmp.transverse(_, command)
   if command:sub(0, 11) == "transverse " or command == "pathfind" then
     transverseCMD = command
     transversedFrom = gmcp.Room.Info.num
-    lastPlane = planes[gmcp.Room.Info.details[1]]
+    local details = mmp.roomDetails()
+    lastPlane = details and planes[details[1]] or nil
     validTransverse = true
   end
 end
@@ -11626,29 +12357,33 @@ registerAnonymousEventHandler("sysDataSendRequest", "mmp.transverse")
 
 function mmp.registerTransverseExit()
   if transversedFrom ~= gmcp.Room.Info.num then
-    addSpecialExit(transversedFrom, gmcp.Room.Info.num, transverseCMD)
-    setExitWeight(transversedFrom, transverseCMD, 20)
-    if lastPlane then
-      addSpecialExit(gmcp.Room.Info.num, transversedFrom, "transverse " .. lastPlane)
-      setExitWeight(gmcp.Room.Info.num, "transverse " .. lastPlane, 20)
-    end
+    mmp.localMapChanges(function()
+      addSpecialExit(transversedFrom, gmcp.Room.Info.num, transverseCMD)
+      setExitWeight(transversedFrom, transverseCMD, 20)
+      if lastPlane then
+        addSpecialExit(gmcp.Room.Info.num, transversedFrom, "transverse " .. lastPlane)
+        setExitWeight(gmcp.Room.Info.num, "transverse " .. lastPlane, 20)
+      end
+    end)
     validTransverse = false
   end
 end
 
 function mmp.clearTransverse()
-  local otherSide = 0
-  for room, command in pairs(getSpecialExits(gmcp.Room.Info.num)) do
-    if next(command) == transverseCMD then
-      otherSide = room
+  mmp.localMapChanges(function()
+    local otherSide = 0
+    for room, command in pairs(getSpecialExits(gmcp.Room.Info.num)) do
+      if next(command) == transverseCMD then
+        otherSide = room
+      end
     end
-  end
-  for room, command in pairs(getSpecialExits(otherSide) or {}) do
-    if room == gmcp.Room.Info.num and string.sub(next(command), 0, 11) == "transverse " then
-      removeSpecialExit(otherSide, next(command))
+    for room, command in pairs(getSpecialExits(otherSide) or {}) do
+      if room == gmcp.Room.Info.num and string.sub(next(command), 0, 11) == "transverse " then
+        removeSpecialExit(otherSide, next(command))
+      end
     end
-  end
-  removeSpecialExit(gmcp.Room.Info.num, transverseCMD)
+    removeSpecialExit(gmcp.Room.Info.num, transverseCMD)
+  end)
   if mmp.autowalking then
     mmp.autowalking = false
     mmp.gotoRoom(string.split(next(mmp.showpathcache()), "_")[2])
@@ -11656,26 +12391,30 @@ function mmp.clearTransverse()
 end
 
 function mmp.registerPathfind()
-  addSpecialExit(transversedFrom, gmcp.Room.Info.num, "pathfind")
-  setExitWeight(transversedFrom, "pathfind", 15)
-  addSpecialExit(gmcp.Room.Info.num, transversedFrom, "pathfind")
-  setExitWeight(gmcp.Room.Info.num, "pathfind", 15)
+  mmp.localMapChanges(function()
+    addSpecialExit(transversedFrom, gmcp.Room.Info.num, "pathfind")
+    setExitWeight(transversedFrom, "pathfind", 15)
+    addSpecialExit(gmcp.Room.Info.num, transversedFrom, "pathfind")
+    setExitWeight(gmcp.Room.Info.num, "pathfind", 15)
+  end)
   validTransverse = false
 end
 
 function mmp.clearPathfind()
-  local otherSide = 0
-  for room, command in pairs(getSpecialExits(gmcp.Room.Info.num)) do
-    if next(command) == "pathfind" then
-      otherSide = room
+  mmp.localMapChanges(function()
+    local otherSide = 0
+    for room, command in pairs(getSpecialExits(gmcp.Room.Info.num)) do
+      if next(command) == "pathfind" then
+        otherSide = room
+      end
     end
-  end
-  for room, command in pairs(getSpecialExits(otherSide) or {}) do
-    if room == gmcp.Room.Info.num and next(command) == "pathfind" then
-      removeSpecialExit(otherSide, next(command))
+    for room, command in pairs(getSpecialExits(otherSide) or {}) do
+      if room == gmcp.Room.Info.num and next(command) == "pathfind" then
+        removeSpecialExit(otherSide, next(command))
+      end
     end
-  end
-  removeSpecialExit(gmcp.Room.Info.num, "pathfind")
+    removeSpecialExit(gmcp.Room.Info.num, "pathfind")
+  end)
   if mmp.autowalking then
     mmp.autowalking = false
     mmp.gotoRoom(string.split(next(mmp.showpathcache()), "_")[2])
@@ -11684,18 +12423,20 @@ end
 
 function mmp.lockpaths(lock)
   local count = 0
-  for area, areaname in pairs(mmp.areatabler) do
-    local rooms = getAreaRooms(area) or {}
-    for i = 0, #rooms do
-      local exits = getSpecialExits(rooms[i] or 0)
-      for room, command in pairs(exits or {}) do
-        if next(command) == "pathfind" then
-          count = count + 1
-          lockSpecialExit(rooms[i], room, "pathfind", lock)
+  mmp.localMapChanges(function()
+    for area, areaname in pairs(mmp.areatabler) do
+      local rooms = getAreaRooms(area) or {}
+      for i = 0, #rooms do
+        local exits = getSpecialExits(rooms[i] or 0)
+        for room, command in pairs(exits or {}) do
+          if next(command) == "pathfind" then
+            count = count + 1
+            lockSpecialExit(rooms[i], room, "pathfind", lock)
+          end
         end
       end
     end
-  end
+  end)
   mmp.echo((lock and "Locked " or "Unlocked ") .. count .. " pathfinding exits.")
 end</script>
 						<eventHandlerList />
@@ -12314,7 +13055,74 @@ end</script>
 				<Script isActive="yes" isFolder="no">
 					<name>mmp.downloadedFile</name>
 					<packageName></packageName>
-					<script>function mmp.downloadedFile(_, filename)
+					<script>mmp.crowdmapLoadRetries = mmp.crowdmapLoadRetries or {}
+
+local function crowdmapDownloadIsCurrent(context)
+  return context.filename == mmp.crowdmapfile
+      and context.source == mmp.settings.mapsource
+      and context.generation == (mmp.mapSourceGeneration or 0)
+      and context.identity == mmp.mapSourceIdentity(mmp.settings.mapsource)
+end
+
+local function finishCrowdmapLoad(context, successMessage)
+  os.remove(context.filename)
+  mmp.crowdmapService.mapLoaded()
+  if mmp.game ~= "starmourn" then
+    local wc = mmp.lockWormholes()
+    local ws = mmp.lockSewers()
+    mmp.lockPebble()
+    if mmp.game == "achaea" and wc == 0 and ws == 0 then
+      mmp.echo("Sorry, it seems your Mudlet isn't compatible with the new crowdmap format - and the map cannot be loaded fully. Please update your Mudlet:\n  http://www.mudlet.org/download/")
+      return
+    end
+  end
+
+  if mmp.settings.waterwalk then mmp.enableWaterWalk() else mmp.disableWaterWalk() end
+
+  mmp.echo(successMessage)
+  mmp.recordCrowdmapVersion(context.version, context.identity)
+
+  local newPublicMarks = mmp.getRoomMarks("public")
+  for markname, location in pairs(context.publicMarks) do
+    if context.privateMarks[markname] == nil and tostring(newPublicMarks[markname]) ~= tostring(location) then
+      context.privateMarks[markname] = location
+    end
+  end
+  mmp.localMapChanges(function()
+    setRoomUserData(1, "gotoMapping-private", yajl.to_string(context.privateMarks))
+  end)
+  mmp.echo("Private marks from the old map migrated successfully.")
+  raiseEvent("mmapper updated map")
+end
+
+local function loadCrowdmapDownload(context, successMessage)
+  mmp.crowdmapService.warnBeforeMapLoad()
+  if not loadMap(context.filename) then return false end
+  finishCrowdmapLoad(context, successMessage)
+  return true
+end
+
+function mmp.retryCrowdmapLoad(filename)
+  local context = mmp.crowdmapLoadRetries[filename]
+  if not context then return mmp.echo("That map download is no longer available to retry.") end
+  if not crowdmapDownloadIsCurrent(context) then
+    mmp.crowdmapLoadRetries[filename] = nil
+    os.remove(filename)
+    mmp.echo("That map download is stale; checking for the current map instead.")
+    return mmp.checkforupdate()
+  end
+  if not io.exists(filename) then
+    mmp.crowdmapLoadRetries[filename] = nil
+    return mmp.echo("That map download is no longer available to retry.")
+  end
+  if loadCrowdmapDownload(context, "Map loaded successfully!") then
+    mmp.crowdmapLoadRetries[filename] = nil
+  else
+    mmp.echo("Nope, didn't work. Open the map and try again?")
+  end
+end
+
+function mmp.downloadedFile(_, filename)
   if not io.exists(filename) then return end
 
   -- workaround for https://bugs.launchpad.net/mudlet/+bug/1092769
@@ -12346,6 +13154,10 @@ end</script>
     echo("\n\n")
 
   elseif filename == mmp.crowdchangelogfile then   -- changelog for the crowdmap
+    if mmp.crowdmapDownloadSource ~= mmp.settings.mapsource or mmp.crowdmapDownloadGeneration ~= (mmp.mapSourceGeneration or 0) or mmp.crowdmapDownloadIdentity ~= mmp.mapSourceIdentity(mmp.settings.mapsource) then
+      os.remove(filename)
+      return
+    end
     local f, s = io.open(filename)
     if f then s = f:read("*a"); io.close(f) end
 
@@ -12376,79 +13188,25 @@ end</script>
     mmp.downloadcrowdmap(mmp.newversion)
 
   elseif filename == mmp.crowdmapfile then    -- crowdmap map
-    mmp.echo("Map downloaded, loading it in...")
-
-    local tmp = getRoomUserData(1, "gotoMapping")
-    local oldmaptable = {}
-
-    if tmp ~= "" then
-      oldmaptable = yajl.to_value(tmp)
+    if mmp.crowdmapDownloadSource ~= mmp.settings.mapsource or mmp.crowdmapDownloadGeneration ~= (mmp.mapSourceGeneration or 0) or mmp.crowdmapDownloadIdentity ~= mmp.mapSourceIdentity(mmp.settings.mapsource) then
+      os.remove(filename)
+      return mmp.checkforupdate()
     end
+    mmp.echo("Map downloaded, loading it in...")
+    local context = {
+      filename = filename,
+      version = mmp.crowdmapDownloadVersion,
+      source = mmp.crowdmapDownloadSource,
+      generation = mmp.crowdmapDownloadGeneration,
+      identity = mmp.crowdmapDownloadIdentity,
+      publicMarks = mmp.getRoomMarks("public"),
+      privateMarks = mmp.getRoomMarks("private")
+    }
 
-    local ok = loadMap(filename)
-
-    if ok then
-      if mmp.game ~= "starmourn" then
-        local wc = mmp.lockWormholes()
-  	local ws = mmp.lockSewers()
-        mmp.lockPebble()
-        if mmp.game == "achaea" and wc == 0 and ws == 0 then -- in achaea, using crowdmap, if we didn't get any special exits - it means Mudlet needs to be updated
-          mmp.echo("Sorry, it seems your Mudlet isn't compatible with the new crowdmap format - and the map cannot be loaded fully. Please update your Mudlet:\n  http://www.mudlet.org/download/")
-          return
-        end
-      end
-
-      if mmp.settings.waterwalk then mmp.enableWaterWalk() else mmp.disableWaterWalk() end
-
-      mmp.echo("Map loaded fine - enjoy!")
-
-      tmp = getRoomUserData(1, "gotoMapping")
-      local newmaptable = {}
-
-      if tmp ~= "" then
-        newmaptable = yajl.to_value(tmp)
-      end
-
-      for k,v in pairs(oldmaptable) do newmaptable[k] = v end
-      setRoomUserData(1, "gotoMapping", yajl.to_string(newmaptable))
-      mmp.echo("Marks from the old map migrated successfully.")
-
-      raiseEvent("mmapper updated map")
-    else
+    if not loadCrowdmapDownload(context, "Map loaded fine - enjoy!") then
+      mmp.crowdmapLoadRetries[filename] = context
       mmp.echon("Map failed to load - you need to have the mapper open. Please open it, and then ")
-      echoLink("click here", [[
-        local tmp = getRoomUserData(1, "gotoMapping")
-        local oldmaptable = {}
-        if tmp ~= "" then
-          oldmaptable = yajl.to_value(tmp)
-        end
-
-        local ok = loadMap(']]..filename..[[')
-        if ok then
-        local wc = mmp.lockWormholes()
-	    local ws = mmp.lockSewers()
-        mmp.lockPebble()
-        if mmp.game == "achaea" and wc == 0 and ws == 0 then -- in achaea, using crowdmap, if we didn't get any special exits - it means Mudlet needs to be updated
-          mmp.echo("Sorry, it seems your Mudlet isn't compatible with the new crowdmap format - and the map cannot be loaded fully. Please update your Mudlet:\n  http://www.mudlet.org/download/")
-          return
-        end
-
-        if mmp.settings.waterwalk then mmp.enableWaterWalk() else mmp.disableWaterWalk() end
-
-        mmp.echo("Map loaded successfully!")
-
-          tmp = getRoomUserData(1, "gotoMapping")
-          local newmaptable = {}
-          if tmp ~= "" then
-            newmaptable = yajl.to_value(tmp)
-          end
-          for k,v in pairs(oldmaptable) do newmaptable[k] = v end
-          setRoomUserData(1, "gotoMapping", yajl.to_string(newmaptable))
-          mmp.echo("Marks from the old map migrated successfully.")
-          raiseEvent("mmapper updated map")
-        else mmp.echo("Nope, didn't work. Open the map and try again?") end
-      ]],
-      "Click here to try loading the map again")
+      echoLink("click here", string.format("mmp.retryCrowdmapLoad(%q)", filename), "Click here to try loading the map again")
       echo(" to try loading it in again.\n")
     end
 
@@ -12458,12 +13216,16 @@ end</script>
   elseif filename == tostring(mmp.mapfile) then   -- map version #, either IRE's or crowd
 	mmp.checkingupdates = false
 
+    if mmp.mapDownloadSource ~= mmp.settings.mapsource or mmp.mapDownloadGeneration ~= (mmp.mapSourceGeneration or 0) or mmp.mapDownloadIdentity ~= mmp.mapSourceIdentity(mmp.settings.mapsource) then
+      return mmp.checkforupdate()
+    end
+
     local function needupdate(currentmd5, oldmd5)
-      if not mmp.settings.crowdmap then
+      if mmp.mapDownloadSource == "game" then
         mmp.echon("The games map was ")
         echoLink("updated", '', "New MD5: "..tostring(currentmd5)..", previous MD5: "..(oldmd5 or "(none)"), true)
         echo(" - you should update yours! Go to Settings -&gt; Mapper tab and click on the 'Download' button there. Once you've updated, ")
-        echoLink("click here", "mmp.updatedmap('"..currentmd5.."')", "Click here to quiet the update reminder")
+        echoLink("click here", string.format("mmp.updatedmap(%q, %q)", currentmd5, mmp.mapDownloadIdentity), "Click here to quiet the update reminder")
         echo(" to remove the reminder.")
       else
         mmp.newversion, mmp.oldversion = currentmd5, oldmd5
@@ -12473,6 +13235,10 @@ end</script>
 
     local f, s = io.open(filename)
     if f then s = f:read("*a"); io.close(f) end
+    if mmp.mapDownloadSource == "service" and s:sub(1, 1) == '"' then
+      local ok, decoded = pcall(yajl.to_value, s)
+      if ok and type(decoded) == "string" then s = decoded end
+    end
     local currentmd5 = string.match(s, "([a-z0-9]+)  map%.xml")
 
     -- using crowdsourced map
@@ -12489,7 +13255,21 @@ end</script>
     local f, s = io.open(getMudletHomeDir().."/map downloads/current")
     if f then s = f:read("*a"); io.close(f) end
 
-    if s ~= currentmd5 then needupdate(currentmd5, s) end
+    local storedVersion, storedIdentity, structuredMarker = s, nil, false
+    local decodedOk, storedMarker = pcall(yajl.to_value, s)
+    if decodedOk and type(storedMarker) == "table" then
+      storedVersion = tostring(storedMarker.version or "")
+      storedIdentity = storedMarker.identity
+      structuredMarker = true
+    end
+
+    if storedVersion ~= currentmd5 or (structuredMarker and storedIdentity ~= mmp.mapDownloadIdentity) then
+      needupdate(currentmd5, storedVersion)
+    elseif not structuredMarker then
+      -- A matching legacy marker is already current. Add its source identity
+      -- silently instead of showing a false one-time update reminder.
+      mmp.writeMapVersion(currentmd5, mmp.mapDownloadIdentity)
+    end
   end
 end</script>
 					<eventHandlerList>
@@ -12501,14 +13281,38 @@ end</script>
 					<packageName></packageName>
 					<script>local downloadfolder = getMudletHomeDir() .. "/map downloads/"
 
+function mmp.mapSourceIdentity(source)
+  if source == "service" then
+    return "service:" .. tostring(mmp.game) .. ":" .. tostring(mmp.crowdmapService.mapUrl() or "")
+  end
+  return tostring(source) .. ":" .. tostring(mmp.game)
+end
+
+function mmp.writeMapVersion(version, identity)
+  local f, err = io.open(downloadfolder .. "current", "w")
+  if not f then
+    return mmp.echo("Couldn't write to the update file, because: " .. err)
+  end
+  f:write(yajl.to_string({ version = tostring(version), identity = identity }))
+  f:close()
+end
+
 -- this should get called at start and every hour after that
 
 function mmp.checkforupdate()
   if not mmp.game or mmp.checkingupdates then
     return
   end
+  if mmp.settings.mapsource == "service" and not mmp.crowdmapService.reporter() then
+    mmp.crowdmapService.waitingForReporter = true
+    return
+  end
   local game = mmp.game
-  mmp.mapfile = downloadfolder .. "MD5"
+  mmp.mapDownloadId = (mmp.mapDownloadId or 0) + 1
+  mmp.mapfile = downloadfolder .. "MD5-" .. mmp.mapDownloadId
+  mmp.mapDownloadSource = mmp.settings.mapsource
+  mmp.mapDownloadGeneration = mmp.mapSourceGeneration or 0
+  mmp.mapDownloadIdentity = mmp.mapSourceIdentity(mmp.mapDownloadSource)
   mmp.mapperfile = downloadfolder .. "mapper"
   if not downloadFile then
     mmp.echo("Your version of Mudlet doesn't support downloading files - please upgrade to 2.0+")
@@ -12529,7 +13333,9 @@ function mmp.checkforupdate()
         return
       end
     end
-    if mmp.settings.crowdmap then
+    if mmp.mapDownloadSource == "service" then
+      downloadFile(mmp.mapfile, mmp.crowdmapService.versionUrl())
+    elseif mmp.mapDownloadSource == "published" then
       if game == "achaea" then
         downloadFile(
           mmp.mapfile, "http://ire-mudlet-mapping.github.io/AchaeaCrowdmap/Map/version.txt"
@@ -12575,14 +13381,9 @@ end
 
 -- called by the user when the map is updated to register the fact that it was
 
-function mmp.updatedmap(currentmd5)
+function mmp.updatedmap(currentmd5, identity)
   assert(currentmd5, "need md5 sum to write to file")
-  local f, err = io.open(downloadfolder .. "current", "w")
-  if not f then
-    return mmp.echo("Couldn't write to the update file, because: " .. err)
-  end
-  f:write(currentmd5)
-  f:close()
+  mmp.writeMapVersion(currentmd5, identity or mmp.mapSourceIdentity(mmp.settings.mapsource))
   local t = {"Go you for updating!", "Thanks for updating the map!", "Alright, map updated!"}
   mmp.echo(t[math.random(1, #t)])
 end
@@ -12597,8 +13398,14 @@ function mmp.retrievechangelog()
 end
 
 function mmp.retrievecrowdchangelog()
-  mmp.crowdchangelogfile = downloadfolder .. "crowdchangelogfile"
-  if mmp.game == "achaea" then
+  mmp.crowdmapDownloadId = (mmp.crowdmapDownloadId or 0) + 1
+  mmp.crowdchangelogfile = downloadfolder .. "crowdchangelogfile-" .. mmp.crowdmapDownloadId
+  mmp.crowdmapDownloadSource = mmp.settings.mapsource
+  mmp.crowdmapDownloadGeneration = mmp.mapSourceGeneration or 0
+  mmp.crowdmapDownloadIdentity = mmp.mapSourceIdentity(mmp.crowdmapDownloadSource)
+  if mmp.settings.mapsource == "service" then
+    mmp.downloadcrowdmap(mmp.newversion)
+  elseif mmp.game == "achaea" then
     downloadFile(
       mmp.crowdchangelogfile, "http://ire-mudlet-mapping.github.io/AchaeaCrowdmap/Map/changelog.txt"
     )
@@ -12664,14 +13471,19 @@ function mmp.downloadmapperscript()
 end
 
 function mmp.downloadcrowdmap(newversion)
-  mmp.crowdmapfile = downloadfolder .. "crowdmap"
-  local f, err = io.open(downloadfolder .. "current", "w")
-  if not f then
-    return mmp.echo("Couldn't write to the update file, because: " .. err)
+  if mmp.settings.mapsource == "service" and not mmp.crowdmapService.reporter() then
+    mmp.crowdmapService.waitingForReporter = true
+    return
   end
-  f:write(newversion)
-  f:close()
-  if mmp.game == "achaea" then
+  mmp.crowdmapDownloadId = (mmp.crowdmapDownloadId or 0) + 1
+  mmp.crowdmapfile = downloadfolder .. "crowdmap-" .. mmp.crowdmapDownloadId
+  mmp.crowdmapDownloadSource = mmp.settings.mapsource
+  mmp.crowdmapDownloadGeneration = mmp.mapSourceGeneration or 0
+  mmp.crowdmapDownloadIdentity = mmp.mapSourceIdentity(mmp.crowdmapDownloadSource)
+  mmp.crowdmapDownloadVersion = newversion
+  if mmp.settings.mapsource == "service" then
+    downloadFile(mmp.crowdmapfile, mmp.crowdmapService.mapUrl())
+  elseif mmp.game == "achaea" then
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/AchaeaCrowdmap/Map/map")
   elseif mmp.game == "starmourn" then
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/StarmournCrowdmap/Map/map")
@@ -12689,6 +13501,10 @@ function mmp.downloadcrowdmap(newversion)
     downloadFile(mmp.crowdmapfile, "http://stickmud.github.io/StickMUDCrowdmap/Map/map")
   end
   mmp.echo("Downloading the latest crowdmap...")
+end
+
+function mmp.recordCrowdmapVersion(version, identity)
+  mmp.writeMapVersion(version, identity or mmp.crowdmapDownloadIdentity)
 end
 
 function mmp.showcrowdchangelog()

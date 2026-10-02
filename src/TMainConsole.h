@@ -27,17 +27,22 @@
 
 #include "TConsole.h"
 #include <QFile>
+#include <QHash>
 #include <QPointer>
 #include <QTextStream>
 #include <QWidget>
+#include <memory>
 #include <optional>
 #include <utility>
 
 #include <list>
 
+class EAction;
 class TAction;
 class TEasyButtonBar;
+class TFlipButton;
 class TMediaPlayer;
+class TMxpFrameWidgets;
 class TScrollBox;
 class TTextBox;
 class TToolBar;
@@ -59,6 +64,8 @@ public:
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     TConsole* createSubConsole(const QString& name, QWidget* parent);
+    TMxpFrameWidgets& mxpFrameWidgets() { return *mpMxpFrameWidgets; }
+    const TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
     bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
@@ -72,7 +79,6 @@ public:
     std::list<int> getBgColor(QString& buf);
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
     void luaWrapLine(QString& buf, int line);
-    QString getCurrentLine(const std::string&);
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
@@ -125,6 +131,18 @@ public:
     bool resetLabelSvgTransform(const QString& name);
     std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
+    std::optional<QFont> getLabelFont(const QString& name) const;
+    bool setLabelFont(const QString& name, const QFont& font);
+    std::optional<QString> getLabelText(const QString& name) const;
+    // No value for a name that is not a label's, false for a label that is not
+    // showing a movie; the movie operations below report failure for either.
+    std::optional<bool> labelShowsMovie(const QString& name) const;
+    bool startLabelMovie(const QString& name);
+    bool pauseLabelMovie(const QString& name);
+    // Also false when the movie has no such frame.
+    bool setLabelMovieFrame(const QString& name, int frame);
+    bool setLabelMovieSpeed(const QString& name, int percent);
+    bool scaleLabelMovie(const QString& name, bool followLabelSize);
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
     // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
@@ -145,7 +163,6 @@ public:
     bool resizeSubConsole(const QString& name, int width, int height);
     bool moveSubConsole(const QString& name, int x, int y);
     bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
-    bool pasteToSubConsole(const QString& name);
     std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
@@ -163,7 +180,73 @@ public:
     void updateCommandLineSpellCheck(bool enabled);
     void setCommandLineText(const QString& text);
     TCommandLine* raiseCommandLine();
+    // The command line operations the core forwards to this view by name, never
+    // by widget. An empty name or "main" is this console's own command line, any
+    // other one made by createCommandLine() or a mini console's; each reports
+    // failure for a name that is none of those.
+    std::optional<QString> getCommandLineText(const QString& name) const;
+    bool replaceCommandLineText(const QString& name, const QString& text);
+    bool appendCommandLineText(const QString& name, const QString& text);
+    bool clearCommandLine(const QString& name);
+    bool selectCommandLineText(const QString& name);
+    bool addCommandLineSuggestion(const QString& name, const QString& word);
+    bool removeCommandLineSuggestion(const QString& name, const QString& word);
+    bool clearCommandLineSuggestions(const QString& name);
+    bool addCommandLineBlacklistWord(const QString& name, const QString& word);
+    bool removeCommandLineBlacklistWord(const QString& name, const QString& word);
+    bool clearCommandLineBlacklist(const QString& name);
+    bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName);
+    // No value for a name that is not a command line's, false for a command line
+    // with no such item.
+    std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label);
+    std::optional<bool> getCommandLineSavesHistory(const QString& name) const;
+    bool setCommandLineSavesHistory(const QString& name, bool savesHistory);
+    bool setCommandLineVisible(const QString& name, bool visible);
+    // Also used by Host to announce a log change for a view not yet built
+    static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
+    // The scroll bar and scrolling operations the core forwards to this view by
+    // name, never by widget. An empty name or "main" is this console, any other
+    // a mini console, user window or buffer; each reports failure for a name
+    // that is none of those.
+    bool setWindowScrollBarVisible(const QString& name, bool visible);
+    bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible);
+    std::optional<bool> getWindowScrollBarVisible(const QString& name);
+    bool setWindowScrolling(const QString& name, bool enabled);
+    std::optional<bool> getWindowScrolling(const QString& name);
+    std::optional<int> getWindowScroll(const QString& name);
+    // A negative line counts back from the end. One at or past the end, or
+    // toEnd, puts the console back to following new lines.
+    bool scrollWindowTo(const QString& name, int line, bool toEnd);
+    // How many characters and lines fit in the named console's upper pane, from its size and font.
+    std::optional<int> getWindowColumnCount(const QString& name);
+    std::optional<int> getWindowRowCount(const QString& name);
+    // The font operations, found by name in the same way. The main console's
+    // font is the profile's display font, which Host keeps and tells scripts
+    // about when it changes.
+    std::optional<QFont> getWindowFont(const QString& name);
+    std::optional<int> getWindowFontSize(const QString& name);
+    // The console keeps its point size. Answers whether the font was taken
+    // and, when not, why.
+    std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight);
+    bool setWindowFontSize(const QString& name, int size);
+    // Creates the console's own command line the first time it is shown.
+    bool setWindowCommandLineVisible(const QString& name, bool visible);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
+    // The text box operations the core forwards to this view by name, never by
+    // widget; each reports failure for a name that is not a text box's.
+    std::optional<QString> getTextBoxText(const QString& name) const;
+    bool setTextBoxText(const QString& name, const QString& text);
+    bool clearTextBox(const QString& name);
+    bool setTextBoxReadOnly(const QString& name, bool readOnly);
+    bool setTextBoxPlaceholder(const QString& name, const QString& text);
+    bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet);
+    std::optional<QFont> getTextBoxFont(const QString& name) const;
+    bool setTextBoxFont(const QString& name, const QFont& font);
+    bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus);
+    // QWidget state the core asks about, answered here so that it need not
+    // reach this view's QWidget base.
+    QPoint mousePosition() const;
+    bool hasKeyboardFocus() const;
     // Shared by scroll boxes, command lines and text boxes: each is the same plain QWidget call.
     bool showPlainWindow(const QString& name);
     bool hidePlainWindow(const QString& name);
@@ -196,25 +279,62 @@ public:
     std::optional<QString> mapWidgetTitle() const;
     std::optional<QRect> mapWidgetGeometry() const;
     bool hideMapWidget();
-    TToolBar* createToolBar(TAction* pAction, const QString& name);
-    TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
-    void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
-    void detachEasyButtonBar(TEasyButtonBar* pBar, int location);
-    void dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area);
-    void undockToolBar(TToolBar* pToolBar);
+    // Brings the bars in line with the root actions (for a package, with the
+    // toolbars in it): makes, fills and places each, and destroys any left from
+    // an action that has switched between docked and floating.
+    void regenerateToolBars(const std::list<TAction*>& rootActions);
+    void regenerateEasyButtonBars(const std::list<TAction*>& rootActions);
+    // Takes an action's bars out of the window without destroying them, for an
+    // action that is being removed or has stopped being a root one.
+    void detachActionBars(TAction* pAction);
+    // Each action's bars, looked up by the action. An action shown as a menu on
+    // another's bar (on a floating toolbar, any entry of such a menu) is
+    // recorded against that bar too, so what is asked of its bar here is done
+    // to the whole bar.
+    bool hasEasyButtonBar(TAction* pAction) const;
+    TToolBar* actionToolBar(TAction* pAction) const;
+    TEasyButtonBar* actionEasyButtonBar(TAction* pAction) const;
+    void setActionToolBar(TAction* pAction, TToolBar* pToolBar);
+    void setActionEasyButtonBar(TAction* pAction, TEasyButtonBar* pBar);
+    // For a child moved out from under pOldParent: the child no longer belongs
+    // to whichever of its bars it shared with its old parent.
+    void releaseParentActionBars(TAction* pOldParent, TAction* pChild);
+    void renameActionToolBar(TAction* pAction, const QString& name);
+    void setActionToolBarVisible(TAction* pAction, bool visible);
+    void hideActionEasyButtonBar(TAction* pAction);
+    // The button and the menu entry a bar draws an action as; the one each
+    // replaces is deleted later.
+    void replaceActionButton(TAction* pAction, TFlipButton* pButton);
+    void replaceActionMenuEntry(TAction* pAction, EAction* pEntry);
+    void setActionButtonChecked(TAction* pAction, bool checked);
+    // Floating toolbars are the main window's children rather than this
+    // console's, so the profile has to delete them itself.
+    const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }
+    void deleteActionToolBars();
+    void deleteActionToolBarsLater();
+    // A floating toolbar that has moved or been resized since the layout was
+    // last saved; committing clears the flags and answers whether any was raised.
+    void setToolBarLayoutChanged(TToolBar* pToolBar);
+    bool commitToolBarLayoutChanges();
+    void discardToolBarLayoutChanges();
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
     void toggleLogging(bool);
-    void printOnDisplay(std::string&, bool isFromServer = false);
+    // The view's part of Host::printOnDisplay(). startIncomingText() starts
+    // timing the pass for the latency box and answers whether to alert the user
+    // if the text changes the buffer; finishIncomingText() schedules the paced
+    // latency box refresh and marks the profile's tab.
+    bool startIncomingText();
+    void alertNewData();
+    void finishIncomingText();
     void finalize();
     void refreshSubconsoles();
 
 
     mutable QMap<QString, QSize> mCachedWindowSizes;
-    TBuffer mClipboard;
     // The log lifecycle lives in the core console model so a profile with no
     // view can run one; these four are references aliasing the model's fields,
     // the way buffer and mFgColor alias theirs. mLogToLogFile and mLogFileName
@@ -258,6 +378,25 @@ signals:
 
 
 private:
+    TToolBar* createToolBar(TAction* pAction, const QString& name);
+    TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
+    void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
+    void detachEasyButtonBar(TEasyButtonBar* pBar, int location);
+    void dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area);
+    void undockToolBar(TToolBar* pToolBar);
+    void constructToolbar(TAction* pAction, TToolBar* pToolBar);
+    void constructToolbar(TAction* pA, TEasyButtonBar* pTB);
+    struct ActionBars
+    {
+        QPointer<TToolBar> mpToolBar;
+        QPointer<TEasyButtonBar> mpEasyButtonBar;
+        QPointer<TFlipButton> mpButton;
+        QPointer<EAction> mpMenuEntry;
+    };
+    ActionBars& actionBarsFor(TAction* pAction);
+    TFlipButton* actionButton(TAction* pAction) const;
+    EAction* actionMenuEntry(TAction* pAction) const;
+
     // The latency box repaints on every setText(), so a flood of packets is
     // shown at most once per pace interval - the same cap the panes paint at.
     static constexpr int csmLatencyBoxPaceMs = 16;
@@ -269,6 +408,8 @@ private:
     QWidget* parentWidgetFor(const QString& windowname) const;
     // Resolves the three name-only kinds in the same order as the core.
     QWidget* plainWindowWidget(const QString& name) const;
+    TCommandLine* commandLineNamed(const QString& name) const;
+    TConsole* consoleNamed(const QString& name);
     // The single answer to "does this profile have a map widget on screen right
     // now" - null if it never opened one, put it away, or createMapper() took it over.
     //
@@ -297,7 +438,15 @@ private:
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
 
+    // An entry lasts as long as its action, so an address a later action is
+    // given never inherits its bars.
+    QHash<TAction*, ActionBars> mActionBars;
+    std::list<QPointer<TToolBar>> mToolBarList;
+    std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
+    QList<QPointer<TToolBar>> mToolBarLayoutChanges;
+
     bool mEnableClose = false;
+    std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;
 };
 
 #endif // MUDLET_TMAINCONSOLE_H
