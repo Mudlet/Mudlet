@@ -7026,6 +7026,11 @@ mudlet::~mudlet()
     // around as they go. QObject only drops these connections once every member
     // is gone, so the focus handler would otherwise walk a destroyed command list.
     disconnect(qGuiApp, nullptr, this, nullptr);
+    // Likewise the map docks: ~QWidget hides them as it closes the window, and
+    // their visibilityChanged handlers read members that are gone by then.
+    for (auto* pDockWidget : findChildren<QDockWidget*>()) {
+        disconnect(pDockWidget, &QDockWidget::visibilityChanged, this, nullptr);
+    }
     TSpellChecker::closeSharedDictionary();
     if (!mTranslatorsLoadedList.isEmpty()) {
         qDebug().nospace().noquote() << "mudlet::~mudlet() INFO - uninstalling translation...";
