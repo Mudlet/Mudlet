@@ -573,6 +573,92 @@ private slots:
         QVERIFY2(bufferText.contains(qsl("OSC 8 Hyperlink Examples")), "The OSC 8 documentation examples were not injected into the view-less buffer.");
     }
 
+    // The OSC 8 hyperlink managers are the model's, so the translation has to
+    // reach them through the model rather than through the view, or a link
+    // arriving while there is no view is left unmanaged.
+    void test_osc8LinkStateReachesTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        host->mEnableOSC8Hyperlinks = true;
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        std::string preset = "\x1b]8;;preset:modelpreset?config={\"style\":{\"color\":\"red\"}}\x1b\\";
+        model->buffer.translateToPlainText(preset, true);
+        QVERIFY2(model->mHyperlinkCompactManager.hasPreset(qsl("modelpreset")), "The preset the server defined never reached the model's compact manager.");
+
+        // A reveal link starts concealed, and only its visibility manager can
+        // say so - an unregistered one is written out as plain text.
+        std::string link =
+                "OSCMODEL(\x1b]8;;send:osc8model?config={\"visibility\":{\"action\":\"reveal\",\"delay\":600000},\"selection\":{\"group\":\"modelgroup\",\"value\":\"modelvalue\",\"selected\":true}}"
+                "\x1b\\HIDDENWORD\x1b]8;;\x1b\\)OSCMODEL\n";
+        model->buffer.translateToPlainText(link, true);
+        const int line = model->buffer.getLastLineNumber() - 1;
+        QVERIFY2(line >= 0 && model->buffer.line(line).startsWith(qsl("OSCMODEL(")), "The line carrying the link never reached the model's buffer.");
+        QCOMPARE(model->buffer.line(line), qsl("OSCMODEL(          )OSCMODEL"));
+        QVERIFY2(!model->mHyperlinkVisibilityManager.trackedLinkIds().isEmpty(), "The link was never registered with the model's visibility manager.");
+        QVERIFY2(model->mHyperlinkSelectionManager.isSelected(qsl("modelgroup"), qsl("modelvalue")), "The link's selection never reached the model's selection manager.");
+    }
+
+    // The format a short line is padded with and the background an HTML export
+    // falls back to are the model's, so neither needs a view to be right.
+    void test_paddingAndHtmlBackgroundComeFromTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        const QColor background{12, 34, 56};
+        host->mBgColor = background;
+        host->refreshMainConsoleColors();
+        const int line = appendModelLine(model->buffer, qsl("padded"));
+        QVERIFY2(model->buffer.bufferToHtml(true, line).contains(qsl("background: #0c2238;")), "The HTML timestamp does not take the model's background.");
+
+        const QColor paddingFg{1, 2, 3};
+        model->mFormatCurrent.setColors(paddingFg, background);
+        const int lineLength = model->buffer.line(line).size();
+        QPoint beyondTheEnd(lineLength + 3, line);
+        QVERIFY(model->buffer.insertInLine(beyondTheEnd, qsl("X"), TChar(QColorConstants::White, QColorConstants::Black)));
+        QCOMPARE(model->buffer.buffer.at(line).at(lineLength).foreground(), paddingFg);
+    }
+
+    // An <OSC>R palette reset re-seeds the format that pads lines and fills
+    // cuts from the profile's colours, with a view or without one.
+    void test_paletteResetReseedsTheCurrentFormatWithAndWithoutAView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        const QColor staleFg{1, 2, 3};
+        const QColor staleBg{4, 5, 6};
+        QVERIFY2(host->mFgColor != staleFg && host->mBgColor != staleBg, "The profile already uses the stale colours, so the assertions cannot fail.");
+        host->setMayRedefineColors(true);
+
+        model->mFormatCurrent.setColors(staleFg, staleBg);
+        std::string reset = "\x1b]R\x07";
+        model->buffer.translateToPlainText(reset, true);
+        QCOMPARE(model->mFormatCurrent.foreground(), host->mFgColor);
+        QCOMPARE(model->mFormatCurrent.background(), host->mBgColor);
+
+        destroyTheView(host);
+        model->mFormatCurrent.setColors(staleFg, staleBg);
+        reset = "\x1b]R\x07";
+        model->buffer.translateToPlainText(reset, true);
+        QCOMPARE(model->mFormatCurrent.foreground(), host->mFgColor);
+        QCOMPARE(model->mFormatCurrent.background(), host->mBgColor);
+    }
+
     // The log file, its stream and the on/off flag are core model state, so the
     // announcement and the log button are all a logging change still needs this
     // view for. TConsoleModel raises both through Host and TMainConsole acts on
