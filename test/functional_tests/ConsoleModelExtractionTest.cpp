@@ -96,6 +96,7 @@ private:
     const QString mHostname = "Test-ConsoleModelExtraction";
     const QString mColourHostname = "Test-ConsoleModelColours";
     const QString mSpellHostname = "Test-ConsoleModelSpellDic";
+    const QString mViewlessHostname = "Test-ConsoleModelViewless";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
@@ -143,6 +144,7 @@ private slots:
         deleteProfileDirectory(mHostname);
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
+        deleteProfileDirectory(mViewlessHostname);
     }
 
     // The view's members must be the model's fields, not copies of them: same
@@ -648,6 +650,105 @@ private slots:
         model->buffer.translateToPlainText(data, true);
         QCOMPARE(model->buffer.mServerWrapPendingLine, heldLine);
         QVERIFY2(host->mServerWrapFlushTimer.isActive(), "Holding a line back with no view did not start the flush timer.");
+    }
+
+    // A line that ends at the game's wrap column is held back for a
+    // continuation; when none comes, the flush timer has to commit it and run
+    // its triggers with no view just as with one.
+    void test_aHeldServerWrappedLineIsCommittedWithNoView()
+    {
+        // A profile that never had a view, rather than one whose view was
+        // closed: a closing profile drops held lines.
+        QVERIFY2(HostManager::self()->addHost(mViewlessHostname, QString(), QString(), QString()), "Could not create a profile with no view.");
+        Host* host = HostManager::self()->getHost(mViewlessHostname);
+        QVERIFY2(host, "The profile with no view is not in the pool.");
+        QVERIFY2(!host->mpConsole, "The profile has a main console.");
+
+        // The trigger's body only writes a Lua global, as echoing would need
+        // a view.
+        runLua(host,
+               qsl("viewlessHeldLine = 'none'\n"
+                   "tempRegexTrigger('^x+ alpha$', [[viewlessHeldLine = line]], 10)\n"));
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+
+        // 70 characters, inside the join band for a wrap column of 80, and
+        // nothing follows it
+        const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
+        std::string data = heldLine.toStdString() + "\n";
+        QElapsedTimer sinceFeed;
+        sinceFeed.start();
+        model->buffer.translateToPlainText(data, true);
+        QCOMPARE(model->buffer.mServerWrapPendingLine, heldLine);
+        QVERIFY2(lastLineHolding(model->buffer, heldLine) < 0, "The full-width line was committed at once rather than held back for a continuation.");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return lastLineHolding(model->buffer, heldLine) >= 0;
+                         },
+                         3000),
+                 "The held line was never committed with no view.");
+        // A timer may fire slightly early, hence the margin
+        QVERIFY2(sinceFeed.elapsed() >= TBuffer::csmServerWrapFlushDelayMs - 50, qPrintable(qsl("The held line was committed after %1ms, before the flush delay was up.").arg(sinceFeed.elapsed())));
+        QVERIFY2(model->buffer.mServerWrapPendingLine.isEmpty(), "The committed line is still held back as well.");
+        QCOMPARE(luaGlobalString(host, "viewlessHeldLine"), heldLine);
+    }
+
+    // Closing the profile drops a held line, as the connection's teardown does
+    // on a closing profile, rather than running its triggers on a profile that
+    // is being taken apart.
+    void test_closingTheProfileDropsAHeldServerWrappedLine()
+    {
+        // The close saves the profile before it drops anything, and
+        // Host::waitForProfileSave() runs the event loop with the profile still
+        // live - so text from the game arriving meanwhile commits the held line,
+        // as does the posting timer any text from it starts, and so does the
+        // flush timer if the save outlasts it, as it can on a slow disk. None of
+        // those is the close dropping the line, so this game says nothing and
+        // the timer is given longer than any save takes.
+        mpServer->setSendsWelcome(false);
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        host->mServerWrapFlushTimer.setInterval(std::chrono::minutes(1));
+
+        const QString heldLine = QString(64, QChar('y')) + qsl(" omega");
+        std::string data = heldLine.toStdString() + "\n";
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        model->buffer.translateToPlainText(data, true);
+        QVERIFY2(host->mServerWrapFlushTimer.isActive(), "The full-width line was not held back for a continuation.");
+
+        destroyTheView(host);
+        QVERIFY2(!host->mServerWrapFlushTimer.isActive(), "Closing the profile left the flush timer running.");
+        QTest::qWait(TBuffer::csmServerWrapFlushDelayMs * 3);
+        QVERIFY2(lastLineHolding(model->buffer, heldLine) < 0, "The held line was committed on a closed profile.");
+    }
+
+    // A line held after the close starts the flush timer again, and is
+    // dropped all the same.
+    void test_aLineHeldAfterTheProfileClosedIsDropped()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+
+        const QString lateLine = QString(64, QChar('w')) + qsl(" delta");
+        std::string data = lateLine.toStdString() + "\n";
+        model->buffer.translateToPlainText(data, true);
+        QCOMPARE(model->buffer.mServerWrapPendingLine, lateLine);
+        QVERIFY2(host->mServerWrapFlushTimer.isActive(), "Holding a line back after the close did not start the flush timer, so the assertion below cannot fail.");
+        QTest::qWait(TBuffer::csmServerWrapFlushDelayMs * 3);
+        QVERIFY2(lastLineHolding(model->buffer, lateLine) < 0, "A line held after the close was committed on a closed profile.");
     }
 
     // The OSC 8 documentation examples are injected into the main console's
@@ -1224,6 +1325,7 @@ private slots:
         deleteProfileDirectory(mHostname);
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
+        deleteProfileDirectory(mViewlessHostname);
     }
 
     // Every one of these Lua functions used to reach through Host::mpConsole

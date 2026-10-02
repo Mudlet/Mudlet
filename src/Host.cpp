@@ -480,16 +480,20 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mServerWrapFlushTimer.setInterval(TBuffer::csmServerWrapFlushDelayMs);
     connect(&mpMainConsoleModel->mNotifier, &TConsoleModelNotifier::serverWrapLineHeld, &mServerWrapFlushTimer, qOverload<>(&QTimer::start));
     connect(&mServerWrapFlushTimer, &QTimer::timeout, this, [this]() {
-        // The trigger-context flag still lives on the view, so with none the
-        // line stays held:
-        if (!mpConsole) {
+        // closeChildren() has emergency-stopped the triggers, and a line held
+        // after it re-arms this timer:
+        if (mIsClosingDown) {
             return;
         }
         // Mimic TMainConsole::printOnDisplay() so that trigger-context
         // functions behave the same as for any other committed line:
-        mpConsole->mTriggerEngineMode = true;
+        if (mpConsole) {
+            mpConsole->mTriggerEngineMode = true;
+        }
         mpMainConsoleModel->buffer.flushPendingServerWrapJoin();
-        mpConsole->mTriggerEngineMode = false;
+        if (mpConsole) {
+            mpConsole->mTriggerEngineMode = false;
+        }
         finalizeMainConsole();
     });
 }
@@ -583,6 +587,9 @@ void Host::closeChildren()
         qDebug().nospace().noquote() << "Host::closeChildren() INFO - dropping the profile save that a package change owed \"" << getName() << "\": the close saves the profile itself.";
         mDeferredSaveTimer.stop();
     }
+    // A held line is dropped with the profile, as the connection's teardown
+    // does not commit it while closing either:
+    mServerWrapFlushTimer.stop();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     mTelnet.terminateConnection();
 
