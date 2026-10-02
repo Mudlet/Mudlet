@@ -2599,7 +2599,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       local function removeTree(path)
-        if lfs.attributes(path, "mode") ~= "directory" then
+        if lfs.symlinkattributes(path, "mode") ~= "directory" then
           os.remove(path)
           return
         end
