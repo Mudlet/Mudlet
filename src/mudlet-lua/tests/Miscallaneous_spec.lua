@@ -2567,6 +2567,37 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       local closing = "mudlet-spec-torn-down"
       local target = "mudlet-spec-load-target"
 
+      -- closing a profile saves the shared window layout beside the profiles
+      -- directory, which the next Mudlet start reads, so put it back afterwards
+      local configurationDirectory = profilesDirectory:match("^(.*)[/\\]")
+      local layoutFiles = {
+        configurationDirectory .. "/windowLayout.dat",
+        configurationDirectory .. "/windowLayoutGeometry.dat",
+      }
+      local layoutBefore = {}
+
+      setup(function()
+        for _, path in ipairs(layoutFiles) do
+          local handle = io.open(path, "rb")
+          if handle then
+            layoutBefore[path] = handle:read("*a")
+            handle:close()
+          end
+        end
+      end)
+
+      teardown(function()
+        for _, path in ipairs(layoutFiles) do
+          if layoutBefore[path] then
+            local handle = assert(io.open(path, "wb"))
+            handle:write(layoutBefore[path])
+            handle:close()
+          else
+            os.remove(path)
+          end
+        end
+      end)
+
       local function removeTree(path)
         if lfs.attributes(path, "mode") ~= "directory" then
           os.remove(path)
