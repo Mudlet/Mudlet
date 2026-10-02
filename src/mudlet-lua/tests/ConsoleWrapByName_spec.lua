@@ -29,6 +29,29 @@ describe("Tests that the timestamp and wrap functions find their console by name
     end
   end
 
+  -- wrapLine() answers nothing whichever console it rewraps, so check that the
+  -- name did not reach the main console by giving it a line wrapLine() would split
+  local function assertLeavesMainAlone(windowName)
+    local mainWrap = getWindowWrap("main")
+    finally(function() setWindowWrap("main", mainWrap) end)
+    local marked = ("%s %s"):format(windowName, text)
+    setWindowWrap("main", 200)
+    echo("\n" .. marked .. "\n")
+    local line
+    for i = getLineCount(), math.max(getLineCount() - 5, 0), -1 do
+      if getLines("main", i, i + 1)[1] == marked then
+        line = i
+        break
+      end
+    end
+    assert.is_not_nil(line, windowName)
+
+    setWindowWrap("main", 20)
+    local before = getLines("main", line, getLineCount())
+    assert.are.equal(0, select("#", wrapLine(windowName, line)))
+    assert.are.same(before, getLines("main", line, getLineCount()))
+  end
+
   local function wrappedLines(window)
     clearWindow(window)
     echo(window, text .. "\n")
@@ -61,7 +84,16 @@ describe("Tests that the timestamp and wrap functions find their console by name
         assert.is_true(kind[2]())
         assertRefusesAll(otherName)
       end)
+
+      it("leaves a " .. kind[1] .. " alone when wrapLine() names it", function()
+        assert.is_true(kind[2]())
+        assertLeavesMainAlone(otherName)
+      end)
     end
+  end)
+
+  it("answers nothing from wrapLine() for a name that is no window at all", function()
+    assertLeavesMainAlone(unknown)
   end)
 
   it("checks the argument types before it looks for the console", function()
@@ -246,6 +278,30 @@ describe("Tests that the timestamp and wrap functions find their console by name
       assert.is_false(timeStampsEnabled(""))
       assert.are.same({nil, byEmptyName}, {disableTimeStamps("")})
       assert.are.same({nil, byMain}, {disableTimeStamps("main")})
+    end)
+
+    it("rewraps a main console line with wrapLine() by main or an empty name", function()
+      for _, name in ipairs({"main", ""}) do
+        local marked = ("%s %s"):format(name == "" and "byEmptyName" or "byMain", text)
+        setWindowWrap("main", 200)
+        echo("\n" .. marked .. "\n")
+        local line
+        for i = getLineCount(), math.max(getLineCount() - 5, 0), -1 do
+          if getLines("main", i, i + 1)[1] == marked then
+            line = i
+            break
+          end
+        end
+        assert.is_not_nil(line, name)
+
+        setWindowWrap("main", 20)
+        wrapLine(name, line)
+        local lines = getLines("main", line, getLineCount())
+        assert.is_true(#lines > 1, name)
+        for _, wrapped in ipairs(lines) do
+          assert.is_true(#wrapped <= 20, wrapped)
+        end
+      end
     end)
 
     -- the main console's width is also the profile's, which is what

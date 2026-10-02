@@ -225,6 +225,7 @@ struct TConsoleModel
     int mWrapAt = 100;
     int mIndentCount = 0;
     int mHangingIndentCount = 0;
+    void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
 
     // The name scripts know this console by. Only the main console, user
     // windows, miniconsoles and buffers can be addressed by scripts, so only

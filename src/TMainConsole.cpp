@@ -330,31 +330,6 @@ void TMainConsole::slot_loggingStateChanged(const bool isLogging)
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
 }
 
-void TMainConsole::selectCurrentLine(std::string& buf)
-{
-    const QString key = buf.c_str();
-    if (key.isEmpty() || key == QLatin1String("main")) {
-        TConsole::selectCurrentLine();
-        return;
-    }
-    auto pC = mSubConsoleMap.value(key);
-    if (pC) {
-        pC->selectCurrentLine();
-    }
-}
-
-void TMainConsole::luaWrapLine(QString& buf, int line)
-{
-    if (buf.isEmpty() || buf == QLatin1String("main")) {
-        TConsole::luaWrapLine(line);
-        return;
-    }
-    auto pC = mSubConsoleMap.value(buf);
-    if (pC) {
-        pC->luaWrapLine(line);
-    }
-}
-
 
 bool TMainConsole::createBuffer(const QString& name)
 {
