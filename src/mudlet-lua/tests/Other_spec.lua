@@ -2279,6 +2279,85 @@ describe("Tests the timer API", function()
         "a permanent timer survives killTimer")
     end)
 
+    it("finds a temporary timer behind a same-named permanent one", function()
+      -- a permanent timer can share a temporary's name (its id), and must be
+      -- passed over rather than reported as a failure
+      local seed = trackTemp(tempTimer(10, [[]]))
+      killTimer(seed)
+      -- permTimer itself takes seed + 1, so the next temporary takes seed + 2
+      local sharedName = tostring(seed + 2)
+      assert.is_true(permTimer(trackPerm(sharedName), "", 30, [[]]) > 0)
+
+      local tempId = trackTemp(tempTimer(10, [[]]))
+      assert.are.equal(seed + 2, tempId, "ids should still be handed out in sequence")
+      assert.is_true(killTimer(tempId), "killTimer must pass over the permanent timer")
+    end)
+
+    -- A package can carry temporary timers, which install inside its folder;
+    -- only top level temporaries were ever killTimer()'s to free
+    describe("with temporary timers inside a package", function()
+      local function timerXml(name, folder, inner)
+        return string.format([[<%s isActive="yes" isFolder="%s" isTempTimer="yes" isOffsetTimer="no">
+<name>%s</name><script></script><command></command><packageName></packageName><time>00:00:30.000</time>%s</%s>
+]], folder and "TimerGroup" or "Timer", folder and "yes" or "no", name, inner or "", folder and "TimerGroup" or "Timer")
+      end
+
+      local function installTimers(packageName, body)
+        local path = getMudletHomeDir() .. "/" .. packageName .. ".xml"
+        local file = assert(io.open(path, "w"))
+        file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TimerPackage>
+]] .. body .. [[
+	</TimerPackage>
+</MudletPackage>
+]])
+        file:close()
+        assert.is_true(installPackage(path))
+        return path
+      end
+
+      local function removeTimers(packageName, path)
+        uninstallPackage(packageName)
+        os.remove(path)
+      end
+
+      local function settle()
+        -- the deferred deletes are flushed once a timer has fired
+        trackTemp(tempTimer(0, function() raiseEvent("otherSpecKillSettled") end))
+        assert.equals("otherSpecKillSettled", waitForEvent("otherSpecKillSettled", 5000))
+      end
+
+      it("leaves them to their package, under their name or the id they were made with", function()
+        local grandchildren = ""
+        for i = 1, 4 do
+          grandchildren = grandchildren .. timerXml("OtherSpecKillGrandchild" .. i)
+        end
+        local path = installTimers("OtherSpecKillPackage",
+          timerXml("OtherSpecKillFolder", true, timerXml("OtherSpecKillTempChild"))
+          .. timerXml("OtherSpecKillTempGroup", true, grandchildren))
+        finally(function() removeTimers("OtherSpecKillPackage", path) end)
+
+        local id = findItems("OtherSpecKillTempChild", "timer")[1]
+        assert.is_not_nil(id)
+        assert.is_false(killTimer(tostring(id)))
+        assert.is_false(killTimer("OtherSpecKillTempChild"))
+        -- a temporary group inside the package frees its own timers, so
+        -- killing them as well would free each one twice
+        for i = 1, 4 do
+          assert.is_false(killTimer("OtherSpecKillGrandchild" .. i))
+        end
+        assert.is_false(killTimer("OtherSpecKillTempGroup"))
+
+        settle()
+        assert.are.equal(1, exists("OtherSpecKillTempChild", "timer"))
+        for i = 1, 4 do
+          assert.are.equal(1, exists("OtherSpecKillGrandchild" .. i, "timer"))
+        end
+      end)
+    end)
+
     it("returns false the second time, as the timer is already dead", function()
       local id = trackTemp(tempTimer(10, [[]]))
       assert.is_true(killTimer(id))
@@ -3161,5 +3240,47 @@ describe("Tests the script API", function()
       assert.are.equal("function", type(onConnect))
       assert.are.same({}, {onConnect()})
     end)
+  end)
+end)
+
+describe("Tests how raiseEvent finds the Lua event dispatcher", function()
+  -- Mudlet looks the dispatcher up by name for every event, so it has to see
+  -- whatever that name means at the time, not what it meant the first time
+
+  it("calls a dispatcher redefined after earlier events", function()
+    local original = _G.dispatchEventToFunctions
+    local seen = {}
+    raiseEvent("otherSpecDispatchRedefined", "before")
+    local ok, message = pcall(function()
+      _G.dispatchEventToFunctions = function(event, ...)
+        seen[#seen + 1] = event
+        return original(event, ...)
+      end
+      raiseEvent("otherSpecDispatchRedefined", "after")
+    end)
+    _G.dispatchEventToFunctions = original
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchRedefined"}, seen)
+  end)
+
+  it("looks in the globals table setfenv(0) gave the thread", function()
+    local original = getfenv(0)
+    local seen = {}
+    raiseEvent("otherSpecDispatchSwapped", "before")
+    local swapped = setmetatable({
+      dispatchEventToFunctions = function(event, ...)
+        seen[#seen + 1] = event
+        return original.dispatchEventToFunctions(event, ...)
+      end,
+    }, {__index = original})
+    local ok, message = pcall(function()
+      setfenv(0, swapped)
+      raiseEvent("otherSpecDispatchSwapped", "after")
+    end)
+    setfenv(0, original)
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchSwapped"}, seen)
   end)
 end)

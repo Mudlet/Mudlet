@@ -3432,6 +3432,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mProgressDialogAreasCount = 0;
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsCount = 0;
+    mJsonProgressShown.invalidate();
     bool abort = false;
     QJsonArray areasArray;
     for (const auto area : mpRoomDB->getAreaMap()) {
@@ -3606,6 +3607,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
+    mJsonProgressShown.invalidate();
     mMapProgressStandalone = true;
     mMapProgressIsTransfer = false;
     mMapProgressCancelRequested = false;
@@ -3850,6 +3852,14 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     } else {
         mProgressDialogLabelsCount += increment;
     }
+
+    // This is called for every ten rooms, and showing the counts - formatting the
+    // label, repainting the dialog and running the event loop so it can be seen
+    // and cancelled - cost several times what reading or writing them did:
+    if (mJsonProgressShown.isValid() && !mJsonProgressShown.hasExpired(50)) {
+        return mMapProgressCancelRequested;
+    }
+    mJsonProgressShown.start();
 
     emit signal_mapProgressSetValue(static_cast<int>(mProgressDialogRoomsCount));
     if (isExportNotImport) {
