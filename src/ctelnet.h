@@ -233,6 +233,7 @@ public:
     const QByteArray& getEncoding() const { return mEncoding; }
     QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
+    void postCharacterModeWarning();
     const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
     std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
@@ -353,6 +354,9 @@ signals:
     void signal_promptReceived();
 
     void signal_bell();
+    // Whether this player still needs telling is the frontend's call; it answers
+    // through postCharacterModeWarning()
+    void signal_characterModeDetected();
 
     void signal_packageDownloadStarted(const QString& title, const QString& cancelText);
     void signal_packageDownloadProgress(qint64 got, qint64 total);

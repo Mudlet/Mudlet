@@ -44,14 +44,10 @@
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
 #include "utils.h"
-#include "TTextEdit.h"
 #include "discord.h"
 #include "dlgComposer.h"
-#include "dlgMapper.h"
 #include "mudlet.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
+#include "MudletReplay.h"
 #include "MMCPServer.h"
 
 #include <QCoreApplication>
@@ -1889,12 +1885,13 @@ void cTelnet::checkNAWS()
 void cTelnet::sendCurrentNAWS()
 {
     Host* pHost = mpHost;
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost) {
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
-    // width of the time stamps if they are showing:
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mainConsoleShowsTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0);
+    // width of the time stamps if they are drawn - with no view they are not:
+    const bool gutterDrawn = pHost->mpConsole && pHost->mainConsoleShowsTimeStamps();
+    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -5334,8 +5331,10 @@ void cTelnet::gotPrompt(std::string& mud_data)
 //              5=lock open, 6=lock secure, 7=lock locked
 static bool containsMxpModeSwitch(const std::string& data)
 {
-    for (size_t pos = data.find('\x1B'); pos != std::string::npos && pos + 3 < data.size(); pos = data.find('\x1B', pos + 1)) {
-        if (data[pos + 1] == '[' && data[pos + 2] >= '0' && data[pos + 2] <= '7' && data[pos + 3] == 'z') {
+    // Anchored on the closing 'z' rather than the ESC: every SGR colour code
+    // opens with an ESC, so a scan from those stops at each one of them.
+    for (size_t pos = data.find('z', 3); pos != std::string::npos; pos = data.find('z', pos + 1)) {
+        if (data[pos - 3] == '\x1B' && data[pos - 2] == '[' && data[pos - 1] >= '0' && data[pos - 1] <= '7') {
             return true;
         }
     }
@@ -5385,7 +5384,7 @@ void cTelnet::gotRest(std::string& mud_data)
         size_t i = mud_data.rfind('\n');
 
         if (i != std::string::npos) {
-            mMudData += mud_data.substr(0, i + 1);
+            mMudData.append(mud_data, 0, i + 1);
             postData();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
@@ -5395,11 +5394,7 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            if (i + 1 < mud_data.size()) {
-                mMudData = mud_data.substr(i + 1, mud_data.size());
-            } else {
-                mMudData = "";
-            }
+            mMudData.assign(mud_data, i + 1, std::string::npos);
         } else {
             mMudData += mud_data;
 
@@ -5447,14 +5442,29 @@ void cTelnet::postData()
 
     // Detach the pending data first: a trigger fired inside printOnDisplay() can
     // call feedTelnet(), re-entering here - it must not post this data again.
-    std::string data{std::move(mMudData)};
-    mMudData.clear();
+    std::string data;
+    data.swap(mMudData);
+
+    // translateToPlainText() parses its argument in place, so anyone snooping
+    // the stream gets a copy of the original bytes:
+    std::string original;
+    const bool snooped = mpHost->mMMCPServer != nullptr;
+    if (snooped) {
+        original = data;
+    }
 
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(data);
+        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data);
+    }
+
+    // Hand the capacity back so the next packet appends without a malloc. A
+    // re-entrant feed may have left a tail of its own behind; that stays.
+    if (mMudData.empty()) {
+        data.clear();
+        mMudData.swap(data);
     }
 }
 
@@ -5757,7 +5767,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         mReplayPaused = false;
         mReplayChunkPending = false;
         mReplayChunkDelay = 0;
-        if (mudlet::self()->replayStart(mpHost)) {
+        if (auto* replay = MudletReplay::self(); replay && replay->start(mpHost)) {
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
@@ -5821,8 +5831,8 @@ void cTelnet::loadReplayChunk()
         // Previous use of loadedBytes + 1 caused a spurious character at end of
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
-        mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        mReplayChunkDelay = offset / mudlet::self()->mReplaySpeed;
+        auto* replay = MudletReplay::self();
+        mReplayChunkDelay = replay ? replay->advance(offset) : offset;
         mReplayChunkPending = true;
         if (!mReplayPaused) {
             mpReplayChunkTimer->start(mReplayChunkDelay);
@@ -5886,8 +5896,8 @@ void cTelnet::endReplay(const QString& message)
     if (!message.isEmpty()) {
         postMessage(message);
     }
-    if (auto pMudlet = mudlet::self()) {
-        pMudlet->replayOver();
+    if (auto* replay = MudletReplay::self()) {
+        replay->over();
     }
 }
 
@@ -6072,9 +6082,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     in_buffer[amount] = '\0';
 
     std::string cleandata;
-    // Pre-allocate for worst case: decompressed data can be much larger than input
-    // BUFFER_SIZE is 100000, so reserve enough for typical usage
-    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE) * 4);
     qint32 datalen = 0;
     datalen = amount;
     char* buffer = in_buffer;
@@ -6105,6 +6112,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
+
+    // About what stripping telnet leaves of the read (decompression already
+    // went through out_buffer above):
+    cleandata.reserve(static_cast<size_t>(datalen));
 
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.
@@ -6751,13 +6762,15 @@ void cTelnet::checkCharacterModePattern()
     raiseProtocolEvent("sysCharacterModeDetected", "");
     qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA persisted past a submitted line)";
 
-    if (mudlet::self()->showCharacterModeWarning()) {
-        mudlet::self()->showedCharacterModeWarning();
-        //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
-        postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
-                       "which Mudlet does not support. Input may not work as expected. "
-                       "Consider using keybindings for immediate key response instead."));
-    }
+    emit signal_characterModeDetected();
+}
+
+void cTelnet::postCharacterModeWarning()
+{
+    //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
+    postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
+                   "which Mudlet does not support. Input may not work as expected. "
+                   "Consider using keybindings for immediate key response instead."));
 }
 
 bool cTelnet::checkEchoAnomalyPattern()

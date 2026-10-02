@@ -33,6 +33,7 @@ class TelnetServerStub : public QTcpServer
     Q_OBJECT
 
     QString mpWelcomeMessage = "";
+    bool mSendsWelcome = true;
     QPointer<QTcpSocket> mpClient;
     QByteArray mPendingData;
     bool mHadClient = false;
@@ -51,6 +52,9 @@ public:
     // actual bound port back via serverPort() (inherited from QTcpServer) once start() has succeeded.
     void start(const QString& host, quint16 port = 0);
     void setWelcomeMessage(const QString& message) { mpWelcomeMessage = message; }
+    // Off for a game that sends nothing at all, not even the bare line feed an
+    // empty welcome message still is:
+    void setSendsWelcome(const bool sendsWelcome) { mSendsWelcome = sendsWelcome; }
     // Sends bytes verbatim to the connected client - allows telnet control
     // bytes like IAC GA to be included:
     void sendRaw(const QByteArray& data);

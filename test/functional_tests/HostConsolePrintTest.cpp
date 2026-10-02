@@ -259,6 +259,28 @@ private slots:
         QCOMPARE(buffer().mCursorY, buffer().size());
     }
 
+    // echo() marks the text it puts on the main console as echoed, and only
+    // that text: what is printed straight after it must not carry the mark.
+    void test_luaEchoMarksOnlyItsOwnText()
+    {
+        QVERIFY(runLua(qsl("echo('hcpt-echoed')")));
+        mpHost->printToMainConsole(qsl("hcpt-printed\n"));
+
+        const int line = lineContaining(qsl("hcpt-echoedhcpt-printed"));
+        QVERIFY(line >= 0);
+        const QString text = buffer().line(line);
+        const std::vector<TChar>& chars = buffer().buffer.at(line);
+        const int echoedFrom = text.indexOf(qsl("hcpt-echoed"));
+        const int printedFrom = text.indexOf(qsl("hcpt-printed"));
+        for (int i = echoedFrom; i < printedFrom; ++i) {
+            QVERIFY2(chars.at(i).mFlags & TChar::Echo, qPrintable(qsl("echoed character %1 of '%2' is not marked as echoed").arg(i).arg(text)));
+        }
+        for (int i = printedFrom; i < text.size(); ++i) {
+            QVERIFY2(!(chars.at(i).mFlags & TChar::Echo), qPrintable(qsl("printed character %1 of '%2' is marked as echoed").arg(i).arg(text)));
+        }
+        QVERIFY(!buffer().mEchoingText);
+    }
+
     void test_systemMessageIsLabelledAndColoured()
     {
         mpHost->printSystemMessage(qsl("careful\n"));
@@ -268,7 +290,7 @@ private slots:
         const QString text = buffer().line(line);
         QVERIFY2(text.endsWith(qsl("careful")), qPrintable(text));
         QVERIFY2(text != qsl("careful"), "the system message label is missing");
-        QCOMPARE(buffer().buffer.at(line).front().foreground(), mpHost->mpConsole->mSystemMessageFgColor);
+        QCOMPARE(buffer().buffer.at(line).front().foreground(), mpHost->mainConsoleModel().mSystemMessageFgColor);
         QCOMPARE(buffer().mCursorY, buffer().size());
     }
 

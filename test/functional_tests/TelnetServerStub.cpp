@@ -99,16 +99,18 @@ void TelnetServerStub::onNewConnection()
 
     QPointer<QTcpSocket> safeClient = client;
 
-    QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]() {
-        if (!safeClient) {
-            return;
-        }
-        const auto bytesWritten = safeClient->write(welcomeMessage.toUtf8() + "\r\n");
-        safeClient->flush();
-        if (bytesWritten <= 0) {
-            qWarning().noquote() << qsl("⚠️ Failed to send welcome message to %1").arg(safeClient->peerAddress().toString());
-        }
-    });
+    if (mSendsWelcome) {
+        QTimer::singleShot(100ms, [safeClient, welcomeMessage = mpWelcomeMessage]() {
+            if (!safeClient) {
+                return;
+            }
+            const auto bytesWritten = safeClient->write(welcomeMessage.toUtf8() + "\r\n");
+            safeClient->flush();
+            if (bytesWritten <= 0) {
+                qWarning().noquote() << qsl("⚠️ Failed to send welcome message to %1").arg(safeClient->peerAddress().toString());
+            }
+        });
+    }
 
     connect(client, &QTcpSocket::readyRead, this, [this, client]() {
         collectNawsUpdates(client);
