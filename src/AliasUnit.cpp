@@ -111,10 +111,11 @@ void AliasUnit::uninstall(const QString& packageName)
 
 void AliasUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto alias : mAliasRootNodeList) {
-        if (alias->isActive()) {
-            alias->compileAll();
-        }
+        alias->compileAll();
     }
 }
 
@@ -413,23 +414,27 @@ bool AliasUnit::disableAlias(const QString& name)
 
 bool AliasUnit::killAlias(const QString& name)
 {
-    for (auto alias : mAliasRootNodeList) {
-        if (alias->getName() != name) {
+    // By the lookup table rather than a walk of every alias; see TimerUnit::killTimer()
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TAlias* alias = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (alias->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named alias that cannot be killed - a permanent alias loaded from
-        // the profile precedes this session's temporaries in this list, and
-        // reporting a failure over it would strand a killable alias
+        // same-named alias that cannot be killed - a permanent one would strand
+        // a killable temporary
         if (!alias->isTemporary()) {
             // only temporary Aliases can be killed
             continue;
         }
-        // An already killed alias is only unlinked from this list once doCleanup()
+        // An already killed alias is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while an alias script is on the
         // call stack - so until then it is still findable by name. Killing it a
         // second time achieves nothing:
-        if (mCleanupSet.contains(alias)) {
+        if (mCleanupSet.contains(alias) || uninstallList.contains(alias)) {
             continue;
         }
         alias->setIsActive(false);

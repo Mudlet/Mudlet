@@ -867,6 +867,7 @@ public:
     static const QString csmInvalidItemID;
     static const QString csmInvalidAreaID;
     static const QString csmInvalidAreaName;
+    static const QStringList csmItemTypes;
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
@@ -892,6 +893,7 @@ private:
     static void errorArgumentType(lua_State*, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const QString& message, const bool useFalseInsteadofNil = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const char* message, const bool useFalseInsteadofNil = false);
+    static int warnArgumentChoice(lua_State*, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value);
     static int setLabelCallback(lua_State*, const char* funcName);
     static int movieFunc(lua_State*, const char* funcName);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
@@ -1084,6 +1086,10 @@ private:
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
     void releaseNestedDispatchState(NestedDispatchState&);
+    // Registry references to the compiled "return <name>" chunk that
+    // callEventHandler() runs to find each handler, by handler name. They
+    // belong to pGlobalLua, so are dropped whenever it is replaced.
+    QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,

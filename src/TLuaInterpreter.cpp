@@ -105,6 +105,7 @@ const QString TLuaInterpreter::csmInvalidExitRoomID{qsl("number %1 is not a vali
 const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem to be parseable as a positive integer")};
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
+const QStringList TLuaInterpreter::csmItemTypes{qsl("alias"), qsl("button"), qsl("script"), qsl("keybind"), qsl("timer"), qsl("trigger")};
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
@@ -344,6 +345,20 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
         TDebug(Qt::white, QColorConstants::Svg::orange, TDebug::Category::LuaWarning) << "Lua: " << functionName << ": " << message << "\n" >> &host;
     }
     return 2;
+}
+
+// No documentation available in wiki - internal function
+// returns nil+msg for a value outside a fixed set; the refusal is the only
+// place a script can read what the set is, so it lists every accepted value
+int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value)
+{
+    Q_ASSERT(accepted.size() > 1);
+    QStringList quoted;
+    for (const auto& choice : accepted) {
+        quoted << qsl("\"%1\"").arg(choice);
+    }
+    const QString lastChoice = quoted.takeLast();
+    return warnArgumentValue(L, functionName, qsl("%1 must be %2 or %3, got \"%4\"").arg(argumentName, quoted.join(qsl(", ")), lastChoice, value));
 }
 
 // No documentation available in wiki - internal function
@@ -1846,7 +1861,7 @@ int TLuaInterpreter::findItems(lua_State* L)
         generateList(itemList, L);
         return 1;
     }
-    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+    return warnArgumentChoice(L, __func__, qsl("item type"), csmItemTypes, type);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAncestorsActive
@@ -1925,7 +1940,7 @@ int TLuaInterpreter::isAncestorsActive(lua_State* L)
         return 1;
     }
 
-    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+    return warnArgumentChoice(L, __func__, qsl("item type"), csmItemTypes, type);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ancestors
@@ -2256,7 +2271,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
             return 1;
         }
 
-        return warnArgumentValue(L, functionName, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+        return warnArgumentChoice(L, functionName, qsl("item type"), csmItemTypes, type);
     }();
     if (results == csmErrorAlreadyPushed) {
         return lua_error(L);
@@ -2705,7 +2720,9 @@ int TLuaInterpreter::getTime(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getEpoch
 int TLuaInterpreter::getEpoch(lua_State* L)
 {
-    lua_pushnumber(L, static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch() / 1000.0));
+    // Not currentDateTime(), which works out the local time zone - on glibc a
+    // stat() of /etc/localtime per call - only for the epoch to discard it:
+    lua_pushnumber(L, static_cast<double>(QDateTime::currentMSecsSinceEpoch()) / 1000.0);
     return 1;
 }
 
@@ -5691,7 +5708,36 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     // same stack, so only ever unwind back down to what we found:
     const int initialStackSize = lua_gettop(L);
 
-    int error = luaL_dostring(L, qsl("return %1").arg(function).toUtf8().constData());
+    // Compiling the lookup costs far more than running it, and every event
+    // pays for at least one - dispatchEventToFunctions is always registered -
+    // so each handler name is compiled once. Running the chunk still looks the
+    // name up afresh, so a handler that is redefined or removed is seen:
+    int error = 0;
+    if (const auto cached = mEventHandlerLookupRefs.constFind(function); cached != mEventHandlerLookupRefs.cend()) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, cached.value());
+        // A freshly loaded chunk would take whatever globals table the thread
+        // has now, which setfenv(0, ...) can have changed since this one was:
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
+        lua_setfenv(L, -2);
+    } else {
+        error = luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+        if (!error) {
+            // Script names come and go with renames, so keep this from growing
+            // without bound - but far above the handler count of any real
+            // profile, as starting over drops the lookups every event uses:
+            if (mEventHandlerLookupRefs.size() >= 16384) {
+                for (const int ref : std::as_const(mEventHandlerLookupRefs)) {
+                    luaL_unref(L, LUA_REGISTRYINDEX, ref);
+                }
+                mEventHandlerLookupRefs.clear();
+            }
+            lua_pushvalue(L, -1);
+            mEventHandlerLookupRefs.insert(function, luaL_ref(L, LUA_REGISTRYINDEX));
+        }
+    }
+    if (!error) {
+        error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    }
     if (error) {
         std::string err;
         if (lua_isstring(L, -1)) {
@@ -6273,6 +6319,7 @@ void TLuaInterpreter::initLuaGlobals()
         // corrupt a freshly-issued registry index, which is what
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
+        mEventHandlerLookupRefs.clear();
         lua_close(pGlobalLua);
         forgetLazyGlobals();
     }
@@ -8882,7 +8929,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
         if (key == qsl("mapInfoColor")) {
             if (!lua_istable(L, 2)) {
-                lua_pushfstring(L, "%s: bad argument #%d type (table expected for mapInfoColor, got %s!)", __func__, 2, luaL_typename(L, 2));
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor requires a table {r, g, b} or {r, g, b, a}"));
             }
 
@@ -8949,7 +8995,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         } else if (value == qsl("disabled")) {
             host.mMapperButtonMode = Host::MapperButtonMode::Disabled;
         } else {
-            return warnArgumentValue(L, __func__, qsl("mapperButton must be \"default\", \"scripted\" or \"disabled\", got \"%1\"").arg(value));
+            return warnArgumentChoice(L, __func__, qsl("mapperButton"), {qsl("default"), qsl("scripted"), qsl("disabled")}, value);
         }
         mudlet::self()->updateMapActionAvailability();
         return success();
@@ -9046,12 +9092,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
             } else if (value == "script") {
                 host.mCommandEchoMode = Host::CommandEchoMode::ScriptControl;
             } else {
-                lua_pushfstring(L, "setConfig: bad argument #2 value (expected 'never', 'always', or 'script', got '%s')", value.toUtf8().constData());
-                return warnArgumentValue(L, __func__, value);
+                return warnArgumentChoice(L, __func__, qsl("showSentText"), {qsl("never"), qsl("always"), qsl("script")}, value);
             }
         } else {
-            lua_pushfstring(L, "setConfig: bad argument #2 type (expected boolean or string for 'showSentText', got %s)", luaL_typename(L, 2));
-            return warnArgumentValue(L, __func__, qsl("showSentText"));
+            return warnArgumentValue(L, __func__, qsl("showSentText must be a boolean or a string, got %1").arg(luaL_typename(L, 2)));
         }
         return success();
     }
@@ -9192,9 +9236,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), behaviours.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return warnArgumentChoice(L, __func__, qsl("blankLinesBehaviour"), behaviours, behaviour);
         }
 
         if (behaviour == qsl("show")) {
@@ -9211,9 +9253,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return warnArgumentChoice(L, __func__, qsl("caretShortcut"), values, value);
         }
 
         if (value == qsl("tab")) {
@@ -9237,9 +9277,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid commandLineHistorySaveSize string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return warnArgumentChoice(L, __func__, qsl("controlCharacterHandling"), values, value);
         }
 
         if (value == qsl("oem")) {
@@ -9269,9 +9307,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid ambiguousEAsianWidthCharacters string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return warnArgumentChoice(L, __func__, qsl("ambiguousEAsianWidthCharacters"), values, value);
         }
 
         if (value == qsl("narrow")) {
