@@ -97,6 +97,12 @@ void* vosk_model_new(const char* path)
     if (!path || !*path) {
         return nullptr;
     }
+    // A folder that exists but that the real library cannot load - a truncated
+    // download, a model in the wrong format - recognised by name, so a test can
+    // reach the path where vosk_model_new() refuses a folder that is there.
+    if (std::string(path).find("vosk-model-stub-unloadable") != std::string::npos) {
+        return nullptr;
+    }
     ++gModelsAlive;
     auto* model = new StubModel;
     model->path = path;

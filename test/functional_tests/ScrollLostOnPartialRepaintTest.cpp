@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QScrollBar>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -176,6 +177,33 @@ private slots:
         QVERIFY2(afterIncremental == authoritative,
                  "a partial repaint that met a pending scroll drew the pre-scroll screen and then discarded the scroll, so the line that arrived "
                  "is missing from the pane until something unrelated forces a full repaint");
+    }
+
+    // Output that arrives soon after a paint leaves the scrollbar to the paint
+    // pacer, and a full repaint landing first must not take that with it
+    void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mpConsole, "no main console");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+        QScrollBar* scrollBar = host->mpConsole->mpScrollBar;
+        QVERIFY(scrollBar);
+        auto* lua = host->getLuaInterpreter();
+
+        lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
+        qApp->processEvents();
+        pane->repaint();
+        lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+        QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
+        pane->forceUpdate();
+        pane->repaint();
+
+        // not QTRY: later output from the connection refreshes the scrollbar
+        // within its retry window and would hide the loss
+        QTest::qWait(100);
+        QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
     }
 
 private:
