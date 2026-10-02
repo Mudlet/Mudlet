@@ -2300,6 +2300,55 @@ void Host::resetMainConsoleFormat()
     mpMainConsoleModel->resetFormat();
 }
 
+TConsoleModel* Host::consoleModelNamed(const QString& name)
+{
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        return mpMainConsoleModel.get();
+    }
+    return mWindowRegistry.subConsoleModel(name);
+}
+
+void Host::markSelectionDirty(TConsoleModel& model)
+{
+    emit model.mNotifier.linesRestyled(std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
+}
+
+bool Host::setWindowFgColor(const QString& name, const QColor& color)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionFgColor(color)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+bool Host::setWindowBgColor(const QString& name, const QColor& color)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionBgColor(color)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+bool Host::setWindowDisplayAttributes(const QString& name, const TChar::AttributeFlags attributes, const bool enabled)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionDisplayAttributes(attributes, enabled)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
 // Hot: the trigger engine reads the model for every character of a colour
 // pattern, so this hands back a reference rather than a shared_ptr copy - the
 // latter costs an atomic increment and decrement per call.

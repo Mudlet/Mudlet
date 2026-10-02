@@ -411,6 +411,54 @@ private slots:
         QVERIFY2(paintsSeen > 0, "the upper pane was not repainted for a link whose characters had just been restyled");
     }
 
+    // The repaint half of restyling a selection by name. The console's model
+    // rewrites the characters and its view is only told which lines to redraw.
+    // ConsoleSelectionByName_spec.lua reads the restyled characters back from
+    // the buffer, which stays right with this wire cut or pointed at the wrong
+    // console.
+    void test_restylingANamedSelectionRedrawsThatConsolesLines()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('seamMini', 0, 0, 300, 200)\n"
+                                                                        "echo('seamMini', 'first\\nsecond\\nthird\\n')\n"
+                                                                        "moveCursor('seamMini', 0, 1)\n"
+                                                                        "selectString('seamMini', 'second', 1)\n")),
+                 "the mini console could not be set up");
+        TConsole* mini = console->subConsoleWidget(qsl("seamMini"));
+        QVERIFY(mini);
+        const int selectedLine = mini->model().P_begin.y();
+        QVERIFY2(selectedLine > 0 && mini->model().P_end.x() > mini->model().P_begin.x(), "nothing below the first line was selected, so a redraw of line 0 would pass");
+
+        const QStringList restyles{qsl("setBold('seamMini', true)"), qsl("setFgColor('seamMini', 1, 2, 3)"), qsl("setBgColor('seamMini', 4, 5, 6)")};
+        for (const QString& restyle : restyles) {
+            for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane, console->mUpperPane, console->mLowerPane}) {
+                pane->mDirtyFirstLine = -1;
+                pane->mDirtyLastLine = -1;
+            }
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(restyle), qPrintable(restyle));
+            QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mUpperPane->mDirtyLastLine == selectedLine,
+                     qPrintable(qsl("%1 did not mark the selected line for the mini console's upper pane to redraw").arg(restyle)));
+            QVERIFY2(mini->mLowerPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyLastLine == selectedLine,
+                     qPrintable(qsl("%1 did not mark the selected line for the mini console's lower pane to redraw").arg(restyle)));
+            QVERIFY2(console->mUpperPane->mDirtyFirstLine < 0 && console->mLowerPane->mDirtyFirstLine < 0, qPrintable(qsl("%1 redrew the main console, which it did not change").arg(restyle)));
+        }
+
+        // The redraw goes to the named console's own view, so it must not hang on the main console having one
+        for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+        const QPointer<TMainConsole> mainView = host->mpConsole;
+        host->mpConsole = nullptr;
+        const bool restyled = host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBold('seamMini', false)"));
+        host->mpConsole = mainView;
+        QVERIFY(restyled);
+        QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyFirstLine == selectedLine, "restyling a mini console redrew it only while the main console had a view");
+    }
+
 private:
     // Answers the link's index, or 0 when the link never landed.
     int feedSpoilerLink(Host* host, const QString& marker)

@@ -95,6 +95,94 @@ bool TConsoleModel::selectSection(int from, int to)
     return true;
 }
 
+void TConsoleModel::selectCurrentLine()
+{
+    selectSection(0, buffer.line(mUserCursor.y()).size());
+}
+
+int TConsoleModel::selectString(const QString& text, int numOfMatch)
+{
+    if (mUserCursor.y() < 0 || mUserCursor.y() >= buffer.size()) {
+        deselect();
+        return -1;
+    }
+
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "line under current user cursor: " >> mpHost;
+        TDebug(Qt::red, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
+        TDebug(Qt::gray, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
+    }
+
+    int begin = -1;
+    for (int i = 0; i < numOfMatch; i++) {
+        const QString li = buffer.line(mUserCursor.y());
+        if (li.isEmpty()) {
+            continue;
+        }
+        begin = li.indexOf(text, begin + 1);
+
+        if (begin == -1) {
+            deselect();
+            return -1;
+        }
+    }
+    if (begin < 0) {
+        deselect();
+        return -1;
+    }
+
+    const int end = begin + text.size();
+    P_begin = QPoint(begin, mUserCursor.y());
+    P_end = QPoint(end, mUserCursor.y());
+
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkRed, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
+                                                                    << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
+                >> mpHost;
+    }
+    return begin;
+}
+
+std::tuple<bool, QString, int, int> TConsoleModel::selection()
+{
+    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+        return {false, qsl("the selection is no longer valid"), 0, 0};
+    }
+
+    const auto start = P_begin.x();
+    const auto length = P_end.x() - P_begin.x();
+    const auto line = buffer.line(mUserCursor.y());
+    if (line.size() < start) {
+        return {false, qsl("the selection is no longer valid"), 0, 0};
+    }
+
+    const auto text = line.mid(start, length);
+    return {true, text, start, length};
+}
+
+QPair<quint8, TChar> TConsoleModel::textAttributes() const
+{
+    int x = P_begin.x();
+    int y = P_begin.y();
+
+    // Fallback to cursor position if no selection is active
+    if (P_begin == P_end) {
+        x = mUserCursor.x();
+        y = mUserCursor.y();
+    }
+
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
+        return qMakePair(2, TChar());
+    }
+
+    const auto& line = buffer.buffer.at(y);
+    if (x >= static_cast<int>(line.size())) {
+        return qMakePair(2, TChar());
+    }
+
+    return qMakePair(0, line.at(x));
+}
+
 void TConsoleModel::resetFormat()
 {
     deselect();
@@ -227,6 +315,13 @@ void TConsoleModel::mirrorLineToStdOut(const QString& line)
         mMirrorPendingLine.clear();
     }
     writeMirrorLine(prefix + line);
+}
+
+// Sets or resets all the given attributes, and no others.
+bool TConsoleModel::setSelectionDisplayAttributes(const TChar::AttributeFlags attributes, const bool enabled)
+{
+    mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (enabled ? attributes : TChar::None));
+    return buffer.applyAttribute(P_begin, P_end, attributes, enabled);
 }
 
 // Two gotchas in here:

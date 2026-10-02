@@ -240,6 +240,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesAppended, this, &TConsole::handleLinesOverflowEvent);
     }
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linkCharactersChanged, this, &TConsole::repaintPanes);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesRestyled, this, &TConsole::markLinesDirty);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
 
     // Every console, not just the main one: the manager is per model, and only
@@ -1616,7 +1617,7 @@ int TConsole::getLineCount()
 
 void TConsole::selectCurrentLine()
 {
-    selectSection(0, buffer.line(mUserCursor.y()).size());
+    mpModel->selectCurrentLine();
 }
 
 std::list<int> TConsole::getFgColor()
@@ -1675,38 +1676,7 @@ std::list<int> TConsole::getBgColor()
 
 QPair<quint8, TChar> TConsole::getTextAttributes() const
 {
-    // Take snapshots of cursor/selection coordinates to avoid race conditions
-    const QPoint beginPoint = P_begin;
-    const QPoint endPoint = P_end;
-    const QPoint userCursorPoint = mUserCursor;
-
-    int x = beginPoint.x();
-    int y = beginPoint.y();
-
-    // Fallback to cursor position if no selection is active
-    if (beginPoint == endPoint) {
-        x = userCursorPoint.x();
-        y = userCursorPoint.y();
-    }
-
-    // Take a snapshot of buffer size to avoid TOCTOU issues
-    const int bufferSize = static_cast<int>(buffer.buffer.size());
-
-    // Early bounds check
-    if (y < 0 || x < 0 || y >= bufferSize) {
-        return qMakePair(2, TChar());
-    }
-
-    // Get line reference and check its bounds safely
-    const auto& line = buffer.buffer.at(y);
-    const int lineSize = static_cast<int>(line.size());
-
-    if (x >= lineSize) {
-        return qMakePair(2, TChar());
-    }
-
-    // Safe access with bounds already verified
-    return qMakePair(0, line.at(x));
+    return mpModel->textAttributes();
 }
 
 void TConsole::luaWrapLine(int line)
@@ -2022,45 +1992,7 @@ bool TConsole::moveCursor(int x, int y)
 
 int TConsole::select(const QString& text, int numOfMatch)
 {
-    if (mUserCursor.y() < 0 || mUserCursor.y() >= buffer.size()) {
-        deselect();
-        return -1;
-    }
-
-    if (TDebug::wants(TDebug::Category::Selection)) {
-        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "line under current user cursor: " >> mpHost;
-        TDebug(Qt::red, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
-        TDebug(Qt::gray, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
-    }
-
-    int begin = -1;
-    for (int i = 0; i < numOfMatch; i++) {
-        const QString li = buffer.line(mUserCursor.y());
-        if (li.isEmpty()) {
-            continue;
-        }
-        begin = li.indexOf(text, begin + 1);
-
-        if (begin == -1) {
-            deselect();
-            return -1;
-        }
-    }
-    if (begin < 0) {
-        deselect();
-        return -1;
-    }
-
-    const int end = begin + text.size();
-    P_begin = QPoint(begin, mUserCursor.y());
-    P_end = QPoint(end, mUserCursor.y());
-
-    if (TDebug::wants(TDebug::Category::Selection)) {
-        TDebug(Qt::darkRed, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
-                                                                    << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
-                >> mpHost;
-    }
-    return begin;
+    return mpModel->selectString(text, numOfMatch);
 }
 
 bool TConsole::selectSection(int from, int to)
@@ -2068,23 +2000,9 @@ bool TConsole::selectSection(int from, int to)
     return mpModel->selectSection(from, to);
 }
 
-// returns whenever the selection is valid, the selection text,
-// start position, and the length of the selection
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
-    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return {false, qsl("the selection is no longer valid"), 0, 0};
-    }
-
-    const auto start = P_begin.x();
-    const auto length = P_end.x() - P_begin.x();
-    const auto line = buffer.line(mUserCursor.y());
-    if (line.size() < start) {
-        return {false, qsl("the selection is no longer valid"), 0, 0};
-    }
-
-    const auto text = line.mid(start, length);
-    return {true, text, start, length};
+    return mpModel->selection();
 }
 
 // The four callers below rewrite the text of an existing selection rather than
@@ -2093,8 +2011,11 @@ std::tuple<bool, QString, int, int> TConsole::getSelection()
 // full relayout per coloured echo - see markLinesDirty().
 void TConsole::markSelectionDirty()
 {
-    const int firstLine = std::min(P_begin.y(), P_end.y());
-    const int lastLine = std::max(P_begin.y(), P_end.y());
+    markLinesDirty(std::min(P_begin.y(), P_end.y()), std::max(P_begin.y(), P_end.y()));
+}
+
+void TConsole::markLinesDirty(const int firstLine, const int lastLine)
+{
     mUpperPane->markLinesDirty(firstLine, lastLine);
     mLowerPane->markLinesDirty(firstLine, lastLine);
 }
@@ -2106,11 +2027,9 @@ void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkH
     }
 }
 
-// Set or Reset ALL the specified (but not others)
 void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, const bool b)
 {
-    mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (b ? attributes : TChar::None));
-    if (buffer.applyAttribute(P_begin, P_end, attributes, b)) {
+    if (mpModel->setSelectionDisplayAttributes(attributes, b)) {
         markSelectionDirty();
     }
 }

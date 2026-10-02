@@ -312,6 +312,15 @@ public:
     void setMainConsoleFgColor(const QColor& color);
     void setMainConsoleBgColor(const QColor& color);
     void resetMainConsoleFormat();
+    // The console a script names: "" and "main" are the main console's, any
+    // other a mini console's, user window's or buffer's. The main console's is
+    // there with or without a view.
+    TConsoleModel* consoleModelNamed(const QString& name);
+    // Paint the named console's selection, and write what follows in the same
+    // format. Each answers whether it found the console.
+    bool setWindowFgColor(const QString& name, const QColor& color);
+    bool setWindowBgColor(const QString& name, const QColor& color);
+    bool setWindowDisplayAttributes(const QString& name, TChar::AttributeFlags attributes, bool enabled);
     TWindowRegistry& windowRegistry() { return mWindowRegistry; }
     const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();
@@ -1119,6 +1128,8 @@ private slots:
     void slot_saveProfileAfterPackageChange();
 
 private:
+    // Repaints the lines holding the console's selection, when it is on screen.
+    void markSelectionDirty(TConsoleModel& model);
     // Stores a boolean setting and tells scripts about it.
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
