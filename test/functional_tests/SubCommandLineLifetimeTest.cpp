@@ -38,10 +38,14 @@
  * while it holds the keyboard focus has to pass that focus to the main command
  * line.
  *
+ * And the dock of a deleted user window, which has to leave the main window
+ * straight away rather than when its deferred delete gets round to it.
+ *
  * Bootstrap mirrors the other functional tests.
  */
 
 #include <QFileInfo>
+#include <QPointer>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -55,6 +59,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TDockWidget.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -126,7 +131,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -227,6 +232,34 @@ private slots:
         QVERIFY2(recreated, qPrintable(recreateMsg));
         console->deleteCommandLine(cmdLineName);
         runDeferredDeletes();
+    }
+
+    // A nested event loop (pumpEvents(), a JSON map import) can hold the dock's
+    // deferred delete back. Left in the dock layout until then, it keeps its share
+    // of the dock area from every user window docked after it, and left showing it
+    // is drawn over the main window.
+    void test_aDeletedUserWindowLeavesTheMainWindowAtOnce()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString windowName = qsl("undockedUserWindow");
+
+        auto [opened, openMsg] = mpHost->openWindow(windowName, /*loadLayout=*/false, /*autoDock=*/true, QString());
+        QVERIFY2(opened, qPrintable(openMsg));
+        const QPointer<TDockWidget> dock = console->dockWidget(windowName);
+        QVERIFY(dock);
+        QVERIFY2(mudlet::self()->layout()->indexOf(dock) != -1, "the user window was never docked, so it leaving the dock layout proves nothing");
+        QVERIFY2(!dock->isHidden(), "the user window was never shown, so it being hidden proves nothing");
+
+        auto [deleted, deleteMsg] = console->deleteMiniConsole(windowName);
+        QVERIFY2(deleted, qPrintable(deleteMsg));
+        // Deliberately no event loop turn here - the dock is still alive.
+        QVERIFY(dock);
+        const bool stillDocked = mudlet::self()->layout()->indexOf(dock) != -1;
+        const bool hidden = dock->isHidden();
+        runDeferredDeletes();
+
+        QVERIFY2(!stillDocked, "the deleted user window's dock was left in the main window's dock layout");
+        QVERIFY2(hidden, "the deleted user window's dock was left showing");
     }
 
     // deleteCommandLine() must not leave the entry behind either - it takes the

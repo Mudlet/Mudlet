@@ -30,34 +30,20 @@
 
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
-#include "TCommandLine.h"
-#include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
 #include "TForkedProcess.h"
-#include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
-#include "TTextEdit.h"
 #include "TTimer.h"
-#include "dlgComposer.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <chrono>
 #include <limits>
@@ -65,7 +51,6 @@
 
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
 #include <QTimer>
@@ -443,9 +428,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(inputText);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    // index is the 0-based position the text was inserted at; the event reports
-    // the 1-based one that ttsGetQueue() and ttsClearQueue() take, so a handler
-    // can hand the number it is given straight back to them
+    // 1-based, as ttsGetQueue() and ttsClearQueue() take it
     event.mArgumentList.append(QString::number(index + 1));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     host.raiseEvent(event);

@@ -40,7 +40,6 @@
 #include <QPointer>
 #include <QWidget>
 
-#include <list>
 #include <map>
 #include <memory>
 #include <vector>
@@ -158,8 +157,7 @@ class TSplitter;
 class dlgNotepad;
 
 
-// TPrintSink and TDebug::Sink are the write-only faces core code redirects
-// output to; QWidget stays first so moc sees the QObject base it needs.
+// QWidget stays first so moc sees the QObject base.
 class TConsole : public QWidget, public TPrintSink, public TDebug::Sink
 {
     Q_OBJECT
@@ -185,57 +183,21 @@ public:
     Host* getHost();
     TConsoleModel& model() { return *mpModel; }
     const TConsoleModel& model() const { return *mpModel; }
-    void replace(const QString&);
-    void insertHTML(const QString&);
     void insertText(const QString&);
-    void insertText(const QString&, QPoint);
-    void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false, QVector<int> luaReference = QVector<int>());
-    void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false, QVector<int> luaReference = QVector<int>());
-    void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false, QVector<int> luaReference = QVector<int>());
-    void copy();
-    void cut();
-    void paste();
     void clear();
-    void appendBuffer();
-    void appendBuffer(const TBuffer&);
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
-    void pasteWindow(const TBuffer&);
-    QStringList getLines(int from, int to);
-    int getLineNumber();
-    int getLineCount();
-    bool deleteLine(int);
     void clearSelection() const;
 
-    int getColumnNumber();
-
-    void setWrapAt(int pos)
-    {
-        mWrapAt = pos;
-        buffer.setWrapAt(pos);
-    }
+    void setWrapAt(int pos) { mpModel->setWrapAt(pos); }
     int getWrapAt();
 
-    void setIndentCount(int count)
-    {
-        mIndentCount = count;
-        buffer.setWrapIndent(count);
-    }
+    void setIndentCount(int count) { mpModel->setIndentCount(count); }
 
-    void setHangingIndentCount(int count)
-    {
-        mHangingIndentCount = count;
-        buffer.setWrapHangingIndent(count);
-    }
+    void setHangingIndentCount(int count) { mpModel->setHangingIndentCount(count); }
 
     TLinkStore& getLinkStore() { return buffer.mLinkStore; }
-    void echo(const QString&);
     bool moveCursor(int x, int y);
-    int select(const QString&, int numOfMatch = 1);
-    std::tuple<bool, QString, int, int> getSelection();
-    void deselect();
-    bool selectSection(int, int);
-    void skipLine();
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
@@ -263,37 +225,28 @@ public:
     void scrollUp(int lines);
     void print(const QString& msg);
     void print(const char*);
-    // timeStampOverride is for content being replayed after being held back -
-    // it keeps the time the text arrived instead of the time it is shown:
+    // timeStampOverride keeps the arrival time for held-back content being replayed.
     void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
-    // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
-    // until its right-click menu asks for it:
+    // The repaint cues for text the model wrote: showNewLines() for lines appended to it, and
+    // showCommandEcho() for whatever TConsoleModel::printCommand() did.
+    void showNewLines();
+    void showCommandEcho(const TConsoleModel::CommandEcho&);
+    // The Central Debug Console's find bar is hidden until Ctrl+F or its context menu calls this.
     void showSearchBar();
-    // Copies text a caller is putting on this console to standard output for
-    // --mirror, one line per line shown, each prefixed with the profile and
-    // console names. Does nothing unless --mirror was given. The text is a
-    // fragment of a line as often as it is whole lines, so a line is written
-    // out once a line feed has ended it and what is left over is held until
-    // one does.
-    void mirrorToStdOut(const QString& text);
-    // The same for a line that is already complete: TBuffer::commitLineData()
-    // calls this with a line as the game sent it, before a trigger can gag or
-    // rewrite it.
-    void mirrorLineToStdOut(const QString& line);
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
     void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
     void discardAll() override;
     void discardLastLine() override;
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
-    bool hasSelection();
-    void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
     void refreshView() const;
     // Repaint just the lines the current selection covers, for the callers that
     // change their text where it stands instead of appending new text.
     void markSelectionDirty();
+    // Repaint the given buffer lines in both panes.
+    void markLinesDirty(int firstLine, int lastLine);
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     void setFontSize(int);
     void setFontName(const QString& fontName);
@@ -308,32 +261,17 @@ public:
     void setBorderColor(const QColor&);
     QColor borderColor() const { return mBorderColor; }
     void lowerMainDisplay();
-    void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
-    // Cannot be called setAttributes as that would mask an inherited method
-    void setDisplayAttributes(const TChar::AttributeFlags, const bool);
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
     // Not used:    void setConsoleFgColor(int, int, int);
-    std::list<int> getFgColor();
-    std::list<int> getBgColor();
-    void luaWrapLine(int line);
-    QString getCurrentLine();
-    void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
-    // For a MainConsole put away by a tab switch, which no resize event reaches:
-    // works out the size it will come back to and has NAWS report it
+    // For a MainConsole hidden by a tab switch, which gets no resize events: NAWS-reports its restored size.
     void syncHiddenScreenDimensions();
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
-    // In the next function the first element in the return is an
-    // error code:
-    // 0 = Okay
-    // 1 = Window not found
-    // 2 = Selection not valid
-    QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
     void setSearchOptions(const enums::BufferSearchOptions);
     void setF3SearchEnabled(const bool enabled);
@@ -346,8 +284,10 @@ public:
     // non-scrolling window:
     void handleLinesOverflowEvent(const int lineCount);
     void clearSplit();
-    bool showTimeStamps() const { return mShowTimeStamps; }
+    bool showTimeStamps() const { return mpModel->mShowTimeStamps; }
     void raiseMudletResizeEvent();
+    // Shows the model's timestamp flag as it now stands.
+    void applyTimeStamps();
     // This hides QWidget::setFont(const QFont&) rather than overriding it
     // (QWidget::setFont is non-virtual). The forceChange parameter is needed
     // when calling from setFontName(...) or setFontSize(...) because those
@@ -364,17 +304,11 @@ public:
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
     QPointer<TCommandLine> mpCommandLine;
-    // The Central Debug Console's find bar, floating over the bottom right of
-    // the console itself:
+    // The Central Debug Console's find bar, floating over its bottom right.
     QPointer<QWidget> mpFindBar;
 
-    // The buffer, cursor/prompt state, selection, current format and fg/bg
-    // colours live in a core TConsoleModel reached through model(). For the
-    // main console that model is co-owned with Host (which drives the trigger
-    // pipeline through it - see Host::runTriggers); sub-consoles own theirs.
-    // The members below are references aliasing the model, so the existing
-    // buffer/mFgColor/... accesses across the codebase are unchanged - which is
-    // why the model has to stay declared ahead of every one of them.
+    // The main console co-owns its model with Host, which runs triggers through it; sub-consoles own theirs.
+    // The members below alias the model, so it must be declared first.
     std::shared_ptr<TConsoleModel> mpModel;
     TBuffer& buffer;
     static const QString cmLuaLineVariable;
@@ -388,26 +322,17 @@ public:
 
     QColor& mBgColor;
     QColor& mFgColor;
-    QColor mSystemMessageFgColor = QColorConstants::Red;
-    QColor mCommandBgColor = QColorConstants::Black;
-    // Transparent so a system message blends into the console's real background
-    // instead of an opaque bar; TTextEdit's selection swap and TBuffer's HTML
-    // export both resolve alpha-0 against getConsoleBgColor() so the text stays
-    // visible when selected and the same colour is kept in copied/exported HTML.
-    QColor mSystemMessageBgColor = QColorConstants::Transparent;
-    QColor mCommandFgColor = QColor(213, 195, 0);
+    QColor& mCommandBgColor;
+    QColor& mCommandFgColor;
 
     int& mButtonState;
 
-    QString mConsoleName;
-    // What --mirror has been handed for the line this console is building, and
-    // has not written out yet because no line feed has ended it
-    QString mMirrorPendingLine;
+    QString& mConsoleName;
     QString& mCurrentLine;
     int& mEngineCursor;
 
-    int mIndentCount = 0;
-    int mHangingIndentCount = 0;
+    int& mIndentCount;
+    int& mHangingIndentCount;
     QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;
@@ -431,14 +356,14 @@ public:
 
     QElapsedTimer mProcessingTimer;
 
-    bool mTriggerEngineMode = false;
+    bool& mTriggerEngineMode;
 
     QPoint& mUserCursor;
-    int mWrapAt = 100;
+    int& mWrapAt;
     QLineEdit* mpLineEdit_networkLatency = nullptr;
     QPoint& P_begin;
     QPoint& P_end;
-    QString mProfileName;
+    QString& mProfileName;
     TSplitter* splitter = nullptr;
     bool& mIsPromptLine;
     QToolButton* logButton = nullptr;
@@ -448,9 +373,7 @@ public:
     QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
     QToolButton* mpBufferSearchDown = nullptr;
-    // The line on which the current search result has been found, or the next
-    // one is to start (currently only for the main console):
-    int mCurrentSearchResult = 0;
+    int& mCurrentSearchResult;
     // Not used:
     // QList<int> mSearchResults;
     // The term that is currently being search for (currently only for the main
@@ -501,8 +424,7 @@ private slots:
 private:
     void createFindBar();
     void positionFindBar();
-    // MainConsole only - they take off the profile's own main window borders.
-    // The height is -1 when it cannot be known.
+    // MainConsole only: subtract the profile's main window borders. Height is -1 when unknown.
     int upperPaneWidthFor(const int containerWidth) const;
     int upperPaneHeightFor(const int containerHeight) const;
     void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
@@ -527,9 +449,6 @@ private:
     QPointer<QShortcut> mpSearchPrevShortcut;
     // The size of the TConsole in (normal) "character" cells:
     QSize mDimensions;
-    // Whether to show (a 13 character by default) timestamp to the left of
-    // each line of text:
-    bool mShowTimeStamps = false;
     // mpMainFrame's palette cannot hold this - it is rebuilt from scratch on every colour change
     QColor mBorderColor = Qt::black;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning

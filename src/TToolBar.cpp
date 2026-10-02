@@ -28,6 +28,7 @@
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 #include "mudlet.h"
 
 #include <QIcon>
@@ -63,10 +64,10 @@ TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e)
-    if (mpHost.isNull()) {
+    if (mpHost.isNull() || !mpHost->mpConsole) {
         return;
     }
-    mpHost->setToolbarLayoutUpdated(this);
+    mpHost->mpConsole->setToolBarLayoutChanged(this);
 }
 
 void TToolBar::setName(const QString& name)
@@ -85,7 +86,9 @@ void TToolBar::moveEvent(QMoveEvent* e)
         return;
     }
 
-    mpHost->setToolbarLayoutUpdated(this);
+    if (mpHost->mpConsole) {
+        mpHost->mpConsole->setToolBarLayoutChanged(this);
+    }
 
     if (mRecordMove) {
         mpTAction->mPosX = e->pos().x();
@@ -207,10 +210,7 @@ void TToolBar::addActionButtons(TAction* pAction)
             pTFlipButton->setMenu(pNewMenu);
         }
 
-        if (pTAction->mpFButton) {
-            pTAction->mpFButton->deleteLater();
-        }
-        pTAction->mpFButton = pTFlipButton;
+        mpHost->mpConsole->replaceActionButton(pTAction, pTFlipButton);
 
         // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
         // add the button to the toolbar AFTER any menu (children) items have
@@ -225,14 +225,11 @@ void TToolBar::addActionButtons(TAction* pAction)
 // item to which the sub-menu is added.
 void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
 {
-    pAction->mpToolBar = this;
+    mpHost->mpConsole->setActionToolBar(pAction, this);
     auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
     pEAction->setCheckable(pAction->isPushDownButton());
     pEAction->setStatusTip(pAction->getName());
-    if (pAction->mpEAction) {
-        pAction->mpEAction->deleteLater();
-    }
-    pAction->mpEAction = pEAction;
+    mpHost->mpConsole->replaceActionMenuEntry(pAction, pEAction);
     pMenu->addAction(pEAction);
 
     if (pAction->isFolder()) {

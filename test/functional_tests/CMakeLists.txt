@@ -34,7 +34,9 @@ endif()
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
+    AsciiLineBreakTest.cpp
     ConsoleModelExtractionTest.cpp
+    ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
@@ -42,6 +44,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     DockWidgetWithoutProfileTest.cpp
+    GlyphCacheTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
@@ -137,6 +140,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
+    MMCPIncomingCallTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
     TelnetOptionsReportTest.cpp
@@ -150,6 +154,7 @@ set(TELNET_GROUP_TEST_SOURCES
     MudletAppVersionTest.cpp
     IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
+    IrcLuaClientTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them
@@ -163,6 +168,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
+    TreeChildTeardownTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
@@ -174,6 +180,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EdbeeReinitTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
     EditorReshowTest.cpp
     PackageExporterTest.cpp
@@ -224,6 +231,7 @@ endif()
 
 # Packages and modules: installing them, saving them and removing them
 set(PACKAGE_GROUP_TEST_SOURCES
+    ActionBarPlacementTest.cpp
     ActionSelfRemovalTest.cpp
     ActionToolbarMenuTest.cpp
     BrokenPackageNoticeTest.cpp
@@ -288,6 +296,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    MediaMuteStateTest.cpp
     SpeechBridgeLuaTest.cpp
     SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp

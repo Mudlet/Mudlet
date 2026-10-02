@@ -1,8 +1,9 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/Lua/xcb-util-cursor save steps below: only builds of
-# development write these shared caches, every other build restores
-# read-only, so build-mudlet-pr.yml has no equivalent save steps at all.
+# ccache/Lua/xcb-util-cursor save steps below and the ccache trim and
+# prune that go with them: only builds of development write these shared
+# caches, every other build restores read-only, so build-mudlet-pr.yml
+# has no equivalent steps at all.
 name: 🔨 Build Mudlet
 on:
   push:
@@ -385,6 +386,7 @@ jobs:
       run: |
         ccache --recompress 19
         ccache --show-compression
+        echo "CCACHE_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
@@ -402,6 +404,14 @@ jobs:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+    # A hit refreshes an entry's timestamp, so whatever this build left untouched
+    # is an object it no longer compiles. Dropping it saves one build's working
+    # set - under half of the 500M cap it would otherwise fill. Skipped after a
+    # failed build, which stops early and would leave most of that looking stale.
+    - name: Trim the ccache to what this build used
+      if: success() && env.CCACHE_BUILD_START
+      run: ccache --evict-older-than "$(( $(date +%s) - CCACHE_BUILD_START + 60 ))s"
 
     - name: Save ccache
       if: >-
@@ -679,8 +689,8 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
       # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes ~75s, and the rest is headroom for a slow runner stretching those.
-      timeout-minutes: 6
+      # takes 300-340s under ASan, and the rest is headroom for a slow runner.
+      timeout-minutes: 12
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -727,9 +737,9 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # ~100s on a healthy Intel runner and measured at 172s on a slow one, so a
-      # tighter limit fails on runner speed rather than on anything the suite did
-      timeout-minutes: 6
+      # 200-245s on arm64; a tighter limit fails on runner speed rather than on
+      # anything the suite did
+      timeout-minutes: 12
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -770,3 +780,48 @@ jobs:
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
           exit 1
         fi
+
+  # Every development build saves its ccache under a new per-commit key and only
+  # the newest is ever restored, so the older ones would sit in the 10GB quota
+  # until GitHub's least-recently-used eviction, which is as likely to drop a
+  # current entry that only development builds restore. The Windows workflow
+  # saves under the same scheme and is swept here too.
+  prune-superseded-ccache:
+    name: Delete superseded ccache entries
+    needs: compile-mudlet
+    # Skipped on PTBs, which save no ccache. A failed sweep must not fail the run:
+    # releases from development are built from whichever platforms' runs succeeded.
+    if: >-
+      always() && github.repository_owner == 'Mudlet' && github.ref == 'refs/heads/development'
+      && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+    - name: Delete all but the newest ccache entry per build
+      # explicitly bash for pipefail, so a failed listing fails the step
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CACHE_REF: ${{ github.ref }}
+      run: |
+        # Overlapping builds can save out of order, so keep the newest commit's
+        # entry rather than the newest save; older commits fall back to save order
+        recent="$(gh api "repos/${GITHUB_REPOSITORY}/commits?sha=${CACHE_REF}&per_page=100" --jq '[.[].sha]')"
+        # jq -s rather than gh's --slurp: --paginate applies --jq per page, and
+        # the grouping has to see every page at once
+        gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100&ref=${CACHE_REF}&key=ccache-" \
+          --jq '.actions_caches[]' \
+          | jq -rs --argjson recent "${recent}" '
+              map(select(.key | test("^ccache-.+-sha-[0-9a-f]{40}$")))
+              | group_by(.key | sub("-sha-[0-9a-f]{40}$"; ""))
+              | map(sort_by([-(. as $c | $recent | index($c.key[-40:]) // 100), .created_at]) | .[:-1][])
+              | .[] | "\(.id) \(.key)"' \
+          | while read -r id key; do
+              echo "deleting ${key}"
+              # a 404 means it is already gone, which is the wanted end state
+              response="$(gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches/${id}" 2>&1)" \
+                || [[ "${response}" == *"HTTP 404"* ]] \
+                || echo "::warning::could not delete ${key}: ${response}"
+            done
