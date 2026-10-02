@@ -2120,20 +2120,20 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             promptBuffer.back() = false;
         }
     }
-    // Every game line passes here (TConsole::print() sees only client output). Mirroring before runTriggers()
+    // Every game line passes here (TConsoleModel::print() sees only client output). Mirroring before runTriggers()
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
     // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
     if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
-        if (Q_LIKELY(mpModel && mpModel->mNotifier.hasLineMirror())) {
+        if (Q_LIKELY(mpModel)) {
             // Read back out of the buffer rather than from line, which every
             // path above has moved from by now
-            emit mpModel->mNotifier.lineCommitted(lineBuffer.back());
+            mpModel->mirrorLineToStdOut(lineBuffer.back());
         } else {
             static bool mirrorWithoutConsoleReported = false;
             if (!mirrorWithoutConsoleReported) {
                 mirrorWithoutConsoleReported = true;
-                qWarning() << "--mirror: a buffer with no console of its own is committing lines, which cannot be copied to standard output";
+                qWarning() << "--mirror: a buffer with no console model is committing lines, which cannot be copied to standard output";
             }
         }
     }

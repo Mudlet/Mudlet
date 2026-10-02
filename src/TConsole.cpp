@@ -239,9 +239,6 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     if (mType & (UserWindow | SubConsole)) {
         connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesAppended, this, &TConsole::handleLinesOverflowEvent);
     }
-    connect(&mpModel->mNotifier, &TConsoleModelNotifier::lineCommitted, this, [model = mpModel.get()](const QString& line) {
-        model->mirrorLineToStdOut(line);
-    });
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linkCharactersChanged, this, &TConsole::repaintPanes);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
 
