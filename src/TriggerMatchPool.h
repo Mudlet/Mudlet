@@ -62,7 +62,7 @@ public:
     // written nothing, when declined (empty batch or no helpers); the caller then runs its sequential
     // pass. The caller decides, against threshold(), whether a batch is worth sharing. One caller at a
     // time: the batch lives in the pool until this returns.
-    bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams);
+    bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams, bool dropsText);
 
     // Regex searches per line below which the fork-join costs more than it saves. Searches, not
     // triggers: disabled, multiline or already-settled triggers run none and should not open the pool.
@@ -99,6 +99,9 @@ private:
         int subjectLength = 0;
         const QString* haystack = nullptr;
         const TBigramFilter* lineBigrams = nullptr;
+        // Whether encoding haystack to subject lost text, which is the main
+        // thread's to answer - see TTrigger::prescanMayFire()
+        bool dropsText = false;
     };
 
     // Spacing for contended words. 128, not 64: Apple Silicon L2 lines are 128 bytes and Intel's

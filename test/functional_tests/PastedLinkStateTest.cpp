@@ -152,9 +152,9 @@ private slots:
         QVERIFY2(pTarget->getLinkStore().getLinksConst(ownId).join(QChar::Space).contains(qsl("send('MINE')")), "the target's own link is not the one we think it is");
 
         QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
-        mpHost->mpConsole->copy();
+        QVERIFY(mpHost->copyToClipboard(qsl("main")));
         QVERIFY(pTarget->moveCursor(0, 0));
-        pTarget->paste();
+        QVERIFY(mpHost->pasteClipboard(targetName));
         qApp->processEvents();
 
         const int pastedId = pastedLinkId(pTarget);
@@ -202,12 +202,12 @@ private slots:
 
         mpHost->mpConsole->P_begin = QPoint(splitColumn - 5, splitLine);
         mpHost->mpConsole->P_end = QPoint(splitColumn + 8, splitLine);
-        mpHost->mpConsole->copy();
+        QVERIFY(mpHost->copyToClipboard(qsl("main")));
 
         auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY(pTarget->moveCursor(0, 0));
-        pTarget->paste();
+        QVERIFY(mpHost->pasteClipboard(targetName));
         qApp->processEvents();
 
         const auto& pastedLine = pTarget->buffer.buffer.at(0);
@@ -245,7 +245,7 @@ private slots:
         QCOMPARE(miniBuffer.getHoveredLink(), pastedId);
 
         for (int i = 0; i < 200; ++i) {
-            pMini->echo(qsl("filler line %1\n").arg(i));
+            pMini->print(qsl("filler line %1\n").arg(i));
         }
         QVERIFY2(pastedLinkId(pMini) == 0, "the pasted line was not trimmed away, so no cleanup was due");
 
@@ -271,7 +271,7 @@ private slots:
         QVERIFY2(!pConsole->getLinkStore().getLinksConst(id).isEmpty(), "echoLink() did not register the link in the store");
 
         for (int i = 0; i < 200; ++i) {
-            pConsole->echo(qsl("filler line %1\n").arg(i));
+            pConsole->print(qsl("filler line %1\n").arg(i));
         }
 
         QVERIFY2(pConsole->getLinkStore().getLinksConst(id).isEmpty(), "an unreferenced link survived its line being trimmed away, so the store grows for the life of the profile");
@@ -298,9 +298,9 @@ private slots:
         const int sourceReference = mpHost->mpConsole->buffer.mLinkStore.getReference(sourceId).value(0);
         QVERIFY2(sourceReference > 0, "echoLink() given a function registered no Lua reference, so this test covers nothing");
 
-        mpHost->mpConsole->copy();
+        QVERIFY(mpHost->copyToClipboard(qsl("main")));
         QVERIFY(pTarget->moveCursor(0, 0));
-        pTarget->paste();
+        QVERIFY(mpHost->pasteClipboard(targetName));
         qApp->processEvents();
 
         const int pastedId = pastedLinkId(pTarget);
@@ -403,7 +403,7 @@ private:
         return false;
     }
 
-    // TConsole::paste() only takes TBuffer::paste()'s verbatim path when the
+    // Host::pasteClipboard() only takes TBuffer::paste()'s verbatim path when the
     // cursor is above the last line - an empty target goes through appendBuffer()
     // instead, which re-registers the id and so is not the path under test.
     void pasteLinkIntoMiniconsole() const
@@ -416,12 +416,12 @@ private:
         qApp->processEvents();
 
         QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
-        mpHost->mpConsole->copy();
+        QVERIFY(mpHost->copyToClipboard(qsl("main")));
 
         auto* pMini = miniconsole();
         QVERIFY(pMini);
         QVERIFY(pMini->moveCursor(0, 0));
-        pMini->paste();
+        QVERIFY(mpHost->pasteClipboard(mMiniName));
         qApp->processEvents();
     }
 

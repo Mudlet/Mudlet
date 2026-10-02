@@ -32,11 +32,39 @@
 #include <QFileInfo>
 #include <QFontInfo>
 
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+
+namespace {
+double relativeLuminance(const QColor& color)
+{
+    const auto channel = [](const double value) {
+        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+}
+
+// Plain blue is barely legible against the dark background most profiles use,
+// so whichever of the two link blues stands out more against this console wins:
+TChar standardLinkFormat(const QColor& background)
+{
+    const QColor lightBlue(80, 160, 255);
+    const QColor linkColor = TConsoleModel::contrastRatio(QColor(Qt::blue), background) >= TConsoleModel::contrastRatio(lightBlue, background) ? QColor(Qt::blue) : lightBlue;
+    return TChar(linkColor, background, TChar::Underline);
+}
+} // namespace
+
 TConsoleModel::TConsoleModel(Host* pHost)
 : buffer(pHost)
 , mpHost(pHost)
+, mProfileName(pHost ? pHost->getName() : qsl("debug console"))
 , mHyperlinkVisibilityManager(*this)
 {
+    // Not in the buffer's constructor: the buffer is built before the managers
+    // it would then be pointed at, and reaches for them while it is.
+    buffer.mpModel = this;
 }
 
 QStringList TConsoleModel::lines(int from, int to)
@@ -47,6 +75,29 @@ QStringList TConsoleModel::lines(int from, int to)
         ret << buffer.line(from + i);
     }
     return ret;
+}
+
+bool TConsoleModel::moveCursor(int x, int y)
+{
+    QPoint P(x, y);
+    if (buffer.moveCursor(P)) {
+        mUserCursor = P;
+        return true;
+    }
+    return false;
+}
+
+void TConsoleModel::moveCursorEnd()
+{
+    const int y = buffer.getLastLineNumber();
+    int x = buffer.line(y).size() - 1;
+    x = x >= 0 ? x : 0;
+    moveCursor(x, y);
+}
+
+void TConsoleModel::deleteLineAtCursor()
+{
+    buffer.deleteLine(mUserCursor.y());
 }
 
 void TConsoleModel::deselect()
@@ -87,6 +138,109 @@ bool TConsoleModel::selectSection(int from, int to)
     return true;
 }
 
+void TConsoleModel::selectCurrentLine()
+{
+    selectSection(0, buffer.line(mUserCursor.y()).size());
+}
+
+int TConsoleModel::selectString(const QString& text, int numOfMatch)
+{
+    if (mUserCursor.y() < 0 || mUserCursor.y() >= buffer.size()) {
+        deselect();
+        return -1;
+    }
+
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "line under current user cursor: " >> mpHost;
+        TDebug(Qt::red, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
+        TDebug(Qt::gray, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
+    }
+
+    int begin = -1;
+    for (int i = 0; i < numOfMatch; i++) {
+        const QString li = buffer.line(mUserCursor.y());
+        if (li.isEmpty()) {
+            continue;
+        }
+        begin = li.indexOf(text, begin + 1);
+
+        if (begin == -1) {
+            deselect();
+            return -1;
+        }
+    }
+    if (begin < 0) {
+        deselect();
+        return -1;
+    }
+
+    const int end = begin + text.size();
+    P_begin = QPoint(begin, mUserCursor.y());
+    P_end = QPoint(end, mUserCursor.y());
+
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkRed, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
+                                                                    << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
+                >> mpHost;
+    }
+    return begin;
+}
+
+std::tuple<bool, QString, int, int> TConsoleModel::selection()
+{
+    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+        return {false, qsl("the selection is no longer valid"), 0, 0};
+    }
+
+    const auto start = P_begin.x();
+    const auto length = P_end.x() - P_begin.x();
+    const auto line = buffer.line(mUserCursor.y());
+    if (line.size() < start) {
+        return {false, qsl("the selection is no longer valid"), 0, 0};
+    }
+
+    const auto text = line.mid(start, length);
+    return {true, text, start, length};
+}
+
+QPair<quint8, TChar> TConsoleModel::textAttributes() const
+{
+    int x = P_begin.x();
+    int y = P_begin.y();
+
+    // Fallback to cursor position if no selection is active
+    if (P_begin == P_end) {
+        x = mUserCursor.x();
+        y = mUserCursor.y();
+    }
+
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
+        return qMakePair(2, TChar());
+    }
+
+    const auto& line = buffer.buffer.at(y);
+    if (x >= static_cast<int>(line.size())) {
+        return qMakePair(2, TChar());
+    }
+
+    return qMakePair(0, line.at(x));
+}
+
+const TChar* TConsoleModel::selectionStartChar() const
+{
+    const int x = P_begin.x();
+    const int y = P_begin.y();
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
+        return nullptr;
+    }
+
+    const auto& line = buffer.buffer.at(y);
+    if (x >= static_cast<int>(line.size())) {
+        return nullptr;
+    }
+    return &line.at(x);
+}
+
 void TConsoleModel::resetFormat()
 {
     deselect();
@@ -104,6 +258,249 @@ bool TConsoleModel::setSelectionFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
     return buffer.applyFgColor(P_begin, P_end, newColor);
+}
+
+void TConsoleModel::print(const QString& msg)
+{
+    buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+    mirrorToStdOut(msg);
+}
+
+void TConsoleModel::print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride)
+{
+    buffer.append(msg, 0, msg.size(), fgColor, bgColor, TChar::None, 0, timeStampOverride);
+    mirrorToStdOut(msg);
+}
+
+void TConsoleModel::printSystemMessage(const QString& msg)
+{
+    // Kept in TConsole's context, where the translations already are.
+    const QString txt = QCoreApplication::translate("TConsole", "System Message: %1").arg(msg);
+    print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
+}
+
+TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
+{
+    // Skip printing if remote echo is active (e.g., password mode)
+    if (mpHost && mpHost->isRemoteEchoingActive()) {
+        return {};
+    }
+
+    if (mTriggerEngineMode) {
+        msg.append(QChar::LineFeed);
+        if (buffer.lineBuffer.isEmpty()) {
+            buffer.appendEmptyLine();
+        }
+        if (!buffer.lineBuffer.back().isEmpty()) {
+            msg.prepend(QChar::LineFeed);
+        }
+        buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
+        return {};
+    }
+
+    const int lineBeforeNewContent = buffer.size() - 2;
+    if (lineBeforeNewContent >= 0 && buffer.promptBuffer[lineBeforeNewContent]) {
+        QPoint P(buffer.buffer.at(lineBeforeNewContent).size(), lineBeforeNewContent);
+        const TChar format(mCommandFgColor, mCommandBgColor);
+        buffer.insertInLine(P, msg, format);
+        const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        buffer.promptBuffer[lineBeforeNewContent] = false;
+        return {CommandEcho::Kind::PromptLine, lineBeforeNewContent, lineBeforeNewContent + 1 + down};
+    }
+    msg.append(QChar::LineFeed);
+    print(msg, mCommandFgColor, mCommandBgColor);
+    return {CommandEcho::Kind::NewLines};
+}
+
+namespace {
+// The first failure (reader gone, stream full) turns --mirror off and says so once, rather than
+// silently losing every line.
+void writeMirrorLine(const QString& line)
+{
+    QByteArray output = line.toUtf8();
+    output.append('\n');
+    const size_t length = static_cast<size_t>(output.size());
+    if (std::fwrite(output.constData(), 1, length, stdout) == length && std::fflush(stdout) == 0) {
+        return;
+    }
+
+    mudlet::smMirrorToStdOut = false;
+    qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
+}
+
+// Every main console is "main", so the profile name is needed too. Both names come from Lua and may
+// hold control characters; a line feed would split the record for a line-based reader.
+QString mirrorPrefix(const QString& profileName, const QString& consoleName)
+{
+    QString prefix = qsl("%1.%2| ").arg(profileName, consoleName);
+    for (QChar& character : prefix) {
+        if (character.category() == QChar::Other_Control) {
+            character = QChar::ReplacementCharacter;
+        }
+    }
+    return prefix;
+}
+} // namespace
+
+void TConsoleModel::mirrorToStdOut(const QString& text)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    // Text may be a fragment (Lua's print() sends its newline separately, echo() need not end a line),
+    // so like TBuffer::appendLine(), write a line out only once a line feed ends it.
+    QStringList fragments = text.split(QChar::LineFeed);
+    const QString stillOpen = fragments.takeLast();
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    for (const QString& fragment : fragments) {
+        writeMirrorLine(prefix + mMirrorPendingLine + fragment);
+        mMirrorPendingLine.clear();
+    }
+    mMirrorPendingLine.append(stillOpen);
+}
+
+void TConsoleModel::mirrorLineToStdOut(const QString& line)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    // Like TBuffer::commitLineData(), put a committed line below a non-empty open line, not onto it.
+    if (!mMirrorPendingLine.isEmpty()) {
+        writeMirrorLine(prefix + mMirrorPendingLine);
+        mMirrorPendingLine.clear();
+    }
+    writeMirrorLine(prefix + line);
+}
+
+// Sets or resets all the given attributes, and no others.
+bool TConsoleModel::setSelectionDisplayAttributes(const TChar::AttributeFlags attributes, const bool enabled)
+{
+    mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (enabled ? attributes : TChar::None));
+    return buffer.applyAttribute(P_begin, P_end, attributes, enabled);
+}
+
+bool TConsoleModel::setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    return buffer.applyLink(P_begin, P_end, commands, hints, luaReferences);
+}
+
+double TConsoleModel::contrastRatio(const QColor& first, const QColor& second)
+{
+    const double one = relativeLuminance(first);
+    const double other = relativeLuminance(second);
+    return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
+}
+
+void TConsoleModel::echoLink(const QString& text, QStringList& commands, QStringList& hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    if (useCurrentFormat) {
+        buffer.addLink(mTriggerEngineMode, text, commands, hints, mFormatCurrent, luaReferences);
+        return;
+    }
+    // the main console's links are coloured against the profile's own background
+    const QColor background = (mpHost && mpHost->mainConsoleModelOrNull() == this) ? mpHost->mBgColor : mBgColor;
+    buffer.addLink(mTriggerEngineMode, text, commands, hints, standardLinkFormat(background), luaReferences);
+}
+
+TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStringList& commands, QStringList& hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    const QPoint start = mUserCursor;
+    const QPoint end(start.x() + text.size(), start.y());
+    const TChar format = useCurrentFormat ? mFormatCurrent : standardLinkFormat(mBgColor);
+    if (mTriggerEngineMode) {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups(start.x(), text.size());
+        QPoint at = start;
+        buffer.insertInLine(at, text, format);
+        buffer.applyLink(start, end, commands, hints, luaReferences);
+        if (start.y() < mEngineCursor) {
+            return {false, mUserCursor.y(), mUserCursor.y()};
+        }
+        return {};
+    }
+    if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
+        buffer.addLink(mTriggerEngineMode, text, commands, hints, format, luaReferences);
+        return {true};
+    }
+
+    buffer.insertInLine(mUserCursor, text, format);
+    buffer.applyLink(start, end, commands, hints, luaReferences);
+    const int line = mUserCursor.y();
+    int newX = mUserCursor.x() + text.size();
+    int down = 0;
+    if (text.indexOf(QChar::LineFeed) != -1) {
+        down = buffer.wrapLine(line, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        newX = std::max(0, static_cast<int>(text.size() - text.lastIndexOf(QChar::LineFeed) - 1));
+    }
+    QPoint newCursor(newX, line + down);
+    if (buffer.moveCursor(newCursor)) {
+        mUserCursor = QPoint(newX, line + down);
+    }
+    return {false, line, line + down};
+}
+
+bool TConsoleModel::echo(QString& text)
+{
+    // A \r would be kept in the buffer and drawn as a glyph, so \r\n becomes \n and a lone \r goes.
+    text.remove(QChar::CarriageReturn);
+    buffer.mEchoingText = true;
+    bool appended = false;
+    if (mTriggerEngineMode) {
+        // Line feeds are embedded in the trigger's line rather than starting new lines, so that
+        // later echoes and cechoes still land on it; wrapping breaks it at them.
+        const int y = buffer.size() - 1;
+        if (y >= 0) {
+            QPoint insertPoint(buffer.lineBuffer.at(y).size(), y);
+            buffer.insertInLine(insertPoint, text, mFormatCurrent);
+        } else {
+            buffer.appendLine(text, 0, text.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        }
+    } else {
+        buffer.append(text, 0, text.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        appended = true;
+    }
+    buffer.mEchoingText = false;
+    return appended;
+}
+
+TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
+{
+    if (mTriggerEngineMode) {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups(mUserCursor.x(), text.size());
+        QPoint at = mUserCursor;
+        buffer.insertInLine(at, text, mFormatCurrent);
+        if (at.y() < mEngineCursor) {
+            return {false, mUserCursor.y(), mUserCursor.y()};
+        }
+        return {};
+    }
+    if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
+        buffer.append(text, 0, text.size(), mFormatCurrent);
+        return {true};
+    }
+
+    buffer.insertInLine(mUserCursor, text, mFormatCurrent);
+    const int line = mUserCursor.y();
+    int down = 0;
+    if (text.indexOf(QChar::LineFeed) != -1) {
+        down = buffer.wrapLine(line, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+    }
+    return {false, line, line + down};
+}
+
+void TConsoleModel::replace(const QString& text)
+{
+    if (mTriggerEngineMode) {
+        const int selected = P_end.x() - P_begin.x();
+        if (P_begin == P_end) {
+            mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size());
+        } else if (text.size() != selected) {
+            mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size() - selected);
+        }
+    }
+    buffer.replaceInLine(P_begin, P_end, text, mFormatCurrent);
 }
 
 // Two gotchas in here:
