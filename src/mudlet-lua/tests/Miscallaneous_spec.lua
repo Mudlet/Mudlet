@@ -2580,6 +2580,25 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         lfs.rmdir(path)
       end
 
+      -- Only folders carrying this file were made by these specs, so a real
+      -- profile that happens to share a name is never deleted
+      local ownerMarker = "mudlet-spec-torn-down-owned"
+
+      local function ownedByUs(name)
+        return io.exists(profilesDirectory .. "/" .. name .. "/" .. ownerMarker)
+      end
+
+      local function removeOwnedProfile(name)
+        if ownedByUs(name) then
+          removeTree(profilesDirectory .. "/" .. name)
+        end
+      end
+
+      local function createOwnedProfile(name)
+        assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. name))
+        io.open(profilesDirectory .. "/" .. name .. "/" .. ownerMarker, "w"):close()
+      end
+
       local function loaded(name)
         local entry = getProfiles()[name]
         return entry ~= nil and entry.loaded
@@ -2600,6 +2619,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- marker file turns a reset's re-run of the script into the global event
       -- mudletSpecTornDownRerun instead of starting it all over again.
       local function runInProfileBeingTornDown(code)
+        for _, name in ipairs({closing, target}) do
+          local path = profilesDirectory .. "/" .. name
+          assert.is_true(lfs.attributes(path) == nil or ownedByUs(name),
+            "refusing to touch " .. path .. ", which these specs did not create")
+        end
         local run = {}
         local handlers = {
           registerAnonymousEventHandler("mudletSpecTornDownResult", function(_, ...)
@@ -2619,8 +2643,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
             end
           end
           waitUntil(function() return not loaded(closing) and not loaded(target) end)
-          removeTree(profilesDirectory .. "/" .. closing)
-          removeTree(profilesDirectory .. "/" .. target)
+          removeOwnedProfile(closing)
+          removeOwnedProfile(target)
         end)
 
         local script = string.format([[
@@ -2637,10 +2661,10 @@ end]], code)
         script = script:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 
         -- left behind by a run that crashed or was killed
-        removeTree(profilesDirectory .. "/" .. closing)
-        removeTree(profilesDirectory .. "/" .. target)
-        assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. target))
-        assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. closing))
+        removeOwnedProfile(closing)
+        removeOwnedProfile(target)
+        createOwnedProfile(target)
+        createOwnedProfile(closing)
         assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. closing .. "/current"))
         local file = assert(io.open(profilesDirectory .. "/" .. closing .. "/current/2020-01-01#00-00-00.xml", "w"))
         file:write(table.concat({
