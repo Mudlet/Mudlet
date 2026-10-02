@@ -47,6 +47,7 @@
 #include "discord.h"
 #include "dlgComposer.h"
 #include "mudlet.h"
+#include "MudletReplay.h"
 #include "MMCPServer.h"
 
 #include <QCoreApplication>
@@ -1878,12 +1879,13 @@ void cTelnet::checkNAWS()
 void cTelnet::sendCurrentNAWS()
 {
     Host* pHost = mpHost;
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost) {
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
-    // width of the time stamps if they are showing:
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mainConsoleShowsTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0);
+    // width of the time stamps if they are drawn - with no view they are not:
+    const bool gutterDrawn = pHost->mpConsole && pHost->mainConsoleShowsTimeStamps();
+    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -5460,7 +5462,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         mReplayPaused = false;
         mReplayChunkPending = false;
         mReplayChunkDelay = 0;
-        if (mudlet::self()->replayStart(mpHost)) {
+        if (auto* replay = MudletReplay::self(); replay && replay->start(mpHost)) {
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
@@ -5524,8 +5526,8 @@ void cTelnet::loadReplayChunk()
         // Previous use of loadedBytes + 1 caused a spurious character at end of
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
-        mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        mReplayChunkDelay = offset / mudlet::self()->mReplaySpeed;
+        auto* replay = MudletReplay::self();
+        mReplayChunkDelay = replay ? replay->advance(offset) : offset;
         mReplayChunkPending = true;
         if (!mReplayPaused) {
             mpReplayChunkTimer->start(mReplayChunkDelay);
@@ -5589,8 +5591,8 @@ void cTelnet::endReplay(const QString& message)
     if (!message.isEmpty()) {
         postMessage(message);
     }
-    if (auto pMudlet = mudlet::self()) {
-        pMudlet->replayOver();
+    if (auto* replay = MudletReplay::self()) {
+        replay->over();
     }
 }
 

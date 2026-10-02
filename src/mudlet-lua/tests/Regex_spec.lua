@@ -421,6 +421,30 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- a group that was captured answers whether it could be selected on the
+    -- line under the cursor: 1 on the trigger's line, 0 on a line too short for it
+    it("selectCaptureGroup answers 1 when it selects and 0 when the line under the cursor is too short", function()
+        local selected, selection, shortLine, refused
+        local id = tempRegexTrigger("^SpecSelectCaptureGroupAnswer (\\w+)$", function()
+            local line = getLineNumber()
+            selected = selectCaptureGroup(2)
+            selection = getSelection()
+            deselect()
+            moveCursor(0, line - 1)
+            shortLine = getCurrentLine()
+            refused = selectCaptureGroup(2)
+            moveCursor(0, line)
+        end, 1)
+
+        feedTriggers("\nx\nSpecSelectCaptureGroupAnswer payload\n")
+
+        assert.are.equal(1, selected)
+        assert.are.equal("payload", selection)
+        assert.are.equal("x", shortLine)
+        assert.are.equal(0, refused)
+        killTrigger(id)
+    end)
+
     -- selectCaptureGroup returns -1 for non-existent named group
     it("selectCaptureGroup returns -1 for non-existent named group", function()
         local result

@@ -141,9 +141,9 @@ jobs:
         ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
 
     - name: (Windows) Run Lua tests
-      # ~94s measured here, and a slow runner can take half again as long - kept in
-      # step with the other platforms
-      timeout-minutes: 6
+      # 270-315s measured here, and a slow runner has taken 354s - kept in step
+      # with the other platforms
+      timeout-minutes: 12
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'

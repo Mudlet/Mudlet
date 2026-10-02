@@ -28,6 +28,7 @@
 #include "CredentialManager.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "TAction.h"
@@ -45,7 +46,6 @@
 #include "TTrigger.h"
 #include "ctelnet.h"
 #include "discord.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
@@ -790,7 +790,7 @@ void dlgProfilePreferences::buildShell()
 
     auto* pCard_dataEncoding = createCard(qsl("card_dataEncoding"));
     addCardRow(pCard_dataEncoding, label_encoding, comboBox_encoding);
-    moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX});
+    moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, checkBox_expectCSpaceIdInColonLessMColorCode});
     reflowCompatibilityCard();
     auto* pCard_network = createCard(qsl("card_network"));
     addCardRow(pCard_network, label_networkPacketTimeout, doubleSpinBox_networkPacketTimeout);
@@ -1250,6 +1250,10 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
     synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for workarounds needed by some games, which used to be on a tab called "Special options".
+    synonyms.append({groupBox_specialOptions, tr("special options, workaround, old game, compatibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for script debugging options, which used to be on a tab called "Special options".
+    synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -1583,7 +1587,7 @@ void dlgProfilePreferences::setCardDescriptions()
     //: Description line under the "Performance" card title on the Advanced settings page
     setCardDescription(findChild<QGroupBox*>(qsl("card_performance")), tr("Ways Mudlet speeds up your scripts. Leave these on unless a script or package misbehaves."));
     //: Description line under the "Developer" card title on the Advanced settings page
-    setCardDescription(groupBox_debug, tr("Diagnostics for people writing packages and scripts. Leave these off for ordinary play."));
+    setCardDescription(groupBox_debug, tr("How much Mudlet's debugging tools report while you work on scripts."));
 }
 
 void dlgProfilePreferences::buildProtocolsSubpage()
@@ -1941,9 +1945,6 @@ void dlgProfilePreferences::reflowWideCards()
     }
     gridLayout_groupBox_iconsAndToolbars->setColumnStretch(2, 1);
 
-    // Alone on its row, so it drifts right unless it spans both columns
-    gridLayout_groupBox_debug->removeWidget(checkBox_expectCSpaceIdInColonLessMColorCode);
-    gridLayout_groupBox_debug->addWidget(checkBox_expectCSpaceIdInColonLessMColorCode, 0, 0, 1, 2);
     // Otherwise the time edit takes the row's stretch and spans the whole card
     horizontalLayout_timerDebugOutputMinimumInterval->setStretch(1, 0);
     horizontalLayout_timerDebugOutputMinimumInterval->addStretch(1);
@@ -1976,13 +1977,15 @@ void dlgProfilePreferences::reflowDisplayOptionsCard()
     gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 3, 1);
 }
 
-// The .ui ends this card with the reconnect notice, but the workaround moved here lands after it,
-// stranding the notice between two checkboxes.
+// The .ui ends this card with the reconnect notice, but the workarounds moved here land after it,
+// stranding the notice between checkboxes.
 void dlgProfilePreferences::reflowCompatibilityCard()
 {
-    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, need_reconnect_for_specialoption});
+    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, checkBox_expectCSpaceIdInColonLessMColorCode, need_reconnect_for_specialoption});
     gridLayout_groupBox_specialOptions->addWidget(checkBox_USE_IRE_DRIVER_BUGFIX, 2, 1);
-    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 3, 0, 1, 2);
+    // Its label is too long to share a row
+    gridLayout_groupBox_specialOptions->addWidget(checkBox_expectCSpaceIdInColonLessMColorCode, 3, 0, 1, 2);
+    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 4, 0, 1, 2);
 }
 
 void dlgProfilePreferences::updateColumnWidthCaps()
@@ -3464,12 +3467,11 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_purgeMediaCache->setEnabled(false);
     // ----- groupBox_specialOptions -----
     need_reconnect_for_specialoption->hide();
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
 
     groupbox_searchEngineSelection->setEnabled(false);
-    // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
-    // This acts on a label within this groupBox:
     slot_hidePasswordMigrationLabel();
+    // ----- groupBox_debug -----
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     checkBox_lazyCaptureGlobals->setEnabled(false);
@@ -3583,9 +3585,10 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
     groupBox_purgeMediaCache->setEnabled(true);
+    // ----- groupBox_specialOptions -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     groupbox_searchEngineSelection->setEnabled(true);
     // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     checkBox_lazyCaptureGlobals->setEnabled(true);
@@ -3671,7 +3674,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
     spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
-    checkBox_antiAlias->setChecked(!pHost->mNoAntiAlias);
+    checkBox_antiAlias->setChecked(pHost->fontsAntiAlias());
 
     connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
@@ -3914,7 +3917,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToState->setChecked(!(discordFlags & Host::DiscordSetState));
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
-        lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
+        lineEdit_discordUserName->setText(pHost->getRequiredDiscordUserName());
         lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). "
                                                                 "Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted "
                                                                 "lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
@@ -3940,8 +3943,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
 
     /* Possible inclusion in 4.20.1
-    checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
-    checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
+    checkBox_mmcpAutostartServer->setChecked(pHost->getMMCPAutoStartServer());
+    checkBox_mmcpAllowPeekReq->setChecked(pHost->getMMCPAllowPeekRequests());
     checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
     */
 
@@ -6476,7 +6479,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         }
         if (mSnapshot.dirty(checkBox_antiAlias)) {
-            pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
+            pHost->setFontsAntiAlias(checkBox_antiAlias->isChecked());
         }
         if (mSnapshot.dirty(mAlertOnNewData)) {
             pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
@@ -6575,10 +6578,11 @@ void dlgProfilePreferences::applyAll()
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
-        if (pHost->mpEditorDialog
-            && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
+        auto* pDialogs = HostDialogs::find(pHost);
+        if (auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr;
+            pEditor && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
             // From the Host, which the write above updated, not a box a script may have moved on from
-            pHost->mpEditorDialog->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
+            pEditor->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
         }
 
         if (mSnapshot.dirty(script_preview_combobox)) {
@@ -6649,8 +6653,8 @@ void dlgProfilePreferences::applyAll()
 
         if (mSnapshot.dirty(lineEdit_discordUserName)) {
             const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
-            if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
-                pHost->mRequiredDiscordUserName = newDiscordUserName;
+            if (pHost->getRequiredDiscordUserName() != newDiscordUserName) {
+                pHost->setRequiredDiscordUserName(newDiscordUserName);
                 Discord::self()->UpdatePresence();
             }
         }
@@ -6660,29 +6664,29 @@ void dlgProfilePreferences::applyAll()
             pHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed());
         }
         if (mSnapshot.dirty(lineEdit_mmcpChatMessagePrefix)) {
-            pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
+            pHost->setMMCPChatPrefix(lineEdit_mmcpChatMessagePrefix->text().trimmed());
         }
         if (mSnapshot.dirty(lineEdit_mmcpPort)) {
             bool ok;
             const quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
-            pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
+            pHost->setMMCPPort(ok ? port : csDefaultMMCPHostPort);
         }
 
         // These MMCP options' check boxes are commented out of profile_preferences.ui, so there is nothing to read
-        /* restore these along with the check boxes:
-        pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
-        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
-        pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
+        /* restore these along with the check boxes, and give Host the setters:
+        pHost->setMMCPAutoStartServer(checkBox_mmcpAutostartServer->isChecked());
+        pHost->setMMCPAutoAcceptCalls(checkBox_mmcpAutoAcceptCalls->isChecked());
+        pHost->setMMCPAllowPeekRequests(checkBox_mmcpAllowPeekReq->isChecked());
         */
 
         if (mSnapshot.dirty(checkBox_mmcpPrefixEmotes)) {
-            pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
+            pHost->setMMCPPrefixEmotes(checkBox_mmcpPrefixEmotes->isChecked());
         }
         if (mSnapshot.dirty(checkBox_mmcpAddChatMessageNewline)) {
-            pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
+            pHost->setMMCPAddChatMessageNewline(checkBox_mmcpAddChatMessageNewline->isChecked());
         }
         if (mSnapshot.dirty(checkBox_mmcpSnoopInMainConsole)) {
-            pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
+            pHost->setMMCPShowSnoopInMainConsole(checkBox_mmcpSnoopInMainConsole->isChecked());
         }
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
@@ -8188,7 +8192,7 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
-    pHost->mPlayerRoomStyle = static_cast<quint8>(style);
+    pHost->setPlayerRoomStyle(static_cast<quint8>(style));
     if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return;
     }
@@ -8205,7 +8209,7 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
     }
 
     setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
-    pHost->mPlayerRoomOuterColor = mpHost->mpMap->mPlayerRoomOuterColor;
+    pHost->setPlayerRoomOuterColor(mpHost->mpMap->mPlayerRoomOuterColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -8226,7 +8230,7 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
     }
 
     setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
-    pHost->mPlayerRoomInnerColor = mpHost->mpMap->mPlayerRoomInnerColor;
+    pHost->setPlayerRoomInnerColor(mpHost->mpMap->mPlayerRoomInnerColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -8248,7 +8252,7 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
 
     if (value < 256 && pHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
-        pHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        pHost->setPlayerRoomOuterDiameter(static_cast<quint8>(value));
         if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
             // And update the displayed map:
             pHost->mpMap->mpMapper->mp2dMap->update();
@@ -8265,7 +8269,7 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
 
     if (value < 256 && pHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
-        pHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        pHost->setPlayerRoomInnerDiameter(static_cast<quint8>(value));
         if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
             // Redefine the QGradientStops
             pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
