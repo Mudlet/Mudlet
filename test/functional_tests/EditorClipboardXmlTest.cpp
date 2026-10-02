@@ -34,6 +34,7 @@
 #include "ActionUnit.h"
 #include "AliasUnit.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "KeyUnit.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
@@ -236,7 +237,7 @@ private slots:
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
@@ -250,8 +251,8 @@ private slots:
     void cleanupTestCase()
     {
         if (mpHost) {
-            if (auto* pEditor = mpHost->mpEditorDialog.data()) {
-                mpHost->mpEditorDialog = nullptr;
+            if (auto* pEditor = HostDialogs::of(mpHost).mpEditorDialog.data()) {
+                HostDialogs::of(mpHost).mpEditorDialog = nullptr;
                 delete pEditor;
             }
         }
