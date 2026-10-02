@@ -721,6 +721,17 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.equal("didn't get a valid container", message)
     end)
 
+    it("refuses to put a container inside one of its own descendants", function()
+      local child = track(Geyser.Container:new({name = "gcsChild"}, from))
+      local grandchild = track(Geyser.Container:new({name = "gcsGrandchild"}, child))
+      for _, destination in ipairs({child, grandchild}) do
+        local result, message = from:changeContainer(destination)
+        assert.is_nil(result)
+        assert.are.equal("can't move gcsFrom into one of its own children", message)
+        assert.are.equal(Geyser, from.container)
+      end
+    end)
+
     it("moves a window back to the root window when passed \"main\"", function()
       local label = track(Geyser.Label:new({name = "gcsBackToMain", x = "50%", y = 0, width = 10, height = 10}, from))
       label:changeContainer("main")
