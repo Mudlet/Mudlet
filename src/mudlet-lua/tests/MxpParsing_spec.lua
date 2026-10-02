@@ -171,6 +171,8 @@ describe("Tests how MXP reads the tags a game sends", function()
       local length = 10000
       finally(function() deleteChain("mxpParseLongChain", length) end)
       defineChain("mxpParseLongChain", length)
+      feed(("<mxpParseLongChain%d>mxpParseLongChainTail</mxpParseLongChain%d>"):format(length - 2, length - 2))
+      assert.is_true(formatOf("mxpParseLongChainTail").bold, "the chain was not defined through to its last link")
       feed("<mxpParseLongChain1>mxpParseLongChainText</mxpParseLongChain1>")
       assert.is_false(formatOf("mxpParseLongChainText").bold)
     end)
