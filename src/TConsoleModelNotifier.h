@@ -39,6 +39,8 @@ signals:
     // continuation, which may never come.
     void serverWrapLineHeld();
     void linkCharactersChanged();
+    // Characters on these lines were restyled where they stand.
+    void linesRestyled(int firstLine, int lastLine);
     void spoilerRevealed();
 };
 

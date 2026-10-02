@@ -240,6 +240,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesAppended, this, &TConsole::handleLinesOverflowEvent);
     }
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linkCharactersChanged, this, &TConsole::repaintPanes);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesRestyled, this, &TConsole::markLinesDirty);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
 
     // Every console, not just the main one: the manager is per model, and only
