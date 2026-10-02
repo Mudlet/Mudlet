@@ -143,10 +143,6 @@ private:
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
     bool mSpellChecking = false;
-    int mSystemDictionarySuggestionsCount = 0;
-    int mUserDictionarySuggestionsCount = 0;
-    char** mpSystemSuggestionsList = nullptr;
-    char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
     // The file used to store the command history between sessions:
