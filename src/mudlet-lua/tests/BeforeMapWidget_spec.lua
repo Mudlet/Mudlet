@@ -1,15 +1,17 @@
--- Specs that need a profile whose map widget has never been opened. Once any
--- spec opens it, the mapper behind it lives for the rest of the run and
--- closeMapWidget() only hides it, so this file is named to sort ahead of every
--- spec that opens one: busted runs its files in sorted order.
+-- Specs that need a profile with no mapper at all. Once the map widget is
+-- opened, the mapper behind it lives for the rest of the session and
+-- closeMapWidget() only hides it; an embedded mapper from createMapper() or
+-- Geyser.Mapper persists the same way. So this file is named to sort ahead of
+-- every spec that makes one: busted runs its files in sorted order.
 
-describe("Tests secondary map views in a profile that never opened the map widget", function()
+describe("Tests secondary map views in a profile without a mapper", function()
   local areaId, roomId
 
   setup(function()
-    local _, message = closeMapWidget()
-    assert.are.equal("no map widget found to close", message,
-      "an earlier spec opened the map widget, so this file no longer tests a profile without one")
+    -- getMapZoom() answers this exactly when TMap::mpMapper is null
+    local _, message = getMapZoom()
+    assert.are.equal("no active mapper", message,
+      "this profile already has a mapper (an earlier spec or an earlier run made one), so this file can no longer test a profile without one")
 
     areaId = addAreaName("BeforeMapWidgetSpec")
     roomId = createRoomID()
@@ -18,8 +20,10 @@ describe("Tests secondary map views in a profile that never opened the map widge
   end)
 
   teardown(function()
-    deleteRoom(roomId)
-    deleteArea(areaId)
+    if roomId then
+      deleteRoom(roomId)
+      deleteArea(areaId)
+    end
   end)
 
   it("creates, paints and closes a view without the main mapper", function()
