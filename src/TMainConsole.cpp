@@ -1736,13 +1736,6 @@ TConsole* TMainConsole::consoleNamed(const QString& name)
     return mSubConsoleMap.value(name);
 }
 
-void TMainConsole::markWindowDirty(const QString& name, const int firstLine, const int lastLine)
-{
-    if (auto pC = consoleNamed(name)) {
-        pC->markLinesDirty(firstLine, lastLine);
-    }
-}
-
 bool TMainConsole::setWindowScrollBarVisible(const QString& name, bool visible)
 {
     auto pC = consoleNamed(name);
@@ -1940,46 +1933,6 @@ bool TMainConsole::setWindowCommandLineVisible(const QString& name, bool visible
         return false;
     }
     pC->setCmdVisible(visible);
-    return true;
-}
-
-bool TMainConsole::echoWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->echoLink(text, commands, hints, useCurrentFormat, luaReferences);
-    return true;
-}
-
-bool TMainConsole::insertWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->insertLink(text, commands, hints, useCurrentFormat, luaReferences);
-    return true;
-}
-
-bool TMainConsole::insertWindowText(const QString& name, const QString& text)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->insertText(text);
-    return true;
-}
-
-bool TMainConsole::replaceWindowText(const QString& name, const QString& text)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return false;
-    }
-    pC->replace(text);
     return true;
 }
 

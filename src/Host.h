@@ -316,6 +316,11 @@ public:
     // other a mini console's, user window's or buffer's. The main console's is
     // there with or without a view.
     TConsoleModel* consoleModelNamed(const QString& name);
+    // Paint the named console's selection, and write what follows in the same
+    // format. Each answers whether it found the console.
+    bool setWindowFgColor(const QString& name, const QColor& color);
+    bool setWindowBgColor(const QString& name, const QColor& color);
+    bool setWindowDisplayAttributes(const QString& name, TChar::AttributeFlags attributes, bool enabled);
     TWindowRegistry& windowRegistry() { return mWindowRegistry; }
     const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();
@@ -548,9 +553,19 @@ public:
     QPointer<TConsole> findConsole(QString name);
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
-    // Makes the named console's selection a link. The console takes over the
-    // commands' Lua registry references only when it is found.
-    bool setWindowLink(const QString& name, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+    // Link writes to a console the caller already found by name, so it is looked
+    // up once per call and before any command becomes a Lua registry reference.
+    // The console takes over the references.
+    void echoWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    void insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    // Makes the console's selection a link.
+    void setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+    // Text writes to the named console, each false for a name that is no console's.
+    // Text or a link put into the main console's line while a trigger runs over
+    // it, or a replacement there, moves the trigger's captures to follow it.
+    bool insertWindowText(const QString& name, const QString& text);
+    // Puts text in place of the console's selection.
+    bool replaceWindowText(const QString& name, const QString& text);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     // Whether windowname can hold a new mini console, scroll box, command line, text edit or label:
     // "" or "main" (any case) is the main console, else it must be a registered user window or scroll box.

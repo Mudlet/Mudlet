@@ -203,10 +203,6 @@ public:
     std::optional<bool> getCommandLineSavesHistory(const QString& name) const;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory);
     bool setCommandLineVisible(const QString& name, bool visible);
-    // Repaints buffer lines the core changed in place in the named console: an
-    // empty name or "main" is this one, any other a mini console, user window or
-    // buffer. Nothing happens for a name that is none of those.
-    void markWindowDirty(const QString& name, int firstLine, int lastLine);
     // The scroll bar and scrolling operations the core forwards to this view by
     // name, never by widget. An empty name or "main" is this console, any other
     // a mini console, user window or buffer; each reports failure for a name
@@ -241,16 +237,6 @@ public:
     bool setWindowFontSize(const QString& name, int size);
     // Creates the console's own command line the first time it is shown.
     bool setWindowCommandLineVisible(const QString& name, bool visible);
-    // The link and text operations, found by name in the same way. A link's
-    // commands can hold Lua registry references, which the console takes over
-    // only when it is found. Text or a link put into the main console's line
-    // while a trigger runs over it, or a replacement there, moves the trigger's
-    // captures to follow it.
-    bool echoWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
-    bool insertWindowLink(const QString& name, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
-    bool insertWindowText(const QString& name, const QString& text);
-    // Puts text in place of the console's selection.
-    bool replaceWindowText(const QString& name, const QString& text);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.

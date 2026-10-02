@@ -5761,7 +5761,7 @@ void TBuffer::appendLog(const QString& text)
 // the last line of the result sits relative to startLine: 0 for a single line
 // that needed no wrapping, 2 for one split into three, and for a range of
 // several lines its length less one whether any of them were split or not.
-// TConsole::insertLink() and TConsole::printCommand() add it to startLine to
+// TConsoleModel::insertLink() and TConsole::printCommand() add it to startLine to
 // place the cursor and the repaint range.
 int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize)
 {

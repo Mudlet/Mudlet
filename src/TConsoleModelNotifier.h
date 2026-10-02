@@ -39,8 +39,11 @@ signals:
     // continuation, which may never come.
     void serverWrapLineHeld();
     void linkCharactersChanged();
-    // Characters on these lines were restyled where they stand.
-    void linesRestyled(int firstLine, int lastLine);
+    // These lines were restyled or written into where they stand.
+    void linesChanged(int firstLine, int lastLine);
+    // Lines were written at the end, which the view brings into view as
+    // echoing there does.
+    void newLinesWritten();
     void spoilerRevealed();
 };
 
