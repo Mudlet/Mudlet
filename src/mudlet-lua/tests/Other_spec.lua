@@ -3163,3 +3163,45 @@ describe("Tests the script API", function()
     end)
   end)
 end)
+
+describe("Tests how raiseEvent finds the Lua event dispatcher", function()
+  -- Mudlet looks the dispatcher up by name for every event, so it has to see
+  -- whatever that name means at the time, not what it meant the first time
+
+  it("calls a dispatcher redefined after earlier events", function()
+    local original = _G.dispatchEventToFunctions
+    local seen = {}
+    raiseEvent("otherSpecDispatchRedefined", "before")
+    local ok, message = pcall(function()
+      _G.dispatchEventToFunctions = function(event, ...)
+        seen[#seen + 1] = event
+        return original(event, ...)
+      end
+      raiseEvent("otherSpecDispatchRedefined", "after")
+    end)
+    _G.dispatchEventToFunctions = original
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchRedefined"}, seen)
+  end)
+
+  it("looks in the globals table setfenv(0) gave the thread", function()
+    local original = getfenv(0)
+    local seen = {}
+    raiseEvent("otherSpecDispatchSwapped", "before")
+    local swapped = setmetatable({
+      dispatchEventToFunctions = function(event, ...)
+        seen[#seen + 1] = event
+        return original.dispatchEventToFunctions(event, ...)
+      end,
+    }, {__index = original})
+    local ok, message = pcall(function()
+      setfenv(0, swapped)
+      raiseEvent("otherSpecDispatchSwapped", "after")
+    end)
+    setfenv(0, original)
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchSwapped"}, seen)
+  end)
+end)
