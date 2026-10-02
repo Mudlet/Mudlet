@@ -67,11 +67,8 @@
 #include <QStyleOptionSlider>
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
-#include <cerrno>
 #include <chrono>
 #include <cmath>
-#include <cstdio>
-#include <cstring>
 
 using namespace std::chrono_literals;
 
@@ -206,6 +203,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
 , mFgColor(mpModel->mFgColor)
+, mCommandBgColor(mpModel->mCommandBgColor)
+, mCommandFgColor(mpModel->mCommandFgColor)
 , mButtonState(mpModel->mButtonState)
 , mConsoleName(mpModel->mConsoleName)
 , mCurrentLine(mpModel->mCurrentLine)
@@ -224,7 +223,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mUserCursor(mpModel->mUserCursor)
 , P_begin(mpModel->P_begin)
 , P_end(mpModel->P_end)
-, mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
+, mProfileName(mpModel->mProfileName)
 , mIsPromptLine(mpModel->mIsPromptLine)
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
@@ -240,7 +239,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     if (mType & (UserWindow | SubConsole)) {
         connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesAppended, this, &TConsole::handleLinesOverflowEvent);
     }
-    connect(&mpModel->mNotifier, &TConsoleModelNotifier::lineCommitted, this, &TConsole::mirrorLineToStdOut);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::lineCommitted, this, [model = mpModel.get()](const QString& line) {
+        model->mirrorLineToStdOut(line);
+    });
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linkCharactersChanged, this, &TConsole::repaintPanes);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
 
@@ -1047,7 +1048,7 @@ void TConsole::clear()
     clearSelection();
     buffer.clear();
     // --mirror's pending line went with the buffer.
-    mMirrorPendingLine.clear();
+    mpModel->mMirrorPendingLine.clear();
     clearSplit();
     mUpperPane->update();
     mLowerPane->update();
@@ -2198,42 +2199,28 @@ void TConsole::setScrolling(const bool state)
 
 void TConsole::printCommand(QString& msg)
 {
-    // Skip printing if remote echo is active (e.g., password mode)
-    if (mpHost && mpHost->isRemoteEchoingActive()) {
+    showCommandEcho(mpModel->printCommand(msg));
+}
+
+void TConsole::showCommandEcho(const TConsoleModel::CommandEcho& echo)
+{
+    switch (echo.kind) {
+    case TConsoleModel::CommandEcho::Kind::None:
+        return;
+    case TConsoleModel::CommandEcho::Kind::NewLines:
+        showNewLines();
+        return;
+    case TConsoleModel::CommandEcho::Kind::PromptLine:
+        mUpperPane->needUpdate(echo.firstLine, echo.lastLine);
+        mLowerPane->needUpdate(echo.firstLine, echo.lastLine);
         return;
     }
+}
 
-    if (mTriggerEngineMode) {
-        msg.append(QChar::LineFeed);
-        if (buffer.lineBuffer.isEmpty()) {
-            buffer.appendEmptyLine();
-        }
-        if (!buffer.lineBuffer.back().isEmpty()) {
-            msg.prepend(QChar::LineFeed);
-        }
-        buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
-    } else {
-        const int lineBeforeNewContent = buffer.size() - 2;
-        if (lineBeforeNewContent >= 0) {
-            int promptEnd = buffer.buffer.at(lineBeforeNewContent).size();
-            if (promptEnd < 0) {
-                promptEnd = 0;
-            }
-            if (buffer.promptBuffer[lineBeforeNewContent]) {
-                QPoint P(promptEnd, lineBeforeNewContent);
-                const TChar format(mCommandFgColor, mCommandBgColor);
-                buffer.insertInLine(P, msg, format);
-                const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
-
-                mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
-                mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
-                buffer.promptBuffer[lineBeforeNewContent] = false;
-                return;
-            }
-        }
-        msg.append("\n");
-        print(msg, mCommandFgColor, mCommandBgColor);
-    }
+void TConsole::showNewLines()
+{
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat, QVector<int> luaReference)
@@ -2259,22 +2246,16 @@ void TConsole::print(const char* txt)
 // echoUserWindow(const QString& msg) was a redundant wrapper around this method:
 void TConsole::print(const QString& msg)
 {
-    buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
-
-    mirrorToStdOut(msg);
+    mpModel->print(msg);
+    showNewLines();
 }
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
 // same as this method it was just that the arguments were in a different order
 void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor, const QString& timeStampOverride)
 {
-    buffer.append(msg, 0, msg.size(), fgColor, bgColor, TChar::None, 0, timeStampOverride);
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
-
-    mirrorToStdOut(msg);
+    mpModel->print(msg, fgColor, bgColor, timeStampOverride);
+    showNewLines();
 }
 
 void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp)
@@ -2288,70 +2269,7 @@ void TConsole::printFormatted(const QString& text, const std::vector<TChar>& for
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    mirrorToStdOut(text);
-}
-
-namespace {
-// The first failure (reader gone, stream full) turns --mirror off and says so once, rather than
-// silently losing every line.
-void writeMirrorLine(const QString& line)
-{
-    QByteArray output = line.toUtf8();
-    output.append('\n');
-    const size_t length = static_cast<size_t>(output.size());
-    if (std::fwrite(output.constData(), 1, length, stdout) == length && std::fflush(stdout) == 0) {
-        return;
-    }
-
-    mudlet::smMirrorToStdOut = false;
-    qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
-}
-
-// Every main console is "main", so the profile name is needed too. Both names come from Lua and may
-// hold control characters; a line feed would split the record for a line-based reader.
-QString mirrorPrefix(const QString& profileName, const QString& consoleName)
-{
-    QString prefix = qsl("%1.%2| ").arg(profileName, consoleName);
-    for (QChar& character : prefix) {
-        if (character.category() == QChar::Other_Control) {
-            character = QChar::ReplacementCharacter;
-        }
-    }
-    return prefix;
-}
-} // namespace
-
-void TConsole::mirrorToStdOut(const QString& text)
-{
-    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
-        return;
-    }
-
-    // Text may be a fragment (Lua's print() sends its newline separately, echo() need not end a line),
-    // so like TBuffer::appendLine(), write a line out only once a line feed ends it.
-    QStringList fragments = text.split(QChar::LineFeed);
-    const QString stillOpen = fragments.takeLast();
-    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
-    for (const QString& fragment : fragments) {
-        writeMirrorLine(prefix + mMirrorPendingLine + fragment);
-        mMirrorPendingLine.clear();
-    }
-    mMirrorPendingLine.append(stillOpen);
-}
-
-void TConsole::mirrorLineToStdOut(const QString& line)
-{
-    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
-        return;
-    }
-
-    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
-    // Like TBuffer::commitLineData(), put a committed line below a non-empty open line, not onto it.
-    if (!mMirrorPendingLine.isEmpty()) {
-        writeMirrorLine(prefix + mMirrorPendingLine);
-        mMirrorPendingLine.clear();
-    }
-    writeMirrorLine(prefix + line);
+    mpModel->mirrorToStdOut(text);
 }
 
 // Not a bare buffer.clear(): selection and scroll state must go with the lines, or the copy actions
@@ -2368,8 +2286,8 @@ void TConsole::discardLastLine()
 
 void TConsole::printSystemMessage(const QString& msg)
 {
-    const QString txt = tr("System Message: %1").arg(msg);
-    print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
+    mpModel->printSystemMessage(msg);
+    showNewLines();
 }
 
 void TConsole::echo(const QString& msg)

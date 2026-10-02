@@ -85,6 +85,38 @@ struct TConsoleModel
     bool setSelectionFgColor(const QColor& newColor);
     bool setSelectionBgColor(const QColor& newColor);
 
+    // Client output, appended at the end of the buffer and copied to --mirror. The view showing the
+    // model brings the new lines into view (TConsole::showNewLines()).
+    void print(const QString& msg);
+    // timeStampOverride keeps the arrival time for held-back content being replayed.
+    void print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride = QString());
+    void printSystemMessage(const QString& msg);
+
+    // What printCommand() did to the buffer, which decides what the view repaints.
+    struct CommandEcho
+    {
+        enum class Kind {
+            // Nothing written, or written while triggers run, which is left to the repaint of the
+            // text they run on.
+            None,
+            NewLines,
+            // Appended to the prompt it answers, which now wraps over rows [firstLine, lastLine).
+            PromptLine
+        };
+        Kind kind = Kind::None;
+        int firstLine = 0;
+        int lastLine = 0;
+    };
+    // Echoes a command the player sent. msg is changed to what was written, line feeds included,
+    // which Host::send() then splits and sends.
+    CommandEcho printCommand(QString& msg);
+
+    // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
+    // line fragment, so what follows the last line feed is held until one arrives.
+    void mirrorToStdOut(const QString& text);
+    // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
+    void mirrorLineToStdOut(const QString& line);
+
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
     // A QPointer because Host and view are torn down in either order: quitting
@@ -112,6 +144,16 @@ struct TConsoleModel
     // matched line as still open - see the branches on it in TConsole and
     // TBuffer::addLink(). Only ever raised on the main console's model.
     bool mTriggerEngineMode = false;
+    // The colours printCommand() and printSystemMessage() write in. On the main console's model
+    // the command pair is the profile's, which Host keeps it in step with.
+    QColor mCommandFgColor = QColor(213, 195, 0);
+    QColor mCommandBgColor = QColorConstants::Black;
+    QColor mSystemMessageFgColor = QColorConstants::Red;
+    // Transparent so a system message blends into the console's real background
+    // instead of an opaque bar; TTextEdit's selection swap and TBuffer's HTML
+    // export both resolve alpha-0 against getConsoleBgColor() so the text stays
+    // visible when selected and the same colour is kept in copied/exported HTML.
+    QColor mSystemMessageBgColor = QColorConstants::Transparent;
     // Last pressed toolbar button's state for getButtonState(): 1 = up, 2 = down (0 invalid); a plain button
     // resets it to 1.
     int mButtonState = 1;
@@ -120,6 +162,10 @@ struct TConsoleModel
     // windows, miniconsoles and buffers can be addressed by scripts, so only
     // they tell scripts when their line indexes shift.
     QString mConsoleName;
+    // Names the console's --mirror records, with mConsoleName.
+    QString mProfileName;
+    // --mirror text not yet ended by a line feed.
+    QString mMirrorPendingLine;
     bool mScriptAddressable = false;
     // The line on which the current search result has been found, or the next
     // one is to start (currently only for the main console). An index into the

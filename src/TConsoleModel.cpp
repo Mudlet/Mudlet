@@ -24,6 +24,7 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -31,9 +32,14 @@
 #include <QFileInfo>
 #include <QFontInfo>
 
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
+
 TConsoleModel::TConsoleModel(Host* pHost)
 : buffer(pHost)
 , mpHost(pHost)
+, mProfileName(pHost ? pHost->getName() : qsl("debug console"))
 , mHyperlinkVisibilityManager(*this)
 {
     // Not in the buffer's constructor: the buffer is built before the managers
@@ -106,6 +112,121 @@ bool TConsoleModel::setSelectionFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
     return buffer.applyFgColor(P_begin, P_end, newColor);
+}
+
+void TConsoleModel::print(const QString& msg)
+{
+    buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+    mirrorToStdOut(msg);
+}
+
+void TConsoleModel::print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride)
+{
+    buffer.append(msg, 0, msg.size(), fgColor, bgColor, TChar::None, 0, timeStampOverride);
+    mirrorToStdOut(msg);
+}
+
+void TConsoleModel::printSystemMessage(const QString& msg)
+{
+    // Kept in TConsole's context, where the translations already are.
+    const QString txt = QCoreApplication::translate("TConsole", "System Message: %1").arg(msg);
+    print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
+}
+
+TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
+{
+    // Skip printing if remote echo is active (e.g., password mode)
+    if (mpHost && mpHost->isRemoteEchoingActive()) {
+        return {};
+    }
+
+    if (mTriggerEngineMode) {
+        msg.append(QChar::LineFeed);
+        if (buffer.lineBuffer.isEmpty()) {
+            buffer.appendEmptyLine();
+        }
+        if (!buffer.lineBuffer.back().isEmpty()) {
+            msg.prepend(QChar::LineFeed);
+        }
+        buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
+        return {};
+    }
+
+    const int lineBeforeNewContent = buffer.size() - 2;
+    if (lineBeforeNewContent >= 0 && buffer.promptBuffer[lineBeforeNewContent]) {
+        QPoint P(buffer.buffer.at(lineBeforeNewContent).size(), lineBeforeNewContent);
+        const TChar format(mCommandFgColor, mCommandBgColor);
+        buffer.insertInLine(P, msg, format);
+        const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        buffer.promptBuffer[lineBeforeNewContent] = false;
+        return {CommandEcho::Kind::PromptLine, lineBeforeNewContent, lineBeforeNewContent + 1 + down};
+    }
+    msg.append(QChar::LineFeed);
+    print(msg, mCommandFgColor, mCommandBgColor);
+    return {CommandEcho::Kind::NewLines};
+}
+
+namespace {
+// The first failure (reader gone, stream full) turns --mirror off and says so once, rather than
+// silently losing every line.
+void writeMirrorLine(const QString& line)
+{
+    QByteArray output = line.toUtf8();
+    output.append('\n');
+    const size_t length = static_cast<size_t>(output.size());
+    if (std::fwrite(output.constData(), 1, length, stdout) == length && std::fflush(stdout) == 0) {
+        return;
+    }
+
+    mudlet::smMirrorToStdOut = false;
+    qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
+}
+
+// Every main console is "main", so the profile name is needed too. Both names come from Lua and may
+// hold control characters; a line feed would split the record for a line-based reader.
+QString mirrorPrefix(const QString& profileName, const QString& consoleName)
+{
+    QString prefix = qsl("%1.%2| ").arg(profileName, consoleName);
+    for (QChar& character : prefix) {
+        if (character.category() == QChar::Other_Control) {
+            character = QChar::ReplacementCharacter;
+        }
+    }
+    return prefix;
+}
+} // namespace
+
+void TConsoleModel::mirrorToStdOut(const QString& text)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    // Text may be a fragment (Lua's print() sends its newline separately, echo() need not end a line),
+    // so like TBuffer::appendLine(), write a line out only once a line feed ends it.
+    QStringList fragments = text.split(QChar::LineFeed);
+    const QString stillOpen = fragments.takeLast();
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    for (const QString& fragment : fragments) {
+        writeMirrorLine(prefix + mMirrorPendingLine + fragment);
+        mMirrorPendingLine.clear();
+    }
+    mMirrorPendingLine.append(stillOpen);
+}
+
+void TConsoleModel::mirrorLineToStdOut(const QString& line)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    // Like TBuffer::commitLineData(), put a committed line below a non-empty open line, not onto it.
+    if (!mMirrorPendingLine.isEmpty()) {
+        writeMirrorLine(prefix + mMirrorPendingLine);
+        mMirrorPendingLine.clear();
+    }
+    writeMirrorLine(prefix + line);
 }
 
 // Two gotchas in here:
