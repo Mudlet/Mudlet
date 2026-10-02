@@ -298,13 +298,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
-    // The "autolog" sentinel file controls whether logging the game's text as
-    // plain text or HTML is immediately resumed on profile loading. Do not
-    // confuse it with the "autologin" item, which controls whether the profile
-    // is automatically started when the Mudlet application is run!
-    mLogStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
-    // "autotimestamp" determines if profile loads with timestamps enabled
-    mTimeStampStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
@@ -494,6 +487,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mpMainConsoleModel->mTriggerEngineMode = false;
         finalizeMainConsole();
     });
+    // Applied to the model rather than by the view, so that a profile loaded
+    // with no view starts with them too
+    mpMainConsoleModel->mShowTimeStamps = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mpClipboard = std::make_unique<TBuffer>(this);
     // a view does this in TConsole::changeColors(), but a profile need never get one
     mpMainConsoleModel->setWrapAt(mWrapAt);
@@ -2354,6 +2350,51 @@ bool Host::setWindowDisplayAttributes(const QString& name, const TChar::Attribut
     return true;
 }
 
+std::optional<bool> Host::getWindowTimeStamps(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    return {pModel->mShowTimeStamps};
+}
+
+// The "autotimestamp" sentinel file makes the profile load with the main
+// console's timestamps on.
+static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
+{
+    const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("autotimestamp"));
+    if (!shown) {
+        QFile::remove(filePath);
+        return;
+    }
+    QSaveFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Host: failed to open autotimestamp file for writing:" << file.errorString();
+        return;
+    }
+    if (!file.commit()) {
+        qWarning() << "Host: error saving timestamp state:" << file.errorString();
+    }
+}
+
+std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool shown)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    const bool wasShown = pModel->mShowTimeStamps;
+    if (wasShown != shown) {
+        pModel->mShowTimeStamps = shown;
+        if (pModel == mpMainConsoleModel.get()) {
+            saveMainConsoleTimeStamps(mHostName, shown);
+        }
+        emit pModel->mNotifier.timeStampsToggled();
+    }
+    return {wasShown};
+}
+
 bool Host::copyToClipboard(const QString& name)
 {
     auto pModel = consoleModelNamed(name);
@@ -2545,17 +2586,35 @@ void Host::finalizeMainConsole()
 
 bool Host::mainConsoleShowsTimeStamps() const
 {
-    return mpConsole->showTimeStamps();
+    return mpMainConsoleModel->mShowTimeStamps;
 }
 
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
+    if (!mpConsole) {
+        // Written where TMainConsole::slot_loggingAnnouncement() would print it,
+        // so that a view built later shows it
+        const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(TMainConsole::loggingAnnouncementText(isLogging, logFileName)));
+        mpMainConsoleModel->buffer.append(text, 0, text.size(), QColorConstants::Red, QColorConstants::Transparent);
+    }
     emit signal_loggingAnnouncement(isLogging, logFileName);
 }
 
 void Host::raiseLoggingStateChanged(const bool isLogging)
 {
     emit signal_loggingStateChanged(isLogging);
+}
+
+void Host::startSavedLogging()
+{
+    // The "autolog" sentinel file controls whether logging the game's text as
+    // plain text or HTML is immediately resumed on profile loading. Do not
+    // confuse it with the "autologin" item, which controls whether the profile
+    // is automatically started when the Mudlet application is run!
+    if (mpMainConsoleModel->mLogToLogFile || !QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")))) {
+        return;
+    }
+    mpMainConsoleModel->toggleLogging(true);
 }
 
 // The per-line trigger orchestration used to live on the main-console widget
@@ -5043,21 +5102,6 @@ void Host::setCompactInputLine(const bool state)
         }
         raiseSettingChangedEvent(qsl("compactInputLine"), state);
     }
-}
-
-QPointer<TConsole> Host::findConsole(QString name)
-{
-    if (!mpConsole) {
-        qWarning() << "Host::findConsole() ERROR: main console not initialized";
-        return nullptr;
-    }
-
-    if (name.isEmpty() or name == qsl("main")) {
-        // Reason for the deref-plus-ref in the next line: `QPointer`s do not
-        // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258
-        return &*mpConsole;
-    }
-    return mpConsole->subConsoleWidget(name);
 }
 
 QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)

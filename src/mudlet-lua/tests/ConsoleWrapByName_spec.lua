@@ -126,6 +126,41 @@ describe("Tests that the timestamp and wrap functions find their console by name
           assert.are.equal(mainShows, timeStampsEnabled("main"))
         end)
 
+        -- A console reports its size only once it differs from the last one it
+        -- reported, and a font change alone reports nothing, so a font change
+        -- leaves a size for the next timestamp change to report. A buffer is
+        -- never shown, so it has no size to report.
+        it("reports a size it has not reported yet when its timestamps change", function()
+          disableTimeStamps(window)
+          local fontSize = getFontSize(window)
+          local reports = {}
+          local handler = registerAnonymousEventHandler("sysConsoleSizeChanged", function(_, ...)
+            reports[#reports + 1] = {...}
+          end)
+
+          setFontSize(window, fontSize + 6)
+          assert.are.same({}, reports)
+          enableTimeStamps(window)
+          enableTimeStamps(window)
+          local onReport = {window, getColumnCount(window), getRowCount(window)}
+          setFontSize(window, fontSize)
+          disableTimeStamps(window)
+          disableTimeStamps(window)
+          local offReport = {window, getColumnCount(window), getRowCount(window), 0}
+          killAnonymousEventHandler(handler)
+
+          if kind[1] == "buffer" then
+            assert.are.same({}, reports)
+            return
+          end
+          assert.are.equal(2, #reports)
+          local gutter = table.remove(reports[1])
+          assert.is_true(gutter > 0, tostring(gutter))
+          assert.are.same(onReport, reports[1])
+          assert.are.same(offReport, reports[2])
+          assert.are_not.same(onReport[2], offReport[2])
+        end)
+
         it("wraps that console at the width and indents it is given", function()
           local mainWrap = getWindowWrap("main")
           local mainWidth = getMainConsoleWidth()

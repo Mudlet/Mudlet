@@ -330,6 +330,12 @@ public:
     bool setWindowFgColor(const QString& name, const QColor& color);
     bool setWindowBgColor(const QString& name, const QColor& color);
     bool setWindowDisplayAttributes(const QString& name, TChar::AttributeFlags attributes, bool enabled);
+    // Whether the named console shows timestamps. The buffer records every
+    // line's time either way.
+    std::optional<bool> getWindowTimeStamps(const QString& name);
+    // Answers whether they were shown before, and leaves them alone when that
+    // is already what was asked for. A view shows the change.
+    std::optional<bool> setWindowTimeStamps(const QString& name, bool shown);
     TWindowRegistry& windowRegistry() { return mWindowRegistry; }
     const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();
@@ -342,6 +348,9 @@ public:
     // logging change through here.
     void raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName);
     void raiseLoggingStateChanged(const bool isLogging);
+    // Starts the log the "autolog" file asks for, once the profile's log
+    // settings have been read, whether or not the profile has a view.
+    void startSavedLogging();
     void postIrcMessage(const QString&, const QString&, const QString&);
     // The running IRC session, creating one if there is none.
     TIrcClient* getOrCreateIrcClient();
@@ -559,7 +568,6 @@ public:
     void setAdvertiseScreenReader(const bool state);
     void setAnnounceIncomingText(const bool state);
     void setMapperPanelVisible(const bool state);
-    QPointer<TConsole> findConsole(QString name);
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     // Link writes to a console the caller already found by name, so it is looked
@@ -974,8 +982,6 @@ public:
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
-    bool mLogStatus = false;
-    bool mTimeStampStatus = false;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;

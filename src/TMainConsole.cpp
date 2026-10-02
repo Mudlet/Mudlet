@@ -100,6 +100,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // and re-labelling the log button are the only parts of it that need a view.
     connect(pH, &Host::signal_loggingAnnouncement, this, &TMainConsole::slot_loggingAnnouncement, Qt::UniqueConnection);
     connect(pH, &Host::signal_loggingStateChanged, this, &TMainConsole::slot_loggingStateChanged, Qt::UniqueConnection);
+    // Host starts a saved log as the profile loads, before there is a view
+    slot_loggingStateChanged(mLogToLogFile);
 
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
@@ -311,15 +313,19 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
     model().toggleLogging(isMessageEnabled);
 }
 
+QString TMainConsole::loggingAnnouncementText(const bool isLogging, const QString& logFileName)
+{
+    return isLogging ? tr("Logging has started. Log file is %1").arg(logFileName) : tr("Logging has been stopped. Log file is %1").arg(logFileName);
+}
+
 void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
-    const QString message = isLogging ? tr("Logging has started. Log file is %1").arg(logFileName) : tr("Logging has been stopped. Log file is %1").arg(logFileName);
-    printSystemMessage(qsl("%1\n").arg(message));
+    printSystemMessage(qsl("%1\n").arg(loggingAnnouncementText(isLogging, logFileName)));
 }
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 {
-    // A click has already flipped the button; this is for logging toggled from Lua, and failed starts.
+    // A click has already flipped the button; this is for logging toggled from Lua, failed starts, and a new view.
     logButton->setChecked(isLogging);
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
 }
@@ -1821,28 +1827,6 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
         pC->mUpperPane->forceUpdate();
     }
     return true;
-}
-
-std::optional<bool> TMainConsole::getWindowTimeStamps(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->showTimeStamps()};
-}
-
-std::optional<bool> TMainConsole::setWindowTimeStamps(const QString& name, bool shown)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    const bool wasShown = pC->showTimeStamps();
-    if (wasShown != shown) {
-        pC->slot_toggleTimeStamps(shown);
-    }
-    return {wasShown};
 }
 
 std::optional<int> TMainConsole::getWindowColumnCount(const QString& name)

@@ -59,7 +59,6 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QProxyStyle>
-#include <QSaveFile>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -224,6 +223,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linkCharactersChanged, this, &TConsole::repaintPanes);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesChanged, this, &TConsole::markLinesDirty);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::newLinesWritten, this, &TConsole::showNewLines);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::timeStampsToggled, this, &TConsole::applyTimeStamps);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
 
     // Every console, not just the main one: the manager is per model, and only
@@ -240,7 +240,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // which has its own title and icon set.
         setWindowTitle(tr("Debug Console"));
         mWrapAt = 50;
-        mShowTimeStamps = true;
+        mpModel->mShowTimeStamps = true;
     } else if (mType == MainConsole) {
         mBorders = mpHost->borders();
         mCommandBgColor = mpHost->mCommandBgColor;
@@ -510,6 +510,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     // so that we can set the state of the button without getting the signal
     // being raised:
     connect(timeStampButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleTimeStamps);
+    if (mType == MainConsole) {
+        timeStampButton->setChecked(mpModel->mShowTimeStamps);
+    }
 
     replayButton = new QToolButton;
     replayButton->setCheckable(true);
@@ -3039,38 +3042,35 @@ void TConsole::raiseMudletResizeEvent()
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mudletEvent.mArgumentList.append(QString::number(characterDimensions.height()));
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentList.append(QString::number(mShowTimeStamps ? TBuffer::smTimeStampFormat.size() : 0));
+    mudletEvent.mArgumentList.append(QString::number(showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0));
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(mudletEvent);
 }
 
 void TConsole::slot_toggleTimeStamps(const bool state)
 {
-    if (mShowTimeStamps == state) {
+    if (mType == TConsole::MainConsole) {
+        // Host saves the choice for the next load, then has this view apply it
+        mpHost->setWindowTimeStamps(qsl("main"), state);
+        return;
+    }
+    if (mpModel->mShowTimeStamps == state) {
         return;
     }
 
-    mShowTimeStamps = state;
+    mpModel->mShowTimeStamps = state;
+    applyTimeStamps();
+}
+
+void TConsole::applyTimeStamps()
+{
+    const bool state = mpModel->mShowTimeStamps;
     if (mType == TConsole::MainConsole) {
         if (timeStampButton->isChecked() != state) {
             // using this will NOT cause the QAbstractButton::checked signal
             // to be raised - which is why we use that rather than the
             // QAbstractButton::toggled one
             timeStampButton->setChecked(state);
-        }
-        const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
-        QSaveFile file(filePath);
-        if (state) {
-            if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                qWarning() << "TConsole: failed to open autotimestamp file for writing:" << file.errorString();
-                return;
-            }
-            QTextStream out(&file);
-            if (!file.commit()) {
-                qDebug() << "TConsole::slot_toggleTimeStamps: error saving timestamp state: " << file.errorString();
-            }
-        } else {
-            QFile::remove(filePath);
         }
     }
 

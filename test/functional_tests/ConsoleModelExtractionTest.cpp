@@ -113,7 +113,10 @@ private:
     const QString mColourHostname = "Test-ConsoleModelColours";
     const QString mSpellHostname = "Test-ConsoleModelSpellDic";
     const QString mViewlessHostname = "Test-ConsoleModelViewless";
+    const QString mNawsHostname = "Test-ConsoleModelNaws";
+    const QString mTimeStampHostname = "Test-ConsoleModelTimeStamps";
     const QString mWrapHostname = "Test-ConsoleModelWrap";
+    const QString mAutoLogHostname = "Test-ConsoleModelAutoLog";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QColor mProfileFgColor{0xFF, 0x00, 0xFF};
@@ -164,7 +167,10 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
+        deleteProfileDirectory(mNawsHostname);
+        deleteProfileDirectory(mTimeStampHostname);
         deleteProfileDirectory(mWrapHostname);
+        deleteProfileDirectory(mAutoLogHostname);
     }
 
     // The view's members must be the model's fields, not copies of them: same
@@ -1038,7 +1044,7 @@ private slots:
         const QString startAnnouncement = TMainConsole::tr("Logging has started. Log file is %1");
         const QString stopAnnouncement = TMainConsole::tr("Logging has been stopped. Log file is %1");
         // The sentinel is what makes logging resume at the next launch
-        // (Host::mLogStatus), so it has to appear and disappear with the log.
+        // (Host::startSavedLogging()), so it has to appear and disappear with the log.
         const QString sentinel = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
         QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging before one has been started.");
 
@@ -1487,7 +1493,10 @@ private slots:
         deleteProfileDirectory(mColourHostname);
         deleteProfileDirectory(mSpellHostname);
         deleteProfileDirectory(mViewlessHostname);
+        deleteProfileDirectory(mNawsHostname);
+        deleteProfileDirectory(mTimeStampHostname);
         deleteProfileDirectory(mWrapHostname);
+        deleteProfileDirectory(mAutoLogHostname);
     }
 
     // Every one of these Lua functions used to reach through Host::mpConsole
@@ -1608,9 +1617,6 @@ expectRefusal('scrollingActive', scrollingActive())
 expectRefusal('getScroll', getScroll())
 expectRefusal('scrollTo', scrollTo(1))
 expectRefusal('scrollTo end', scrollTo())
-expectRefusal('enableTimeStamps', enableTimeStamps())
-expectRefusal('disableTimeStamps', disableTimeStamps())
-expectRefusal('timeStampsEnabled', timeStampsEnabled())
 expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
 expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
 expectRefusal('moveCursor', moveCursor('noViewMc', 0, 0))
@@ -1972,6 +1978,326 @@ headlessProblems = table.concat(headlessProblems, '; ')
         QCOMPARE(host->mWrapIndentCount, 2);
         QCOMPARE(host->mWrapHangingIndentCount, 3);
         QCOMPARE(luaGlobalNumber(host, "noViewWrap"), 23);
+    }
+
+    // The main console's timestamp flag lives in its model: the toolbar button and
+    // Lua both set it there, the button and the autotimestamp file follow it, and
+    // it outlives the view.
+    void test_mainConsoleTimeStampsLiveInTheModel()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        TConsoleModel& model = host->mainConsoleModel();
+        const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
+        QVERIFY2(!model.mShowTimeStamps, "The profile started with timestamps on, so turning them on proves nothing.");
+        QVERIFY(!QFile::exists(autoTimeStampPath));
+
+        host->mpConsole->timeStampButton->click();
+        QVERIFY(model.mShowTimeStamps);
+        QVERIFY(host->mpConsole->showTimeStamps());
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+        QVERIFY(QFile::exists(autoTimeStampPath));
+        runLua(host, qsl("timeStampsShown = tostring(timeStampsEnabled())\n"));
+        QCOMPARE(luaGlobalString(host, "timeStampsShown"), qsl("true"));
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY(!model.mShowTimeStamps);
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        QVERIFY2(!host->mpConsole->timeStampButton->isChecked(), "The toolbar button did not follow timestamps turned off from Lua.");
+        QVERIFY(!QFile::exists(autoTimeStampPath));
+
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(model.mShowTimeStamps);
+        QVERIFY2(host->mpConsole->timeStampButton->isChecked(), "The toolbar button did not follow timestamps turned on from Lua.");
+        QVERIFY(QFile::exists(autoTimeStampPath));
+
+        destroyTheView(host);
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+    }
+
+    // With a view, turning timestamps on from the toolbar button or from Lua saves
+    // the choice once, not once for the model and again for the view. A directory
+    // in the file's place makes every save attempt warn, so the warnings count them.
+    void test_timeStampsTurnedOnWithAViewAreSavedOnce()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
+        const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
+        QVERIFY(QDir().mkpath(autoTimeStampPath));
+        const QRegularExpression saveFailed(qsl("failed to open autotimestamp file"));
+        QTest::failOnWarning(saveFailed);
+
+        QTest::ignoreMessage(QtWarningMsg, saveFailed);
+        host->mpConsole->timeStampButton->click();
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+
+        QTest::ignoreMessage(QtWarningMsg, saveFailed);
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+    }
+
+    // Timestamps turned on or off from Lua change the width the game is told,
+    // by the gutter they take, as the toolbar button does.
+    void test_luaTimeStampsOnTheMainConsoleResendNaws()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
+        const auto sizeWithGutter = [host](const int gutter) {
+            return QSize(std::min(host->mScreenWidth, host->mWrapAt) - gutter, host->mScreenHeight);
+        };
+        const auto nawsReaches = [this, &sizeWithGutter](const int gutter) {
+            return QTest::qWaitFor(
+                    [this, &sizeWithGutter, gutter]() {
+                        return !mpServer->nawsUpdates().isEmpty() && mpServer->nawsUpdates().constLast() == sizeWithGutter(gutter);
+                    },
+                    5000);
+        };
+
+        // IAC DO NAWS
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        QVERIFY2(nawsReaches(0), "The profile never reported its size with no timestamps.");
+
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY2(nawsReaches(TBuffer::smTimeStampFormat.size()), "Timestamps turned on from Lua left the game's width alone.");
+
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QVERIFY2(nawsReaches(0), "Timestamps turned off from Lua left the game's width alone.");
+    }
+
+    // The timestamp functions set and read the console model's flag, so the main
+    // console answers them with no view, as it does with one, and the profile
+    // still loads next time as they left it. The size report belongs to the view.
+    void test_timeStampFunctionsWorkWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
+        destroyTheView(host);
+
+        runLua(host, qsl(R"LUA(
+noViewTimeStampProblems = {}
+noViewSizeReports = 0
+registerAnonymousEventHandler('sysConsoleSizeChanged', function() noViewSizeReports = noViewSizeReports + 1 end)
+
+-- the answer is one value, or nil and a reason
+function expectTimeStampAnswer(name, first, reason, ...)
+    local count, actualFirst, actualReason = select('#', ...), ...
+    if count ~= (reason and 2 or 1) or actualFirst ~= first or actualReason ~= reason then
+        table.insert(noViewTimeStampProblems, name .. ' returned ' .. count .. ' values: ' .. tostring(actualFirst) .. ', ' .. tostring(actualReason))
+    end
+end
+
+byEmptyName = 'timestamps were not enabled for the main console'
+byMain = 'timestamps were not enabled for the "main" console'
+expectTimeStampAnswer('timeStampsEnabled before', false, nil, timeStampsEnabled())
+expectTimeStampAnswer('enableTimeStamps', true, nil, enableTimeStamps())
+expectTimeStampAnswer('timeStampsEnabled on', true, nil, timeStampsEnabled('main'))
+expectTimeStampAnswer('enableTimeStamps again', nil, 'timestamps were already enabled for the main console', enableTimeStamps())
+expectTimeStampAnswer('enableTimeStamps main again', nil, 'timestamps were already enabled for the "main" console', enableTimeStamps('main'))
+)LUA"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+        QVERIFY2(QFile::exists(autoTimeStampPath), "Timestamps turned on with no view were not saved for the next load.");
+
+        runLua(host, qsl(R"LUA(
+local unknown = 'noViewNoSuchConsole'
+local notFound = 'window "' .. unknown .. '" not found'
+expectTimeStampAnswer('disableTimeStamps', true, nil, disableTimeStamps('main'))
+expectTimeStampAnswer('timeStampsEnabled off', false, nil, timeStampsEnabled(''))
+expectTimeStampAnswer('disableTimeStamps again', nil, byEmptyName, disableTimeStamps(''))
+expectTimeStampAnswer('disableTimeStamps main again', nil, byMain, disableTimeStamps('main'))
+expectTimeStampAnswer('enableTimeStamps unknown', nil, notFound, enableTimeStamps(unknown))
+expectTimeStampAnswer('disableTimeStamps unknown', nil, notFound, disableTimeStamps(unknown))
+expectTimeStampAnswer('timeStampsEnabled unknown', nil, notFound, timeStampsEnabled(unknown))
+noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
+)LUA"));
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        QVERIFY2(!QFile::exists(autoTimeStampPath), "Timestamps turned off with no view were not saved for the next load.");
+        QCOMPARE(luaGlobalString(host, "noViewTimeStampReport"), QString());
+        QCOMPARE(luaGlobalNumber(host, "noViewSizeReports"), 0);
+    }
+
+    // The saved choice is applied to the model as the profile loads, not by the
+    // view, so a profile loaded with no view starts with its timestamps on too.
+    void test_aProfileLoadedWithNoViewStartsWithItsSavedTimeStamps()
+    {
+        seedSavedProfile(mTimeStampHostname);
+        QFile autoTimeStamp(MudletApp::getMudletPath(enums::profileDataItemPath, mTimeStampHostname, qsl("autotimestamp")));
+        QVERIFY(autoTimeStamp.open(QIODevice::WriteOnly));
+        autoTimeStamp.close();
+
+        Host* host = mudlet::self()->loadProfile(mTimeStampHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(host->mainConsoleShowsTimeStamps(), "A profile loaded with no view ignored its saved timestamps.");
+        runLua(host, qsl("timeStampsShown = tostring(timeStampsEnabled())\n"));
+        QCOMPARE(luaGlobalString(host, "timeStampsShown"), qsl("true"));
+    }
+
+    // A view built for a profile that loads with timestamps on shows them and
+    // checks its button, and turns nothing on a second time: loading saves
+    // nothing. A directory in the file's place reads as "on" and makes any save
+    // attempt warn.
+    void test_aProfileLoadedWithAViewShowsItsSavedTimeStampsWithoutSavingThem()
+    {
+        seedSavedProfile(mTimeStampHostname);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, mTimeStampHostname, qsl("autotimestamp"))));
+        QTest::failOnWarning(QRegularExpression(qsl("failed to open autotimestamp file")));
+
+        mudlet::self()->doAutoLogin(mTimeStampHostname, true);
+        Host* host = HostManager::self()->getHost(mTimeStampHostname);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole, "The profile was loaded with no view.");
+        QVERIFY2(host->mainConsoleShowsTimeStamps(), "A profile loaded with a view ignored its saved timestamps.");
+        QVERIFY2(host->mpConsole->timeStampButton->isChecked(), "The toolbar button does not show the timestamps the profile loaded with.");
+    }
+
+    // The saved choice is acted on by Host as the profile loads, not by the
+    // view, so a profile loaded with no view starts its log too, and the
+    // announcement a view would print waits in the buffer for one.
+    void test_aProfileLoadedWithNoViewStartsItsSavedLog()
+    {
+        seedSavedProfile(mAutoLogHostname);
+        QFile autoLog(MudletApp::getMudletPath(enums::profileDataItemPath, mAutoLogHostname, qsl("autolog")));
+        QVERIFY(autoLog.open(QIODevice::WriteOnly));
+        autoLog.close();
+
+        Host* host = mudlet::self()->loadProfile(mAutoLogHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        TConsoleModel& model = host->mainConsoleModel();
+        QVERIFY2(model.mLogToLogFile, "A profile loaded with no view did not start its saved log.");
+        const QString logFileName = model.mLogFileName;
+        QVERIFY2(QFile::exists(logFileName), "A profile loaded with no view opened no log file.");
+        const QString startAnnouncement = TMainConsole::tr("Logging has started. Log file is %1").arg(logFileName);
+        QCOMPARE(announcementCount(model, startAnnouncement), 1);
+
+        // Stopping the log is what flushes it to the file
+        model.toggleLogging(true);
+        QVERIFY2(!logTextContains(readFile(logFileName), startAnnouncement), "The start announcement was logged into the file it announced.");
+    }
+
+    // A view built for a profile whose log has already started shows it on its
+    // button, and starts nothing a second time - which would stop the log.
+    void test_aProfileLoadedWithAViewStartsItsSavedLogOnce()
+    {
+        seedSavedProfile(mAutoLogHostname);
+        QFile autoLog(MudletApp::getMudletPath(enums::profileDataItemPath, mAutoLogHostname, qsl("autolog")));
+        QVERIFY(autoLog.open(QIODevice::WriteOnly));
+        autoLog.close();
+
+        mudlet::self()->doAutoLogin(mAutoLogHostname, true);
+        Host* host = HostManager::self()->getHost(mAutoLogHostname);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole, "The profile was loaded with no view.");
+        TConsoleModel& model = host->mainConsoleModel();
+        QVERIFY2(model.mLogToLogFile, "A profile loaded with a view did not start its saved log.");
+        QVERIFY2(host->mpConsole->logButton->isChecked(), "The log button does not show the log the profile loaded with.");
+        QVERIFY2(host->mpConsole->logButton->toolTip().contains(TMainConsole::tr("Stop logging game output to log file.")), "The log button offers to start a log that is already running.");
+        QCOMPARE(announcementCount(model, TMainConsole::tr("Logging has started. Log file is %1").arg(model.mLogFileName)), 1);
+    }
+
+    // A profile with no view still tells the game its size when asked: the
+    // character grid it would wrap to. Timestamps turned on leave out no gutter,
+    // as none is drawn.
+    void test_nawsReportsTheCharacterGridWithNoView()
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        // A save of its own, or loading the profile goes off to install the default packages
+        writeProfileSave(qsl("%1profileNaws.xml").arg(saveFolder), QString());
+
+        Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+
+        host->mTelnet.connectIt(mLocalhost, mPort.toInt());
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+                         },
+                         5000),
+                 "The view-less profile did not connect.");
+        // IAC DO NAWS
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !mpServer->nawsUpdates().isEmpty();
+                         },
+                         5000),
+                 "The view-less profile never answered IAC DO NAWS.");
+        QCOMPARE(mpServer->nawsUpdates().constLast(), QSize(std::min(host->mScreenWidth, host->mWrapAt), host->mScreenHeight));
+    }
+
+    // With no view no timestamp gutter is drawn, so timestamps turned on or off
+    // from Lua leave the width the game is told as it was.
+    void test_luaTimeStampsLeaveTheReportedWidthAloneWithNoView()
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mNawsHostname);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        writeProfileSave(qsl("%1profileNaws.xml").arg(saveFolder), QString());
+
+        Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY(!host->mainConsoleShowsTimeStamps());
+        const auto sizeWithGutter = [host](const int gutter) {
+            return QSize(std::min(host->mScreenWidth, host->mWrapAt) - gutter, host->mScreenHeight);
+        };
+        const auto nawsReaches = [this, &sizeWithGutter](const int gutter) {
+            return QTest::qWaitFor(
+                    [this, &sizeWithGutter, gutter]() {
+                        return !mpServer->nawsUpdates().isEmpty() && mpServer->nawsUpdates().constLast() == sizeWithGutter(gutter);
+                    },
+                    5000);
+        };
+
+        host->mTelnet.connectIt(mLocalhost, mPort.toInt());
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+                         },
+                         5000),
+                 "The view-less profile did not connect.");
+        // IAC DO NAWS
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        QVERIFY2(nawsReaches(0), "The view-less profile never reported its size with no timestamps.");
+
+        const auto onlyFullWidthSince = [this, &sizeWithGutter](const qsizetype from) {
+            const auto updates = mpServer->nawsUpdates();
+            for (qsizetype i = from; i < updates.size(); ++i) {
+                if (updates.at(i) != sizeWithGutter(0)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        qsizetype reported = mpServer->nawsUpdates().size();
+        runLua(host, qsl("enableTimeStamps()\n"));
+        QVERIFY(host->mainConsoleShowsTimeStamps());
+        QTest::qWait(500);
+        QVERIFY2(onlyFullWidthSince(reported), "Timestamps turned on from Lua with no view took a gutter off the game's width.");
+
+        reported = mpServer->nawsUpdates().size();
+        runLua(host, qsl("disableTimeStamps()\n"));
+        QTest::qWait(500);
+        QVERIFY2(onlyFullWidthSince(reported), "Timestamps turned off from Lua with no view changed the game's width.");
     }
 
     // A profile that never had a view, whose changeColors() would otherwise
@@ -3161,7 +3487,6 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         QCOMPARE(host->windowGeometry(miniName), std::optional<QRect>(QRect(10, 20, 100, 50)));
         QCOMPARE(host->windowVisible(miniName), std::optional<bool>(true));
-        QCOMPARE(host->findConsole(miniName).data(), host->mpConsole->subConsoleWidget(miniName));
 
         // The name is taken, and every one of these refusals is the registry's
         // answer rather than a widget lookup
@@ -3192,7 +3517,6 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(!host->windowType(absentName).has_value(), "Host reports a window type for a sub-console that was never created.");
         QVERIFY2(!host->windowGeometry(absentName).has_value(), "Host reports a geometry for a sub-console that was never created.");
         QVERIFY2(!host->windowVisible(absentName).has_value(), "Host reports a visibility for a sub-console that was never created.");
-        QVERIFY2(!host->findConsole(absentName), "findConsole() found a sub-console that was never created.");
         QVERIFY2(!host->showWindow(absentName), "showWindow() found a sub-console that was never created.");
         QVERIFY2(!host->closeWindow(absentName), "closeWindow() found a sub-console that was never created.");
         QVERIFY2(!host->pasteWindow(absentName), "pasteWindow() found a sub-console that was never created.");
@@ -4101,6 +4425,23 @@ private:
                                  .arg(mProfileFgColor.name(), QString::number(mProfileBgColor.alpha()), mProfileBgColor.name()));
     }
 
+    // Utility function giving a profile a save of its own, or loading it goes
+    // off to install the default packages
+    void seedSavedProfile(const QString& profileName)
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName);
+        QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
+        writeProfileSave(qsl("%1profile.xml").arg(saveFolder), QString());
+    }
+
+    // Utility function: how many times the console announces this, ignoring
+    // where the console wrapped it
+    int announcementCount(TConsoleModel& model, const QString& announcement)
+    {
+        QString wanted = announcement;
+        return joinedBuffer(model.buffer).remove(QChar::Space).count(wanted.remove(QChar::Space));
+    }
+
     // Utility function writing the smallest profile save readHost() accepts,
     // holding nothing but the given <Host> children. Not surgical: readHost()
     // reads a missing boolean attribute as "off", so importing one into a live
@@ -4259,10 +4600,7 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 void initializeQRCResourcesForConsoleModelExtraction()

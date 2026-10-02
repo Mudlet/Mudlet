@@ -170,18 +170,6 @@ static QColor colorFromColorTable(lua_State* L, const QString& name)
         lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
     })
 
-#define CONSOLE(ARG_L, ARG_name)                                                                                                                                                                       \
-    ({                                                                                                                                                                                                 \
-        auto name_ = (ARG_name);                                                                                                                                                                       \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
-        if (!console_) {                                                                                                                                                                               \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());                                                                                                                      \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        console_;                                                                                                                                                                                      \
-    })
-
 static int windowNotFound(lua_State* L, const QString& name)
 {
     lua_pushnil(L);
@@ -1010,8 +998,7 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
 int TLuaInterpreter::disableTimeStamps(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto wasShown = host.mpConsole ? host.mpConsole->setWindowTimeStamps(windowName, false) : std::nullopt;
+    const auto wasShown = getHostFromLua(L).setWindowTimeStamps(windowName, false);
     if (!wasShown) {
         return windowNotFound(L, windowName);
     }
@@ -1308,8 +1295,7 @@ int TLuaInterpreter::getScrollBarVisible(lua_State* L)
 int TLuaInterpreter::enableTimeStamps(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto wasShown = host.mpConsole ? host.mpConsole->setWindowTimeStamps(windowName, true) : std::nullopt;
+    const auto wasShown = getHostFromLua(L).setWindowTimeStamps(windowName, true);
     if (!wasShown) {
         return windowNotFound(L, windowName);
     }
@@ -1950,8 +1936,7 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 int TLuaInterpreter::timeStampsEnabled(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto shown = host.mpConsole ? host.mpConsole->getWindowTimeStamps(windowName) : std::nullopt;
+    const auto shown = getHostFromLua(L).getWindowTimeStamps(windowName);
     if (!shown) {
         return windowNotFound(L, windowName);
     }

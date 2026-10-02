@@ -306,8 +306,10 @@ public:
     // non-scrolling window:
     void handleLinesOverflowEvent(const int lineCount);
     void clearSplit();
-    bool showTimeStamps() const { return mShowTimeStamps; }
+    bool showTimeStamps() const { return mpModel->mShowTimeStamps; }
     void raiseMudletResizeEvent();
+    // Shows the model's timestamp flag as it now stands.
+    void applyTimeStamps();
     // This hides QWidget::setFont(const QFont&) rather than overriding it
     // (QWidget::setFont is non-virtual). The forceChange parameter is needed
     // when calling from setFontName(...) or setFontSize(...) because those
@@ -469,9 +471,6 @@ private:
     QPointer<QShortcut> mpSearchPrevShortcut;
     // The size of the TConsole in (normal) "character" cells:
     QSize mDimensions;
-    // Whether to show (a 13 character by default) timestamp to the left of
-    // each line of text:
-    bool mShowTimeStamps = false;
     // mpMainFrame's palette cannot hold this - it is rebuilt from scratch on every colour change
     QColor mBorderColor = Qt::black;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning

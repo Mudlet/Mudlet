@@ -3054,8 +3054,8 @@ describe("Tests UI functions", function()
     end)
   end)
 
-  -- these all resolve their window through the shared CONSOLE macro, which
-  -- returns nil plus a 'window "..." not found' message for an unknown name.
+  -- these all return nil plus a 'window "..." not found' message for an
+  -- unknown name.
   -- Each is called with otherwise-valid arguments so the lookup is what fails.
   describe("unknown-window contracts", function()
     local badWindowCalls = {
