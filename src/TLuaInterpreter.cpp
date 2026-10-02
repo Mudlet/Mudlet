@@ -29,30 +29,32 @@
 #include "TLuaInterpreter.h"
 
 
-#include "EAction.h"
+#include "FontManager.h"
 #include "Host.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
+#include "MudletReplay.h"
+#include "TAction.h"
 #include "TAlias.h"
 #include "TBuffer.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
 #include "TForkedProcess.h"
 #include "TGameDetails.h"
+#include "TKey.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TTextEdit.h"
 #include "TEncodingHelper.h"
+#include "TIrcClient.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
@@ -83,6 +85,7 @@
 #include <QTextStream>
 #include <QFileInfo>
 #include <QVector>
+#include <cmath>
 #include <limits>
 
 using namespace std::chrono_literals;
@@ -102,6 +105,7 @@ const QString TLuaInterpreter::csmInvalidExitRoomID{qsl("number %1 is not a vali
 const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem to be parseable as a positive integer")};
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
+const QStringList TLuaInterpreter::csmItemTypes{qsl("alias"), qsl("button"), qsl("script"), qsl("keybind"), qsl("timer"), qsl("trigger")};
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
@@ -341,6 +345,20 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
         TDebug(Qt::white, QColorConstants::Svg::orange, TDebug::Category::LuaWarning) << "Lua: " << functionName << ": " << message << "\n" >> &host;
     }
     return 2;
+}
+
+// No documentation available in wiki - internal function
+// returns nil+msg for a value outside a fixed set; the refusal is the only
+// place a script can read what the set is, so it lists every accepted value
+int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value)
+{
+    Q_ASSERT(accepted.size() > 1);
+    QStringList quoted;
+    for (const auto& choice : accepted) {
+        quoted << qsl("\"%1\"").arg(choice);
+    }
+    const QString lastChoice = quoted.takeLast();
+    return warnArgumentValue(L, functionName, qsl("%1 must be %2 or %3, got \"%4\"").arg(argumentName, quoted.join(qsl(", ")), lastChoice, value));
 }
 
 // No documentation available in wiki - internal function
@@ -812,7 +830,7 @@ int TLuaInterpreter::loadReplay(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString errMsg;
-    if (mudlet::self()->loadReplay(&host, replayFileName, &errMsg)) {
+    if (MudletReplay::self()->load(&host, replayFileName, &errMsg)) {
         lua_pushboolean(L, true);
         return 1;
     }
@@ -1669,11 +1687,9 @@ int TLuaInterpreter::errorc(lua_State* L)
     }
     luaFunctionInfo.append(QChar::LineFeed);
     luaErrorText.append(QChar::LineFeed);
-    if (host.mpEditorDialog) {
-        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[ERROR:] "), QColor(Qt::blue), QColor(Qt::black));
-        host.mpEditorDialog->mpErrorConsole->print(luaFunctionInfo, QColor(Qt::green), QColor(Qt::black));
-        host.mpEditorDialog->mpErrorConsole->print(qsl("         %1").arg(luaErrorText), QColor(Qt::red), QColor(Qt::black));
-    }
+    emit host.signal_errorConsolePrint(QLatin1String("[ERROR:] "), QColor(Qt::blue), QColor(Qt::black));
+    emit host.signal_errorConsolePrint(luaFunctionInfo, QColor(Qt::green), QColor(Qt::black));
+    emit host.signal_errorConsolePrint(qsl("         %1").arg(luaErrorText), QColor(Qt::red), QColor(Qt::black));
 
     if (host.mEchoLuaErrors) {
         const TBuffer& buffer = host.mainConsoleModel().buffer;
@@ -1691,7 +1707,7 @@ int TLuaInterpreter::errorc(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#debugc -- not #debug - compare GlobalLua
 int TLuaInterpreter::debug(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     const int n = lua_gettop(L);
     if (!n) {
         // Nothing to show
@@ -1709,10 +1725,8 @@ int TLuaInterpreter::debug(lua_State* L)
     }
     luaDebugText.append(QChar::LineFeed);
 
-    if (host.mpEditorDialog) {
-        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[DEBUG:]"), QColor(Qt::blue), QColor(Qt::black));
-        host.mpEditorDialog->mpErrorConsole->print(luaDebugText, QColor(Qt::green), QColor(Qt::black));
-    }
+    emit host.signal_errorConsolePrint(QLatin1String("[DEBUG:]"), QColor(Qt::blue), QColor(Qt::black));
+    emit host.signal_errorConsolePrint(luaDebugText, QColor(Qt::green), QColor(Qt::black));
 
     return 0;
 }
@@ -1847,7 +1861,7 @@ int TLuaInterpreter::findItems(lua_State* L)
         generateList(itemList, L);
         return 1;
     }
-    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+    return warnArgumentChoice(L, __func__, qsl("item type"), csmItemTypes, type);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAncestorsActive
@@ -1926,7 +1940,7 @@ int TLuaInterpreter::isAncestorsActive(lua_State* L)
         return 1;
     }
 
-    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+    return warnArgumentChoice(L, __func__, qsl("item type"), csmItemTypes, type);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ancestors
@@ -2257,7 +2271,7 @@ int TLuaInterpreter::ancestors(lua_State* L)
             return 1;
         }
 
-        return warnArgumentValue(L, functionName, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+        return warnArgumentChoice(L, functionName, qsl("item type"), csmItemTypes, type);
     }();
     if (results == csmErrorAlreadyPushed) {
         return lua_error(L);
@@ -2275,28 +2289,12 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     }
 
     const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
-    QString name;
-    if (n > 1) {
-        name = lua_tostring(L, 1);
-        if (name == QLatin1String("main")) {
-            // clear it so it is treated as the main console below
-            name.clear();
-        }
-    }
+    const QString name = n > 1 ? QString{lua_tostring(L, 1)} : QString();
     if (luaLine < 1) {
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
 
-    Host& host = getHostFromLua(L);
-    if (name.isEmpty()) {
-        const TBuffer& buffer = host.mainConsoleModel().buffer;
-        if (luaLine < buffer.timeBuffer.size()) {
-            lua_pushstring(L, buffer.timeBuffer.at(luaLine).toUtf8().constData());
-            return 1;
-        }
-        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
-    }
-    auto pModel = host.windowRegistry().subConsoleModel(name);
+    auto pModel = getHostFromLua(L).consoleModelNamed(name);
     if (!pModel) {
         return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
     }
@@ -2780,10 +2778,7 @@ int TLuaInterpreter::installModule(lua_State* L)
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
-    auto moduleManager = host.mpModuleManager;
-    if (moduleManager && moduleManager->moduleTable->isVisible()) {
-        moduleManager->layoutModules();
-    }
+    emit host.signal_moduleListChangedByScript();
     return pushInstallSucceeded(L, message);
 }
 
@@ -2796,10 +2791,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
         lua_pushboolean(L, false);
         return 1;
     }
-    auto moduleManager = host.mpModuleManager;
-    if (moduleManager && moduleManager->moduleTable->isVisible()) {
-        moduleManager->layoutModules();
-    }
+    emit host.signal_moduleListChangedByScript();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2822,14 +2814,7 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    auto moduleManager = host.mpModuleManager;
-    if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        const int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleManager->moduleTable->item(row, 2);
-        if (checkItem) {
-            checkItem->setCheckState(Qt::Checked);
-        }
-    }
+    emit host.signal_moduleSyncChangedByScript(module, true);
 
     lua_pushboolean(L, true);
     return 1;
@@ -2844,14 +2829,7 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    auto moduleManager = host.mpModuleManager;
-    if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        const int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleManager->moduleTable->item(row, 2);
-        if (checkItem) {
-            checkItem->setCheckState(Qt::Unchecked);
-        }
-    }
+    emit host.signal_moduleSyncChangedByScript(module, false);
 
     lua_pushboolean(L, true);
     return 1;
@@ -5323,20 +5301,18 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
 void TLuaInterpreter::logError(std::string& e, const QString& name, const QString& function)
 {
     // Log error to Editor's Errors TConsole:
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" %1:<%2> %3:<%4>\n")
-                                                              .arg(
-                                                                      //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
-                                                                      tr("object"),
-                                                                      name,
-                                                                      //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
-                                                                      tr("function"),
-                                                                      function),
-                                                      QColor(Qt::green),
-                                                      QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
-    }
+    emit mpHost->signal_errorConsolePrint(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
+    emit mpHost->signal_errorConsolePrint(qsl(" %1:<%2> %3:<%4>\n")
+                                                  .arg(
+                                                          //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
+                                                          tr("object"),
+                                                          name,
+                                                          //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
+                                                          tr("function"),
+                                                          function),
+                                          QColor(Qt::green),
+                                          QColor(Qt::black));
+    emit mpHost->signal_errorConsolePrint(qsl("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
@@ -5363,11 +5339,9 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 void TLuaInterpreter::logEventError(const QString& event, const QString& error)
 {
     // Log error to Editor's Errors TConsole:
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" event handler for %1:\n").arg(event), QColor(Qt::green), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("        <%1>\n").arg(error), QColor(Qt::red), QColor(Qt::black));
-    }
+    emit mpHost->signal_errorConsolePrint(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
+    emit mpHost->signal_errorConsolePrint(qsl(" event handler for %1:\n").arg(event), QColor(Qt::green), QColor(Qt::black));
+    emit mpHost->signal_errorConsolePrint(qsl("        <%1>\n").arg(error), QColor(Qt::red), QColor(Qt::black));
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
@@ -7594,9 +7568,7 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
         pS->setScript(oldCode);
         return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->writeScript(id);
-    }
+    emit mpHost->signal_scriptCodeChanged(id);
     return {id, QString()};
 }
 
@@ -7731,7 +7703,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
     pT->setName(name);
-    mpHost->getKeyUnit()->warnIfKeyIsTaken(pT);
+    emit mpHost->signal_keyBoundByScript(pT->getID());
     updateEditor();
     return {pT->getID(), QString()};
 }
@@ -7752,7 +7724,7 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
     }
     const int id = pT->getID();
     pT->setName(QString::number(id));
-    mpHost->getKeyUnit()->warnIfKeyIsTaken(pT);
+    emit mpHost->signal_keyBoundByScript(pT->getID());
     return id;
 }
 
@@ -8866,7 +8838,18 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
         if (key == qsl("mapExitSize")) {
-            host.mpMap->mpMapper->slot_exitSize(getVerifiedInt(L, __func__, 2, "value"));
+            // not truncated to a whole number: the preferences store sizes such as
+            // 12.5, which getConfig() answers and a script may hand back
+            const double size = getVerifiedDouble(L, __func__, 2, "value");
+            // the size divides the exit pen width, is saved with the profile to
+            // one decimal place and is turned back into an int by the preferences
+            // (qRound(50.0 / size)), so NaN, infinity and sizes below 1 - the
+            // smallest the old whole-number check let through - would all break
+            // the exits or outlive the script that set them
+            if (!std::isfinite(size) || size < 1.0) {
+                return warnArgumentValue(L, __func__, qsl("mapExitSize must be a number of at least 1, got %1").arg(size));
+            }
+            host.mpMap->mpMapper->mp2dMap->setExitSize(size);
             return success();
         }
         if (key == qsl("mapRoundRooms")) {
@@ -8914,7 +8897,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
         if (key == qsl("mapInfoColor")) {
             if (!lua_istable(L, 2)) {
-                lua_pushfstring(L, "%s: bad argument #%d type (table expected for mapInfoColor, got %s!)", __func__, 2, luaL_typename(L, 2));
                 return warnArgumentValue(L, __func__, qsl("mapInfoColor requires a table {r, g, b} or {r, g, b, a}"));
             }
 
@@ -8981,7 +8963,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         } else if (value == qsl("disabled")) {
             host.mMapperButtonMode = Host::MapperButtonMode::Disabled;
         } else {
-            return warnArgumentValue(L, __func__, qsl("mapperButton must be \"default\", \"scripted\" or \"disabled\", got \"%1\"").arg(value));
+            return warnArgumentChoice(L, __func__, qsl("mapperButton"), {qsl("default"), qsl("scripted"), qsl("disabled")}, value);
         }
         mudlet::self()->updateMapActionAvailability();
         return success();
@@ -9078,12 +9060,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
             } else if (value == "script") {
                 host.mCommandEchoMode = Host::CommandEchoMode::ScriptControl;
             } else {
-                lua_pushfstring(L, "setConfig: bad argument #2 value (expected 'never', 'always', or 'script', got '%s')", value.toUtf8().constData());
-                return warnArgumentValue(L, __func__, value);
+                return warnArgumentChoice(L, __func__, qsl("showSentText"), {qsl("never"), qsl("always"), qsl("script")}, value);
             }
         } else {
-            lua_pushfstring(L, "setConfig: bad argument #2 type (expected boolean or string for 'showSentText', got %s)", luaL_typename(L, 2));
-            return warnArgumentValue(L, __func__, qsl("showSentText"));
+            return warnArgumentValue(L, __func__, qsl("showSentText must be a boolean or a string, got %1").arg(luaL_typename(L, 2)));
         }
         return success();
     }
@@ -9140,7 +9120,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         // Match case-insensitively but store the family as the font database
         // spells it, so that getConfig() reads back a canonical name:
         QString matchedFontName;
-        for (const QString& availableFont : mudlet::self()->getAvailableFonts()) {
+        for (const QString& availableFont : FontManager::availableFonts()) {
             if (!availableFont.compare(fontName, Qt::CaseInsensitive)) {
                 matchedFontName = availableFont;
                 break;
@@ -9224,9 +9204,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), behaviours.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return warnArgumentChoice(L, __func__, qsl("blankLinesBehaviour"), behaviours, behaviour);
         }
 
         if (behaviour == qsl("show")) {
@@ -9243,9 +9221,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return warnArgumentChoice(L, __func__, qsl("caretShortcut"), values, value);
         }
 
         if (value == qsl("tab")) {
@@ -9269,9 +9245,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid commandLineHistorySaveSize string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return warnArgumentChoice(L, __func__, qsl("controlCharacterHandling"), values, value);
         }
 
         if (value == qsl("oem")) {
@@ -9301,9 +9275,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         const auto value = getVerifiedString(L, __func__, 2, "value");
 
         if (!values.contains(value)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid ambiguousEAsianWidthCharacters string \"%s\", it should be one of \"%s\"", lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
-            return 2;
+            return warnArgumentChoice(L, __func__, qsl("ambiguousEAsianWidthCharacters"), values, value);
         }
 
         if (value == qsl("narrow")) {
@@ -9316,11 +9288,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     if (key == qsl("muteMediaAPI")) {
-        mudlet::self()->slot_muteAPI(getVerifiedBool(L, __func__, 2, "value"));
+        MudletMedia::self()->setApiMuted(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("muteMediaGame")) {
-        mudlet::self()->slot_muteGame(getVerifiedBool(L, __func__, 2, "value"));
+        MudletMedia::self()->setGameMuted(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("enableBlinkText")) {
@@ -9348,21 +9320,21 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
 
     if (key == qsl("ircHostName")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcHostName(&host, getVerifiedString(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcHostName(&host, getVerifiedString(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
         return warnArgumentValue(L, __func__, result.second);
     }
     if (key == qsl("ircHostPort")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcHostPort(&host, getVerifiedInt(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcHostPort(&host, getVerifiedInt(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
         return warnArgumentValue(L, __func__, result.second);
     }
     if (key == qsl("ircHostSecure")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcHostSecure(&host, getVerifiedBool(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcHostSecure(&host, getVerifiedBool(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
@@ -9370,21 +9342,21 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("ircChannels")) {
         const QString channels = getVerifiedString(L, __func__, 2, "value");
-        QPair<bool, QString> result = dlgIRC::writeIrcChannels(&host, channels.split(qsl(" "), Qt::SkipEmptyParts));
+        QPair<bool, QString> result = TIrcClient::writeIrcChannels(&host, channels.split(qsl(" "), Qt::SkipEmptyParts));
         if (result.first) {
             return success();
         }
         return warnArgumentValue(L, __func__, result.second);
     }
     if (key == qsl("ircNickName")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcNickName(&host, getVerifiedString(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcNickName(&host, getVerifiedString(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
         return warnArgumentValue(L, __func__, result.second);
     }
     if (key == qsl("ircPassword")) {
-        QPair<bool, QString> result = dlgIRC::writeIrcPassword(&host, getVerifiedString(L, __func__, 2, "value"));
+        QPair<bool, QString> result = TIrcClient::writeIrcPassword(&host, getVerifiedString(L, __func__, 2, "value"));
         if (result.first) {
             return success();
         }
@@ -9756,34 +9728,34 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("muteMediaAPI"),
              [&]() {
-                 lua_pushboolean(L, mudlet::self()->muteAPI());
+                 lua_pushboolean(L, MudletMedia::self()->apiMuted());
              }},
             {qsl("muteMediaGame"),
              [&]() {
-                 lua_pushboolean(L, mudlet::self()->muteGame());
+                 lua_pushboolean(L, MudletMedia::self()->gameMuted());
              }},
             {qsl("ircHostName"),
              [&]() {
-                 lua_pushstring(L, dlgIRC::readIrcHostName(&host).toUtf8().constData());
+                 lua_pushstring(L, TIrcClient::readIrcHostName(&host).toUtf8().constData());
              }},
             {qsl("ircHostPort"),
              [&]() {
-                 lua_pushnumber(L, dlgIRC::readIrcHostPort(&host));
+                 lua_pushnumber(L, TIrcClient::readIrcHostPort(&host));
              }},
             {qsl("ircHostSecure"),
              [&]() {
-                 lua_pushboolean(L, dlgIRC::readIrcHostSecure(&host));
+                 lua_pushboolean(L, TIrcClient::readIrcHostSecure(&host));
              }},
             {qsl("ircChannels"),
              [&]() {
-                 lua_pushstring(L, dlgIRC::readIrcChannels(&host).join(qsl(" ")).toUtf8().constData());
+                 lua_pushstring(L, TIrcClient::readIrcChannels(&host).join(qsl(" ")).toUtf8().constData());
              }},
             {qsl("ircNickName"),
              [&]() {
-                 lua_pushstring(L, dlgIRC::readIrcNickName(&host).toUtf8().constData());
+                 lua_pushstring(L, TIrcClient::readIrcNickName(&host).toUtf8().constData());
              }},
             {qsl("ircPassword"), [&]() {
-                 lua_pushstring(L, dlgIRC::readIrcPassword(&host).toUtf8().constData());
+                 lua_pushstring(L, TIrcClient::readIrcPassword(&host).toUtf8().constData());
              }}};
 
     auto it = configMap.find(key);
@@ -9828,7 +9800,5 @@ int TLuaInterpreter::getConfig(lua_State* L)
 
 void TLuaInterpreter::updateEditor()
 {
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mNeedUpdateData = true;
-    }
+    emit mpHost->signal_itemsChangedByScript();
 }

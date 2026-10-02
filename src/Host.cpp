@@ -27,10 +27,8 @@
 
 #include "discord.h"
 #include "MudletApp.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
-#include "dlgNotepad.h"
-#include "dlgTriggerEditor.h"
+#include "FontManager.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "HostManager.h"
@@ -45,6 +43,7 @@
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "TIrcClient.h"
 #include "TLabelModel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -53,13 +52,13 @@
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TTextEdit.h"
-#include "TToolBar.h"
 #include "utils.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
+#include "ShortcutsManager.h"
 
 #include <chrono>
 #include <cstring>
@@ -270,7 +269,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBufferSearchOptions(enums::BufferSearchOptionNone)
 , mpDlgIRC(nullptr)
 , mMMCPServer(nullptr)
-, mpDlgProfilePreferences(nullptr)
 , mMMCPChatPort(csDefaultMMCPHostPort)
 , mMMCPChatPrefix(csDefaultChatPrefix)
 , mMMCPAutostartServer(false)
@@ -300,13 +298,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
-    // The "autolog" sentinel file controls whether logging the game's text as
-    // plain text or HTML is immediately resumed on profile loading. Do not
-    // confuse it with the "autologin" item, which controls whether the profile
-    // is automatically started when the Mudlet application is run!
-    mLogStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
-    // "autotimestamp" determines if profile loads with timestamps enabled
-    mTimeStampStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
@@ -389,7 +380,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         loadSecuredPassword();
     } else {
         QString password{readProfileData(qsl("password"))};
@@ -403,7 +394,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         thankForUsingPTB();
     }
 
-    if (mudlet::self()->smFirstLaunch) {
+    if (MudletApp::firstLaunch()) {
         QTimer::singleShot(0ms, this, [this]() {
             if (mpConsole) {
                 mpConsole->setCommandLinePlaceholderText(tr("Text to send to the game"));
@@ -455,10 +446,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
 
-    auto i = mudlet::self()->mpShortcutsManager->iterator();
-    while (i.hasNext()) {
-        auto entry = i.next();
-        profileShortcuts[entry] = std::make_unique<QKeySequence>(*mudlet::self()->mpShortcutsManager->getSequence(entry));
+    if (auto* shortcuts = ShortcutsManager::self()) {
+        auto i = shortcuts->iterator();
+        while (i.hasNext()) {
+            auto entry = i.next();
+            profileShortcuts[entry] = std::make_unique<QKeySequence>(*shortcuts->getSequence(entry));
+        }
     }
 
     auto settings = MudletApp::getQSettings();
@@ -469,10 +462,39 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     // Built here, at the end of the constructor, rather than on first use: the
     // model's buffer snapshots this Host's colours, so every one of them has to
-    // be initialised first. The view binds the buffer's back-pointer when it
-    // attaches (TConsole::TConsole) and unbinds it when it goes away, and
+    // be initialised first. The view subscribes to the model's notifier when
+    // it attaches (TConsole::TConsole) and unsubscribes when it goes away, and
     // TConsole::changeColors() refreshes the snapshot as it does so.
     mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
+    mpMainConsoleModel->mConsoleName = qsl("main");
+    mpMainConsoleModel->mScriptAddressable = true;
+    mpMainConsoleModel->mCommandFgColor = mCommandFgColor;
+    mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
+
+    mServerWrapFlushTimer.setSingleShot(true);
+    mServerWrapFlushTimer.setInterval(TBuffer::csmServerWrapFlushDelayMs);
+    connect(&mpMainConsoleModel->mNotifier, &TConsoleModelNotifier::serverWrapLineHeld, &mServerWrapFlushTimer, qOverload<>(&QTimer::start));
+    connect(&mServerWrapFlushTimer, &QTimer::timeout, this, [this]() {
+        // closeChildren() has emergency-stopped the triggers, and a line held
+        // after it re-arms this timer:
+        if (mIsClosingDown) {
+            return;
+        }
+        // Mimic Host::printOnDisplay() so that trigger-context
+        // functions behave the same as for any other committed line:
+        mpMainConsoleModel->mTriggerEngineMode = true;
+        mpMainConsoleModel->buffer.flushPendingServerWrapJoin();
+        mpMainConsoleModel->mTriggerEngineMode = false;
+        finalizeMainConsole();
+    });
+    // Applied to the model rather than by the view, so that a profile loaded
+    // with no view starts with them too
+    mpMainConsoleModel->mShowTimeStamps = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
+    mpClipboard = std::make_unique<TBuffer>(this);
+    // a view does this in TConsole::changeColors(), but a profile need never get one
+    mpMainConsoleModel->setWrapAt(mWrapAt);
+    mpMainConsoleModel->setIndentCount(mWrapIndentCount);
+    mpMainConsoleModel->setHangingIndentCount(mWrapHangingIndentCount);
 }
 
 Host::~Host()
@@ -485,33 +507,10 @@ Host::~Host()
     // is being taken apart runs against freed members (#9653):
     mDeferredSaveTimer.stop();
 
-    // The editor is a parentless top-level window, so delete it here while the
-    // units it references are still alive. Null the QPointer first: it only
-    // clears itself once ~QObject is reached, so anything looking at
-    // mpEditorDialog mid-teardown would find a half-destroyed widget:
-    if (auto* pEditor = mpEditorDialog.data()) {
-        mpEditorDialog = nullptr;
-        disconnect(this, nullptr, pEditor, nullptr);
-        delete pEditor;
-    }
+    emit signal_destroyProfileDialogs();
 
-    if (auto* pNotePad = mpNotePad.data()) {
-        if (mudlet::self()) {
-            pNotePad->save();
-            pNotePad->close();
-        }
-        mpNotePad = nullptr;
-        disconnect(this, nullptr, pNotePad, nullptr);
-        delete pNotePad;
-    }
-
-    if (auto* pDlgIRC = mpDlgIRC.data()) {
-        mpDlgIRC = nullptr;
-        delete pDlgIRC;
-    }
-
-    for (const auto& pToolBar : mActionUnit.getToolBarList()) {
-        delete pToolBar.data();
+    if (mpConsole) {
+        mpConsole->deleteActionToolBars();
     }
 
     // This needs to be cleared here while the Host object is still valid,
@@ -587,45 +586,23 @@ void Host::closeChildren()
         qDebug().nospace().noquote() << "Host::closeChildren() INFO - dropping the profile save that a package change owed \"" << getName() << "\": the close saves the profile itself.";
         mDeferredSaveTimer.stop();
     }
-    const auto hostToolBarMap = getActionUnit()->getToolBarList();
+    // A held line is dropped with the profile, as the connection's teardown
+    // does not commit it while closing either:
+    mServerWrapFlushTimer.stop();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     mTelnet.terminateConnection();
 
     stopAllTriggers();
 
-    if (mpEditorDialog) {
-        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-        mpEditorDialog->close();
-        // close() only posts the deletion; disconnect so no emit reaches the released editor:
-        disconnect(this, nullptr, mpEditorDialog, nullptr);
-        mpEditorDialog = nullptr;
-    }
+    emit signal_closeProfileDialogs();
 
     // A snapshot: closing one removes it (and a user window's dock) from the registry.
     for (const QString& consoleName : mWindowRegistry.subConsoleNames()) {
         mpConsole->closeSubConsole(consoleName);
     }
 
-    if (mpNotePad) {
-        mpNotePad->save();
-        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-        mpNotePad->close();
-        disconnect(this, nullptr, mpNotePad, nullptr);
-        mpNotePad = nullptr;
-    }
-
-    for (TToolBar* pTB : hostToolBarMap) {
-        if (pTB) {
-            pTB->setAttribute(Qt::WA_DeleteOnClose);
-            pTB->deleteLater();
-        }
-    }
-
-    // close IRC client window if it is open.
-    if (mpDlgIRC) {
-        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        mpDlgIRC->deleteLater();
-        mpDlgIRC = nullptr;
+    if (mpConsole) {
+        mpConsole->deleteActionToolBarsLater();
     }
 }
 
@@ -1733,7 +1710,7 @@ static QString installedFamily(const QStringList& availableFonts, const QString&
 
 Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
 {
-    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+    const QStringList availableFonts = FontManager::availableFonts();
 
     if (const QString installed = installedFamily(availableFonts, requested); !installed.isEmpty()) {
         return {installed, QFont::Normal, true};
@@ -1929,14 +1906,17 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
-            mpConsole->printCommand(cmd);
+            const TConsoleModel::CommandEcho echo = mpMainConsoleModel->printCommand(cmd);
+            if (mpConsole) {
+                mpConsole->showCommandEcho(echo);
+            }
         }
 
         //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
 #if defined(INCLUDE_3DMAPPER)
-        if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
+        if (mpConsole && (!mpMap->mpMapper || !mpMap->mpMapper->glWidget)) {
 #else
-        if (!mpMap->mpMapper) {
+        if (mpConsole && !mpMap->mpMapper) {
 #endif
             mpConsole->update();
         }
@@ -2321,6 +2301,163 @@ void Host::resetMainConsoleFormat()
     mpMainConsoleModel->resetFormat();
 }
 
+TConsoleModel* Host::consoleModelNamed(const QString& name)
+{
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        return mpMainConsoleModel.get();
+    }
+    return mWindowRegistry.subConsoleModel(name);
+}
+
+void Host::markSelectionDirty(TConsoleModel& model)
+{
+    emit model.mNotifier.linesChanged(std::min(model.P_begin.y(), model.P_end.y()), std::max(model.P_begin.y(), model.P_end.y()));
+}
+
+bool Host::setWindowFgColor(const QString& name, const QColor& color)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionFgColor(color)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+bool Host::setWindowBgColor(const QString& name, const QColor& color)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionBgColor(color)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+bool Host::setWindowDisplayAttributes(const QString& name, const TChar::AttributeFlags attributes, const bool enabled)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->setSelectionDisplayAttributes(attributes, enabled)) {
+        markSelectionDirty(*pModel);
+    }
+    return true;
+}
+
+std::optional<bool> Host::getWindowTimeStamps(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    return {pModel->mShowTimeStamps};
+}
+
+// The "autotimestamp" sentinel file makes the profile load with the main
+// console's timestamps on.
+static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
+{
+    const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("autotimestamp"));
+    if (!shown) {
+        QFile::remove(filePath);
+        return;
+    }
+    QSaveFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Host: failed to open autotimestamp file for writing:" << file.errorString();
+        return;
+    }
+    if (!file.commit()) {
+        qWarning() << "Host: error saving timestamp state:" << file.errorString();
+    }
+}
+
+std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool shown)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    const bool wasShown = pModel->mShowTimeStamps;
+    if (wasShown != shown) {
+        pModel->mShowTimeStamps = shown;
+        if (pModel == mpMainConsoleModel.get()) {
+            saveMainConsoleTimeStamps(mHostName, shown);
+        }
+        emit pModel->mNotifier.timeStampsToggled();
+    }
+    return {wasShown};
+}
+
+bool Host::copyToClipboard(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    *mpClipboard = pModel->buffer.copy(pModel->P_begin, pModel->P_end);
+    return true;
+}
+
+void Host::cutMainConsoleToClipboard()
+{
+    *mpClipboard = mpMainConsoleModel->buffer.cut(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end);
+    markSelectionDirty(*mpMainConsoleModel);
+}
+
+bool Host::pasteClipboard(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pasteClipboardInto(*pModel);
+    return true;
+}
+
+void Host::pasteClipboardInto(TConsoleModel& model)
+{
+    const int line = model.mUserCursor.y();
+    const bool inPlace = model.buffer.size() - 1 > line;
+    if (inPlace) {
+        model.buffer.paste(model.mUserCursor, *mpClipboard);
+    } else {
+        model.buffer.appendBuffer(*mpClipboard);
+    }
+    if (inPlace) {
+        emit model.mNotifier.linesChanged(line, line);
+    }
+    emit model.mNotifier.newLinesWritten();
+}
+
+bool Host::appendClipboard(const QString& name)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pModel->buffer.appendBuffer(*mpClipboard);
+    emit pModel->mNotifier.newLinesWritten();
+    return true;
+}
+
+void Host::setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum)
+{
+    TBuffer& buffer = mpMainConsoleModel->buffer;
+    if (useMaximum) {
+        linesLimit = buffer.getMaxBufferSize();
+    }
+    buffer.setBufferSize(linesLimit, batchDeleteSize);
+    mConsoleBufferSize = linesLimit;
+    mUseMaxConsoleBufferSize = useMaximum;
+}
+
 // Hot: the trigger engine reads the model for every character of a colour
 // pattern, so this hands back a reference rather than a shared_ptr copy - the
 // latter costs an atomic increment and decrement per call.
@@ -2337,47 +2474,134 @@ void Host::refreshMainConsoleColors()
 {
     mpMainConsoleModel->mFgColor = mFgColor;
     mpMainConsoleModel->mBgColor = mBgColor;
+    mpMainConsoleModel->mCommandFgColor = mCommandFgColor;
+    mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
+    mpMainConsoleModel->mFormatCurrent.setColors(mFgColor, mBgColor);
     mpMainConsoleModel->buffer.updateColors();
+}
+
+void Host::applyMainConsoleColors()
+{
+    if (mpConsole) {
+        mpConsole->changeColors();
+    } else {
+        refreshMainConsoleColors();
+    }
 }
 
 void Host::printToMainConsole(const QString& msg)
 {
-    mpConsole->print(msg);
+    mpMainConsoleModel->print(msg);
+    if (mpConsole) {
+        mpConsole->showNewLines();
+    }
 }
 
 void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor)
 {
-    mpConsole->print(msg, fgColor, bgColor);
+    mpMainConsoleModel->print(msg, fgColor, bgColor);
+    if (mpConsole) {
+        mpConsole->showNewLines();
+    }
 }
 
 void Host::printSystemMessage(const QString& msg)
 {
-    mpConsole->printSystemMessage(msg);
+    mpMainConsoleModel->printSystemMessage(msg);
+    if (mpConsole) {
+        mpConsole->showNewLines();
+    }
 }
 
-void Host::printOnDisplay(std::string& data, bool isFromServer)
+void Host::echoMainConsole(QString text)
 {
-    mpConsole->printOnDisplay(data, isFromServer);
+    if (!mpMainConsoleModel->echo(text)) {
+        return;
+    }
+    emit mpMainConsoleModel->mNotifier.newLinesWritten();
+    mpMainConsoleModel->mirrorToStdOut(text);
+}
+
+void Host::printOnDisplay(std::string& data, const bool isFromServer)
+{
+    // The view only times the pass, flashes the taskbar and marks the profile's
+    // tab; the text is processed whether or not there is one.
+    const bool alertWanted = mpConsole && mpConsole->startIncomingText() && isFromServer;
+    TConsoleModel& model = *mpMainConsoleModel;
+    TBuffer& buffer = model.buffer;
+
+    // Notify visibility manager of incoming data (for output gap detection)
+    if (isFromServer) {
+        model.mHyperlinkVisibilityManager.onDataReceived();
+    }
+
+    // feedTriggers() lands here, so this runs nested inside an outer pass that
+    // is itself mid-translate; clearing the flag outright would take trigger
+    // context away from the rest of that pass.
+    const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
+    model.mTriggerEngineMode = true;
+    const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
+    const QString beforeTranslateLastLine = alertWanted ? buffer.line(beforeTranslateLastLineNumber - 1) : QString();
+    buffer.translateToPlainText(data, isFromServer);
+    model.mTriggerEngineMode = wasInTriggerEngineMode;
+
+    if (alertWanted && mpConsole) {
+        const int lastLineNumber = buffer.getLastLineNumber();
+        if (lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine) {
+            mpConsole->alertNewData();
+        }
+    }
+
+    // dequeues MXP events and raise them through the LuaInterpreter
+    auto& mxpEventQueue = mMxpClient.mMxpEvents;
+    while (!mxpEventQueue.isEmpty()) {
+        const auto& event = mxpEventQueue.dequeue();
+        mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions, event.caption);
+    }
+
+    if (mpConsole) {
+        mpConsole->finishIncomingText();
+    }
 }
 
 void Host::finalizeMainConsole()
 {
-    mpConsole->finalize();
+    if (mpConsole) {
+        mpConsole->finalize();
+    }
 }
 
 bool Host::mainConsoleShowsTimeStamps() const
 {
-    return mpConsole->showTimeStamps();
+    return mpMainConsoleModel->mShowTimeStamps;
 }
 
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
+    if (!mpConsole) {
+        // Written where TMainConsole::slot_loggingAnnouncement() would print it,
+        // so that a view built later shows it
+        const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(TMainConsole::loggingAnnouncementText(isLogging, logFileName)));
+        mpMainConsoleModel->buffer.append(text, 0, text.size(), QColorConstants::Red, QColorConstants::Transparent);
+    }
     emit signal_loggingAnnouncement(isLogging, logFileName);
 }
 
 void Host::raiseLoggingStateChanged(const bool isLogging)
 {
     emit signal_loggingStateChanged(isLogging);
+}
+
+void Host::startSavedLogging()
+{
+    // The "autolog" sentinel file controls whether logging the game's text as
+    // plain text or HTML is immediately resumed on profile loading. Do not
+    // confuse it with the "autologin" item, which controls whether the profile
+    // is automatically started when the Mudlet application is run!
+    if (mpMainConsoleModel->mLogToLogFile || !QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")))) {
+        return;
+    }
+    mpMainConsoleModel->toggleLogging(true);
 }
 
 // The per-line trigger orchestration used to live on the main-console widget
@@ -2627,6 +2851,25 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
     event.mArgumentList << a << b << c;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     raiseEvent(event);
+}
+
+TIrcClient* Host::getOrCreateIrcClient()
+{
+    if (!mpIrcClient) {
+        mpIrcClient = new TIrcClient(this);
+    }
+    return mpIrcClient;
+}
+
+void Host::showIrcClient()
+{
+    QPointer<TIrcClient> client = getOrCreateIrcClient();
+    // A window starts the session as it is shown, so it sees it connect. Whoever else is
+    // listening, or nobody at all, the session still starts: start() does nothing twice.
+    emit signal_showIrcClient();
+    if (client) {
+        client->start();
+    }
 }
 
 void Host::enableTimer(const QString& name)
@@ -3132,7 +3375,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (!registeredFromArchive) {
             // the fonts were registered up front for the scripts' sake, and nothing
             // got installed that could own them - take them back out again
-            mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
+            if (auto* fonts = FontManager::self()) {
+                fonts->unloadFonts(getName(), packageName);
+            }
             takeBackWhatTheManifestOverwrote();
             if (!discardTheFolderThisInstallMade()) {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
@@ -3474,7 +3719,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
-    mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
+    if (auto* fonts = FontManager::self()) {
+        fonts->unloadFonts(getName(), packageName);
+    }
     if (isModule) {
         mInstalledModules.remove(packageName);
         mModulesLoadedOk.remove(packageName);
@@ -3890,6 +4137,10 @@ QString Host::readProfileData(const QString& item)
 // does not install font system-wide
 void Host::installPackageFonts(const QString& packageName)
 {
+    auto* fonts = FontManager::self();
+    if (!fonts) {
+        return;
+    }
     auto packagePath = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
@@ -3898,7 +4149,7 @@ void Host::installPackageFonts(const QString& packageName)
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-            mudlet::self()->mFontManager.loadFont(filePath, getName(), packageName);
+            fonts->loadFont(filePath, getName(), packageName);
         }
     }
 }
@@ -4389,6 +4640,31 @@ bool Host::getMMCPShowSnoopInMainConsole()
     return mMMCPShowSnoopInMainConsole;
 }
 
+void Host::setMMCPChatPrefix(const QString& prefix)
+{
+    mMMCPChatPrefix = prefix;
+}
+
+void Host::setMMCPPort(const quint16 port)
+{
+    mMMCPChatPort = port;
+}
+
+void Host::setMMCPPrefixEmotes(const bool prefixEmotes)
+{
+    mMMCPPrefixEmotes = prefixEmotes;
+}
+
+void Host::setMMCPAddChatMessageNewline(const bool addNewline)
+{
+    mMMCPAddChatMessageNewline = addNewline;
+}
+
+void Host::setMMCPShowSnoopInMainConsole(const bool showSnoop)
+{
+    mMMCPShowSnoopInMainConsole = showSnoop;
+}
+
 QString Host::getSpellDic() const
 {
     if (!mSpellDic.isEmpty()) {
@@ -4485,6 +4761,7 @@ void Host::setName(const QString& name)
     }
 
     mTelnet.mProfileName = name;
+    mpMainConsoleModel->mProfileName = name;
     if (mpMap) {
         mpMap->mProfileName = name;
         if (currentPlayerRoom) {
@@ -4814,40 +5091,63 @@ void Host::setCompactInputLine(const bool state)
     }
 }
 
-QPointer<TConsole> Host::findConsole(QString name)
-{
-    if (!mpConsole) {
-        qWarning() << "Host::findConsole() ERROR: main console not initialized";
-        return nullptr;
-    }
-
-    if (name.isEmpty() or name == qsl("main")) {
-        // Reason for the deref-plus-ref in the next line: `QPointer`s do not
-        // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258
-        return &*mpConsole;
-    }
-    return mpConsole->subConsoleWidget(name);
-}
-
 QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
 {
-    if (!mpConsole) {
-        QStringList failMessage;
-        failMessage << qsl("internal error: no main TConsole - please report").arg(windowName);
-        return qMakePair(false, failMessage);
-    }
-
-    if (windowName.isEmpty() || windowName == QLatin1String("main")) {
-        return qMakePair(true, mpConsole->getLines(lineFrom, lineTo));
-    }
-
-    auto pModel = mWindowRegistry.subConsoleModel(windowName);
+    auto pModel = consoleModelNamed(windowName);
     if (!pModel) {
         QStringList failMessage;
         failMessage << qsl("mini console, user window or buffer '%1' not found").arg(windowName);
         return qMakePair(false, failMessage);
     }
     return qMakePair(true, pModel->lines(lineFrom, lineTo));
+}
+
+// Hands the view the cue for what a console model write did: new lines to show, or lines to repaint.
+static void showConsoleWrite(TConsoleModel& model, const TConsoleModel::WriteResult& result)
+{
+    if (result.appended) {
+        emit model.mNotifier.newLinesWritten();
+    } else if (result.firstLine >= 0) {
+        emit model.mNotifier.linesChanged(result.firstLine, result.lastLine);
+    }
+}
+
+void Host::echoWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    model.echoLink(text, commands, hints, useCurrentFormat, luaReferences);
+    emit model.mNotifier.newLinesWritten();
+}
+
+void Host::insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    showConsoleWrite(model, model.insertLink(text, commands, hints, useCurrentFormat, luaReferences));
+}
+
+void Host::setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    if (model.setLink(commands, hints, luaReferences)) {
+        markSelectionDirty(model);
+    }
+}
+
+bool Host::insertWindowText(const QString& name, const QString& text)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    showConsoleWrite(*pModel, pModel->insertText(text));
+    return true;
+}
+
+bool Host::replaceWindowText(const QString& name, const QString& text)
+{
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pModel->replace(text);
+    return true;
 }
 
 std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
@@ -5292,20 +5592,26 @@ bool Host::closeWindow(const QString& name)
 
 bool Host::echoWindow(const QString& name, const QString& text)
 {
-    if (!mpConsole) {
-        return false;
+    // Not consoleModelNamed(): echoUserWindow() does not take "main" or "" for the main console.
+    if (auto pModel = mWindowRegistry.subConsoleModel(name)) {
+        const TChar& format = pModel->mFormatCurrent;
+        pModel->buffer.append(text, 0, text.size(), format.foreground(), format.background(), format.allDisplayAttributes());
+        emit pModel->mNotifier.newLinesWritten();
+        pModel->mirrorToStdOut(text);
+        return true;
     }
-
-    return mpConsole->printWindow(name, text);
+    return mpConsole && mpConsole->setLabelText(name, text);
 }
 
 bool Host::pasteWindow(const QString& name)
 {
-    if (!mpConsole) {
+    // unlike paste(), never the main console
+    auto pModel = mWindowRegistry.subConsoleModel(name);
+    if (!pModel) {
         return false;
     }
-
-    return mpConsole->pasteToSubConsole(name);
+    pasteClipboardInto(*pModel);
+    return true;
 }
 
 bool Host::setCmdLineAction(const QString& name, const int func)
@@ -5650,6 +5956,31 @@ bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, i
     return mpConsole->setSubConsoleCommandForegroundColor(name, QColor(r, g, b, alpha));
 }
 
+void Host::setProfileBackgroundColor(const QColor& color)
+{
+    mBgColor = color;
+    // Host outlives its main console; with no view, the buffer's colours must still follow:
+    if (mpConsole) {
+        mpConsole->setConsoleBgColor(color.red(), color.green(), color.blue(), color.alpha());
+    } else {
+        refreshMainConsoleColors();
+    }
+}
+
+void Host::setProfileCommandBackgroundColor(const QColor& color)
+{
+    mCommandBgColor = color;
+    // The main console's view reads this from the model, which exists with no view too:
+    mpMainConsoleModel->mCommandBgColor = color;
+}
+
+void Host::setProfileCommandForegroundColor(const QColor& color)
+{
+    mCommandFgColor = color;
+    // The main console's view reads this from the model, which exists with no view too:
+    mpMainConsoleModel->mCommandFgColor = color;
+}
+
 // Returns true when a script has claimed the built-in map buttons for this
 // profile via setConfig("mapperButton", ...): "disabled" swallows the request
 // outright, "scripted" turns it into a sysMapperButtonAction event so the
@@ -5787,14 +6118,6 @@ void Host::setDockLayoutUpdated(const QString& name)
     }
 }
 
-void Host::setToolbarLayoutUpdated(TToolBar* pTB)
-{
-    if (!mToolbarLayoutChanges.contains(pTB)) {
-        pTB->setProperty("layoutChanged", QVariant(true));
-        mToolbarLayoutChanges.append(pTB);
-    }
-}
-
 bool Host::commitLayoutUpdates(bool flush)
 {
     bool updated = false;
@@ -5809,23 +6132,13 @@ bool Host::commitLayoutUpdates(bool flush)
     }
     mDockLayoutChanges.clear();
 
-    // commit changes (or rather clear the layout changed flags) for
-    // dockable/floating toolbars across all profiles:
-    if (!flush) {
-        for (const auto& pToolBar : std::as_const(mToolbarLayoutChanges)) {
-            if (!pToolBar || pToolBar.isNull()) {
-                // This can happen when a TToolBar is deleted
-                continue;
-            }
-            if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
-                qWarning().nospace().noquote() << "host::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
-            } else if (pToolBar->property("layoutChanged").toBool()) {
-                pToolBar->setProperty("layoutChanged", QVariant(false));
-                updated = true;
-            }
+    if (mpConsole) {
+        if (flush) {
+            mpConsole->discardToolBarLayoutChanges();
+        } else if (mpConsole->commitToolBarLayoutChanges()) {
+            updated = true;
         }
     }
-    mToolbarLayoutChanges.clear();
     return updated;
 }
 
@@ -6153,7 +6466,7 @@ void Host::setCommandLineHistorySaveSize(const int lines)
 
 QString Host::getEditorTheme() const
 {
-    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
+    if (MudletApp::darkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
         return mEditorThemeDark;
     }
     return mEditorTheme;
@@ -6161,7 +6474,7 @@ QString Host::getEditorTheme() const
 
 QString Host::getEditorThemeFile() const
 {
-    if (mudlet::self()->inDarkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
+    if (MudletApp::darkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
         return mEditorThemeFileDark;
     }
     return mEditorThemeFile;
