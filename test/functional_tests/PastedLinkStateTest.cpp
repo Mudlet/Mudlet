@@ -245,7 +245,7 @@ private slots:
         QCOMPARE(miniBuffer.getHoveredLink(), pastedId);
 
         for (int i = 0; i < 200; ++i) {
-            pMini->echo(qsl("filler line %1\n").arg(i));
+            pMini->print(qsl("filler line %1\n").arg(i));
         }
         QVERIFY2(pastedLinkId(pMini) == 0, "the pasted line was not trimmed away, so no cleanup was due");
 
@@ -271,7 +271,7 @@ private slots:
         QVERIFY2(!pConsole->getLinkStore().getLinksConst(id).isEmpty(), "echoLink() did not register the link in the store");
 
         for (int i = 0; i < 200; ++i) {
-            pConsole->echo(qsl("filler line %1\n").arg(i));
+            pConsole->print(qsl("filler line %1\n").arg(i));
         }
 
         QVERIFY2(pConsole->getLinkStore().getLinksConst(id).isEmpty(), "an unreferenced link survived its line being trimmed away, so the store grows for the life of the profile");

@@ -440,10 +440,9 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     void printToMainConsole(const QString& msg);
     void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
-    // What echo() and insertHTML() write; false when there is no main console to write it to.
-    bool echoToMainConsole(const QString& text);
-    bool insertHtmlInMainConsole(const QString& text);
     void printSystemMessage(const QString& msg);
+    // A script's echo() to the main console.
+    void echoMainConsole(QString text);
     void printOnDisplay(std::string& data, bool isFromServer);
     void finalizeMainConsole();
     bool mainConsoleShowsTimeStamps() const;
