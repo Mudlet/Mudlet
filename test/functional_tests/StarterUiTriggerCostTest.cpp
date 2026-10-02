@@ -29,6 +29,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
 #include "TTrigger.h"
@@ -105,8 +106,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     void test_captureLayersArmAHandfulOfTriggersNotOnePerShape()
@@ -531,7 +532,7 @@ private:
     // same XML export/import as a package, so this covers both.
     QTreeWidget* triggerTreeWidget(Host* host)
     {
-        dlgTriggerEditor* editor = host->mpEditorDialog;
+        dlgTriggerEditor* editor = HostDialogs::of(host).mpEditorDialog;
         if (!editor) {
             return nullptr;
         }
@@ -865,10 +866,7 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

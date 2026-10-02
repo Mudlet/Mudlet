@@ -118,58 +118,66 @@ describe("Tests TextEdit widget functions", function()
   end)
 
   describe("Tests error handling", function()
-    it("Should fail gracefully with non-existent text edit", function()
-      local ok, err = getTextEditText("doesNotExist")
-      assert.is_nil(ok)
-      assert.is_string(err)
+    local calls = {
+      getTextEditText = function(n) return getTextEditText(n) end,
+      setTextEditText = function(n) return setTextEditText(n, "text") end,
+      clearTextEdit = function(n) return clearTextEdit(n) end,
+      setTextEditReadOnly = function(n) return setTextEditReadOnly(n, true) end,
+      setTextEditPlaceholder = function(n) return setTextEditPlaceholder(n, "text") end,
+      setTextEditStyleSheet = function(n) return setTextEditStyleSheet(n, "css") end,
+      setTextEditFont = function(n) return setTextEditFont(n, "Arial") end,
+      setTextEditFontSize = function(n) return setTextEditFontSize(n, 12) end,
+      setTextEditTabMovesFocus = function(n) return setTextEditTabMovesFocus(n, true) end,
+    }
+
+    for functionName, call in pairs(calls) do
+      it("Should fail " .. functionName .. " with non-existent text edit", function()
+        local ok, err = call("doesNotExist")
+        assert.is_nil(ok)
+        assert.are.equal("text edit name 'doesNotExist' not found", err)
+      end)
+    end
+
+    -- the other window kinds share the name space, and the functions for
+    -- labels and plain windows are shaped like these, so a name that is only
+    -- some other kind of window must not be taken for a text edit
+    describe("with the name of another kind of window", function()
+      local otherName = "teOtherKindOfWindow"
+
+      after_each(function()
+        deleteLabel(otherName)
+        deleteScrollBox(otherName)
+        deleteCommandLine(otherName)
+      end)
+
+      local kinds = {
+        label = function() return createLabel(otherName, 0, 0, 50, 20, 1) end,
+        ["scroll box"] = function() return createScrollBox(otherName, 0, 0, 50, 20) end,
+        ["command line"] = function() return createCommandLine(otherName, 0, 0, 50, 20) end,
+      }
+
+      for kind, create in pairs(kinds) do
+        it("Should refuse every text edit function for a " .. kind, function()
+          assert.is_true(create())
+          for functionName, call in pairs(calls) do
+            local ok, err = call(otherName)
+            assert.is_nil(ok, functionName)
+            assert.are.equal(("text edit name '%s' not found"):format(otherName), err, functionName)
+          end
+        end)
+      end
     end)
 
-    it("Should fail setTextEditText with non-existent text edit", function()
-      local ok, err = setTextEditText("doesNotExist", "text")
+    it("Should not answer getFont or setFont for a text edit", function()
+      local teName = "teNotAConsole"
+      createTextEdit("main", teName, 0, 0, 50, 20)
+      finally(function() deleteTextEdit(teName) end)
+      local ok, err = getFont(teName)
       assert.is_nil(ok)
-      assert.is_string(err)
-    end)
-
-    it("Should fail clearTextEdit with non-existent text edit", function()
-      local ok, err = clearTextEdit("doesNotExist")
+      assert.are.equal(('window "%s" not found'):format(teName), err)
+      ok, err = setFont(teName, "Ubuntu Mono")
       assert.is_nil(ok)
-      assert.is_string(err)
-    end)
-
-    it("Should fail setTextEditReadOnly with non-existent text edit", function()
-      local ok, err = setTextEditReadOnly("doesNotExist", true)
-      assert.is_nil(ok)
-      assert.is_string(err)
-    end)
-
-    it("Should fail setTextEditPlaceholder with non-existent text edit", function()
-      local ok, err = setTextEditPlaceholder("doesNotExist", "text")
-      assert.is_nil(ok)
-      assert.is_string(err)
-    end)
-
-    it("Should fail setTextEditStyleSheet with non-existent text edit", function()
-      local ok, err = setTextEditStyleSheet("doesNotExist", "css")
-      assert.is_nil(ok)
-      assert.is_string(err)
-    end)
-
-    it("Should fail setTextEditFont with non-existent text edit", function()
-      local ok, err = setTextEditFont("doesNotExist", "Arial")
-      assert.is_nil(ok)
-      assert.is_string(err)
-    end)
-
-    it("Should fail setTextEditFontSize with non-existent text edit", function()
-      local ok, err = setTextEditFontSize("doesNotExist", 12)
-      assert.is_nil(ok)
-      assert.is_string(err)
-    end)
-
-    it("Should fail setTextEditTabMovesFocus with non-existent text edit", function()
-      local ok, err = setTextEditTabMovesFocus("doesNotExist", true)
-      assert.is_nil(ok)
-      assert.is_string(err)
+      assert.are.equal(('window "%s" not found'):format(teName), err)
     end)
   end)
 

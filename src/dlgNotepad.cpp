@@ -25,6 +25,7 @@
 
 #include "MudletApp.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "utils.h"
 
 #include <QApplication>
@@ -199,9 +200,9 @@ void dlgNotepad::setTabsStyleSheet(const QString& styleSheet)
 
 dlgNotepad::~dlgNotepad()
 {
-    if (mpHost && mpHost->mpNotePad) {
+    if (auto* pDialogs = mpHost ? HostDialogs::find(mpHost) : nullptr; pDialogs && pDialogs->mpNotePad) {
         save();
-        mpHost->mpNotePad = nullptr;
+        pDialogs->mpNotePad = nullptr;
     }
 }
 
@@ -618,7 +619,7 @@ void dlgNotepad::closeEvent(QCloseEvent* event)
 // The grey arrows the .ui file gives the send controls toggle are all but invisible
 // against a dark background, so use the brighter green ones (which the .ui file already
 // uses for the hovered-over state) there instead. The background colour is what matters,
-// so go by the palette rather than by mudlet::inDarkMode() - the latter is only set when
+// so go by the palette rather than by MudletApp::darkMode() - the latter is only set when
 // Mudlet itself applies its dark theme, yet a dark system theme darkens the notepad as well.
 // The application palette is the one to read: when this runs in response to a style change
 // the widgets have not had the new palette propagated down to them yet

@@ -41,28 +41,22 @@
 
 using namespace std::chrono_literals;
 
-// Hand-rolled because a case-insensitive text.contains("<a ") cannot tell a tag
-// from prose that happens to hold "<a ", and case-folds every character it walks.
-// Any whitespace counts as the separator because HTML allows any; the styling pass
-// in setText() recognises only the ASCII ones, so an anchor split by a non-breaking
-// space comes out clickable but unstyled.
+// Not a case-insensitive contains("<a "): that can't tell a tag from prose and case-folds every character.
+// Any whitespace separates, as in HTML; setText()'s styling pass knows only ASCII whitespace, so an
+// anchor split by a non-breaking space is clickable but unstyled.
 static bool containsAnchorTag(const QString& text)
 {
     qsizetype close = -1;
-    // Every later '<' is nearer the end still, so a '<' too close to it for a tag
-    // name and a separator ends the walk rather than being skipped over.
+    // Later '<'s are nearer the end still, so one too close to it for a tag name and separator ends the walk.
     for (qsizetype at = text.indexOf(QLatin1Char('<')); at >= 0 && at + 2 < text.size(); at = text.indexOf(QLatin1Char('<'), at + 1)) {
         const char16_t tagName = text.at(at + 1).unicode();
         if ((tagName != u'a' && tagName != u'A') || !text.at(at + 2).isSpace()) {
             continue;
         }
-        // Prose holds "<a" and a space too, so it is only a tag once the '>' that
-        // closes it turns up; another '<' on the way there means this one never was
-        // one. That also turns away an attribute value carrying a '<' of its own,
-        // which HTML asks to be written &lt; anyway.
+        // Only a tag if its closing '>' comes before any other '<'. That also rejects a '<' inside an
+        // attribute value, which HTML wants written &lt; anyway.
         if (close < at) {
-            // Searched for again only once the walk has passed the last one found,
-            // so the '>' scans stay linear over the whole text
+            // Re-searched only once the walk passes the last '>' found, keeping the scans linear.
             close = text.indexOf(QLatin1Char('>'), at + 3);
             if (close < 0) {
                 // no tag anywhere past here can be closed either
@@ -111,12 +105,10 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 
 TLabel::~TLabel()
 {
-    // The backstop against a stale entry: TMainConsole deregisters where it
-    // destroys a label, but a label can also die as a child of a console that is
-    // itself going, with nobody taking it out of the map first.
+    // Backstop: TMainConsole deregisters labels it destroys, but one can also die with its parent console.
     if (mpHost) {
         mpHost->windowRegistry().deregisterLabel(mName, mpModel.get());
-        // The tracker holds the movie raw and reads every entry it has to report
+        // The tracker holds a raw pointer and dereferences every entry when reporting.
         if (mpMovie) {
             mpHost->getGifTracker()->unregisterGif(mpMovie);
         }
@@ -212,8 +204,7 @@ bool TLabel::carriesLink() const
 
 void TLabel::mousePressEvent(QMouseEvent* event)
 {
-    // QLabel needs the press to note which link it landed on, so the matching
-    // release can activate it; with links-only flags it records the anchor and
+    // QLabel needs the press to note the link so the release can activate it; with links-only flags it
     // leaves the press ignored, so the label's own click callback still runs.
     bool takenByQt = false;
     if (carriesLink()) {
@@ -244,7 +235,6 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
-    // The release is where QLabel activates a link
     bool takenByQt = false;
     if (carriesLink()) {
         QLabel::mouseReleaseEvent(event);
@@ -569,9 +559,8 @@ void TLabel::resetSvgTransform()
     refreshSvg();
 }
 
-// A label is game UI with its own right-click handling, so Qt's "Copy Link
-// Location" menu over a link is left out. QWidget's rather than QLabel's: passing
-// the event on untouched is what a plain widget does.
+// Labels have their own right-click handling, so skip QLabel's "Copy Link Location" menu:
+// QWidget's handler just passes the event on.
 void TLabel::contextMenuEvent(QContextMenuEvent* event)
 {
     QWidget::contextMenuEvent(event);

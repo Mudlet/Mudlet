@@ -26,26 +26,24 @@
 #include "dlgIRC.h"
 #include "Host.h"
 #include "MudletApp.h"
+#include "TIrcClient.h"
 #include "ircmessageformatter.h"
 
+#include <IrcConnection>
 #include <IrcTextFormat>
 #include <IrcUser>
 
 #include "mudlet.h"
 
-#include <QDataStream>
-#include <QSaveFile>
 #include <QDesktopServices>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
 
-#include <algorithm>
-
 
 dlgIRC::dlgIRC(Host* pHost)
 : mpHost(pHost)
-, mRealName(MudletApp::scmVersion())
+, mpClient(pHost->getOrCreateIrcClient())
 {
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));
@@ -57,9 +55,6 @@ dlgIRC::dlgIRC(Host* pHost)
     }
 
     setupCommandParser();
-
-    connection = new IrcConnection(this);
-    connection->setReconnectDelay(5);
 
     ircBrowser->setFocusProxy(lineEdit);
 
@@ -75,29 +70,17 @@ dlgIRC::dlgIRC(Host* pHost)
     connect(lineEdit, &QLineEdit::textEdited, this, &dlgIRC::slot_onTextEdited);
     connect(ircBrowser, &QTextBrowser::anchorClicked, this, &dlgIRC::slot_onAnchorClicked);
     connect(userList, &QListView::doubleClicked, this, &dlgIRC::slot_onUserActivated);
+    IrcConnection* connection = mpClient->connection();
     connect(connection, &IrcConnection::connected, this, &dlgIRC::slot_onConnected);
     connect(connection, &IrcConnection::connecting, this, &dlgIRC::slot_onConnecting);
     connect(connection, &IrcConnection::disconnected, this, &dlgIRC::slot_onDisconnected);
-    connect(connection, &IrcConnection::nickNameRequired, this, &dlgIRC::slot_nickNameRequired);
-    connect(connection, &IrcConnection::nickNameChanged, this, &dlgIRC::slot_nickNameChanged);
-    connect(connection, &IrcConnection::joinMessageReceived, this, &dlgIRC::slot_joinedChannel);
-    connect(connection, &IrcConnection::partMessageReceived, this, &dlgIRC::slot_partedChannel);
-    connect(connection, &IrcConnection::numericMessageReceived, this, &dlgIRC::slot_receiveNumericMessage);
-
-    mPassword = readIrcPassword(mpHost);
-    mHostName = readIrcHostName(mpHost);
-    mHostPort = readIrcHostPort(mpHost);
-    mHostSecure = readIrcHostSecure(mpHost);
-    mNickName = readIrcNickName(mpHost);
-    mChannels = readIrcChannels(mpHost);
-
-    connection->setNickName(mNickName);
-    connection->setUserName(mUserName);
-    connection->setPassword(mPassword);
-    connection->setRealName(mRealName);
-    connection->setHost(mHostName);
-    connection->setPort(mHostPort);
-    connection->setSecure(mHostSecure);
+    connect(mpClient, &TIrcClient::signal_nickNameReserved, this, &dlgIRC::slot_nickNameReserved);
+    connect(mpClient, &TIrcClient::signal_nickNameChanged, this, &dlgIRC::setClientWindowTitle);
+    connect(mpClient, &TIrcClient::signal_restarting, this, &dlgIRC::slot_restarting);
+    connect(mpClient, &TIrcClient::signal_restarted, this, &dlgIRC::slot_restarted);
+    connect(mpClient, &TIrcClient::signal_messageSent, this, &dlgIRC::slot_showOwnMessage);
+    connect(mpClient, &TIrcClient::signal_messageReceived, this, &dlgIRC::slot_showMessage);
+    connect(mpClient, &QObject::destroyed, this, &dlgIRC::slot_clientDestroyed);
 
     // set the title here to pick up the previously loaded nick and host values.
     setClientWindowTitle();
@@ -107,10 +90,12 @@ dlgIRC::~dlgIRC()
 {
     writeQSettings();
 
-    if (connection->isActive()) {
-        const QString quitMsg = tr("%1 closed their client.").arg(mNickName);
-        connection->quit(quitMsg);
-        connection->close();
+    // The session ends with its window, which must not hear it disconnect or go
+    if (mpClient) {
+        ircBrowser->setDocument(nullptr);
+        mpClient->connection()->disconnect(this);
+        mpClient->disconnect(this);
+        delete mpClient.data();
     }
 
     if (mpHost && mpHost->mpDlgIRC) {
@@ -118,9 +103,17 @@ dlgIRC::~dlgIRC()
     }
 }
 
+// The session's buffers own the documents shown here and go with it, but the
+// browser does not notice its document being deleted.
+void dlgIRC::slot_clientDestroyed()
+{
+    ircBrowser->setDocument(nullptr);
+    hide();
+}
+
 void dlgIRC::setClientWindowTitle()
 {
-    setWindowTitle(tr("Mudlet IRC Client - %1 - %2 on %3").arg(mpHost->getName(), mNickName, mHostName));
+    setWindowTitle(tr("Mudlet IRC Client - %1 - %2 on %3").arg(mpHost->getName(), mpClient->getNickName(), mpClient->getHostName()));
 }
 
 void dlgIRC::startClient()
@@ -129,15 +122,14 @@ void dlgIRC::startClient()
         return;
     }
 
-    connection->sendCommand(IrcCommand::createJoin(mChannels));
-    connection->open();
+    mpClient->start();
 
     setupBuffers();
 
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Starting Mudlet IRC Client...")));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Host: %1:%2").arg(mHostName, QString::number(mHostPort))));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Nick: %1").arg(mNickName)));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Auto-Join Channels: %1").arg(mChannels.join(" "))));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Host: %1:%2").arg(mpClient->getHostName(), QString::number(mpClient->getHostPort()))));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Nick: %1").arg(mpClient->getNickName())));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Auto-Join Channels: %1").arg(mpClient->getChannels().join(" "))));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ This client supports Auto-Completion using the Tab key.")));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Type <b>/help</b> for commands or <b>/help [command]</b> for command syntax.")));
     ircBrowser->append(qsl("\n"));
@@ -145,112 +137,10 @@ void dlgIRC::startClient()
     mIrcStarted = true;
 }
 
-// A CR or an LF ends an IRC command and a NUL may not appear in one at all, so
-// text holding any of them cannot go on the wire as it stands.
-static bool textBreaksIrcLine(const QString& text)
-{
-    return std::any_of(text.cbegin(), text.cend(), [](const QChar character) {
-        return character == QChar::CarriageReturn || character == QChar::LineFeed || character == QChar::Null;
-    });
-}
-
-// A nick and a channel name are each a single IRC parameter, and a parameter ends
-// at the first space.
-static bool textHasSpace(const QString& text)
-{
-    return std::any_of(text.cbegin(), text.cend(), [](const QChar character) {
-        return character.isSpace();
-    });
-}
-
-// A refusal that quotes the text it is refusing must not break its own line doing
-// it, and a game server can make that text arbitrarily long.
-static QString escapedForError(const QString& text)
-{
-    QString escaped = text;
-    escaped.replace(QChar::Null, qsl("\\0")).replace(QChar::CarriageReturn, qsl("\\r")).replace(QChar::LineFeed, qsl("\\n"));
-    if (escaped.length() > 40) {
-        escaped.truncate(40);
-        escaped.append(qsl("..."));
-    }
-    return escaped;
-}
-
-// What goes on the wire is one IRC command whose parameters are separated by
-// spaces and ended by a CR LF, so either argument carrying one of those
-// separators makes the server read a second, caller-chosen command - a QUIT, or a
-// PRIVMSG to somewhere else - out of a single send. The caller is often relaying
-// text that a game server chose, which would put those commands in the game's
-// hands.
-//
-// They are refused rather than stripped: a stripped message is not the one the
-// caller asked to send and nothing says so, whereas a refusal leaves the caller
-// with what it needs to split the text itself, which is what the protocol wants
-// anyway. The formatting codes an IRC message may legitimately carry (bold,
-// colour, the CTCP delimiter) are left alone - only what the line protocol itself
-// forbids is refused.
-QPair<bool, QString> dlgIRC::validateMsgArguments(const QString& target, const QString& message)
-{
-    if (target.isEmpty()) {
-        return {false, qsl("no target given, name the channel or the nick to send the message to")};
-    }
-    if (textBreaksIrcLine(target)) {
-        return {false, qsl("target \"%1\" must not contain a line break or a null character").arg(escapedForError(target))};
-    }
-    // a comma-separated list of targets is still one PRIVMSG in the protocol, so
-    // it is allowed - but every name in that list has to be a name
-    const QStringList names = target.split(QLatin1Char(','));
-    for (const QString& name : names) {
-        if (name.isEmpty()) {
-            return {false, qsl("target \"%1\" has an empty name in its list").arg(escapedForError(target))};
-        }
-        if (textHasSpace(name)) {
-            return {false, qsl("target \"%1\" must be a channel or a nick name, which holds no spaces").arg(escapedForError(name))};
-        }
-        if (name.startsWith(QLatin1Char(':'))) {
-            return {false, qsl("target \"%1\" must not start with a colon").arg(escapedForError(name))};
-        }
-    }
-    if (message.isEmpty()) {
-        return {false, qsl("no message given to send")};
-    }
-    if (textBreaksIrcLine(message)) {
-        return {false, qsl("message \"%1\" must not contain a line break or a null character").arg(escapedForError(message))};
-    }
-    return {true, QString()};
-}
-
-// Where the Lua API's sendIrc() ends up, rather than in sendMsg(): what it is
-// given is text to send, never a command to run. sendMsg() hands the message to
-// the command parser, which turns a leading "/" into JOIN, NICK, QUIT or - by way
-// of QUOTE, and of the tolerant parser's raw relay of an unknown verb - any verb
-// at all. That is a second way for a caller relaying what a game server said to
-// hand the game the choice of command, needing no CR or LF to do it, so the path
-// a game's text reaches does not parse commands.
-QPair<bool, QString> dlgIRC::sendText(const QString& target, const QString& message)
-{
-    const auto arguments = validateMsgArguments(target, message);
-    if (!arguments.first) {
-        return arguments;
-    }
-
-    IrcCommand* command = IrcCommand::createMessage(target, message);
-    // the local echo (servers do not send our own messages back) is built before
-    // the command is handed over: sendCommand() takes ownership of a parentless
-    // command, and Communi states it is not safe to access one after that
-    IrcMessage* msg = command->toMessage(connection->nickName(), connection);
-    connection->sendCommand(command);
-    slot_receiveMessage(msg);
-    delete msg;
-
-    return {true, QString()};
-}
-
-// The IRC window's own input, where a command the user typed is meant to be acted
-// on - see sendText() for the path that must not do that.
+// For the IRC window's input, where typed commands are meant to run; see TIrcClient::sendText().
 QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
 {
-    const auto arguments = validateMsgArguments(target, message);
+    const auto arguments = TIrcClient::validateMsgArguments(target, message);
     if (!arguments.first) {
         return arguments;
     }
@@ -266,31 +156,22 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         return {false, qsl("message could not be parsed")};
     }
 
-    // parse() hands back a command this function owns, and only sendCommand()
-    // takes that ownership on - so a path that returns before reaching it has to
-    // free the command itself
+    // we own the parsed command until sendCommand(), so early returns must free it
     const bool isCustomCommand = processCustomCommand(command);
     if (isCustomCommand) {
         delete command;
         return {true, QString()};
     }
 
-    // read once, and build the local echo (servers do not send our own messages
-    // back), before the command is handed over: sendCommand() takes ownership of
-    // a parentless command, and Communi states it is not safe to access one after
-    // that
+    // read, and local echo built, before sendCommand() takes ownership (see TIrcClient::sendText())
+    IrcConnection* connection = mpClient->connection();
     const IrcCommand::Type commandType = command->type();
     IrcMessage* msg = nullptr;
     if (commandType == IrcCommand::Message || commandType == IrcCommand::CtcpAction) {
         msg = command->toMessage(connection->nickName(), connection);
     }
 
-    // update ping-started time if this command was a ping
-    if (commandType == IrcCommand::Ping) {
-        mPingStarted = QDateTime::currentMSecsSinceEpoch();
-    }
-
-    connection->sendCommand(command);
+    mpClient->sendCommand(command);
 
     // if the command was a quit command we should close the IRC window.
     if (commandType == IrcCommand::Quit) {
@@ -300,53 +181,20 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
     }
 
     if (msg) {
-        slot_receiveMessage(msg);
+        slot_showOwnMessage(msg);
         delete msg;
     }
 
     return {true, QString()};
 }
 
-void dlgIRC::ircRestart(bool reloadConfigs)
+void dlgIRC::slot_restarting(const QString& reason)
 {
-    const QString msg = tr("Restarting IRC Client");
-    ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(msg));
+    ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(reason));
+}
 
-    // issue a quit message to the network if we're connected.
-    if (connection->isConnected()) {
-        connection->quit(msg);
-    }
-
-    // remove the old buffers.
-    for (const QString& chName : std::as_const(mChannels)) {
-        if (chName == serverBuffer->name()) {
-            continue; // skip the server-buffer.
-        }
-        bufferModel->remove(chName);
-    }
-
-    connection->close();
-
-    if (reloadConfigs) {
-        mHostName = readIrcHostName(mpHost);
-        mHostPort = readIrcHostPort(mpHost);
-        mHostSecure = readIrcHostSecure(mpHost);
-        mNickName = readIrcNickName(mpHost);
-        mChannels = readIrcChannels(mpHost);
-        mPassword = readIrcPassword(mpHost);
-
-        connection->setNickName(mNickName);
-        connection->setHost(mHostName);
-        connection->setPort(mHostPort);
-        connection->setSecure(mHostSecure);
-        connection->setPassword(mPassword);
-    }
-
-    // queue auto-joined channels and reopen the connection.
-    connection->sendCommand(IrcCommand::createJoin(mChannels));
-    connection->open();
-
-    serverBuffer->setName(connection->host());
+void dlgIRC::slot_restarted()
+{
     setClientWindowTitle();
 }
 
@@ -398,7 +246,7 @@ void dlgIRC::setupCommandParser()
 
 void dlgIRC::setupBuffers()
 {
-    bufferModel = new IrcBufferModel(connection);
+    IrcBufferModel* bufferModel = mpClient->bufferModel();
     connect(bufferModel, &IrcBufferModel::added, this, &dlgIRC::slot_onBufferAdded);
     connect(bufferModel, &IrcBufferModel::removed, this, &dlgIRC::slot_onBufferRemoved);
     bufferList->setModel(bufferModel);
@@ -406,10 +254,10 @@ void dlgIRC::setupBuffers()
     connect(bufferModel, &IrcBufferModel::channelsChanged, commandParser, &IrcCommandParser::setChannels);
     // keep track of the current buffer, see also onBufferActivated()
     connect(bufferList->selectionModel(), &QItemSelectionModel::currentChanged, this, &dlgIRC::slot_onBufferActivated);
-    // create a server buffer for non-targeted messages...
-    serverBuffer = bufferModel->add(connection->host());
-    serverBuffer->setName(connection->host());
-    connect(bufferModel, &IrcBufferModel::messageIgnored, serverBuffer, &IrcBuffer::receiveMessage);
+    // the server buffer was added before there was anything here to see it
+    for (IrcBuffer* buffer : bufferModel->buffers()) {
+        slot_onBufferAdded(buffer);
+    }
 }
 
 bool dlgIRC::processCustomCommand(IrcCommand* cmd)
@@ -418,6 +266,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         return false;
     }
 
+    IrcBufferModel* bufferModel = mpClient->bufferModel();
     const QString cmdName = QString(cmd->parameters().at(0)).toUpper();
     if (cmdName == "CLEAR") {
         auto* buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
@@ -441,8 +290,8 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
                 buffer = bufferModel->find(bufferName);
             }
         }
-        if (buffer && buffer->title() != serverBuffer->title()) {
-            bufferList->setCurrentIndex(bufferModel->index(bufferModel->find(connection->host())));
+        if (buffer && buffer->title() != mpClient->serverBuffer()->title()) {
+            bufferList->setCurrentIndex(bufferModel->index(bufferModel->find(mpClient->connection()->host())));
             buffer->close();
         }
         return true;
@@ -456,7 +305,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         return true;
     }
     if (cmdName == "RECONNECT") {
-        ircRestart();
+        mpClient->restart();
 
         return true;
     }
@@ -473,8 +322,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
             msgText = QString(cmd->parameters().mid(2).join(" "));
         }
 
-        // the input line is cleared whatever this returns, so a refusal that went
-        // unreported would take the typed message away without a word
+        // the input line is cleared regardless, so a refusal must be reported
         const auto result = sendMsg(target, msgText);
         if (!result.first) {
             //: %1 is why the message could not be sent, e.g. 'no message given to send'
@@ -533,18 +381,18 @@ void dlgIRC::displayHelp(const QString& cmdName = "")
 
 void dlgIRC::slot_onConnected()
 {
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Connected to %1.")).arg(mHostName));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Joining %1...")).arg(mChannels.join(qsl(" "))));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Connected to %1.")).arg(mpClient->getHostName()));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Joining %1...")).arg(mpClient->getChannels().join(qsl(" "))));
 }
 
 void dlgIRC::slot_onConnecting()
 {
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Connecting %1...")).arg(mHostName));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Connecting %1...")).arg(mpClient->getHostName()));
 }
 
 void dlgIRC::slot_onDisconnected()
 {
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Disconnected from %1.")).arg(mHostName));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Disconnected from %1.")).arg(mpClient->getHostName()));
 }
 
 void dlgIRC::slot_onTextEdited()
@@ -573,8 +421,7 @@ void dlgIRC::slot_onTextEntered()
 
     IrcCommand* command = commandParser->parse(input);
     if (command) {
-        // as in sendMsg(): the parsed command is owned here until sendCommand()
-        // takes it, so a custom command - which never gets there - is freed here
+        // owned here until sendCommand(), which a custom command never reaches
         const bool isCustomCommand = processCustomCommand(command);
         if (isCustomCommand) {
             delete command;
@@ -582,19 +429,15 @@ void dlgIRC::slot_onTextEntered()
             return;
         }
 
+        IrcConnection* connection = mpClient->connection();
         const IrcCommand::Type commandType = command->type();
         IrcMessage* msg = nullptr;
         if (commandType == IrcCommand::Message || commandType == IrcCommand::CtcpAction) {
             msg = command->toMessage(connection->nickName(), connection);
         }
 
-        // update ping-started time if this command was a ping
-        if (commandType == IrcCommand::Ping) {
-            mPingStarted = QDateTime::currentMSecsSinceEpoch();
-        }
-
         // send to the server.
-        connection->sendCommand(command);
+        mpClient->sendCommand(command);
 
         // if the command was a quit command we should close this window.
         if (commandType == IrcCommand::Quit) {
@@ -605,7 +448,7 @@ void dlgIRC::slot_onTextEntered()
 
         // echo own messages (servers do not send our own messages back)
         if (msg) {
-            slot_receiveMessage(msg);
+            slot_showOwnMessage(msg);
             delete msg;
         }
         lineEdit->clear();
@@ -649,8 +492,6 @@ void dlgIRC::slot_onHistoryCompletion()
 
 void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
 {
-    // joined a buffer - start listening to buffer specific messages
-    connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
     auto* document = new QTextDocument(buffer);
     document->setMaximumBlockCount(mMessageBufferLimit);
@@ -660,6 +501,7 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     userModel->setSortMethod(Irc::SortByTitle);
     userModels.insert(buffer, userModel);
     // activate the new buffer
+    IrcBufferModel* bufferModel = mpClient->bufferModel();
     const int idx = bufferModel->buffers().indexOf(buffer);
     if (idx != -1) {
         bufferList->setCurrentIndex(bufferModel->index(idx));
@@ -692,9 +534,10 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
     auto* user = index.data(Irc::UserRole).value<IrcUser*>();
     if (user) {
         // ensure the "user" isn't our own client, can only do this by name.
-        if (user->name() == mNickName) {
+        if (user->name() == mpClient->getNickName()) {
             return;
         }
+        IrcBufferModel* bufferModel = mpClient->bufferModel();
         IrcBuffer* buffer = bufferModel->add(user->name());
         // activate the new query
         const int idx = bufferModel->buffers().indexOf(buffer);
@@ -704,9 +547,7 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
     }
 }
 
-// The document on screen has to be written through the browser, which scrolls
-// and repaints as well as appending; one that is not on screen has no browser to
-// go through and is written directly.
+// The on-screen document goes through the browser so it scrolls and repaints.
 void dlgIRC::appendToDocument(QTextDocument* document, const QString& html)
 {
     if (document == ircBrowser->document()) {
@@ -724,49 +565,34 @@ void dlgIRC::appendToDocument(QTextDocument* document, const QString& html)
     cursor.endEditBlock();
 }
 
-void dlgIRC::slot_receiveMessage(IrcMessage* message)
+// Our own lines, which the server does not echo back, go to the buffer on screen.
+void dlgIRC::slot_showOwnMessage(IrcMessage* message)
 {
-    // update timestamp of ping/pong messages.
-    if (message->type() == IrcMessage::Pong && mPingStarted) {
-        message->setTimeStamp(QDateTime::fromMSecsSinceEpoch(mPingStarted));
-        mPingStarted = 0;
-    }
+    slot_showMessage(bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>(), message);
+}
 
-    auto* buffer = qobject_cast<IrcBuffer*>(sender());
-    if (!buffer) {
-        buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
-    }
+void dlgIRC::slot_showMessage(IrcBuffer* buffer, IrcMessage* message)
+{
     QTextDocument* document = bufferTexts.value(buffer);
-    if (document) {
-        const QString html = IrcMessageFormatter::formatMessage(message);
-        if (!html.isEmpty()) {
-            // send a plain-text formatted copy of the message to Lua, as long as it isn't our own.
-            if (!message->isOwn()) {
-                const QString textToLua = IrcMessageFormatter::formatMessage(message, true);
-                if (!textToLua.isEmpty() && mpHost) {
-                    const QString from = message->nick();
-                    const QString to = getMessageTarget(message, buffer->title());
-                    mpHost->postIrcMessage(from, to, textToLua);
-                }
-            }
+    if (!document) {
+        return;
+    }
+    const QString html = IrcMessageFormatter::formatMessage(message);
+    if (html.isEmpty()) {
+        return;
+    }
 
-            appendToDocument(document, html);
+    appendToDocument(document, html);
 
-            // Being kicked ourselves makes IrcBufferModelPrivate::messageFilter()
-            // destroy the channel's buffer, and with it the document this line has
-            // just gone into, so the server buffer - which is never destroyed -
-            // keeps a copy the player can still read. The nick test is deliberately
-            // the same expression that filter's own destroy test uses, so the copy
-            // is made exactly when the buffer is taken away: keep the two in step.
-            const bool kickedUs = message->type() == IrcMessage::Kick && !static_cast<IrcKickMessage*>(message)->user().compare(connection->nickName(), Qt::CaseInsensitive);
-            // a kick naming us in a channel we have no buffer for arrives on the
-            // server buffer itself, via messageIgnored, and has already been
-            // appended above - copying it again would show it twice
-            if (kickedUs && buffer != serverBuffer) {
-                if (QTextDocument* serverDocument = bufferTexts.value(serverBuffer)) {
-                    appendToDocument(serverDocument, html);
-                }
-            }
+    // Being kicked makes IrcBufferModelPrivate::messageFilter() destroy the channel buffer,
+    // so copy the line to the never-destroyed server buffer. The nick test mirrors that
+    // filter's own destroy test: keep the two in step.
+    const bool kickedUs = message->type() == IrcMessage::Kick && !static_cast<IrcKickMessage*>(message)->user().compare(mpClient->connection()->nickName(), Qt::CaseInsensitive);
+    // a kick from a channel with no buffer already arrived on the server buffer (messageIgnored)
+    IrcBuffer* serverBuffer = mpClient->serverBuffer();
+    if (kickedUs && buffer != serverBuffer) {
+        if (QTextDocument* serverDocument = bufferTexts.value(serverBuffer)) {
+            appendToDocument(serverDocument, html);
         }
     }
 }
@@ -776,247 +602,15 @@ void dlgIRC::slot_onAnchorClicked(const QUrl& link)
     QDesktopServices::openUrl(link);
 }
 
-void dlgIRC::slot_nickNameRequired(const QString& reserved, QString* alt)
+void dlgIRC::slot_nickNameReserved(const QString& reserved, const QString& replacement)
 {
-    Q_UNUSED(alt)
-    const QString newNick = qsl("%1_%2").arg(reserved, QString::number(rand() % 10000));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, newNick)));
-    connection->setNickName(newNick);
-}
-
-void dlgIRC::slot_nickNameChanged(const QString& nick)
-{
-    if (!mpHost || nick == mNickName) {
-        return;
-    }
-
-    // send a notice to Lua about the nick name change.
-    mpHost->postIrcMessage(mNickName, nick, tr("Your nick has changed."));
-    mNickName = nick;
-
-    setClientWindowTitle();
-}
-
-void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
-{
-    if (!mpHost) {
-        return;
-    }
-
-    if (!mReadyForSending) {
-        mReadyForSending = true;
-    }
-
-    const QString chan = message->channel();
-    if (!mChannels.contains(chan)) {
-        mChannels << chan;
-    }
-
-    if (message->isOwn()) {
-        const QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
-        mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
-    }
-}
-
-void dlgIRC::slot_partedChannel(IrcPartMessage* message)
-{
-    if (!mpHost) {
-        return;
-    }
-
-    const QString chan = message->channel();
-    if (mChannels.contains(chan)) {
-        mChannels.removeAll(chan);
-    }
-
-    if (message->isOwn()) {
-        const QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
-        mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
-    }
-}
-
-void dlgIRC::slot_receiveNumericMessage(IrcNumericMessage* msg)
-{
-    // set the connected host name and update the serverBuffer name to match it.
-    if (msg->code() == Irc::RPL_YOURHOST) {
-        serverBuffer->setName(msg->nick());
-        mConnectedHostName = msg->nick();
-    }
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, replacement)));
 }
 
 void dlgIRC::showEvent(QShowEvent* event)
 {
     startClient();
     event->ignore();
-}
-
-QString dlgIRC::getMessageTarget(IrcMessage* msg, const QString& bufferName)
-{
-    QString target = bufferName;
-    switch (msg->type()) {
-    case IrcMessage::Notice: {
-        auto* msgNotice = static_cast<IrcNoticeMessage*>(msg);
-        target = msgNotice->target();
-        break;
-    }
-    case IrcMessage::Private: {
-        auto* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
-        target = msgPrivate->target();
-        break;
-    }
-    default:
-        // Other message types are not expected - I hope - SlySven
-        qWarning().noquote().nospace() << "dlgIRC::getMessageTarget(..., \"" << bufferName << "\") WARNING - message of type: " << msg->type()
-                                       << " not explicitly handled, this needs fixing by Mudlet Makers...";
-    }
-    return target;
-}
-
-QString dlgIRC::readIrcHostName(Host* pH)
-{
-    QString hostname = pH->readProfileData(dlgIRC::HostNameCfgItem);
-    if (hostname.isEmpty()) {
-        hostname = dlgIRC::DefaultHostName;
-    }
-    return hostname;
-}
-
-int dlgIRC::readIrcHostPort(Host* pH)
-{
-    const QString portStr = pH->readProfileData(dlgIRC::HostPortCfgItem);
-    bool ok;
-    int port = portStr.toInt(&ok);
-    if (portStr.isEmpty() || !ok) {
-        port = dlgIRC::DefaultHostPort;
-    } else if (port > 65535 || port < 1) {
-        port = dlgIRC::DefaultHostPort;
-    }
-    return port;
-}
-
-bool dlgIRC::readIrcHostSecure(Host* pH)
-{
-    const QString secureStr = pH->readProfileData(dlgIRC::HostSecureCfgItem);
-    return secureStr.contains(QLatin1String("true"), Qt::CaseInsensitive);
-}
-
-QString dlgIRC::readIrcNickName(Host* pH)
-{
-    QString nick = pH->readProfileData(dlgIRC::NickNameCfgItem);
-    if (nick.isEmpty()) {
-        // if the new config doesn't exist, try loading the old one.
-        nick = readAppDefaultIrcNick();
-
-        if (nick.isEmpty()) {
-            nick = qsl("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
-        }
-    }
-    return nick;
-}
-
-QString dlgIRC::readIrcPassword(Host* pH)
-{
-    QString pass = pH->readProfileData(dlgIRC::PasswordCfgItem);
-    return pass;
-}
-
-QString dlgIRC::readAppDefaultIrcNick()
-{
-    QFile file(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
-    const bool opened = file.open(QIODevice::ReadOnly);
-    QString rstr;
-    if (opened) {
-        QDataStream ifs(&file);
-        ifs.setVersion(QDataStream::Qt_5_12);
-        ifs >> rstr;
-        file.close();
-    }
-    return rstr;
-}
-
-void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
-{
-    QSaveFile file(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
-    const bool opened = file.open(QIODevice::WriteOnly);
-    if (opened) {
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << nick;
-        if (!file.commit()) {
-            qDebug() << "dlgIRC::writeAppDefaultIrcNick: error saving default nickname: " << file.errorString();
-        }
-    }
-}
-
-QStringList dlgIRC::readIrcChannels(Host* pH)
-{
-    QStringList channels;
-    const QString channelstr = pH->readProfileData(dlgIRC::ChannelsCfgItem);
-    if (channelstr.isEmpty()) {
-        channels << dlgIRC::DefaultChannels;
-    } else {
-        channels = channelstr.split(qsl(" "), Qt::SkipEmptyParts);
-    }
-    return channels;
-}
-
-QPair<bool, QString> dlgIRC::writeIrcHostName(Host* pH, const QString& hostname)
-{
-    return pH->writeProfileData(dlgIRC::HostNameCfgItem, hostname);
-}
-
-QPair<bool, QString> dlgIRC::writeIrcHostPort(Host* pH, int port)
-{
-    return pH->writeProfileData(dlgIRC::HostPortCfgItem, QString::number(port));
-}
-
-QPair<bool, QString> dlgIRC::writeIrcHostSecure(Host* pH, bool secure)
-{
-    return pH->writeProfileData(dlgIRC::HostSecureCfgItem, (secure ? QLatin1String("true") : QLatin1String("false")));
-}
-
-QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
-{
-    // What is stored here is put on the wire as "NICK <nickname>" at registration
-    // without passing through validateMsgArguments(), and IrcConnection only
-    // takes the first space-separated word of it - which leaves a line break
-    // inside that word to end the NICK and start a command of the storer's
-    // choosing.
-    if (textBreaksIrcLine(nickname) || textHasSpace(nickname)) {
-        return {false, qsl("nick name \"%1\" must be a single word, without a line break or a null character").arg(escapedForError(nickname))};
-    }
-
-    // update app-wide file to set a default nick as whatever the last-used nick was.
-    writeAppDefaultIrcNick(nickname);
-
-    return pH->writeProfileData(dlgIRC::NickNameCfgItem, nickname);
-}
-
-QPair<bool, QString> dlgIRC::validateIrcPassword(const QString& password)
-{
-    // as for the nick name above, except that this goes out as the trailing
-    // parameter of "PASS :<password>", so an injected line could hold spaces too.
-    // The password itself is never quoted back.
-    if (textBreaksIrcLine(password)) {
-        return {false, qsl("password must not contain a line break or a null character")};
-    }
-
-    return {true, QString()};
-}
-
-QPair<bool, QString> dlgIRC::writeIrcPassword(Host* pH, const QString& password)
-{
-    const QPair<bool, QString> valid = validateIrcPassword(password);
-    if (!valid.first) {
-        return valid;
-    }
-
-    return pH->writeProfileData(dlgIRC::PasswordCfgItem, password);
-}
-
-QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& channels)
-{
-    return pH->writeProfileData(dlgIRC::ChannelsCfgItem, channels.join(qsl(" ")));
 }
 
 void dlgIRC::writeQSettings()
