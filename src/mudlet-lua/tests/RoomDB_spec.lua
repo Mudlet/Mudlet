@@ -301,6 +301,49 @@ describe("Tests the room and area database behind the map", function()
       assert.are.same({}, getRoomsByPosition1(areaHome, 9, 9, 0))
       assert.are.same({mover}, getRoomsByPosition1(areaAway, 9, 9, 0))
     end)
+
+    it("finds the same rooms as a walk of the area's own room list", function()
+      -- getRoomsByPosition reads the per-cell index the 2D map draws from, so
+      -- shake that index with every kind of edit and hold it to the rooms
+      local area = addAreaName("RoomDBSpecGrid")
+      local made = {}
+      finally(function()
+        for _, id in ipairs(made) do
+          deleteRoom(id)
+        end
+        deleteArea("RoomDBSpecGrid")
+      end)
+      for i = 1, 24 do
+        made[#made + 1] = makeRoom(area, i % 3, i % 4, i % 2)
+      end
+      setRoomCoordinates(made[1], 2, 3, 1)
+      setRoomCoordinates(made[2], 5, 5, 5)
+      setRoomArea(made[3], areaAway)
+      deleteRoom(made[4])
+      -- the same id coming back somewhere else must not answer for where it was
+      local reused = made[5]
+      deleteRoom(reused)
+      assert.is_true(addRoom(reused))
+      assert.is_true(setRoomArea(reused, area))
+      setRoomCoordinates(reused, 7, 7, 0)
+
+      local expected = {}
+      for _, id in ipairs(getAreaRooms1(area)) do
+        local x, y, z = getRoomCoordinates(id)
+        local key = x .. "," .. y .. "," .. z
+        expected[key] = expected[key] or {}
+        table.insert(expected[key], id)
+      end
+      for z = 0, 5 do
+        for x = 0, 7 do
+          for y = 0, 7 do
+            local want = expected[x .. "," .. y .. "," .. z] or {}
+            table.sort(want)
+            assert.are.same(want, getRoomsByPosition1(area, x, y, z), string.format("at %d,%d,%d", x, y, z))
+          end
+        end
+      end
+    end)
   end)
 
   describe("Tests exits that are taken away again", function()
