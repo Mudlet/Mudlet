@@ -1741,6 +1741,102 @@ bool TMainConsole::setCommandLineVisible(const QString& name, bool visible)
     return true;
 }
 
+TConsole* TMainConsole::consoleNamed(const QString& name)
+{
+    if (name.isEmpty() || !name.compare(qsl("main"))) {
+        return this;
+    }
+    return mSubConsoleMap.value(name);
+}
+
+bool TMainConsole::setWindowScrollBarVisible(const QString& name, bool visible)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setScrollBarVisible(visible);
+    return true;
+}
+
+bool TMainConsole::setWindowHorizontalScrollBarVisible(const QString& name, bool visible)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setHorizontalScrollBar(visible);
+    return true;
+}
+
+std::optional<bool> TMainConsole::getWindowScrollBarVisible(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getScrollBarVisible()};
+}
+
+bool TMainConsole::setWindowScrolling(const QString& name, bool enabled)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+    pC->setScrolling(enabled);
+    return true;
+}
+
+std::optional<bool> TMainConsole::getWindowScrolling(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {pC->getScrolling()};
+}
+
+std::optional<int> TMainConsole::getWindowScroll(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return {};
+    }
+    return {std::max(std::min(pC->mUpperPane->mCursorY, pC->getLastLineNumber()), 0)};
+}
+
+bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
+{
+    auto pC = consoleNamed(name);
+    if (!pC) {
+        return false;
+    }
+
+    const int numLines = pC->getLastLineNumber();
+    if (line >= numLines) {
+        toEnd = true;
+    } else if (line < 0) {
+        line = std::max(numLines + line, 0);
+    }
+
+    if (!toEnd) {
+        pC->scrollUp(pC->mUpperPane->mCursorY - line);
+        return true;
+    }
+    if (!pC->mUpperPane->mIsTailMode) {
+        pC->mLowerPane->mCursorY = pC->buffer.size();
+        pC->mLowerPane->hide();
+        pC->buffer.mCursorY = pC->buffer.size();
+        pC->mUpperPane->mCursorY = pC->buffer.size();
+        pC->mUpperPane->mCursorX = 0;
+        pC->mUpperPane->mIsTailMode = true;
+        pC->mUpperPane->updateScreenView();
+        pC->mUpperPane->forceUpdate();
+    }
+    return true;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {

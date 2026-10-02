@@ -1004,8 +1004,10 @@ int TLuaInterpreter::disableCommandLine(lua_State* L)
 int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->setHorizontalScrollBar(false);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setWindowHorizontalScrollBarVisible(windowName, false)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
@@ -1013,8 +1015,10 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 int TLuaInterpreter::disableScrollBar(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->setScrollBarVisible(false);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setWindowScrollBarVisible(windowName, false)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
@@ -1283,8 +1287,10 @@ int TLuaInterpreter::enableCommandLine(lua_State* L)
 int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->setHorizontalScrollBar(true);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setWindowHorizontalScrollBarVisible(windowName, true)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
@@ -1292,8 +1298,10 @@ int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 int TLuaInterpreter::enableScrollBar(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->setScrollBarVisible(true);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setWindowScrollBarVisible(windowName, true)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
@@ -1301,8 +1309,12 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
 int TLuaInterpreter::getScrollBarVisible(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    lua_pushboolean(L, console->getScrollBarVisible());
+    const Host& host = getHostFromLua(L);
+    const auto visible = host.mpConsole ? host.mpConsole->getWindowScrollBarVisible(windowName) : std::nullopt;
+    if (!visible) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushboolean(L, *visible);
     return 1;
 }
 
@@ -1808,26 +1820,13 @@ int TLuaInterpreter::getSaveCommandHistory(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScroll
 int TLuaInterpreter::getScroll(lua_State* L)
 {
-    QString windowName;
-
-    const int n = lua_gettop(L);
-    if (n == 1) {
-        windowName = getVerifiedString(L, __func__, 1, "window name", true);
-    } else {
-        windowName = QLatin1String("main");
+    const QString windowName = lua_gettop(L) == 1 ? getVerifiedString(L, __func__, 1, "window name", true) : qsl("main");
+    const Host& host = getHostFromLua(L);
+    const auto scroll = host.mpConsole ? host.mpConsole->getWindowScroll(windowName) : std::nullopt;
+    if (!scroll) {
+        return windowNotFound(L, windowName);
     }
-
-    auto console = getHostFromLua(L).findConsole(windowName);
-    if (!console) {
-        lua_pushnil(L);
-        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
-        return 2;
-    }
-
-    int result = console->mUpperPane->mCursorY;
-    result = std::min(result, console->getLastLineNumber());
-    result = std::max(result, 0);
-    lua_pushnumber(L, result);
+    lua_pushnumber(L, *scroll);
     return 1;
 }
 
@@ -4521,7 +4520,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollTo
 int TLuaInterpreter::scrollTo(lua_State* L)
 {
-    QString windowName;
+    const char* name = "";
     int targetLine = -1;
     bool stopScrolling = false;
 
@@ -4531,49 +4530,28 @@ int TLuaInterpreter::scrollTo(lua_State* L)
             return lua_error(L);
         }
         targetLine = getVerifiedInt(L, __func__, 2, "line to scroll to");
-        windowName = lua_tostring(L, 1);
+        name = lua_tostring(L, 1);
     } else if (n == 1) {
         if (lua_isnumber(L, 1)) {
             targetLine = getVerifiedInt(L, __func__, 1, "line to scroll to");
-            windowName = qsl("main");
+            name = "main";
         } else {
-            windowName = getVerifiedString(L, __func__, 1, "window name", true);
+            if (!checkStringArg(L, __func__, 1, "window name", true)) {
+                return lua_error(L);
+            }
+            name = lua_tostring(L, 1);
             stopScrolling = true;
         }
     } else if (n == 0) {
-        windowName = qsl("main");
+        name = "main";
         stopScrolling = true;
     }
 
-    auto console = getHostFromLua(L).findConsole(windowName);
-    if (!console) {
-        lua_pushnil(L);
-        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
-        return 2;
+    const QString windowName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->scrollWindowTo(windowName, targetLine, stopScrolling)) {
+        return windowNotFound(L, windowName);
     }
-
-    const int numLines = console->getLastLineNumber();
-    if (targetLine >= numLines) { // larger than buffer or at end
-        stopScrolling = true;
-    } else if (targetLine < 0) { // negative, count from end of buffer
-        targetLine = std::max((numLines + targetLine), 0);
-    }
-
-    if (stopScrolling) {
-        if (!console->mUpperPane->mIsTailMode) {
-            console->mLowerPane->mCursorY = console->buffer.size();
-            console->mLowerPane->hide();
-            console->buffer.mCursorY = console->buffer.size();
-            console->mUpperPane->mCursorY = console->buffer.size();
-            console->mUpperPane->mCursorX = 0;
-            console->mUpperPane->mIsTailMode = true;
-            console->mUpperPane->updateScreenView();
-            console->mUpperPane->forceUpdate();
-        }
-    } else {
-        console->scrollUp(console->mUpperPane->mCursorY - targetLine);
-    }
-
     return 0;
 }
 
@@ -4637,8 +4615,10 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
         return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
-    auto console = CONSOLE(L, windowName);
-    console->setScrolling(true);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setWindowScrolling(windowName, true)) {
+        return windowNotFound(L, windowName);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4651,8 +4631,10 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
         return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
-    auto console = CONSOLE(L, windowName);
-    console->setScrolling(false);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setWindowScrolling(windowName, false)) {
+        return windowNotFound(L, windowName);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4667,8 +4649,12 @@ int TLuaInterpreter::scrollingActive(lua_State* L)
         return 1;
     }
 
-    auto console = CONSOLE(L, windowName);
-    lua_pushboolean(L, console->getScrolling());
+    const Host& host = getHostFromLua(L);
+    const auto scrolling = host.mpConsole ? host.mpConsole->getWindowScrolling(windowName) : std::nullopt;
+    if (!scrolling) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushboolean(L, *scrolling);
     return 1;
 }
 

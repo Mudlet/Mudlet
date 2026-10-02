@@ -204,6 +204,19 @@ public:
     std::optional<bool> getCommandLineSavesHistory(const QString& name) const;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory);
     bool setCommandLineVisible(const QString& name, bool visible);
+    // The scroll bar and scrolling operations the core forwards to this view by
+    // name, never by widget. An empty name or "main" is this console, any other
+    // a mini console, user window or buffer; each reports failure for a name
+    // that is none of those.
+    bool setWindowScrollBarVisible(const QString& name, bool visible);
+    bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible);
+    std::optional<bool> getWindowScrollBarVisible(const QString& name);
+    bool setWindowScrolling(const QString& name, bool enabled);
+    std::optional<bool> getWindowScrolling(const QString& name);
+    std::optional<int> getWindowScroll(const QString& name);
+    // A negative line counts back from the end. One at or past the end, or
+    // toEnd, puts the console back to following new lines.
+    bool scrollWindowTo(const QString& name, int line, bool toEnd);
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.
@@ -383,6 +396,7 @@ private:
     // Resolves the three name-only kinds in the same order as the core.
     QWidget* plainWindowWidget(const QString& name) const;
     TCommandLine* commandLineNamed(const QString& name) const;
+    TConsole* consoleNamed(const QString& name);
     // The single answer to "does this profile have a map widget on screen right
     // now" - null if it never opened one, put it away, or createMapper() took it over.
     //
