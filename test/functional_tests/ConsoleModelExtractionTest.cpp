@@ -85,6 +85,11 @@ extern void qInitResources_mudlet_fonts_posix();
 void initializeQRCResourcesForConsoleModelExtraction();
 
 using namespace std::chrono_literals;
+// QObject::receivers() is protected; naming it through a subclass is how a test may call it.
+struct SignalReceiverCount : QObject
+{
+    static int of(const QObject* object, const char* signal) { return (object->*(&SignalReceiverCount::receivers))(signal); }
+};
 
 // The main console's text buffer, cursor/prompt state, fg/bg colours and log
 // lifecycle were lifted out of the TConsole widget into a core TConsoleModel
@@ -1545,6 +1550,11 @@ expectRefusal('setLabelToolTip', setLabelToolTip('noViewLbl', 't'))
 expectRefusal('setLabelCursor', setLabelCursor('noViewLbl', 0))
 expectRefusal('setLabelCustomCursor', setLabelCustomCursor('noViewLbl', '/nowhere.png'))
 expectRefusal('getLabelText', getLabelText('noViewLbl'))
+expectRefusal('startMovie', startMovie('noViewLbl'))
+expectRefusal('pauseMovie', pauseMovie('noViewLbl'))
+expectRefusal('setMovieFrame', setMovieFrame('noViewLbl', 0))
+expectRefusal('setMovieSpeed', setMovieSpeed('noViewLbl', 100))
+expectRefusal('scaleMovie', scaleMovie('noViewLbl'))
 expectRefusal('clearCmdLine', clearCmdLine())
 expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
 expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
@@ -3136,6 +3146,51 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         runLua(host, qsl("mouseX, mouseY = getMousePosition()\n"));
         QCOMPARE(luaGlobalNumber(host, "mouseX"), local.x());
         QCOMPARE(luaGlobalNumber(host, "mouseY"), local.y());
+    }
+
+    // A script can read back neither the speed of a label's movie nor the size
+    // it is scaled to.
+    void test_movieSpeedAndScalingReachTheLabelsMovie()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString gifPath = writeTestGif();
+        QVERIFY2(!gifPath.isEmpty(), "Could not write a GIF that Qt reads back as a movie.");
+        const QString labelName = qsl("scaledMovieLabel");
+        runLua(host, qsl("createLabel('%1', 0, 0, 60, 30, 1)\nsetMovie('%1', '%2')\n").arg(labelName, gifPath));
+        TLabel* label = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(label, "createLabel() made no widget.");
+        QMovie* movie = label->movie();
+        QVERIFY2(movie, "setMovie() gave the label no movie, so the checks below prove nothing.");
+        const auto deleteTheLabel = qScopeGuard([host, labelName]() {
+            host->mpConsole->deleteLabel(labelName);
+        });
+
+        runLua(host, qsl("setMovieSpeed('%1', 250)\n").arg(labelName));
+        QCOMPARE(movie->speed(), 250);
+
+        // scaling must leave any other listener to the label's resizes connected
+        QSignalSpy resizes(label, &TLabel::resized);
+        QVERIFY(resizes.isValid());
+
+        const int listenersBefore = SignalReceiverCount::of(label, SIGNAL(resized()));
+        runLua(host, qsl("scaleMovie('%1')\n").arg(labelName));
+        QCOMPARE(movie->scaledSize(), QSize(60, 30));
+        runLua(host, qsl("scaleMovie('%1')\n").arg(labelName));
+        QVERIFY2(SignalReceiverCount::of(label, SIGNAL(resized())) == listenersBefore + 1, "Asking twice for a movie to be scaled connected it to the label's resizes twice.");
+        runLua(host, qsl("resizeWindow('%1', 90, 45)\n").arg(labelName));
+        QTRY_COMPARE(movie->scaledSize(), QSize(90, 45));
+
+        runLua(host, qsl("scaleMovie('%1', false)\n").arg(labelName));
+        QCOMPARE(movie->scaledSize(), QSize(90, 45));
+        const int resizesBefore = resizes.count();
+        runLua(host, qsl("resizeWindow('%1', 70, 35)\n").arg(labelName));
+        QTRY_VERIFY2(resizes.count() > resizesBefore, "Turning movie scaling off cut the label's other resize listeners off too.");
+        QCOMPARE(label->size(), QSize(70, 35));
+        QCOMPARE(movie->scaledSize(), QSize(90, 45));
     }
 
     // A scroll box inside a scroll box is one of this console's own recursive
