@@ -106,7 +106,7 @@ private slots:
     }
 
     // The count is not "lines added": it is every line in the rewrapped range
-    // bar one, whether that line was split or not. TConsole::insertLink() moves
+    // bar one, whether that line was split or not. TConsoleModel::insertLink() moves
     // the user cursor down by it, so a line that needed no wrapping still has
     // to be counted.
     void test_rewrapCountsEveryLineInItsRange()
@@ -358,6 +358,44 @@ private slots:
         }
     }
 
+    // The main console's wrap settings are the profile's. Loading a profile and
+    // applying the preferences both hand them over through changeColors()
+    // rather than setWindowWrap(), and wrapLine('main') has to honour them
+    // just the same.
+    void test_wrapLineOnMainUsesTheProfilesWrapSettings()
+    {
+        startProfile();
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+
+        const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        QVERIFY2(host->mWrapAt > token.size(), "the profile already wraps narrower than the test line");
+        runLua(qsl("echo('main', '\\n%1\\n')").arg(token));
+        int tokenLine = -1;
+        for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
+            if (console->buffer.line(i) == token) {
+                tokenLine = i;
+            }
+        }
+        QVERIFY2(tokenLine >= 0, "the test line was not echoed whole onto the main console");
+
+        host->mWrapAt = 20;
+        host->mWrapIndentCount = 2;
+        host->mWrapHangingIndentCount = 4;
+        console->changeColors();
+        QCOMPARE(console->getWrapAt(), 20);
+
+        runLua(qsl("wrapLine('main', %1)").arg(tokenLine));
+
+        const QString firstLine = console->buffer.line(tokenLine);
+        const QString secondLine = console->buffer.line(tokenLine + 1);
+        QVERIFY2(firstLine.size() <= 20, qPrintable(qsl("the line was not rewrapped to the profile's width: '%1'").arg(firstLine)));
+        QVERIFY2(firstLine.startsWith(qsl("  a")), qPrintable(qsl("the first line did not get the profile's indent: '%1'").arg(firstLine)));
+        QVERIFY2(secondLine.startsWith(qsl("    ")), qPrintable(qsl("the second line did not get the profile's hanging indent: '%1'").arg(secondLine)));
+    }
+
     // East Asian Wide glyphs take two columns each, so the split points come
     // from the column count rather than the character count.
     void test_wideGlyphsWrapOnTheirColumnWidth()
@@ -457,8 +495,8 @@ private slots:
         const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
         runLua(qsl("feedTelnet('%1\\n')").arg(heldLine));
 
-        auto* flushTimer = console->findChild<QTimer*>(qsl("serverWrapFlushTimer"));
-        QVERIFY2(flushTimer && flushTimer->isActive(), "the full-width line was not held back for a continuation");
+        QTimer* flushTimer = &host->mServerWrapFlushTimer;
+        QVERIFY2(flushTimer->isActive(), "the full-width line was not held back for a continuation");
 
         int sizeAtFlush = -1;
         int cursorAtFlush = -1;

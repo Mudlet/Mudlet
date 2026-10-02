@@ -94,7 +94,7 @@ describe("Console operations on a buffer emptied by deleteLine()", function()
   end)
 
   describe("inserting", function()
-    -- with no line to insert into, TConsole::insertText() and insertLink()
+    -- with no line to insert into, TConsoleModel::insertText() and insertLink()
     -- both fall through to appending
     it("insertText appends instead", function()
       insertText(win, "spliced")

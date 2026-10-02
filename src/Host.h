@@ -51,6 +51,7 @@
 #include <QRect>
 #include <QStack>
 #include <QTextStream>
+#include <QTimer>
 
 #include <memory>
 #include <string>
@@ -78,14 +79,10 @@ class TRoom;
 class TConsole;
 class TMainConsole;
 struct TConsoleModel;
-class dlgNotepad;
-class dlgTriggerEditor;
 class TMap;
 class MMCPServer;
 class dlgIRC;
-class dlgPackageManager;
-class dlgModuleManager;
-class dlgProfilePreferences;
+class TIrcClient;
 class cTelnet;
 
 class stopWatch
@@ -165,9 +162,6 @@ class Host : public QObject
 
     friend class XMLexport;
     friend class XMLimport;
-    friend class dlgProfilePreferences;
-    // Allows the functional test to set the Discord username restriction:
-    friend class TDiscordModeTest;
     // Allows the functional test to call closeChildren() on its own:
     friend class HostWidgetDecouplingTest;
     // Allows the functional test to answer the keychain lookup in place of a keychain:
@@ -243,6 +237,8 @@ public:
     const QString& getDiscordApplicationID();
     void setDiscordInviteURL(const QString& s);
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
+    const QString& getRequiredDiscordUserName() const { return mRequiredDiscordUserName; }
+    void setRequiredDiscordUserName(const QString& userName) { mRequiredDiscordUserName = userName; }
     void setSpellDic(const QString&);
     void setEnableSpellCheck(const bool enable);
     bool getEnableSpellCheck() const { return mEnableSpellCheck; }
@@ -293,6 +289,8 @@ public:
     void setHostID(int id) { mHostID = id; }
 
     TLuaInterpreter* getLuaInterpreter() { return &mLuaInterpreter; }
+    void setLazyCaptureGlobals(const bool state) { mLuaInterpreter.setLazyCaptureGlobals(state); }
+    bool lazyCaptureGlobals() const { return mLuaInterpreter.lazyCaptureGlobals(); }
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);
@@ -314,16 +312,50 @@ public:
     void setMainConsoleFgColor(const QColor& color);
     void setMainConsoleBgColor(const QColor& color);
     void resetMainConsoleFormat();
+    // The console a script names: "" and "main" are the main console's, any
+    // other a mini console's, user window's or buffer's. The main console's is
+    // there with or without a view.
+    TConsoleModel* consoleModelNamed(const QString& name);
+    // The one clipboard every console copies to and pastes from. Each answers
+    // whether it found the console.
+    bool copyToClipboard(const QString& name);
+    void cutMainConsoleToClipboard();
+    bool pasteClipboard(const QString& name);
+    bool appendClipboard(const QString& name);
+    // The main console's scrollback limit is also the profile's setting. With
+    // useMaximum the most this machine can hold stands in for the limit given.
+    void setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum);
+    // Paint the named console's selection, and write what follows in the same
+    // format. Each answers whether it found the console.
+    bool setWindowFgColor(const QString& name, const QColor& color);
+    bool setWindowBgColor(const QString& name, const QColor& color);
+    bool setWindowDisplayAttributes(const QString& name, TChar::AttributeFlags attributes, bool enabled);
+    // Whether the named console shows timestamps. The buffer records every
+    // line's time either way.
+    std::optional<bool> getWindowTimeStamps(const QString& name);
+    // Answers whether they were shown before, and leaves them alone when that
+    // is already what was asked for. A view shows the change.
+    std::optional<bool> setWindowTimeStamps(const QString& name, bool shown);
     TWindowRegistry& windowRegistry() { return mWindowRegistry; }
     const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();
+    // The whole restyle when the main console has a view, which refreshes the
+    // model on the way; only the model's copy of the colours when it has none.
+    void applyMainConsoleColors();
     void runTriggers(int line);
     // The log lifecycle lives in the core console model, which is a plain
     // struct and cannot emit, so it raises the two view-only halves of a
     // logging change through here.
     void raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName);
     void raiseLoggingStateChanged(const bool isLogging);
+    // Starts the log the "autolog" file asks for, once the profile's log
+    // settings have been read, whether or not the profile has a view.
+    void startSavedLogging();
     void postIrcMessage(const QString&, const QString&, const QString&);
+    // The running IRC session, creating one if there is none.
+    TIrcClient* getOrCreateIrcClient();
+    // As getOrCreateIrcClient(), asks the frontend to show it, and starts the session.
+    void showIrcClient();
     void enableTimer(const QString&);
     void disableTimer(const QString&);
     void enableTrigger(const QString&);
@@ -408,6 +440,9 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     void printToMainConsole(const QString& msg);
     void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
+    // What echo() and insertHTML() write; false when there is no main console to write it to.
+    bool echoToMainConsole(const QString& text);
+    bool insertHtmlInMainConsole(const QString& text);
     void printSystemMessage(const QString& msg);
     void printOnDisplay(std::string& data, bool isFromServer);
     void finalizeMainConsole();
@@ -441,6 +476,11 @@ public:
     bool getMMCPAddChatMessageNewline();
     bool getMMCPAutoAcceptCalls();
     bool getMMCPShowSnoopInMainConsole();
+    void setMMCPChatPrefix(const QString&);
+    void setMMCPPort(const quint16);
+    void setMMCPPrefixEmotes(const bool);
+    void setMMCPAddChatMessageNewline(const bool);
+    void setMMCPShowSnoopInMainConsole(const bool);
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -499,6 +539,11 @@ public:
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
+    void setPlayerRoomStyle(const quint8 styleCode) { mPlayerRoomStyle = styleCode; }
+    void setPlayerRoomOuterDiameter(const quint8 outerDiameter) { mPlayerRoomOuterDiameterPercentage = outerDiameter; }
+    void setPlayerRoomInnerDiameter(const quint8 innerDiameter) { mPlayerRoomInnerDiameterPercentage = innerDiameter; }
+    void setPlayerRoomOuterColor(const QColor& outerColor) { mPlayerRoomOuterColor = outerColor; }
+    void setPlayerRoomInnerColor(const QColor& innerColor) { mPlayerRoomInnerColor = innerColor; }
     void setSearchOptions(const enums::EditorSearchOptions);
     void setBufferSearchOptions(const enums::BufferSearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
@@ -523,9 +568,21 @@ public:
     void setAdvertiseScreenReader(const bool state);
     void setAnnounceIncomingText(const bool state);
     void setMapperPanelVisible(const bool state);
-    QPointer<TConsole> findConsole(QString name);
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
+    // Link writes to a console the caller already found by name, so it is looked
+    // up once per call and before any command becomes a Lua registry reference.
+    // The console takes over the references.
+    void echoWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    void insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    // Makes the console's selection a link.
+    void setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+    // Text writes to the named console, each false for a name that is no console's.
+    // Text or a link put into the main console's line while a trigger runs over
+    // it, or a replacement there, moves the trigger's captures to follow it.
+    bool insertWindowText(const QString& name, const QString& text);
+    // Puts text in place of the console's selection.
+    bool replaceWindowText(const QString& name, const QString& text);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     // Whether windowname can hold a new mini console, scroll box, command line, text edit or label:
     // "" or "main" (any case) is the main console, else it must be a registered user window or scroll box.
@@ -570,6 +627,11 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
+    // The profile's own colours, which the main console draws with, applied to
+    // it at once - unlike setMainConsoleBgColor(), which paints a selection.
+    void setProfileBackgroundColor(const QColor& color);
+    void setProfileCommandBackgroundColor(const QColor& color);
+    void setProfileCommandForegroundColor(const QColor& color);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
     bool resetBackgroundImage(const QString& name, bool fullWindow = false);
@@ -588,7 +650,6 @@ public:
     void setupIreDriverBugfix();
 
     void setDockLayoutUpdated(const QString&);
-    void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height)
     {
@@ -641,6 +702,7 @@ public:
     }
     void sendCmdLine(const QString& cmd);
     bool fontsAntiAlias() const { return !mNoAntiAlias; }
+    void setFontsAntiAlias(const bool antiAlias) { mNoAntiAlias = !antiAlias; }
 
 private:
     QSettings& profileIni();
@@ -661,6 +723,9 @@ private:
     std::shared_ptr<TConsoleModel> mpMainConsoleModel;
     // Non-owning: the views own the models it indexes and keep it in step.
     TWindowRegistry mWindowRegistry;
+    // Built at the end of the constructor, as the main console's model is,
+    // because a TBuffer snapshots this Host's colours.
+    std::unique_ptr<TBuffer> mpClipboard;
 
     // Initialised ahead of mLuaInterpreter below, whose construction reads it:
     // initLuaGlobals() posts a message for each Lua module that fails to load, and
@@ -681,8 +746,6 @@ public:
     // something derived from a QObject, have one:
     QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
-    QPointer<dlgPackageManager> mpPackageManager;
-    QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
     bool mDisablePasswordMasking = false;
@@ -746,11 +809,9 @@ public:
     bool mIsProfileLoadingSequence = false;
 
 
-    QPointer<dlgTriggerEditor> mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     QScopedPointer<GMCPAuthenticator> mpAuth;
-    QPointer<dlgNotepad> mpNotePad;
 
     // Controls how sent commands are displayed on the main TConsole:
     enum class CommandEchoMode {
@@ -836,6 +897,10 @@ public:
     // whole logical line and Mudlet's own wrapping (mWrapAt) handles display:
     bool mUndoServerWrap = false;
     int mUndoServerWrapWidth = 80;
+    // Commits a line held back for its continuation once the game has gone
+    // quiet without sending one. Here rather than on the view because the
+    // flush runs the trigger pipeline, which is the core's work.
+    QTimer mServerWrapFlushTimer;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
@@ -917,8 +982,6 @@ public:
     QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
-    bool mLogStatus = false;
-    bool mTimeStampStatus = false;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
@@ -987,10 +1050,10 @@ public:
     enums::EditorSearchOptions mSearchOptions = enums::EditorSearchOptionNone;
     enums::BufferSearchOptions mBufferSearchOptions = enums::BufferSearchOptionNone;
     QPointer<dlgIRC> mpDlgIRC;
+    // Null while the profile has no IRC session.
+    QPointer<TIrcClient> mpIrcClient;
     QPointer<MMCPServer> mMMCPServer;
-    QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
-    QList<QPointer<TToolBar>> mToolbarLayoutChanges;
 
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
@@ -1049,6 +1112,7 @@ signals:
     void signal_showMapperScriptReminder();
     void signal_showUnpackingProgress(const QString& message, const QString& title);
     void signal_hideUnpackingProgress();
+    void signal_showIrcClient();
     // Raised while logging is still off when a log starts, and already off when
     // one stops, so that the frontend's print lands on screen but outside the
     // log file. That only holds while the connection is direct - a queued one
@@ -1063,6 +1127,29 @@ signals:
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
+    // The frontend owns the editor, notepad and IRC client it opens for a
+    // profile. On close it closes them and lets go of them; on destruction it
+    // deletes them there and then, while the units the editor references still
+    // exist, so both need a direct connection.
+    void signal_closeProfileDialogs();
+    void signal_destroyProfileDialogs();
+    // For the profile's script editor, if it has one: a script toggled an item,
+    // rewrote a script's code, changed items behind the editor's trees or made
+    // a key binding, whose key something else may hold; or there is a Lua
+    // error or debug line, or a map error, for the editor's error console.
+    void signal_triggerToggled(int id);
+    void signal_aliasToggled(int id);
+    void signal_timerToggled(int id);
+    void signal_keyToggled(int id);
+    void signal_scriptToggled(int id);
+    void signal_scriptCodeChanged(int id);
+    void signal_itemsChangedByScript();
+    void signal_keyBoundByScript(int id);
+    void signal_errorConsolePrint(const QString& text, const QColor& fgColor, const QColor& bgColor);
+    // For the profile's module manager, if it has one: a script installed or
+    // uninstalled a module, or turned a module's sync on or off.
+    void signal_moduleListChangedByScript();
+    void signal_moduleSyncChangedByScript(const QString& module, bool sync);
 
 public slots:
     void slot_timerFires();
@@ -1072,6 +1159,10 @@ private slots:
     void slot_saveProfileAfterPackageChange();
 
 private:
+    // Inserts at the console's cursor, or appends when no line follows it.
+    void pasteClipboardInto(TConsoleModel& model);
+    // Repaints the lines holding the console's selection, when it is on screen.
+    void markSelectionDirty(TConsoleModel& model);
     // Stores a boolean setting and tells scripts about it.
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);

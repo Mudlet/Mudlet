@@ -418,6 +418,19 @@ private slots:
         QCOMPARE(mirroredLines(), shownLines());
     }
 
+    // A game line lands below a line the print path left unfinished, so the
+    // unfinished one is written out first, and client output after the game
+    // line follows it.
+    void test_anUnfinishedEchoIsMirroredAheadOfTheGameLineAfterIt()
+    {
+        QVERIFY(runLua(qsl("echo(\"left unfinished\")")));
+        feedLineFromServer("game line below it");
+        QVERIFY(runLua(qsl("echo(\"after the game line\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("left unfinished"), qsl("game line below it"), qsl("after the game line")}));
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
     // Console names come from Lua, which takes any string at all. A line feed
     // in one would split the record it prefixes over two lines and leave a
     // reader unable to say which console the second half came from.

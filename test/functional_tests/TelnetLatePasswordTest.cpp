@@ -471,6 +471,20 @@ private slots:
     // keychain that answers only when the test says so. A password is on its way - so the login
     // step arms the password step - while the lookup is out and after its deadline, until the
     // keychain answers; a refusal then is final.
+    // Every other test of the storage preference stands in for it with the testing override, so this is
+    // the one that reads it where the running application keeps it: Preferences -> Store passwords in
+    // (raised in review of #11032).
+    void testTheCredentialManagerFollowsThePlayersStoragePreference()
+    {
+        CredentialManager::profileStorageOverrideForTesting().reset();
+
+        mudlet::self()->setStorePasswordsSecurely(false);
+        QCOMPARE(CredentialManager::profileStoragePreferred(), std::optional<bool>(true));
+
+        mudlet::self()->setStorePasswordsSecurely(true);
+        QCOMPARE(CredentialManager::profileStoragePreferred(), std::optional<bool>(false));
+    }
+
     void testTheProfilesLookupKeepsAPasswordOnItsWayUntilTheKeychainAnswers()
     {
         Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
@@ -486,10 +500,16 @@ private slots:
             reads->append(job);
             return false;
         };
-        // The keychain path is the one under test, and MUDLET_TEST_MODE puts CredentialManager on
-        // file storage - it is read as the lookup starts, so it can go straight back
+        // The keychain path is the one under test, and two things route CredentialManager away from
+        // it: MUDLET_TEST_MODE, and - since saved sign-ins began following the "Store passwords in"
+        // preference (#11029) - the preference this class turns off in init() so that no case can
+        // reach the real keychain by accident. Both are read as the lookup starts, so both go back
+        // immediately afterwards; the job hook above is what actually keeps the reads away from the
+        // machine's own store.
         qunsetenv("MUDLET_TEST_MODE");
+        mudlet::self()->setStorePasswordsSecurely(true);
         host->lookUpSecuredPassword(manager);
+        mudlet::self()->setStorePasswordsSecurely(false);
         qputenv("MUDLET_TEST_MODE", "1");
 
         QVERIFY2(!reads->isEmpty(), "the lookup never read the keychain, so this test cannot cover it");

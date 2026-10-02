@@ -109,7 +109,31 @@ Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on th
 
 ## Comments
 
-Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
+Comments drift from the code they describe, and a stale one misleads worse than none; every comment also costs the reader's time and an agent's context window. Write one only when the code cannot say it, and keep it to a line or two.
+
+Write a comment for a *why* the code can't carry: a Qt/OS/compiler quirk, a workaround, an ordering or thread-safety constraint, a file-format constraint, or why the obvious alternative is wrong.
+
+Don't write comments that:
+
+- restate what the code or a name already says (`// Save the profile` above `saveProfile()`)
+- narrate the change: "previously…", "now…", "no longer…", "fixes #1234 where…", "moved from X". That history belongs in the commit message and PR description
+- label code with banners or section dividers
+- document a function whose signature already says everything
+
+```cpp
+// Bad: restates the code, and narrates a change nobody reading this file needs
+// Previously we cleared the cache here, but that crashed when the profile closed,
+// so now we check the pointer first and only clear it if it is still valid
+if (mpCache) {
+    mpCache->clear();
+}
+
+// Good: the one fact the code can't show
+// Posted, not sent: the console may be mid-paint when this runs
+QCoreApplication::postEvent(mpConsole, event);
+```
+
+Translator comments (`//:`), tool directives (`NOLINT`, `clang-format off`) and Lua `---` LDoc blocks are not clutter: never remove them to trim comments, but do update them when the string, line or API they describe changes.
 
 ## Tests
 
@@ -117,7 +141,7 @@ Two harnesses: Lua specs in `src/mudlet-lua/tests/*_spec.lua` (busted, run in th
 
 Prefer a spec. A functional test statically links `mudlet_core`, so it costs ~250MB and a link step in every build tree unless it joins a grouped per-subsystem binary, where it costs a compile instead; either way each ctest case runs in its own process. Some subsystems have such a group today - the `*_GROUP_TEST_SOURCES` lists in `test/functional_tests/CMakeLists.txt`, which document how to join one. A spec is ~30KB and needs no rebuild at all because `mudlet-lua` loads from disk. Specs are also shared with Mudlet Web, so writing one grows that platform's coverage for free, which a functional test never does. Write a functional test when a spec genuinely cannot reach the behaviour: private C++ state, a path with no Lua entry point, or something that happens before Lua exists. Sanitiser coverage is not one of those reasons, as the spec run exercises the same instrumented binary.
 
-Both harnesses fail silently rather than red when the setup is wrong, so confirm a new test fails without the fix before trusting it.
+Both harnesses fail silently rather than red when the setup is wrong, so confirm a new test fails without the fix before trusting it. A test that bites says nothing about behaviour the change didn't mean to touch, so also run the same probes on the merge base and the branch, and check that every difference is intended.
 
 ## Demo videos
 
