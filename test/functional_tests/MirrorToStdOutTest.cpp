@@ -123,7 +123,7 @@ private:
         // cases are about is what is on the line, so the separator comes off
         // here rather than being asserted on. Nothing else can leave a carriage
         // return at the end of one: cTelnet strips those the game sends and
-        // TConsole::echo() those a script sends.
+        // TConsoleModel::echo() those a script sends.
         for (QString& line : lines) {
             if (line.endsWith(QChar::CarriageReturn)) {
                 line.chop(1);
@@ -415,6 +415,19 @@ private slots:
         QVERIFY(runLua(qsl("echo(\"first half, \") echo(\"second half\\n\")")));
 
         QCOMPARE(mirroredLines(), QStringList{qsl("first half, second half")});
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
+    // A game line lands below a line the print path left unfinished, so the
+    // unfinished one is written out first, and client output after the game
+    // line follows it.
+    void test_anUnfinishedEchoIsMirroredAheadOfTheGameLineAfterIt()
+    {
+        QVERIFY(runLua(qsl("echo(\"left unfinished\")")));
+        feedLineFromServer("game line below it");
+        QVERIFY(runLua(qsl("echo(\"after the game line\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("left unfinished"), qsl("game line below it"), qsl("after the game line")}));
         QCOMPARE(mirroredLines(), shownLines());
     }
 

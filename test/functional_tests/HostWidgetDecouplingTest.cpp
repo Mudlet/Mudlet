@@ -26,6 +26,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
 #include "T2DMap.h"
@@ -466,15 +467,15 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = host->mpEditorDialog.data();
+        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
         QVERIFY2(editor, "The profile came up without its editor dialog.");
         mudlet::self()->slot_notes();
-        auto* notepad = host->mpNotePad.data();
+        auto* notepad = HostDialogs::of(host).mpNotePad.data();
         QVERIFY2(notepad, "The notepad was not opened.");
         auto* note = notepad->tabWidget->widget(0);
         QVERIFY2(note, "The notepad opened without a tab.");
         mudlet::self()->showOptionsDialog(qsl("tab_general"), host);
-        auto* preferences = host->mpDlgProfilePreferences.data();
+        auto* preferences = HostDialogs::of(host).mpDlgProfilePreferences.data();
         QVERIFY2(preferences, "The preferences dialog was not opened.");
 
         const QString styleSheet = qsl("QWidget { color: #123456; }");
@@ -583,12 +584,12 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = host->mpEditorDialog.data();
+        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
         QVERIFY2(editor, "The profile came up without its editor dialog.");
         auto* sourceEditor = editor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
         QVERIFY2(sourceEditor, "The editor has no source editor pane.");
         mudlet::self()->slot_notes();
-        auto* notepad = host->mpNotePad.data();
+        auto* notepad = HostDialogs::of(host).mpNotePad.data();
         QVERIFY2(notepad, "The notepad was not opened.");
         auto* note = notepad->tabWidget->widget(0);
         QVERIFY2(note, "The notepad opened without a tab.");
@@ -615,7 +616,7 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = host->mpEditorDialog.data();
+        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
         QVERIFY2(editor, "The profile came up without its editor dialog.");
 
         const enums::EditorSearchOptions options = enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord;
@@ -637,7 +638,7 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = host->mpEditorDialog.data();
+        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
         QVERIFY2(editor, "The profile came up without its editor dialog.");
         auto* sourceEditor = editor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
         QVERIFY2(sourceEditor, "The editor has no source editor pane.");
@@ -663,7 +664,7 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = host->mpEditorDialog.data();
+        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
         QVERIFY2(editor, "The profile came up without its editor dialog.");
         QVERIFY2(editor->mpTriggerBaseItem, "The editor has no trigger tree root.");
         const int shown = editor->mpTriggerBaseItem->childCount();
@@ -695,10 +696,10 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        const QPointer<dlgTriggerEditor> editor(host->mpEditorDialog.data());
+        const QPointer<dlgTriggerEditor> editor(HostDialogs::of(host).mpEditorDialog.data());
         QVERIFY2(editor, "The profile came up without its editor dialog.");
         mudlet::self()->slot_notes();
-        const QPointer<dlgNotepad> notepad(host->mpNotePad.data());
+        const QPointer<dlgNotepad> notepad(HostDialogs::of(host).mpNotePad.data());
         QVERIFY2(notepad, "The notepad was not opened.");
 
         const QString heldStyleSheet = qsl("QWidget { color: #123456; }");
@@ -706,10 +707,11 @@ private slots:
         QCOMPARE(editor->styleSheet(), heldStyleSheet);
         QCOMPARE(notepad->styleSheet(), heldStyleSheet);
         QVERIFY2(!editor->mCleanResetQueued, "SETUP: the editor already has a clean reset queued, so the assertion below cannot fail.");
+        editor->mNeedUpdateData = false;
 
         host->closeChildren();
-        QVERIFY2(!host->mpEditorDialog, "closeChildren() did not release the editor.");
-        QVERIFY2(!host->mpNotePad, "closeChildren() did not release the notepad.");
+        QVERIFY2(!HostDialogs::of(host).mpEditorDialog, "closeChildren() did not release the editor.");
+        QVERIFY2(!HostDialogs::of(host).mpNotePad, "closeChildren() did not release the notepad.");
         // Deliberately no event loop turn from here on: the deletions
         // closeChildren() posted are what would end the window being tested,
         // and both dialogs have to still be there for the emits to have
@@ -720,10 +722,15 @@ private slots:
         const QString releasedStyleSheet = qsl("QWidget { color: #654321; }");
         QVERIFY(host->setProfileStyleSheet(releasedStyleSheet));
         QVERIFY(QMetaObject::invokeMethod(host, "signal_editorCleanResetRequested"));
+        emit host->signal_itemsChangedByScript();
+        emit host->signal_errorConsolePrint(qsl("released editor probe"), QColor(Qt::red), QColor(Qt::black));
 
         QCOMPARE(editor->styleSheet(), heldStyleSheet);
         QCOMPARE(notepad->styleSheet(), heldStyleSheet);
         QVERIFY2(!editor->mCleanResetQueued, "A released editor was still asked to rebuild its trees.");
+        QVERIFY2(!editor->mNeedUpdateData, "A released editor was still told scripts changed its items.");
+        QVERIFY2(!editor->mpErrorConsole->model().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("released editor probe")),
+                 "A released editor still printed to its error console.");
     }
 
     // The toolbar's first map button press makes the profile's map dock,
