@@ -27,6 +27,7 @@
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 
 #include <QGridLayout>
 #include <QIcon>
@@ -176,10 +177,7 @@ void TEasyButtonBar::addActionButtons(TAction* pAction)
             pTFlipButton->setMenu(pNewMenu);
         }
 
-        if (pTAction->mpFButton) {
-            pTAction->mpFButton->deleteLater();
-        }
-        pTAction->mpFButton = pTFlipButton;
+        pAction->mpHost->mpConsole->replaceActionButton(pTAction, pTFlipButton);
 
         // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
         // add the button to the toolbar AFTER any menu (children) items have
@@ -198,7 +196,9 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
         if (!pTAction->isActive()) {
             continue;
         }
-        pAction->mpEasyButtonBar = this;
+        // Through the bar's own action: the editor clears the host of an
+        // action it deletes, which still has its entries drawn as they go
+        mpTAction->mpHost->mpConsole->setActionEasyButtonBar(pAction, this);
         auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pTAction->getName(), pTAction->mID);
         pEAction->setStatusTip(pTAction->getName());
         pEAction->setCheckable(pTAction->isPushDownButton());
@@ -208,10 +208,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
             pEAction->setChecked(false);
         }
 
-        if (pTAction->mpEAction) {
-            pTAction->mpEAction->deleteLater();
-        }
-        pTAction->mpEAction = pEAction;
+        mpTAction->mpHost->mpConsole->replaceActionMenuEntry(pTAction, pEAction);
 
         //FIXME: Heiko April 2012 -> addActionButtons()
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
