@@ -267,23 +267,27 @@ bool KeyUnit::disableKey(const QString& name)
 
 bool KeyUnit::killKey(QString& name)
 {
-    for (auto pChild : mKeyRootNodeList) {
-        if (pChild->getName() != name) {
+    // By the lookup table rather than a walk of every key; see TimerUnit::killTimer()
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TKey* pChild = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (pChild->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named key that cannot be killed - a permanent key loaded from the
-        // profile precedes this session's temporaries in this list, and reporting
-        // a failure over it would strand a killable key
+        // same-named key that cannot be killed - a permanent one would strand a
+        // killable temporary
         if (!pChild->isTemporary()) {
             // only temporary Keys can be killed
             continue;
         }
-        // An already killed key is only unlinked from this list once doCleanup()
+        // An already killed key is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while a key script is on the call
         // stack - so until then it is still findable by name. Killing it a second
         // time achieves nothing:
-        if (mCleanupSet.contains(pChild)) {
+        if (mCleanupSet.contains(pChild) || uninstallList.contains(pChild)) {
             continue;
         }
         pChild->setIsActive(false);

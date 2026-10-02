@@ -312,9 +312,12 @@ set(FUNCTIONAL_TEST_UTILS
     DiscordIpcServerStub.cpp
 )
 
+mudlet_add_test_pch_provider(mudlet_functional_test_pch)
+
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 macro(add_functional_test_binary target)
     add_executable(${target} ${ARGN} ${FUNCTIONAL_TEST_UTILS})
+    mudlet_reuse_test_pch(${target} mudlet_functional_test_pch)
     add_dependencies(${target} ${LIB_MUDLET_TARGET})
     target_link_libraries(${target} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS ON)
