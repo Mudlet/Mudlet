@@ -938,6 +938,96 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
+
+    it("Should read stylesheets with odd spacing, case, comments and quoting the way it always has", function()
+      -- each entry: stylesheet, then what differs from the default format
+      local cases = {
+        { "color: red", {} }, -- no semicolon, so nothing is read
+        { "color: red;", { foreground = "red" } },
+        { "  color :  rgb(1, 2, 3)  ;  ", { foreground = "rgb(1, 2, 3)" } },
+        { "COLOR: red; Font-Weight: bold;", {} },
+        { "color: blue !important; font-weight: bold !important;", { foreground = "blue !important", bold = true } },
+        { "/* comment */ color: green; font-style: italic;", { italic = true } },
+        { "color: green; /* trailing; comment */", { foreground = "green" } },
+        { "font-family: \"Foo: Bar\", 'Baz;Qux'; color: #00ff00;", { foreground = "#00ff00" } },
+        { "background-color: red; color: white;", { foreground = "white" } },
+        { "background-color: red;", {} },
+        { "color: red; color: blue;", { foreground = "blue" } },
+        { "QLabel { color: red; }", {} },
+        { "QLabel{ font: bold italic 12pt; color: #ff0000; text-decoration: underline line-through }", { foreground = "#ff0000", underline = true, strikeout = true } },
+        { "font-weight: 700;", {} },
+        { "font: normal; font-weight: bold;", { bold = true } },
+        { "font-weight: bold; font: normal;", { bold = true } },
+        { "font: italic bold 10pt \"Sans\"; text-decoration: overline;", { bold = true, italic = true, overline = true } },
+        { "color:\r\n  rgba(10, 20, 30, 40);\nfont-style:\titalic;", { foreground = "rgba(10, 20, 30, 40)", italic = true } },
+        { "color:;font-weight:;", {} },
+        { ";;;color: red;;;", { foreground = "red" } },
+        { "color: red: blue;", { foreground = "red: blue" } },
+        { "border-image: url(a:b.png); color: yellow;", { foreground = "yellow" } },
+        { "text-decoration: UNDERLINE; font-weight: BOLD;", {} },
+      }
+      for _, case in ipairs(cases) do
+        local want = table.deepcopy(expected)
+        for k, v in pairs(case[2]) do
+          want[k] = v
+        end
+        setLabelStyleSheet(labelName, case[1])
+        assert.are.same(want, getLabelFormat(labelName), case[1])
+      end
+    end)
+
+    it("Should return a fresh table each time, so changing one leaves the next call alone", function()
+      local first = getLabelFormat(labelName)
+      first.foreground[1] = 0
+      first.bold = true
+      assert.are.same(expected, getLabelFormat(labelName))
+
+      setLabelStyleSheet(labelName, "color: red; font-weight: bold;")
+      expected.foreground = "red"
+      expected.bold = true
+      local styled = getLabelFormat(labelName)
+      styled.foreground = { 1, 2, 3 }
+      styled.bold = false
+      styled.underline = nil
+      assert.are.same(expected, getLabelFormat(labelName))
+    end)
+
+    it("Should follow the stylesheet as it changes, and tell labels apart", function()
+      local otherLabel = "gldfTestLabel2"
+      createLabel(otherLabel, 0, 0, 0, 0, 0)
+      finally(function() deleteLabel(otherLabel) end)
+      hideWindow(otherLabel)
+      setLabelStyleSheet(labelName, "color: red;")
+      setLabelStyleSheet(otherLabel, "font-weight: bold;")
+      assert.are.equal("red", getLabelFormat(labelName).foreground)
+      assert.is_false(getLabelFormat(labelName).bold)
+      assert.are.same({ 192, 192, 192 }, getLabelFormat(otherLabel).foreground)
+      assert.is_true(getLabelFormat(otherLabel).bold)
+
+      setLabelStyleSheet(labelName, "color: blue;")
+      assert.are.equal("blue", getLabelFormat(labelName).foreground)
+      setLabelStyleSheet(labelName, "")
+      assert.are.same(expected, getLabelFormat(labelName))
+      setLabelStyleSheet(labelName, "color: red;")
+      assert.are.equal("red", getLabelFormat(labelName).foreground)
+    end)
+
+    it("Should error for a label that does not exist", function()
+      assert.has_error(function() getLabelFormat("gldfNoSuchLabel") end)
+    end)
+
+    it("Should start an echo to the label from its stylesheet, and pick up a new one", function()
+      local function span(fg)
+        return string.format('<span style="color: %s;background-color: rgba(0, 0, 0, 0); font-weight: bold; font-style: normal; text-decoration: underline;">', fg)
+      end
+      setLabelStyleSheet(labelName, "color: rgb(1, 2, 3); font-weight: bold; text-decoration: underline;")
+      cecho(labelName, "<red>HP\n<reset>ok")
+      assert.are.equal(span("rgb(1, 2, 3)") .. span("rgb(255, 0, 0)") .. "HP<br>" .. span("rgb(1, 2, 3)") .. "ok", getLabelText(labelName))
+
+      setLabelStyleSheet(labelName, "color: blue; font-weight: bold; text-decoration: underline;")
+      decho(labelName, "<0,255,0>HP<r>ok")
+      assert.are.equal(span("blue") .. span("rgb(0, 255, 0)") .. "HP" .. span("blue") .. "ok", getLabelText(labelName))
+    end)
   end)
 
   describe("Tests the error handling of setLabelStyleSheet", function()
@@ -1049,6 +1139,62 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local expected = htmlString
         local actual = hecho2html(hechoString)
         assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the html conversions with a resetFormat", function()
+      local function span(fg, bg, weight, style, decoration)
+        return string.format('<span style="color: %s;background-color: %s; font-weight: %s; font-style: %s; text-decoration: %s;">', fg, bg, weight, style, decoration)
+      end
+
+      it("starts from the resetFormat and goes back to it on a reset, in all three styles", function()
+        local function labelFormat()
+          return { foreground = "#ffffff", background = "rgba(0, 0, 0, 0)", bold = true, italic = false, overline = false, reverse = false, strikeout = false, underline = true }
+        end
+        local function L(fg)
+          return span(fg, "rgba(0, 0, 0, 0)", "bold", "normal", "underline")
+        end
+        local expected = L("#ffffff") .. L("rgb(255, 0, 0)") .. "HP " .. L("rgb(0, 255, 0)") .. "1234" .. L("#ffffff") .. "/200"
+        assert.are.equal(expected, cecho2html("<red>HP <green>1234<reset>/200", labelFormat()))
+        assert.are.equal(expected, decho2html("<255,0,0>HP <0,255,0>1234<r>/200", labelFormat()))
+        assert.are.equal(expected, hecho2html("#ff0000HP #00ff001234#r/200", labelFormat()))
+      end)
+
+      it("restores every attribute on each of several resets in a row", function()
+        local reset = { foreground = { 10, 20, 30 }, background = { 40, 50, 60 }, bold = false, italic = true, overline = true, reverse = false, strikeout = true, underline = false }
+        local function T(weight, decoration)
+          return span("rgb(10, 20, 30)", "rgba(40, 50, 60, 255)", weight, "italic", decoration)
+        end
+        local base = T("normal", "overline line-through")
+        local expected = base .. T("bold", "overline line-through") .. T("bold", "overline underline line-through") .. "x" .. base .. "y" .. base .. base
+        assert.are.equal(expected, cecho2html("<b><u>x<reset>y</u></b>", reset))
+
+        local blue = span("rgb(0, 0, 255)", "rgba(40, 50, 60, 255)", "normal", "italic", "overline line-through")
+        expected = base .. blue .. "a" .. base .. "b" .. base .. "c" .. base .. base .. "d"
+        assert.are.equal(expected, cecho2html("<blue>a<reset>b<r>c<reset><reset>d", reset))
+      end)
+
+      it("leaves the resetFormat it was given untouched", function()
+        -- reversing puts the background table in the foreground slot, where an alpha gets filled in
+        local reset = { foreground = { 10, 20, 30 }, background = { 40, 50, 60 }, bold = false, italic = false, overline = false, reverse = true, strikeout = false, underline = false }
+        local before = table.deepcopy(reset)
+        local R = span("rgb(40, 50, 60)", "rgba(10, 20, 30, 255)", "normal", "normal", "none")
+        local swapped = span("rgb(0, 0, 255)", "rgba(255, 0, 0, 255)", "normal", "normal", "none")
+        local expected = R .. swapped .. "a" .. R .. "b" .. R .. "c" .. R .. R .. "d"
+        assert.are.equal(expected, cecho2html("<red:blue>a<reset>b<r>c<reset><reset>d", reset))
+        assert.are.same(before, reset)
+      end)
+
+      it("keeps every piece of a long string, in order", function()
+        local reset = { foreground = "#ffffff", background = "rgba(0, 0, 0, 0)", bold = false, italic = false, overline = false, reverse = false, strikeout = false, underline = false }
+        local red = span("rgb(255, 0, 0)", "rgba(0, 0, 0, 0)", "normal", "normal", "none")
+        local green = span("rgb(0, 255, 0)", "rgba(0, 0, 0, 0)", "normal", "normal", "none")
+        local input, expected = {}, { span("#ffffff", "rgba(0, 0, 0, 0)", "normal", "normal", "none") }
+        for i = 1, 300 do
+          input[#input + 1] = (i % 2 == 0 and "<red>" or "<green>") .. "w" .. i .. " "
+          expected[#expected + 1] = (i % 2 == 0 and red or green) .. "w" .. i .. " "
+        end
+        assert.are.equal(table.concat(expected), cecho2html(table.concat(input), reset))
       end)
     end)
   end)
