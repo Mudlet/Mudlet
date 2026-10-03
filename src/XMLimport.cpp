@@ -1888,7 +1888,13 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
                 // The last expected detail for the entry - so store this
                 // completed entry into the QMap
                 entry << readElementText();
-                map[key] = entry;
+                // Every reader of an entry indexes its file, sync flag and priority, so a hand-edited or
+                // truncated file that leaves one out would read past the end of it
+                if (entry.size() >= 3) {
+                    map[key] = entry;
+                } else {
+                    qWarning().nospace().noquote() << "XMLimport::readModulesDetailsMap() WARNING - ignoring the module \"" << key << "\" as its entry is missing some of its details.";
+                }
                 entry.clear();
             } else {
                 readUnknownElement(qsl("ModulesDetailsMap"));
