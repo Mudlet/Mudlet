@@ -5151,6 +5151,7 @@ void cTelnet::postMessage(QString msg)
 //forward data for further processing
 void cTelnet::gotPrompt(std::string& mud_data)
 {
+    emit mpHost->signal_serverTextSent();
     mpPostingTimer->stop();
 
     if (mpPostingTimer->interval() != mTimeOut) {
@@ -5241,6 +5242,12 @@ void cTelnet::gotRest(std::string& mud_data)
     if (mud_data.empty()) {
         return;
     }
+
+    // Before the text is held or posted, and so before anything behind it in the
+    // same read is handled - a password prompt has no newline on the end, so it
+    // waits here for one, and the WILL ECHO after it must not be processed while
+    // the command line still thinks the game has said nothing since.
+    emit mpHost->signal_serverTextSent();
 
     // MXP detection scan
     // Always scan when force MXP is enabled to detect re-initialization (e.g., after "config mxp on")
