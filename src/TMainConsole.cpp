@@ -1439,7 +1439,7 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
     auto pN = mSubCommandLineMap.value(name);
 
     if (!pN) {
-        pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, parentWidgetFor(windowname));
+        pN = new TCommandLine(mpHost, name, enums::SubCommandLine, this, parentWidgetFor(windowname));
         registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
@@ -3957,23 +3957,4 @@ void TMainConsole::closeEvent(QCloseEvent* event)
         mEnableClose = true;
         event->accept();
     }
-}
-
-bool TMainConsole::clear(const QString& name)
-{
-    if (name.isEmpty() || !name.compare(QLatin1String("main"))) {
-        TConsole::clear();
-        mUpperPane->showNewLines();
-        mUpperPane->forceUpdate();
-        mLowerPane->forceUpdate();
-        return true;
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        pC->clear();
-        return true;
-    }
-
-    return false;
 }

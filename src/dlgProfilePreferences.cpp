@@ -26,6 +26,7 @@
 #include "dlgProfilePreferences.h"
 
 #include "CredentialManager.h"
+#include "EditorAutoCompleteFocusHandler.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "HostDialogs.h"
@@ -163,6 +164,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // init generated dialog
     setupUi(this);
     buildShell();
+
+    // The theme/font preview below has autocomplete switched on like the script
+    // editor's own widget, so it needs the same treatment: without it edbee's
+    // completion list takes the keyboard focus while its popup is open
+    // (see #5310). Done here rather than in loadEditorTab() so it holds even
+    // when that returns early for want of a profile.
+    new EditorAutoCompleteFocusHandler(edbeePreviewWidget, this);
 
     mpTimer_apply = new QTimer(this);
     mpTimer_apply->setSingleShot(true);
@@ -1384,7 +1392,7 @@ void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QStrin
     mpStackedWidget_categories->setCurrentWidget(pPage);
     capColumnWidth(pPage);
     // As on a category page, the cap above measured cards without their padding
-    QTimer::singleShot(0, this, [this, pPage]() {
+    QTimer::singleShot(0ms, this, [this, pPage]() {
         if (pPage && mpStackedWidget_categories->currentWidget() == pPage) {
             capColumnWidth(pPage);
         }
@@ -2268,7 +2276,7 @@ void dlgProfilePreferences::spotlight(QWidget* pTarget)
     if (!pTarget) {
         return;
     }
-    QTimer::singleShot(0, this, [this, pTarget = QPointer<QWidget>(pTarget)]() {
+    QTimer::singleShot(0ms, this, [this, pTarget = QPointer<QWidget>(pTarget)]() {
         if (!pTarget) {
             return;
         }
@@ -2757,7 +2765,7 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
     capColumnWidth(pShownPage);
     // Card padding arrives with the stylesheet when the page is first shown, after the cap above. Without a
     // re-cap, a page needing more than the reading width is capped 34px short and clips.
-    QTimer::singleShot(0, this, [this, pShownPage]() {
+    QTimer::singleShot(0ms, this, [this, pShownPage]() {
         if (pShownPage && mpStackedWidget_categories->currentWidget() == pShownPage) {
             capColumnWidth(pShownPage);
             // A grown cap moves the sidebar breakpoint and the window's maximum width, otherwise not

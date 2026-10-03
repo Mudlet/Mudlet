@@ -43,6 +43,7 @@
 #include <QMessageBox>
 #include <QCommandLineOption>
 #include <QPainter>
+#include <QTextLayout>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -425,14 +426,18 @@ int main(int argc, char* argv[])
     // constructing thread, inside profile load; warming up on a pool thread now usually finishes first.
     // A local pool, so every early return joins it: the warm-up holds Qt's TLS backend mutex while loading
     // the plugin, and static destruction tears those down. Not the global pool: waiting on it would also
-    // wait for QtConcurrent work a profile left running. Runs on print-and-exit paths too, which is how
-    // AppStartupTeardownTest drives that race via --version.
+    // wait for QtConcurrent work a profile left running. --version starts it as it returns, only so
+    // AppStartupTeardownTest can drive that race: any earlier, it and this thread fill Qt's unguarded
+    // caches at once, which a QCoreApplication leaves empty - a double free.
     QThreadPool sslWarmupPool;
-    sslWarmupPool.start([]() {
-        QSslConfiguration::defaultConfiguration();
-    });
+    const auto startSslWarmup = [&sslWarmupPool]() {
+        sslWarmupPool.start([]() {
+            QSslConfiguration::defaultConfiguration();
+        });
+    };
 
     if (app) {
+        startSslWarmup();
         mudlet::start();
         // GUI runs settle the config path here, before any file is read; a
         // print-and-exit run has MudletApp resolve it on first use instead.
@@ -577,6 +582,9 @@ int main(int argc, char* argv[])
                                                           "This is free software: you are free to change and redistribute it.\n"
                                                           "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
+        if (!app) {
+            startSslWarmup();
+        }
         return 0;
     }
 
@@ -1241,12 +1249,12 @@ static bool isFileAccessible(const QString& filePath)
 // Returns true if operation succeeded, false if all retries failed
 static bool tryFileOperationWithRetry(const std::function<bool()>& operation, const QString& operationName, int maxAttempts = 3)
 {
-    const std::chrono::milliseconds retryDelays[] = {5000ms, 15000ms, 30000ms};
+    const std::chrono::milliseconds retryDelays[] = {5s, 15s, 30s};
 
     for (int attempt = 0; attempt < maxAttempts; ++attempt) {
         if (attempt > 0) {
             qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts << "after" << retryDelays[attempt - 1].count() << "ms delay";
-            QThread::msleep(retryDelays[attempt - 1].count());
+            QThread::sleep(retryDelays[attempt - 1]);
         }
 
         if (operation()) {

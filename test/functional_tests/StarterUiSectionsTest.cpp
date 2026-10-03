@@ -50,6 +50,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class StarterUiSectionsTest : public QObject
 {
     Q_OBJECT
@@ -513,8 +515,8 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("type(__settleDelay) == 'number' and __settleDelay > 0")), "the starter UI no longer waits before deciding the game's interface is gone");
         QElapsedTimer waited;
         waited.start();
-        while (waited.elapsed() < 30000 && !luaQuiet(host, qsl("not BaseUI.settings.standingAside"))) {
-            QTest::qWait(250);
+        while (waited.durationElapsed() < 30s && !luaQuiet(host, qsl("not BaseUI.settings.standingAside"))) {
+            QTest::qWait(250ms);
         }
         QVERIFY2(luaTrue(host, qsl("not BaseUI.settings.standingAside")), "the starter UI did not come back on duty at all");
         QVERIFY2(luaTrue(host, qsl("not BaseUI.container.hidden")), "the dock stayed hidden while its sections came back over the game's text");
@@ -831,7 +833,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect to the stub.");
         }
     }

@@ -35,6 +35,7 @@
 #include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "TBuffer.h"
+#include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
@@ -48,6 +49,7 @@
 #include "TKey.h"
 #include "TLabel.h"
 #include "TMap.h"
+#include "TMapViewManager.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
@@ -4002,12 +4004,16 @@ void mudlet::addConsoleForNewHost(Host* pH)
         removeAddonCommandsForHost(pH, packageName);
     });
 
-    // Wire the map engine's progress signals to the console that owns the dialog.
-    // Must be connected before the profile's map is loaded (further down in
+    // Give the map the manager of its secondary views, and wire the map engine's
+    // progress signals to the console that owns the dialog. Must be connected
+    // before the profile's map is loaded (further down in
     // slot_connectionDialogueFinished()), or early map operations have no
     // frontend to show progress.
     if (!pH->mpMap.isNull()) {
         auto pMap = pH->mpMap.data();
+        if (!pMap->getViewManager()) {
+            pMap->setViewManager(new TMapViewManager(pH, pMap));
+        }
         connect(pMap, &TMap::signal_mapTransferProgressStart, pConsole, &TMainConsole::showMapTransferProgress, Qt::UniqueConnection);
         connect(pMap, &TMap::signal_mapJsonProgressStart, pConsole, &TMainConsole::showMapJsonProgress, Qt::UniqueConnection);
         connect(pMap, &TMap::signal_mapProgressSetLabel, pConsole, &TMainConsole::setMapProgressDialogLabel, Qt::UniqueConnection);
@@ -4806,7 +4812,7 @@ void mudlet::endProfileLoad()
     mCloseRequestedDuringProfileLoad = false;
     // Queued: the load's caller is still on the stack, holding a Host this
     // close deletes
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         close();
     });
 }
@@ -8223,9 +8229,7 @@ void mudlet::activateProfile(Host* pHost)
     refreshAddonPlacement();
 
     // Reset the styles to reflect those of the now active profile:
-    mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+    setGlobalStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
 
     // Tell the new profile that it is gaining focus via a Mudlet event:
     TEvent focusGainedEvent{};
