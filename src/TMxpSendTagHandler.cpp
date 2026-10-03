@@ -26,6 +26,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 {
     mLastCaption.clear();
     mCurrentTagContent.clear();
+    mInsideTag = true;
 
     QString href = extractHref(tag);
     QString hint = extractHint(tag);
@@ -151,6 +152,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 void TMxpSendTagHandler::resetCurrentTagContent(TMxpClient& client)
 {
     mIsHrefInContent = false;
+    mInsideTag = false;
     mCurrentTagContent.clear();
     client.setLinkMode(false);
 }
@@ -179,5 +181,7 @@ void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
 }
 void TMxpSendTagHandler::handleContent(char ch)
 {
-    mCurrentTagContent.append(ch);
+    if (mInsideTag) {
+        mCurrentTagContent.append(ch);
+    }
 }

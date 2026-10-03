@@ -16,6 +16,27 @@ private:
   }
 
 private slots:
+  // Game text between two SENDs is not part of either
+  void testTextOutsideSendIsNotCaptured() {
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
+
+    MxpStartTag startTag("SEND");
+    MxpEndTag endTag("SEND");
+
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+
+    tagHandler.handleTag(ctx, stub, &startTag);
+    tagHandler.handleContent("north");
+    tagHandler.handleTag(ctx, stub, &endTag);
+    QCOMPARE(sendTagHandler.currentCaption(), qsl("north"));
+
+    tagHandler.handleContent("plain game text");
+    tagHandler.handleTag(ctx, stub, &endTag);
+    QCOMPARE(sendTagHandler.currentCaption(), QString());
+  }
+
   void testSendHrefUTF8FromMxpProcessor() {
     // issue #4368
     TMxpStubClient stub;
