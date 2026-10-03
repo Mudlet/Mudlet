@@ -622,6 +622,8 @@ QSettings* MudletApp::getQSettings()
     // parented to the application, not the main window: the window deletes
     // itself on close and the Updater keeps using this QSettings past that point.
     smpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(root), QSettings::IniFormat, QCoreApplication::instance());
+    // See noteEarlySettingsStatus()
+    smpSettings->allKeys();
     QSettings::Status status = smpSettings->status();
     if (status == QSettings::NoError) {
         status = smEarlySettingsErrors.value(smpSettings->fileName(), QSettings::NoError);
@@ -639,6 +641,9 @@ QSettings* MudletApp::getQSettings()
 
 void MudletApp::noteEarlySettingsStatus(const QSettings& settings)
 {
+    // Only the section headers are parsed up front; the lines in a section are
+    // parsed, and their errors reported, on its first read
+    settings.allKeys();
     if (settings.status() == QSettings::NoError) {
         return;
     }

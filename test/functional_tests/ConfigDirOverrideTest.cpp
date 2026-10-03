@@ -693,19 +693,29 @@ private slots:
     // main() reads Mudlet.ini before the settings store exists, and Qt hands that
     // parse to the store without parsing again - so only the early reader is told
     // the file is broken, and the store has to hear it from there
+    // A broken section header is caught as the file is opened, a broken line in
+    // a section only once that section is read
+    void test_aFormatErrorOnlyAnEarlyReaderSawIsStillReported_data()
+    {
+        QTest::addColumn<QByteArray>("contents");
+        QTest::newRow("broken section header") << QByteArray("[General]\nkey=1\n[Broken\n");
+        QTest::newRow("broken line in a section") << QByteArray("[General]\nkey=1\ntruncated mid-write\nother=2\n");
+    }
+
     void test_aFormatErrorOnlyAnEarlyReaderSawIsStillReported()
     {
+        QFETCH(QByteArray, contents);
         QTemporaryDir root;
         QVERIFY(root.isValid());
         const QString iniPath = qsl("%1/Mudlet.ini").arg(root.path());
         QFile ini(iniPath);
         QVERIFY(ini.open(QIODevice::WriteOnly));
-        ini.write("[General]\nkey=1\n[Broken\n");
+        ini.write(contents);
         ini.close();
         {
             const QSettings early(iniPath, QSettings::IniFormat);
-            QCOMPARE(early.status(), QSettings::FormatError);
             MudletApp::noteEarlySettingsStatus(early);
+            QCOMPARE(early.status(), QSettings::FormatError);
         }
 
         MudletApp::setConfigPath(root.path());
