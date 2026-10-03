@@ -328,7 +328,7 @@ private:
     QString consoleTextSinceMark() const
     {
         QString text;
-        auto& buffer = mpHost->mpConsole->buffer;
+        auto& buffer = mpHost->mainConsoleView()->buffer;
         // From the mark itself, not past it: every console message ends in a
         // newline, so the line the mark names is the empty one the next message
         // starts writing into rather than the previous test's last line.
@@ -381,7 +381,7 @@ private:
         });
     }
 
-    QList<QProgressDialog*> consoleProgressDialogs() const { return mpHost->mpConsole->findChildren<QProgressDialog*>(); }
+    QList<QProgressDialog*> consoleProgressDialogs() const { return mpHost->mainConsoleView()->findChildren<QProgressDialog*>(); }
 
     // Relies on the map's being the console's only progress dialog: a package
     // download would put a second one there (TMainConsole::showPackageDownloadProgress),
@@ -591,7 +591,7 @@ private slots:
         QVERIFY2(mpHost, "the test profile could not be created");
         QSignalSpy connectionSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
         QVERIFY2(connectionSpy.count() == 1 || connectionSpy.wait(5s), "the test profile never connected to the stub game");
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         // No mapper widget yet, so every download below takes the standalone
         // progress path the signals under test belong to, until the tests at the
         // end of this file that deliberately create one.
@@ -630,7 +630,7 @@ private slots:
 
     void init()
     {
-        mConsoleMark = mpHost->mpConsole->buffer.getLastLineNumber();
+        mConsoleMark = mpHost->mainConsoleView()->buffer.getLastLineNumber();
         mpMapServer->forgetRequests();
         forgetMapDownloadEvents();
     }

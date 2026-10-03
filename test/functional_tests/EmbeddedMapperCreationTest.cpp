@@ -114,7 +114,7 @@ private slots:
             QFAIL("Could not connect with the host.");
         }
 
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         watchMapOpenEvent();
     }
 
@@ -142,18 +142,18 @@ private slots:
         pMap->setDefaultAreaShown(false);
         QVERIFY2(!pRoomDB->isEmpty(), "the map has to be non-empty for this to be the returning-user path");
 
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        QVERIFY(mpHost->mpConsole->mpMapper);
+        QVERIFY(mpHost->mainConsoleView()->mpMapper);
 
         QVERIFY2(mapOpenEventCountIs(1), "createMapper() did not raise mapOpenEvent exactly once for an already-loaded map");
 
-        auto* pComboBox = mpHost->mpConsole->mpMapper->comboBox_showArea;
+        auto* pComboBox = mpHost->mainConsoleView()->mpMapper->comboBox_showArea;
         QCOMPARE(pComboBox->count(), 2); // the hidden default area is still in the constructor's fill
         QCOMPARE(pComboBox->currentText(), mPlayerAreaName);
 
         // Geyser.Mapper re-runs createMapper() on every reposition
-        auto [recreated, recreateMessage] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [recreated, recreateMessage] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(recreated, qPrintable(recreateMessage));
         QVERIFY2(mapOpenEventCountIs(1), "a repeat createMapper() raised mapOpenEvent again");
     }
@@ -177,9 +177,9 @@ private slots:
         QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(mapKey);
         QVERIFY2(pDock, "the toolbar action created no map dock, so this case covers nothing");
 
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        dlgMapper* pEmbedded = mpHost->mpConsole->mpMapper.data();
+        dlgMapper* pEmbedded = mpHost->mainConsoleView()->mpMapper.data();
         QVERIFY2(pEmbedded, "createMapper() left no embedded mapper to lose");
         QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
 
@@ -208,25 +208,25 @@ private slots:
     {
         auto [opened, openMessage] = mpHost->openMapWidget(QString(), -1, -1, -1, -1);
         QVERIFY2(opened, qPrintable(openMessage));
-        QVERIFY(mpHost->mpConsole->mpDockableMapWidget);
+        QVERIFY(mpHost->mainConsoleView()->mpDockableMapWidget);
         QVERIFY2(mpHost->mapWidgetGeometry().has_value(), "the map widget did not come up, so closing it below proves nothing");
 
         auto [closed, closeMessage] = mpHost->closeMapWidget();
         QVERIFY2(closed, qPrintable(closeMessage));
         QVERIFY2(!mpHost->mapWidgetGeometry().has_value(), "closeMapWidget() left the map widget on screen");
-        QPointer<QDockWidget> pDock = mpHost->mpConsole->mpDockableMapWidget;
+        QPointer<QDockWidget> pDock = mpHost->mainConsoleView()->mpDockableMapWidget;
         QPointer<QWidget> pDockMapper = pDock->widget();
 
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        QVERIFY(mpHost->mpConsole->mpMapper);
+        QVERIFY(mpHost->mainConsoleView()->mpMapper);
         // the embedded mapper is what draws the map now, not the dock's own one
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
 
         // gone rather than merely hidden behind the embedded mapper - only the raw
         // pointer tells those two apart, the getter below reads the same "not on
         // screen" either way and would have passed before this was fixed
-        QVERIFY(!mpHost->mpConsole->mpDockableMapWidget);
+        QVERIFY(!mpHost->mainConsoleView()->mpDockableMapWidget);
         QVERIFY(!mpHost->mapWidgetGeometry().has_value());
         auto [reopened, reopenMessage] = mpHost->openMapWidget(QString(), -1, -1, -1, -1);
         QVERIFY2(!reopened, "openMapWidget() built a second map over the embedded mapper");
@@ -234,7 +234,7 @@ private slots:
         auto [closedAgain, closeAgainMessage] = mpHost->closeMapWidget();
         QVERIFY(!closedAgain);
         QCOMPARE(closeAgainMessage, qsl("no map widget found to close"));
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
 
         // openMapWidget() raised one and the mapper that replaced its widget raises
         // another, which is what tells a mapper package to set itself up again
@@ -247,7 +247,7 @@ private slots:
         QVERIFY2(pDock.isNull(), "the map widget was forgotten rather than destroyed, so it is still parented on the main window");
         QVERIFY2(pDockMapper.isNull(), "the map widget's own mapper outlived the dock that owned it");
         QVERIFY2(mpHost->mpMap->mpMapper, "the map widget's death took the map's mapper with it");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
     }
 
     // The profile's own map dock is hidden rather than destroyed when the main
@@ -268,22 +268,22 @@ private slots:
         mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
         QVERIFY2(mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "the toolbar action built no main window map dock, so this covers nothing");
-        QVERIFY2(mpHost->mpConsole->mpDockableMapWidget, "the toolbar action destroyed the profile's own map dock rather than hiding it");
+        QVERIFY2(mpHost->mainConsoleView()->mpDockableMapWidget, "the toolbar action destroyed the profile's own map dock rather than hiding it");
         QVERIFY2(!mpHost->mapWidgetGeometry().has_value(), "the toolbar action left the profile's own map dock on screen");
         QVERIFY2(mpHost->mpMap->mpMapper.data() != pOwnDockMapper, "the main window dock did not take the map over, so this covers nothing");
 
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        QVERIFY(!mpHost->mpConsole->mpDockableMapWidget);
-        QVERIFY(mpHost->mpConsole->mpMapper);
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QVERIFY(!mpHost->mainConsoleView()->mpDockableMapWidget);
+        QVERIFY(mpHost->mainConsoleView()->mpMapper);
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
 
         // and closing the main window dock hands the map to the embedded mapper
         // rather than to the dock that is now gone
         mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
         QVERIFY2(mpHost->mpMap->mpMapper, "closing the main window map dock left the map with no mapper at all");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
     }
 
     // Companion guard to the above rather than a guard for the bug: a fix that
@@ -297,11 +297,11 @@ private slots:
         dlgMapper* pDockMapper = mpHost->mpMap->mpMapper.data();
         QVERIFY(pDockMapper);
 
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(!created, "createMapper() built an embedded mapper over a map widget that was on screen");
         QCOMPARE(message, qsl("cannot create mapper. Do you already use a map window?"));
-        QVERIFY2(!mpHost->mpConsole->mpMapper, "the refused call left an embedded mapper behind");
-        QVERIFY(mpHost->mpConsole->mpDockableMapWidget);
+        QVERIFY2(!mpHost->mainConsoleView()->mpMapper, "the refused call left an embedded mapper behind");
+        QVERIFY(mpHost->mainConsoleView()->mpDockableMapWidget);
         QCOMPARE(mpHost->mpMap->mpMapper.data(), pDockMapper);
         QVERIFY2(mapOpenEventCountIs(1), "the refused createMapper() raised a mapOpenEvent of its own");
     }
@@ -320,14 +320,14 @@ private slots:
         mudlet::self()->hide();
         qApp->processEvents();
 
-        QVERIFY2(!mpHost->mpConsole->mpDockableMapWidget->isVisible(), "the map widget stayed visible with the main window hidden, so this covers nothing");
+        QVERIFY2(!mpHost->mainConsoleView()->mpDockableMapWidget->isVisible(), "the map widget stayed visible with the main window hidden, so this covers nothing");
         QVERIFY2(mpHost->mapWidgetGeometry().has_value(), "a main window that is merely not on screen made the map widget itself count as closed");
 
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(!created, "createMapper() took away the map widget of a profile whose main window was only minimised");
         QCOMPARE(message, qsl("cannot create mapper. Do you already use a map window?"));
-        QVERIFY(mpHost->mpConsole->mpDockableMapWidget);
-        QVERIFY2(!mpHost->mpConsole->mpMapper, "the refused call left an embedded mapper behind");
+        QVERIFY(mpHost->mainConsoleView()->mpDockableMapWidget);
+        QVERIFY2(!mpHost->mainConsoleView()->mpMapper, "the refused call left an embedded mapper behind");
     }
 
     // TMap::mpMapper is what the map is painted through, and a window that
@@ -336,14 +336,14 @@ private slots:
     // than leave rooms being created and never drawn.
     void test_createMapperTakesTheMapBackWhenNothingIsDrawingIt()
     {
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        dlgMapper* pEmbedded = mpHost->mpConsole->mpMapper.data();
+        dlgMapper* pEmbedded = mpHost->mainConsoleView()->mpMapper.data();
         QVERIFY(pEmbedded);
 
         mpHost->mpMap->mpMapper = nullptr;
 
-        auto [again, againMessage] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [again, againMessage] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(again, qPrintable(againMessage));
         QVERIFY2(mpHost->mpMap->mpMapper, "a repeat createMapper() left the map with no mapper at all");
         QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
@@ -360,19 +360,19 @@ private slots:
     // being drawn as soon as the event loop ran the deferred delete.
     void test_createMapperTakesOverAMapWidgetThatWasDrawingTheMap()
     {
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        dlgMapper* pEmbedded = mpHost->mpConsole->mpMapper.data();
+        dlgMapper* pEmbedded = mpHost->mainConsoleView()->mpMapper.data();
         QVERIFY(pEmbedded);
 
         mpHost->mpMap->mpMapper = nullptr;
         mudlet::self()->slot_showMapperDialog();
-        QVERIFY2(mpHost->mpConsole->mpDockableMapWidget, "no map widget was built, so this covers nothing");
-        QPointer<QWidget> pDockMapper = mpHost->mpConsole->mpDockableMapWidget->widget();
+        QVERIFY2(mpHost->mainConsoleView()->mpDockableMapWidget, "no map widget was built, so this covers nothing");
+        QPointer<QWidget> pDockMapper = mpHost->mainConsoleView()->mpDockableMapWidget->widget();
         QCOMPARE(mpHost->mpMap->mpMapper.data(), qobject_cast<dlgMapper*>(pDockMapper.data()));
-        mpHost->mpConsole->mpDockableMapWidget->hide();
+        mpHost->mainConsoleView()->mpDockableMapWidget->hide();
 
-        auto [again, againMessage] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [again, againMessage] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(again, qPrintable(againMessage));
         QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
 
@@ -386,9 +386,9 @@ private slots:
     {
         QVERIFY2(mpHost->mpMap->mpRoomDB->isEmpty(), "a freshly created profile was expected to have no rooms");
 
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        QVERIFY(mpHost->mpConsole->mpMapper);
+        QVERIFY(mpHost->mainConsoleView()->mpMapper);
 
         QVERIFY2(mapOpenEventCountIs(1), "createMapper() did not raise mapOpenEvent exactly once for a first-run profile");
     }
@@ -400,15 +400,15 @@ private slots:
     // on direct interaction, even after the dock is closed again.
     void test_toolbarMapActionLeavesEmbeddedMapperInCharge()
     {
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        QVERIFY(mpHost->mpConsole->mpMapper);
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QVERIFY(mpHost->mainConsoleView()->mpMapper);
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
 
         mudlet::self()->slot_showMapperDialog();
 
         QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "the toolbar map action built a competing main window map dock over an embedded mapper");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
         QVERIFY2(mapOpenEventCountIs(1), "the toolbar map action raised mapOpenEvent over an existing embedded mapper");
     }
 
@@ -421,7 +421,7 @@ private slots:
         QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Show map"));
 
         mudlet::self()->show();
-        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
         qApp->processEvents();
         QVERIFY2(mpHost->mapperShown(), "the embedded mapper did not come up on screen, so the Hide map branch cannot be exercised");

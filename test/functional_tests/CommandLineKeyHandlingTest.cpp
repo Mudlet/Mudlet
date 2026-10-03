@@ -88,12 +88,12 @@ private:
     TCommandLine* freshCommandLine()
     {
         mLineName = qsl("keyHandlingLine%1").arg(++mLineCounter);
-        auto [created, message] = mpHost->mpConsole->createCommandLine(QString(), mLineName, 0, 0, 300, 30);
+        auto [created, message] = mpHost->mainConsoleView()->createCommandLine(QString(), mLineName, 0, 0, 300, 30);
         if (!created) {
             qWarning() << "CommandLineKeyHandlingTest - could not create a command line:" << message;
             return nullptr;
         }
-        TCommandLine* pCommandLine = mpHost->mpConsole->subCommandLineWidget(mLineName);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->subCommandLineWidget(mLineName);
         if (pCommandLine) {
             pCommandLine->mSaveCommands = false;
         }
@@ -505,7 +505,7 @@ private slots:
     // and pressing it again cycles on to the next match.
     void test_tabCompletesAWordFromTheConsoleBuffer()
     {
-        mpHost->mpConsole->print(qsl("qzxalpha qzxbravo\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxalpha qzxbravo\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -528,7 +528,7 @@ private slots:
     // are already what the player meant.
     void test_tabCompletesOnlyTheWordBeingTyped()
     {
-        mpHost->mpConsole->print(qsl("a qzxquinquagenarian appears\n"));
+        mpHost->mainConsoleView()->print(qsl("a qzxquinquagenarian appears\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -544,7 +544,7 @@ private slots:
     // (#1954)
     void test_tabCompletesPastANonAsciiLetter()
     {
-        mpHost->mpConsole->print(qsl("qzvbjörnsson waves\n"));
+        mpHost->mainConsoleView()->print(qsl("qzvbjörnsson waves\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -564,7 +564,7 @@ private slots:
     // word before it would overwrite what was already accepted.
     void test_tabDoesNothingAfterASpace()
     {
-        mpHost->mpConsole->print(qsl("the qzxbrachiosaurus lumbers past\n"));
+        mpHost->mainConsoleView()->print(qsl("the qzxbrachiosaurus lumbers past\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -582,7 +582,7 @@ private slots:
     // test takes whichever Tab offered.
     void test_aSpaceAcceptsTheCompletionSoTabNoLongerCyclesIt()
     {
-        mpHost->mpConsole->print(qsl("qzxobstreperous qzxobfuscatory\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxobstreperous qzxobfuscatory\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -602,7 +602,7 @@ private slots:
     // from wherever the last one was.
     void test_aNewPartWordStartsTheCompletionOver()
     {
-        mpHost->mpConsole->print(qsl("qzxobstreperous qzxobfuscatory\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxobstreperous qzxobfuscatory\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -644,7 +644,7 @@ private slots:
     // in the game's output, and taking it off the blacklist puts it back.
     void test_blacklistedWordsAreNeverOffered()
     {
-        mpHost->mpConsole->print(qsl("qzxkeepme qzxdropme\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxkeepme qzxdropme\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         pCommandLine->addBlacklist(qsl("qzxdropme"));
@@ -677,7 +677,7 @@ private slots:
     // line they named.
     void test_luaSuggestionsAndBlacklistReachTheNamedCommandLine()
     {
-        mpHost->mpConsole->print(qsl("qzxluadropme\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxluadropme\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         const auto completes = [pCommandLine](const QString& typed) {
@@ -737,8 +737,8 @@ private slots:
     // and shrinks again when Lua clears it.
     void test_luaTextResizesTheMainCommandLine()
     {
-        QVERIFY(mpHost->mpConsole->mpCommandLine);
-        QWidget* pLayer = mpHost->mpConsole->layerCommandLine;
+        QVERIFY(mpHost->mainConsoleView()->mpCommandLine);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
         QVERIFY(pLayer);
         const auto clearMain = qScopeGuard([this]() {
             runLua(qsl("clearCmdLine()"));
@@ -852,7 +852,7 @@ private slots:
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
-        TMainConsole* pConsole = mpHost->mpConsole;
+        TMainConsole* pConsole = mpHost->mainConsoleView();
         const QString sentinel = qsl("qzxscrollbackline");
         for (int line = 0; line < 60; ++line) {
             pConsole->print(qsl("%1 %2\n").arg(sentinel, QString::number(line)));
@@ -990,7 +990,7 @@ private slots:
 
         // opening the search bar selects whatever is in it, so a search bar that
         // was left deselected and comes back selected is one that opened
-        QLineEdit* pSearchBox = mpHost->mpConsole->mpBufferSearchBox;
+        QLineEdit* pSearchBox = mpHost->mainConsoleView()->mpBufferSearchBox;
         QVERIFY(pSearchBox);
         pSearchBox->setText(qsl("a search that was already there"));
         pSearchBox->deselect();

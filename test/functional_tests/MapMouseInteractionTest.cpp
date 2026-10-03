@@ -696,7 +696,7 @@ private:
     // The wheel stores the zoom on the area, where the next frame reads it from.
     double zoom() const { return area()->get2DMapZoom(); }
 
-    QString consoleText() const { return mpHost->mpConsole->buffer.lineBuffer.join(QChar::LineFeed); }
+    QString consoleText() const { return mpHost->mainConsoleView()->buffer.lineBuffer.join(QChar::LineFeed); }
 
     QList<QTreeWidgetItem*> listedRooms() const
     {
@@ -816,7 +816,7 @@ private slots:
             mp2dMap->mpDlgMapLabel->close();
         }
         runLua(qsl("mudlet.custom_speedwalk = nil\ndoSpeedWalk = nil"));
-        mpHost->mpConsole->discardAll();
+        mpHost->mainConsoleView()->discardAll();
         mp2dMap->mCustomLinesRoomFrom = 0;
         mp2dMap->mCustomLinesRoomTo = 0;
         mp2dMap->mCustomLinesRoomExit.clear();

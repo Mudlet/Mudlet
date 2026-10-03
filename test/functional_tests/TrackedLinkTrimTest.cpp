@@ -99,7 +99,7 @@ private slots:
 
         mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanupTestCase()
@@ -121,7 +121,7 @@ private slots:
     // trim calls this at all is covered end to end by TBufferOSC_spec.lua.
     void test_adjustingLineNumbersDropsOnlyTheLinksOnRemovedLines()
     {
-        auto& manager = mpHost->mpConsole->getHyperlinkVisibilityManager();
+        auto& manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
 
         const int firstRemoved = 0;
         const int lastRemoved = csmBatchDeleteSize - 1;
@@ -142,7 +142,7 @@ private slots:
     // which links are still in use cannot see it - but it is still live.
     void test_concealedLinkKeepsItsCommandsAcrossATrim()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
         QVERIFY(mpHost->clearWindow(qsl("main")));
@@ -173,7 +173,7 @@ private slots:
     // it moves up exactly one.
     void test_aWholelineConcealmentMovesTheLinksBelowItOnlyOnce()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
         QVERIFY(mpHost->clearWindow(qsl("main")));
@@ -218,7 +218,7 @@ private slots:
     // and a tracked link's command has to go with the rest.
     void test_clearingTheWindowStillDropsATrackedLinksCommands()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& manager = pConsole->getHyperlinkVisibilityManager();
 
         fill(pConsole, qsl("seed"), 5);
@@ -241,7 +241,7 @@ private slots:
     // reach, so it has to be dropped along with them.
     void test_clearingTheWindowDropsAQueuedHiddenAnnouncement()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& manager = pConsole->getHyperlinkVisibilityManager();
         QVERIFY(mpHost->clearWindow(qsl("main")));
 
@@ -268,7 +268,7 @@ private slots:
     // leaving it to the view.
     void test_deletingALineMovesTrackedLinks()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
         QVERIFY(mpHost->clearWindow(qsl("main")));
@@ -299,7 +299,7 @@ private slots:
     // or a cut would otherwise drop every link on the console it was taken from.
     void test_anotherBuffersLifecycleLeavesTheTrackedLinksAlone()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& manager = pConsole->getHyperlinkVisibilityManager();
         QVERIFY(mpHost->clearWindow(qsl("main")));
 
@@ -323,7 +323,7 @@ private slots:
     // to maintain its links off its own buffer rather than the main one's.
     void test_aMiniconsoleMaintainsItsOwnTrackedLinks()
     {
-        auto* pMain = mpHost->mpConsole.data();
+        auto* pMain = mpHost->mainConsoleView();
         auto* pMini = pMain->createMiniConsole(QString(), qsl("trackedLinkMini"), 0, 0, 300, 100);
         QVERIFY2(pMini, "the miniconsole was not created, so this test proves nothing");
         QVERIFY2(&pMini->getHyperlinkVisibilityManager() != &pMain->getHyperlinkVisibilityManager(), "the miniconsole shares the main console's manager");

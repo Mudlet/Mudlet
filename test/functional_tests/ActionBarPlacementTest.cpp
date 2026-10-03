@@ -130,7 +130,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* top = makeRootBar(host, qsl("placementTop"), 0);
@@ -155,10 +155,10 @@ private slots:
         auto* floating = makeRootBar(host, qsl("placementFloating"), 4);
         host->getActionUnit()->updateAllToolbars();
 
-        QVERIFY2(host->mpConsole->actionToolBar(floating), "a floating location should have been given a toolbar");
-        QVERIFY(!host->mpConsole->actionEasyButtonBar(floating));
-        QCOMPARE(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)), Qt::RightDockWidgetArea);
-        QVERIFY(host->mpConsole->actionToolBars().size() == 1);
+        QVERIFY2(host->mainConsoleView()->actionToolBar(floating), "a floating location should have been given a toolbar");
+        QVERIFY(!host->mainConsoleView()->actionEasyButtonBar(floating));
+        QCOMPARE(mudlet::self()->dockWidgetArea(host->mainConsoleView()->actionToolBar(floating)), Qt::RightDockWidgetArea);
+        QVERIFY(host->mainConsoleView()->actionToolBars().size() == 1);
     }
 
     void test_aDeactivatedFloatingToolbarIsTakenOffTheWindow()
@@ -169,16 +169,16 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementDeactivated"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QVERIFY(host->mpConsole->actionToolBar(floating));
-        QVERIFY2(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)) != Qt::NoDockWidgetArea, "the toolbar has to be docked first, or undocking it proves nothing");
+        QVERIFY(host->mainConsoleView()->actionToolBar(floating));
+        QVERIFY2(mudlet::self()->dockWidgetArea(host->mainConsoleView()->actionToolBar(floating)) != Qt::NoDockWidgetArea, "the toolbar has to be docked first, or undocking it proves nothing");
 
         floating->setIsActive(false);
         floating->setDataChanged();
         host->getActionUnit()->updateAllToolbars();
 
-        QVERIFY2(host->mpConsole->actionToolBar(floating), "a deactivated toolbar is taken down, not destroyed");
-        QCOMPARE(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)), Qt::NoDockWidgetArea);
-        QVERIFY(host->mpConsole->actionToolBar(floating)->isHidden());
+        QVERIFY2(host->mainConsoleView()->actionToolBar(floating), "a deactivated toolbar is taken down, not destroyed");
+        QCOMPARE(mudlet::self()->dockWidgetArea(host->mainConsoleView()->actionToolBar(floating)), Qt::NoDockWidgetArea);
+        QVERIFY(host->mainConsoleView()->actionToolBar(floating)->isHidden());
     }
 
     void test_aButtonBarMovedUnderAnotherActionLeavesItsStrip()
@@ -186,7 +186,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* moved = makeRootBar(host, qsl("placementMoved"), 0);
@@ -212,7 +212,7 @@ private slots:
         auto* moved = makeRootBar(host, qsl("placementMovedFloating"), 4);
         auto* newParent = makeRootBar(host, qsl("placementFloatingParent"), 0);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(moved);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(moved);
         QVERIFY(toolBar);
         toolBar->setFloating(true);
 
@@ -228,7 +228,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         // Childless, so deleting it runs no unregisterAction() but its own
@@ -250,7 +250,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* floating = makeRootBar(host, qsl("placementNamed"), 4);
@@ -272,7 +272,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* floating = makeRootBar(host, qsl("placementShownFloating"), 4);
@@ -299,7 +299,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* removed = makeRootBar(host, qsl("placementForgotten"), 4, false);
@@ -320,7 +320,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* floating = makeRootBar(host, qsl("placementGroupHome"), 4);
@@ -356,7 +356,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* root = makeRootBar(host, qsl("placementMenuHome"), 0, false);
@@ -389,7 +389,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* root = makeRootBar(host, qsl("placementDeletedMenuHome"), 0, false);
@@ -427,7 +427,7 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementLayout"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(floating);
         QVERIFY(toolBar);
         QCoreApplication::processEvents();
         host->commitLayoutUpdates();
@@ -459,7 +459,7 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementFlushed"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(floating);
         QVERIFY(toolBar);
         QCoreApplication::processEvents();
         host->commitLayoutUpdates();
@@ -485,7 +485,7 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementLayoutGone"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(floating);
         QVERIFY(toolBar);
         QCoreApplication::processEvents();
         host->commitLayoutUpdates();

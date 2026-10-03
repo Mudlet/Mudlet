@@ -101,7 +101,7 @@ private slots:
             QFAIL("Could not connect with the host.");
         }
 
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanup()
@@ -123,7 +123,7 @@ private slots:
         mudlet::self()->slot_showMapperDialog();
 
         QVERIFY2(runLua(qsl("assert(buttonEvents == 2)")), "expected each map button entry point to raise sysMapperButtonAction exactly once");
-        QVERIFY2(!mpHost->mpConsole->mpDockableMapWidget, "scripted mode still created the default map dock");
+        QVERIFY2(!mpHost->mainConsoleView()->mpDockableMapWidget, "scripted mode still created the default map dock");
         QVERIFY2(!mpHost->mpMap->mpMapper, "scripted mode still created a mapper");
         QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "scripted mode still created a main window map dock");
     }
