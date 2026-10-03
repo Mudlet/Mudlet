@@ -2377,6 +2377,28 @@ describe("Trigger processing", function()
             assert.is_true(spec.wasPrompt, "isPrompt() was false on a prompt line the trigger had just gagged")
         end)
 
+        it("isPrompt stays true after a prompt trigger clears the main window", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function()
+                _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+                clearWindow()
+                _G.TrigSpec.linesAfter = getLineCount()
+                _G.TrigSpec.wasPrompt = isPrompt()
+            end)
+            assert.is_true(liveTriggerId > 0, "the prompt trigger was not created")
+
+            echo("\nfirst\nsecond\n")
+            local ok, msg = feedTelnet("SpecPromptCleared> <T_IAC><T_GA>")
+            local spec = _G.TrigSpec
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, spec.fired, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(0, spec.linesAfter, "clearWindow() did not leave the one empty line")
+            assert.is_true(spec.wasPrompt, "isPrompt() was false on a prompt line the trigger had just cleared away")
+        end)
+
         it("isPrompt stays false after an ordinary trigger gags the line it matched", function()
             _G.TrigSpec = {fired = 0}
             liveTriggerId = tempRegexTrigger("^SpecOrdinaryGagged$", gagAndReadIsPrompt)

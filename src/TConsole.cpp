@@ -1046,9 +1046,7 @@ void TConsole::refresh()
 
 void TConsole::clear()
 {
-    buffer.clear();
-    // --mirror's pending line went with the buffer.
-    mpModel->mMirrorPendingLine.clear();
+    mpModel->clear();
     bufferCleared();
 }
 

@@ -100,6 +100,14 @@ void TConsoleModel::deleteLineAtCursor()
     buffer.deleteLine(mUserCursor.y());
 }
 
+void TConsoleModel::clear()
+{
+    buffer.clear();
+    // --mirror's pending line went with the buffer.
+    mMirrorPendingLine.clear();
+    mUserCursor = QPoint();
+}
+
 void TConsoleModel::deselect()
 {
     P_begin = QPoint();
