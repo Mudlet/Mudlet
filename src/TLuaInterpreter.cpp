@@ -8856,7 +8856,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
-            host.mpMap->mpMapper->slot_roomSize(getVerifiedInt(L, __func__, 2, "value"));
+            // Through float, as dlgMapper::slot_roomSize() rounds it:
+            host.mRoomSize = static_cast<float>(getVerifiedInt(L, __func__, 2, "value") / 10.0);
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
             return success();
         }
         if (key == qsl("mapExitSize")) {
@@ -8871,15 +8873,18 @@ int TLuaInterpreter::setConfig(lua_State* L)
             if (!std::isfinite(size) || size < 1.0) {
                 return warnArgumentValue(L, __func__, qsl("mapExitSize must be a number of at least 1, got %1").arg(size));
             }
-            host.mpMap->mpMapper->mp2dMap->setExitSize(size);
+            host.mLineSize = size;
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
             return success();
         }
         if (key == qsl("mapRoundRooms")) {
-            host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
+            host.mBubbleMode = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoundRooms);
             return success();
         }
         if (key == qsl("showRoomIdsOnMap")) {
-            host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
+            host.mShowRoomID = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowRoomIds);
             return success();
         }
         if (key == qsl("showMapInfo")) {
@@ -8903,9 +8908,8 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
         if (key == qsl("mapShowGrid")) {
-            const bool showGrid = getVerifiedBool(L, __func__, 2, "value");
-            host.mMapperShowGrid = showGrid;
-            host.mpMap->mpMapper->slot_setShowGrid(showGrid);
+            host.mMapperShowGrid = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowGrid);
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {

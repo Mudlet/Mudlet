@@ -71,6 +71,10 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+public:
+    // Host settings the 2D map keeps a copy of to draw with
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
+
 signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
@@ -93,6 +97,7 @@ signals:
     void signal_defaultAreaVisibilitySet(bool wasShown);
     void signal_mapInfoContributorsChanged();
     void signal_mapRepaintRequested();
+    void signal_mapperSettingChanged(TMap::MapperSetting setting);
 
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
@@ -150,6 +155,7 @@ public:
     void announceDefaultAreaVisibilitySet(bool wasShown);
     void announceMapInfoContributorsChanged();
     void requestMapRepaint();
+    void announceMapperSettingChanged(MapperSetting setting);
 
     void audit();
     inline static bool smShowMapAuditErrors = false;

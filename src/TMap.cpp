@@ -3856,6 +3856,11 @@ void TMap::requestMapRepaint()
     emit signal_mapRepaintRequested();
 }
 
+void TMap::announceMapperSettingChanged(const MapperSetting setting)
+{
+    emit signal_mapperSettingChanged(setting);
+}
+
 void TMap::updateArea(int areaId)
 {
     static bool debounce;
