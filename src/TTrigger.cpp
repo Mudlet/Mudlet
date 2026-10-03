@@ -853,7 +853,7 @@ TRootTriggerFilter TTrigger::rootFilter() const
     return filter;
 }
 
-bool TTrigger::uniformLineColors(Host* pHost, const int line, const int length, QRgb& foreground, QRgb& background)
+bool TTrigger::uniformLineColors(Host* pHost, const int line, QRgb& foreground, QRgb& background)
 {
     if (!pHost || line < 0) {
         return false;
@@ -862,8 +862,7 @@ bool TTrigger::uniformLineColors(Host* pHost, const int line, const int length, 
     if (line >= static_cast<int>(buffer.buffer.size())) {
         return false;
     }
-    const int end = qBound(0, length, static_cast<int>(buffer.buffer[line].size()));
-    const TChar* pColors = uniformWindowColors(buffer, buffer.preTriggerPassLine(line), line, 0, end);
+    const TChar* pColors = uniformWindowColors(buffer, buffer.preTriggerPassLine(line), line, 0, static_cast<int>(buffer.buffer[line].size()));
     if (!pColors) {
         return false;
     }
@@ -1268,7 +1267,7 @@ void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
     for (auto* triggerNode : *mpMyChildrenList) {
         auto* trigger = static_cast<TTrigger*>(triggerNode);
         // no line filter: a capture is not the line those bits were built from
-        trigger->match(subject, text, lineNumber, posOffset, nullptr);
+        trigger->match(subject, text, lineNumber, posOffset, nullptr, true);
     }
 }
 
@@ -1353,7 +1352,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
     }
 }
 
-bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, int length)
+bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, int length, bool haystackIsCapture)
 {
     if (patternNumber >= mColorPatternList.size()) {
         return false;
@@ -1376,8 +1375,9 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     // Filter ("only pass matches") parents hand children just the matched
     // capture, so restrict the scan to that window; for top-level triggers
     // the window covers the whole line:
-    const int start = qBound(0, posOffset, static_cast<int>(bufferLine.size()));
-    const int end = qBound(start, posOffset + length, static_cast<int>(bufferLine.size()));
+    const int lineLength = static_cast<int>(bufferLine.size());
+    const int start = qBound(0, posOffset, lineLength);
+    const int end = haystackIsCapture ? qBound(start, posOffset + length, lineLength) : lineLength;
     int pos = start;
     int matchBegin = -1;
     bool matching = false;
@@ -1749,7 +1749,7 @@ bool TTrigger::prescanMayFire(
     return false;
 }
 
-bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams)
+bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture)
 {
     // Guard against re-entrancy: cleanup may have deleted this trigger while
     // match() was still on the call stack
@@ -1826,9 +1826,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                 break;
 
             case REGEX_COLOR_PATTERN:
-                // for a filter child the haystack is just the parent's capture,
-                // so its length bounds the color scan window on that line
-                ret = match_color_pattern(line, patternNumber, posOffset, static_cast<int>(haystack.length()));
+                ret = match_color_pattern(line, patternNumber, posOffset, static_cast<int>(haystack.length()), haystackIsCapture);
                 break;
 
             case REGEX_PROMPT:
@@ -1934,7 +1932,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                     if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack) && !subject.dropsText()) {
                         continue;
                     }
-                    ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams);
+                    ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams, haystackIsCapture);
                     if (ret) {
                         conditionMet = true;
                     }
@@ -1952,7 +1950,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             }
             for (auto* triggerNode : *mpMyChildrenList) {
                 auto* trigger = static_cast<TTrigger*>(triggerNode);
-                ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams);
+                ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams, haystackIsCapture);
                 if (ret) {
                     conditionMet = true;
                 }
