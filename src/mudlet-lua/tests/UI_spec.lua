@@ -2040,6 +2040,12 @@ describe("Tests UI functions", function()
         assert.is_true(BaseUI.prefixesLeadTheirShapes())
       end)
 
+      it("gates each shape only on a literal it cannot match without", function()
+        for _, line in ipairs(readableLines) do
+          assert.is_true(BaseUI.needsHoldOn(line), line)
+        end
+      end)
+
       -- restore whatever the assertions do: a raised vitalsLock left behind
       -- makes createVitalsTriggers a silent no-op for every later test
       local savedIds, savedLock
