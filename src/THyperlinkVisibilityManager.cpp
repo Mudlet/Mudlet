@@ -717,11 +717,10 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
     }
 }
 
-// Gotcha: the screen-reader announcements below are the one view concern still
-// wired straight from this class, so unlike the repaint they no longer stop when
-// the console does - closing a profile mid-map-import, where closeHost() keeps
-// retrying every 50ms, can announce about a console that has already gone. They
-// move to the frontend with the rest of this file's mudlet:: reach-ins.
+// Gotcha: the screen-reader announcements below go straight to the app frontend,
+// so unlike the repaint they don't stop when the console does - closing a profile
+// mid-map-import, where closeHost() keeps retrying every 50ms, can announce about
+// a console that has already gone.
 void THyperlinkVisibilityManager::queueHiddenAnnouncement()
 {
     ++mPendingHiddenCount;

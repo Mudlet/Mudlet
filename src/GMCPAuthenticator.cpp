@@ -28,7 +28,6 @@
 #include "UntrustedText.h"
 #include "ctelnet.h"
 #include "TAppFrontend.h"
-#include <QAccessible>
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDesktopServices>
