@@ -151,6 +151,22 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   } >> "${CLAUDE_ENV_FILE}"
 fi
 
+# Let worktrees share ccache hits. By default ccache hashes the absolute paths
+# CMake passes and, for a -g build, the working directory too, so a worktree
+# beside this checkout missed on every file its sibling had already compiled.
+# base_dir has ccache rewrite paths below it as relative ones, which are the
+# same in every worktree; it has to sit above them all but below /opt/qt, or
+# the Qt include paths become relative too and differ with worktree depth.
+# With hash_dir off a cached object can carry another worktree's build
+# directory in its debug info, which only matters when stepping through it in
+# a debugger. One Debug build fills ~5GiB, so the default size evicted a
+# branch's objects as soon as a second one was built.
+if command -v ccache >/dev/null 2>&1; then
+  ccache --set-config=base_dir="$(dirname "${CLAUDE_PROJECT_DIR:-$PWD}")"
+  ccache --set-config=hash_dir=false
+  ccache --set-config=max_size=15G
+fi
+
 # PR-review tooling for the agent. Installed at user scope, so it lands in
 # the cached container state like everything else. Non-fatal: a marketplace
 # outage must not block the session.
