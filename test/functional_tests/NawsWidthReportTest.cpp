@@ -200,6 +200,9 @@ private slots:
         if (mpHost && mpHost->mpConsole && mpHost->mpConsole->showTimeStamps()) {
             mpHost->mpConsole->slot_toggleTimeStamps(false);
         }
+        if (mpHost) {
+            runLua(mpHost, qsl("if resizeProbeHandler then killAnonymousEventHandler(resizeProbeHandler) resizeProbeHandler = nil end"));
+        }
         showTab(mHostname);
         if (mpHost) {
             mpHost->setUserBorders(QMargins());
@@ -413,7 +416,6 @@ private slots:
 
         runLua(mpHost, qsl("resizeProbeWidth = nil setBorderLeft(60) setBorderRight(40)"));
         const int widthWhileHidden = luaGlobalNumber(mpHost, "resizeProbeWidth");
-        runLua(mpHost, qsl("killAnonymousEventHandler(resizeProbeHandler) resizeProbeHandler = nil"));
         QCOMPARE(widthWhileHidden, widthOnScreen);
     }
 
