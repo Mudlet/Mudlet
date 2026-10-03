@@ -239,6 +239,7 @@ set(mudlet_SRCS
     VarUnit.cpp
     VoskRecognizer.cpp
     WideComboBox.cpp
+    widgetutils.cpp
     XMLexport.cpp
     XMLimport.cpp)
 
