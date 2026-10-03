@@ -69,6 +69,16 @@ private:
 
     void runLua(Host* pHost, const QString& code) const { QVERIFY2(pHost->getLuaInterpreter()->compileAndExecuteScript(code), qPrintable(code)); }
 
+    // 0 for a global that is not a number
+    static int luaGlobalNumber(Host* pHost, const char* name)
+    {
+        lua_State* L = pHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const int value = lua_isnumber(L, -1) ? static_cast<int>(lua_tonumber(L, -1)) : 0;
+        lua_pop(L, 1);
+        return value;
+    }
+
     void showTab(const QString& hostname) const { mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(hostname)); }
 
     // What a correctly behaving Mudlet would put on the wire for this profile as
@@ -373,6 +383,38 @@ private slots:
         QVERIFY2(!updates.isEmpty(), "borders that left no rows cost the game the profile's new width");
         QVERIFY2(measurableWidth(mpHost), "at the 40 column floor or the wrap-at ceiling this case cannot tell a right prediction from a wrong one");
         QCOMPARE(updates.constLast(), QSize(reportableWidth(mpHost), rowsBefore));
+    }
+
+    // Moving a border raises sysWindowResizeEvent, and a profile waiting in a
+    // background tab has to be told the room it will have, as it would be on
+    // screen - not a width taken from a console that is zero pixels wide.
+    void aBackgroundedProfileThatMovesItsBordersRaisesTheWidthItComesBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
+        runLua(mpHost,
+               qsl("resizeProbeWidth = nil\n"
+                   "if resizeProbeHandler then killAnonymousEventHandler(resizeProbeHandler) end\n"
+                   "resizeProbeHandler = registerAnonymousEventHandler('sysWindowResizeEvent', function(_, width) resizeProbeWidth = width end)"));
+        // Loading the second profile puts it in front
+        showTab(mHostname);
+        settle(1500ms);
+        QVERIFY2(!mpHost->mpConsole->isHidden(), "the first profile has to be on screen for the first reading");
+
+        runLua(mpHost, qsl("setBorderLeft(60) setBorderRight(40)"));
+        settle(600ms);
+        const int widthOnScreen = luaGlobalNumber(mpHost, "resizeProbeWidth");
+        QVERIFY2(widthOnScreen > 0, "moving a border on screen raised no sysWindowResizeEvent");
+
+        runLua(mpHost, qsl("setBorderLeft(0) setBorderRight(0)"));
+        showTab(mSecondHostname);
+        settle(1500ms);
+        QVERIFY2(mpHost->mpConsole->isHidden(), "the first profile should be in a background tab by now");
+
+        runLua(mpHost, qsl("resizeProbeWidth = nil setBorderLeft(60) setBorderRight(40)"));
+        const int widthWhileHidden = luaGlobalNumber(mpHost, "resizeProbeWidth");
+        runLua(mpHost, qsl("killAnonymousEventHandler(resizeProbeHandler) resizeProbeHandler = nil"));
+        QCOMPARE(widthWhileHidden, widthOnScreen);
     }
 
     // Geyser lays every element out against getMainWindowSize(), so a profile
