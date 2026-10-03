@@ -22,6 +22,7 @@
 
 #include <QColor>
 #include <QPointer>
+#include <QRect>
 #include <QSet>
 #include <QString>
 
@@ -75,6 +76,8 @@ struct TLabelModel
     double mSvgRotation = 0.0;
     double mSvgShearX = 0.0;
     double mSvgShearY = 0.0;
+    // The widget's pos() and size(), kept current by the view as Qt moves or resizes it.
+    QRect mGeometry;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
