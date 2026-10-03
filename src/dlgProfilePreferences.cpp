@@ -6353,23 +6353,18 @@ void dlgProfilePreferences::applyAll()
         // Save console buffer settings and apply them
         if (mSnapshot.anyDirty({checkBox_useMaxBufferSize, console_buffer_size_spinBox})) {
             const bool useMaxBuffer = mSnapshot.dirty(checkBox_useMaxBufferSize) ? checkBox_useMaxBufferSize->isChecked() : pHost->getUseMaxConsoleBufferSize();
-            int newBufferSize;
+            // The profile keeps the size the user chose while the maximum is in
+            // charge, so unticking the maximum has a size to go back to
+            const int chosenBufferSize = !useMaxBuffer && mSnapshot.dirty(console_buffer_size_spinBox) ? console_buffer_size_spinBox->value() : pHost->getConsoleBufferSize();
 
-            if (useMaxBuffer && pHost->mpConsole) {
-                newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
-            } else {
-                newBufferSize = mSnapshot.dirty(console_buffer_size_spinBox) ? console_buffer_size_spinBox->value() : pHost->getConsoleBufferSize();
-            }
-
-            // Calculate batch delete size as 5% of buffer size (minimum 100)
-            const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-
-            if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
-                pHost->setConsoleBufferSize(newBufferSize);
+            if (pHost->getConsoleBufferSize() != chosenBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
+                pHost->setConsoleBufferSize(chosenBufferSize);
                 pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
 
-                // Apply the new buffer size to the main console
                 if (pHost->mpConsole) {
+                    const int newBufferSize = useMaxBuffer ? pHost->mpConsole->buffer.getMaxBufferSize() : chosenBufferSize;
+                    // Calculate batch delete size as 5% of buffer size (minimum 100)
+                    const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
                     pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
                 }
             }

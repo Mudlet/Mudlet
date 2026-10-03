@@ -2424,12 +2424,14 @@ bool Host::appendClipboard(const QString& name)
 void Host::setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum)
 {
     TBuffer& buffer = mpMainConsoleModel->buffer;
+    mUseMaxConsoleBufferSize = useMaximum;
     if (useMaximum) {
-        linesLimit = buffer.getMaxBufferSize();
+        // Left as the size to return to once the maximum is no longer used
+        buffer.setBufferSize(buffer.getMaxBufferSize(), batchDeleteSize);
+        return;
     }
     buffer.setBufferSize(linesLimit, batchDeleteSize);
     mConsoleBufferSize = linesLimit;
-    mUseMaxConsoleBufferSize = useMaximum;
 }
 
 // Hot: the trigger engine reads the model for every character of a colour
