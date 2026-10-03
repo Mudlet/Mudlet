@@ -4218,6 +4218,9 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
     // getFont() does not report.
     void test_setFontKeepsALabelsPointSize()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so there is no bundled Ubuntu Mono to give the label");
+#else
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
@@ -4245,6 +4248,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(label->font().family(), qsl("Ubuntu Mono"));
         QCOMPARE(label->font().weight(), QFont::Bold);
         QCOMPARE(label->font().pointSize(), 19);
+#endif
     }
 
     void test_getMousePositionIsRelativeToTheMainConsole()
