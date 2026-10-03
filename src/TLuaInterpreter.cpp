@@ -2974,21 +2974,9 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 
     const bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
     if (host.mpMap->mpMapper) {
-        // If we are re-enabling the display of the default area
-        // AND the mapper was showing the default area
-        // the area widget will NOT be showing the correct area name afterwards
-        bool isAreaWidgetInNeedOfResetting = false;
-        if ((!host.mpMap->getDefaultAreaShown()) && (isToShowDefaultArea) && (host.mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
-            isAreaWidgetInNeedOfResetting = true;
-        }
-
+        const bool wasShown = host.mpMap->getDefaultAreaShown();
         host.mpMap->setDefaultAreaShown(isToShowDefaultArea);
-        if (isAreaWidgetInNeedOfResetting) {
-            // Corner case fixup:
-            host.mpMap->mpMapper->comboBox_showArea->setCurrentText(host.mpMap->getDefaultAreaName());
-        }
-        host.mpMap->mpMapper->mp2dMap->repaint();
-        host.mpMap->mpMapper->update();
+        host.mpMap->announceDefaultAreaVisibilitySet(wasShown);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -8868,7 +8856,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
-            host.mpMap->mpMapper->slot_roomSize(getVerifiedInt(L, __func__, 2, "value"));
+            // Through float, as dlgMapper::slot_roomSize() rounds it:
+            host.mRoomSize = static_cast<float>(getVerifiedInt(L, __func__, 2, "value") / 10.0);
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
             return success();
         }
         if (key == qsl("mapExitSize")) {
@@ -8883,25 +8873,28 @@ int TLuaInterpreter::setConfig(lua_State* L)
             if (!std::isfinite(size) || size < 1.0) {
                 return warnArgumentValue(L, __func__, qsl("mapExitSize must be a number of at least 1, got %1").arg(size));
             }
-            host.mpMap->mpMapper->mp2dMap->setExitSize(size);
+            host.mLineSize = size;
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
             return success();
         }
         if (key == qsl("mapRoundRooms")) {
-            host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
+            host.mBubbleMode = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoundRooms);
             return success();
         }
         if (key == qsl("showRoomIdsOnMap")) {
-            host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
+            host.mShowRoomID = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowRoomIds);
             return success();
         }
         if (key == qsl("showMapInfo")) {
             host.mMapInfoContributors.insert(getVerifiedString(L, __func__, 2, "value"));
-            host.mpMap->mpMapper->slot_updateInfoContributors();
+            host.mpMap->announceMapInfoContributorsChanged();
             return success();
         }
         if (key == qsl("hideMapInfo")) {
             host.mMapInfoContributors.remove(getVerifiedString(L, __func__, 2, "value"));
-            host.mpMap->mpMapper->slot_updateInfoContributors();
+            host.mpMap->announceMapInfoContributorsChanged();
             return success();
         }
 #if defined(INCLUDE_3DMAPPER)
@@ -8915,18 +8908,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
         if (key == qsl("mapShowGrid")) {
-            const bool showGrid = getVerifiedBool(L, __func__, 2, "value");
-            host.mMapperShowGrid = showGrid;
-            host.mpMap->mpMapper->slot_setShowGrid(showGrid);
+            host.mMapperShowGrid = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowGrid);
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
             mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
-
-            if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->update();
-            }
-
+            host.mpMap->requestMapRepaint();
             return success();
         }
         if (key == qsl("mapInfoColor")) {
