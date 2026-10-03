@@ -467,7 +467,35 @@ describe("Tests TBuffer OSC sequence handling", function()
       local text = table.concat(getLines("main", before, getLastLineNumber("main") + 1))
       local spaces = text:match("CUF2%(( *)%)CUF2")
       assert.is_truthy(spaces, text:sub(1, 200))
-      assert.is_true(#spaces <= wrapAt, "moved forward " .. #spaces .. " columns with a wrap of " .. wrapAt)
+      assert.is_true(#spaces < wrapAt, "moved forward " .. #spaces .. " columns with a wrap of " .. wrapAt)
+    end)
+
+    -- wrapping drops the spaces it breaks at, so the length is read from the
+    -- line triggers see, before it is wrapped
+    it("should stop at the right margin over a run of moves", function()
+      local wrapAt = getWindowWrap("main")
+      local seen
+      local trigger = tempRegexTrigger("^CUF3\\(", function()
+        seen = #line
+      end)
+      local ok = feedTriggers("CUF3(" .. string.rep("\027[1000C", 1000) .. ")CUF3\n")
+      killTrigger(trigger)
+      assert.is_true(ok)
+      assert.is_truthy(seen)
+      assert.is_true(seen <= wrapAt + 5, "a run of moves made a line of " .. seen .. " characters with a wrap of " .. wrapAt)
+    end)
+
+    it("should not move further than 1000 columns when the wrap is wider", function()
+      local wrapAt = getWindowWrap("main")
+      setWindowWrap("main", 5000)
+      local before = getLastLineNumber("main")
+      local ok = feedTriggers("CUF4(\027[999999999C)CUF4\n")
+      setWindowWrap("main", wrapAt)
+      assert.is_true(ok)
+      local text = table.concat(getLines("main", before, getLastLineNumber("main") + 1))
+      local spaces = text:match("CUF4%(( *)%)CUF4")
+      assert.is_truthy(spaces, text:sub(1, 200))
+      assert.is_true(#spaces < 1000, "moved forward " .. #spaces .. " columns with a wrap of 5000")
     end)
 
   end)
