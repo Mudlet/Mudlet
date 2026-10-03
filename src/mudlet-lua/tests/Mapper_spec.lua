@@ -2570,6 +2570,16 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(3, getMapZoom(areaAlpha))
     end)
 
+    it("setMapZoom refuses a zoom that is not a finite number", function()
+      local before = getMapZoom(areaAlpha)
+      for _, zoom in ipairs({0 / 0, math.huge, -math.huge}) do
+        local ok, err = setMapZoom(zoom, areaAlpha)
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("it must be a finite number", 1, true), err)
+        assert.are.equal(before, getMapZoom(areaAlpha))
+      end
+    end)
+
     -- centerview() only asks for the move: TMap::updateArea() defers the repaint
     -- that takes the mapper to the new area onto a zero timer, so the
     -- no-argument getMapZoom() keeps answering with the old area until the
@@ -2772,6 +2782,11 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok, err = setMapZoom(0.5, areaBeta, viewId)
       assert.is_nil(ok)
       assert.is_truthy(err:find("it must be at least", 1, true), err)
+      assert.are.equal(before, getMapZoom(areaBeta))
+
+      ok, err = setMapZoom(math.huge, areaBeta, viewId)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("it must be a finite number", 1, true), err)
       assert.are.equal(before, getMapZoom(areaBeta))
     end)
 

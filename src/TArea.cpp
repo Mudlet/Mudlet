@@ -1187,7 +1187,7 @@ bool TArea::hasPermanentLabels() const
 
 void TArea::set2DMapZoom(const qreal zoom)
 {
-    if (zoom >= TMap::scmMinXYZoom) {
+    if (qIsFinite(zoom) && zoom >= TMap::scmMinXYZoom) {
         mLast2DMapZoom = zoom;
     }
 }
