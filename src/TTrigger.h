@@ -301,6 +301,9 @@ public:
     void setIsColorizerTrigger(const bool b) { mIsColorizerTrigger = b; }
     void compile();
     void execute();
+    // Only Lua reads a fire's captures, and handing them over costs more than a fire that runs no
+    // script. A command's send and a sound's playback can raise events, so those count as reaching Lua.
+    bool fireReachesLua() const { return mRegisteredAnonymousLuaFunction || !mScript.isEmpty() || !mCommand.isEmpty() || mSoundTrigger; }
     bool isFilterChain();
     bool setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger = true);
     void rebuildPrescanGrams();

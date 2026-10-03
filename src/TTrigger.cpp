@@ -1117,11 +1117,15 @@ END: {
         updateMultistates(patternNumber, captureList, posList, &nameGroups);
         return;
     }
-    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-    pL->setCaptureGroups(captureList, posList);
-    pL->setCaptureNameGroups(nameGroups, namePositions);
-    execute();
-    pL->clearCaptureGroups();
+    if (fireReachesLua()) {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+        pL->setCaptureNameGroups(nameGroups, namePositions);
+        execute();
+        pL->clearCaptureGroups();
+    } else {
+        execute();
+    }
     if (mFilterTrigger) {
         if (captureList.size() > 1) {
             const int total = captureList.size();
@@ -1202,12 +1206,14 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-    pL->setCaptureGroups(captureList, posList);
-
-    // call lua trigger function with number of matches and matches itselves as arguments
-    execute();
-    pL->clearCaptureGroups();
+    if (fireReachesLua()) {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+        execute();
+        pL->clearCaptureGroups();
+    } else {
+        execute();
+    }
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
@@ -1339,12 +1345,14 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         updateMultistates(regexNumber, captureList, posList);
         return;
     }
-    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-    pL->setCaptureGroups(captureList, posList);
-
-    // call lua trigger function with number of matches and matches itselves as arguments
-    execute();
-    pL->clearCaptureGroups();
+    if (fireReachesLua()) {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+        execute();
+        pL->clearCaptureGroups();
+    } else {
+        execute();
+    }
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
@@ -1484,11 +1492,14 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-    pL->setCaptureGroups(captureList, posList);
-    // call lua trigger function with number of matches and matches itselves as arguments
-    execute();
-    pL->clearCaptureGroups();
+    if (fireReachesLua()) {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+        execute();
+        pL->clearCaptureGroups();
+    } else {
+        execute();
+    }
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             auto it1 = captureList.begin();
@@ -1627,11 +1638,14 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-    pL->setCaptureGroups(captureList, posList);
-    // call lua trigger function with number of matches and matches themselves as arguments
-    execute();
-    pL->clearCaptureGroups();
+    if (fireReachesLua()) {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+        execute();
+        pL->clearCaptureGroups();
+    } else {
+        execute();
+    }
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
