@@ -1297,6 +1297,9 @@ private slots:
         VoskRecognizer::resetLibraryLoadState();
         VoskRecognizer::unloadLibraryByRequest(false);
         SherpaRecognizer::resetLibraryLoadState();
+        if (SherpaRecognizer::libraryPresent()) {
+            QSKIP("a sherpa-onnx library file that will not load is on its search paths here, so the getters answer for sherpa-onnx");
+        }
         auto removeStub = qScopeGuard([stub]() {
             // Unmapped before it is deleted, as Windows will not remove a loaded module
             VoskRecognizer::resetLibraryLoadState();
