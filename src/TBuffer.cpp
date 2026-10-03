@@ -6724,8 +6724,15 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
 
     for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
         const int charLinkIndex = buffer.at(cookedRow).at(cookedPos).linkIndex();
+        QRgb charBgColor = buffer.at(cookedRow).at(cookedPos).backgroundRgba();
+        if (qAlpha(charBgColor) == 0) {
+            // A transparent cell (e.g. a system message) has no colour of its
+            // own on screen - it shows the console's background through it -
+            // so fall back to that rather than exporting alpha-0 as black.
+            charBgColor = (mpModel ? mpModel->mBgColor : QColor(Qt::black)).rgba();
+        }
         // Do we need to start a new span?
-        if (firstSpan || buffer.at(cookedRow).at(cookedPos).foregroundRgba() != currentFgColor || buffer.at(cookedRow).at(cookedPos).backgroundRgba() != currentBgColor
+        if (firstSpan || buffer.at(cookedRow).at(cookedPos).foregroundRgba() != currentFgColor || charBgColor != currentBgColor
             || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
@@ -6733,13 +6740,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                 s.append(QLatin1String("</span>"));
             }
             currentFgColor = buffer.at(cookedRow).at(cookedPos).foregroundRgba();
-            currentBgColor = buffer.at(cookedRow).at(cookedPos).backgroundRgba();
-            if (qAlpha(currentBgColor) == 0) {
-                // A transparent cell (e.g. a system message) has no colour of its
-                // own on screen - it shows the console's background through it -
-                // so fall back to that rather than exporting alpha-0 as black.
-                currentBgColor = (mpModel ? mpModel->mBgColor : QColor(Qt::black)).rgba();
-            }
+            currentBgColor = charBgColor;
             currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
             currentLinkIndex = charLinkIndex;
 
