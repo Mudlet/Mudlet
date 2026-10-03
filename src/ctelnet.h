@@ -186,7 +186,11 @@ public:
     // internal protocol replies that also route through here (e.g. MXP) or the
     // auto-login credentials, so only game commands can arm character-at-a-time
     // detection:
-    bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false);
+    // fromCommandLine marks text the player typed into a command line and submitted;
+    // only that text is withheld from sysDataSendRequest at a masked password prompt.
+    // A script's send, a trigger, a key or a button is not a password being hidden,
+    // and withholding its event costs the profile denyCurrentSend() as well.
+    bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false, bool fromCommandLine = false);
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
