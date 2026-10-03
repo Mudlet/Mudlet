@@ -439,6 +439,40 @@ private slots:
         QCOMPARE(pHistory->currentData().toString(), QFileInfo(olderMap).absoluteFilePath());
     }
 
+    // Only an older pick is kept, as Load would otherwise pass over a map
+    // saved after the dialog opened
+    void test_aMapSavedWhileTheDialogIsOpenBecomesTheDefaultPick()
+    {
+        const QString mapsPath = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
+        QVERIFY(QDir().mkpath(mapsPath));
+        const QString olderMap = qsl("%1/2026-01-01#10-00-00map.dat").arg(mapsPath);
+        const QString newerMap = qsl("%1/2026-01-02#10-00-00map.dat").arg(mapsPath);
+        const auto removeMaps = qScopeGuard([olderMap, newerMap]() {
+            QFile::remove(olderMap);
+            QFile::remove(newerMap);
+        });
+        {
+            QFile file(olderMap);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-3600), QFileDevice::FileModificationTime));
+        }
+        openPreferences();
+        auto* pHistory = mpPreferences->comboBox_mapHistory;
+        QCOMPARE(pHistory->currentData().toString(), QFileInfo(olderMap).absoluteFilePath());
+
+        {
+            QFile file(newerMap);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+        }
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_echoLuaErrors->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        returnToTheDialog();
+
+        QCOMPARE(pHistory->currentIndex(), 0);
+        QCOMPARE(pHistory->currentData().toString(), QFileInfo(newerMap).absoluteFilePath());
+    }
+
     // The destinations live only in the menu, which a re-read rebuilds from
     // the profiles on disk
     void test_tickedCopyMapDestinationsSurviveTheSettingsBeingReread()

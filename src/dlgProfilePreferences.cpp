@@ -5757,8 +5757,9 @@ void dlgProfilePreferences::fillOutMapHistory()
     }
 
     // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
-    // The rebuild follows every change, so it keeps an older map that was picked to load.
-    const QVariant pickedMapFile = comboBox_mapHistory->currentData();
+    // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
+    // is not kept, so a map saved since takes its place at the top.
+    const QVariant pickedMapFile = comboBox_mapHistory->currentIndex() > 0 ? comboBox_mapHistory->currentData() : QVariant();
     {
         const QSignalBlocker blocker(comboBox_mapHistory);
         comboBox_mapHistory->clear();
