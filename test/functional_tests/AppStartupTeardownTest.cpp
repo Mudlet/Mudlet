@@ -101,6 +101,11 @@ private slots:
             environment.insert(qsl("XDG_CACHE_HOME"), qsl("%1/cache").arg(sandbox.path()));
             environment.insert(qsl("QT_QPA_PLATFORM"), qsl("offscreen"));
             environment.insert(qsl("MUDLET_TEST_MODE"), qsl("1"));
+            // Has Qt log every plugin directory it searches, so the run below
+            // can tell whether the warm-up looked for a TLS backend at all. Forced
+            // to stderr, as macOS would send it to the system log instead.
+            environment.insert(qsl("QT_DEBUG_PLUGINS"), qsl("1"));
+            environment.insert(qsl("QT_FORCE_STDERR_LOGGING"), qsl("1"));
             // The warm-up leaves Qt's CA store loaded for the process lifetime,
             // so a leak check here would only ever report that. Appended
             // rather than replacing what ctest set, since the runtime
@@ -119,15 +124,20 @@ private slots:
             QVERIFY2(mudlet.waitForFinished(scmFinishTimeoutMs), qPrintable(qsl("%1: --version never finished").arg(where)));
 
             const QString output = QString::fromUtf8(mudlet.readAllStandardOutput());
-            const QString diagnostics = qsl("%1, stderr:\n%2").arg(where, QString::fromUtf8(mudlet.readAllStandardError()));
+            const QString standardError = QString::fromUtf8(mudlet.readAllStandardError());
+            const QString diagnostics = qsl("%1, stderr:\n%2").arg(where, standardError);
             QVERIFY2(mudlet.exitStatus() == QProcess::NormalExit, qPrintable(qsl("mudlet --version crashed on leaving main(); %1").arg(diagnostics)));
             QVERIFY2(mudlet.exitCode() == 0, qPrintable(qsl("mudlet --version exited %1; %2").arg(QString::number(mudlet.exitCode()), diagnostics)));
-            // Without this the case would still pass against a main() that
-            // returned before the version branch, which is where the warm-up
-            // starts, and cover nothing. The application name is the one part
-            // of that banner no translation touches - mudlet, mudlet.exe or
-            // Mudlet, depending on the platform
+            // The application name is the one part of the banner no
+            // translation touches - mudlet, mudlet.exe or Mudlet, depending on
+            // the platform
             QVERIFY2(output.contains(qsl("mudlet"), Qt::CaseInsensitive), qPrintable(qsl("no version banner, so main() never reached the version branch; %1").arg(diagnostics)));
+            // Without a warm-up in flight at the return the case would pass with
+            // the #10460 fix reverted, and cover nothing. Nothing else on this
+            // path loads plugins, so a search of a tls directory is the warm-up's.
+            // Either stream: under MSYS2 main() sends debug output to stdout.
+            QVERIFY2(standardError.contains(qsl("/tls\"")) || output.contains(qsl("/tls\"")),
+                     qPrintable(qsl("Qt never searched for a TLS backend, so the SSL warm-up never ran; %1").arg(diagnostics)));
         }
     }
 };
