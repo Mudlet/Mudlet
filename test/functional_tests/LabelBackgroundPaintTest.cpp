@@ -64,7 +64,7 @@ private:
     QColor paintedColour(const QPoint& at = QPoint(50, 50))
     {
         QTest::qWait(50ms);
-        const QImage shot = mpHost->mpConsole->mpMainFrame->grab(backdropArea).toImage();
+        const QImage shot = mpHost->mainConsoleView()->mpMainFrame->grab(backdropArea).toImage();
         return shot.pixelColor(at);
     }
 
@@ -73,8 +73,8 @@ private:
     void createTargetCovering(int fillBackground)
     {
         runLua(qsl("createLabel('lbpTarget', 0, 0, %1, %2, %3)").arg(backdropArea.width()).arg(backdropArea.height()).arg(fillBackground));
-        QVERIFY(mpHost->mpConsole->labelWidget(qsl("lbpTarget")));
-        QCOMPARE(mpHost->mpConsole->labelWidget(qsl("lbpTarget"))->geometry(), backdropArea);
+        QVERIFY(mpHost->mainConsoleView()->labelWidget(qsl("lbpTarget")));
+        QCOMPARE(mpHost->mainConsoleView()->labelWidget(qsl("lbpTarget"))->geometry(), backdropArea);
     }
 
 private slots:
@@ -130,7 +130,7 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         runLua(qsl("createLabel('lbpBackdrop', 0, 0, %1, %2, 1)").arg(backdropArea.width()).arg(backdropArea.height()));
         runLua(qsl("setBackgroundColor('lbpBackdrop', %1, %2, %3, 255)").arg(backdropColour().red()).arg(backdropColour().green()).arg(backdropColour().blue()));
         QCOMPARE(paintedColour(), backdropColour());
@@ -143,7 +143,7 @@ private slots:
         runLua(qsl("setProfileStyleSheet('')"));
         runLua(qsl("setAppStyleSheet('')"));
         for (const auto& name : {qsl("lbpTarget"), qsl("lbpGauge_back"), qsl("lbpGauge_front"), qsl("lbpGauge_text"), qsl("lbpBackdrop")}) {
-            mpHost->mpConsole->deleteLabel(name);
+            mpHost->mainConsoleView()->deleteLabel(name);
         }
     }
 
