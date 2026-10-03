@@ -511,11 +511,6 @@ Host::~Host()
         mpConsole->deleteActionToolBars();
     }
 
-    // This needs to be cleared here while the Host object is still valid,
-    // otherwise it'll be cleared when the Host object is being destroyed,
-    // which can lead to a crash when closing multiple profiles at once.
-    mpLastCommandLineUsed.clear();
-
     mStopWatchMap.clear();
 
     mErrorLogStream.flush();
@@ -1134,7 +1129,7 @@ void Host::resetProfile_phase2()
     // with it, so the commands those ids named have to go too - otherwise a
     // package that places its command from a script adds another on every
     // reset and can never remove the ones before.
-    mudlet::self()->removeAddonCommandsForHost(this);
+    emit signal_profileResetting();
 
     getAliasUnit()->removeAllTempAliases();
     getTimerUnit()->removeAllTempTimers();
@@ -4273,13 +4268,12 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
         return;
     }
 
-    mudlet* pMudlet = mudlet::self();
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(qsl("inviteurl"));
     // Will be of form: "https://discord.gg/#####"
     if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty() && inviteUrl.toString() != qsl("0")) {
         setDiscordInviteURL(inviteUrl.toString());
-        pMudlet->updateDiscordNamedIcon();
+        emit signal_discordGameChanged();
         hasInvite = true;
     }
 
@@ -4325,11 +4319,10 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         return;
     }
 
-    auto pMudlet = mudlet::self();
     auto gameName = discordInfo.value(qsl("game"));
     if (gameName != QJsonValue::Undefined) {
         setDiscordGameName(gameName.toString());
-        pMudlet->updateDiscordNamedIcon();
+        emit signal_discordGameChanged();
         QPair<bool, QString> const richPresenceSupported = Discord::self()->gameIntegrationSupported(getUrl());
         if (richPresenceSupported.first && Discord::self()->usingMudletsDiscordID(this)) {
             Discord::self()->setServerOrigin(this, DiscordSetDetail);
@@ -6214,46 +6207,12 @@ void Host::setFocusOnHostActiveCommandLine()
             return;
         }
 
-        mpConsole->focusCommandLine(activeCommandLine());
+        mpConsole->focusActiveCommandLine();
 
         mFocusTimerRunning = false;
     };
 
     QTimer::singleShot(0ms, this, setCommandLineFocus);
-}
-
-void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
-{
-    if (!pCommandLine || mIsClosingDown) {
-        return;
-    }
-    mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
-    mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
-}
-
-void Host::forgetCommandLine(TCommandLine* pCommandLine)
-{
-    if (pCommandLine && !mIsClosingDown) {
-        mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
-    }
-}
-
-// Returns a pointer to the last used TCommandLine for this profile:
-TCommandLine* Host::activeCommandLine()
-{
-    TCommandLine* pCommandLine = nullptr;
-    if (mIsClosingDown || mpLastCommandLineUsed.isEmpty()) {
-        return nullptr;
-    }
-
-    do {
-        pCommandLine = mpLastCommandLineUsed.top();
-        if (!pCommandLine) {
-            mpLastCommandLineUsed.pop();
-        }
-    } while (!mpLastCommandLineUsed.isEmpty() && !pCommandLine);
-
-    return pCommandLine;
 }
 
 QPointer<TConsole> Host::parentTConsole(QObject* start) const

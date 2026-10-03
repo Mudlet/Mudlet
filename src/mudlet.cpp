@@ -3993,6 +3993,10 @@ void mudlet::addConsoleForNewHost(Host* pH)
             setGlobalStyleSheet(styleSheet);
         }
     });
+    connect(pH, &Host::signal_discordGameChanged, this, &mudlet::updateDiscordNamedIcon);
+    connect(pH, &Host::signal_profileResetting, this, [this, pH]() {
+        removeAddonCommandsForHost(pH);
+    });
 
     // Wire the map engine's progress signals to the console that owns the dialog.
     // Must be connected before the profile's map is loaded (further down in

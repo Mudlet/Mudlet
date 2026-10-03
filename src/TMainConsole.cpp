@@ -1533,10 +1533,44 @@ void TMainConsole::setCommandLineText(const QString& text)
     mpCommandLine->selectAll();
 }
 
-void TMainConsole::focusCommandLine(TCommandLine* pCommandLine)
+void TMainConsole::recordActiveCommandLine(TCommandLine* pCommandLine)
+{
+    if (!pCommandLine || (mpHost && mpHost->isClosingDown())) {
+        return;
+    }
+    mLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    mLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
+}
+
+void TMainConsole::forgetCommandLine(TCommandLine* pCommandLine)
+{
+    if (pCommandLine && !(mpHost && mpHost->isClosingDown())) {
+        mLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    }
+}
+
+TCommandLine* TMainConsole::activeCommandLine()
+{
+    TCommandLine* pCommandLine = nullptr;
+    if ((mpHost && mpHost->isClosingDown()) || mLastCommandLineUsed.isEmpty()) {
+        return nullptr;
+    }
+
+    do {
+        pCommandLine = mLastCommandLineUsed.top();
+        if (!pCommandLine) {
+            mLastCommandLineUsed.pop();
+        }
+    } while (!mLastCommandLineUsed.isEmpty() && !pCommandLine);
+
+    return pCommandLine;
+}
+
+void TMainConsole::focusActiveCommandLine()
 {
     using namespace std::chrono_literals;
 
+    TCommandLine* pCommandLine = activeCommandLine();
     TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
     if (!targetCommandLine) {
         return;
