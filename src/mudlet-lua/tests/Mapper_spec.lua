@@ -2551,6 +2551,25 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
+    it("a new area starts at the default zoom of 20", function()
+      local areaId = addAreaName("MapperSpecZoomDefault")
+      finally(function() deleteArea(areaId) end)
+      assert.are.equal(20, getMapZoom(areaId))
+    end)
+
+    it("setMapZoom refuses a zoom below 3 and accepts 3", function()
+      local before = getMapZoom(areaAlpha)
+      finally(function() setMapZoom(before, areaAlpha) end)
+
+      local ok, err = setMapZoom(2.9, areaAlpha)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("it must be at least 3", 1, true), err)
+      assert.are.equal(before, getMapZoom(areaAlpha))
+
+      assert.is_true(setMapZoom(3, areaAlpha))
+      assert.are.equal(3, getMapZoom(areaAlpha))
+    end)
+
     -- centerview() only asks for the move: TMap::updateArea() defers the repaint
     -- that takes the mapper to the new area onto a zero timer, so the
     -- no-argument getMapZoom() keeps answering with the old area until the

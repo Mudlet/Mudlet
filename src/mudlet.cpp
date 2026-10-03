@@ -3982,6 +3982,22 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
     HostDialogs::connectTeardown(pH);
 
+    // Functor connects again, so no Qt::UniqueConnection: see the note above signal_bell's
+    connect(pH, &Host::signal_consoleFontChanged, this, [](const QFont& font) {
+        if (smpDebugArea && smpDebugConsole) {
+            smpDebugConsole->setFont(font);
+        }
+    });
+    connect(pH, &Host::signal_profileStyleSheetChanged, this, [this, pH](const QString& styleSheet) {
+        if (pH == mpCurrentActiveHost) {
+            setGlobalStyleSheet(styleSheet);
+        }
+    });
+    connect(pH, &Host::signal_discordGameChanged, this, &mudlet::updateDiscordNamedIcon);
+    connect(pH, &Host::signal_profileResetting, this, [this, pH]() {
+        removeAddonCommandsForHost(pH);
+    });
+
     // Wire the map engine's progress signals to the console that owns the dialog.
     // Must be connected before the profile's map is loaded (further down in
     // slot_connectionDialogueFinished()), or early map operations have no
