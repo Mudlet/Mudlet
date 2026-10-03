@@ -532,6 +532,10 @@ foreach(test_name ${allFunctionalTestNames})
     )
 endforeach()
 
+# A buffer's default font gives the same row count for its pane's stale and laid-out
+# heights at 96 DPI; 72 DPI tells them apart
+set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DPI=72")
+
 # ResetProfileTest creates a full profile per test method, so it needs a longer
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)

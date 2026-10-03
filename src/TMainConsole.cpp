@@ -2108,24 +2108,6 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     return true;
 }
 
-std::optional<int> TMainConsole::getWindowColumnCount(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->mUpperPane->getColumnCount()};
-}
-
-std::optional<int> TMainConsole::getWindowRowCount(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->mUpperPane->getRowCount()};
-}
-
 std::optional<QFont> TMainConsole::getWindowFont(const QString& name)
 {
     auto pC = consoleNamed(name);

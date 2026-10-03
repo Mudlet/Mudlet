@@ -31,6 +31,7 @@
 #include <QPair>
 #include <QPoint>
 #include <QPointer>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
@@ -229,6 +230,8 @@ struct TConsoleModel
     int mWrapAt = 100;
     int mIndentCount = 0;
     int mHangingIndentCount = 0;
+    // The upper pane's columns and rows, kept current by TTextEdit::reportGridSize().
+    QSize mGridSize;
     void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
 
     // The name scripts know this console by. Only the main console, user
