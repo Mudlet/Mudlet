@@ -155,7 +155,12 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
-    TDockWidget* createUserWindow(const QString& name);
+    // Makes the user window if the name is free and shows it, then floats it
+    // ("f") or docks it ("r", "l", "t", "b"), each also accepted as the word it
+    // stands for; an empty area leaves it where it is. An unknown area is
+    // refused with the window already showing. A name held by a miniconsole is
+    // refused before anything is made.
+    std::pair<bool, QString> openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
@@ -382,6 +387,7 @@ signals:
 
 private:
     dlgMapper* dockedMapper() const;
+    TDockWidget* createUserWindow(const QString& name);
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
     void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
