@@ -92,7 +92,8 @@ const QString windowStateReporterName = qsl("mudlet_windowStateReporter");
 // script made: dock drags and docking, the main window's layout, a hidden widget's pending
 // events arriving as it is shown, and a style sheet's minimum size, which resizes a hidden
 // widget without a Resize event. Its visibility follows ShowToParent/HideToParent, which Qt
-// sends whether or not an ancestor is showing.
+// sends whether or not an ancestor is showing. A nameless one only passes visibility down, from
+// a container that is not a named window itself.
 class WindowStateReporter : public QObject
 {
 public:
@@ -105,6 +106,8 @@ public:
         pWatched->installEventFilter(this);
     }
 
+    const QString& name() const { return mName; }
+
     bool eventFilter(QObject* watched, QEvent* event) override
     {
         if (!mpConsole) {
@@ -114,7 +117,9 @@ public:
         case QEvent::Move:
         case QEvent::Resize:
         case QEvent::StyleChange:
-            mpConsole->reportGeometry(mName);
+            if (!mName.isEmpty()) {
+                mpConsole->reportGeometry(mName);
+            }
             break;
         case QEvent::ShowToParent:
         case QEvent::HideToParent:
@@ -206,7 +211,7 @@ TMainConsole::~TMainConsole()
     for (auto textBox : findChildren<TTextBox*>()) {
         disconnect(textBox, &QObject::destroyed, this, nullptr);
     }
-    // Likewise for a Hide or Move reaching a child as ~QWidget tears it down
+    // Likewise for a HideToParent or Move reaching a child as ~QWidget tears it down
     qDeleteAll(findChildren<QObject*>(windowStateReporterName));
 
     // Unlike labels and sub-consoles, these kinds don't deregister in their destructors, and their
@@ -450,38 +455,18 @@ void TMainConsole::reportVisibility(const QString& name)
 
 void TMainConsole::reportVisibilityWithin(QWidget* pRoot)
 {
-    const auto within = [pRoot](const QWidget* pW) {
-        return pW && (pW == pRoot || pRoot->isAncestorOf(pW));
-    };
-    QStringList names;
-    for (auto it = mLabelMap.cbegin(); it != mLabelMap.cend(); ++it) {
-        if (within(it.value())) {
-            names.append(it.key());
+    // Every named window has a reporter among its children, so its subtree's reporters name them
+    for (auto pObject : pRoot->findChildren<QObject*>(windowStateReporterName)) {
+        const QString& name = static_cast<WindowStateReporter*>(pObject)->name();
+        if (!name.isEmpty()) {
+            reportVisibility(name);
         }
     }
-    for (auto it = mSubConsoleMap.cbegin(); it != mSubConsoleMap.cend(); ++it) {
-        if (within(it.value()) || within(mDockWidgetMap.value(it.key()))) {
-            names.append(it.key());
-        }
-    }
-    for (auto it = mScrollBoxMap.cbegin(); it != mScrollBoxMap.cend(); ++it) {
-        if (within(it.value())) {
-            names.append(it.key());
-        }
-    }
-    for (auto it = mSubCommandLineMap.cbegin(); it != mSubCommandLineMap.cend(); ++it) {
-        if (within(it.value())) {
-            names.append(it.key());
-        }
-    }
-    for (auto it = mTextBoxMap.cbegin(); it != mTextBoxMap.cend(); ++it) {
-        if (within(it.value())) {
-            names.append(it.key());
-        }
-    }
-    for (const auto& name : std::as_const(names)) {
-        reportVisibility(name);
-    }
+}
+
+void TMainConsole::watchVisibility(QWidget* pContainer)
+{
+    new WindowStateReporter(this, QString(), pContainer);
 }
 
 void TMainConsole::reportDockGeometry()
