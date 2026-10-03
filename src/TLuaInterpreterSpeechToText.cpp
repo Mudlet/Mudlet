@@ -570,10 +570,8 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
-    // Asked before initialized(), which is false here too and would answer
-    // "not initialized" for an engine that is. Reported to the caller, as
-    // stt.cancel() does - the fault took the microphone claim with it, so
-    // there is no owner to route by.
+    // Before initialized(), which is false in Error too. Reported to the caller:
+    // the fault took the microphone claim, so there is no owner to route by.
     if (pRecognizer->state() == SpeechRecognizer::State::Error) {
         const QString message = errorStateStartMessage(pRecognizer);
         reportSpeechRefusalTo(getHostFromLua(L), message);

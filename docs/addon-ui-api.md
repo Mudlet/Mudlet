@@ -160,10 +160,12 @@ end)
    Uninstalling a package or module removes the commands its code created:
    the code that held their ids and answered their clicks is gone, and
    nothing else knows to remove them. Reloading a module does not, since it
-   comes straight back with its Lua state, ids included. The Lua that called
+   comes straight back with its Lua state, ids included - but updating a
+   package uninstalls it first, so a package must not keep a command's id
+   across its own uninstall and skip `addCommand` when installed again. The Lua that called
    `addCommand` decides: one of the package's items, a function one of them
-   defined (an event handler, a timer closure), or a file in the package's
-   folder or beside the module's own file. Commands made from the command line, a profile's own items, code
+   defined (an event handler, a timer closure), or a file in the folder
+   Mudlet unpacked the package into. Commands made from the command line, a profile's own items, code
    compiled from a string (a string-code `tempTimer`, `loadstring`), or a
    function whose item shares its name with another package's item or one of
    the profile's belong to no package and stay. A library package's helper

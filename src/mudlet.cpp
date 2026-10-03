@@ -1614,9 +1614,9 @@ void mudlet::removeAddonCommandsForPackage(Host* pHost, const QString& package)
         return;
     }
     QList<int> doomed;
-    for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
-        if (it.value().pHost == pHost && it.value().package == package) {
-            doomed.append(it.key());
+    for (const auto [commandId, command] : std::as_const(mAddonCommands).asKeyValueRange()) {
+        if (command.pHost == pHost && command.package == package) {
+            doomed.append(commandId);
         }
     }
     for (int commandId : doomed) {

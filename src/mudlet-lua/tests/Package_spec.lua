@@ -3335,22 +3335,41 @@ describe("Tests that uninstalling takes the addon commands it made", function()
   it("tells a package's script from a profile script of the same name", function()
     local name = "mudlet-spec-command-collide"
     local scriptName = name .. " script"
-    permScript(scriptName, "", placeCommand("mudletSpecProfileCommand", "mudlet-spec profile command"))
+    -- The profile's handler is reached from the package's body through
+    -- raiseEvent(), so it runs while a script of its own name is being compiled
+    permScript(scriptName, "", placeCommand("mudletSpecProfileCommand", "mudlet-spec profile command") .. "\n"
+      .. 'mudletSpecProfileHandler = registerAnonymousEventHandler("mudletSpecCollideEvent", function() '
+      .. placeCommand("mudletSpecProfileHandlerCommand", "mudlet-spec profile handler command") .. " end)")
     defer(function()
       forgetCommand(mudletSpecProfileCommand)
-      _G.mudletSpecProfileCommand = nil
+      forgetCommand(mudletSpecProfileHandlerCommand)
+      if mudletSpecProfileHandler then
+        killAnonymousEventHandler(mudletSpecProfileHandler)
+      end
+      _G.mudletSpecProfileCommand, _G.mudletSpecProfileHandlerCommand, _G.mudletSpecProfileHandler = nil, nil, nil
       disableScript(scriptName)
     end)
     assert.is_number(mudletSpecProfileCommand, "the profile's script could not place its command")
-    local path = scratchXml(name, "<ScriptPackage>" .. scriptXml(scriptName, placeCommand("mudletSpecCollideCommand", "mudlet-spec collide command")) .. "</ScriptPackage>")
-    withScratchPackage(name, path, {"mudletSpecCollideCommand"})
+    local path = scratchXml(name, "<ScriptPackage>" .. scriptXml(scriptName, table.concat({
+      placeCommand("mudletSpecCollideCommand", "mudlet-spec collide command"),
+      "local function place() " .. placeCommand("mudletSpecCollideLocalCommand", "mudlet-spec collide local command") .. " end",
+      "place()",
+      'raiseEvent("mudletSpecCollideEvent")',
+    }, "\n")) .. "</ScriptPackage>")
+    withScratchPackage(name, path, {"mudletSpecCollideCommand", "mudletSpecCollideLocalCommand"})
     local packageCommand = mudletSpecCollideCommand
+    local localCommand = mudletSpecCollideLocalCommand
+    local handlerCommand = mudletSpecProfileHandlerCommand
     assert.is_number(packageCommand, "the package's script could not place its command")
+    assert.is_number(localCommand, "the package's local function could not place its command")
+    assert.is_number(handlerCommand, "the profile's handler never placed its command")
 
     removeFixturePackage(name)
 
     assert.is_false(removeCommand(packageCommand), "the package's command outlived it because a profile script shares its script's name")
+    assert.is_false(removeCommand(localCommand), "a command from a function the package's body called outlived the package")
     assert.is_true(removeCommand(mudletSpecProfileCommand), "uninstalling the package removed the profile's command")
+    assert.is_true(removeCommand(handlerCommand), "uninstalling the package removed a command the profile's handler made during the package's install")
   end)
 
   -- A reload brings the module straight back with its Lua state, so a command
@@ -3373,20 +3392,6 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     local id = mudletSpecModuleCommand
     assert.is_number(id, "the module's script could not place its command")
 
-    local beside = scratchDirectory .. "/" .. name .. "-command.lua"
-    defer(function()
-      forgetCommand(mudletSpecModuleFileCommand)
-      _G.mudletSpecModuleFileCommand = nil
-      os.remove(beside)
-    end)
-    local file = io.open(beside, "wb")
-    assert.is_not_nil(file, "could not write beside the module's file")
-    file:write(placeCommand("mudletSpecModuleFileCommand", "mudlet-spec module file command"))
-    file:close()
-    dofile(beside)
-    local fileCommand = mudletSpecModuleFileCommand
-    assert.is_number(fileCommand, "the file beside the module could not place its command")
-
     local loads = mudletSpecModuleLoads
     reloadModuleUntil(name, function() return mudletSpecModuleLoads > loads end)
     assert.is_true(enableCommand(id), "reloading the module removed the command it keeps the id of")
@@ -3396,7 +3401,6 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     -- a reload postponed by a profile save could otherwise be what removed it
     assert.equals(loads, mudletSpecModuleLoads, "the module was reloaded while being removed")
     assert.is_false(enableCommand(id), "the command outlived the module that made it")
-    assert.is_false(enableCommand(fileCommand), "the command a file beside the module made outlived the module")
   end)
 end)
 
