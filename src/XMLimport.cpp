@@ -25,6 +25,7 @@
 
 #include "LuaInterface.h"
 #include "CredentialManager.h"
+#include "Host.h"
 #include "SecureStringUtils.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -37,7 +38,7 @@
 #include "TTrigger.h"
 #include "TVar.h"
 #include "VarUnit.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "enums.h"
 
 #include <QBuffer>
@@ -1049,9 +1050,7 @@ void XMLimport::readHost(Host* pHost)
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
 
-    if (mudlet::self()->mpCurrentActiveHost == pHost) {
-        mudlet::self()->dactionInputLine->setChecked(compactInputLine);
-    }
+    TAppFrontend::instance()->setCompactInputLineChecked(pHost, compactInputLine);
 
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
         pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
