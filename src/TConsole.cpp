@@ -1054,6 +1054,8 @@ void TConsole::clear()
 
 void TConsole::bufferCleared()
 {
+    // The caret indexes the buffer, and the caret keys read the line it is on
+    mUpperPane->initializeCaret();
     mUpperPane->resetHScrollbar();
     clearSelection();
     clearSplit();

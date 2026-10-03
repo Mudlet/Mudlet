@@ -650,6 +650,41 @@ private slots:
 
         QVERIFY2(consoleBuffer().isLinkVisited(linkIndex), "the activated link was not marked as visited");
     }
+
+    // clearWindow() takes away the line the caret is on, and the caret keys read
+    // that line. After the cases that read the original buffer, as it empties it.
+    void test_theCaretKeysStayInsideABufferClearedUnderTheCaret()
+    {
+        for (int line = 0; line < 5; ++line) {
+            mpHost->mpConsole->print(qsl("clear filler %1\n").arg(line));
+        }
+        const int line = static_cast<int>(consoleBuffer().lineBuffer.length()) - 2;
+        QVERIFY(line >= 2);
+        pane()->setCaretPosition(line, 3);
+
+        QVERIFY(runLua(qsl("clearWindow()")));
+        QCOMPARE(consoleBuffer().lineBuffer.length(), 1);
+
+        for (const Qt::Key key : {Qt::Key_End, Qt::Key_Right, Qt::Key_Left}) {
+            press(pane(), key);
+            QCOMPARE(pane()->mCaretLine, 0);
+            QCOMPARE(pane()->mCaretColumn, 0);
+        }
+    }
+
+    // clearWindow() leaves a single empty line, which Ctrl+End cannot step over
+    // the way it does a trailing one, as there is no line before it.
+    void test_ctrlEndInAClearedBufferStaysOnTheOnlyLine()
+    {
+        QVERIFY(runLua(qsl("clearWindow()")));
+        QCOMPARE(consoleBuffer().lineBuffer.length(), 1);
+        pane()->setCaretPosition(0, 0);
+
+        press(pane(), Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pane()->mCaretLine, 0);
+        QCOMPARE(pane()->mCaretColumn, 0);
+    }
 };
 
 #include "CaretNavigationTest.moc"
