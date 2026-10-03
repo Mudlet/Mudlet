@@ -2548,8 +2548,8 @@ void mudlet::warnAboutRejectedPortableRoot()
     //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
     notice->setWindowTitle(tr("Portable data directory unusable"));
     if (rejectedRoot.isEmpty()) {
-        //: %1 is the full path of a portable.txt file that is empty, which outside the folder Mudlet is installed in names no data directory
-        notice->setText(tr("%1 is empty, so it names no data directory.").arg(marker));
+        //: %1 is the full path of a portable.txt file whose first line is empty or that could not be read, so it names no data directory
+        notice->setText(tr("%1 names no data directory.").arg(marker));
         //: %1 is the full path of the directory Mudlet uses for profiles and settings
         notice->setInformativeText(
                 tr("Mudlet is using %1. To keep profiles in a portable data directory, write its path into the file and restart Mudlet.").arg(MudletApp::getMudletPath(enums::mainPath)));
