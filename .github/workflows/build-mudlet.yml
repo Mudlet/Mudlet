@@ -128,10 +128,11 @@ jobs:
     # Keyed on the runner image, as the rocks link against its Homebrew libraries, and on
     # the script that installs them. A tagged release installs its rocks afresh, since the
     # app bundles them.
-    - name: (macOS) Identify the runner image
+    - name: (macOS) Work out the Lua rocks cache key
       if: runner.os == 'macOS'
-      id: image
-      run: echo "version=${ImageVersion:?is not set, and the Lua rocks cache key needs it}" >> "$GITHUB_OUTPUT"
+      id: rocks
+      run: |
+        echo "key=luarocks-${{ matrix.os }}-${{ runner.arch }}-${ImageVersion:?is not set}-${{ hashFiles('CI/install-lua-rocks.sh') }}" >> "$GITHUB_OUTPUT"
 
     - name: (macOS) Restore Lua rocks cache
       if: runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/')
@@ -139,7 +140,7 @@ jobs:
       uses: actions/cache/restore@v6
       with:
         path: ~/.luarocks
-        key: luarocks-${{ matrix.os }}-${{ runner.arch }}-${{ steps.image.outputs.version }}-${{ hashFiles('CI/install-lua-rocks.sh') }}
+        key: ${{ steps.rocks.outputs.key }}
 
     - name: (macOS) Install dependencies
       if: runner.os == 'macOS'
@@ -196,9 +197,13 @@ jobs:
         # Help CMake find keg-only Homebrew packages (PCRE2 is keg-only on macOS)
         echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
-        # Install the Lua rocks early, as lua-yajl generates translation statistics
-        if [ "${{ steps.cache-luarocks.outputs.cache-hit }}" != "true" ]; then
-          HOMEBREW_PREFIX="${HOMEBREW_PREFIX}" ${{github.workspace}}/CI/install-lua-rocks.sh
+        # Install lua-yajl early to generate translation statistics - unless the cache held
+        # every rock, and they all still load against this runner's Homebrew libraries
+        if [ "${{ steps.cache-luarocks.outputs.cache-hit }}" = "true" ] \
+          && ${{github.workspace}}/CI/install-lua-rocks.sh --check; then
+          echo "LUA_ROCKS_CACHED=true" >> $GITHUB_ENV
+        else
+          HOMEBREW_PREFIX="${HOMEBREW_PREFIX}" ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
         fi
 
         # Allow stats generation script to see location of lua-yajl
@@ -268,8 +273,8 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-        # Install the Lua rocks early, as lua-yajl generates translation statistics
-        ${{github.workspace}}/CI/install-lua-rocks.sh
+        # Install lua-yajl early to generate translation statistics
+        ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -437,12 +442,30 @@ jobs:
         ccache --show-stats -v
         ccache --show-compression
 
-    - name: (Linux) Install dependencies for packaging/tests
-      if: runner.os == 'Linux'
+    - name: install dependencies for packaging/tests
       run: |
+        if [ "${LUA_ROCKS_CACHED}" != "true" ]; then
+          ${{github.workspace}}/CI/install-lua-rocks.sh
+        fi
+
         # necessary for Qt multimedia and modern Qt
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
-        sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
+        if [ "${RUNNER_OS}" = "Linux" ]; then
+          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
+        fi
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+
+    - name: (macOS) Save Lua rocks cache
+      if: >-
+        runner.os == 'macOS' && github.ref_name == 'development'
+        && steps.cache-luarocks.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ~/.luarocks
+        key: ${{ steps.rocks.outputs.key }}
 
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
@@ -761,16 +784,6 @@ jobs:
       run: |
         if [ -e /tmp/busted-tests-failed ]
         then
-          echo "Lua tests failed - see the step that ran them above, '(Linux) Run Lua tests' or '(macOS) Run Lua tests', for detailed output."
+          echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
           exit 1
         fi
-
-    # Last, so that only rocks a whole build, package and test run has used get cached
-    - name: (macOS) Save Lua rocks cache
-      if: >-
-        runner.os == 'macOS' && github.ref_name == 'development'
-        && steps.cache-luarocks.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v6
-      with:
-        path: ~/.luarocks
-        key: luarocks-${{ matrix.os }}-${{ runner.arch }}-${{ steps.image.outputs.version }}-${{ hashFiles('CI/install-lua-rocks.sh') }}

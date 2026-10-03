@@ -135,10 +135,11 @@ jobs:
     # Keyed on the runner image, as the rocks link against its Homebrew libraries, and on
     # the script that installs them. A tagged release installs its rocks afresh, since the
     # app bundles them.
-    - name: (macOS) Identify the runner image
+    - name: (macOS) Work out the Lua rocks cache key
       if: runner.os == 'macOS'
-      id: image
-      run: echo "version=${ImageVersion:?is not set, and the Lua rocks cache key needs it}" >> "$GITHUB_OUTPUT"
+      id: rocks
+      run: |
+        echo "key=luarocks-${{ matrix.os }}-${{ runner.arch }}-${ImageVersion:?is not set}-${{ hashFiles('CI/install-lua-rocks.sh') }}" >> "$GITHUB_OUTPUT"
 
     - name: (macOS) Restore Lua rocks cache
       if: runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/')
@@ -146,7 +147,7 @@ jobs:
       uses: actions/cache/restore@v6
       with:
         path: ~/.luarocks
-        key: luarocks-${{ matrix.os }}-${{ runner.arch }}-${{ steps.image.outputs.version }}-${{ hashFiles('CI/install-lua-rocks.sh') }}
+        key: ${{ steps.rocks.outputs.key }}
 
     - name: (macOS) Install dependencies
       if: runner.os == 'macOS'
@@ -203,9 +204,13 @@ jobs:
         # Help CMake find keg-only Homebrew packages (PCRE2 is keg-only on macOS)
         echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
-        # Install the Lua rocks early, as lua-yajl generates translation statistics
-        if [ "${{ steps.cache-luarocks.outputs.cache-hit }}" != "true" ]; then
-          HOMEBREW_PREFIX="${HOMEBREW_PREFIX}" ${{github.workspace}}/CI/install-lua-rocks.sh
+        # Install lua-yajl early to generate translation statistics - unless the cache held
+        # every rock, and they all still load against this runner's Homebrew libraries
+        if [ "${{ steps.cache-luarocks.outputs.cache-hit }}" = "true" ] \
+          && ${{github.workspace}}/CI/install-lua-rocks.sh --check; then
+          echo "LUA_ROCKS_CACHED=true" >> $GITHUB_ENV
+        else
+          HOMEBREW_PREFIX="${HOMEBREW_PREFIX}" ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
         fi
 
         # Allow stats generation script to see location of lua-yajl
@@ -268,8 +273,8 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-        # Install the Lua rocks early, as lua-yajl generates translation statistics
-        ${{github.workspace}}/CI/install-lua-rocks.sh
+        # Install lua-yajl early to generate translation statistics
+        ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -390,6 +395,7 @@ jobs:
         ccache --show-compression
 
     - name: Build Mudlet
+      id: build
       uses: lukka/run-cmake@v10.9
       with:
         configurePreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
@@ -411,12 +417,21 @@ jobs:
         ccache --show-stats -v
         ccache --show-compression
 
-    - name: (Linux) Install dependencies for packaging/tests
-      if: runner.os == 'Linux'
+    - name: install dependencies for packaging/tests
       run: |
+        if [ "${LUA_ROCKS_CACHED}" != "true" ]; then
+          ${{github.workspace}}/CI/install-lua-rocks.sh
+        fi
+
         # necessary for Qt multimedia and modern Qt
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
-        sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
+        if [ "${RUNNER_OS}" = "Linux" ]; then
+          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
+        fi
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
 
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
@@ -481,21 +496,6 @@ jobs:
         GITHUB_FORCE_BUILD: ${{ github.event.inputs.scheduled == 'true' }}
         # needed so CI/*.after_success.sh can query existing releases to skip duplicate PTBs
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v7
-      if: env.UPLOAD_FILENAME && !(runner.os == 'macOS' && matrix.run_tests == 'true')
-      with:
-        name: ${{env.UPLOAD_FILENAME}}
-        path: ${{env.FOLDER_TO_UPLOAD}}
-
-    - name: Submit to make.mudlet.org
-      if: env.UPLOAD_FILENAME && !(runner.os == 'macOS' && matrix.run_tests == 'true')
-      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
-      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
-      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
-      shell: bash
-
 
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests
@@ -669,7 +669,11 @@ jobs:
     # publish a PTB or a release, and has to wait for the C++ tests - the C++ tests can wait
     # for it and run alongside the Lua tests. That took the arm64 job's tests from 387s to 257s.
     - name: (macOS) Run C++ and Lua tests
-      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      id: tests
+      # Whatever happened after the build: the C++ tests need nothing that came later
+      if: >-
+        !cancelled() && steps.build.outcome == 'success'
+        && matrix.run_tests == 'true' && runner.os == 'macOS'
       # Covers both suites: on the 3-core arm64 runner ctest takes ~215s on its own, and the
       # Lua suite stretches from ~170s to ~240s while sharing the runner with it
       timeout-minutes: 15
@@ -690,9 +694,14 @@ jobs:
           ASAN_OPTIONS=detect_leaks=0
         )
         lua_log="${{runner.temp}}/lua-tests.log"
-        env "${lua_tests_env[@]}" ~/Desktop/Mudlet.app/Contents/MacOS/mudlet \
-          --profile "Mudlet self-test" --mirror --offline > "${lua_log}" 2>&1 &
-        lua_tests=$!
+        lua_tests=""
+        if [ -x ~/Desktop/Mudlet.app/Contents/MacOS/mudlet ]; then
+          env "${lua_tests_env[@]}" ~/Desktop/Mudlet.app/Contents/MacOS/mudlet \
+            --profile "Mudlet self-test" --mirror --offline > "${lua_log}" 2>&1 &
+          lua_tests=$!
+        else
+          echo "No packaged app to run the Lua tests with - an earlier step failed" > "${lua_log}"
+        fi
 
         cd "${{runner.workspace}}/b/ninja"
         [ -d src/mudlet.app ] || mv "${{runner.temp}}/mudlet-for-ctest.app" src/mudlet.app
@@ -700,9 +709,10 @@ jobs:
         # On the 3-core arm64 runner -j6 took the run from 330s to 213s, and -j9 was slower (245s).
         ctest_status=0
         ctest --output-on-failure -j $(( 2 * $(sysctl -n hw.ncpu) )) || ctest_status=$?
+        echo "ctest=${ctest_status}" >> "$GITHUB_OUTPUT"
 
         lua_status=0
-        wait "${lua_tests}" || lua_status=$?
+        [ -z "${lua_tests}" ] || wait "${lua_tests}" || lua_status=$?
         echo "::group::Lua tests"
         cat "${lua_log}"
         echo "::endgroup::"
@@ -719,24 +729,31 @@ jobs:
         echo "C++ tests exited with ${ctest_status}, the Lua run with ${lua_status}"
         [ "${ctest_status}" -eq 0 ] && [ "${lua_status}" -eq 0 ]
 
-    # The macOS test job's C++ tests only run after packaging, and still decide whether its
-    # snapshot is published, so its upload comes after them - see the step above
-    - name: (macOS) Upload packaged Mudlet
+    # After the tests because the macOS test job's C++ tests, which run alongside its Lua
+    # tests, still decide whether its snapshot is published - as the C++ tests of every
+    # other job here do by running ahead of packaging. As before, the Lua tests do not.
+    - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v7
-      if: env.UPLOAD_FILENAME && runner.os == 'macOS' && matrix.run_tests == 'true'
+      if: >-
+        !cancelled() && env.UPLOAD_FILENAME
+        && (runner.os != 'macOS' || matrix.run_tests != 'true' || steps.tests.outputs.ctest == '0')
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
 
-    - name: (macOS) Submit to make.mudlet.org
-      if: env.UPLOAD_FILENAME && runner.os == 'macOS' && matrix.run_tests == 'true'
+    - name: Submit to make.mudlet.org
+      if: >-
+        !cancelled() && env.UPLOAD_FILENAME
+        && (runner.os != 'macOS' || matrix.run_tests != 'true' || steps.tests.outputs.ctest == '0')
+      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
+      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
       run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
-    - name: (macOS) Show what the tests left behind on failure
-      if: failure() && matrix.run_tests == 'true' && runner.os == 'macOS'
+    # A timeout or a cancellation stops the test step before it can say anything
+    - name: (macOS) Show what the tests left behind
+      if: always() && (steps.tests.outcome == 'failure' || steps.tests.outcome == 'cancelled')
       run: |
-        # A timeout kills the test step before it can say anything
         [ ! -e "${{runner.temp}}/lua-tests.shown" ] || exit 0
         pgrep -fl 'Mudlet.app|ctest' || echo "Neither the Lua run nor ctest was still running"
         cat "${{runner.temp}}/lua-tests.log" 2>/dev/null || echo "The Lua run left no log"
