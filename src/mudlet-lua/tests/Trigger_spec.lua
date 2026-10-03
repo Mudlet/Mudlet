@@ -3231,9 +3231,8 @@ describe("Trigger processing", function()
         -- space it broke at, so both sides are matched with all whitespace gone.
         local function consoleSince(mark)
             local last = getLastLineNumber("main")
-            -- getLines() answers an out-of-range index with "ERROR: invalid line
-            -- number" rather than failing, which would make every scan below
-            -- match nothing and pass
+            -- getLines() leaves out lines outside the buffer rather than
+            -- failing, which would make every scan below match nothing and pass
             assert.is_true(mark <= last, "the console buffer trimmed past the mark, so this scan would read outside it")
             return (table.concat(getLines("main", mark, last + 1), ""):gsub("%s+", ""))
         end
