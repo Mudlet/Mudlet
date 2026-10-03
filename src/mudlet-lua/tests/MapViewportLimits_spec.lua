@@ -211,15 +211,70 @@ describe("Tests painting a map label many times bigger than the map window", fun
     assert.is_not_nil(getMapLabels(areaId)[id])
   end)
 
-  it("exports an area holding a huge scaled label to an image", function()
-    local id = createMapImageLabel(areaId, getMudletHomeDir() .. "/nonexistent.png", -kHugeLabelRooms / 2, kHugeLabelRooms / 2, 0,
-      kHugeLabelRooms, kHugeLabelRooms, 0.005, true)
-    local filePath = getMudletHomeDir() .. "/HugeLabelSpec.png"
-    finally(function()
-      deleteMapLabel(areaId, id)
-      os.remove(filePath)
+  -- Lua cannot read the mapper's pixels back, but it can read an export's, so
+  -- this is where a huge label drawn as nothing at all would show up. An opaque
+  -- image covers the whole export, so each labelled export has to differ from
+  -- the bare one; the two runs cover the layers under and over the rooms.
+  describe("exports an area holding a huge scaled image label", function()
+    local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+    assert(specDirectory, "MapViewportLimits_spec.lua has to be run from a file so that it can find its fixtures")
+    local opaqueImage = specDirectory .. "/fixtures/images/solid-magenta-4x4.png"
+    local barePath = getMudletHomeDir() .. "/HugeLabelSpecBare.png"
+    local labelledPath = getMudletHomeDir() .. "/HugeLabelSpecLabelled.png"
+
+    local function readBytes(path)
+      local file = io.open(path, "rb")
+      if not file then
+        return nil
+      end
+      local bytes = file:read("*a")
+      file:close()
+      return bytes
+    end
+
+    -- The export is written on another thread after exportAreaImage() returns,
+    -- and starting a second one before the first has reported back crashes
+    -- Mudlet (#10393), so wait for the file to be complete and then a little
+    -- longer for the export to report back.
+    local function exportAndWait(path)
+      os.remove(path)
+      assert.is_true(exportAreaImage(areaId, path))
+      local bytes = readBytes(path)
+      local waitedMs = 0
+      while not (bytes and bytes:sub(-8, -5) == "IEND") and waitedMs < 5000 do
+        pumpEvents(20)
+        waitedMs = waitedMs + 20
+        bytes = readBytes(path)
+      end
+      pumpEvents(100)
+      assert(bytes and bytes:sub(-8, -5) == "IEND", "the export was never written to " .. path)
+      return bytes
+    end
+
+    local function exportWithHugeLabel(showOnTop)
+      local id
+      finally(function()
+        if id then
+          deleteMapLabel(areaId, id)
+        end
+        os.remove(barePath)
+        os.remove(labelledPath)
+      end)
+      local bare = exportAndWait(barePath)
+      id = createMapImageLabel(areaId, opaqueImage, -kHugeLabelRooms / 2, kHugeLabelRooms / 2, 0,
+        kHugeLabelRooms, kHugeLabelRooms, 0.005, showOnTop)
+
+      local labelled = exportAndWait(labelledPath)
+      assert.is_true(bare ~= labelled,
+        "the export came out the same with the label as without it, so the label was not drawn")
+    end
+
+    it("above the rooms", function()
+      exportWithHugeLabel(true)
     end)
 
-    assert.is_true(exportAreaImage(areaId, filePath))
+    it("below the rooms", function()
+      exportWithHugeLabel(false)
+    end)
   end)
 end)
