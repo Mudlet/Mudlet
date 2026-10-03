@@ -213,6 +213,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
     MapViewCueTest.cpp
+    LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
