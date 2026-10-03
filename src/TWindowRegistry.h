@@ -134,14 +134,25 @@ public:
         }
     }
 
+    // Mid-switch the dock can be a few pixels wide, which nothing can be laid out in - answer the last
+    // size a caller was given instead. Cached as it is asked rather than as the view writes it, as the
+    // view also writes the sizes the dock passes through while it is laid out.
     std::optional<QSize> userWindowSize(const QString& name) const
     {
         const auto it = mDockWidgets.constFind(name);
         if (it == mDockWidgets.constEnd()) {
             return {};
         }
+        const int minValidWidth = 50;
+        if (it->width() < minValidWidth) {
+            return {mAnsweredUserWindowSizes.value(name, *it)};
+        }
+        mAnsweredUserWindowSizes[name] = *it;
         return {*it};
     }
+
+    // Apart from deregisterDockWidget(): a profile reset drops the docks but keeps what was answered for them.
+    void forgetUserWindowSize(const QString& name) { mAnsweredUserWindowSizes.remove(name); }
 
     // TConsole::getMainWindowSize()'s answer, written by the view as anything it depends on changes.
     void setMainWindowSize(const QSize& size) { mMainWindowSize = size; }
@@ -234,6 +245,7 @@ private:
     QMap<QString, TLabelModel*> mLabels;
     QMap<QString, SubConsoleEntry> mSubConsoles;
     QMap<QString, QSize> mDockWidgets;
+    mutable QMap<QString, QSize> mAnsweredUserWindowSizes;
     QSet<QString> mScrollBoxes;
     QSet<QString> mCommandLines;
     QSet<QString> mTextBoxes;
