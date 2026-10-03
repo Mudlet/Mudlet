@@ -54,9 +54,11 @@ existing Makefiles tree, use `make -j $(sysctl -n hw.ncpu)`.
 ccache is enabled automatically whenever it is installed. A full cache evicts objects continuously,
 so branch switches can trigger near-full rebuilds — run `ccache -s`, and if `Cache size` has
 reached `Max cache size`, raise it with `ccache -M <n>G`.
-Git worktrees and second clones share each other's objects; for Debug and RelWithDebInfo builds
-that also needs `ccache --set-config hash_dir=false`, since ccache otherwise hashes the build
-directory into anything compiled with `-g`.
+Git worktrees and second clones share each other's objects. Builds that emit debug information
+(Debug, RelWithDebInfo, or any build with Sentry enabled) also need
+`ccache --set-config hash_dir=false` for that, since ccache otherwise hashes the build directory
+into anything compiled with `-g`. The trade-off is that a reused object's debug information points
+at the checkout that first compiled it, so a debugger may open that checkout's sources.
 
 ## Building on Windows
 
