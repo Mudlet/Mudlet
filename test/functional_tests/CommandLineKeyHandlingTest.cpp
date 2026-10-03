@@ -38,6 +38,8 @@
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTextBlock>
+#include <QTextLayout>
 #include <QtTest/QtTest>
 
 #include <chrono>
@@ -739,6 +741,13 @@ private slots:
         QVERIFY(runLua(qsl("appendCmdLine('%1', '\\nrow three')").arg(mLineName)));
         type(pCommandLine, qsl("Y"));
         QCOMPARE(pCommandLine->toPlainText(), qsl("row one\nrow twoX\nrow threeY"));
+
+        // A row that only wraps on screen ends its first row the same way
+        const QString wrapping = qsl("word ").repeated(200).trimmed();
+        QVERIFY(runLua(qsl("printCmdLine('%1', '%2')").arg(mLineName, wrapping)));
+        QVERIFY2(pCommandLine->document()->firstBlock().layout()->lineCount() > 1, "the long text did not wrap, so this case would prove nothing");
+        type(pCommandLine, qsl("Z"));
+        QCOMPARE(pCommandLine->toPlainText(), wrapping + qsl("Z"));
     }
 
     // The main command line grows to show every row of what Lua puts into it,
