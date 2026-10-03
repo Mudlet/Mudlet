@@ -156,12 +156,14 @@ int TConsoleModel::selectString(const QString& text, int numOfMatch)
         TDebug(Qt::gray, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
 
+    const QString li = buffer.line(mUserCursor.y());
+    if (li.isEmpty()) {
+        deselect();
+        return -1;
+    }
+
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
-        const QString li = buffer.line(mUserCursor.y());
-        if (li.isEmpty()) {
-            continue;
-        }
         begin = li.indexOf(text, begin + 1);
 
         if (begin == -1) {
