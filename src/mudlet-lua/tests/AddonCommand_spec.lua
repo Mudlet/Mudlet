@@ -267,6 +267,18 @@ describe("addon commands", function()
       assert.is_number(afterKill, "the key was refused for some other reason: " .. tostring(why))
     end)
 
+    it("refuses one a binding in a switched off group has, and names it", function()
+      permGroup("SpecDisabledKeyGroup", "key")
+      permKey("SpecDisabledKeyGroupChild", "SpecDisabledKeyGroup", mudlet.keymodifier.Alt, mudlet.key.F5, [[echo("bound")]])
+      disableKey("SpecDisabledKeyGroup")
+
+      local id, why = place{name = "DisabledGroupKeyClashSpec", shortcut = "Alt+F5"}
+
+      assert.is_nil(id, "a command took the key of a binding whose group was switched off")
+      assert.is_truthy(why:find("SpecDisabledKeyGroupChild", 1, true),
+        "the refusal does not name the key binding holding the key: " .. tostring(why))
+    end)
+
     -- A killed binding lingers until the key unit next tidies up, but can never fire again
     it("hands out the key of a killed binding", function()
       local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F6, [[echo("bound")]])
