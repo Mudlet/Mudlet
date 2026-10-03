@@ -141,7 +141,8 @@ const QString mainWindowSizeReporterName = qsl("mudlet_mainWindowSizeReporter");
 
 // Keeps the core's copy of TConsole::getMainWindowSize() current. That is the console's size less its
 // toolbars and command line, or its container's while a tab switch hides it, so a resize of any of
-// them, the console being hidden or shown, and its moving to another container all change it.
+// them, the console being hidden or shown, and its moving to another container all change it. A style
+// sheet's minimum size resizes a hidden part without a Resize event, hence StyleChange.
 class MainWindowSizeReporter : public QObject
 {
 public:
@@ -166,6 +167,7 @@ public:
             }
             [[fallthrough]];
         case QEvent::Resize:
+        case QEvent::StyleChange:
         case QEvent::ShowToParent:
         case QEvent::HideToParent:
             mpConsole->reportMainWindowSize();
