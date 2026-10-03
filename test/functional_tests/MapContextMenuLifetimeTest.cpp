@@ -392,6 +392,59 @@ private slots:
         QCOMPARE(actionsUnderTheMap(), before);
     }
 
+    // The line's second point, picked and right-clicked, with the line then
+    // taken away as removeCustomLine() does while the menu is still up
+    QPointer<QMenu> openTheMenuOfAPointWhoseLineIsThenRemoved()
+    {
+        buildMap();
+        TRoom* pRoom = addLineToTheEastRoom();
+        if (!pRoom) {
+            return nullptr;
+        }
+        showMapper();
+        // The first click picks the line, only then can one of its points be picked
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 4));
+        rightClickAt(pointUnitsFromCentre(1, 4));
+        QPointer<QMenu> menu = mp2dMap->mActiveContextMenu;
+        pRoom->customLines.remove(kLineExit);
+        pRoom->customLinesArrow.remove(kLineExit);
+        pRoom->customLinesStyle.remove(kLineExit);
+        pRoom->customLinesColor.remove(kLineExit);
+        pRoom->calcRoomDimensions();
+        return menu;
+    }
+
+    void test_addingAPointToALineRemovedWhileItsMenuIsUpDoesNothing()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPointWhoseLineIsThenRemoved();
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QAction* addPoint = menuItem(menu, qsl("Add point"));
+        QVERIFY2(addPoint && addPoint->isEnabled(), "the menu offers no Add point");
+
+        addPoint->trigger();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY2(!pRoom->customLines.contains(kLineExit), "the removed line was brought back");
+    }
+
+    void test_removingAPointFromALineRemovedWhileItsMenuIsUpDoesNothing()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPointWhoseLineIsThenRemoved();
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QAction* removePoint = menuItem(menu, qsl("Remove point"));
+        QVERIFY2(removePoint && removePoint->isEnabled(), "the menu offers no Remove point");
+
+        removePoint->trigger();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY2(!pRoom->customLines.contains(kLineExit), "the removed line was brought back");
+    }
+
     // A menu put up over the map covers part of it, and the click that picks
     // one of its items lands on both. It used to be read as a click on the map:
     // the menu was closed and the click replayed underneath, so the item it was
