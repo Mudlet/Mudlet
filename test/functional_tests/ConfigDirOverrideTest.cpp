@@ -690,6 +690,30 @@ private slots:
         QCOMPARE(settingsFileName(), QString());
     }
 
+    // main() reads Mudlet.ini before the settings store exists, and Qt hands that
+    // parse to the store without parsing again - so only the early reader is told
+    // the file is broken, and the store has to hear it from there
+    void test_aFormatErrorOnlyAnEarlyReaderSawIsStillReported()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QString iniPath = qsl("%1/Mudlet.ini").arg(root.path());
+        QFile ini(iniPath);
+        QVERIFY(ini.open(QIODevice::WriteOnly));
+        ini.write("[General]\nkey=1\n[Broken\n");
+        ini.close();
+        {
+            const QSettings early(iniPath, QSettings::IniFormat);
+            QCOMPARE(early.status(), QSettings::FormatError);
+            MudletApp::noteEarlySettingsStatus(early);
+        }
+
+        MudletApp::setConfigPath(root.path());
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("^MudletApp::getQSettings\\(\\) ERROR - \"[^\"]+Mudlet\\.ini\" is not valid INI")));
+        QVERIFY(MudletApp::getQSettings());
+        MudletApp::setConfigPath(QString());
+    }
+
     // The preferences dialog can change the language at any time, so an accessor
     // handing back a reference into the static would change under whoever held it
     void test_getInterfaceLanguageHandsBackASnapshot()
