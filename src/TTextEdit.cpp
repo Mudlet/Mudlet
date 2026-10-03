@@ -1312,7 +1312,8 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // An opaque cache without an alpha channel is what lets Qt copy it out
     // instead of blending it, whichever of the two formats the window uses.
     const QImage::Format cacheFormat = opaque ? QImage::Format_RGB32 : QImage::Format_ARGB32_Premultiplied;
-    if (clearColor != mCacheClearColor) {
+    const bool cacheRetired = (clearColor != mCacheClearColor);
+    if (cacheRetired) {
         mCacheClearColor = clearColor;
         mCachedScreenSize = QSize();
     }
@@ -1329,11 +1330,11 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     int lineOffset = imageTopLine();
     int from = 0;
 
-    // A scroll moves every row, so the region handed to us is a floor and not a
-    // ceiling: taken as a ceiling it redraws only the rows named in it, leaving
-    // the rows the scroll exposed still showing pre-scroll ink.
+    // A scroll moves every row, and a retired cache has no row worth keeping, so
+    // the region handed to us is then a floor and not a ceiling: taken as a
+    // ceiling it redraws only the rows named in it and leaves the rest stale.
     const bool scrolledSinceLastPaint = (lineOffset != mLastRenderedOffset);
-    if (scrolledSinceLastPaint) {
+    if (scrolledSinceLastPaint || cacheRetired) {
         y_bottom = mScreenHeight;
     }
 
@@ -1603,6 +1604,8 @@ void TTextEdit::paintNothing(const QRect& r)
     QPainter painter(this);
     painter.fillRect(r, QColor(mpConsole->getConsoleBgColor().rgb()));
     setAttribute(Qt::WA_OpaquePaintEvent, false);
+    // The solid fill must give way to whatever now shows through beneath it
+    update();
 }
 
 void TTextEdit::paintEvent(QPaintEvent* e)

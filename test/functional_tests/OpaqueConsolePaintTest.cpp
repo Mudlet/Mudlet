@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -34,6 +35,21 @@
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
+
+class PaintCounter : public QObject
+{
+public:
+    int count = 0;
+
+protected:
+    bool eventFilter(QObject*, QEvent* event) override
+    {
+        if (event->type() == QEvent::Paint) {
+            ++count;
+        }
+        return false;
+    }
+};
 
 /*
  * The main console's text pane paints its own background whenever nothing
@@ -137,6 +153,60 @@ private slots:
                          qPrintable(qsl("device row %1 of the cached screen still shows %2 rather than %3").arg(y).arg(QColor(cached.pixel(x, y)).name(), color.name())));
             }
         }
+    }
+
+    // Nothing holds a hover or selection repaint back until the new background
+    // has been painted everywhere, so the first paint to see it may cover a
+    // single row.
+    void test_aNewBackgroundKeepsTheRowsAPartialRepaintMisses()
+    {
+        TTextEdit* pane = startPane();
+        QVERIFY(pane);
+        auto* lua = mudlet::self()->getActiveHost()->getLuaInterpreter();
+        lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('MORE ' .. i .. '\\n') end\n"
+                                         "setBackgroundColor(20, 40, 90)\n"));
+        settle(pane);
+        QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
+        QVERIFY2(pane->imageTopLine() >= 10, "the view is too near the top of the buffer for a repaint to reuse the cached screen");
+
+        lua->compileAndExecuteScript(qsl("setBackgroundColor(90, 20, 40)\n"));
+        const QRect band(0, 2 * pane->mFontHeight, pane->width(), pane->mFontHeight);
+        QImage shown(pane->size(), QImage::Format_ARGB32_Premultiplied);
+        pane->render(&shown, band.topLeft(), QRegion(band), QWidget::RenderFlags());
+        const QImage afterBand = pane->cachedScreen().copy();
+
+        pane->forceUpdate();
+        pane->repaint();
+        QVERIFY2(afterBand == pane->cachedScreen(), "the rows outside the first repaint after a new background were left blank in the cached screen");
+    }
+
+    // The fill it paints while Qt is not painting beneath it is the opaque
+    // version of a background that may since have become translucent.
+    void test_aPaneWithNoRowsToDrawIsPaintedAgainOverWhatLiesBeneath()
+    {
+        TTextEdit* pane = startPane();
+        QVERIFY(pane);
+        mudlet::self()->getActiveHost()->getLuaInterpreter()->compileAndExecuteScript(qsl("setBackgroundColor(20, 40, 90)\n"));
+        settle(pane);
+        qApp->processEvents();
+        QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
+
+        PaintCounter paints;
+        pane->installEventFilter(&paints);
+        const int fontHeight = pane->mFontHeight;
+        auto restore = qScopeGuard([&] {
+            pane->mFontHeight = fontHeight;
+            pane->removeEventFilter(&paints);
+        });
+        for (int before = -1; before != paints.count;) {
+            before = paints.count;
+            QTest::qWait(500);
+        }
+        pane->mFontHeight = 0;
+        pane->repaint();
+        QVERIFY(!pane->testAttribute(Qt::WA_OpaquePaintEvent));
+        const int paintsSoFar = paints.count;
+        QTRY_VERIFY2(paints.count > paintsSoFar, "the pane kept the solid fill it painted while nothing beneath it was painted");
     }
 
     // Hover and selection repaints copy rows between the cached screen and the
