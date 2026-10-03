@@ -3231,32 +3231,35 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor, xOffset, 20, width(), mFontHeight);
 
-    static bool isAreaWidgetValid = true; // Remember between uses
-    QFont _f = mpMap->mpMapper->comboBox_showArea->font();
-    if (isAreaWidgetValid) {
-        if (mAreaID == -1                       // the map being shown is the "default" area
-            && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
+    // The area combobox belongs to the main mapper, which a secondary view may exist without
+    if (!mIsSecondaryView && mpMap->mpMapper) {
+        static bool isAreaWidgetValid = true; // Remember between uses
+        QFont _f = mpMap->mpMapper->comboBox_showArea->font();
+        if (isAreaWidgetValid) {
+            if (mAreaID == -1                       // the map being shown is the "default" area
+                && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
-            isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
-            // Set the area widget to indicate the area widget is NOT
-            // showing valid text - so make it italic and crossed out
-            _f.setItalic(true);
-            _f.setUnderline(true);
-            _f.setStrikeOut(true);
-            _f.setOverline(true);
+                isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
+                // Set the area widget to indicate the area widget is NOT
+                // showing valid text - so make it italic and crossed out
+                _f.setItalic(true);
+                _f.setUnderline(true);
+                _f.setStrikeOut(true);
+                _f.setOverline(true);
+            }
+        } else {
+            if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
+                isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
+                // Reset to normal
+                _f.setItalic(false);
+                _f.setUnderline(false);
+                _f.setStrikeOut(false);
+                _f.setOverline(false);
+            }
         }
-    } else {
-        if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
-            isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
-            // Reset to normal
-            _f.setItalic(false);
-            _f.setUnderline(false);
-            _f.setStrikeOut(false);
-            _f.setOverline(false);
-        }
+
+        mpMap->mpMapper->comboBox_showArea->setFont(_f);
     }
-
-    mpMap->mpMapper->comboBox_showArea->setFont(_f);
 
     if (!mHelpMsg.isEmpty()) {
         painter.setPen(QColor(255, 155, 50));
@@ -5407,7 +5410,9 @@ void T2DMap::slot_newMap()
     mpMap->updateArea(-1);
     isCenterViewCall = false;
     mpMap->setUnsaved(__func__);
-    mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    if (mpMap->mpMapper) {
+        mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    }
 }
 
 void T2DMap::slot_setArea()
@@ -5474,7 +5479,9 @@ void T2DMap::slot_setArea()
             mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
             mpMap->setUnsaved(__func__);
 
-            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper) {
+                mpMap->mpMapper->updateAreaComboBox();
+            }
         }
         mMultiRect = QRect(0, 0, 0, 0);
         QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
@@ -5483,7 +5490,9 @@ void T2DMap::slot_setArea()
         }
         if (!mMultiSelectionSet.isEmpty()) {
             const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
-            mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            if (!mIsSecondaryView && mpMap->mpMapper) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            }
             switchArea(targetAreaName);
             // The rooms are still selected, so land on them rather than on
             // whichever room switchArea() would otherwise have picked:
@@ -5501,7 +5510,11 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    if (!mIsSecondaryView && mpMap->mpMapper) {
+        arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    } else {
+        arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
+    }
 }
 
 
