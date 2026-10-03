@@ -126,6 +126,8 @@ private slots:
         mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
+        // A Host added without a console gets no view manager from mudlet::addConsoleForNewHost()
+        map()->setViewManager(new TMapViewManager(mpHost, map()));
         QVERIFY(viewManager());
     }
 
@@ -156,7 +158,12 @@ private slots:
         QVERIFY(areaListOf(alphaView).contains(qsl("Doomed")));
 
         QVERIFY(runLua(qsl("assert(addAreaName('NewArea'))")));
+        QVERIFY2(areaListOf(alphaView).contains(qsl("NewArea")) && areaListOf(doomedView).contains(qsl("NewArea")), "a view's area list is missing an area added from Lua");
         QVERIFY(runLua(qsl("assert(setAreaName(%1, 'NewName'))").arg(old)));
+        for (const auto& view : {alphaView, doomedView}) {
+            const QStringList names = areaListOf(view);
+            QVERIFY2(names.contains(qsl("NewName")) && !names.contains(qsl("OldName")), qPrintable(qsl("a view's area list missed a rename from Lua: %1").arg(names.join(qsl(", ")))));
+        }
         // By name, as the id it switches views off has to be looked up first
         QVERIFY(runLua(qsl("assert(deleteArea('Doomed'))")));
 
