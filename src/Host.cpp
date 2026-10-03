@@ -5109,6 +5109,7 @@ bool Host::replaceWindowText(const QString& name, const QString& text)
         return false;
     }
     pModel->replace(text);
+    markSelectionDirty(*pModel);
     return true;
 }
 
