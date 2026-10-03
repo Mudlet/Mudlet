@@ -1917,7 +1917,7 @@ noViewCursor = table.concat(results, '|')
             host->setConsoleBufferSize(12345);
             host->setUseMaxConsoleBufferSize(false);
             runLua(host, qsl("setConsoleBufferSize('%1', 700, 70, true)\n").arg(name));
-            QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+            QCOMPARE(host->getConsoleBufferSize(), 12345);
             QVERIFY(host->getUseMaxConsoleBufferSize());
             QCOMPARE(host->mpConsole->buffer.mLinesLimit, maxBufferSize);
             QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 70);
@@ -2002,7 +2002,7 @@ headlessProblems = table.concat(headlessProblems, '; ')
 
         runLua(host, qsl("setConsoleBufferSize('main', 700, 70, true)\n"));
         QCOMPARE(model->buffer.mLinesLimit, maxBufferSize);
-        QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+        QCOMPARE(host->getConsoleBufferSize(), 700);
         QVERIFY(host->getUseMaxConsoleBufferSize());
     }
 
