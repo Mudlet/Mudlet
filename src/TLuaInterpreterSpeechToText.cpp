@@ -164,9 +164,8 @@ static QString noEngineMessage()
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
 
-// A fault while listening keeps the model, but a failed load leaves none - and
-// the model-less backends never have one - so "reload" is said only when there
-// is one to reload
+// A failed load leaves no model, and model-less backends never have one, so
+// "reload" is said only when there is one
 static QString errorStateStartMessage(const SpeechRecognizer* pRecognizer)
 {
     if (pRecognizer->modelPath().isEmpty()) {

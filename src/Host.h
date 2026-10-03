@@ -523,10 +523,8 @@ public:
     // alone even when that is not registered, there being nothing better to move
     // it to. Returns true when the display font was changed.
     bool substituteMissingDisplayFont();
-    // Every package or module that could own the code a Lua chunk came from: an
-    // item, by the "Script: name" style names items compile under, or a file in
-    // a package's folder. An item in no package counts as "", and temporary
-    // items and items with no code are not counted.
+    // Every package or module that could own the code a Lua chunk came from, by
+    // the "Script: name" style item names or a file's package folder; "" is the profile
     QSet<QString> packagesOwningChunk(const QString& chunkName);
     // The script whose top-level code is running, so code it runs directly can
     // be told apart from another script of the same name in another package

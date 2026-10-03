@@ -157,16 +157,17 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   } >> "${CLAUDE_ENV_FILE}"
 fi
 
-# Let worktrees share ccache hits. ccache hashes the absolute paths CMake
-# passes and, for a -g build, the working directory, so without this a worktree
-# would miss on everything a sibling had compiled. base_dir turns paths below it
-# into relative ones, the same in every worktree; it must not be above /opt/qt
-# or /usr, whose include paths would then differ with worktree depth. With
-# hash_dir off, an object's debug info can name a sibling's build directory.
-# The main checkout's parent, even from a worktree, as the setting is global.
-CCACHE_BASE_DIR=""
+# Let worktrees share ccache hits: base_dir makes paths below it relative, so
+# it is the main checkout's parent - never / or above /opt/qt and /usr, whose
+# include paths would then differ with worktree depth. hash_dir off keeps each
+# worktree's build directory out of the hash of a -g build. Both are global.
+CHECKOUT_ROOT=""
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
-  CCACHE_BASE_DIR="$(dirname "$(cd "${CLAUDE_PROJECT_DIR}" && cd "$(git rev-parse --git-common-dir)/.." && pwd)")" || CCACHE_BASE_DIR=""
+  CHECKOUT_ROOT="$(cd "${CLAUDE_PROJECT_DIR}" && cd "$(git rev-parse --git-common-dir)/.." && pwd)" || CHECKOUT_ROOT=""
+fi
+CCACHE_BASE_DIR=""
+if [ -n "${CHECKOUT_ROOT}" ]; then
+  CCACHE_BASE_DIR="$(dirname "${CHECKOUT_ROOT}")"
 fi
 if command -v ccache >/dev/null 2>&1 && [ -n "${CCACHE_BASE_DIR}" ] && [ "${CCACHE_BASE_DIR}" != "/" ]; then
   ccache --set-config=base_dir="${CCACHE_BASE_DIR}" \

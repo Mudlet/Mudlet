@@ -300,9 +300,8 @@ public:
         CommandSurface surfaces = CommandSurface::Both;
     };
 
-    // package is the package or module whose code asked, empty for none, and
-    // its commands are removed when it is uninstalled. error says why a command
-    // could not be placed, so the binding can say which.
+    // package: whose code asked, empty for none. error: why a command could not
+    // be placed, so the binding can say which.
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error);
     bool removeAddonCommand(int commandId, Host* pHost);
     bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost);
@@ -311,9 +310,9 @@ public:
     bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost);
     bool setAddonCommandPinned(int commandId, bool pinned, Host* pHost);
     bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
-    // Every command a profile placed, dropped when it closes or resets
-    void removeAddonCommandsForHost(Host* pHost);
-    void removeAddonCommandsForPackage(Host* pHost, const QString& package);
+    // Every command a profile placed, dropped when it closes or resets - or only
+    // those a package or module made, when one is named, on its uninstall
+    void removeAddonCommandsForHost(Host* pHost, const QString& package = QString());
     // Which add-on commands hold this key, named as the player reads them.
     // The clash check only runs when a package asks for a key, and Mudlet's
     // own bindings can appear afterwards - the buffer search is switched on

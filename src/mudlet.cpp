@@ -1595,27 +1595,11 @@ QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifie
     return {};
 }
 
-void mudlet::removeAddonCommandsForHost(Host* pHost)
+void mudlet::removeAddonCommandsForHost(Host* pHost, const QString& package)
 {
-    QList<int> doomed;
-    for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
-        if (it.value().pHost == pHost) {
-            doomed.append(it.key());
-        }
-    }
-    for (int commandId : doomed) {
-        removeAddonCommand(commandId, pHost);
-    }
-}
-
-void mudlet::removeAddonCommandsForPackage(Host* pHost, const QString& package)
-{
-    if (package.isEmpty()) {
-        return;
-    }
     QList<int> doomed;
     for (const auto [commandId, command] : std::as_const(mAddonCommands).asKeyValueRange()) {
-        if (command.pHost == pHost && command.package == package) {
+        if (command.pHost == pHost && (package.isEmpty() || command.package == package)) {
             doomed.append(commandId);
         }
     }
@@ -4015,7 +3999,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         removeAddonCommandsForHost(pH);
     });
     connect(pH, &Host::signal_packageRemoved, this, [this, pH](const QString& packageName) {
-        removeAddonCommandsForPackage(pH, packageName);
+        removeAddonCommandsForHost(pH, packageName);
     });
 
     // Wire the map engine's progress signals to the console that owns the dialog.

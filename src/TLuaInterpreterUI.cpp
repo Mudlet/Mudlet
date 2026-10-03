@@ -4663,10 +4663,8 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
     return 1;
 }
 
-// The package or module whose code a Lua frame is running, empty for none.
-// Several items can share the name its chunk compiled under; the script whose
-// body is running is taken for its own frames, and for functions that body
-// called directly - not ones reached through a C function such as raiseEvent().
+// Of same-named items, the running script owns its body and what that body calls
+// directly - not what it reaches through a C function such as raiseEvent()
 static QString packageOfFrame(lua_State* L, Host& host, const int level, const lua_Debug& frame)
 {
     const QString source = QString::fromUtf8(frame.source);

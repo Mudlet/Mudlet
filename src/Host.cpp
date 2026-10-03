@@ -3597,8 +3597,8 @@ QSet<QString> Host::packagesOwningChunk(const QString& chunkName)
     const QString name = chunkName.mid(separator + 2);
 
     QSet<QString> owners;
-    // An item with no code - such as the folder a package is installed into,
-    // named after the package - cannot be where a chunk came from
+    // Disabled items count: their code may already have run, and permScript()
+    // makes them disabled. Items with no code, like a package's folder, do not.
     auto collectOwners = [&name, &owners](const auto& roots) {
         for (auto* root : roots) {
             std::vector<decltype(root)> pending{root};

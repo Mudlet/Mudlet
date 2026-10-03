@@ -167,8 +167,9 @@ end)
    defined (an event handler, a timer closure), or a file in the folder
    Mudlet unpacked the package into. Commands made from the command line, a profile's own items, code
    compiled from a string (a string-code `tempTimer`, `loadstring`), or a
-   function whose item shares its name with another package's item or one of
-   the profile's belong to no package and stay. A library package's helper
+   function whose item shares its name with another package's item or
+   one of the profile's belong to no package and stay - unless it is a
+   script's own body, or a function that body calls directly while it runs. A library package's helper
    that calls `addCommand` for its callers makes commands that are the
    library's.
 5. **Cycles leave no residue.** Repeated add/remove must not accumulate
