@@ -529,6 +529,43 @@ private slots:
         QVERIFY2(trigger->getPatternsList().isEmpty(), qPrintable(trigger->getPatternsList().join(qsl(", "))));
     }
 
+    // The snapshot's active state is applied before its patterns and code, while
+    // the item still holds ones that cannot be activated - none, a broken regex,
+    // broken Lua - and switching on again once they are restored is what was missing
+    void test_restoringPatternsAnItemCouldNotRunWithoutSwitchesItBackOn()
+    {
+        TTrigger* firstPattern = newTrigger(qsl("eixh trigger given its first pattern"));
+        QVERIFY(firstPattern->setRegexCodeList({qsl("eixh first pattern")}, {REGEX_SUBSTRING}));
+        QVERIFY(firstPattern->setIsActive(true));
+        const QString withPattern = exportTriggerToXML(firstPattern);
+        firstPattern->setRegexCodeList({}, {});
+        QVERIFY(!firstPattern->isActive());
+        QVERIFY(updateTriggerFromXML(firstPattern, withPattern));
+        QVERIFY2(firstPattern->isActive(), "a redo that gave the trigger its pattern back left it switched off");
+
+        TTrigger* brokenRegex = newTrigger(qsl("eixh trigger given a broken regex"));
+        QVERIFY(brokenRegex->setRegexCodeList({qsl("^eixh")}, {REGEX_PERL}));
+        QVERIFY(brokenRegex->setIsActive(true));
+        const QString working = exportTriggerToXML(brokenRegex);
+        brokenRegex->setRegexCodeList({qsl("(eixh unclosed")}, {REGEX_PERL});
+        QVERIFY(!brokenRegex->isActive());
+        QVERIFY(updateTriggerFromXML(brokenRegex, working));
+        QVERIFY2(brokenRegex->isActive(), "undoing the edit that broke the trigger's regex left it switched off");
+
+        TScript* brokenLua = newScript(qsl("eixh script given broken Lua"));
+        // compile() rather than setScript() alone: a bare Host blocks compiling until a profile has loaded
+        brokenLua->setScript(qsl("local eixh = 1"));
+        brokenLua->compile();
+        QVERIFY(brokenLua->setIsActive(true));
+        const QString compiling = exportScriptToXML(brokenLua);
+        brokenLua->setScript(qsl("if then end"));
+        brokenLua->compile();
+        brokenLua->setIsActive(true);
+        QVERIFY(!brokenLua->isActive());
+        QVERIFY(updateScriptFromXML(brokenLua, compiling));
+        QVERIFY2(brokenLua->isActive(), "undoing the edit that broke the script's Lua left it switched off");
+    }
+
     // The same for a script given its first event handler: undoing that has to
     // stop the script being called for the event.
     void test_eventHandlersAddedByAnEditAreTakenAwayByTheRestore()
