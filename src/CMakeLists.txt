@@ -795,7 +795,10 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSIO
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+# On the one file that reads it: a checkout path on every compile line keeps
+# ccache from sharing objects between worktrees
+set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS
     LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)

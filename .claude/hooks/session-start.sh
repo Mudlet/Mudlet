@@ -71,6 +71,23 @@ if [ ! -d "${QT_DIR}" ]; then
     linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech)
 fi
 
+# One cache for every checkout: base_dir turns paths under the directory above
+# the project into relative ones, so sibling and nested worktrees hash alike, and
+# with -g (the Debug presets) the working directory is hashed unless hash_dir is
+# off. Kept off "/" so the Qt and system headers stay absolute.
+if command -v ccache >/dev/null 2>&1 && [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  CCACHE_BASE_DIR="$(dirname "${CLAUDE_PROJECT_DIR}")"
+  [ "${CCACHE_BASE_DIR}" != "/" ] || CCACHE_BASE_DIR="${CLAUDE_PROJECT_DIR}"
+  ccache --set-config=base_dir="${CCACHE_BASE_DIR}" || true
+  ccache --set-config=hash_dir=false || true
+  # rcc stamps every resource with its file's mtime, which differs between
+  # checkouts; pinned, the font and image resources hit too. Not SOURCE_DATE_EPOCH:
+  # GCC would apply that to __DATE__, and the updater reads the real build time.
+  if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+    echo "export QT_RCC_SOURCE_DATE_OVERRIDE=1" >> "${CLAUDE_ENV_FILE}"
+  fi
+fi
+
 # Test-suite and UI-driving dependencies: xvfb and xcb libraries for the
 # busted run (the aqt Qt's xcb platform needs libxcb-cursor0 and
 # libxcb-shape0, which Ubuntu's own Qt would have pulled in), gstreamer for
