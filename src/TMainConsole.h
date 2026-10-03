@@ -240,9 +240,6 @@ public:
     // A negative line counts back from the end. One at or past the end, or
     // toEnd, puts the console back to following new lines.
     bool scrollWindowTo(const QString& name, int line, bool toEnd);
-    // How many characters and lines fit in the named console's upper pane, from its size and font.
-    std::optional<int> getWindowColumnCount(const QString& name);
-    std::optional<int> getWindowRowCount(const QString& name);
     // The font operations, found by name in the same way. The main console's
     // font is the profile's display font, which Host keeps and tells scripts
     // about when it changes.

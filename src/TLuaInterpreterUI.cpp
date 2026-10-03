@@ -1446,12 +1446,11 @@ int TLuaInterpreter::getClipboardText(lua_State* L)
 int TLuaInterpreter::getColumnCount(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto columns = host.mpConsole ? host.mpConsole->getWindowColumnCount(windowName) : std::nullopt;
-    if (!columns) {
+    const auto gridSize = getHostFromLua(L).windowGridSize(windowName);
+    if (!gridSize) {
         return windowNotFound(L, windowName);
     }
-    lua_pushnumber(L, *columns);
+    lua_pushnumber(L, gridSize->width());
     return 1;
 }
 
@@ -1742,12 +1741,11 @@ int TLuaInterpreter::getMainWindowSize(lua_State* L)
 int TLuaInterpreter::getRowCount(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    const Host& host = getHostFromLua(L);
-    const auto rows = host.mpConsole ? host.mpConsole->getWindowRowCount(windowName) : std::nullopt;
-    if (!rows) {
+    const auto gridSize = getHostFromLua(L).windowGridSize(windowName);
+    if (!gridSize) {
         return windowNotFound(L, windowName);
     }
-    lua_pushnumber(L, *rows);
+    lua_pushnumber(L, gridSize->height());
     return 1;
 }
 
