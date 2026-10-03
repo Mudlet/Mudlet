@@ -44,7 +44,6 @@
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
-#include "widgetutils.h"
 
 #include <QAccessible>
 #include <QTextDocument>
@@ -119,8 +118,6 @@ private:
 
 private slots:
   void initTestCase() {
-    widgetutils::syncAccessibleDescriptionsWithToolTips();
-
     if (portableMarkerPresent()) {
       QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
             "so the config dir cannot be redirected");
@@ -1983,6 +1980,8 @@ private slots:
   // Each view relabels the toolbar actions and changes their tooltips, and a
   // widget with no description of its own reports its tooltip, markup
   // included, through the accessible interface a screen reader reads.
+  // mudlet::start() installs the filter that prevents this, so this test also
+  // fails if the application stops installing it.
   void testAccessibleDescriptionsHaveNoMarkup() {
     static const QRegularExpression htmlTag(qsl(R"(<[/A-Za-z][^>]*>)"));
     for (const auto &itemType : mItemTypes) {
