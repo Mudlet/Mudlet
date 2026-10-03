@@ -3023,6 +3023,11 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     // emptied matches table:
     TLuaInterpreter* pL = host.getLuaInterpreter();
     const int dispatchDepth = pL->pushNestedDispatchState();
+    if (dispatchDepth < 0) {
+        qWarning().nospace() << "TLuaInterpreter::expandAlias(...) WARNING - not expanding " << payload << " as a garbage collection finaliser asked for it while the capture tables were being built.";
+        lua_pushboolean(L, false);
+        return 1;
+    }
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
     host.send(payload, wantPrint, false);
@@ -3626,6 +3631,10 @@ void TLuaInterpreter::clearCaptureGroups()
 // popNestedDispatchState() to unwind to.
 int TLuaInterpreter::pushNestedDispatchState()
 {
+    // The matching pop moves the parked lists back over any a build is walking
+    if (buildingCaptureTables()) {
+        return -1;
+    }
     // Every Lua call is made before the entry goes onto the stack, and each one
     // is raw. A package is free to put __index on the globals table, and running
     // one here could raise past the pop this pairs with - raw reads cannot, and
@@ -4432,8 +4441,30 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 }
 
 // No documentation available in wiki - internal function
+// While true, nothing may replace the capture lists - see pushMatchesTable()
+bool TLuaInterpreter::buildingCaptureTables()
+{
+    if (mCaptureBuildDepth == 0) {
+        return false;
+    }
+    // Only a __gc finaliser, which is a running Lua function, can reach a pass from
+    // inside a build. With none running, the count was left behind by an error
+    // that a finaliser raised straight past the decrement.
+    lua_Debug ar;
+    if (!lua_getstack(pGlobalLua, 0, &ar)) {
+        mCaptureBuildDepth = 0;
+        return false;
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::pushMatchesTable(lua_State* L)
 {
+    // Every push below can run a __gc finaliser, and one that starts a trigger or
+    // alias pass would replace the lists this walk holds iterators into, so passes
+    // are refused until it ends
+    ++mCaptureBuildDepth;
     // presized, so filling it in does not rehash the table on the way up
     lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
 
@@ -4448,11 +4479,14 @@ void TLuaInterpreter::pushMatchesTable(lua_State* L)
         lua_pushstring(L, capture.toUtf8().constData());
         lua_rawset(L, -3);
     }
+    --mCaptureBuildDepth;
 }
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 {
+    // Passes are refused for the same reason pushMatchesTable() gives
+    ++mCaptureBuildDepth;
     int k = 1;
     lua_newtable(L);
     for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
@@ -4472,6 +4506,7 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
         }
         lua_settable(L, -3);
     }
+    --mCaptureBuildDepth;
 }
 
 // No documentation available in wiki - internal, test-only function
