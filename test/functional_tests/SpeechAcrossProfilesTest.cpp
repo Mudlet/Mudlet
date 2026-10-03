@@ -1732,7 +1732,7 @@ private slots:
 
         // Move the first profile in alongside the second, so one window holds
         // both - the arrangement four tabs in one detached window generalises
-        QVERIFY2(pWindow->addProfile(mFirstHostname, mpFirstHost->mpConsole), "the first profile could not join the detached window");
+        QVERIFY2(pWindow->addProfile(mFirstHostname, mpFirstHost->mainConsoleView()), "the first profile could not join the detached window");
         pWindow->switchToProfile(mFirstHostname);
         QTest::qWait(200ms);
 

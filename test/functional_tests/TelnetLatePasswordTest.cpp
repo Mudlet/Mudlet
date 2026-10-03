@@ -618,10 +618,10 @@ private:
     // it sits on happened to be broken part way through it.
     static bool consoleContains(Host* host, const QString& substring)
     {
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return false;
         }
-        auto& buffer = host->mpConsole->buffer;
+        auto& buffer = host->mainConsoleView()->buffer;
         QString all;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             all.append(buffer.line(i));

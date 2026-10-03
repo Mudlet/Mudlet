@@ -163,7 +163,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
         int sizesWithOverflow = 0;
@@ -208,7 +208,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
         waitForQuietConsole(host);
 
@@ -268,7 +268,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
         int checkedSizes = 0;
@@ -297,7 +297,7 @@ private slots:
             const int row = pane->getScreenHeight() / 2;
             const QRect damaged(0, row * cellHeight, pane->width(), cellHeight * 2);
             QPainter eraser(&rendered);
-            eraser.fillRect(damaged, host->mpConsole->getConsoleBgColor());
+            eraser.fillRect(damaged, host->mainConsoleView()->getConsoleBgColor());
             eraser.end();
             pane->render(&rendered, damaged.topLeft(), QRegion(damaged), QWidget::DrawChildren);
 
@@ -321,7 +321,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
         int checkedSizes = 0;
@@ -385,7 +385,7 @@ private slots:
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
         runLua(host, qsl("createMiniConsole('overflowMini', 0, 0, 800, 400)"));
-        auto* mini = host->mpConsole->subConsoleWidget(qsl("overflowMini"));
+        auto* mini = host->mainConsoleView()->subConsoleWidget(qsl("overflowMini"));
         QVERIFY2(mini, "The miniconsole was not created");
         TTextEdit* pane = mini->mUpperPane;
         QVERIFY2(pane, "The miniconsole has no pane");
@@ -434,7 +434,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
         int checkedSizes = 0;
@@ -481,7 +481,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        QVERIFY2(host->mpConsole->mUpperPane, "No upper pane available");
+        QVERIFY2(host->mainConsoleView()->mUpperPane, "No upper pane available");
         applyFont(host, kTestFamilies.first(), kDecorationSize);
         const QString spaces(kSpaceRunCount, QLatin1Char(' '));
 
@@ -505,7 +505,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        QVERIFY2(host->mpConsole->mUpperPane, "No upper pane available");
+        QVERIFY2(host->mainConsoleView()->mUpperPane, "No upper pane available");
         applyFont(host, kTestFamilies.first(), kDecorationSize);
         const QString spaces(kSpaceRunCount, QLatin1Char(' '));
 
@@ -532,9 +532,9 @@ private:
     // the default palette colour where no cell was filled.
     static QImage renderPane(Host* host)
     {
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QImage image(pane->size(), QImage::Format_ARGB32_Premultiplied);
-        image.fill(host->mpConsole->getConsoleBgColor());
+        image.fill(host->mainConsoleView()->getConsoleBgColor());
         pane->render(&image, QPoint(), QRegion(), QWidget::DrawChildren);
         return image;
     }
@@ -559,7 +559,7 @@ private:
         return {top - cellTop, bottom - cellTop};
     }
 
-    static QRgb consoleBackground(Host* host) { return host->mpConsole->getConsoleBgColor().rgb(); }
+    static QRgb consoleBackground(Host* host) { return host->mainConsoleView()->getConsoleBgColor().rgb(); }
 
     static int cellHeightOf(const TTextEdit* pane) { return QFontMetrics(pane->font()).height(); }
     static int cellWidthOf(const TTextEdit* pane) { return QFontMetrics(pane->font()).averageCharWidth(); }
@@ -597,7 +597,7 @@ private:
     // given underlay, repaints, and returns the ink of the underscore line.
     QVector<QPoint> renderAndCollectInk(Host* host, const Underlay& underlay)
     {
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         runLua(host, qsl("clearWindow()"));
         runLua(host, qsl("cecho('<white>%1\\n')").arg(QString(kUnderscoreCount, QLatin1Char('_'))));
         runLua(host, qsl("cecho('%1%2\\n')").arg(underlay.colourTag, QString(kFillerCount, QLatin1Char(' '))));
@@ -607,10 +607,10 @@ private:
             return {};
         }
         if (underlay.selected) {
-            if (underscoreLine + 1 >= static_cast<int>(host->mpConsole->buffer.buffer.size())) {
+            if (underscoreLine + 1 >= static_cast<int>(host->mainConsoleView()->buffer.buffer.size())) {
                 return {};
             }
-            auto& below = host->mpConsole->buffer.buffer.at(underscoreLine + 1);
+            auto& below = host->mainConsoleView()->buffer.buffer.at(underscoreLine + 1);
             for (TChar& character : below) {
                 character.select();
             }
@@ -628,7 +628,7 @@ private:
     // is not in the buffer or has scrolled out of view.
     int inkOnLine(Host* host, const QString& lineText)
     {
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         const int line = findLine(host, lineText);
         if (line < 0) {
             return -1;
@@ -642,7 +642,7 @@ private:
         if (top < 0) {
             return -1;
         }
-        const QRgb background = host->mpConsole->getConsoleBgColor().rgb();
+        const QRgb background = host->mainConsoleView()->getConsoleBgColor().rgb();
         const int lastY = qMin(top + cellHeight, rendered.height()) - 1;
         const int lastX = qMin(lineText.size() * cellWidthOf(pane), rendered.width()) - 1;
         int ink = 0;
@@ -665,7 +665,7 @@ private:
         int previousLastLine = -1;
         int pollsUnchanged = 0;
         while (pollsUnchanged < 3) {
-            const int lastLine = host->mpConsole->buffer.getLastLineNumber();
+            const int lastLine = host->mainConsoleView()->buffer.getLastLineNumber();
             if (lastLine == previousLastLine) {
                 ++pollsUnchanged;
             } else {
@@ -678,7 +678,7 @@ private:
 
     static int findLine(Host* host, const QString& text)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i) == text) {
                 return i;
