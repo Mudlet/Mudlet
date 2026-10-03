@@ -1667,6 +1667,91 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals(notAnArchive, zipLocation)
         assert.is_false(fileExists(extractDirectory .. "/readme.txt"))
       end)
+
+      it("survives the profile that asked for it closing before the extraction reports back", function()
+        if not testMode then
+          pending("pumping events after closing the other profile needs MUDLET_TEST_MODE")
+          return
+        end
+        local name = "mudlet-spec-unzip-closed"
+        local profileDirectory = getMudletHomeDir():match("^(.*)[/\\][^/\\]+$") .. "/" .. name
+
+        local function removeTree(path)
+          if lfs.attributes(path, "mode") ~= "directory" then
+            return
+          end
+          for entry in lfs.dir(path) do
+            if entry ~= "." and entry ~= ".." then
+              local child = path .. "/" .. entry
+              if lfs.attributes(child, "mode") == "directory" then
+                removeTree(child)
+              else
+                os.remove(child)
+              end
+            end
+          end
+          lfs.rmdir(path)
+        end
+        finally(function() removeTree(profileDirectory) end)
+
+        -- Enough empty entries that the extraction is still running when the profile
+        -- has gone; empty ones need no checksum, so the archive is quick to write here
+        local entries = 5000
+        local function le(value, bytes)
+          local out = {}
+          for i = 1, bytes do
+            out[i] = string.char(value % 256)
+            value = math.floor(value / 256)
+          end
+          return table.concat(out)
+        end
+        local localHeaders, centralDirectory, offset = {}, {}, 0
+        for i = 1, entries do
+          local entry = string.format("f%05d", i)
+          local common = le(20, 2) .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0x21, 2) .. le(0, 4) .. le(0, 4) .. le(0, 4) .. le(#entry, 2) .. le(0, 2)
+          local header = le(0x04034b50, 4) .. common .. entry
+          localHeaders[i] = header
+          centralDirectory[i] = le(0x02014b50, 4) .. le(20, 2) .. common .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0, 4) .. le(offset, 4) .. entry
+          offset = offset + #header
+        end
+        local directory = table.concat(centralDirectory)
+        local archive = profileDirectory .. "/many.zip"
+        local unzipped = profileDirectory .. string.format("/unzipped/f%05d", entries)
+
+        lfs.mkdir(profileDirectory)
+        lfs.mkdir(profileDirectory .. "/current")
+        writeFile(archive, table.concat(localHeaders) .. directory .. le(0x06054b50, 4) .. le(0, 2) .. le(0, 2) .. le(entries, 2) .. le(entries, 2) .. le(#directory, 4) .. le(offset, 4) .. le(0, 2))
+
+        -- the unzipAsync() call has to come from the other profile's own Lua, so it
+        -- runs from a script in the profile it loads
+        local script = string.format("unzipAsync(%q, getMudletHomeDir() .. '/unzipped')", archive)
+        writeFile(profileDirectory .. "/current/2026-01-01#00-00-00.xml", [[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <ScriptPackage>
+    <Script isActive="yes" isFolder="no">
+      <name>mudlet-spec-unzip</name>
+      <packageName></packageName>
+      <script>]] .. script .. [[</script>
+      <eventHandlerList />
+    </Script>
+  </ScriptPackage>
+</MudletPackage>
+]])
+
+        assert.is_true(loadProfile(name, true))
+        assert.is_true(closeProfile(name))
+
+        for _ = 1, 300 do
+          pumpEvents(100)
+          if fileExists(unzipped) then
+            break
+          end
+        end
+        pumpEvents(500)
+        assert.is_true(fileExists(unzipped), "the archive was not unpacked")
+        assert.is_nil(waitForEvent("sysUnzipDone", 200), "the closed profile's extraction was reported here")
+      end)
     end)
 
     describe("Tests the functionality of loadReplay", function()
