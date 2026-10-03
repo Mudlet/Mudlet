@@ -382,6 +382,21 @@ private slots:
         QCOMPARE(destination.buffer.at(3).at(1).linkIndex(), 0);
     }
 
+    // The formatting runs out before the second line even starts
+    void test_appendedLinesPastTheFormattingGetTheDefault()
+    {
+        TBuffer source(mpHost);
+        TBuffer destination(mpHost);
+        destination.appendFormatted(qsl("ab\ncd"), std::vector<TChar>{TChar(Qt::red, Qt::black)}, source.mLinkStore);
+
+        QCOMPARE(destination.lineBuffer.mid(0, 2), (QStringList{qsl("ab"), qsl("cd")}));
+        QCOMPARE(destination.buffer.at(0).at(0).foreground(), QColor(Qt::red));
+        QCOMPARE(destination.buffer.at(0).at(1).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(1).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(1).at(0).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(1).at(1).foreground(), TChar().foreground());
+    }
+
 private:
     TConsole* miniconsole() const { return mpHost->mpConsole->subConsoleWidget(mMiniName); }
 

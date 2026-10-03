@@ -55,6 +55,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <span>
 #include <iterator>
 #include <optional>
 #include <utility>
@@ -5182,7 +5183,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     // Check for text/formatting size mismatch - this is a programming error
     if (text.size() != static_cast<qsizetype>(formatting.size())) {
         qWarning() << "TBuffer::appendFormatted: text size" << text.size() << "differs from formatting size" << formatting.size()
-                   << "- using longer length with default formatting for missing entries";
+                   << "- missing entries get default formatting and extra ones are ignored";
     }
 
     const int lastLineBeforeWrap = buffer.size() - 1;
@@ -5212,14 +5213,16 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             lineBuffer.back().append(QStringView(text).sliced(runStart, runLength));
             std::vector<TChar>& chars = buffer.back();
             const size_t first = chars.size();
-            const qsizetype copied = std::clamp<qsizetype>(formatted - runStart, 0, runLength);
-            chars.insert(chars.end(), formatting.begin() + runStart, formatting.begin() + runStart + copied);
-            chars.resize(first + runLength, defaultChar);
-            for (size_t i = first; i < chars.size(); ++i) {
-                if (chars[i].mLinkIndex) {
-                    chars[i].mLinkIndex = remapLinkId(sourceLinkStore, chars[i].mLinkIndex, remappedLinkIds);
+            if (const qsizetype copied = std::clamp<qsizetype>(formatted - runStart, 0, runLength); copied > 0) {
+                const auto from = formatting.begin() + runStart;
+                chars.insert(chars.end(), from, from + copied);
+                for (TChar& ch : std::span(chars).subspan(first)) {
+                    if (ch.mLinkIndex) {
+                        ch.mLinkIndex = remapLinkId(sourceLinkStore, ch.mLinkIndex, remappedLinkIds);
+                    }
                 }
             }
+            chars.resize(first + runLength, defaultChar);
             if (firstChar) {
                 timeBuffer.back() = currentTimeStamp();
                 firstChar = false;
