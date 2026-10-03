@@ -43,8 +43,8 @@
 #include <chrono>
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "KeyUnit.h"
@@ -213,7 +213,7 @@ private:
                 [this, &text]() {
                     return mpServer->received().contains(text);
                 },
-                5000);
+                5s);
     }
 
 private slots:
@@ -239,7 +239,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         // A config dir of this test's own reads as a brand new installation, so
         // the first-run interface tour would open a second after the profile
         // loads and its application-wide event filter would swallow every key
@@ -253,7 +253,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests and eat their key presses");
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -271,7 +271,7 @@ private slots:
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -714,6 +714,97 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxdropme"));
     }
 
+    // The completion pool and the blacklist cannot be read back from Lua, so
+    // only a Tab shows that the Lua functions filling them reached the command
+    // line they named.
+    void test_luaSuggestionsAndBlacklistReachTheNamedCommandLine()
+    {
+        mpHost->mpConsole->print(qsl("qzxluadropme\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        const auto completes = [pCommandLine](const QString& typed) {
+            pCommandLine->clear();
+            type(pCommandLine, typed);
+            press(pCommandLine, Qt::Key_Tab);
+            return pCommandLine->toPlainText();
+        };
+
+        QVERIFY(runLua(qsl("addCmdLineSuggestion('%1', 'qzxluasuggested')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluasug")), qsl("qzxluasuggested"));
+        QVERIFY(runLua(qsl("removeCmdLineSuggestion('%1', 'qzxluasuggested')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluasug")), qsl("qzxluasug"));
+        QVERIFY(runLua(qsl("addCmdLineSuggestion('%1', 'qzxluasuggested')").arg(mLineName)));
+        QVERIFY(runLua(qsl("clearCmdLineSuggestions('%1')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluasug")), qsl("qzxluasug"));
+
+        QCOMPARE(completes(qsl("qzxluadrop")), qsl("qzxluadropme"));
+        QVERIFY(runLua(qsl("addCmdLineBlacklist('%1', 'qzxluadropme')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluadrop")), qsl("qzxluadrop"));
+        QVERIFY(runLua(qsl("removeCmdLineBlacklist('%1', 'qzxluadropme')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluadrop")), qsl("qzxluadropme"));
+        QVERIFY(runLua(qsl("addCmdLineBlacklist('%1', 'qzxluadropme')").arg(mLineName)));
+        QVERIFY(runLua(qsl("clearCmdLineBlacklist('%1')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluadrop")), qsl("qzxluadropme"));
+
+        QVERIFY(runLua(qsl("addCommandLineMenuEvent('%1', 'qzxMenuLabel', 'qzxMenuEvent')").arg(mLineName)));
+        QCOMPARE(pCommandLine->contextMenuItems.value(qsl("qzxMenuLabel")), qsl("qzxMenuEvent"));
+    }
+
+    // Text put into a command line from Lua is left the way typing would leave
+    // it, so the next key typed carries on from the end; selecting it from Lua
+    // is what Escape does.
+    void test_luaTextLeavesTheCaretAtTheEndOfTheNamedCommandLine()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("typed"));
+        pCommandLine->selectAll();
+        QVERIFY(runLua(qsl("printCmdLine('%1', 'printed')").arg(mLineName)));
+        QVERIFY(selection(pCommandLine).isEmpty());
+        type(pCommandLine, qsl("X"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("printedX"));
+
+        pCommandLine->selectAll();
+        QVERIFY(runLua(qsl("appendCmdLine('%1', ' appended')").arg(mLineName)));
+        QVERIFY(selection(pCommandLine).isEmpty());
+        type(pCommandLine, qsl("Y"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("printedX appendedY"));
+
+        QVERIFY(runLua(qsl("selectCmdLineText('%1')").arg(mLineName)));
+        QCOMPARE(selection(pCommandLine), qsl("printedX appendedY"));
+    }
+
+    // The main command line grows to show every row of what Lua puts into it,
+    // and shrinks again when Lua clears it.
+    void test_luaTextResizesTheMainCommandLine()
+    {
+        QVERIFY(mpHost->mpConsole->mpCommandLine);
+        QWidget* pLayer = mpHost->mpConsole->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+
+        QVERIFY(runLua(qsl("printCmdLine('one row')")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QVERIFY(runLua(qsl("printCmdLine('row one\\nrow two')")));
+        qApp->processEvents();
+        const int twoRows = pLayer->maximumHeight();
+        QVERIFY2(twoRows > oneRow, qPrintable(qsl("two printed rows left the command line %1 high, one row %2").arg(twoRows).arg(oneRow)));
+
+        QVERIFY(runLua(qsl("appendCmdLine('\\nrow three')")));
+        qApp->processEvents();
+        const int threeRows = pLayer->maximumHeight();
+        QVERIFY2(threeRows > twoRows, qPrintable(qsl("a third appended row left the command line %1 high, two rows %2").arg(threeRows).arg(twoRows)));
+
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        QCOMPARE(pLayer->maximumHeight(), oneRow);
+    }
+
     // Escape leaves completion mode, and selects the line so the next thing
     // typed replaces it.
     void test_escapeSelectsTheWholeLine()
@@ -972,7 +1063,7 @@ private slots:
     {
         TCommandLine* pCommandLine = mainCommandLine();
         QVERIFY(pCommandLine);
-        QCOMPARE(pCommandLine->getType(), TCommandLine::MainCommandLine);
+        QCOMPARE(pCommandLine->getType(), enums::MainCommandLine);
         QVERIFY2(!mpHost->mDisablePasswordMasking, "password masking is off in this profile, so this case proves nothing");
 
         type(pCommandLine, qsl("qzxleftover"));

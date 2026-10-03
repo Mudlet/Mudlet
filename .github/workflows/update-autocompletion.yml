@@ -14,15 +14,11 @@ permissions:
   contents: read
 
 jobs:
-  # Run the scraper against a recorded copy of the wiki's heading markup. This catches a
-  # regression in the scraper itself - the wiki moving underneath it is what the count
-  # guards in the generator are for - so it is worth running on any change to either file
-  # rather than only finding out on the next scheduled scrape.
+  # Catches scraper regressions on change; the generator's count guards cover the wiki's markup moving.
   test-scraper:
     name: Unit-test the scraper against recorded wiki markup
     runs-on: ubuntu-latest
-    # this job runs Lua out of the pull request's own checkout, so its token gets
-    # nothing it could write with
+    # runs Lua from the PR's own checkout, so its token gets no write access
     permissions:
       contents: read
     steps:
@@ -62,10 +58,7 @@ jobs:
         set -o pipefail
         lua CI/update-autocompletion.lua src/lua-function-list.json | tee update.log
 
-        # The two kinds of warning need different people to act on them: a duplicate heading
-        # is something to fix on the wiki, a heading this scraper cannot read as a name is
-        # something to fix in the scraper. Reporting both as duplicates told the reviewer of
-        # the update PR that the scrape had gone fine when it had not.
+        # Kept apart: a duplicate heading is fixed on the wiki, an unreadable one in the scraper.
         sed -n 's/^::warning::duplicate heading: //p' update.log > duplicates.txt
         sed -n 's/^::warning::unusable name: //p' update.log > unusable.txt
 
@@ -78,8 +71,7 @@ jobs:
           {
             echo "#### :warning: $2 ($count)"
             echo ""
-            # a markup change puts every heading on the page in here, and GitHub rejects a
-            # pull request body over 65,536 characters outright
+            # a markup change lists every heading, and GitHub rejects PR bodies over 65,536 characters
             head --lines=20 "$1" | sed 's/^/- /'
             if [ "$count" -gt 20 ]; then
               echo "- ... and $((count - 20)) more, in this run's log"

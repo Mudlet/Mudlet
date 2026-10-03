@@ -52,7 +52,7 @@
 
 #include <QTemporaryDir>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -241,7 +241,7 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt marker present - config dir cannot be redirected for this test");
         }
-        QVERIFY2(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletApp::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
     }
 
     void cleanupTestCase()
@@ -252,7 +252,7 @@ private slots:
 
     void test_aTriggerWithMismatchedPatternListsDoesNotCrashTheLoad()
     {
-        const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QVERIFY(QDir().mkpath(folder));
         {
             QFile xmlFile(qsl("%1/2020-01-01#00-00-00.xml").arg(folder));
@@ -386,7 +386,8 @@ private:
     static bool matches(TTrigger* pTrigger, const QString& line)
     {
         const QByteArray utf8 = line.toUtf8();
-        return pTrigger->match(utf8.constData(), utf8.size(), line, -1);
+        const TUtf8Subject subject(utf8.constData(), utf8.size());
+        return pTrigger->match(subject, line, -1);
     }
 
     // match_substring() indexes mSubstringPatterns by pattern number and

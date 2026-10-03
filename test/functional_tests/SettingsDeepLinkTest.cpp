@@ -38,7 +38,7 @@
 #include <QScrollArea>
 #include <QStackedWidget>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -49,6 +49,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class SettingsDeepLinkTest : public QObject
 {
@@ -77,7 +79,7 @@ private:
     // MUDLET_TEST_NO_THEME_DOWNLOAD rather than anything about this file.
     static void writeEditorThemesFile()
     {
-        const QString file = MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile);
+        const QString file = MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
         QFile themes(file);
         QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -112,7 +114,7 @@ private:
                     [this]() {
                         return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) != nullptr;
                     },
-                    5000)) {
+                    5s)) {
             return nullptr;
         }
         return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight"));
@@ -143,7 +145,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -316,7 +318,7 @@ private slots:
                          [this]() {
                              return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) == nullptr;
                          },
-                         8000),
+                         8s),
                  "the spotlight was still a child of the dialog long after its animation had finished");
     }
 };

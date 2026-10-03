@@ -94,6 +94,7 @@ set(mudlet_SRCS
     GifTracker.cpp
     GMCPAuthenticator.cpp
     Host.cpp
+    HostDialogs.cpp
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
@@ -106,8 +107,10 @@ set(mudlet_SRCS
     MMCPClient.cpp
     MMCPServer.cpp
     mudlet.cpp
+    MudletApp.cpp
     MudletInstanceCoordinator.cpp
-    MudletPaths.cpp
+    MudletMedia.cpp
+    MudletReplay.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -150,10 +153,12 @@ set(mudlet_SRCS
     TFeatureCallout.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
+    TGlyphCache.cpp
     THyperlinkCompactManager.cpp
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIrcClient.cpp
     TKey.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
@@ -188,6 +193,7 @@ set(mudlet_SRCS
     TMxpFormattingTagsHandler.cpp
     TMxpFrameManager.cpp
     TMxpFrameTagHandler.cpp
+    TMxpFrameWidgets.cpp
     TMxpHRTagHandler.cpp
     TMxpImageTagHandler.cpp
     TMxpLinkTagHandler.cpp
@@ -213,6 +219,7 @@ set(mudlet_SRCS
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
     TStringUtils.cpp
@@ -366,6 +373,7 @@ set(mudlet_HDRS
     GifTracker.h
     GMCPAuthenticator.h
     Host.h
+    HostDialogs.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
@@ -379,8 +387,10 @@ set(mudlet_HDRS
     MMCPClient.h
     MMCPServer.h
     mudlet.h
+    MudletApp.h
     MudletInstanceCoordinator.h
-    MudletPaths.h
+    MudletMedia.h
+    MudletReplay.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -414,6 +424,7 @@ set(mudlet_HDRS
     TCommandLine.h
     TConsole.h
     TConsoleModel.h
+    TConsoleModelNotifier.h
     TDebug.h
     TDebugFilterBar.h
     TDetachedWindow.h
@@ -428,11 +439,13 @@ set(mudlet_HDRS
     TFlipButton.h
     TForkedProcess.h
     TGameDetails.h
+    TGlyphCache.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TimerUnit.h
+    TIrcClient.h
     TKey.h
     TKeySequenceEdit.h
     TLabel.h
@@ -463,6 +476,7 @@ set(mudlet_HDRS
     TMxpFormattingTagsHandler.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
+    TMxpFrameWidgets.h
     TMxpHRTagHandler.h
     TMxpImageTagHandler.h
     TMxpLinkTagHandler.h
@@ -491,6 +505,7 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
     TStringUtils.h
@@ -646,6 +661,20 @@ add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_UIS}
 )
 
+mudlet_precompile_headers(${LIB_MUDLET_TARGET})
+# Objective-C++ would need a precompiled header of its own for three files
+set_source_files_properties(AppleSpeechRecognizer.mm MacMicrophonePermission.mm sparkleupdater.mm
+  PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+if(USE_UPDATER)
+  # Its own target, so it keeps plain ccache: the precompiled-header launcher
+  # tells ccache to ignore __DATE__ and __TIME__, which this file embeds to order
+  # test builds
+  add_library(mudlet_build_time OBJECT updater/ReleaseBuildTime.cpp)
+  set_target_properties(mudlet_build_time PROPERTIES AUTOMOC OFF)
+  target_link_libraries(mudlet_build_time PRIVATE Qt6::Gui)
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE $<TARGET_OBJECTS:mudlet_build_time>)
+endif()
+
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
 # features of Mudlet, generally speaking they will not be '#define'd in
@@ -756,15 +785,21 @@ if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
 
+# APP_VERSION is PUBLIC because the functional tests link ${LIB_MUDLET_TARGET}
+# and check the version identity it reports.
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSION}")
+
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
-    APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+# Only on the file that reads it: ccache's base_dir cannot rewrite a path in a
+# definition, so on every file it would stop worktrees sharing any cache hits.
+set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY
+  COMPILE_DEFINITIONS LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
@@ -1042,9 +1077,7 @@ if(UNIX AND NOT APPLE)
                                      WORLD_READ
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    # the map fixture the pathfinding specs need. It stays zipped rather than
-    # joining the *.xml above because unpacked it is 5.5MiB rather than 633KiB,
-    # and every package built from this tree would carry the difference
+    # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
     PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"

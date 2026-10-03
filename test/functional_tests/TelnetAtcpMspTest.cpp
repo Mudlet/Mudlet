@@ -47,7 +47,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "TLuaInterpreter.h"
@@ -160,7 +160,7 @@ private:
                          [this, &marker]() {
                              return mpServer->received().contains(marker);
                          },
-                         10000),
+                         10s),
                  "the telnet marker never came back");
     }
     void feedMsp(const QByteArray& message) { feedSubnegotiation(OPT_MSP, message); }
@@ -207,7 +207,7 @@ private:
                 [this, expected]() {
                     return mpMediaServer->requestedPaths().size() >= expected;
                 },
-                15000);
+                15s);
     }
 
     // The well-formed message that follows a malformed one is issued second, so
@@ -241,11 +241,11 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -265,7 +265,7 @@ private slots:
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -331,7 +331,7 @@ private slots:
                          [this]() {
                              return !subnegotiationsFor(mpServer->received(), OPT_ATCP).isEmpty();
                          },
-                         10000),
+                         10s),
                  "Mudlet never answered Auth.Request");
 
         const QList<Subnegotiation> replies = subnegotiationsFor(mpServer->received(), OPT_ATCP);
@@ -367,13 +367,13 @@ private slots:
                          []() {
                              return openComposers().isEmpty();
                          },
-                         5000),
+                         5s),
                  "cancelling the composer left its window behind");
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
                              return mpServer->received().contains("*q\nno\n");
                          },
-                         10000),
+                         10s),
                  "cancelling the composer did not tell the game the buffer was abandoned");
     }
 
@@ -404,7 +404,7 @@ private slots:
                          [this]() {
                              return !subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty();
                          },
-                         10000),
+                         10s),
                  "saving the composer sent no GMCP message");
         const QList<Subnegotiation> sent = subnegotiationsFor(mpServer->received(), OPT_GMCP);
         QCOMPARE(sent.size(), 1);
@@ -417,7 +417,7 @@ private slots:
                          []() {
                              return openComposers().isEmpty();
                          },
-                         5000),
+                         5s),
                  "saving the composer left its window behind");
     }
 
@@ -440,7 +440,7 @@ private slots:
                          [this]() {
                              return !subnegotiationsFor(mpServer->received(), OPT_ATCP).isEmpty();
                          },
-                         10000),
+                         10s),
                  "saving the composer sent no ATCP message");
         const QList<Subnegotiation> sent = subnegotiationsFor(mpServer->received(), OPT_ATCP);
         QCOMPARE(sent.size(), 1);
@@ -451,7 +451,7 @@ private slots:
                          []() {
                              return openComposers().isEmpty();
                          },
-                         5000),
+                         5s),
                  "saving the composer left its window behind");
     }
 

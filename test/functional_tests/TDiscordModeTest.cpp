@@ -38,7 +38,7 @@
 
 #include <utility>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "DiscordIpcServerStub.h"
@@ -160,7 +160,7 @@ private:
                 [this]() {
                     return Discord::getLoggedInUserName() == mDiscordStubUserName;
                 },
-                65000);
+                65s);
         return loggedIn && mpDiscordIpcStub->handshakeCount() > handshakesBefore;
     }
 
@@ -196,12 +196,12 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -209,8 +209,10 @@ private slots:
             QFAIL("No active host available for the test.");
         }
 
+        // The connection can complete before the spy exists, and on a loaded
+        // leak-detection runner it can take seconds
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -221,7 +223,7 @@ private slots:
         auto& discord = *Discord::self();
         if (discord.libraryLoaded() && mpDiscordIpcStub->listening()) {
             mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-            mpHost->mRequiredDiscordUserName.clear();
+            mpHost->setRequiredDiscordUserName(QString());
             QVERIFY2(establishDiscordLogin(), "Discord warm-up handshake did not complete in time");
         }
     }
@@ -236,7 +238,7 @@ private slots:
         // RPC connection down.
         mpHost->mDiscordMode = Host::DiscordShowGameDetails;
         mpHost->mDiscordAccessFlags = Host::DiscordSetSubMask;
-        mpHost->mRequiredDiscordUserName.clear();
+        mpHost->setRequiredDiscordUserName(QString());
         discord.resetData(mpHost);
         // Deliberately do NOT clear Discord::smUserName here: a completed
         // handshake populated it and the reuse check in establishDiscordLogin()
@@ -437,7 +439,7 @@ private slots:
         // Simulate being logged into Discord with a different account than
         // the profile requires - that makes the Lua API read-only:
         Discord::smUserName = qsl("someone_else");
-        mpHost->mRequiredDiscordUserName = qsl("profile_owner");
+        mpHost->setRequiredDiscordUserName(qsl("profile_owner"));
 
         auto [setResult, setError] = evalLua(qsl("setDiscordDetail(\"changed\")"));
         QVERIFY2(!setResult.isValid(), "setter should be denied while the API is read-only");
@@ -463,7 +465,7 @@ private slots:
         discord.setParty(mpHost, 2, 5);
 
         Discord::smUserName = qsl("someone_else");
-        mpHost->mRequiredDiscordUserName = qsl("profile_owner");
+        mpHost->setRequiredDiscordUserName(qsl("profile_owner"));
 
         QCOMPARE(evalLua(qsl("getDiscordSmallIcon()")).first, QVariant(qsl("shield")));
         QCOMPARE(evalLua(qsl("getDiscordSmallIconText()")).first, QVariant(qsl("Guardian")));
@@ -516,7 +518,7 @@ private slots:
         QVERIFY2(establishDiscordLogin(), "the discord-rpc handshake did not complete in time");
 
         // The profile demands a different account, so the API turns read-only:
-        mpHost->mRequiredDiscordUserName = qsl("profile_owner");
+        mpHost->setRequiredDiscordUserName(qsl("profile_owner"));
 
         // getDiscordSmallIcon() used to (wrongly) demand write access - it
         // must keep working while the API is read-only:
@@ -525,7 +527,7 @@ private slots:
         auto [setResult, setError] = evalLua(qsl("setDiscordDetail(\"changed\")"));
         QVERIFY2(!setResult.isValid(), "setter should be denied while the API is read-only");
         QVERIFY2(setError.contains(qsl("read-only")), "denial should say the API is read-only");
-        // No need to restore mRequiredDiscordUserName here: the next init()
+        // No need to restore the required Discord username here: the next init()
         // resets the gating state before resetData()'s UpdatePresence() runs, so
         // the shared connection is not torn down on the way into the next test.
     }
@@ -554,8 +556,8 @@ private slots:
 
         // discord-rpc serializes SET_ACTIVITY on its own IO thread, so give
         // the frames generous time to arrive:
-        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Exploring the IPC stub"), 10000);
-        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Exploring the IPC stub"), 10s);
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10s);
     }
 
     void cleanupTestCase()
@@ -565,7 +567,7 @@ private slots:
         mpHost = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }

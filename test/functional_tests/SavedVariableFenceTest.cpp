@@ -37,7 +37,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -54,6 +54,8 @@
 #include <QXmlStreamReader>
 
 #include <optional>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -178,7 +180,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -352,7 +354,7 @@ private slots:
             vu->savedVars.insert(shape.globalName);
         }
 
-        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-test.xml");
         QVERIFY2(exportProfileTo(xmlPath), "the profile could not be exported");
 
         // nothing of the seeding may survive into the checks below, or they would
@@ -450,7 +452,7 @@ private:
 
     QString exportProfileXml()
     {
-        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-export.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-export.xml");
         if (!exportProfileTo(xmlPath)) {
             return {};
         }
@@ -472,14 +474,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(1000)) {
+        if (!spy2.wait(1s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

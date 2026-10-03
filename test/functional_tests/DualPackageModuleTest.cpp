@@ -23,7 +23,7 @@
 #include "AliasUnit.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
@@ -32,6 +32,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // One name installed as both a package and a module cannot be made any more -
 // installPackage() refuses the second half - but a profile saved before it did
@@ -61,7 +63,7 @@ private:
     // Their aliases are named differently so which half lost its items shows.
     QString writeHalf(const QString& folder, const QString& aliasName)
     {
-        const QString home = MudletPaths::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString home = MudletApp::getMudletPath(enums::profileHomePath, mpHostname);
         const QString directory = qsl("%1/%2").arg(home, folder);
         if (!QDir().mkpath(directory)) {
             return QString();
@@ -107,13 +109,13 @@ private:
     void settleSaves(Host* host)
     {
         for (int i = 0; i < 200 && (host->hasPendingProfileSave() || host->currentlySavingProfile()); ++i) {
-            QTest::qWait(20);
+            QTest::qWait(20ms);
             host->waitForProfileSave();
         }
     }
 
-    QString moduleHalfPath() const { return qsl("%1/as-module/%2.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
-    QString packageHalfPath() const { return qsl("%1/as-package/%2.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
+    QString moduleHalfPath() const { return qsl("%1/as-module/%2.xml").arg(MudletApp::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
+    QString packageHalfPath() const { return qsl("%1/as-package/%2.xml").arg(MudletApp::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
 
     // A profile up and running with both halves written out and neither of them
     // installed, so that a test can ask for either one first.
@@ -213,7 +215,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -224,14 +226,14 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // The exemption that lets a legacy profile finish loading is the only way
@@ -360,7 +362,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -379,12 +381,7 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

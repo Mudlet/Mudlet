@@ -27,10 +27,11 @@
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QTimer>
+#include <QTranslator>
 #include <QWidget>
 #include <QtTest/QTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "utils.h"
 
 // Free inline functions rather than a QObject on purpose: a header is not listed
@@ -49,7 +50,7 @@ inline constexpr int scmApplyTimeout = 10000;
 
 inline void deleteProfileDirectory(const QString& profileName)
 {
-    QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+    QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
     if (dir.exists()) {
         dir.removeRecursively();
     }
@@ -126,6 +127,23 @@ inline bool search(QWidget* pDialog, const QString& query)
     pField->setText(query);
     return waitForSearch(pDialog);
 }
+
+// Brackets every string it is asked for, so that a case can tell what the
+// dialog re-read on a language change from what it is still showing from
+// before it - without depending on which translations this build shipped.
+class BracketingTranslator : public QTranslator
+{
+public:
+    QString translate(const char* context, const char* sourceText, const char* disambiguation, int n) const override
+    {
+        Q_UNUSED(context)
+        Q_UNUSED(disambiguation)
+        Q_UNUSED(n)
+        return qsl("[%1]").arg(QString::fromUtf8(sourceText));
+    }
+
+    bool isEmpty() const override { return false; }
+};
 
 } // namespace TestSettings
 

@@ -34,9 +34,10 @@
 #include "ActionUnit.h"
 #include "AliasUnit.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "KeyUnit.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ScriptUnit.h"
@@ -73,7 +74,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -232,11 +233,11 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
@@ -250,8 +251,8 @@ private slots:
     void cleanupTestCase()
     {
         if (mpHost) {
-            if (auto* pEditor = mpHost->mpEditorDialog.data()) {
-                mpHost->mpEditorDialog = nullptr;
+            if (auto* pEditor = HostDialogs::of(mpHost).mpEditorDialog.data()) {
+                HostDialogs::of(mpHost).mpEditorDialog = nullptr;
                 delete pEditor;
             }
         }

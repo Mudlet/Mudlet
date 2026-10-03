@@ -22,11 +22,12 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "EditorUndoStack.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -93,7 +94,7 @@ private:
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        MudletApp::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
     if (dir.exists()) {
       dir.removeRecursively();
@@ -108,7 +109,7 @@ private:
     }
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(1000)) {
+    if (!spy2.wait(1s)) {
       QFAIL("Could not connect with the host.");
     }
   }
@@ -139,7 +140,7 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
-    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
              qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
@@ -153,7 +154,7 @@ private slots:
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
 
-    mpEditor = mpHost->mpEditorDialog;
+    mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
     QVERIFY2(mpEditor->mpUndoStack != nullptr, "Undo stack should exist");
 

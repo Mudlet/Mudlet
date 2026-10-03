@@ -51,7 +51,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
@@ -64,6 +64,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class MapperPanelTest : public QObject
 {
@@ -106,7 +108,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -213,7 +215,7 @@ private:
         mMenuWorked = false;
         int attemptsLeft = 100;
         mpMenuTimer = new QTimer(this);
-        mpMenuTimer->setInterval(20);
+        mpMenuTimer->setInterval(20ms);
         connect(mpMenuTimer, &QTimer::timeout, this, [this, work, attemptsLeft]() mutable {
             QWidget* pPopup = QApplication::activePopupWidget();
             auto* pMenu = qobject_cast<QMenu*>(pPopup);
@@ -348,7 +350,7 @@ private:
 
     QStringList savedMapFiles() const
     {
-        const QDir dir(MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName));
+        const QDir dir(MudletApp::getMudletPath(enums::profileMapsPath, mProfileName));
         return dir.entryList({qsl("*.dat")}, QDir::Files);
     }
 
@@ -374,7 +376,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         // The menu items are found by their text.
@@ -384,13 +386,13 @@ private slots:
         mSavedDrawUpperLowerLevels = mudlet::self()->mDrawUpperLowerLevels;
         // The map autosave writes into the directory the retry case counts
         // files in, and moves the save-error flag the warning cases read.
-        mudlet::self()->getQSettings()->setValue(qsl("autosaveIntervalMinutes"), 0);
+        MudletApp::getQSettings()->setValue(qsl("autosaveIntervalMinutes"), 0);
         deleteProfileDirectory();
 
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
     }
 
     void cleanupTestCase()

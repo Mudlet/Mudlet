@@ -38,7 +38,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAction.h"
@@ -54,6 +54,8 @@
 #include "utils.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class PackageExporterTest : public QObject
 {
@@ -77,7 +79,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -156,7 +158,7 @@ private:
                 [closeButton]() {
                     return !closeButton->isHidden();
                 },
-                30000);
+                30s);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         return settled;
     }
@@ -183,7 +185,7 @@ private slots:
         QVERIFY2(mpServer->isListening(), qPrintable(qsl("TelnetServerStub failed to start: %1").arg(mpServer->errorString())));
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -192,12 +194,12 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         // getActualPath() falls back to this setting when the user has not
         // browsed for a location, which is the only way a test can steer where
         // a package lands without a file dialog
-        mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir.path());
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir.path());
 
         auto* pTrigger = new TTrigger(nullptr, mpHost);
         pTrigger->setRegexCodeList({qsl("^exported$")}, {REGEX_PERL});
@@ -412,7 +414,7 @@ private slots:
         QVERIFY2(waitForExportToSettle(exporter), "the module export never finished");
         QVERIFY2(!reportedFailure(exporter), qPrintable(qsl("the module export reported a failure: %1").arg(infoText(exporter))));
 
-        const QString moduleFile = qsl("%1/%2.mpackage").arg(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName), moduleName);
+        const QString moduleFile = qsl("%1/%2.mpackage").arg(MudletApp::getMudletPath(enums::profileHomePath, mProfileName), moduleName);
         QVERIFY2(QFileInfo::exists(moduleFile), "module mode did not write the package into the profile directory");
         QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "module mode exported the file but never installed it");
 

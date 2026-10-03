@@ -33,10 +33,11 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -55,6 +56,8 @@
 #include <QDropEvent>
 #include <QMimeData>
 #include <QTreeWidget>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -109,7 +112,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -198,7 +201,7 @@ private slots:
         selectVariable(pMember);
         mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("edited member value"));
         mpEditor->slot_showTriggers();
-        QTest::qWait(20);
+        QTest::qWait(20ms);
 
         QCOMPARE(luaMemberCount(qsl("viewSwitchTable")), 1);
         QVERIFY2(luaHolds(qsl("viewSwitchTable[1/3]"), qsl("fraction member value")), "the edit reached a variable it was not meant to reach");
@@ -509,6 +512,33 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // The view walks the globals table with lua_next() rather than reading a
+    // name out of it, and Mudlet leaves "line" and "multimatches" out of that
+    // table until a script reads them. So the walk has to ask for what is still
+    // owed before it starts, or the first thing anyone debugging a trigger
+    // looks for is not on the list.
+    void test_variablesViewShowsTheCaptureGlobalsNoScriptHasRead()
+    {
+        QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
+        // The generic mapper reads "line" on every line, which would leave
+        // nothing owed to ask for. It is not in this profile, but say so rather
+        // than depend on that.
+        execLua(qsl("disableTrigger('onNewLine Trigger')"));
+        execLua(qsl("local id = tempRegexTrigger([[^VariablesViewLine (\\w+)$]], function() end) "
+                    "feedTriggers('\\nVariablesViewLine word\\n') killTrigger(id) "
+                    "variablesViewOwed = tostring(rawget(_G, 'line') == nil and rawget(_G, 'multimatches') == nil)"));
+        QVERIFY2(luaHolds(qsl("variablesViewOwed"), qsl("true")), "nothing was left owed, so this cannot tell whether the walk asks for it");
+
+        mpEditor->repopulateVars();
+
+        QVERIFY2(findVariableItem({qsl("line")}), "the Variables view did not show the line the deferral was holding");
+        QVERIFY2(findVariableItem({qsl("multimatches")}), "the Variables view did not show the multimatches the deferral was holding");
+        QVERIFY2(luaHolds(qsl("line"), qsl("VariablesViewLine word")), "the walk put something other than the line that was owed into the globals table");
+
+        execLua(qsl("variablesViewOwed = nil enableTrigger('onNewLine Trigger')"));
+        mpEditor->repopulateVars();
+    }
+
     // The type a typed value is written back as was decided with toInt(), which
     // reads "2.71" as no number at all, so editing a decimal turned it into a
     // string (#9422).
@@ -697,14 +727,14 @@ private:
     {
         if (!mpEditor) {
             mudlet::self()->slot_showScriptDialog();
-            QTest::qWait(100);
-            mpEditor = mpHost->mpEditorDialog;
+            QTest::qWait(100ms);
+            mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
             if (!mpEditor) {
                 return false;
             }
         }
         mpEditor->slot_showVariables();
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         return true;
     }
 
@@ -716,14 +746,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(1000)) {
+        if (!spy2.wait(1s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

@@ -65,30 +65,30 @@ TAlias::TAlias(const QString& name, Host* pHost)
 
 TAlias::~TAlias()
 {
-    if (!mpHost) {
-        return;
-    }
-    mpHost->getAliasUnit()->unregisterAlias(this);
+    if (mpHost) {
+        mpHost->getAliasUnit()->unregisterAlias(this);
 
-    if (isTemporary()) {
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
-        } else {
-            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(this);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
         }
     }
+
+    deleteChildren();
 }
 
 void TAlias::setName(const QString& name)
 {
-    if (!isTemporary()) {
-        mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
-    }
+    // killAlias() trusts this table to hold only current names of live aliases
+    mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     mName = name;
     mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }
 
-bool TAlias::match(const QString& haystack)
+bool TAlias::match(const QByteArray& haystack)
 {
     // Guard against re-entrancy: cleanup may have deleted this alias while
     // match() was still on the call stack
@@ -118,14 +118,7 @@ bool TAlias::match(const QString& haystack)
         return false; //regex compile error
     }
 
-    const QByteArray utf8Data = haystack.toUtf8();
-    const size_t utf8Length = utf8Data.size();
-    char* haystackC = static_cast<char*>(malloc(utf8Length + 1));
-    if (!haystackC) {
-        return false;
-    }
-    memcpy(haystackC, utf8Data.constData(), utf8Length);
-    haystackC[utf8Length] = '\0';
+    const char* haystackC = haystack.constData();
 
     // These must be initialised before any goto so the latter does not jump
     // over them:
@@ -136,7 +129,7 @@ bool TAlias::match(const QString& haystack)
     std::list<std::string> captureList;
     std::list<int> posList;
     uint32_t name_entry_size = 0;
-    int haystackCLength = strlen(haystackC);
+    const int haystackCLength = haystack.size();
     int rc = 0;
     int i = 0;
     pcre2_match_data* match_data = nullptr;
@@ -154,7 +147,9 @@ bool TAlias::match(const QString& haystack)
         goto MUD_ERROR;
     }
 
-    rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
+    // pcre2_match() finds the JIT code itself, but only after option and argument checks repeated for every alias
+    rc = mRegexJitCompiled ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr)
+                           : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
 
     if (rc < 0) {
         goto MUD_ERROR;
@@ -169,7 +164,7 @@ bool TAlias::match(const QString& haystack)
     matchCondition = true; // alias has matched
 
     for (i = 0; i < rc; i++) {
-        char* substring_start = haystackC + ovector[2 * i];
+        const char* substring_start = haystackC + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
 
         std::string match;
@@ -233,7 +228,7 @@ bool TAlias::match(const QString& haystack)
         }
 
         for (i = 0; i < rc; i++) {
-            char* substring_start = haystackC + ovector[2 * i];
+            const char* substring_start = haystackC + ovector[2 * i];
             int substring_length = ovector[2 * i + 1] - ovector[2 * i];
             std::string match;
             if (substring_length < 1) {
@@ -269,7 +264,6 @@ MUD_ERROR:
         }
     }
 
-    free(haystackC);
     return matchCondition;
 }
 
@@ -299,6 +293,7 @@ void TAlias::compileRegex()
             pcre2_code_deleter);
 
     if (re == nullptr) {
+        mRegexJitCompiled = false;
         mOK_init = false;
         PCRE2_UCHAR errorBuffer[256];
         pcre2_get_error_message(errorcode, errorBuffer, sizeof(errorBuffer));
@@ -309,7 +304,7 @@ void TAlias::compileRegex()
         }
         setError(qsl("<b>%1</b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
-        pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE);
+        mRegexJitCompiled = (pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0);
         mOK_init = true;
     }
 
@@ -339,22 +334,6 @@ void TAlias::compileAll()
     for (auto* aliasNode : *mpMyChildrenList) {
         auto* alias = static_cast<TAlias*>(aliasNode);
         alias->compileAll();
-    }
-}
-
-void TAlias::compile()
-{
-    if (mNeedsToBeCompiled) {
-        if (!compileScript()) {
-            if (TDebug::wants(TDebug::Category::Error)) {
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
-            }
-            mOK_code = false;
-        }
-    }
-    for (auto* aliasNode : *mpMyChildrenList) {
-        auto* alias = static_cast<TAlias*>(aliasNode);
-        alias->compile();
     }
 }
 
@@ -429,23 +408,6 @@ QString TAlias::packageName(TAlias* pAlias)
 
     if (pAlias->getParent()) {
         return packageName(pAlias->getParent());
-    }
-
-    return QString();
-}
-
-QString TAlias::moduleName(TAlias* pAlias)
-{
-    if (!pAlias) {
-        return QString();
-    }
-
-    if (!pAlias->mPackageName.isEmpty()) {
-        return mpHost->mInstalledModules.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
-    }
-
-    if (pAlias->getParent()) {
-        return moduleName(pAlias->getParent());
     }
 
     return QString();

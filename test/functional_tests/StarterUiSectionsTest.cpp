@@ -34,7 +34,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -49,6 +49,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class StarterUiSectionsTest : public QObject
 {
@@ -91,7 +93,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -102,8 +104,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // The bands the dock hands out are what a player sees before they touch
@@ -500,13 +502,21 @@ private slots:
         QVERIFY(runLua(host, qsl("BaseUI.standAside(nil, 'some-game-gui')")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.container.hidden and BaseUI.sections.map.hidden")), "standing aside did not hide the dock and its floating section");
 
-        QVERIFY(runLua(host, qsl("BaseUI.serverGuiRemoved(nil, 'some-game-gui')")));
-        // it deliberately waits before looking, so that a version upgrade which
-        // uninstalls only to reinstall a moment later is not taken for a removal
+        // It deliberately waits before looking, so that a version upgrade which
+        // uninstalls only to reinstall a moment later is not taken for a removal.
+        // What comes back is what this case is about, not how long that wait is,
+        // so the timer it sets is shortened rather than waited out.
+        QVERIFY(runLua(host,
+                       qsl("local realTempTimer = tempTimer\n"
+                           "tempTimer = function(seconds, ...) __settleDelay = seconds return realTempTimer(0, ...) end\n"
+                           "local ok, err = pcall(BaseUI.serverGuiRemoved, nil, 'some-game-gui')\n"
+                           "tempTimer = realTempTimer\n"
+                           "assert(ok, err)")));
+        QVERIFY2(luaTrue(host, qsl("type(__settleDelay) == 'number' and __settleDelay > 0")), "the starter UI no longer waits before deciding the game's interface is gone");
         QElapsedTimer waited;
         waited.start();
-        while (waited.elapsed() < 30000 && !luaQuiet(host, qsl("not BaseUI.settings.standingAside"))) {
-            QTest::qWait(250);
+        while (waited.durationElapsed() < 30s && !luaQuiet(host, qsl("not BaseUI.settings.standingAside"))) {
+            QTest::qWait(250ms);
         }
         QVERIFY2(luaTrue(host, qsl("not BaseUI.settings.standingAside")), "the starter UI did not come back on duty at all");
         QVERIFY2(luaTrue(host, qsl("not BaseUI.container.hidden")), "the dock stayed hidden while its sections came back over the game's text");
@@ -823,7 +833,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect to the stub.");
         }
     }
@@ -868,10 +878,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

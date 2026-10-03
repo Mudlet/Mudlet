@@ -23,7 +23,7 @@
 
 #include <QPushButton>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
@@ -41,6 +41,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // Regression tests for the self-uninstall use-after-free: a package toolbar
 // button whose Lua script calls uninstallPackage() on its own package used to
@@ -134,7 +136,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -186,7 +188,7 @@ private slots:
         // block until the save has fully finished, so no background save thread is
         // still running when cleanup() destroys the host: tearing the host down
         // underneath an in-flight save corrupted the heap and crashed on Windows.
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         host->waitForProfileSave();
     }
 
@@ -198,14 +200,14 @@ private slots:
         // destruction never races a background save thread (a Windows crash).
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // installPackage() works out why an install failed and hands the reason back,
@@ -223,7 +225,7 @@ private slots:
 
         // A file that exists but is not an archive, which is the failure a user
         // meets most often - unzip refuses it.
-        const QString brokenPackage = qsl("%1/broken.mpackage").arg(MudletPaths::getMudletPath(enums::profileHomePath, mpHostname));
+        const QString brokenPackage = qsl("%1/broken.mpackage").arg(MudletApp::getMudletPath(enums::profileHomePath, mpHostname));
         QFile broken(brokenPackage);
         QVERIFY2(broken.open(QIODevice::WriteOnly), qPrintable(qsl("Could not create %1").arg(brokenPackage)));
         broken.write("this is not a zip archive");
@@ -268,15 +270,15 @@ private slots:
         actionUnit->updateAllToolbars();
 
         TMainConsole* console = host->mpConsole;
-        QVERIFY2(topBar->mpEasyButtonBar, "The top-bar action should have been given a TEasyButtonBar");
-        QCOMPARE(topBar->mpEasyButtonBar->parentWidget(), console->mpTopToolBar);
-        QVERIFY2(leftBar->mpEasyButtonBar, "The left-bar action should have been given a TEasyButtonBar");
-        QCOMPARE(leftBar->mpEasyButtonBar->parentWidget(), console->mpLeftToolBar);
-        QVERIFY2(rightBar->mpEasyButtonBar, "The right-bar action should have been given a TEasyButtonBar");
-        QCOMPARE(rightBar->mpEasyButtonBar->parentWidget(), console->mpRightToolBar);
-        QVERIFY2(floatingBar->mpToolBar, "The floating action should have been given a TToolBar");
-        QCOMPARE(floatingBar->mpToolBar->parentWidget(), static_cast<QWidget*>(mudlet::self()));
-        QCOMPARE(mudlet::self()->dockWidgetArea(floatingBar->mpToolBar), Qt::LeftDockWidgetArea);
+        QVERIFY2(console->actionEasyButtonBar(topBar), "The top-bar action should have been given a TEasyButtonBar");
+        QCOMPARE(console->actionEasyButtonBar(topBar)->parentWidget(), console->mpTopToolBar);
+        QVERIFY2(console->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
+        QCOMPARE(console->actionEasyButtonBar(leftBar)->parentWidget(), console->mpLeftToolBar);
+        QVERIFY2(console->actionEasyButtonBar(rightBar), "The right-bar action should have been given a TEasyButtonBar");
+        QCOMPARE(console->actionEasyButtonBar(rightBar)->parentWidget(), console->mpRightToolBar);
+        QVERIFY2(console->actionToolBar(floatingBar), "The floating action should have been given a TToolBar");
+        QCOMPARE(console->actionToolBar(floatingBar)->parentWidget(), static_cast<QWidget*>(mudlet::self()));
+        QCOMPARE(mudlet::self()->dockWidgetArea(console->actionToolBar(floatingBar)), Qt::LeftDockWidgetArea);
     }
 
     // The bars are the console's widgets now, so ActionUnit has to cope with being
@@ -304,10 +306,10 @@ private slots:
         actionUnit->updateAllToolbars();
         host->mpConsole = console;
 
-        QVERIFY2(!floatingBar->mpToolBar, "No bar should have been built while the console was away");
+        QVERIFY2(!host->mpConsole->actionToolBar(floatingBar), "No bar should have been built while the console was away");
 
         actionUnit->updateAllToolbars();
-        QVERIFY2(floatingBar->mpToolBar, "The bar should be built once the console is back");
+        QVERIFY2(host->mpConsole->actionToolBar(floatingBar), "The bar should be built once the console is back");
     }
 
     // Removing a docked bar's action reaches the console to take the bar down.
@@ -327,8 +329,8 @@ private slots:
         leftBar->setIsActive(true);
         actionUnit->registerAction(leftBar);
         actionUnit->updateAllToolbars();
-        QVERIFY2(leftBar->mpEasyButtonBar, "The left-bar action should have been given a TEasyButtonBar");
-        QPointer<TEasyButtonBar> bar = leftBar->mpEasyButtonBar;
+        QVERIFY2(host->mpConsole->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
+        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(leftBar);
 
         QPointer<TMainConsole> console = host->mpConsole;
         host->mpConsole = nullptr;
@@ -361,8 +363,8 @@ private slots:
         folder->setIsActive(true);
         actionUnit->registerAction(folder);
         actionUnit->updateAllToolbars();
-        QVERIFY2(leftBar->mpEasyButtonBar, "The left-bar action should have been given a TEasyButtonBar");
-        QPointer<TEasyButtonBar> bar = leftBar->mpEasyButtonBar;
+        QVERIFY2(host->mpConsole->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
+        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(leftBar);
 
         QPointer<TMainConsole> console = host->mpConsole;
         host->mpConsole = nullptr;
@@ -398,10 +400,10 @@ private slots:
         actionUnit->updateAllToolbars();
 
         TMainConsole* console = host->mpConsole;
-        QPointer<TEasyButtonBar> bar = leftBar->mpEasyButtonBar;
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(leftBar);
         QVERIFY2(bar, "The left-bar action should have been given a TEasyButtonBar");
         QVERIFY2(console->mpLeftToolBar->layout()->indexOf(bar) != -1, "SETUP: the bar is not on the left toolbar to begin with");
-        QPointer<TToolBar> toolbar = floatingBar->mpToolBar;
+        QPointer<TToolBar> toolbar = console->actionToolBar(floatingBar);
         QVERIFY2(toolbar, "The floating action should have been given a TToolBar");
         QVERIFY2(mudlet::self()->dockWidgetArea(toolbar) != Qt::NoDockWidgetArea, "SETUP: the toolbar is not docked to begin with");
         QVERIFY2(!toolbar->isHidden(), "SETUP: the toolbar is hidden to begin with");
@@ -425,7 +427,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -444,12 +446,7 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

@@ -1,10 +1,8 @@
 #!/bin/bash
 # Runs the busted Lua specs the way CI's "(Linux) Run Lua tests" step does:
-# starts the HTTP, Discord IPC, MMCP peer and telnet fixtures, then drives the
-# built Mudlet through the "Mudlet self-test" profile under xvfb. --offline stops
-# the profile connecting to its game server, which is also what leaves the telnet
-# socket in the state feedTelnet() needs; the specs that do need a connection open
-# one to the telnet fixture themselves.
+# starts the HTTP, Discord IPC, MMCP peer and telnet fixtures, then runs the
+# "Mudlet self-test" profile under xvfb. --offline skips the game server, leaving the telnet
+# socket as feedTelnet() needs it; specs that want a connection open one to the telnet fixture.
 #
 # Usage: .claude/scripts/run-lua-tests.sh [path-to-mudlet-binary]
 # Defaults to the linux-debug-nosan build. A binary built in another worktree
@@ -14,6 +12,10 @@
 # mudlet-lua/lua/utf8_filenames.lua), still comes from whoever built it. Needs
 # the rocks and apt packages that .claude/hooks/session-start.sh installs.
 #
+# MUDLET_LUA_TESTS_TIMEOUT caps the Mudlet run in seconds (default 900). A run
+# the cap cuts short exits 124; otherwise the exit code is 0 when every spec
+# passed and non-zero when any failed.
+#
 # Safe to run concurrently (e.g. one run per worktree): every fixture binds an
 # ephemeral port handed over through this run's private temp directory, only
 # this run's fixture processes are cleaned up, and the profile tree lives in a
@@ -22,6 +24,8 @@ set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/../.." && pwd)"
 BINARY="${1:-$WS/build-linux-debug-nosan/src/mudlet}"
+TIMEOUT="${MUDLET_LUA_TESTS_TIMEOUT:-900}"
+[[ "$TIMEOUT" =~ ^[1-9][0-9]*$ ]] || { echo "MUDLET_LUA_TESTS_TIMEOUT must be a whole number of seconds, not '$TIMEOUT'"; exit 1; }
 TMP="$(mktemp -d /tmp/mudlet-luatests-XXXX)"
 
 [ -x "$BINARY" ] || { echo "no mudlet binary at $BINARY - build first"; exit 1; }
@@ -123,8 +127,7 @@ FIXTURE_PIDS+=($!)
 for _ in $(seq 1 50); do [ -s "$peer_dir/port" ] && break; sleep 0.1; done
 [ -s "$peer_dir/port" ] || { echo "mmcp fixture failed"; cat "$TMP/mmcp.log"; exit 1; }
 
-# 4. silent recording game server (ephemeral port); never negotiates, so specs
-# see the connected-but-unnegotiated state.
+# 4. silent recording game server (ephemeral port); never negotiates, so specs see an unnegotiated link.
 telnet_dir="$TMP/telnet-server"
 mkdir -p "$telnet_dir"
 MUDLET_TEST_TELNET_DIR="$telnet_dir" nohup python3 "$WS/CI/telnet-fixture-server.py" > "$TMP/telnet.log" 2>&1 &
@@ -154,15 +157,10 @@ export MUDLET_TEST_HTTP_PORT="$HTTP_PORT"
 export MUDLET_TEST_MMCP_DIR="$peer_dir"
 export MUDLET_TEST_TELNET_DIR="$telnet_dir"
 export XDG_RUNTIME_DIR="${MUDLET_TEST_DISCORD_RUNTIME_DIR:-$runtime_dir}"
-# Xvfb is an X server, so both toolkits have to target X11 - on a Wayland desktop
-# neither picks it by itself, and the GTK3 platform theme Qt loads under GNOME
-# calls gtk_init(), which exits the process when it cannot open a display.
+# Xvfb is X11 only, and on a Wayland desktop neither Qt nor GDK picks X11 by itself.
 export QT_QPA_PLATFORM=xcb
-# Replacing XDG_RUNTIME_DIR above also hides the desktop's Wayland socket. Where
-# Qt loads its GTK platform theme, GDK then finds no display it is willing to
-# open and gtk_init() exits the process during QApplication construction - status
-# 1, before Mudlet prints a line. The run is under an X server either way, so name
-# the backend GDK should have picked; it is a no-op without that theme plugin.
+# Otherwise Qt's GTK3 platform theme calls gtk_init(), which finds no display (the XDG_RUNTIME_DIR
+# above hides the Wayland socket) and exits with status 1 before Mudlet prints a line.
 export GDK_BACKEND=x11
 export LD_LIBRARY_PATH="$WS/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export DBUS_SESSION_BUS_ADDRESS='disabled:'
@@ -181,22 +179,40 @@ export MUDLET_TEST_EXPECTED_LUA_PATH="$(readlink -f "$WS/src/mudlet-lua/lua")"
 
 cd "$WS"
 rc=0
-timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline 2>&1 \
-  | tee "$TMP/run.log" || rc=$?
+started=$SECONDS
+timeout -k 10 "$TIMEOUT" xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline 2>&1 \
+  | tee "$TMP/run.log" || { status=("${PIPESTATUS[@]}"); rc=${status[0]}; [ "$rc" -ne 0 ] || rc=${status[1]}; }
+# Mudlet's status comes first: under pipefail a failing tee (e.g. a full /tmp) would
+# otherwise replace a timeout's 124 with its own 1.
+# 137 is the -k escalation, but also any other SIGKILL (e.g. the OOM killer),
+# so only the elapsed time can say which it was.
+timed_out=false
+if [ "$rc" -eq 124 ] || { [ "$rc" -eq 137 ] && [ $((SECONDS - started)) -ge "$TIMEOUT" ]; }; then
+  timed_out=true
+fi
 
 # loadGlobal() walks on to its next candidate when one fails to run, so a syntax
 # error anywhere in this worktree's mudlet-lua silently hands the whole library
 # over to the donor's LUA_SOURCE_PATH and the suite passes against that instead.
 # The warning it emits on the way past names the file and the Lua error, so treat
 # it as fatal. MudletBusted_spec.lua backs this up with a positive check.
-# Anchored: --mirror copies every line the consoles show into this same log,
-# each behind a "<profile>.<console>| " prefix, so an unanchored match would
-# also fire on a spec that merely echoed the phrase.
+# Anchored: --mirror copies console output into this log behind a "<profile>.<console>| " prefix,
+# so an unanchored match would fire on a spec that merely echoed the phrase.
 if grep -q "^TLuaInterpreter::loadGlobal() loading" "$TMP/run.log"; then
   echo "This worktree's mudlet-lua failed to load, so the specs ran against the"
   echo "binary's own copy - the result above is meaningless. The failure was:"
   grep "^TLuaInterpreter::loadGlobal() loading" "$TMP/run.log"
   rc=1
+fi
+
+# Checked before the marker: busted writes it at the first failing spec, so a
+# run cut short after one would otherwise read as an ordinary failing run.
+if [ "$timed_out" = true ]; then
+  # the killed run usually stops mid-line
+  echo
+  echo "Mudlet was killed by the ${TIMEOUT}s timeout before the suite finished - results are incomplete."
+  echo "Set MUDLET_LUA_TESTS_TIMEOUT to allow it longer."
+  exit 124
 fi
 
 if [ -e "$MUDLET_TEST_FAILURE_MARKER" ]; then

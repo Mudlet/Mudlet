@@ -48,7 +48,7 @@
 #include <cstdio>
 #include <limits>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -75,6 +75,8 @@
 #ifndef BENCH_BUILD_ASAN
 #define BENCH_BUILD_ASAN 0
 #endif
+
+using namespace std::chrono_literals;
 
 // Prototype of the per-vertex arrays A* could keep between searches. A map
 // over one of them records each write, so the next search puts the defaults
@@ -211,7 +213,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -222,8 +224,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     void benchFindPath()
@@ -232,7 +234,7 @@ private slots:
         Host* host = TestProfile::create(mHostname, mLocalhost, QString::number(mPort));
         QVERIFY(host);
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the stub");
 
         host->showHideOrCreateMapper(false);
         QVERIFY(host->mpMap);
@@ -510,11 +512,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
-        QDir dir(path);
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

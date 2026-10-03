@@ -25,7 +25,7 @@
 #include <chrono>
 #include <memory>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "HostManager.h"
@@ -113,7 +113,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -401,11 +401,11 @@ private slots:
         QByteArray advertise = msspTlsPayload(QByteArray::number(securePort));
         host->mTelnet.loopbackTest(advertise);
 
-        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5000);
+        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5s);
         // cTelnet emits the informative text already translated for the frontend
         // to show; a frontend that dropped it would ask about no port at all.
         QVERIFY2(mTlsPromptInformativeText.contains(QString::number(securePort)), qPrintable(qsl("The question the user was asked did not name the secure port: %1").arg(mTlsPromptInformativeText)));
-        QTRY_COMPARE_WITH_TIMEOUT(host->getPort(), static_cast<int>(securePort), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(host->getPort(), static_cast<int>(securePort), 5s);
         QVERIFY2(host->mSslTsl, "Answering Yes did not enable ssl_tsl on the profile.");
 
         // Stop talking to the local stub before it is destroyed at scope exit.
@@ -432,10 +432,10 @@ private slots:
         QByteArray advertise = msspTlsPayload("48000");
         host->mTelnet.loopbackTest(advertise);
 
-        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5000);
+        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5s);
         // Declining is otherwise indistinguishable from nothing happening, so
         // the don't-ask-again flag is what has to carry the assertion.
-        QTRY_VERIFY2_WITH_TIMEOUT(!host->mAskTlsAvailable, "Answering No never reached cTelnet: it is still willing to ask again.", 5000);
+        QTRY_VERIFY2_WITH_TIMEOUT(!host->mAskTlsAvailable, "Answering No never reached cTelnet: it is still willing to ask again.", 5s);
         QCOMPARE(host->getPort(), originalPort);
         QCOMPARE(host->mSslTsl, originalSsl);
         if (connectedSpy.isEmpty()) {
@@ -466,7 +466,7 @@ private slots:
         // exec() has unwound and the frontend's lambda has run to its guard -
         // the warning claimed above is therefore already in by the time this
         // returns.
-        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5000);
+        QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5s);
         QVERIFY2(!HostManager::self()->getHost(mHostname), "The profile survived the teardown, so this is not the case being tested.");
 #endif
     }
@@ -583,14 +583,14 @@ private slots:
         // the download's own progress reaching the dialog. The dialog carries
         // WA_DeleteOnClose and a failed download would take it away mid-wait, so
         // the condition has to stay safe for a null one.
-        QTRY_VERIFY2_WITH_TIMEOUT(!dialog || dialog->maximum() == static_cast<int>(csmAnnouncedPackageLength), "The download's progress never reached the frontend's progress dialog.", 5000);
+        QTRY_VERIFY2_WITH_TIMEOUT(!dialog || dialog->maximum() == static_cast<int>(csmAnnouncedPackageLength), "The download's progress never reached the frontend's progress dialog.", 5s);
         QVERIFY2(dialog, "The progress dialog went away before the download's progress reached it.");
         QVERIFY2(dialog->value() > 0, "The download's progress did not move the dialog's value.");
 
         // Aborting is the quickest way to finish a download, and the wire that
         // takes the dialog down afterwards is the one a completed one uses too.
         host->mTelnet.slot_cancelPackageDownload();
-        QTRY_COMPARE_WITH_TIMEOUT(console->findChildren<QProgressDialog*>().count(), 0, 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(console->findChildren<QProgressDialog*>().count(), 0, 5s);
     }
 
     // The user's Cancel has to reach cTelnet::slot_cancelPackageDownload().
@@ -623,7 +623,7 @@ private slots:
 
         QPointer<QProgressDialog> dialog = console->findChild<QProgressDialog*>();
         QVERIFY2(dialog, "The GUI download did not raise a progress dialog.");
-        QTRY_VERIFY2_WITH_TIMEOUT(!progressSpy.isEmpty(), "The download never got under way, so there was nothing to cancel.", 5000);
+        QTRY_VERIFY2_WITH_TIMEOUT(!progressSpy.isEmpty(), "The download never got under way, so there was nothing to cancel.", 5s);
         QVERIFY2(dialog, "The progress dialog went away before the download got under way.");
 
         auto cancelButton = dialog->findChild<QPushButton*>();
@@ -635,7 +635,7 @@ private slots:
         // for installation, which is what the file check below catches.
         finishPackageBody();
 
-        QTRY_VERIFY2_WITH_TIMEOUT(!errorSpy.isEmpty(), "Pressing Cancel did not abort the package download.", 5000);
+        QTRY_VERIFY2_WITH_TIMEOUT(!errorSpy.isEmpty(), "Pressing Cancel did not abort the package download.", 5s);
         QCOMPARE(errorSpy.takeFirst().at(0).value<QNetworkReply::NetworkError>(), QNetworkReply::OperationCanceledError);
         QVERIFY2(!QFileInfo::exists(host->mTelnet.mServerPackage), "The cancelled download was saved for installation anyway.");
     }
@@ -667,8 +667,8 @@ private slots:
         mpPackageBodyDrip = nullptr;
         delete mpPackageServer;
         mpPackageServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // Utility function to manually start a profile like a user would do via the
@@ -689,14 +689,7 @@ private slots:
     // Utility function
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-
-        if (!dir.exists()) {
-            qInfo() << "Profile directory does not exist:" << path;
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 
 private:

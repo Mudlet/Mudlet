@@ -41,8 +41,8 @@
 #include "AliasUnit.h"
 #include "Host.h"
 #include "KeyUnit.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ScriptUnit.h"
@@ -96,7 +96,7 @@ private:
     bool mAnsweredPicker = false;
     QStringList mStagedPackageNames;
 
-    QString profileHome() const { return MudletPaths::getMudletPath(enums::profileHomePath, mProfileName); }
+    QString profileHome() const { return MudletApp::getMudletPath(enums::profileHomePath, mProfileName); }
 
     QString packagePath(const QString& packageName) const { return qsl("%1/%2.mpackage").arg(mExportDir, packageName); }
 
@@ -226,7 +226,7 @@ private:
     void settleSaves()
     {
         for (int i = 0; i < 200 && (mpHost->hasPendingProfileSave() || mpHost->currentlySavingProfile()); ++i) {
-            QTest::qWait(20);
+            QTest::qWait(20ms);
             mpHost->waitForProfileSave();
         }
     }
@@ -257,7 +257,7 @@ private:
     {
         stopAnsweringMessageBoxes();
         mpModalAnswerTimer = new QTimer(this);
-        mpModalAnswerTimer->setInterval(20);
+        mpModalAnswerTimer->setInterval(20ms);
         connect(mpModalAnswerTimer, &QTimer::timeout, this, [this, answer]() {
             auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
             if (!box) {
@@ -297,7 +297,7 @@ private:
         QElapsedTimer sinceArmed;
         sinceArmed.start();
         auto* timer = new QTimer(this);
-        timer->setInterval(20);
+        timer->setInterval(20ms);
         connect(timer, &QTimer::timeout, this, [this, chosenPath, sinceArmed]() {
             auto* modal = QApplication::activeModalWidget();
             auto* picker = qobject_cast<QFileDialog*>(modal);
@@ -305,7 +305,7 @@ private:
                 // Only the picker's own exec() can be ended from here, so a
                 // modal that never turns out to be one has to be closed on a
                 // deadline - otherwise the click below waits out ctest's
-                if (modal && sinceArmed.hasExpired(10000)) {
+                if (modal && sinceArmed.durationElapsed() > 10s) {
                     modal->close();
                 }
                 return;
@@ -379,10 +379,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(profileHome());
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mProfileName);
     }
 
 private slots:
@@ -407,7 +404,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -416,7 +413,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "the test profile never finished loading");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(!connected.isEmpty() || connected.wait(2000), "the test profile never connected to the stub server");
+        QVERIFY2(!connected.isEmpty() || connected.wait(2s), "the test profile never connected to the stub server");
         // a new profile is given packages of its own on connect, and each of
         // those arms a save that would otherwise land mid-export
         settleSaves();
@@ -428,7 +425,7 @@ private slots:
         mAnsweredMessageBoxes = 0;
         mExportDir = qsl("%1/%2").arg(mExportRoot.path(), QString::fromUtf8(QTest::currentTestFunction()));
         QVERIFY(QDir().mkpath(mExportDir));
-        mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir);
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir);
     }
 
     void cleanup()
@@ -441,14 +438,14 @@ private slots:
         mpExporter = nullptr;
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
         mpHost = nullptr;
 
         for (const auto& packageName : std::as_const(mStagedPackageNames)) {
@@ -778,7 +775,7 @@ private slots:
         QVERIFY2(!info.value(qsl("created")).isEmpty(), "the package was not stamped with when it was made");
 
         // the author is the one field offered back the next time round
-        QCOMPARE(mudlet::getQSettings()->value(qsl("packageAuthor")).toString(), qsl("A Test Author"));
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("packageAuthor")).toString(), qsl("A Test Author"));
     }
 
     // A help URL that already names a scheme is left exactly as it is, so the
@@ -1145,7 +1142,7 @@ private slots:
         openExporter();
         QVERIFY2(chooseSaveLocation(chosenDir), "the save location picker was never answered");
 
-        QCOMPARE(mudlet::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), chosenDir);
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), chosenDir);
     }
 
     // An asset that is there but cannot be read used to be skipped without a

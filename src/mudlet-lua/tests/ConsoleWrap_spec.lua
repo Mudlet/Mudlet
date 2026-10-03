@@ -64,6 +64,11 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.same({"abcdefghij", "klmnopqrst"}, wrapped(10, "abcdefghijklmnopqrst"))
     end)
 
+    it("breaks after a hyphen whether or not the line is plain ASCII", function()
+      assert.are.same({"abcd-", "efghijkl"}, wrapped(10, "abcd-efghijkl"))
+      assert.are.same({"abcé-", "efghijkl"}, wrapped(10, "abcé-efghijkl"))
+    end)
+
     it("counts an east asian character as two columns", function()
       -- ten columns of a script drawn double width is five characters
       assert.are.same({"日本語のテ", "キストです"}, wrapped(10, "日本語のテキストです"))

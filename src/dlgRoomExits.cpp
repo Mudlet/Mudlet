@@ -303,9 +303,7 @@ void dlgRoomExits::slot_endEditSpecialExits()
     specialExits->clearSelection();
 }
 
-// The Delete key removes the selected special exits (see
-// ExitsTreeWidget::keyPressEvent()), and one of them may be the item being
-// edited.
+// Delete (ExitsTreeWidget::keyPressEvent()) can remove the item being edited.
 void dlgRoomExits::slot_specialExitRowsAboutToBeRemoved(const QModelIndex& parent, const int first, const int last)
 {
     if (!mpEditItem || parent.isValid()) {
