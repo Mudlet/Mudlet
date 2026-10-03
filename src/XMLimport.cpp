@@ -1893,7 +1893,8 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
                 if (entry.size() >= 3) {
                     map[key] = entry;
                 } else {
-                    qWarning().nospace().noquote() << "XMLimport::readModulesDetailsMap() WARNING - ignoring the module \"" << key << "\" as its entry is missing some of its details.";
+                    // Quoted so that QDebug escapes any control characters the file put in the name
+                    qWarning().nospace() << "XMLimport::readModulesDetailsMap() WARNING - ignoring the module " << key << " as its entry is missing some of its details.";
                 }
                 entry.clear();
             } else {
