@@ -241,6 +241,24 @@ private slots:
         QCOMPARE(grown, measured);
     }
 
+    // A style sheet's minimum size resizes a hidden command line with no Resize event.
+    void test_hiddenConsoleFollowsItsCommandLineStyleSheet()
+    {
+        TMainConsole* pConsole = mpFrontHost->mainConsoleView();
+        pConsole->hide();
+        const QSize before = pConsole->getMainWindowSize();
+
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setCmdLineStyleSheet('main', 'QPlainTextEdit { min-height: 120px; }')"));
+        const QSize styled = mpFrontHost->mainWindowSize().value_or(QSize());
+        const QSize measured = pConsole->getMainWindowSize();
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setCmdLineStyleSheet('main', '')"));
+        pConsole->show();
+        QTest::qWait(50);
+
+        QVERIFY2(measured.height() < before.height(), "the style sheet did not grow the command line, so there is nothing to test here");
+        QCOMPARE(styled, measured);
+    }
+
 private:
     QStringList elementNames() const { return {mLabelName, mConsoleName, mScrollBoxName, mCmdLineName, mTextEditName, mUserWindowName, mChildLabelName}; }
 
