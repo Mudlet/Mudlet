@@ -2793,6 +2793,9 @@ describe("MMCP chat with a profile that closes", function()
   local name = "mudlet-spec-mmcp-closing"
   local peerName = "SpecClosingPeer"
   local profileDirectory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+  -- written into the profile this spec makes, so a profile of the same name
+  -- that it did not make is never deleted
+  local fixtureMarker = profileDirectory .. "/mudlet-spec-fixture"
 
   local function removeTree(path)
     if lfs.attributes(path, "mode") ~= "directory" then
@@ -2836,6 +2839,10 @@ describe("MMCP chat with a profile that closes", function()
       pending("waiting for the chat traffic needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
       return
     end
+    if lfs.attributes(fixtureMarker) then
+      removeTree(profileDirectory)
+    end
+    assert.is_nil(lfs.attributes(profileDirectory), "a profile named " .. name .. " already exists and is not this spec's to delete")
     finally(function()
       if peerConnected() then
         mmcp.disconnect(peerName)
@@ -2845,14 +2852,16 @@ describe("MMCP chat with a profile that closes", function()
         closeProfile(name)
         waitUntil(function() return not loaded() end)
       end
-      removeTree(profileDirectory)
+      if lfs.attributes(fixtureMarker) then
+        removeTree(profileDirectory)
+      end
     end)
 
     -- a port of its own, so a server left over from another run is not called;
     -- math.random is unseeded here and would give every run the same one
     local port = 20000 + os.time() % 40000
-    removeTree(profileDirectory)
     lfs.mkdir(profileDirectory)
+    io.open(fixtureMarker, "w"):close()
     lfs.mkdir(profileDirectory .. "/current")
     local file = io.open(profileDirectory .. "/current/2026-01-01#00-00-00.xml", "w")
     file:write(string.format([[<?xml version="1.0" encoding="UTF-8"?>
