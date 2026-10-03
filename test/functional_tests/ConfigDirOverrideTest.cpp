@@ -806,7 +806,7 @@ private slots:
         const QByteArray savedHome = qgetenv("HOME");
         qputenv("HOME", home.path().toUtf8());
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable.txt names no data directory")));
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names no data directory, so")));
         mudlet::self()->setupConfig();
         savedHome.isNull() ? qunsetenv("HOME") : qputenv("HOME", savedHome);
 
