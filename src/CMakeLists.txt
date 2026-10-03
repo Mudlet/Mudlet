@@ -112,6 +112,7 @@ set(mudlet_SRCS
     MudletInstanceCoordinator.cpp
     MudletMedia.cpp
     MudletReplay.cpp
+    MudletWebExport.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -393,6 +394,7 @@ set(mudlet_HDRS
     MudletInstanceCoordinator.h
     MudletMedia.h
     MudletReplay.h
+    MudletWebExport.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
