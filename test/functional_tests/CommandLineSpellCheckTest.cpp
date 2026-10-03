@@ -52,6 +52,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class CommandLineSpellCheckTest : public QObject
 {
     Q_OBJECT
@@ -491,7 +493,7 @@ private slots:
                 return !pObject.isNull();
             });
         };
-        QTRY_COMPARE_WITH_TIMEOUT(stillAlive(), 0, 2000);
+        QTRY_COMPARE_WITH_TIMEOUT(stillAlive(), 0, 2s);
         QCOMPARE(pCommandLine->findChildren<QMenu*>().size(), 0);
         QCOMPARE(pCommandLine->findChildren<QAction*>().size(), actionsBefore);
     }
