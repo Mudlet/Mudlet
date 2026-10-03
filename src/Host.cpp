@@ -48,7 +48,12 @@
 #include "TMapViewManager.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
 #include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
 #include "TTextEdit.h"
 #include "utils.h"
 #include "VarUnit.h"
@@ -75,6 +80,7 @@
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSet>
 #include <QScopeGuard>
 #include <QSettings>
 #include <QTemporaryFile>
@@ -84,6 +90,7 @@
 #include <QUuid>
 #include <zip.h>
 #include <memory>
+#include <vector>
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -3573,6 +3580,50 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
+QString Host::packageOwningChunk(const QString& chunkName)
+{
+    const qsizetype separator = chunkName.indexOf(qsl(": "));
+    if (separator < 0) {
+        return {};
+    }
+    const QStringView kind = QStringView(chunkName).left(separator);
+    const QString name = chunkName.mid(separator + 2);
+
+    QSet<QString> owners;
+    auto collectOwners = [&name, &owners](const auto& roots) {
+        for (auto* root : roots) {
+            std::vector<decltype(root)> pending{root};
+            while (!pending.empty()) {
+                auto* item = pending.back();
+                pending.pop_back();
+                if (!item->isTemporary() && item->getName() == name) {
+                    owners.insert(root->mPackageName);
+                }
+                for (auto* child : *item->getChildrenList()) {
+                    pending.push_back(static_cast<decltype(root)>(child));
+                }
+            }
+        }
+    };
+
+    if (kind == u"Script") {
+        collectOwners(mScriptUnit.getScriptRootNodeList());
+    } else if (kind == u"Trigger") {
+        collectOwners(mTriggerUnit.getTriggerRootNodeList());
+    } else if (kind == u"Alias") {
+        collectOwners(mAliasUnit.getAliasRootNodeList());
+    } else if (kind == u"Timer") {
+        collectOwners(mTimerUnit.getTimerRootNodeList());
+    } else if (kind == u"Key") {
+        collectOwners(mKeyUnit.getKeyRootNodeList());
+    } else if (kind == u"Button") {
+        collectOwners(mActionUnit.getActionRootNodeList());
+    } else {
+        return {};
+    }
+    return owners.size() == 1 ? *owners.constBegin() : QString();
+}
+
 void Host::removePackageInfo(const QString& packageName, const bool isModule)
 {
     if (isModule) {
@@ -3697,6 +3748,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
+    // ModuleSync included: the reload re-runs the module's scripts, and a command
+    // left behind would still hold the shortcut the fresh copy asks for.
+    emit signal_packageRemoved(packageName);
     if (auto* fonts = FontManager::self()) {
         fonts->unloadFonts(getName(), packageName);
     }

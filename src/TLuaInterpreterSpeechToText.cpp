@@ -164,6 +164,11 @@ static QString noEngineMessage()
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
 
+static QString errorStateStartMessage()
+{
+    return qsl("speech recognition is in an error state - reload the model with stt.init() before listening again");
+}
+
 // words follows a symbol resolved from the library, so unloading or reloading it
 // changes what the backend can do without anything else happening. Announced
 // here because docs/stt-api.md tells consumers to re-read capabilities on a
@@ -559,6 +564,16 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
+    // Asked before initialized(), which is false here too: a model is loaded
+    // and getInfo() names it, so the answer is to reload it, not to load one.
+    // Reported to the caller, as stt.cancel() does - the fault took the
+    // microphone claim with it, so there is no owner to route by.
+    if (pRecognizer->state() == SpeechRecognizer::State::Error) {
+        const QString message = errorStateStartMessage();
+        reportSpeechRefusalTo(getHostFromLua(L), message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
     if (!pRecognizer->initialized()) {
         const QString message = qsl("speech recognizer not initialized with a model - call stt.init() first");
         reportSpeechRefusal(message);
@@ -714,6 +729,12 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     pMudlet->initSpeechRecognition(onDemandSpeechBackend());
 
     auto* pRecognizer = pMudlet->speechRecognizer();
+    // As stt.start(): an error state has a model to reload, not one missing
+    if (pRecognizer && pRecognizer->state() == SpeechRecognizer::State::Error) {
+        const QString message = errorStateStartMessage();
+        reportSpeechRefusalTo(getHostFromLua(L), message);
+        return warnArgumentValue(L, funcName, message);
+    }
     if (!pRecognizer || !pRecognizer->initialized()) {
         const QString message = pRecognizer ? qsl("speech recognizer not initialized - call stt.init() first") : noEngineMessage();
         reportSpeechRefusal(message);

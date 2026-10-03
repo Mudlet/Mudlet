@@ -13,7 +13,8 @@ desktop Mudlet. "Here is a command" maps onto whatever chrome a client has;
 
 Commands are identified by the numeric id returned at creation - names and
 labels carry no identity and may repeat freely. Every command belongs to the
-profile that created it and is removed when that profile closes or resets.
+profile that created it and is removed when that profile closes or resets,
+or when the package or module whose code created it is uninstalled.
 
 ## Placing a command
 
@@ -156,6 +157,11 @@ end)
    profile is removed when that profile closes *or* resets, without the
    package's involvement - a reset takes the Lua state with it, so the ids
    the package was holding die there and the commands must not outlive them.
+   Uninstalling a package or module removes the commands its code created,
+   for the same reason: the ids lived in its Lua and go with it. The code
+   that called `addCommand` decides, so a command made from a package's
+   event handler or timer is still that package's. Commands made from the
+   command line or a profile's own scripts belong to no package and stay.
 5. **Cycles leave no residue.** Repeated add/remove must not accumulate
    toolbar spacing, separators, or menu entries; emptied `menuPath` submenus
    disappear.

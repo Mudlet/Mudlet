@@ -3187,6 +3187,141 @@ describe("Tests installing a module whose XML cannot be read", function()
   end)
 end)
 
+-- A command's id lives in the Lua of the package that made it, so once that
+-- package is gone nothing could remove the command: it stayed on screen, kept
+-- raising sysCommandClicked and held its shortcut, which then refused the same
+-- package's command when it was installed again.
+describe("Tests that uninstalling takes the addon commands it made", function()
+  local shortcut = "Ctrl+Alt+Shift+F11"
+
+  local function scriptsXml(scripts)
+    local lines = {"<ScriptPackage>"}
+    for scriptName, code in pairs(scripts) do
+      lines[#lines + 1] = '<Script isActive="yes" isFolder="no"><name>' .. scriptName .. '</name><packageName></packageName>'
+      lines[#lines + 1] = "<script>" .. code .. "</script><eventHandlerList/></Script>"
+    end
+    lines[#lines + 1] = "</ScriptPackage>"
+    return table.concat(lines, "\n")
+  end
+
+  local function scratchXml(name, scripts)
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    writePackageXml(path, scriptsXml(scripts))
+    return path
+  end
+
+  -- Removed whatever happens, so a regression does not leave the key taken for
+  -- every spec after this one
+  local function forgetCommand(id)
+    if type(id) == "number" then
+      removeCommand(id)
+    end
+  end
+
+  local function placeCommandScript(globalName, label)
+    return globalName .. ' = addCommand{name = "' .. label .. '", menuPath = "MudletSpec", shortcut = "' .. shortcut .. '"}'
+  end
+
+  it("removes a package's command, and lets the package have it back when reinstalled", function()
+    local name = "mudlet-spec-command"
+    local path = scratchXml(name, {[name .. " script"] = placeCommandScript("mudletSpecPackageCommand", "mudlet-spec command")})
+    local first
+    defer(function()
+      forgetCommand(first)
+      forgetCommand(mudletSpecPackageCommand)
+      mudletSpecPackageCommand = nil
+      removeFixturePackage(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the command package")
+    first = mudletSpecPackageCommand
+    assert.is_number(first, "the package's script could not place its command")
+
+    mudletSpecPackageCommand = nil
+    removeFixturePackage(name)
+    assert.is_false(removeCommand(first), "the command outlived the package that made it")
+
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the command package, again")
+    assert.is_number(mudletSpecPackageCommand, "the reinstalled package could not place its command - the old one still holds the shortcut")
+  end)
+
+  it("removes a command made later by a handler the package's script registered", function()
+    local name = "mudlet-spec-command-handler"
+    local path = scratchXml(name, {[name .. " script"] =
+      'mudletSpecCommandHandler = registerAnonymousEventHandler("mudletSpecMakeCommand", function() '
+      .. placeCommandScript("mudletSpecHandlerCommand", "mudlet-spec handler command") .. " end)"})
+    local id
+    defer(function()
+      forgetCommand(id)
+      if mudletSpecCommandHandler then
+        killAnonymousEventHandler(mudletSpecCommandHandler)
+      end
+      mudletSpecCommandHandler, mudletSpecHandlerCommand = nil, nil
+      removeFixturePackage(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the handler package")
+    raiseEvent("mudletSpecMakeCommand")
+    id = mudletSpecHandlerCommand
+    assert.is_number(id, "the package's handler could not place its command")
+
+    removeFixturePackage(name)
+    assert.is_false(removeCommand(id), "the command outlived the package whose handler made it")
+  end)
+
+  it("leaves a command the package did not make", function()
+    local name = "mudlet-spec-command-bystander"
+    local path = scratchXml(name, {[name .. " script"] = "mudletSpecBystanderLoaded = true"})
+    local id = addCommand{name = "mudlet-spec own command", menuPath = "MudletSpec"}
+    defer(function()
+      forgetCommand(id)
+      mudletSpecBystanderLoaded = nil
+      removeFixturePackage(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    assert.is_number(id)
+
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the bystander package")
+    removeFixturePackage(name)
+
+    assert.is_true(removeCommand(id), "uninstalling a package removed a command it did not make")
+  end)
+
+  it("removes a module's command, and lets the module have it back when reloaded", function()
+    local name = "mudlet-spec-command-module"
+    local path = scratchXml(name, {[name .. " script"] = "mudletSpecModuleLoads = (mudletSpecModuleLoads or 0) + 1 "
+      .. placeCommandScript("mudletSpecModuleCommand", "mudlet-spec module command")})
+    local first
+    defer(function()
+      forgetCommand(first)
+      forgetCommand(mudletSpecModuleCommand)
+      mudletSpecModuleCommand, mudletSpecModuleLoads = nil, nil
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the command module")
+    first = mudletSpecModuleCommand
+    assert.is_number(first, "the module's script could not place its command")
+
+    local loads = mudletSpecModuleLoads
+    reloadModuleUntil(name, function() return mudletSpecModuleLoads > loads end)
+    assert.is_number(mudletSpecModuleCommand, "the reloaded module could not place its command - the old one still holds the shortcut")
+    assert.is_false(removeCommand(first), "the reload left the module's first command behind")
+
+    local second = mudletSpecModuleCommand
+    removeFixtureModule(name)
+    assert.is_false(removeCommand(second), "the command outlived the module that made it")
+  end)
+end)
+
 describe("The package specs clean up after themselves", function()
   it("leaves no fixture package, module or folder behind", function()
     for _, name in ipairs(getPackages()) do

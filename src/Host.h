@@ -522,6 +522,11 @@ public:
     // alone even when that is not registered, there being nothing better to move
     // it to. Returns true when the display font was changed.
     bool substituteMissingDisplayFont();
+    // The package or module owning the item a compiled chunk is named after,
+    // from the "Script: name" style names items compile under. Empty for any
+    // other chunk, an item in no package, or a name items in more than one
+    // place share.
+    QString packageOwningChunk(const QString& chunkName);
     // What to write into the profile: the display font with the family the profile
     // asked for put back in place of any stand-in the above had to pick. Saving the
     // stand-in instead would make this machine's lack of a font the profile's own
@@ -1128,6 +1133,8 @@ signals:
     void signal_discordGameChanged();
     // A reset is about to replace the Lua state, so whatever it placed in the frontend has to go.
     void signal_profileResetting();
+    // A package or module's items are gone, so whatever its Lua placed in the frontend has to go too.
+    void signal_packageRemoved(const QString& packageName);
     // The frontend owns the editor, notepad and IRC client it opens for a
     // profile. On close it closes them and lets go of them; on destruction it
     // deletes them there and then, while the units the editor references still

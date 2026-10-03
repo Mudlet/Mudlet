@@ -55,6 +55,7 @@
 #include "mudlet.h"
 
 #include <array>
+#include <cstring>
 #include <limits>
 #include <math.h>
 
@@ -4781,8 +4782,24 @@ int TLuaInterpreter::addCommand(lua_State* L)
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
+    // The Lua that called this decides, C frames such as pcall() passed over, so
+    // a command made from a closure a package script left behind - an event
+    // handler, a timer - is still that package's. Looking further up would hand
+    // a command typed through the "lua" alias to whichever package provides it.
+    QString package;
+    lua_Debug frame;
+    for (int level = 1; lua_getstack(L, level, &frame); ++level) {
+        if (!lua_getinfo(L, "S", &frame) || !frame.what || !std::strcmp(frame.what, "C")) {
+            continue;
+        }
+        if (frame.source) {
+            package = host.packageOwningChunk(QString::fromUtf8(frame.source));
+        }
+        break;
+    }
+
     QString error;
-    const int commandId = pMudlet->addAddonCommand(request, &host, error);
+    const int commandId = pMudlet->addAddonCommand(request, &host, package, error);
     if (commandId < 0) {
         return warnArgumentValue(L, __func__, error.isEmpty() ? qsl("the command could not be placed") : error);
     }

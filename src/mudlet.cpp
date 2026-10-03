@@ -933,7 +933,7 @@ void mudlet::applyAddonIcon(QToolButton* button, QAction* action, const QString&
     }
 }
 
-int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString& error)
+int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error)
 {
     const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
     const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
@@ -1030,6 +1030,7 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
     const int commandId = mNextAddonCommandId++;
     AddonCommand command;
     command.pHost = pHost;
+    command.package = package;
     command.request = request;
     command.icon = request.icon;
     command.tooltip = request.tooltip;
@@ -1599,6 +1600,22 @@ void mudlet::removeAddonCommandsForHost(Host* pHost)
     QList<int> doomed;
     for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
         if (it.value().pHost == pHost) {
+            doomed.append(it.key());
+        }
+    }
+    for (int commandId : doomed) {
+        removeAddonCommand(commandId, pHost);
+    }
+}
+
+void mudlet::removeAddonCommandsForPackage(Host* pHost, const QString& package)
+{
+    if (package.isEmpty()) {
+        return;
+    }
+    QList<int> doomed;
+    for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
+        if (it.value().pHost == pHost && it.value().package == package) {
             doomed.append(it.key());
         }
     }
@@ -3996,6 +4013,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_discordGameChanged, this, &mudlet::updateDiscordNamedIcon);
     connect(pH, &Host::signal_profileResetting, this, [this, pH]() {
         removeAddonCommandsForHost(pH);
+    });
+    connect(pH, &Host::signal_packageRemoved, this, [this, pH](const QString& packageName) {
+        removeAddonCommandsForPackage(pH, packageName);
     });
 
     // Wire the map engine's progress signals to the console that owns the dialog.
