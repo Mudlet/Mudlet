@@ -1183,7 +1183,7 @@ private slots:
                 mpHost->setCaretEnabled(false);
             }
             // the keyboard is released on a 0ms timer
-            QTest::qWait(80);
+            QTest::qWait(80ms);
         });
 
         press(pCommandLine, key);
