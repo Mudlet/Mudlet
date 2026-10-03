@@ -188,13 +188,13 @@ int TConsoleModel::selectString(const QString& text, int numOfMatch)
 
 std::tuple<bool, QString, int, int> TConsoleModel::selection()
 {
-    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+    if (P_begin.y() >= static_cast<int>(buffer.buffer.size())) {
         return {false, qsl("the selection is no longer valid"), 0, 0};
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
-    const auto line = buffer.line(mUserCursor.y());
+    const auto line = buffer.line(P_begin.y());
     if (line.size() < start) {
         return {false, qsl("the selection is no longer valid"), 0, 0};
     }
