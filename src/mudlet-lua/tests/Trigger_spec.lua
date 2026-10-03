@@ -618,6 +618,57 @@ describe("Trigger processing", function()
             assert.is_false(matchedStale, "The green text pulled left must not be matched as red")
         end)
 
+        it("should match colors an earlier trigger pushed past the line's original end", function()
+            _G.pushedColorMatches = {}
+            local lengthened = false
+
+            local lengthener = tempRegexTrigger("^PushedColors ", function()
+                if selectString("PushedColors", 1) > -1 then
+                    replace("PushedColorsLonger")
+                    lengthened = true
+                end
+                deselect()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.pushedColorMatches, table.concat(matches, ","))]])
+
+            feedTriggers("\nPushedColors \27[31mRED\27[0m cd \27[31mRED\27[0m\n")
+
+            killTrigger(lengthener)
+            killTrigger(colorTrigger)
+            local captured = _G.pushedColorMatches
+            _G.pushedColorMatches = nil
+
+            assert.is_true(lengthened, "the lengthening trigger should have run")
+            assert.are.same({"RED,RED"}, captured)
+        end)
+
+        -- Replacing the whole line leaves its color snapshot all one color, and appendBuffer(), unlike
+        -- echo(), pastes past the end of that snapshot without refreshing it.
+        it("should match colors pasted onto a line an earlier trigger lengthened", function()
+            _G.pastedColorMatches = {}
+
+            local lengthener = tempRegexTrigger("^PastedColors RED$", function()
+                selectString("RED", 1)
+                copy()
+                selectSection(0, #"PastedColors RED")
+                replace("PastedColorsLonger")
+                deselect()
+                appendBuffer()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.pastedColorMatches, matches[1])]])
+
+            feedTriggers("\nPastedColors \27[31mRED\27[0m\n")
+
+            killTrigger(lengthener)
+            killTrigger(colorTrigger)
+            local captured = _G.pastedColorMatches
+            _G.pastedColorMatches = nil
+
+            assert.are.same({"RED"}, captured)
+        end)
+
         -- A nested pass takes the retained originals over for its own line, so
         -- the enclosing line's have to be retained before that happens. A recolor
         -- made from inside the nested pass is the only way to reach that window.
@@ -2786,6 +2837,26 @@ describe("Trigger processing", function()
             feed("hello \27[33mworld\27[0m\n")
             assert.is_true(_G.ColorFilterSpec.captureChildFired,
                 "a colour child should fire when the parent's capture is yellow")
+        end)
+
+        it("scans no further than the end of the parent's capture", function()
+            feed("hello \27[33mworld\27[0m\n")
+            assert.is_nil(_G.ColorFilterSpec.leadingChildFired,
+                "a color child must not fire when the yellow text follows the parent's capture")
+
+            feed("\27[33mhello\27[0m world\n")
+            assert.is_true(_G.ColorFilterSpec.leadingChildFired,
+                "a color child should fire when the parent's capture is yellow")
+        end)
+
+        it("scans no further than the end of the parent's capture for a child inside a folder", function()
+            feed("hello \27[33mworld\27[0m\n")
+            assert.is_nil(_G.ColorFilterSpec.leadingFolderChildFired,
+                "a color child in a folder must not fire when the yellow text follows the parent's capture")
+
+            feed("\27[33mhello\27[0m world\n")
+            assert.is_true(_G.ColorFilterSpec.leadingFolderChildFired,
+                "a color child in a folder should fire when the parent's capture is yellow")
         end)
 
         it("offers a perl child the whole of a multibyte capture", function()
