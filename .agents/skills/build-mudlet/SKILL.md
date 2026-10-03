@@ -179,6 +179,14 @@ on the 4 cores these containers get.
 
 The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold` - keep
 that flag if you reconfigure the tree from scratch.
+
+The hook also sets ccache's `base_dir` and `hash_dir` so worktrees share hits: a clean build in a
+second worktree took 1m18s from the cache against 8m41s cold. Configure every tree with the same
+flags, or nothing matches. A tree that rebuilds its precompiled header in place - after a flag
+change - does not cache it, because ccache reads the old `.gch` as an input, so every file built
+on top of it misses for other worktrees; delete `cmake_pch.hxx.gch` before rebuilding to avoid that.
+An object shared this way records the build directory of the worktree that first compiled it, so
+a debugger opens that worktree's sources; build with `CCACHE_HASHDIR=1` in a tree you are debugging.
 Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
 
 Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted
