@@ -1963,8 +1963,8 @@ do
       text = arg1
     end
 
-    local selection = {getSelection(windowname)}
-    if _comp(selection, {"", 0, 0}) then
+    local selected, selectionStart, selectionLength = getSelection(windowname)
+    if selected == "" and selectionStart == 0 and selectionLength == 0 then
       return nil, "replace: nothing is selected to be replaced. Did selectString return -1?"
     end
     text = text or ""
