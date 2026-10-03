@@ -50,6 +50,7 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QLabel>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QToolBar>
 #include <QtTest/QtTest>
@@ -344,7 +345,9 @@ private slots:
     // then given text labels must widen Pause for its longer Resume text too
     void pausingAfterAnIconSizeChangeLeavesTheButtonsWhereTheyAre()
     {
-        const int originalIconSize = mudlet::self()->mToolbarIconSize;
+        const auto restoreIconSize = qScopeGuard([originalIconSize = mudlet::self()->mToolbarIconSize]() {
+            mudlet::self()->setToolBarIconSize(originalIconSize);
+        });
         mudlet::self()->setToolBarIconSize(1);
         const QString file = writeThreeChunkReplay(qsl("iconsize.dat"));
         QVERIFY(!file.isEmpty());
@@ -364,10 +367,7 @@ private slots:
         pause->trigger();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
         QCoreApplication::processEvents();
-        const int stopAfter = stopButton->x();
-        mudlet::self()->setToolBarIconSize(originalIconSize);
-
-        QCOMPARE(stopAfter, stopBefore);
+        QCOMPARE(stopButton->x(), stopBefore);
     }
 
     // Resuming waits out what was left of the interrupted gap, not the whole of
