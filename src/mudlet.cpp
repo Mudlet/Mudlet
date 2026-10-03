@@ -5016,6 +5016,7 @@ void mudlet::setToolBarIconSize(const int s)
     if (mpToolBarReplay) {
         mpToolBarReplay->setIconSize(mpMainToolBar->iconSize());
         mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+        fitReplayPauseButton();
     }
     // The signal first: a detached window sets its own toolbar's size from it,
     // and the buttons below are sized from the toolbar of whichever window each
@@ -7213,15 +7214,8 @@ void mudlet::slot_replayStarted()
     //: Tooltip on the replay toolbar's Pause button
     mpActionReplayPause->setToolTip(utils::richText(tr("Hold the replay where it is. It carries on from the same point when you resume.")));
     mpToolBarReplay->addAction(mpActionReplayPause);
-    QWidget* pauseButton = mpToolBarReplay->widgetForAction(mpActionReplayPause);
-    pauseButton->setObjectName(mpActionReplayPause->objectName());
-    // As wide as it is while it reads Resume, or pausing pushes the buttons after it along
-    //: Button on the replay toolbar that lets a held replay carry on
-    mpActionReplayPause->setText(tr("Resume"));
-    const int resumeWidth = pauseButton->sizeHint().width();
-    //: Button on the replay toolbar that holds the replay where it is
-    mpActionReplayPause->setText(tr("Pause"));
-    pauseButton->setMinimumWidth(std::max(resumeWidth, pauseButton->sizeHint().width()));
+    mpToolBarReplay->widgetForAction(mpActionReplayPause)->setObjectName(mpActionReplayPause->objectName());
+    fitReplayPauseButton();
 
     //: Button on the replay toolbar that ends the replay early
     mpActionReplayStop = new QAction(style()->standardIcon(QStyle::SP_MediaStop), tr("Stop"), this);
@@ -7298,6 +7292,21 @@ QString mudlet::replayTimeLabelText(const QString& time, const bool paused) cons
         text = tr("%1 (paused)").arg(text);
     }
     return qsl("<font size=25><b>%1</b></font>").arg(text);
+}
+
+// As wide as it is while it reads Resume, or pausing pushes the buttons after it along
+void mudlet::fitReplayPauseButton()
+{
+    QWidget* pauseButton = mpToolBarReplay->widgetForAction(mpActionReplayPause);
+    const QString currentText = mpActionReplayPause->text();
+    //: Button on the replay toolbar that lets a held replay carry on
+    mpActionReplayPause->setText(tr("Resume"));
+    const int resumeWidth = pauseButton->sizeHint().width();
+    //: Button on the replay toolbar that holds the replay where it is
+    mpActionReplayPause->setText(tr("Pause"));
+    const int pauseWidth = pauseButton->sizeHint().width();
+    mpActionReplayPause->setText(currentText);
+    pauseButton->setMinimumWidth(std::max(resumeWidth, pauseWidth));
 }
 
 void mudlet::slot_replayPauseToggled(const bool paused)

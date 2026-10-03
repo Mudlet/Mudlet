@@ -606,6 +606,7 @@ private:
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
     QString replayTimeLabelText(const QString& time, const bool paused) const;
+    void fitReplayPauseButton();
     dlgTriggerEditor* createMudletEditor();
     static void showEditorRestoringWindowState(QWidget* editor);
 

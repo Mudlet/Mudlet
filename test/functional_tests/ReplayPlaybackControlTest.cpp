@@ -340,6 +340,36 @@ private slots:
         QCOMPARE(stopButton->x(), stopBefore);
     }
 
+    // Icon-only buttons all measure the same, so a replay started like that and
+    // then given text labels must widen Pause for its longer Resume text too
+    void pausingAfterAnIconSizeChangeLeavesTheButtonsWhereTheyAre()
+    {
+        const int originalIconSize = mudlet::self()->mToolbarIconSize;
+        mudlet::self()->setToolBarIconSize(1);
+        const QString file = writeThreeChunkReplay(qsl("iconsize.dat"));
+        QVERIFY(!file.isEmpty());
+        QVERIFY(MudletReplay::self()->load(mpHost, file));
+        mudlet::self()->setToolBarIconSize(4);
+
+        QAction* pause = replayAction(qsl("replay_pause_action"));
+        QToolBar* toolBar = replayToolBar();
+        QVERIFY(pause && toolBar);
+        QWidget* pauseButton = toolBar->widgetForAction(pause);
+        QWidget* stopButton = toolBar->widgetForAction(replayAction(qsl("replay_stop_action")));
+        QVERIFY(pauseButton && stopButton);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QTRY_VERIFY(pauseButton->isVisible() && pauseButton->x() > 0);
+        const int stopBefore = stopButton->x();
+
+        pause->trigger();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QCoreApplication::processEvents();
+        const int stopAfter = stopButton->x();
+        mudlet::self()->setToolBarIconSize(originalIconSize);
+
+        QCOMPARE(stopAfter, stopBefore);
+    }
+
     // Resuming waits out what was left of the interrupted gap, not the whole of
     // it again. Nothing else here can tell those apart: both end with the chunk
     // arriving, they just differ by seconds.
