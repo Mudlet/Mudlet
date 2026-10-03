@@ -1230,18 +1230,15 @@ function BaseUI.prefixesLeadTheirShapes()
   return true
 end
 
--- for the test suite: the vitals scan remembers which shapes matched a line
--- with its digits read as 0, which is only sound while no shape tells one
--- digit from another
-function BaseUI.shapesTreatDigitsAlike()
-  for _, pattern in ipairs(vitalsLinePatterns) do
-    for _, regex in ipairs({ pattern.regex, pattern.prefix or "" }) do
-      if regex:gsub("{%d*,?%d*}", ""):find("%d") then
-        return false
-      end
+-- for the test suite: the shapes a full walk finds in a line, without the memo
+function BaseUI.vitalsShapesMatching(text)
+  local indices = {}
+  for index, pattern in ipairs(vitalsLinePatterns) do
+    if rex.match(text, compiledPattern[pattern.regex]) then
+      indices[#indices + 1] = index
     end
   end
-  return true
+  return indices
 end
 
 -- for the test suite: the vitals scan never tries a shape on a line without
@@ -1336,7 +1333,6 @@ local function candidateShapesFor(mask, skipWindowed)
   return shapes
 end
 
--- visits one shape's reading, dropping the nonsense ones
 local function readShape(index, pattern, visit, state, first, second)
   local kind = pattern.kind
   if kind == "curmax" then
@@ -1358,12 +1354,27 @@ local function readShape(index, pattern, visit, state, first, second)
   end
 end
 
--- a line with every digit read as 0 -&gt; the shapes that matched it, in order.
--- No shape tells one digit from another, so every line reading the same way
--- matches exactly these; prompts and combat lines repeat with only their
--- numbers changing, and the full walk costs most of the per-line time
+-- a literal digit, a backreference or a condition on a group lets a regex tell
+-- digits apart, and the memo below is only sound while none can
+local function shapesTreatDigitsAlike()
+  for _, pattern in ipairs(vitalsLinePatterns) do
+    for _, regex in ipairs({ pattern.regex, pattern.prefix or "" }) do
+      regex = regex:gsub("{%d*,?%d*}", "")
+      if regex:find("%d") or regex:find("\\[kg]") or regex:find("(?P=", 1, true) or regex:find("(?(", 1, true) then
+        return false
+      end
+    end
+  end
+  return true
+end
+BaseUI.shapesTreatDigitsAlike = shapesTreatDigitsAlike
+local memoIsSound = shapesTreatDigitsAlike()
+
+-- a line with its digits read as 0 -&gt; the shapes that matched it, in order:
+-- prompts and combat lines repeat with only their numbers changing
 local matchedShapes, matchedShapesWithoutWindowed = {}, {}
-local matchedShapeCount = 0
+local matchedShapeBytes = 0
+local noShapes = {}
 
 -- calls visit(state, index, pattern, current, max, percent) for each reading
 -- in one plain-text line, in shape order; chat-shaped lines have none.
@@ -1376,20 +1387,22 @@ local function scanVitalsLine(text, skipWindowed, visit, state)
   if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
     return
   end
-  local skeleton = text:gsub("%d", "0")
-  local known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
-  local matched = known[skeleton]
-  if matched then
-    for _, index in ipairs(matched) do
-      local pattern = vitalsLinePatterns[index]
-      local first, second = rex.match(text, compiledPattern[pattern.regex])
-      if first then
-        readShape(index, pattern, visit, state, first, second)
+  local skeleton, known, matched
+  if memoIsSound then
+    skeleton = text:gsub("%d", "0")
+    known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+    matched = known[skeleton]
+    if matched then
+      for _, index in ipairs(matched) do
+        local pattern = vitalsLinePatterns[index]
+        local first, second = rex.match(text, compiledPattern[pattern.regex])
+        if first then
+          readShape(index, pattern, visit, state, first, second)
+        end
       end
+      return
     end
-    return
   end
-  matched = {}
   local lowered = text:lower()
   local mask = 0
   for literal, bit in pairs(needsBit) do
@@ -1418,16 +1431,19 @@ local function scanVitalsLine(text, skipWindowed, visit, state)
       first, second = rex.match(text, compiledPattern[pattern.regex])
     end
     if first then
+      matched = matched or {}
       matched[#matched + 1] = index
       readShape(index, pattern, visit, state, first, second)
     end
   end
-  if matchedShapeCount &gt;= 1000 then
-    matchedShapes, matchedShapesWithoutWindowed, matchedShapeCount = {}, {}, 0
-    known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+  if skeleton then
+    if matchedShapeBytes &gt;= 100000 then
+      matchedShapes, matchedShapesWithoutWindowed, matchedShapeBytes = {}, {}, 0
+      known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+    end
+    matchedShapeBytes = matchedShapeBytes + #skeleton
+    known[skeleton] = matched or noShapes
   end
-  matchedShapeCount = matchedShapeCount + 1
-  known[skeleton] = matched
 end
 
 local function addReading(readings, index, pattern, current, max, percent)

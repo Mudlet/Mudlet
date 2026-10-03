@@ -1618,6 +1618,15 @@ describe("Tests UI functions", function()
       end
     end
 
+    -- each line with its digits swapped for others, which a shape must not tell apart
+    local function assertDigitsReadAlike(line)
+      local shapes = BaseUI.vitalsShapesMatching(line)
+      for _, digit in ipairs({ "0", "1", "5", "9" }) do
+        local swapped = line:gsub("%d", digit)
+        assert.are.same(shapes, BaseUI.vitalsShapesMatching(swapped), swapped)
+      end
+    end
+
     local function kindCount(hits, kind)
       local count = 0
       for _, hit in ipairs(hits) do
@@ -1877,6 +1886,12 @@ describe("Tests UI functions", function()
         end)
       end
 
+      it("matches the same shapes whatever digits these screens hold", function()
+        for _, screen in ipairs(screens) do
+          assertDigitsReadAlike(screen.line)
+        end
+      end)
+
       it("gates each shape only on a literal these screens cannot match without", function()
         for _, screen in ipairs(screens) do
           assert.is_true(BaseUI.needsHoldOn(screen.line), screen.name)
@@ -2062,10 +2077,9 @@ describe("Tests UI functions", function()
         assert.is_true(BaseUI.shapesTreatDigitsAlike())
       end)
 
-      it("reads a line the same way the second time", function()
+      it("matches the same shapes whatever digits a line holds", function()
         for _, line in ipairs(readableLines) do
-          assert.are.same(BaseUI.parseVitalsLine(line), BaseUI.parseVitalsLine(line), line)
-          assert.are.same(BaseUI.parseVitalsLine(line, true), BaseUI.parseVitalsLine(line, true), line)
+          assertDigitsReadAlike(line)
         end
       end)
 
