@@ -1140,11 +1140,15 @@ function verbosePackageInstall(fileName)
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok and reason and reason ~= "" then
-    -- installed, but with problems already reported on the console
+    -- installPackage() asks for a quiet install, so nothing else puts the reason on the console
     local partialText = mudlet.Locale.packageInstallPartial.message
-    partialText = string.format(partialText, packageName)
+    partialText = string.format(partialText, packageName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. partialText .. '\n')
+    decho('<0,150,190>' .. warnPrefix)
+    -- echo, as decho would take a tag such as <b> in an error message as formatting
+    setFgColor(190, 150, 0)
+    echo(partialText .. '\n')
+    resetFormat()
   elseif ok then
     local successText = mudlet.Locale.packageInstallSuccess.message
     successText = string.format(successText, packageName)
@@ -1167,9 +1171,12 @@ function verboseModuleInstall(fileName)
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok and reason and reason ~= "" then
     local partialText = mudlet.Locale.moduleInstallPartial.message
-    partialText = string.format(partialText, moduleName)
+    partialText = string.format(partialText, moduleName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. partialText .. '\n')
+    decho('<0,150,190>' .. warnPrefix)
+    setFgColor(190, 150, 0)
+    echo(partialText .. '\n')
+    resetFormat()
   elseif ok then
     local successText = mudlet.Locale.moduleInstallSuccess.message
     successText = string.format(successText, moduleName)
