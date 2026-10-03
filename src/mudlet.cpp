@@ -4719,6 +4719,13 @@ void mudlet::setCompactInputLineChecked(Host* pHost, bool checked)
     }
 }
 
+void mudlet::showTrayNotification(const QString& title, const QString& text, int msecs)
+{
+    mTrayIcon.show();
+    mTrayIcon.showMessage(title, text, mTrayIcon.icon(), msecs);
+    mTrayIcon.hide();
+}
+
 // Received when the OS/DE/WM tells Mudlet to close (or we force the close
 // ourselves or the user hits the close application menu option or action on
 // the "Connect" buttion):

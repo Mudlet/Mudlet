@@ -165,10 +165,10 @@ public:
     void doAutoLogin(const QString&, bool offline);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
-    void updateMapActionAvailability();
+    void updateMapActionAvailability() override;
     void updateMainWindowTitle();
     void forceClose();
-    void armForceClose();
+    void armForceClose() override;
     Host* getActiveHost() override;
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
@@ -248,7 +248,7 @@ public:
     // Helper function to check if current version is >= specified version for backward compatibility
     bool isVersionAtLeast(const QString& minVersion);
     void onlyShowProfiles(const QStringList&);
-    bool openWebPage(const QString&);
+    bool openWebPage(const QString&) override;
 
     // Profile validation and orphan detection
     bool hasOrphanedProfiles();
@@ -277,7 +277,7 @@ public:
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
-    void setShowTabConnectionIndicators(const bool);
+    void setShowTabConnectionIndicators(const bool) override;
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
@@ -286,7 +286,10 @@ public:
     void showConnectionDialog() override { slot_showConnectionDialog(); }
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
-    bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
+    bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
+    void showTrayNotification(const QString& title, const QString& text, int msecs) override;
+    bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
+    void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
     // Addon toolbar button management
     // Surfaces a command can be placed on. A client with different chrome maps
     // these onto whatever it has; one that has only a menu honours Menu alone.
