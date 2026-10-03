@@ -711,24 +711,29 @@ void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions)
 
 void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActions)
 {
+    // A floating/dockable bar is a TToolBar, so drop any TEasyButtonBar the
+    // action had before it was made one
+    auto releaseEasyButtonBar = [this](TAction* pAction) {
+        if (TEasyButtonBar* pOldBar = actionEasyButtonBar(pAction)) {
+            mEasyButtonBarList.remove(pOldBar);
+            pOldBar->deleteLater();
+            setActionEasyButtonBar(pAction, nullptr);
+        }
+    };
     for (auto& rootAction : rootActions) {
         if (rootAction->mLocation == 4) {
-            // This TAction is set to be a floating/dockable widget
-            if (TEasyButtonBar* pOldBar = actionEasyButtonBar(rootAction)) {
-                // But it has a TEasyButtonBar type toolbar so we need to
-                // remove the TEasyButtonBar from the list of TEasyButtonBars:
-                mEasyButtonBarList.remove(pOldBar);
-                // And destroy it:
-                pOldBar->deleteLater();
-                setActionEasyButtonBar(rootAction, nullptr);
-            }
-            continue; // skip over any root action node that IS going to be a TToolBar.
+            releaseEasyButtonBar(rootAction);
+            continue;
         }
         if (!rootAction->mPackageName.isEmpty()) {
             // It has a package name so it is actually the parent
             // module/package item rather than the actual ToolBar
             for (auto* childActionNode : *rootAction->mpMyChildrenList) {
                 auto* childAction = static_cast<TAction*>(childActionNode);
+                if (childAction->mLocation == 4) {
+                    releaseEasyButtonBar(childAction);
+                    continue;
+                }
                 TEasyButtonBar* pTB = nullptr;
                 for (auto& easyButtonBar : mEasyButtonBarList) {
                     if (easyButtonBar == actionEasyButtonBar(childAction)) {
@@ -737,7 +742,7 @@ void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActio
                     }
                 }
                 if (!pTB) {
-                    pTB = createEasyButtonBar(rootAction, childAction->getName());
+                    pTB = createEasyButtonBar(childAction, childAction->getName());
                     mEasyButtonBarList.emplace_back(pTB);
                     setActionEasyButtonBar(childAction, pTB); // needed for drag&drop
                 }

@@ -497,6 +497,76 @@ private slots:
         QVERIFY(!host->commitLayoutUpdates());
     }
 
+    // Its settings are its own, not those of the package it sits in
+    void test_aButtonBarInAPackageTakesItsOwnStyleSheetAndLayout()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementStyledPackage"), 0, false);
+        package->mPackageName = qsl("placementStyledPackage");
+        auto* packaged = new TAction(package, host);
+        packaged->setName(qsl("placementStyledBar"));
+        packaged->setIsFolder(true);
+        packaged->setIsActive(true);
+        packaged->css = qsl("background-color: red;");
+        packaged->mUseCustomLayout = true;
+        packaged->setSizeX(200);
+        packaged->setSizeY(40);
+        host->getActionUnit()->registerAction(packaged);
+        auto* button = new TAction(packaged, host);
+        button->setName(qsl("placementStyledBar button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(packaged);
+        QVERIFY2(bar, "a bar directly in a package should have been given a button bar");
+        QCOMPARE(bar->styleSheet(), qsl("background-color: red;"));
+        auto* buttonArea = bar->findChild<QWidget*>(qsl("easyButtonBar_Widget_%1_placementStyledBar").arg(host->getName()));
+        QVERIFY(buttonArea);
+        QCOMPARE(buttonArea->minimumSize(), QSize(200, 40));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledBar', 'background-color: blue;')")));
+        QCOMPARE(console->actionEasyButtonBar(packaged), bar.data());
+        QCOMPARE(bar->styleSheet(), qsl("background-color: blue;"));
+    }
+
+    // A button bar takes its size from its own action, so a stray one made
+    // for a floating toolbar in a package would widen the top strip
+    void test_aFloatingToolbarInAPackageIsGivenNoButtonBar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementFloatingPackage"), 0, false);
+        package->mPackageName = qsl("placementFloatingPackage");
+        auto* floating = new TAction(package, host);
+        floating->setName(qsl("placementFloatingInPackage"));
+        floating->setIsFolder(true);
+        floating->setIsActive(true);
+        floating->mLocation = 4;
+        floating->mUseCustomLayout = true;
+        floating->setSizeX(200);
+        floating->setSizeY(80);
+        host->getActionUnit()->registerAction(floating);
+        auto* button = new TAction(floating, host);
+        button->setName(qsl("placementFloatingInPackage button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        host->getActionUnit()->updateAllToolbars();
+        host->getActionUnit()->updateAllToolbars();
+
+        QVERIFY(!console->hasEasyButtonBar(floating));
+        const auto strays = console->findChildren<TEasyButtonBar*>(qsl("easyButtonBar_%1_placementFloatingInPackage").arg(host->getName()));
+        QCOMPARE(strays.size(), 0);
+    }
+
     void cleanup()
     {
         if (auto* self = mudlet::self()) {
