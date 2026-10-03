@@ -109,6 +109,20 @@ void TKeySequenceEdit::keyPressEvent(QKeyEvent* pEvent)
         pEvent->accept();
         return;
     }
+    if (pEvent->modifiers() == Qt::NoModifier) {
+        if (key == Qt::Key_Escape) {
+            // Left for the dialog, which closes on it: captured, it would
+            // replace the binding just set rather than close anything
+            pEvent->ignore();
+            return;
+        }
+        if (key == Qt::Key_Backspace || key == Qt::Key_Delete) {
+            clear();
+            emit editingFinished();
+            pEvent->accept();
+            return;
+        }
+    }
     QKeySequenceEdit::keyPressEvent(pEvent);
 }
 
