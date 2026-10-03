@@ -258,11 +258,13 @@ describe("addon commands", function()
       local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F7, [[echo("bound")]])
       disableKey(tostring(key))
 
-      local id, why = place{name = "DisabledKeyClashSpec", shortcut = "Alt+F7"}
+      local id = place{name = "DisabledKeyClashSpec", shortcut = "Alt+F7"}
       killKey(tostring(key))
+      -- so the binding, and nothing else holding Alt+F7, was the reason
+      local afterKill, why = place{name = "DisabledKeyClashSpecAfterKill", shortcut = "Alt+F7"}
 
       assert.is_nil(id, "a command took the key of a switched off binding, which then never fires once switched on")
-      assert.is_string(why)
+      assert.is_number(afterKill, "the key was refused for some other reason: " .. tostring(why))
     end)
 
     -- A killed binding lingers until the key unit next tidies up, but can never fire again

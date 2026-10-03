@@ -1353,7 +1353,7 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         if (pOtherHost.isNull() || pOtherHost.data() == pHost || pOtherHost->isClosingDown()) {
             continue;
         }
-        if (!pOtherHost->getKeyUnit()->wouldMatch(combination.key(), combination.keyboardModifiers())) {
+        if (!pOtherHost->getKeyUnit()->firstBinding(combination.key(), combination.keyboardModifiers())) {
             continue;
         }
         // The editor rather than the console. A package re-places its commands
