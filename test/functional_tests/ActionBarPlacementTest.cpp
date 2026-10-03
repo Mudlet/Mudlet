@@ -26,6 +26,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
+#include "EditorMoveItemCommand.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
@@ -247,6 +248,32 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(!bar, "the moved bar's old bar was kept");
         QVERIFY(console->actionEasyButtonBar(newParent) && !console->actionEasyButtonBar(newParent)->isHidden());
+    }
+
+    void test_undoingAMoveIntoAnotherBarBringsTheBarBack()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* moved = makeRootBar(host, qsl("placementUndoneMove"), 0);
+        auto* newParent = makeRootBar(host, qsl("placementUndoneMoveParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QVERIFY(console->actionEasyButtonBar(moved) && !console->actionEasyButtonBar(moved)->isHidden());
+
+        host->getActionUnit()->reParentAction(moved->getID(), 0, newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+        EditorMoveItemCommand move(EditorViewType::cmActionView, moved->getID(), 0, newParent->getID(), 0, 0, moved->getName(), host);
+        // The first redo() is QUndoStack::push()'s, made after the drop has already moved it
+        move.redo();
+        move.undo();
+
+        QVERIFY(!moved->getParent());
+        TEasyButtonBar* bar = console->actionEasyButtonBar(moved);
+        QVERIFY2(bar && !bar->isHidden(), "the bar moved back out by undo is not showing");
+        QVERIFY(laidOutIn(console->mpTopToolBar, bar));
     }
 
     void test_aButtonBarMovedOutOfAPackageIntoAnotherBarIsTakenOffTheWindow()
