@@ -613,6 +613,7 @@ void TTextEdit::paintForegrounds(QPainter& painter, TGlyphCache& glyphCache, con
             paintGraphemeForeground(painter, glyphCache, run);
         }
     }
+    glyphCache.flush(painter);
     if (!clip.isNull()) {
         painter.restore();
     }
@@ -1029,13 +1030,14 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCac
         return;
     }
 
-    if (painter.pen().color() != effectiveFgColor) {
-        painter.setPen(effectiveFgColor);
-    }
     TGlyphCache::Style style;
     style.setFlag(TGlyphCache::Bold, isBold);
     style.setFlag(TGlyphCache::Italic, isItalics);
     if (Q_UNLIKELY(useQtDecoration)) {
+        glyphCache.flush(painter);
+        if (painter.pen().color() != effectiveFgColor) {
+            painter.setPen(effectiveFgColor);
+        }
         // drawGlyphRun() draws these decorations differently, so they stay with drawText()
         QFont font = TGlyphCache::styled(this->font(), style);
         font.setOverline(useQtOverline);
@@ -1046,11 +1048,14 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCac
         }
         painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme.toString());
     } else if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space) {
-        glyphCache.drawCentered(painter, textRect, grapheme, style);
+        glyphCache.queueCentered(painter, textRect, grapheme, style, effectiveFgColor);
     }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
-    drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
+    if (attributes & (TChar::Underline | TChar::Overline | TChar::StrikeOut)) {
+        glyphCache.flush(painter);
+        drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
+    }
 }
 
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, const TChar& charStyle) const
