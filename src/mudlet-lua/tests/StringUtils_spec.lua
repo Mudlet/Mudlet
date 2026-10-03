@@ -455,6 +455,30 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("[inner/outer] outer", f("[{inner()}] {outerName}"))
     end)
 
+    it("should interpolate a variable named like one of f's own locals", function()
+      do
+        local lookup, outer_env, code = "local lookup", "local outer_env", "local code"
+        assert.equals("local lookup/local outer_env/local code", f("{lookup}/{outer_env}/{code}"))
+      end
+
+      local was = rawget(_G, "lookup")
+      _G.lookup = {x = 42}
+      local ok, result = pcall(f, "{lookup.x}")
+      _G.lookup = was
+      assert.is_true(ok, tostring(result))
+      assert.equals("42", result)
+    end)
+
+    it("should not let an outer f's locals shadow those of a function it calls", function()
+      local code, block, exp_env = "mine", "my block", "my env"
+      local function inner()
+        -- not a tail call, which would take this frame off the stack
+        local result = f("{code}/{block}/{exp_env}")
+        return result
+      end
+      assert.equals("[mine/my block/my env]", f("[{inner()}]"))
+    end)
+
     -- a function made in an expression writes its globals into that
     -- expression's own environment, which nothing else may see
     it("should not let a global assigned inside one expression leak into the next", function()

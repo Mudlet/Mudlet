@@ -204,16 +204,23 @@ function f(supersecretstringvariablenocollision)
   local outer_env = _ENV or getfenv(1)
   -- looks the name up afresh on every read, so one serves every block
   local lookup = function(_, k)
+    -- From this f()'s own frame: below it are this function, the expression
+    -- and the gsub callback
     local stack_level = 5
     while debug.getinfo(stack_level, "") ~= nil do
-      local i = 1
-      repeat
-        local name, value = debug.getlocal(stack_level, i)
-        if name == k then
-          return value
+      local name, value = debug.getlocal(stack_level, 1)
+      -- An f() and its gsub callback, here or further up the stack, are told
+      -- by their first parameter, so none of their locals shadow the caller's
+      if name ~= "supersecretstringvariablenocollision" and name ~= "supersecretblocknocollision" then
+        local i = 1
+        while name do
+          if name == k then
+            return value
+          end
+          i = i + 1
+          name, value = debug.getlocal(stack_level, i)
         end
-        i = i + 1
-      until name == nil
+      end
       stack_level = stack_level + 1
     end
     -- Mudlet leaves these out of the globals table until they are first read
@@ -222,8 +229,8 @@ function f(supersecretstringvariablenocollision)
     end
     return rawget(outer_env, k)
   end
-  return (supersecretstringvariablenocollision:gsub("%b{}", function(block)
-    local code = block:match("{(.*)}")
+  return (supersecretstringvariablenocollision:gsub("%b{}", function(supersecretblocknocollision)
+    local code = supersecretblocknocollision:match("{(.*)}")
     local exp_env = {}
     setmetatable(exp_env, { __index = lookup })
     if not setfenv then
