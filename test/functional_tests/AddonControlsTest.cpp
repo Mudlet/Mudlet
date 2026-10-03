@@ -782,6 +782,23 @@ private slots:
         QVERIFY2(!pinnedWarning.contains(qsl("OtherProfileClash")), "the page named a command from a different profile");
     }
 
+    // A disabled command's menu item keeps its key, but Qt leaves the key to the Mudlet shortcut then
+    void test_theShortcutsPageWarnsAboutACommandOnlyWhileEnabled()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'DisabledClash', menuPath = 'ClashTest', shortcut = 'Ctrl+Shift+F12'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+        QVERIFY2(callReturnedTrue(mpFirstHost, qsl("disableCommand(%1)").arg(commandId)), "the command could not be disabled");
+        bool clearedAfterwards = false;
+        const QString disabledWarning = shortcutsPageWarning({qsl("Notepad")}, QKeySequence(qsl("Ctrl+Shift+F12")), clearedAfterwards);
+        QVERIFY2(callReturnedTrue(mpFirstHost, qsl("enableCommand(%1)").arg(commandId)), "the command could not be enabled again");
+        const QString enabledWarning = shortcutsPageWarning({qsl("Notepad")}, QKeySequence(qsl("Ctrl+Shift+F12")), clearedAfterwards);
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(!disabledWarning.isNull(), "the Notepad shortcut's editor could not be found");
+        QVERIFY2(disabledWarning.isEmpty(), qPrintable(qsl("the page warned about a disabled command, which cannot take the key: \"%1\"").arg(disabledWarning)));
+        QVERIFY2(enabledWarning.contains(qsl("DisabledClash")), qPrintable(qsl("the page does not warn about the command once it is enabled again: \"%1\"").arg(enabledWarning)));
+    }
+
     // One line per key, however many hold it
     void test_theShortcutsPageWarnsOnceWhenMudletAndACommandAllShareAKey()
     {

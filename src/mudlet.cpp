@@ -1540,7 +1540,7 @@ void mudlet::unplaceAddonCommand(AddonCommand& command)
     command.container = nullptr;
 }
 
-QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost, const bool pinnedOnlyFromOtherProfiles) const
+QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost, const bool onlyLiveWhileShown) const
 {
     QStringList holders;
     bool anotherProfile = false;
@@ -1551,9 +1551,13 @@ QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, con
         if (!pAction || pAction->shortcut() != sequence) {
             continue;
         }
+        // Qt's shortcut map skips a disabled action, so it leaves the key to the other holder
+        if (onlyLiveWhileShown && !command.enabled) {
+            continue;
+        }
         if (command.pHost == pHost) {
             holders.append(qsl("\"%1\"").arg(addonPlainLabel(pAction->text())));
-        } else if (!pinnedOnlyFromOtherProfiles || command.pinned) {
+        } else if (!onlyLiveWhileShown || command.pinned) {
             anotherProfile = true;
         }
     }
