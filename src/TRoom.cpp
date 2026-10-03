@@ -1536,6 +1536,22 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
     }
 
+    // ExitStubs - only a corrupt file can leave one here, with a direction code
+    // that the rest of the code cannot handle:
+    if (!exitStubsCopy.isEmpty()) {
+        QStringList extras;
+        for (const int dirCode : std::as_const(exitStubsCopy)) {
+            extras.append(dirCodeToDisplayName(dirCode));
+            exitStubs.removeAll(dirCode);
+        }
+        //: %1 is the room ID, %2 is a list of exit stub items
+        const QString infoMsg = tr("[ INFO ]  - In room with ID: %1 found one or more surplus exit stub items that were removed: %2.").arg(id).arg(extras.join(QLatin1String(", ")));
+        if (TMap::smShowMapAuditErrors) {
+            mpRoomDB->mpMap->postMessage(infoMsg);
+        }
+        mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
+    }
+
     // Custom Lines - points - the master element - if the entry for an exit is
     // not valid then remove corresponding entries in other elements
     {
@@ -1675,9 +1691,8 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             if (!exitStubs.contains(dirCode)) {
                 // Add a stub (this is so we can retain doors and locks, though exit weights and custom lines will go)
                 exitStubs.append(dirCode);
-                // Remove a (now valid) stub in this direction from check pool
-                exitStubsPool.remove(dirCode);
             }
+            exitStubsPool.remove(dirCode);
 
             exitRoomId = -1;
 
