@@ -1738,6 +1738,34 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.equals("after the gap", after.text, "payload bytes: " .. after.hex)
     end)
 
+    it("sends a snooper a prompt without the marker Mudlet ends it with", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      finally(function()
+        if mmcp.getClientFlags(PEER_NAME) == "      N " then
+          peerSends(30, "")
+          waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+        end
+        mmcp.allowSnoop(PEER_NAME)
+      end)
+      peerSends(30, "")
+      assert.is_true(waitUntil(function()
+        return mmcp.getClientFlags(PEER_NAME) == "      N "
+      end, 2000))
+
+      -- IAC GA, then IAC EOR
+      for _, ending in ipairs({"\255\249", "\255\239"}) do
+        local mark = captureSeq()
+        feedTelnet("a normal line\r\n<100hp 50mp> " .. ending)
+        local prompt = waitForPeerEvent(mark, function(event)
+          return event.type == "command" and event.name == "SnoopData" and contains(event.text, "100hp")
+        end, 2000)
+        assert.is_table(prompt)
+        assert.equals("<100hp 50mp> ", prompt.text, "payload bytes: " .. prompt.hex)
+      end
+    end)
+
     it("raises sysMMCPIncomingSnoopMessage for snooped output", function()
       if peerUnavailable() then return end
       ensurePeer()

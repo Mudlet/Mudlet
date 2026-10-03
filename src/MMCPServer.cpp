@@ -80,6 +80,11 @@ void MMCPServer::sendSnoopData(std::string& lines)
     // clients and the other (outData2) which will be send to all other clients
 
     while (std::getline(iss, line)) {
+        // cTelnet ends a prompt with 0xff, always the block's last byte, and
+        // writeData() would show it to the snooper as a '?'
+        if (iss.eof() && !line.empty() && line.back() == '\xff') {
+            line.pop_back();
+        }
         QByteArray outData1, outData2;
         outData1.append(static_cast<char>(SnoopData));
         outData2.append(static_cast<char>(SnoopData));
