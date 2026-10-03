@@ -71,11 +71,33 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+public:
+    // Host settings the 2D map keeps a copy of to draw with
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
+
 signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
     void signal_mapSymbolFontChanged();
+
+    // Cues for the mapper drawing this map (mpMapper); the symbol cache one
+    // also reaches every secondary map view. With no mapper nothing listens.
+    void signal_mapperColoursChanged();
+    void signal_mapCleared();
+    void signal_mapLabelsChanged();
+    void signal_mapLoaded(bool showPlayerArea);
+    void signal_mapperShowRequested();
+    void signal_mapDownloadEnded();
+    void signal_symbolCachesStale();
+    void signal_playerRoomStyleChanged();
+    void signal_areaListChanged();
+    void signal_areaRenamed(const QString& oldName, const QString& newName);
+    void signal_playerAreaShowRequested();
+    void signal_defaultAreaVisibilitySet(bool wasShown);
+    void signal_mapInfoContributorsChanged();
+    void signal_mapRepaintRequested();
+    void signal_mapperSettingChanged(TMap::MapperSetting setting);
 
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
@@ -123,6 +145,17 @@ public:
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
     void updateArea(int areaId);
+    // For a whole map read in outside TMap, as XMLimport does:
+    void announceMapLoaded(bool showPlayerArea);
+    void requestMapperShown();
+    // For changes the Lua API makes to the map or to the mapper's settings:
+    void announceAreaListChanged();
+    void announceAreaRenamed(const QString& oldName, const QString& newName);
+    void requestPlayerAreaShown();
+    void announceDefaultAreaVisibilitySet(bool wasShown);
+    void announceMapInfoContributorsChanged();
+    void requestMapRepaint();
+    void announceMapperSettingChanged(MapperSetting setting);
 
     void audit();
     inline static bool smShowMapAuditErrors = false;
@@ -253,6 +286,7 @@ public:
 
 
     std::unique_ptr<TRoomDB> mpRoomDB;
+    // Made by the GUI when it gives the profile a console, so null without one.
     // Non-owning: Qt parent-child system (TMap as parent) handles lifetime.
     TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
@@ -260,6 +294,7 @@ public:
     QString mProfileName;
 
     TMapViewManager* getViewManager() { return mpViewManager; }
+    void setViewManager(TMapViewManager* pViewManager) { mpViewManager = pViewManager; }
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name

@@ -23,7 +23,6 @@
 #include "XMLimport.h"
 
 
-#include "dlgMapper.h"
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
@@ -191,12 +190,8 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                 } else {
                     readMap();
                     mpHost->mpMap->audit();
-                    if (mpHost->mpMap->mpMapper) {
-                        mpHost->mpMap->mpMapper->mp2dMap->init();
-                        mpHost->mpMap->mpMapper->updateAreaComboBox();
-                        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                        mpHost->mpMap->mpMapper->show();
-                    }
+                    mpHost->mpMap->announceMapLoaded(true);
+                    mpHost->mpMap->requestMapperShown();
                 }
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
