@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "T2DMap.h"
 #include "TMap.h"

@@ -35,6 +35,7 @@
 #include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "TBuffer.h"
+#include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"

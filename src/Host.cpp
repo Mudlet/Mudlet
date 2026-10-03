@@ -36,7 +36,6 @@
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
-#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -49,7 +48,6 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
-#include "TTextEdit.h"
 #include "utils.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
@@ -4012,9 +4010,9 @@ QString Host::readProfileIniData(const QString& item)
 // Because '/' and '\\' are used by the QSettings class in key names for
 // special purposes we MUST filter them out in the name, we'll replace them
 // with '_'s:
-std::tuple<QString, bool> Host::getCmdLineSettings(const TCommandLine::CommandLineType type, const QString& name)
+std::tuple<QString, bool> Host::getCmdLineSettings(const enums::CommandLineType type, const QString& name)
 {
-    if (type == TCommandLine::MainCommandLine) {
+    if (type == enums::MainCommandLine) {
         // This one does not need the name to be kept in a QSettings but we
         // still need to retrieve the other setting:
         auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/main")).compare(qsl("false"), Qt::CaseInsensitive));
@@ -4059,9 +4057,9 @@ std::tuple<QString, bool> Host::getCmdLineSettings(const TCommandLine::CommandLi
     return {fileName, saveCommands};
 }
 
-void Host::setCmdLineSettings(const TCommandLine::CommandLineType type, const bool saveCommands, const QString& name)
+void Host::setCmdLineSettings(const enums::CommandLineType type, const bool saveCommands, const QString& name)
 {
-    if (type == TCommandLine::MainCommandLine) {
+    if (type == enums::MainCommandLine) {
         writeProfileIniData(qsl("CommandLines/SaveHistory/main"), saveCommands ? qsl("true") : qsl("false"));
         return;
     }
@@ -6217,25 +6215,6 @@ void Host::setFocusOnHostActiveCommandLine()
     };
 
     QTimer::singleShot(0ms, this, setCommandLineFocus);
-}
-
-QPointer<TConsole> Host::parentTConsole(QObject* start) const
-{
-    QPointer<TConsole> result;
-    auto ptr = start;
-    if (!ptr) {
-        // Handle pathalogical case:
-        return result;
-    }
-    do {
-        ptr = ptr->parent();
-    } while (ptr && !ptr->inherits("TConsole"));
-    // QObject::inherits(...) uses a const char* - so no need to wrap raw string literal!
-    if (!ptr) {
-        // Handle not found case:
-        return result;
-    }
-    return qobject_cast<TConsole*>(ptr);
 }
 
 void Host::setBorders(QMargins borders)
