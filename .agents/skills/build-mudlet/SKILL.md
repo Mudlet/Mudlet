@@ -236,6 +236,9 @@ bounded job count, which is why the presets use it. In a pre-existing Makefiles 
 ccache is installed. A full cache evicts objects continuously, so switching branches can trigger a
 near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`, raise it with
 `ccache -M <n>G`.
+Git worktrees and second clones share each other's objects; for Debug and RelWithDebInfo builds
+that also needs `ccache --set-config hash_dir=false`, since ccache otherwise hashes the build
+directory into anything compiled with `-g`.
 
 **Sanitizers are on by default** on every non-Windows build, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile

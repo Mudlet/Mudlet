@@ -270,8 +270,22 @@ endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
-  set(CMAKE_C_COMPILER_LAUNCHER ccache)
-  set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  # ccache only shares objects between checkouts of the same code (git worktrees, a
+  # second clone) when a base_dir lets it rewrite their absolute paths as relative
+  # ones. Default it to this checkout unless the developer has configured their own.
+  execute_process(
+    COMMAND ${CCACHE_FOUND} --get-config base_dir
+    OUTPUT_VARIABLE ccacheBaseDir
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(ccacheBaseDir STREQUAL "")
+    set(MUDLET_CCACHE_ENV "CCACHE_BASEDIR=${CMAKE_SOURCE_DIR}")
+    set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
+  else()
+    set(CMAKE_C_COMPILER_LAUNCHER ccache)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  endif()
 endif(CCACHE_FOUND)
 
 include(PrecompiledHeaders)

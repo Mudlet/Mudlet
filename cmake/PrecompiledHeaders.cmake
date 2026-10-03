@@ -57,7 +57,7 @@ if(CCACHE_FOUND AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   list(REMOVE_DUPLICATES ccacheSloppiness)
   list(JOIN ccacheSloppiness "," ccacheSloppiness)
   set(MUDLET_PCH_COMPILER_LAUNCHER
-      ${CMAKE_COMMAND} -E env "CCACHE_SLOPPINESS=${ccacheSloppiness}" ${CCACHE_FOUND})
+      ${CMAKE_COMMAND} -E env "CCACHE_SLOPPINESS=${ccacheSloppiness}" ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
 endif()
 
 function(mudlet_use_pch_compiler_launcher target)
