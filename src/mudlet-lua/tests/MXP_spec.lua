@@ -636,6 +636,87 @@ describe("Tests MXP handling", function()
       assert.is_nil(windowType("mxpSpecDotted.name"))
     end)
 
+    -- a frame given the name of a script's window would take the name over, and
+    -- closing the frame would then leave the script's window unreachable
+    local function windowHolds(name, needle)
+      return table.concat(getLines(name, 0, getLineCount(name) + 1), "|"):find(needle, 1, true) ~= nil
+    end
+
+    it("refuses a frame named like a mini console a script made", function()
+      local name = "mxpSpecScriptMini"
+      finally(function()
+        closeFrame(name)
+        deleteMiniConsole(name)
+      end)
+      createMiniConsole(name, 0, 0, 300, 100)
+      echo(name, "mxpSpecScriptText\n")
+      local columns = getColumnCount("main")
+
+      local mark = getLastLineNumber("main")
+      openFrame(name, 'Align="right" Width="20%" Height="30%"')
+
+      assert.are.equal(columns, getColumnCount("main"), "the frame was opened")
+      assert.is_truthy(mainSince(mark):find("<FRAME", 1, true), mainSince(mark))
+      closeFrame(name)
+      assert.are.equal("miniconsole", windowType(name))
+      assert.is_true(windowHolds(name, "mxpSpecScriptText"), "the name no longer reaches the script's mini console")
+    end)
+
+    it("refuses a frame named like a user window a script made", function()
+      local name = "mxpSpecScriptDock"
+      finally(function()
+        closeFrame(name)
+        closeUserWindow(name)
+      end)
+      openUserWindow(name, false)
+      echo(name, "mxpSpecScriptText\n")
+
+      openFrame(name, 'Align="right" Width="20%" Height="30%"')
+
+      assert.are.equal("userwindow", windowType(name))
+      assert.is_true(openUserWindow(name, false))
+      closeFrame(name)
+      assert.are.equal("userwindow", windowType(name))
+      assert.is_true(windowHolds(name, "mxpSpecScriptText"), "the name no longer reaches the script's user window")
+    end)
+
+    -- deleteMiniConsole() works on a frame's console, which frees the name for
+    -- a script's own window while the frame itself is still open
+    it("leaves a mini console a script made in a frame's place when the frame closes", function()
+      local name = "mxpSpecReusedMini"
+      finally(function()
+        closeFrame(name)
+        deleteMiniConsole(name)
+      end)
+      openFrame(name, 'Align="right" Width="20%" Height="30%"')
+      assert.are.equal("miniconsole", windowType(name))
+      assert.is_true(deleteMiniConsole(name))
+      createMiniConsole(name, 0, 0, 300, 100)
+
+      closeFrame(name)
+
+      assert.are.equal("miniconsole", windowType(name))
+      echo(name, "mxpSpecReusedText\n")
+      assert.is_true(windowHolds(name, "mxpSpecReusedText"), "the name no longer reaches the script's mini console")
+    end)
+
+    it("leaves a user window a script made in a frame's place when the frame closes", function()
+      local name = "mxpSpecReusedDock"
+      finally(function()
+        closeFrame(name)
+        deleteMiniConsole(name)
+      end)
+      openFrame(name, 'Align="right" Width="20%" Height="30%"')
+      assert.is_true(deleteMiniConsole(name))
+      assert.is_true(openUserWindow(name, false))
+
+      closeFrame(name)
+
+      assert.are.equal("userwindow", windowType(name))
+      echo(name, "mxpSpecReusedText\n")
+      assert.is_true(windowHolds(name, "mxpSpecReusedText"), "the name no longer reaches the script's user window")
+    end)
+
     it("stops at twenty frames", function()
       local names = {}
       for index = 1, 21 do

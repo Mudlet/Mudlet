@@ -94,6 +94,14 @@ bool TMxpFrameManager::createFrame(const QString& name, const QMap<QString, QStr
         return showFrame(name);
     }
 
+    // The frame would take the name over from the script's window, and closing
+    // the frame would then leave that window unreachable by name
+    const TWindowRegistry& registry = mpHost->windowRegistry();
+    if (registry.hasSubConsole(name) || registry.hasDockWidget(name) || registry.hasLabel(name) || registry.hasPlainWindow(name)) {
+        qWarning() << "TMxpFrameManager::createFrame: A window named" << name << "already exists";
+        return false;
+    }
+
     if (!canCreateFrame()) {
         qWarning() << "TMxpFrameManager::createFrame: Maximum frame limit reached";
         return false;
