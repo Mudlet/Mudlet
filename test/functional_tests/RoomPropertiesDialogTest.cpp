@@ -147,14 +147,14 @@ private:
         QHash<int, int> usedWeights;
         QHash<bool, int> usedLockStatus;
         int hiddenRoomCount = 0;
-        QSet<TRoom*> rooms;
+        QSet<int> rooms;
 
         for (const int roomId : roomIds) {
             TRoom* pRoom = room(roomId);
             if (!pRoom) {
                 continue;
             }
-            rooms.insert(pRoom);
+            rooms.insert(roomId);
             if (!pRoom->name.isEmpty()) {
                 ++usedNames[pRoom->name];
             }
@@ -191,12 +191,9 @@ private:
                        QColor newBorderColor,
                        bool changeBorderThickness,
                        int newBorderThickness,
-                       QSet<TRoom*> rooms) {
+                       QSet<int> roomIds) {
                     ++mEmitted.emitCount;
-                    mEmitted.roomIds.clear();
-                    for (const TRoom* pRoom : rooms) {
-                        mEmitted.roomIds.append(pRoom->getId());
-                    }
+                    mEmitted.roomIds = QList<int>(roomIds.cbegin(), roomIds.cend());
                     std::sort(mEmitted.roomIds.begin(), mEmitted.roomIds.end());
                     mEmitted.changeName = changeName;
                     mEmitted.newName = newName;
@@ -497,7 +494,7 @@ private slots:
         buildMap();
         auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom, scmThirdRoom});
         int previewCount = 0;
-        connect(pDlg, &dlgRoomProperties::signal_preview_border, this, [&previewCount](QSet<TRoom*>) {
+        connect(pDlg, &dlgRoomProperties::signal_preview_border, this, [&previewCount](QSet<int>) {
             ++previewCount;
         });
 
@@ -567,6 +564,102 @@ private slots:
         QCOMPARE(room(scmSecondRoom)->mSymbol, qsl("?"));
         QVERIFY(!room(scmFirstRoom)->mSymbolColor.isValid());
         QVERIFY(!room(scmSecondRoom)->mSymbolColor.isValid());
+    }
+
+    // The dialog is not modal, so a script can delete a room in the selection
+    // while it is open; Cancel must only put back the rooms that are still there
+    void cancelAfterARoomIsDeletedRestoresOnlyTheRoomsLeft()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->spinBox_borderThickness->setValue(5);
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 5);
+
+        QVERIFY(roomDB()->removeRoom(scmFirstRoom));
+        pDlg->reject();
+
+        QVERIFY(!room(scmFirstRoom));
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 0);
+    }
+
+    void okAfterARoomIsDeletedAppliesOnlyToTheRoomsLeft()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        pDlg->lineEdit_name->setText(qsl("Renamed"));
+        pDlg->spinBox_borderThickness->setValue(3);
+
+        QVERIFY(roomDB()->removeRoom(scmFirstRoom));
+        pDlg->accept();
+
+        QVERIFY(!room(scmFirstRoom));
+        QCOMPARE(room(scmSecondRoom)->name, qsl("Renamed"));
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 3);
+    }
+
+    // deleteMap() and loading another map free every room the dialog was opened on
+    void closingTheDialogAfterTheMapIsClearedTouchesNoRoom()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        pDlg->lineEdit_name->setText(qsl("Renamed"));
+        pDlg->spinBox_borderThickness->setValue(3);
+
+        map()->mapClear();
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.emitCount, 1);
+        QVERIFY(!room(scmFirstRoom));
+        QVERIFY(!room(scmSecondRoom));
+
+        buildMap();
+        auto* pSecondDlg = openDialogOn({scmFirstRoom});
+        pSecondDlg->spinBox_borderThickness->setValue(4);
+        map()->mapClear();
+        pSecondDlg->reject();
+
+        QVERIFY(!room(scmFirstRoom));
+    }
+
+    void previewAndCancelAfterARoomIdIsReusedLeaveTheNewRoomAlone()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+
+        QVERIFY(roomDB()->removeRoom(scmFirstRoom));
+        QVERIFY(map()->addRoom(scmFirstRoom));
+        QVERIFY(map()->setRoomArea(scmFirstRoom, mAreaId));
+        room(scmFirstRoom)->mBorderThickness = 7;
+
+        pDlg->spinBox_borderThickness->setValue(5);
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 5);
+        QVERIFY2(room(scmFirstRoom)->mBorderThickness == 7, "the preview reached a new room that reused the id");
+
+        pDlg->reject();
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 0);
+        QVERIFY2(room(scmFirstRoom)->mBorderThickness == 7, "Cancel restored the old room's border onto a new room that reused the id");
+    }
+
+    void okAfterARoomIdIsReusedLeavesTheNewRoomAlone()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        pDlg->lineEdit_name->setText(qsl("Renamed"));
+
+        QVERIFY(roomDB()->removeRoom(scmFirstRoom));
+        QVERIFY(map()->addRoom(scmFirstRoom));
+        QVERIFY(map()->setRoomArea(scmFirstRoom, mAreaId));
+        pDlg->accept();
+
+        QCOMPARE(room(scmSecondRoom)->name, qsl("Renamed"));
+        QVERIFY2(room(scmFirstRoom)->name.isEmpty(), "OK renamed a new room that reused the id");
+        QCOMPARE(mEmitted.roomIds, QList<int>{scmSecondRoom});
     }
 };
 
