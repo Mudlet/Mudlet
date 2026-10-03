@@ -105,6 +105,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         mBgColor = Qt::black;
     }
     mScreenHeight = height() / mFontHeight;
+    reportGridSize();
 
     setMouseTracking(true);
     QCursor cursor;
@@ -3006,6 +3007,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
+    reportGridSize();
 
     // Safety check: during destruction, mpHost or mpConsole might be null
     if (mpHost && mpConsole) {
@@ -3129,6 +3131,21 @@ int TTextEdit::getColumnCount() const
 int TTextEdit::getRowCount() const
 {
     return qRound(height() / QFontMetricsF(font()).lineSpacing());
+}
+
+void TTextEdit::reportGridSize()
+{
+    if (!mIsLowerPane && mpConsole) {
+        mpConsole->model().mGridSize = QSize(getColumnCount(), getRowCount());
+    }
+}
+
+void TTextEdit::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::FontChange) {
+        reportGridSize();
+    }
+    QWidget::changeEvent(event);
 }
 
 QString TTextEdit::htmlCenter(const QString& text)

@@ -37,6 +37,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -260,7 +261,70 @@ private slots:
         QCOMPARE(styled, measured);
     }
 
+    void test_gridSizesFollowTheApplicationWindowResizing()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const QSize before = mpFrontHost->windowGridSize(qsl("main")).value_or(QSize());
+        mudlet::self()->resize(windowSize + QSize(-120, -80));
+        QTest::qWait(50);
+        const QSize after = mpFrontHost->windowGridSize(qsl("main")).value_or(QSize());
+        const QString shrunk = gridSizeMismatches();
+        mudlet::self()->resize(windowSize);
+        QTest::qWait(50);
+
+        QVERIFY2(after != before, "resizing the application window did not change the front profile's grid");
+        QVERIFY2(shrunk.isEmpty(), qPrintable(shrunk));
+        const QString restored = gridSizeMismatches();
+        QVERIFY2(restored.isEmpty(), qPrintable(restored));
+    }
+
+    void test_backgroundGridFollowsAFontSizeChange()
+    {
+        const QSize before = mpBackgroundHost->windowGridSize(mConsoleName).value_or(QSize());
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("wsgFontSizes = {getFontSize('main'), getFontSize('%1')} setFontSize('main', 20) setMiniConsoleFontSize('%1', 20)").arg(mConsoleName));
+        const QSize after = mpBackgroundHost->windowGridSize(mConsoleName).value_or(QSize());
+        const QString enlarged = gridSizeMismatches();
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setFontSize('main', wsgFontSizes[1]) setMiniConsoleFontSize('%1', wsgFontSizes[2])").arg(mConsoleName));
+        QTest::qWait(50);
+
+        QVERIFY2(after != before, "a bigger font did not change the miniconsole's grid");
+        QVERIFY2(enlarged.isEmpty(), qPrintable(enlarged));
+        const QString restored = gridSizeMismatches();
+        QVERIFY2(restored.isEmpty(), qPrintable(restored));
+    }
+
+    void test_bufferGridMatchesItsPane()
+    {
+        const QString buffer = qsl("wsgBuffer");
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createBuffer('%1')").arg(buffer));
+        const TConsole* pConsole = mpFrontHost->mainConsoleView()->subConsoleWidget(buffer);
+        QVERIFY(pConsole);
+        QCOMPARE(mpFrontHost->windowGridSize(buffer).value_or(QSize()), QSize(pConsole->mUpperPane->getColumnCount(), pConsole->mUpperPane->getRowCount()));
+    }
+
 private:
+    // Each profile's main console, miniconsole and user window whose model grid disagrees with its upper pane, as failure text
+    QString gridSizeMismatches() const
+    {
+        QStringList mismatches;
+        for (Host* pHost : {mpBackgroundHost, mpFrontHost}) {
+            for (const QString& name : {qsl("main"), mConsoleName, mUserWindowName}) {
+                TConsole* pConsole = name == qsl("main") ? pHost->mainConsoleView() : pHost->mainConsoleView()->subConsoleWidget(name);
+                if (!pConsole) {
+                    mismatches << qsl("%1 has no '%2'").arg(pHost->getName(), name);
+                    continue;
+                }
+                const QSize live(pConsole->mUpperPane->getColumnCount(), pConsole->mUpperPane->getRowCount());
+                const QSize model = pHost->windowGridSize(name).value_or(QSize());
+                if (model != live) {
+                    mismatches << qsl("%1 '%2' answers %3x%4 but is %5x%6").arg(pHost->getName(), name).arg(model.width()).arg(model.height()).arg(live.width()).arg(live.height());
+                }
+            }
+        }
+        return mismatches.join(qsl("; "));
+    }
+
     QStringList elementNames() const { return {mLabelName, mConsoleName, mScrollBoxName, mCmdLineName, mTextEditName, mUserWindowName, mChildLabelName}; }
 
     // built through the Lua API so each profile's own interpreter creates them

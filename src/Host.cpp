@@ -6119,6 +6119,18 @@ std::optional<QSize> Host::mainWindowSize() const
     return {mWindowRegistry.mainWindowSize()};
 }
 
+std::optional<QSize> Host::windowGridSize(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    const TConsoleModel* pModel = (name.isEmpty() || name == QLatin1String("main")) ? mpMainConsoleModel.get() : mWindowRegistry.subConsoleModel(name);
+    if (!pModel) {
+        return {};
+    }
+    return {pModel->mGridSize};
+}
+
 std::optional<QSize> Host::userWindowSize(const QString& name) const
 {
     if (!mpConsole) {
