@@ -339,7 +339,7 @@ private slots:
                              lineNumber = lineHolding(console, qsl("OSCSEAM1"));
                              return lineNumber >= 0;
                          },
-                         8000),
+                         8s),
                  "the line carrying the link never reached the buffer");
         // Concealment keeps the character count identical so buffer indices stay
         // valid, which is why the text is replaced space for space.
@@ -381,7 +381,7 @@ private slots:
                              console->mLowerPane->mForceUpdate = false;
                              return false;
                          },
-                         12000),
+                         12s),
                  "the hyperlink never changed visibility, so nothing here was exercised");
         QCOMPARE(console->buffer.lineBuffer.at(lineNumber), qsl("OSCSEAM1(HIDDENWORD)OSCSEAM1"));
         QVERIFY2(upperForced, "the upper pane was not forced to redraw for a hyperlink that had just been revealed");
@@ -542,7 +542,7 @@ private:
                     lineNumber = lineHolding(console, marker);
                     return lineNumber >= 0;
                 },
-                8000);
+                8s);
         if (!landed) {
             return 0;
         }
@@ -589,7 +589,7 @@ private:
                 [&]() {
                     return readingIndex(seen, name, occurrence) >= 0;
                 },
-                8000);
+                8s);
     }
 
     // A QVERIFY2 here returns from this helper rather than from the test slot,
@@ -627,7 +627,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
-        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8000)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }

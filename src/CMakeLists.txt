@@ -796,10 +796,10 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
-# On the one file that reads it: a checkout path on every compile line keeps
-# ccache from sharing objects between worktrees
-set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS
-    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+# Only on the file that reads it: ccache's base_dir cannot rewrite a path in a
+# definition, so on every file it would stop worktrees sharing any cache hits.
+set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY
+  COMPILE_DEFINITIONS LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)

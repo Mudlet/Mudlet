@@ -57,6 +57,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapContextMenuLifetimeTest : public QObject
 {
     Q_OBJECT
@@ -261,7 +263,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
     }
 
     void cleanupTestCase()

@@ -71,21 +71,12 @@ if [ ! -d "${QT_DIR}" ]; then
     linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech)
 fi
 
-# One cache for every checkout: base_dir turns paths under the directory above
-# the project into relative ones, so sibling and nested worktrees hash alike, and
-# with -g (the Debug presets) the working directory is hashed unless hash_dir is
-# off. Kept off "/" so the Qt and system headers stay absolute.
-if command -v ccache >/dev/null 2>&1 && [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
-  CCACHE_BASE_DIR="$(dirname "${CLAUDE_PROJECT_DIR}")"
-  [ "${CCACHE_BASE_DIR}" != "/" ] || CCACHE_BASE_DIR="${CLAUDE_PROJECT_DIR}"
-  ccache --set-config=base_dir="${CCACHE_BASE_DIR}" || true
-  ccache --set-config=hash_dir=false || true
-  # rcc stamps every resource with its file's mtime, which differs between
-  # checkouts; pinned, the font and image resources hit too. Not SOURCE_DATE_EPOCH:
-  # GCC would apply that to __DATE__, and the updater reads the real build time.
-  if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
-    echo "export QT_RCC_SOURCE_DATE_OVERRIDE=1" >> "${CLAUDE_ENV_FILE}"
-  fi
+# rcc stamps every resource with its file's mtime, which differs between
+# checkouts; pinned, the font and image resources share ccache hits too. Not
+# SOURCE_DATE_EPOCH: GCC would apply that to __DATE__, and the updater reads the
+# real build time.
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  echo "export QT_RCC_SOURCE_DATE_OVERRIDE=1" >> "${CLAUDE_ENV_FILE}"
 fi
 
 # Test-suite and UI-driving dependencies: xvfb and xcb libraries for the
@@ -166,6 +157,26 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
     echo "export LUA_PATH='${LUA_PATH}'"
     echo "export LUA_CPATH='${LUA_CPATH}'"
   } >> "${CLAUDE_ENV_FILE}"
+fi
+
+# Let worktrees share ccache hits: base_dir makes paths below it relative, so
+# it is the main checkout's parent - never / or above /opt/qt and /usr, whose
+# include paths would then differ with worktree depth. hash_dir off keeps each
+# worktree's build directory out of the hash of a -g build, so a shared object's
+# debug info can name a sibling's; build with CCACHE_HASHDIR=1 to step through
+# one in a debugger. Both settings are global.
+CHECKOUT_ROOT=""
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  CHECKOUT_ROOT="$(cd "${CLAUDE_PROJECT_DIR}" && cd "$(git rev-parse --git-common-dir)/.." && pwd)" || CHECKOUT_ROOT=""
+fi
+CCACHE_BASE_DIR=""
+if [ -n "${CHECKOUT_ROOT}" ]; then
+  CCACHE_BASE_DIR="$(dirname "${CHECKOUT_ROOT}")"
+fi
+if command -v ccache >/dev/null 2>&1 && [ -n "${CCACHE_BASE_DIR}" ] && [ "${CCACHE_BASE_DIR}" != "/" ]; then
+  ccache --set-config=base_dir="${CCACHE_BASE_DIR}" \
+    && ccache --set-config=hash_dir=false \
+    || echo "WARNING: could not configure ccache for sharing between worktrees"
 fi
 
 # PR-review tooling for the agent. Installed at user scope, so it lands in

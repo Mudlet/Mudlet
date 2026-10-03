@@ -365,7 +365,7 @@ private slots:
         luaGlobalIsTrue("resetDisabledTimerRan"),
         "a timer switched off during a reset must run its script once "
         "switched back on",
-        2000);
+        2s);
     QVERIFY(mpHost->getTimerUnit()->disableTimer(qsl("resetDisabledTimer")));
   }
 
@@ -1184,7 +1184,7 @@ private slots:
     }
 
     QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-    if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
+    if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
       QFAIL("Could not connect with the host.");
     }
   }

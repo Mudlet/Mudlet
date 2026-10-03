@@ -898,7 +898,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became the active one, so this cannot test what follows focus");
 
         QVERIFY2(buttonIn(pWindow, qsl("SpeechFollow")), "a pinned command did not follow the player into the window they moved to");
@@ -931,7 +931,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became the active one, so the pinned command never left home");
         QVERIFY2(menuItemIn(pWindow, qsl("SpeechPinnedItem")), "the pinned command did not follow the player into the other window");
 
@@ -945,7 +945,7 @@ private slots:
                          []() {
                              return QApplication::activeWindow() == mudlet::self();
                          },
-                         2000),
+                         2s),
                  "the main window never became the active one, so the pinned command never came home");
 
         const bool itemCameBack = menuItemIn(mudlet::self(), qsl("SpeechPinnedItem")) != nullptr;
@@ -1675,7 +1675,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became active, so this cannot test what happens when focus leaves it");
         QVERIFY2(buttonIn(pWindow, qsl("SpeechStay")), "the pinned command did not follow the player into the detached window");
 

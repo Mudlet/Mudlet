@@ -1439,7 +1439,7 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
     auto pN = mSubCommandLineMap.value(name);
 
     if (!pN) {
-        pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, parentWidgetFor(windowname));
+        pN = new TCommandLine(mpHost, name, enums::SubCommandLine, this, parentWidgetFor(windowname));
         registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
