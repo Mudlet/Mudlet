@@ -1865,6 +1865,12 @@ describe("Tests UI functions", function()
         end)
       end
 
+      it("gates each shape only on a literal these screens cannot match without", function()
+        for _, screen in ipairs(screens) do
+          assert.is_true(BaseUI.needsHoldOn(screen.line), screen.name)
+        end
+      end)
+
       it("should not read guild points or bare xp from an LPMud row", function()
         local hits = BaseUI.parseVitalsLine("Hp: 143 (167) Gp: 240 (240) Xp: 267000")
         assert.is_nil(reading(hits, "mp"))
