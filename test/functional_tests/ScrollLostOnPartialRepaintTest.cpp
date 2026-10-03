@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QPainter>
 #include <QScrollBar>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -249,6 +250,62 @@ private slots:
         // within its retry window and would hide the loss
         QTest::qWait(100ms);
         QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
+    }
+
+    // A hover or selection repaint draws into a scratch buffer seeded only with
+    // the rows it repaints, so what it shows has to match a full repaint while
+    // the rest of the scratch is left as it was.
+    void test_aHoverRepaintCopiesAndShowsOnlyItsOwnRows()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mpConsole, "no main console");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+        auto* lua = host->getLuaInterpreter();
+        mudlet::self()->resize(1200, 800);
+        lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo(string.format('FILLER %03d %s\\n', i, string.rep('_', i % 23))) end\n"));
+        QTest::qWait(100ms);
+        const int rows = pane->mScreenHeight;
+        const int fontHeight = pane->mFontHeight;
+        QVERIFY2(rows > 12, "the pane is too short to hold a band away from both of its edges");
+
+        // Cell-aligned at both edges of the pane, as hover and selection repaints
+        // are, and once off the cell grid so the rows it names round outwards
+        const QList<QRect> bands{QRect(0, 0, pane->width(), fontHeight),
+                                 QRect(0, 3 * fontHeight + fontHeight / 2, pane->width(), 2 * fontHeight),
+                                 QRect(0, (rows - 1) * fontHeight, pane->width(), pane->height() - (rows - 1) * fontHeight)};
+        for (const QRect& band : bands) {
+            pane->forceUpdate();
+            QPixmap reference(pane->size());
+            pane->render(&reference);
+            QVERIFY2(pane->imageTopLine() > 0, "the pane must be scrolled for a band repaint to reuse the cached screen");
+
+            const QColor stale(Qt::magenta);
+            const QImage cached = pane->cachedScreen();
+            const qreal dpr = cached.devicePixelRatio();
+            pane->mRenderBuffer = QImage(cached.size(), QImage::Format_ARGB32_Premultiplied);
+            pane->mRenderBuffer.setDevicePixelRatio(dpr);
+            pane->mRenderBuffer.fill(stale);
+
+            QPixmap shown = reference.copy();
+            {
+                QPainter eraser(&shown);
+                eraser.fillRect(band, stale);
+            }
+            QVERIFY2(!pane->mMouseTracking && pane->mDirtyFirstLine < 0, "a drag or a pending dirty line would repaint the cache itself rather than the scratch buffer");
+            pane->render(&shown, band.topLeft(), QRegion(band));
+            QVERIFY2(pane->mRenderBuffer.pixelColor(0, qRound((band.top() + band.height() / 2) * dpr)) != stale,
+                     qPrintable(qsl("repainting rows %1 to %2 did not draw into the scratch buffer, so nothing here tests it").arg(band.top()).arg(band.bottom())));
+
+            // Mid-cell on a text row the band cannot reach, which also keeps it
+            // clear of the spare row below the last line that every paint redraws
+            const int farRow = qRound(((band.top() > pane->height() / 2 ? 1 : rows - 3) + 0.5) * fontHeight * dpr);
+            QVERIFY2(pane->mRenderBuffer.pixelColor(0, farRow) == stale,
+                     qPrintable(qsl("repainting rows %1 to %2 copied device row %3 of the cached screen, which it cannot show").arg(band.top()).arg(band.bottom()).arg(farRow)));
+            QVERIFY2(shown.toImage() == reference.toImage(),
+                     qPrintable(qsl("repainting rows %1 to %2 over a stale scratch buffer showed something other than a full repaint").arg(band.top()).arg(band.bottom())));
+        }
     }
 
 private:

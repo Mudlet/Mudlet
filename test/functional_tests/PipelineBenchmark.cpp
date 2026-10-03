@@ -1196,10 +1196,8 @@ private:
     // Reusing the cache is not on its own the answer, because the scroll
     // shortcut below it reuses the same cached screen and is what a build with
     // a broken guard falls through to. Only the wanted path paints into
-    // mRenderBuffer, over a copy of the cache, and it alone redraws the damaged
-    // band. So the cache is marked twice, once outside the band and once inside
-    // it, and only the wanted path leaves mRenderBuffer with the first mark and
-    // without the second.
+    // mRenderBuffer, so it alone leaves the mark in the band redrawn there,
+    // while the cache keeps both of its marks.
     bool overlayPaintReusedCache(TTextEdit* pane, QPixmap& target, const QRect& band)
     {
         const QColor outsideMark(0, 255, 0);
@@ -1213,11 +1211,12 @@ private:
         pane->render(&target, QPoint(), QRegion(band));
 
         const QImage painted = pane->mRenderBuffer.copy();
+        const QImage cached = pane->cachedScreen().copy();
         const int insideTop = qRound(insideRow * pane->mFontHeight * pane->devicePixelRatioF());
         const double insideMarkLeft = markedFraction(painted, insideTop, insideMark);
-        const bool cacheWasBlitted = markedFraction(painted, 0, outsideMark) > 0.9;
+        const bool cacheLeftAlone = markedFraction(cached, 0, outsideMark) > 0.9 && markedFraction(cached, insideTop, insideMark) > 0.9;
         const bool bandWasRedrawn = insideMarkLeft >= 0.0 && insideMarkLeft < 0.1;
-        return cacheWasBlitted && bandWasRedrawn;
+        return cacheLeftAlone && bandWasRedrawn;
     }
 
     static void markCacheRow(TTextEdit* pane, const int row, const QColor& colour)

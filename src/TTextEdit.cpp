@@ -1404,8 +1404,16 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         if (mRenderBuffer.size() != surfaceSize || !qFuzzyCompare(mRenderBuffer.devicePixelRatio(), dpr)) {
             mRenderBuffer = QImage(surfaceSize, QImage::Format_ARGB32_Premultiplied);
             mRenderBuffer.setDevicePixelRatio(dpr);
+            mRenderBuffer.fill(Qt::transparent);
         }
-        std::memcpy(mRenderBuffer.bits(), screen.constBits(), mRenderBuffer.sizeInBytes());
+        // The widget clips this paint to r and everything drawn here composites
+        // pixel by pixel, so rows outside r cannot reach the screen and need not
+        // be copied. A device row of slack each side covers a fractional scale
+        // rounding the clip outwards.
+        const int firstRow = std::clamp(qFloor(r.top() * dpr) - 1, 0, surfaceSize.height());
+        const int endRow = std::clamp(qCeil((r.bottom() + 1) * dpr) + 1, firstRow, surfaceSize.height());
+        const qsizetype bytesPerLine = mRenderBuffer.bytesPerLine();
+        std::memcpy(mRenderBuffer.bits() + firstRow * bytesPerLine, screen.constBits() + firstRow * bytesPerLine, (endRow - firstRow) * bytesPerLine);
         target = &mRenderBuffer;
     }
 

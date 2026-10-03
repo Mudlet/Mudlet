@@ -302,7 +302,8 @@ private:
     // Device size of the frame last left in the window; empty while none is.
     QSize mCachedScreenSize;
     // Cosmetic repaints - hover, selection - draw here, over a copy of the
-    // window, as they must leave the cached screen as they found it.
+    // window's damaged rows, as they must leave the cached screen as they
+    // found it. The other rows hold stale ink that is never shown.
     QImage mRenderBuffer;
     // Buffer lines whose text changed where it stands, so the cached screen
     // cannot be trusted for the rows they land on. -1 for "none pending".
