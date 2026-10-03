@@ -62,6 +62,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     SpeechAcrossProfilesTest.cpp
+    MudletProxyStyleTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
