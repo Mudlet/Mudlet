@@ -521,6 +521,34 @@ private slots:
         QVERIFY2(console->mLowerPane->mDirtyFirstLine == line && console->mLowerPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the lower pane to redraw");
     }
 
+    void test_replacingOnTheMainConsoleRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamOld keep\\nthird\\n')\n")), "the main console could not be written to");
+        int line = -1;
+        for (int i = console->buffer.size() - 1; i >= 0; --i) {
+            if (console->buffer.line(i).contains(qsl("seamOld"))) {
+                line = i;
+                break;
+            }
+        }
+        QVERIFY2(line > 0, "the line to replace in is not below the first line, so a redraw of line 0 would pass");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("moveCursor('main', 0, %1)\nselectString('seamOld', 1)\n").arg(line)), "the text to replace could not be selected");
+        for (TTextEdit* pane : {console->mUpperPane, console->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("replace('NEW')")), "replace() failed");
+
+        QCOMPARE(console->buffer.line(line), qsl("keep NEW keep"));
+        QVERIFY2(console->mUpperPane->mDirtyFirstLine == line && console->mUpperPane->mDirtyLastLine == line, "replace() did not mark the line it changed for the upper pane to redraw");
+        QVERIFY2(console->mLowerPane->mDirtyFirstLine == line && console->mLowerPane->mDirtyLastLine == line, "replace() did not mark the line it changed for the lower pane to redraw");
+    }
+
 private:
     // Answers the link's index, or 0 when the link never landed.
     int feedSpoilerLink(Host* host, const QString& marker)
