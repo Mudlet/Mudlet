@@ -448,6 +448,10 @@ private slots:
         QTest::mouseClick(component, Qt::LeftButton, Qt::NoModifier, component->rect().center());
         QVERIFY2(window.focusWidget() == component, "a click into the code area left the keyboard with the field that had it before");
 
+        nameField->setFocus();
+        QTest::keyClick(nameField, Qt::Key_Tab);
+        QVERIFY2(window.focusWidget() == component, "Tab from the field before the code area did not reach it");
+
         QCOMPARE(mpEditorComponent->focusPolicy(), Qt::WheelFocus);
         QCOMPARE(mpPreviewEditor->textEditorComponent()->focusPolicy(), Qt::WheelFocus);
     }
