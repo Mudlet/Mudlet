@@ -88,6 +88,13 @@ public:
         return socket->flush();
     }
 
+    void dropLast()
+    {
+        if (!mSockets.isEmpty() && mSockets.last()) {
+            mSockets.last()->disconnectFromHost();
+        }
+    }
+
 protected:
     void incomingConnection(qintptr socketDescriptor) override
     {
@@ -419,6 +426,17 @@ private slots:
         QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
     }
 
+    void test_aDroppedConnectionNoLongerReportsTheServer()
+    {
+        QVERIFY(openRegisteredClient());
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+
+        mpIrcServer->dropLast();
+
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("false|not yet connected")), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+    }
+
     void test_joinsAndPartsAreTrackedAndReported()
     {
         QVERIFY(openRegisteredClient());
@@ -487,8 +505,13 @@ private slots:
         // otherwise the line lands in the channel's document, which the restart takes away
         QVERIFY(showBuffer(mServerHost));
 
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+
         QVERIFY(storeSettings(qsl("restartedbot"), qsl("#restarted")));
         QCOMPARE(luaValues(qsl("restartIrc()")), qsl("true"));
+        // the new server has not named itself yet
+        QCOMPARE(luaValues(qsl("getIrcConnectedHost()")), qsl("false|not yet connected"));
 
         QVERIFY2(waitForLine(oldConnection, "QUIT :Restarting IRC Client"), "the old connection was not quit");
         QVERIFY(shownText().contains(qsl("! Restarting IRC Client.")));
