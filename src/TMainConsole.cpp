@@ -86,11 +86,10 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
     }
 }
 
-const QString geometryReporterName = qsl("mudlet_geometryReporter");
-
 // Keeps the core's copy of a named window's geometry current through the moves and resizes no
-// script made: dock drags and docking, the main window's layout, and a hidden widget's pending
-// events arriving as it is shown.
+// script made: dock drags and docking, the main window's layout, a hidden widget's pending
+// events arriving as it is shown, and a style sheet's minimum size, which resizes a hidden
+// widget without a Resize event.
 class GeometryReporter : public QObject
 {
 public:
@@ -99,14 +98,14 @@ public:
     , mpConsole(pConsole)
     , mName(name)
     {
-        setObjectName(geometryReporterName);
         pWatched->installEventFilter(this);
     }
 
     bool eventFilter(QObject* watched, QEvent* event) override
     {
         Q_UNUSED(watched)
-        if (mpConsole && (event->type() == QEvent::Move || event->type() == QEvent::Resize)) {
+        const auto type = event->type();
+        if (mpConsole && (type == QEvent::Move || type == QEvent::Resize || type == QEvent::StyleChange)) {
             mpConsole->reportGeometry(mName);
         }
         return false;
@@ -380,10 +379,7 @@ bool TMainConsole::createBuffer(const QString& name)
 
 void TMainConsole::watchGeometry(const QString& name, QWidget* pWidget)
 {
-    // A widget can be registered again under its own name, e.g. a buffer reused as a miniconsole
-    if (!pWidget->findChild<QObject*>(geometryReporterName, Qt::FindDirectChildrenOnly)) {
-        new GeometryReporter(this, name, pWidget);
-    }
+    new GeometryReporter(this, name, pWidget);
     reportGeometry(name);
 }
 
@@ -3423,9 +3419,9 @@ std::optional<QString> TMainConsole::mapWidgetTitle() const
     return {pM->windowTitle()};
 }
 
-// pos()/size() rather than geometry() for the same reason as
-// Host::windowGeometry(): they are what move()/resize() were given, while a
-// floating dock's geometry() reports the client area instead.
+// pos()/size() rather than geometry(), as in reportGeometry(): they are what
+// move()/resize() were given, while a floating dock's geometry() reports the
+// client area instead.
 std::optional<QRect> TMainConsole::mapWidgetGeometry() const
 {
     auto pM = mapWidget();

@@ -149,13 +149,13 @@ public:
     bool scaleLabelMovie(const QString& name, bool followLabelSize);
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
-    // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
     // Copies a named window's current pos() and size() into Host's window registry (a label's into
     // its model), where Host::windowGeometry() reads them. Every view op that moves or resizes a
     // widget calls it, as a hidden widget gets no events to report its own.
     void reportGeometry(const QString& name);
     // For QMainWindow::restoreState(), which places hidden docks without an event.
     void reportDockGeometry();
+    // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
     void registerSubConsole(const QString& name, TConsole* pConsole);
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
