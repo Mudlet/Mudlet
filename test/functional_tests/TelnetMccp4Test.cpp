@@ -544,7 +544,7 @@ private:
         });
 
         QSignalSpy profileLoaded(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!profileLoaded.wait(10000)) {
+        if (!profileLoaded.wait(10s)) {
             return nullptr;
         }
         auto* host = mudlet::self()->getActiveHost();
@@ -552,7 +552,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(5000)) {
+        if (!connected.wait(5s)) {
             return nullptr;
         }
         return host;
