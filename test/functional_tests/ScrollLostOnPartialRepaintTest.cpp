@@ -127,11 +127,11 @@ private slots:
 
         // A shallow region, which is what the fallback measured unpatched.
         pane->repaint(QRect(0, 0, pane->width(), 3 * pane->mFontHeight));
-        const QImage afterIncremental = pane->mScreenMap.toImage();
+        const QImage afterIncremental = pane->cachedScreen().copy();
 
         pane->forceUpdate();
         pane->repaint();
-        const QImage authoritative = pane->mScreenMap.toImage();
+        const QImage authoritative = pane->cachedScreen().copy();
 
         QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
         QCOMPARE(afterIncremental.size(), authoritative.size());
@@ -167,12 +167,12 @@ private slots:
         QVERIFY2(partial.height() < pane->rect().height(), "the repaint has to be partial to exercise the path");
         pane->repaint(partial);
 
-        const QImage afterIncremental = pane->mScreenMap.toImage();
+        const QImage afterIncremental = pane->cachedScreen().copy();
 
         // What the same buffer looks like when every row is re-rendered.
         pane->forceUpdate();
         pane->repaint();
-        const QImage authoritative = pane->mScreenMap.toImage();
+        const QImage authoritative = pane->cachedScreen().copy();
 
         QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
         QCOMPARE(afterIncremental.size(), authoritative.size());
