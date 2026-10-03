@@ -134,7 +134,6 @@ public:
     bool setLabelSvgShear(const QString& name, double shearX, double shearY);
     bool resetLabelSvgShear(const QString& name);
     bool resetLabelSvgTransform(const QString& name);
-    std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
     std::optional<QFont> getLabelFont(const QString& name) const;
     bool setLabelFont(const QString& name, const QFont& font);
@@ -150,6 +149,12 @@ public:
     bool scaleLabelMovie(const QString& name, bool followLabelSize);
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
+    // Copies a named window's current pos() and size() into Host's window registry (a label's into
+    // its model), where Host::windowGeometry() reads them. Every view op that moves or resizes a
+    // widget calls it, as a hidden widget gets no events to report its own.
+    void reportGeometry(const QString& name);
+    // For QMainWindow::restoreState(), which places hidden docks without an event.
+    void reportDockGeometry();
     // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
     void registerSubConsole(const QString& name, TConsole* pConsole);
     TConsole* deregisterSubConsole(const QString& name);
@@ -179,7 +184,6 @@ public:
     bool resetSubConsoleBackgroundImage(const QString& name);
     bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color);
-    std::optional<QRect> getSubConsoleGeometry(const QString& name) const;
     std::optional<bool> getSubConsoleVisible(const QString& name) const;
     void setDockLayoutChanged(const QString& name);
     bool clearDockLayoutChanged(const QString& name);
@@ -266,7 +270,6 @@ public:
     bool hidePlainWindow(const QString& name);
     bool resizePlainWindow(const QString& name, int width, int height);
     bool movePlainWindow(const QString& name, int x, int y);
-    std::optional<QRect> getPlainWindowGeometry(const QString& name) const;
     std::optional<bool> getPlainWindowVisible(const QString& name) const;
     bool setCommandLineAction(const QString& name, const int func);
     bool resetCommandLineAction(const QString& name);
@@ -444,6 +447,9 @@ private:
     QWidget* parentWidgetFor(const QString& windowname) const;
     // Resolves the three name-only kinds in the same order as the core.
     QWidget* plainWindowWidget(const QString& name) const;
+    void watchGeometry(const QString& name, QWidget* pWidget);
+    void reportGeometry(const QStringList& names);
+    std::pair<bool, QString> placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     TCommandLine* commandLineNamed(const QString& name) const;
     TConsole* consoleNamed(const QString& name);
     // The single answer to "does this profile have a map widget on screen right
