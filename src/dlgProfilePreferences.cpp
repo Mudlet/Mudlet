@@ -32,6 +32,7 @@
 #include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletProxyStyle.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -837,6 +838,12 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_captions, {checkBox_enableBlinkText, checkBox_enableClosedCaption});
     auto* pCard_keyboard = createCard(qsl("card_accessibilityKeyboard"));
     addCardRow(pCard_keyboard, label_caretModeKey, comboBox_caretModeKey);
+    addCardRow(pCard_keyboard, label_menuBarAltKeyNavigation, comboBox_menuBarAltKeyNavigation);
+#if defined(Q_OS_MACOS)
+    // The native menu bar takes no part in Alt key navigation
+    label_menuBarAltKeyNavigation->hide();
+    comboBox_menuBarAltKeyNavigation->hide();
+#endif
     moveIntoCard(pCard_keyboard, {checkBox_f3SearchEnabled});
     buildCategoryPage(scmCategory_accessibility, {groupBox_accessibility, pCard_captions, pCard_keyboard});
 
@@ -1236,6 +1243,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
+    synonyms.append({label_menuBarAltKeyNavigation, tr("Alt key, menu bar, menus, keyboard, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for putting the time in front of each logged line.
     synonyms.append({mIsLoggingTimestamps, tr("timestamps, time, date, transcript")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the format logs are written in.
@@ -3695,6 +3704,7 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(comboBox_appearance);
         comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
     }
+    comboBox_menuBarAltKeyNavigation->setCurrentIndex(static_cast<int>(MudletProxyStyle::altKeyNavigation()));
     {
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
@@ -6829,6 +6839,9 @@ void dlgProfilePreferences::applyAll()
     }
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
+    }
+    if (mSnapshot.dirty(comboBox_menuBarAltKeyNavigation)) {
+        MudletProxyStyle::setAltKeyNavigation(static_cast<enums::MenuBarAltKeyNavigation>(comboBox_menuBarAltKeyNavigation->currentIndex()));
     }
     if (mSnapshot.dirty(telnetHandlerEnabled)) {
         QSettings* settings = MudletApp::getQSettings();
