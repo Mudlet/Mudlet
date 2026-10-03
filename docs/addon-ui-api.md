@@ -46,8 +46,9 @@ not be placed. The reasons are:
   where there is no menu item for either to attach to
 - a `shortcut` was given while the menu bar is hidden, so it could never fire
 - the `shortcut` is not a key sequence Qt understands, is longer than the four
-  steps Qt can hold, or is one already taken - by Mudlet, or by a command of
-  this or another profile
+  steps Qt can hold, or is one already taken - by Mudlet, by a command of
+  this or another profile, or by one of this profile's key bindings, including
+  one that is switched off
 - a `menuPath` part names an existing command of this profile's, or the
   command's own name is already a submenu of this profile's in the menu it
   would land in

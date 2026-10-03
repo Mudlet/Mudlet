@@ -483,6 +483,31 @@ private slots:
         QVERIFY2(!heard.contains(text), qPrintable(qsl("the warning on another profile's closed editor was read out: %1").arg(heard.join(qsl(" | ")))));
     }
 
+    // A switched off binding is warned about too, as enableKey() brings it back
+    // onto a key the command then gets first
+    void test_anotherProfileIsToldWhenACommandTakesItsSwitchedOffKeyBinding()
+    {
+        const QString sequence = QKeySequence(QKeyCombination(Qt::AltModifier, Qt::Key_F6)).toString(QKeySequence::NativeText);
+
+        QVERIFY2(runLua(mpSecondHost, qsl("_offKeyId = tempKey(mudlet.keymodifier.Alt, mudlet.key.F6, [[echo('bound')]]) disableKey(tostring(_offKeyId))")).isNull(),
+                 "the second profile's key binding could not be made");
+        dlgTriggerEditor* pEditor = editorFor(mpSecondHost);
+        QVERIFY2(pEditor, "the second profile's editor could not be opened");
+        pEditor->showInfo(QString());
+
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileOffBinding', menuPath = 'ClashTest', shortcut = 'Alt+F6'"));
+        runLua(mpFirstHost, qsl("setCommandPinned(%1, true)").arg(commandId));
+        const QString text = editorSaid(pEditor);
+
+        runLua(mpSecondHost, qsl("killKey(tostring(_offKeyId))"));
+        if (commandId > 0) {
+            runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+        }
+
+        QVERIFY2(commandId > 0, "the command was refused over a binding belonging to a different profile");
+        QVERIFY2(text.contains(sequence), qPrintable(qsl("a pinned command took another profile's switched off key binding without saying so in its editor: %1").arg(text)));
+    }
+
     // The same clash inside one profile, which is the direction a package meets
     // most: its command goes on first, and a binding the player already had -
     // or makes later - is the half that stops working. Warned about rather than
