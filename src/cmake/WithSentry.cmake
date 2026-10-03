@@ -163,7 +163,9 @@ if(APPLE)
             COMMAND strip -x $<TARGET_FILE:${EXE_MUDLET_TARGET}>
             COMMENT "Creating .dSYM bundle and stripping executable"
         )
-    else()
+    elseif(SENTRY_SEND_DEBUG)
+        # Only the Sentry upload below reads an unstripped build's .dSYM. Without it,
+        # dsymutil's 15-30s and the ~200MB it adds inside the app bundle buy nothing.
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
             COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
             COMMENT "Creating .dSYM bundle without stripping"
