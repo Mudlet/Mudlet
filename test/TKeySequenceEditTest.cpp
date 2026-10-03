@@ -201,11 +201,12 @@ private slots:
 
     void backspaceAndDeleteClearTheBinding()
     {
-        for (const Qt::Key key : {Qt::Key_Backspace, Qt::Key_Delete}) {
+        const QList<QKeyCombination> combinations{QKeyCombination(Qt::Key_Backspace), QKeyCombination(Qt::Key_Delete), QKeyCombination(Qt::KeypadModifier, Qt::Key_Delete)};
+        for (const QKeyCombination combination : combinations) {
             TKeySequenceEdit edit(QKeySequence(qsl("Ctrl+J")), qsl("Script editor"));
             QSignalSpy finished(&edit, &QKeySequenceEdit::editingFinished);
 
-            QTest::keyClick(innerLineEdit(edit), key);
+            QTest::keyClick(innerLineEdit(edit), combination.key(), combination.keyboardModifiers());
 
             QVERIFY2(edit.keySequence().isEmpty(), qPrintable(edit.keySequence().toString()));
             QCOMPARE(finished.count(), 1);
