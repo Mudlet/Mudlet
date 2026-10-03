@@ -204,9 +204,9 @@ function f(supersecretstringvariablenocollision)
   local outer_env = _ENV or getfenv(1)
   -- looks the name up afresh on every read, so one serves every block
   local lookup = function(_, k)
-    -- From this f()'s own frame: below it are this function, the expression
-    -- and the gsub callback
-    local stack_level = 5
+    -- From the frame above this f(): below it are this function, the
+    -- expression, the gsub callback, gsub itself and this f()
+    local stack_level = 6
     while debug.getinfo(stack_level, "") ~= nil do
       local name, value = debug.getlocal(stack_level, 1)
       -- An f() and its gsub callback, here or further up the stack, are told

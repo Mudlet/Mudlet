@@ -472,9 +472,7 @@ describe("Tests StringUtils.lua functions", function()
     it("should not let an outer f's locals shadow those of a function it calls", function()
       local code, block, exp_env = "mine", "my block", "my env"
       local function inner()
-        -- not a tail call, which would take this frame off the stack
-        local result = f("{code}/{block}/{exp_env}")
-        return result
+        return f("{code}/{block}/{exp_env}")
       end
       assert.equals("[mine/my block/my env]", f("[{inner()}]"))
     end)
