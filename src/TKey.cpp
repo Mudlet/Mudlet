@@ -54,25 +54,25 @@ TKey::TKey(QString name, Host* pHost)
 
 TKey::~TKey()
 {
-    if (!mpHost) {
-        return;
-    }
-    mpHost->getKeyUnit()->unregisterKey(this);
+    if (mpHost) {
+        mpHost->getKeyUnit()->unregisterKey(this);
 
-    if (isTemporary()) {
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
-        } else {
-            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(this);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
         }
     }
+
+    deleteChildren();
 }
 
 void TKey::setName(const QString& name)
 {
-    if (!isTemporary()) {
-        mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
-    }
+    // killKey() trusts this table to hold only current names of live keys
+    mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
     mName = name;
     mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }

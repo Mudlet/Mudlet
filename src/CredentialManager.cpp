@@ -327,7 +327,7 @@ bool CredentialManager::isOperationValid() const
     if (!mudlet::self()) {
         return std::nullopt;
     }
-    return !mudlet::self()->storingPasswordsSecurely();
+    return !MudletApp::storingPasswordsSecurely();
 }
 
 bool CredentialManager::keychainMayHoldAnEarlierCopy() const

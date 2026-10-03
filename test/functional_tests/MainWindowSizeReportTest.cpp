@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TCommandLine.h"
 #include "TDockWidget.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -153,7 +154,7 @@ private slots:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             QFAIL("Profile took too long to load.");
         }
         mpHost = mudlet::self()->getActiveHost();
@@ -162,7 +163,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
         settle();

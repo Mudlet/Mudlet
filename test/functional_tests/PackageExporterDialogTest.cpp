@@ -226,7 +226,7 @@ private:
     void settleSaves()
     {
         for (int i = 0; i < 200 && (mpHost->hasPendingProfileSave() || mpHost->currentlySavingProfile()); ++i) {
-            QTest::qWait(20);
+            QTest::qWait(20ms);
             mpHost->waitForProfileSave();
         }
     }
@@ -257,7 +257,7 @@ private:
     {
         stopAnsweringMessageBoxes();
         mpModalAnswerTimer = new QTimer(this);
-        mpModalAnswerTimer->setInterval(20);
+        mpModalAnswerTimer->setInterval(20ms);
         connect(mpModalAnswerTimer, &QTimer::timeout, this, [this, answer]() {
             auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
             if (!box) {
@@ -297,7 +297,7 @@ private:
         QElapsedTimer sinceArmed;
         sinceArmed.start();
         auto* timer = new QTimer(this);
-        timer->setInterval(20);
+        timer->setInterval(20ms);
         connect(timer, &QTimer::timeout, this, [this, chosenPath, sinceArmed]() {
             auto* modal = QApplication::activeModalWidget();
             auto* picker = qobject_cast<QFileDialog*>(modal);
@@ -305,7 +305,7 @@ private:
                 // Only the picker's own exec() can be ended from here, so a
                 // modal that never turns out to be one has to be closed on a
                 // deadline - otherwise the click below waits out ctest's
-                if (modal && sinceArmed.hasExpired(10000)) {
+                if (modal && sinceArmed.durationElapsed() > 10s) {
                     modal->close();
                 }
                 return;
@@ -413,7 +413,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "the test profile never finished loading");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(!connected.isEmpty() || connected.wait(2000), "the test profile never connected to the stub server");
+        QVERIFY2(!connected.isEmpty() || connected.wait(2s), "the test profile never connected to the stub server");
         // a new profile is given packages of its own on connect, and each of
         // those arms a save that would otherwise land mid-export
         settleSaves();
@@ -438,7 +438,7 @@ private slots:
         mpExporter = nullptr;
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }

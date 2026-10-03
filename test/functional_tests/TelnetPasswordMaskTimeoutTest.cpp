@@ -51,8 +51,8 @@
 // ECHO that cTelnet acts on, and 5 toggles inside a 5 second window latch an
 // anomaly that makes the process refuse ECHO for good. A grouped ctest case runs
 // this whole class in one process, so init() clears that window before every
-// test function and each function may make at most 4 toggles of its own. The six
-// below spend 2, 3, 1, 2, 2 and 2.
+// test function and each function may make at most 4 toggles of its own. The seven
+// below spend 2, 3, 1, 2, 2, 2 and 2.
 
 #include <QTemporaryDir>
 #include <QTimer>
@@ -64,6 +64,8 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "TBuffer.h"
+#include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -108,6 +110,9 @@ private:
         QString line = text;
         QVERIFY2(mpHost->mTelnet.sendData(line, true, true), "the line was not written to the stub server");
     }
+
+    // The advisory's first line, which fits ahead of any wrap point.
+    int characterModeWarningLines() const { return mpHost->mpConsole->buffer.lineBuffer.filter(qsl("This game appears to use character-at-a-time mode")).size(); }
 
 private slots:
     void initTestCase()
@@ -182,7 +187,7 @@ private slots:
         QVERIFY(mpHost->mTelnet.mConnectionTimer.isValid());
         QVERIFY(QTest::qWaitFor(
                 [this]() {
-                    return mpHost->mTelnet.mConnectionTimer.elapsed() >= 50;
+                    return mpHost->mTelnet.mConnectionTimer.durationElapsed() >= 50ms;
                 },
                 5s));
     }
@@ -279,7 +284,7 @@ private slots:
 
         // Same timer, same connected slot: only the wait is cut short.
         timer->start(0ms);
-        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->isRemoteEchoingActive(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->isRemoteEchoingActive(), 5s);
         QVERIFY2(!timer->isActive(), "the single-shot timeout was still running after it fired");
         QVERIFY2(!echoNegotiatedByServer(), "the timeout did not send DONT ECHO, so the game's next WILL ECHO is dropped as a repeat");
 
@@ -332,7 +337,7 @@ private slots:
         QVERIFY2(timer->isActive(), "the prompt arriving behind the password stopped the clock that password started");
 
         timer->start(0ms);
-        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->isRemoteEchoingActive(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->isRemoteEchoingActive(), 5s);
         QVERIFY2(!echoNegotiatedByServer(), "the timeout did not send DONT ECHO, so the game's next WILL ECHO is dropped as a repeat");
     }
 
@@ -437,6 +442,32 @@ private slots:
 
         QVERIFY2(!mpHost->isRemoteEchoingActive(), "WONT ECHO did not turn password masking off");
         QVERIFY2(!echoNegotiatedByServer(), "WONT ECHO did not clear the negotiated ECHO state");
+    }
+
+    // cTelnet only announces the detection: whether the player is new enough to
+    // be told about it is the main window's call, so the advisory reaches the
+    // console only through that wiring. This config dir is a fresh install, so
+    // the player counts as new and has warnings to spare.
+    void test_characterModeDetectionWarnsANewPlayerOnce()
+    {
+        QVERIFY(mpHost);
+        QVERIFY2(mudlet::self()->showCharacterModeWarning(), "no warning is due - the player reads as experienced or has had them all - so this test could not fail");
+        const int warningsBefore = characterModeWarningLines();
+
+        serverSaysOption(TN_WILL, OPT_SUPPRESS_GO_AHEAD);
+        serverSaysEcho(TN_WILL);
+        playerSends(qsl("hunter2"));
+
+        QTimer* detect = mpHost->mTelnet.mTimerCharacterModeDetect;
+        QVERIFY2(detect && detect->isActive(), "the line submitted with ECHO and SGA both up did not arm character-at-a-time detection");
+        detect->start(0ms);
+        QTRY_VERIFY(mpHost->mTelnet.mCharacterModeDetected);
+
+        QTRY_COMPARE(characterModeWarningLines(), warningsBefore + 1);
+        QTest::qWait(100ms);
+        QCOMPARE(characterModeWarningLines(), warningsBefore + 1);
+
+        serverSaysEcho(TN_WONT);
     }
 };
 

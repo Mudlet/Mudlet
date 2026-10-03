@@ -328,7 +328,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     slot_togglePasswordVisibility(false);
 
     character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         character_password_entry->setToolTip(utils::richText(tr("Characters password, stored securely in the computer's credential manager")));
     } else {
         character_password_entry->setToolTip(utils::richText(tr("Characters password. Note that the password is not encrypted in storage")));
@@ -664,7 +664,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
 
     const QString profileName = pItem->data(csmNameRole).toString();
 
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         if (pass.trimmed().isEmpty()) {
             // If password is empty, remove it from secure storage
             deleteSecurePassword(profileName);
@@ -836,7 +836,7 @@ void dlgConnectionProfiles::slot_saveName()
     // Check for orphaned keychain entries when creating a new profile with a name
     // that doesn't exist as a directory but might have keychain entries from
     // a previously deleted profile (deleted outside Mudlet interface)
-    if (mudlet::self()->storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(MudletApp::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
+    if (MudletApp::storingPasswordsSecurely() && currentProfileEditName == tr("new profile name") && !QDir(MudletApp::getMudletPath(enums::profileHomePath, newProfileName)).exists()) {
         // Check if there are orphaned keychain entries for this profile name
         // Use QPointer to safely detect if dialog or credManager is destroyed during async operations
         // Create CredentialManager without a parent to avoid destruction when dialog closes
@@ -956,7 +956,7 @@ void dlgConnectionProfiles::slot_saveName()
         return; // Exit here - continueProfileSave will be called from the callback
     }
 
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         migrateSecuredPassword(currentProfileEditName, newProfileName);
     }
 
@@ -1204,7 +1204,7 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     // This prevents lost callbacks from aborting in-progress keychain operations.
     // Crash prevention comes from parentless CredentialManager + QPointer guards.
     // Create CredentialManager without a parent to avoid destruction when dialog closes
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
 
         // Clean up character password entry first, then chain proxy cleanup
@@ -2115,7 +2115,7 @@ void dlgConnectionProfiles::slot_copyProfile()
             character_password_entry->setText(oldPassword);
         }
 
-        if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
+        if (MudletApp::storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
             writeSecurePassword(profile_name, oldPassword);
         }
         mCopyingProfile = false;
@@ -2200,7 +2200,7 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
         const QSignalBlocker blocker(character_password_entry);
         character_password_entry->setText(oldPassword);
     }
-    if (mudlet::self()->storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
+    if (MudletApp::storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
         writeSecurePassword(profileName, oldPassword);
     }
     mCopyingProfile = false;
@@ -2976,7 +2976,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     }
 
     // If secure storage is enabled, try keychain first, then fallback to QSettings
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         mKeychainOperationProfile = profile_name;
         auto* credManager = new CredentialManager(this);
         credManager->retrievePassword(

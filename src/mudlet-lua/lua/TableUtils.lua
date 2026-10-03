@@ -194,20 +194,23 @@ end
 -- container, which holds it back again, so the descent has to remember where it
 -- has been or it never ends. The set is kept out of table._contains' own
 -- signature, which ignores anything past the value to look for.
+-- The set is only made on the first descent, so searching a flat list - the
+-- usual case - allocates nothing.
 local function containsValue(t, value, seen)
-  if seen[t] then
-    return false
-  end
-  seen[t] = true
-
   for k, v in pairs(t) do
     if v == value then
       return true
     elseif k == value then
       return true
     elseif type(v) == "table" then
-      if containsValue(v, value, seen) then
-        return true
+      if not seen then
+        seen = { [t] = true }
+      end
+      if not seen[v] then
+        seen[v] = true
+        if containsValue(v, value, seen) then
+          return true
+        end
       end
     end
   end
@@ -220,10 +223,15 @@ function table._contains(t, value)
     return nil, "first parameter passed isn't a table"
   end
 
-  return containsValue(t, value, {})
+  return containsValue(t, value, nil)
 end
 
 function table.contains(tbl, ...)
+  -- one value to look for is the usual call, and needs no table built for it
+  if select("#", ...) == 1 then
+    local item = ...
+    return item ~= nil and table._contains(tbl, item) and true or false
+  end
   for _,item in ipairs({...}) do
     if table._contains(tbl, item) then return true end
   end

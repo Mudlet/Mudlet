@@ -34,6 +34,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 /*
  * A screen cache owes one property: an incremental paint draws what a forced
  * full repaint of the same buffer would. Both cases below assert exactly that,
@@ -97,7 +99,7 @@ private slots:
         // and a smaller default window would skip the case while ctest still
         // reported a pass
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         const int screenHeight = pane->mScreenHeight;
         QVERIFY2(screenHeight >= 20, "the pane is too short to leave the top of the buffer by more than the ten-line shortcut");
 
@@ -202,7 +204,7 @@ private slots:
 
         // not QTRY: later output from the connection refreshes the scrollbar
         // within its retry window and would hide the loss
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
     }
 
@@ -214,7 +216,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

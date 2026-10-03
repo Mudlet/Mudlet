@@ -44,6 +44,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
@@ -58,6 +59,8 @@
 
 #include <QRegularExpression>
 #include <QTreeWidget>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -1169,14 +1172,14 @@ private:
     {
         if (!mpEditor) {
             mudlet::self()->slot_showScriptDialog();
-            QTest::qWait(100);
-            mpEditor = mpHost->mpEditorDialog;
+            QTest::qWait(100ms);
+            mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
             if (!mpEditor) {
                 return false;
             }
         }
         mpEditor->slot_showVariables();
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         return true;
     }
 
@@ -1205,7 +1208,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(1000)) {
+        if (!spy2.wait(1s)) {
             QFAIL("Could not connect with the host.");
         }
     }

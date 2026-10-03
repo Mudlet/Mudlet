@@ -208,7 +208,7 @@ private slots:
         }
 
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 

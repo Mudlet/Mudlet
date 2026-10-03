@@ -34,10 +34,8 @@
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 
 #include <QBuffer>
 #include <QDataStream>
@@ -230,11 +228,9 @@ void TMap::mapClear()
 // The supplied message should contain a localised message and no "WARNING:" or other prefixes:
 void TMap::logError(const QString& msg)
 {
-    if (mpHost->mpEditorDialog) {
-        /*: Used to print a map error in the Errors console in the Editor, %1 is the
+    /*: Used to print a map error in the Errors console in the Editor, %1 is the
  message text and a line-feed is also appended.*/
-        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
-    }
+    emit mpHost->signal_errorConsolePrint(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
 }
 
 // Not used:
@@ -1949,7 +1945,7 @@ bool TMap::restore(QString location)
                 } else if (mVersion >= 17) {
                     ifs >> pA->mUserData;
                     const qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
-                    pA->mLast2DMapZoom = (fallback_map2DZoom >= T2DMap::csmMinXYZoom) ? fallback_map2DZoom : T2DMap::csmDefaultXYZoom;
+                    pA->mLast2DMapZoom = (fallback_map2DZoom >= scmMinXYZoom) ? fallback_map2DZoom : scmDefaultXYZoom;
                 }
                 if (mVersion >= 21) {
                     int mapLabelsCount = -1;
@@ -2504,25 +2500,6 @@ void TMap::postMessage(const QString text)
             pHost->postMessage(mStoredMessages.takeFirst());
         }
     }
-}
-
-// Used by the 2D mapper to send view center coordinates to 3D one
-void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, const int zPos)
-{
-#if defined(INCLUDE_3DMAPPER)
-    if (mpM) {
-        if (auto* glWidget = dynamic_cast<GLWidget*>(mpM.data())) {
-            glWidget->setViewCenter(areaId, xPos, yPos, zPos);
-        } else if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpM.data())) {
-            modernWidget->setViewCenter(areaId, xPos, yPos, zPos);
-        }
-    }
-#else
-    Q_UNUSED(areaId)
-    Q_UNUSED(xPos)
-    Q_UNUSED(yPos)
-    Q_UNUSED(zPos)
-#endif
 }
 
 void TMap::appendRoomErrorMsg(const int roomId, const QString msg, const bool isToSetFileViewingRecommended)
@@ -3436,6 +3413,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mProgressDialogAreasCount = 0;
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsCount = 0;
+    mJsonProgressShown.invalidate();
     bool abort = false;
     QJsonArray areasArray;
     for (const auto area : mpRoomDB->getAreaMap()) {
@@ -3610,6 +3588,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
+    mJsonProgressShown.invalidate();
     mMapProgressStandalone = true;
     mMapProgressIsTransfer = false;
     mMapProgressCancelRequested = false;
@@ -3854,6 +3833,14 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     } else {
         mProgressDialogLabelsCount += increment;
     }
+
+    // This is called for every ten rooms, and showing the counts - formatting the
+    // label, repainting the dialog and running the event loop so it can be seen
+    // and cancelled - cost several times what reading or writing them did:
+    if (mJsonProgressShown.isValid() && !mJsonProgressShown.hasExpired(50)) {
+        return mMapProgressCancelRequested;
+    }
+    mJsonProgressShown.start();
 
     emit signal_mapProgressSetValue(static_cast<int>(mProgressDialogRoomsCount));
     if (isExportNotImport) {

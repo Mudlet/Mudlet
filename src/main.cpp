@@ -43,6 +43,7 @@
 #include <QMessageBox>
 #include <QCommandLineOption>
 #include <QPainter>
+#include <QTextLayout>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -1150,7 +1151,7 @@ int main(int argc, char* argv[])
         // safe to call here.  Previously this ran on a 2-second timer,
         // which created a race: the connection dialog could open and
         // attempt to load passwords before migration had a chance to run.
-        if (mudlet::self()->storingPasswordsSecurely()) {
+        if (MudletApp::storingPasswordsSecurely()) {
             mudlet::self()->migratePasswordsToSecureStorage();
         }
 
@@ -1241,12 +1242,12 @@ static bool isFileAccessible(const QString& filePath)
 // Returns true if operation succeeded, false if all retries failed
 static bool tryFileOperationWithRetry(const std::function<bool()>& operation, const QString& operationName, int maxAttempts = 3)
 {
-    const std::chrono::milliseconds retryDelays[] = {5000ms, 15000ms, 30000ms};
+    const std::chrono::milliseconds retryDelays[] = {5s, 15s, 30s};
 
     for (int attempt = 0; attempt < maxAttempts; ++attempt) {
         if (attempt > 0) {
             qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts << "after" << retryDelays[attempt - 1].count() << "ms delay";
-            QThread::msleep(retryDelays[attempt - 1].count());
+            QThread::sleep(retryDelays[attempt - 1]);
         }
 
         if (operation()) {
