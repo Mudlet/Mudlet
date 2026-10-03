@@ -1085,9 +1085,10 @@ private:
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
     void releaseNestedDispatchState(NestedDispatchState&);
-    // Registry references to the compiled "return <name>" chunk that
-    // callEventHandler() runs to find each handler, by handler name. They
-    // belong to pGlobalLua, so are dropped whenever it is replaced.
+    // Registry references to how callEventHandler() finds each handler, by
+    // handler name: the name itself, read raw from the globals, or else the
+    // compiled "return <name>" chunk. They belong to pGlobalLua, so are
+    // dropped whenever it is replaced.
     QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
 

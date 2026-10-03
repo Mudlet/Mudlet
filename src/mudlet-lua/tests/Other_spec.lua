@@ -3300,11 +3300,12 @@ describe("Tests how raiseEvent finds the Lua event dispatcher", function()
     local ok, message = pcall(function()
       setfenv(0, swapped)
       raiseEvent("otherSpecDispatchSupplied", "after")
+      raiseEvent("otherSpecDispatchSupplied", "again")
     end)
     setfenv(0, original)
 
     assert.is_true(ok, tostring(message))
-    assert.are.same({"otherSpecDispatchSupplied"}, seen)
+    assert.are.same({"otherSpecDispatchSupplied", "otherSpecDispatchSupplied"}, seen)
   end)
 end)
 

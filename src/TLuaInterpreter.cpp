@@ -5722,6 +5722,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     // plain global name skips the chunk: what the globals table holds under it
     // is what "return name" would find, and only when it holds nothing - so a
     // metamethod could supply or reject the name - does the chunk run instead:
+    const auto loadLookup = [L, &function] {
+        return luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+    };
     int error = 0;
     bool resolved = false;
     if (const auto cached = mEventHandlerLookupRefs.constFind(function); cached != mEventHandlerLookupRefs.cend()) {
@@ -5731,7 +5734,13 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             resolved = !lua_isnil(L, -1);
             if (!resolved) {
                 lua_pop(L, 1);
-                error = luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+                // The chunk takes the name's place, so a name that only a
+                // metamethod supplies is not compiled again on every event:
+                error = loadLookup();
+                if (!error) {
+                    lua_pushvalue(L, -1);
+                    lua_rawseti(L, LUA_REGISTRYINDEX, cached.value());
+                }
             }
         } else {
             // A freshly loaded chunk would take whatever globals table the
@@ -5741,7 +5750,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_setfenv(L, -2);
         }
     } else {
-        error = luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+        error = loadLookup();
         if (!error) {
             // Script names come and go with renames, so keep this from growing
             // without bound - but far above the handler count of any real
