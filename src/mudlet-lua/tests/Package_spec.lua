@@ -2109,16 +2109,39 @@ describe("Tests the functionality of verbosePackageInstall", function()
     -- announcement's own name is checked for having been trimmed
     assert.is_false(containsWrapped(text, "Installing '" .. getMudletHomeDir()), text)
   end)
+  -- installPackage() asks for a quiet install, so nothing but this line tells
+  -- the player who dropped the file which parts of it are not working
+  it("says which parts of a package are not working", function()
+    local name = "mudlet-spec-brokenscripts"
+    defer(function()
+      removeFixturePackage(name)
+      _G.mudletSpecBrokenScriptsRuns = nil
+    end)
+    local path = fixtureDirectory .. "/" .. name .. ".mpackage"
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(packageInstalled(name), "the package was not installed")
+    assert.is_true(containsWrapped(text, "Package '" .. path .. "' was installed, but not everything in it is working:"), text)
+    assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    -- shown as the script wrote it, not taken as decho's formatting
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
+  end)
 end)
 
 describe("Tests the functionality of verboseModuleInstall", function()
   -- A module is installed from a copy inside the profile for the same reason
   -- installFixtureModule() does it: a save rewrites a synced module's own
   -- .mpackage, which must not be the committed fixture.
-  local function stageModule()
+  local function stageModule(name)
+    name = name or moduleName
     lfs.mkdir(scratchDirectory)
-    local path = scratchDirectory .. "/" .. moduleName .. ".mpackage"
-    copyFile(fixtureDirectory .. "/" .. moduleName .. ".mpackage", path)
+    local path = scratchDirectory .. "/" .. name .. ".mpackage"
+    copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
     return path
   end
 
@@ -2147,6 +2170,25 @@ describe("Tests the functionality of verboseModuleInstall", function()
     assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
     assert.is_true(containsWrapped(text, "could not open file"), text)
     assert.is_false(moduleInstalled("mudlet-spec-there-is-no-such-module"))
+  end)
+  it("says which parts of a module are not working", function()
+    local name = "mudlet-spec-brokenscripts"
+    defer(function()
+      removeFixtureModule(name)
+      _G.mudletSpecBrokenScriptsRuns = nil
+    end)
+    local path = stageModule(name)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verboseModuleInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(moduleInstalled(name), "the module was not installed")
+    assert.is_true(containsWrapped(text, "Module '" .. path .. "' was installed, but not everything in it is working:"), text)
+    assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
   end)
 end)
 
