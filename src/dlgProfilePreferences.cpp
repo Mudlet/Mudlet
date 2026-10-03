@@ -3886,6 +3886,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible, Qt::UniqueConnection);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    mBufferSizeBeforeMax = pHost->getConsoleBufferSize();
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
 
     // Set maximum buffer size based on system capabilities and update tooltip
@@ -6355,7 +6356,12 @@ void dlgProfilePreferences::applyAll()
             const bool useMaxBuffer = mSnapshot.dirty(checkBox_useMaxBufferSize) ? checkBox_useMaxBufferSize->isChecked() : pHost->getUseMaxConsoleBufferSize();
             // The profile keeps the size the user chose while the maximum is in
             // charge, so unticking the maximum has a size to go back to
-            const int chosenBufferSize = !useMaxBuffer && mSnapshot.dirty(console_buffer_size_spinBox) ? console_buffer_size_spinBox->value() : pHost->getConsoleBufferSize();
+            int chosenBufferSize = pHost->getConsoleBufferSize();
+            if (useMaxBuffer) {
+                chosenBufferSize = mBufferSizeBeforeMax;
+            } else if (mSnapshot.dirty(console_buffer_size_spinBox)) {
+                chosenBufferSize = console_buffer_size_spinBox->value();
+            }
 
             if (pHost->getConsoleBufferSize() != chosenBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
                 pHost->setConsoleBufferSize(chosenBufferSize);
@@ -8402,16 +8408,16 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     }
 
     if (checked) {
-        // When max is enabled, set spinbox to max value and disable it
+        // A size typed into the box may not have been applied yet
+        mBufferSizeBeforeMax = console_buffer_size_spinBox->value();
         if (pHost->mpConsole) {
             const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
             console_buffer_size_spinBox->setValue(maxBufferSize);
         }
         console_buffer_size_spinBox->setEnabled(false);
     } else {
-        // When max is disabled, enable the spinbox and set to stored value
         console_buffer_size_spinBox->setEnabled(true);
-        console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+        console_buffer_size_spinBox->setValue(mBufferSizeBeforeMax);
     }
 }
 
