@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QDateTime>
 #include <QObject>
 #include <QPointer>
 #include <QStringList>
@@ -38,7 +39,7 @@ public:
     MudletWebExport(Host*, const QString& archivePathFileName, QObject* parent = nullptr);
 
     // Saves the profile and writes the archive once that save is on disk.
-    // finished() is emitted exactly once, possibly before this returns.
+    // finished() is emitted exactly once, always from the event loop.
     void start();
 
     static QString suggestedFileName(const QString& profileName);
@@ -56,6 +57,7 @@ private:
     QString mArchivePathFileName;
     QStringList mWarnings;
     QMetaObject::Connection mHostGone;
+    QDateTime mSaveStarted;
     bool mFinished = false;
 };
 

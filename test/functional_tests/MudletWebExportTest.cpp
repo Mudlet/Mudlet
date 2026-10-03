@@ -30,7 +30,9 @@
 #include <chrono>
 #include <zip.h>
 
+#include "AliasUnit.h"
 #include "Host.h"
+#include "TAlias.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletWebExport.h"
@@ -285,6 +287,62 @@ private slots:
         }
     }
 
+    // The export's own save writes a synced module out before anything is copied,
+    // so an edit made in this session is in the archive rather than the stale file
+    void test_aSyncedModuleGoesInWithItsLatestEdits()
+    {
+        QVERIFY(mpHost->changeModuleSync(qsl("xml-module"), QLatin1String("1")).first);
+        const auto ids = mpHost->getAliasUnit()->findItems(qsl("xml module alias"), true, true);
+        QCOMPARE(ids.size(), 1);
+        mpHost->getAliasUnit()->getAlias(ids.front())->setName(qsl("edited xml module alias"));
+
+        const QString archivePath = mOutputDir.filePath(qsl("synced.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY(readArchive(archivePath).value(mProfileName + qsl("/xml-module/xml-module.xml")).contains("edited xml module alias"));
+
+        mpHost->getAliasUnit()->getAlias(ids.front())->setName(qsl("xml module alias"));
+        QVERIFY(mpHost->changeModuleSync(qsl("xml-module"), QLatin1String("0")).first);
+        mpHost->saveProfile();
+        mpHost->waitForProfileSave();
+    }
+
+    // Kept inside the profile folder, a module already travels at its own path;
+    // Mudlet Web finds it there by file name
+    void test_aModuleInsideTheProfileGoesInOnce()
+    {
+        const QString path = qsl("%1/scripts/inside-module.xml").arg(profileHome());
+        QVERIFY(writeFile(path, moduleXml(qsl("inside module alias"))));
+        QVERIFY2(installModule(path), "The module could not be installed");
+
+        const QString archivePath = mOutputDir.filePath(qsl("inside.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(qsl("; "))));
+        const auto entries = readArchive(archivePath);
+        QCOMPARE(entries.value(mProfileName + qsl("/scripts/inside-module.xml")), readFile(path));
+        QVERIFY2(!entries.contains(mProfileName + qsl("/inside-module/inside-module.xml")), "The module went in twice");
+    }
+
+    // Asked for while another save is still being written, the export waits for
+    // it rather than failing on saveProfile()'s refusal to run alongside it
+    void test_anExportStartedDuringASaveWaitsForIt()
+    {
+        mpHost->waitForProfileSave();
+        auto [saved, file, saveError] = mpHost->saveProfile();
+        QVERIFY2(saved, qPrintable(saveError));
+        QVERIFY(mpHost->currentlySavingProfile());
+
+        const QString archivePath = mOutputDir.filePath(qsl("during-save.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        int saves = 0;
+        for (const auto& name : readArchive(archivePath).keys()) {
+            saves += name.startsWith(mProfileName + qsl("/current/")) ? 1 : 0;
+        }
+        QCOMPARE(saves, 1);
+    }
+
     // Saved into the profile's own folder, a second export must not swallow the first
     void test_anExportInsideTheProfileDoesNotIncludeItself()
     {
@@ -339,6 +397,8 @@ private slots:
         for (const int roomId : mpHost->mpMap->mpRoomDB->getRoomIDList()) {
             QVERIFY(mpHost->mpMap->mpRoomDB->removeRoom(roomId));
         }
+        // as a map that failed to load is: empty, with nothing unsaved
+        mpHost->mpMap->resetUnsaved();
         const QFileInfoList onDisk = QDir(qsl("%1/map").arg(profileHome())).entryInfoList({qsl("*.dat")}, QDir::Files, QDir::Time);
         QVERIFY(!onDisk.isEmpty());
 
@@ -355,6 +415,30 @@ private slots:
         }
         QCOMPARE(maps, QStringList{qsl("%1/map/%2").arg(mProfileName, onDisk.first().fileName())});
         QCOMPARE(entries.value(maps.first()), readFile(onDisk.first().absoluteFilePath()));
+
+        // ...but a map the player has just cleared stays cleared, not brought back
+        mpHost->mpMap->setUnsaved(__func__);
+        const QString clearedPath = mOutputDir.filePath(qsl("cleared-map.zip"));
+        auto [clearedOk, clearedError, clearedWarnings] = exportTo(clearedPath);
+        QVERIFY2(clearedOk, qPrintable(clearedError));
+        for (const auto& name : readArchive(clearedPath).keys()) {
+            QVERIFY2(!name.startsWith(mProfileName + qsl("/map/")), qPrintable(qsl("A cleared map came back: %1").arg(name)));
+        }
+    }
+
+    // A module called "media" would land in the folder Mudlet Web takes for the
+    // profile's own, so it is reported rather than misfiled
+    void test_aModuleNamedLikeAProfileFolderIsReported()
+    {
+        const QString path = mModuleDir.filePath(qsl("media.xml"));
+        QVERIFY(writeFile(path, moduleXml(qsl("media module alias"))));
+        QVERIFY2(installModule(path), "The module could not be installed");
+
+        const QString archivePath = mOutputDir.filePath(qsl("reserved.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY2(warnings.filter(qsl("\"media\"")).size() == 1, qPrintable(warnings.join(qsl("; "))));
+        QVERIFY(!readArchive(archivePath).contains(mProfileName + qsl("/media/media.xml")));
     }
 
     void test_theSuggestedFileNameIsSafeOnEveryPlatform()

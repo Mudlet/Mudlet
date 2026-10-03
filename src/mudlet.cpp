@@ -3274,9 +3274,17 @@ void mudlet::slot_exportToMudletWeb()
 
 void mudlet::exportToMudletWeb(Host* pHost, QWidget* dialogParent)
 {
-    if (mpMudletWebExport) {
-        //: Title and text of the message shown when "Export to Mudlet Web" is chosen while an earlier export is still being written.
-        QMessageBox::information(dialogParent, tr("Export to Mudlet Web"), tr("An export to Mudlet Web is already being written. Please wait for it to finish."));
+    auto alreadyRunning = [this, dialogParent]() {
+        if (!mpMudletWebExport) {
+            return false;
+        }
+        //: Title of the message shown when "Export to Mudlet Web" is chosen while an earlier export is still being written.
+        const QString title = tr("Export to Mudlet Web");
+        //: Shown when "Export to Mudlet Web" is chosen while an earlier export is still being written.
+        QMessageBox::information(dialogParent, title, tr("An export to Mudlet Web is already being written. Please wait for it to finish."));
+        return true;
+    };
+    if (alreadyRunning()) {
         return;
     }
     const QPointer<Host> host = pHost;
@@ -3294,8 +3302,16 @@ void mudlet::exportToMudletWeb(Host* pHost, QWidget* dialogParent)
     // Added by the dialog rather than afterwards, so its "replace it?" check
     // asks about the file that will really be written
     dialog.setDefaultSuffix(qsl("zip"));
-    // The dialog runs an event loop, and the profile can close while it is up
-    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty() || !host || mpMudletWebExport) {
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty()) {
+        return;
+    }
+    // The dialog runs an event loop: the profile may have closed, or another export begun
+    if (!host) {
+        //: Shown when the profile being exported for Mudlet Web was closed while its file dialog was open. %1 is the profile's name.
+        QMessageBox::warning(dialogParent, title, tr("Profile %1 was closed, so it was not exported.").arg(profileName));
+        return;
+    }
+    if (alreadyRunning()) {
         return;
     }
     const QString fileName = dialog.selectedFiles().constFirst();
@@ -3305,6 +3321,8 @@ void mudlet::exportToMudletWeb(Host* pHost, QWidget* dialogParent)
     QPointer<QWidget> parent = dialogParent;
     connect(exporter, &MudletWebExport::finished, this, [this, exporter, fileName, profileName, parent](bool ok, const QString& error, const QStringList& warnings) {
         exporter->deleteLater();
+        // Cleared now: deleteLater() waits for an event loop the dialogs below hold up
+        mpMudletWebExport.clear();
         QApplication::restoreOverrideCursor();
         if (!ok) {
             //: Title of the message shown when exporting a profile for Mudlet Web fails.

@@ -592,7 +592,7 @@ private slots:
 
 
 private:
-    // One at a time: a second would save the profile again and race the first for the file
+    // One export at a time, whichever profile: each starts a save and holds the busy cursor
     QPointer<MudletWebExport> mpMudletWebExport;
     void assignKeySequences();
     QString autodetectPreferredLanguage();
