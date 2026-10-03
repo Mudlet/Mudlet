@@ -54,6 +54,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class LuaMapperCueTest : public QObject
 {
     Q_OBJECT
@@ -115,7 +117,7 @@ private:
         int before = -1;
         while (before != mPaintCount) {
             before = mPaintCount;
-            QTest::qWait(50);
+            QTest::qWait(50ms);
         }
         mPaintCount = 0;
     }
@@ -178,7 +180,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
         mudlet::self()->show();
     }
 
