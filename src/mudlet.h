@@ -440,12 +440,16 @@ public:
 #endif
 
 
+    // Asks where to save, then packs the profile for Mudlet Web's "Import .zip"
+    void exportToMudletWeb(Host*, QWidget* dialogParent);
+
 public slots:
     void slot_closeCurrentProfile();
     void slot_closeProfileRequested(int);
     void slot_closeProfileByName(const QString& profileName);
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
+    void slot_exportToMudletWeb();
     void slot_handleToolbarVisibilityChanged(bool);
     void slot_toolbarToggleActionTriggered(bool);
 #if defined(INCLUDE_UPDATER)

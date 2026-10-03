@@ -39,6 +39,7 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletWebExport.h"
 #include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
@@ -100,6 +101,7 @@
 #include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
+#include <QStandardPaths>
 #include <QStyleFactory>
 #include <QSvgRenderer>
 #include <QStyleHints>
@@ -2273,6 +2275,7 @@ void mudlet::init()
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_packageManager);
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_packageExporter);
+    connect(dactionExportToMudletWeb, &QAction::triggered, this, &mudlet::slot_exportToMudletWeb);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multiView);
     connect(dactionMuteMedia, &QAction::triggered, &mMedia, &MudletMedia::toggleAllMuted);
@@ -3262,6 +3265,68 @@ void mudlet::slot_packageManager()
     widgetutils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
 }
 
+void mudlet::slot_exportToMudletWeb()
+{
+    if (Host* pHost = getActiveHost()) {
+        exportToMudletWeb(pHost, this);
+    }
+}
+
+void mudlet::exportToMudletWeb(Host* pHost, QWidget* dialogParent)
+{
+    const QPointer<Host> host = pHost;
+    const QString profileName = pHost->getName();
+    QString downloads = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (downloads.isEmpty()) {
+        downloads = QDir::homePath();
+    }
+    //: Title of the file dialog that picks where to save a profile exported for Mudlet Web, the browser version of Mudlet.
+    QString fileName =
+            QFileDialog::getSaveFileName(dialogParent, tr("Export profile to Mudlet Web"), QDir(downloads).filePath(MudletWebExport::suggestedFileName(profileName)), tr("Zip archives (*.zip)"));
+    // The dialog runs an event loop, and the profile can close while it is up
+    if (fileName.isEmpty() || !host) {
+        return;
+    }
+    if (!fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive)) {
+        fileName.append(qsl(".zip"));
+    }
+
+    auto exporter = new MudletWebExport(host, fileName, this);
+    QPointer<QWidget> parent = dialogParent;
+    connect(exporter, &MudletWebExport::finished, this, [this, exporter, fileName, profileName, parent](bool ok, const QString& error, const QStringList& warnings) {
+        exporter->deleteLater();
+        if (!ok) {
+            //: Title of the message shown when exporting a profile for Mudlet Web fails.
+            QMessageBox::warning(parent ? parent.data() : this, tr("Export to Mudlet Web failed"), error);
+            return;
+        }
+
+        QMessageBox box(parent ? parent.data() : this);
+        box.setIcon(warnings.isEmpty() ? QMessageBox::Information : QMessageBox::Warning);
+        //: Title of the message shown once a profile has been exported for Mudlet Web.
+        box.setWindowTitle(tr("Exported to Mudlet Web"));
+        //: Shown once a profile has been exported for Mudlet Web. %1 is the profile's name, %2 the file it was saved to; "Import .zip…" is the name of the button on Mudlet Web's start screen.
+        box.setText(tr("<p>Profile <b>%1</b> is saved to:</p><p>%2</p><p>Open Mudlet Web, choose <b>Import .zip…</b> under the profile list, and pick this file.</p>")
+                            .arg(profileName.toHtmlEscaped(), QDir::toNativeSeparators(fileName).toHtmlEscaped()));
+        if (!warnings.isEmpty()) {
+            box.setInformativeText(warnings.join(QLatin1Char('\n')));
+        }
+        //: Button shown once a profile has been exported for Mudlet Web: opens Mudlet Web in the web browser.
+        auto openButton = box.addButton(tr("Open Mudlet Web"), QMessageBox::AcceptRole);
+        //: Button shown once a profile has been exported for Mudlet Web: opens the folder the file was saved in.
+        auto showButton = box.addButton(tr("Open folder"), QMessageBox::ActionRole);
+        box.addButton(QMessageBox::Close);
+        box.setDefaultButton(openButton);
+        box.exec();
+        if (box.clickedButton() == openButton) {
+            openWebPage(MudletWebExport::scmMudletWebUrl);
+        } else if (box.clickedButton() == showButton) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(fileName).absolutePath()));
+        }
+    });
+    exporter->start();
+}
+
 void mudlet::slot_packageExporter()
 {
     Host* pH = getActiveHost();
@@ -4225,6 +4290,7 @@ void mudlet::disableToolbarButtons()
     dactionPackageManager->setEnabled(false);
     dactionModuleManager->setEnabled(false);
     dactionPackageExporter->setEnabled(false);
+    dactionExportToMudletWeb->setEnabled(false);
 
     dactionToggleTimeStamp->setEnabled(false);
     dactionToggleReplay->setEnabled(false);
@@ -4305,6 +4371,7 @@ void mudlet::updateMainWindowToolbarState()
     dactionPackageManager->setEnabled(hasActiveProfileInMainWindow);
     dactionModuleManager->setEnabled(hasActiveProfileInMainWindow);
     dactionPackageExporter->setEnabled(hasActiveProfileInMainWindow);
+    dactionExportToMudletWeb->setEnabled(hasActiveProfileInMainWindow);
 
     dactionToggleTimeStamp->setEnabled(hasActiveProfileInMainWindow);
     dactionToggleReplay->setEnabled(hasActiveProfileInMainWindow);
@@ -4452,6 +4519,7 @@ void mudlet::enableToolbarButtons()
     dactionPackageManager->setEnabled(true);
     dactionModuleManager->setEnabled(true);
     dactionPackageExporter->setEnabled(true);
+    dactionExportToMudletWeb->setEnabled(true);
 
     dactionToggleTimeStamp->setEnabled(true);
     dactionToggleReplay->setEnabled(true);

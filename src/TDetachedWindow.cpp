@@ -368,6 +368,13 @@ void TDetachedWindow::createMenus()
     connect(packageExporterAction, &QAction::triggered, this, &TDetachedWindow::slot_showPackageExporterDialog);
     toolboxMenu->addAction(packageExporterAction);
 
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Mudlet Web is the browser version of Mudlet.
+    auto exportToMudletWebAction = new QAction(tr("Export to Mudlet &Web"), this);
+    //: This explains the "Export to Mudlet Web" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
+    exportToMudletWebAction->setStatusTip(tr("Save this profile - settings, triggers, aliases, scripts, packages, modules and map - into one file that Mudlet Web can import."));
+    connect(exportToMudletWebAction, &QAction::triggered, this, &TDetachedWindow::slot_exportToMudletWeb);
+    toolboxMenu->addAction(exportToMudletWebAction);
+
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuToggleReplayAction = new QAction(tr("Record replay"), this);
     //: This explains the "Record replay" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
@@ -3063,6 +3070,15 @@ void TDetachedWindow::slot_showPackageExporterDialog()
     withCurrentProfileActive([this]() {
         mudlet::self()->slot_packageExporter();
     });
+}
+
+void TDetachedWindow::slot_exportToMudletWeb()
+{
+    // Not through withCurrentProfileActive(): the file dialog spins an event
+    // loop, which would run the main window with this profile swapped in
+    if (Host* pHost = HostManager::self()->getHost(mCurrentProfileName); pHost && mudlet::self()) {
+        mudlet::self()->exportToMudletWeb(pHost, this);
+    }
 }
 
 void TDetachedWindow::slot_showConnectionDialog()
