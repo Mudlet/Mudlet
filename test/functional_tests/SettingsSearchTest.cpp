@@ -57,6 +57,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class SettingsSearchTest : public QObject
 {
     Q_OBJECT
@@ -500,7 +502,7 @@ private slots:
                          [this]() {
                              return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) != nullptr;
                          },
-                         5000),
+                         5s),
                  "following a subpage result drew no spotlight over the card it found");
     }
 

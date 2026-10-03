@@ -270,7 +270,6 @@ public:
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
-    void setGlobalStyleSheet(const QString&);
     void setInterfaceLanguage(const QString&);
     void setMenuBarVisibility(enums::controlsVisibility);
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
@@ -601,6 +600,7 @@ private:
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
     void setupTrayIcon();
+    void setGlobalStyleSheet(const QString&);
     // Not const: HostManager::getHostCount() is not
     bool toolBarShouldBeVisible();
     void reshowRequiredMainConsoles();

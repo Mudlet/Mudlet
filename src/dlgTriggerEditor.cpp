@@ -15193,7 +15193,7 @@ void dlgTriggerEditor::showBannerUndoToast()
 
     mpBannerUndoTimer = new QTimer(this);
     mpBannerUndoTimer->setSingleShot(true);
-    mpBannerUndoTimer->setInterval(std::chrono::seconds(5));
+    mpBannerUndoTimer->setInterval(5s);
 
     //: Toast notification shown when user dismisses an editor tip banner. Allows them to undo or permanently hide the tips for this editor view type.
     QString toastMessage = tr("Banner hidden. <a href='undo' style='color: inherit; text-decoration: underline;'>Undo</a> | <a href='hide-permanently' style='color: inherit; text-decoration: "

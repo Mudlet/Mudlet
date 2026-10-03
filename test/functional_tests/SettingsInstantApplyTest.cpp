@@ -47,6 +47,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class SettingsInstantApplyTest : public QObject
 {
     Q_OBJECT
@@ -326,7 +328,7 @@ private slots:
                          [&saveDir]() {
                              return !saveDir.entryList({qsl("*.xml")}, QDir::Files).isEmpty();
                          },
-                         30000),
+                         30s),
                  "closing the settings never wrote the profile out");
 
         mpHost->mFORCE_SAVE_ON_EXIT = saveOnExitBefore;

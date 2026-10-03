@@ -302,7 +302,10 @@ bool AliasUnit::processDataStream(const QString& data)
     Lua->set_lua_string(qsl("command"), data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
-    auto copyOfNodeList = mAliasRootNodeList;
+    const std::vector<TAlias*> copyOfNodeList(mAliasRootNodeList.cbegin(), mAliasRootNodeList.cend());
+    // Encoded once for every alias; matching has always stopped at a NUL in the command
+    QByteArray haystack = data.toUtf8();
+    haystack.truncate(qstrlen(haystack.constData()));
 
     mProcessingDepth++;
     const auto processingGuard = qScopeGuard([this] {
@@ -318,7 +321,7 @@ bool AliasUnit::processDataStream(const QString& data)
             continue;
         }
         // = data.replace( "\n", "" );
-        if (alias->match(data)) {
+        if (alias->match(haystack)) {
             state = true;
         }
     }

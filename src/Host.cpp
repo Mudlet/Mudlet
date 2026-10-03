@@ -36,7 +36,6 @@
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
-#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -49,7 +48,6 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
-#include "TTextEdit.h"
 #include "utils.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
@@ -222,35 +220,33 @@ qint64 stopWatch::getElapsedMilliSeconds() const
 
 QString stopWatch::getElapsedDayTimeString() const
 {
-    using namespace std::chrono_literals;
-
     if (!mIsInitialised) {
         return qsl("+:0:0:0:0:000");
     }
 
-    qint64 elapsed = getElapsedMilliSeconds();
+    milliseconds remainder{getElapsedMilliSeconds()};
 
     bool isNegative = false;
-    if (elapsed < 0) {
+    if (remainder < 0ms) {
         isNegative = true;
-        elapsed *= -1;
+        remainder = -remainder;
     }
 
-    qint64 const days = elapsed / std::chrono::milliseconds(24h).count();
-    qint64 remainder = elapsed - (days * std::chrono::milliseconds(24h).count());
-    quint8 const hours = static_cast<quint8>(remainder / std::chrono::milliseconds(1h).count());
-    remainder = remainder - (hours * std::chrono::milliseconds(1h).count());
-    quint8 const minutes = static_cast<quint8>(remainder / std::chrono::milliseconds(1min).count());
-    remainder = remainder - (minutes * std::chrono::milliseconds(1min).count());
-    quint8 const seconds = static_cast<quint8>(remainder / std::chrono::milliseconds(1s).count());
-    quint16 const milliSeconds = static_cast<quint16>(remainder - (seconds * std::chrono::milliseconds(1s).count()));
+    const auto wholeDays = duration_cast<days>(remainder);
+    remainder -= wholeDays;
+    const auto wholeHours = duration_cast<hours>(remainder);
+    remainder -= wholeHours;
+    const auto wholeMinutes = duration_cast<minutes>(remainder);
+    remainder -= wholeMinutes;
+    const auto wholeSeconds = duration_cast<seconds>(remainder);
+    remainder -= wholeSeconds;
     return qsl("%1:%2:%3:%4:%5:%6")
             .arg((isNegative ? QLatin1String("-") : QLatin1String("+")),
-                 QString::number(days),
-                 QString::number(hours),
-                 QString::number(minutes),
-                 QString::number(seconds),
-                 QString::number(milliSeconds));
+                 QString::number(wholeDays.count()),
+                 QString::number(wholeHours.count()),
+                 QString::number(wholeMinutes.count()),
+                 QString::number(wholeSeconds.count()),
+                 QString::number(remainder.count()));
 }
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
@@ -1411,9 +1407,9 @@ void Host::waitForProfileSave()
             waitedForNotification.start();
         }
         if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
-            QThread::msleep(1);
+            QThread::sleep(1ms);
         }
-        if (waitedForNotification.hasExpired(duration_cast<milliseconds>(notificationTimeout).count())) {
+        if (waitedForNotification.durationElapsed() > notificationTimeout) {
             qWarning().nospace() << "Host::waitForProfileSave() WARNING - the save of \"" << getName() << "\" has not reported itself finished within " << notificationTimeout.count()
                                  << " seconds of its writes completing, so giving up on it. State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size()
                                  << ", module write still running=" << mModuleFuture.isRunning() << ".";
@@ -4012,9 +4008,9 @@ QString Host::readProfileIniData(const QString& item)
 // Because '/' and '\\' are used by the QSettings class in key names for
 // special purposes we MUST filter them out in the name, we'll replace them
 // with '_'s:
-std::tuple<QString, bool> Host::getCmdLineSettings(const TCommandLine::CommandLineType type, const QString& name)
+std::tuple<QString, bool> Host::getCmdLineSettings(const enums::CommandLineType type, const QString& name)
 {
-    if (type == TCommandLine::MainCommandLine) {
+    if (type == enums::MainCommandLine) {
         // This one does not need the name to be kept in a QSettings but we
         // still need to retrieve the other setting:
         auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/main")).compare(qsl("false"), Qt::CaseInsensitive));
@@ -4059,9 +4055,9 @@ std::tuple<QString, bool> Host::getCmdLineSettings(const TCommandLine::CommandLi
     return {fileName, saveCommands};
 }
 
-void Host::setCmdLineSettings(const TCommandLine::CommandLineType type, const bool saveCommands, const QString& name)
+void Host::setCmdLineSettings(const enums::CommandLineType type, const bool saveCommands, const QString& name)
 {
-    if (type == TCommandLine::MainCommandLine) {
+    if (type == enums::MainCommandLine) {
         writeProfileIniData(qsl("CommandLines/SaveHistory/main"), saveCommands ? qsl("true") : qsl("false"));
         return;
     }
@@ -6217,25 +6213,6 @@ void Host::setFocusOnHostActiveCommandLine()
     };
 
     QTimer::singleShot(0ms, this, setCommandLineFocus);
-}
-
-QPointer<TConsole> Host::parentTConsole(QObject* start) const
-{
-    QPointer<TConsole> result;
-    auto ptr = start;
-    if (!ptr) {
-        // Handle pathalogical case:
-        return result;
-    }
-    do {
-        ptr = ptr->parent();
-    } while (ptr && !ptr->inherits("TConsole"));
-    // QObject::inherits(...) uses a const char* - so no need to wrap raw string literal!
-    if (!ptr) {
-        // Handle not found case:
-        return result;
-    }
-    return qobject_cast<TConsole*>(ptr);
 }
 
 void Host::setBorders(QMargins borders)

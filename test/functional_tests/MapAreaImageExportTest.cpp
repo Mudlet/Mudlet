@@ -45,6 +45,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapAreaImageExportTest : public QObject
 {
     Q_OBJECT
@@ -172,11 +174,11 @@ private slots:
 
         // The export hands the actual file write to a QtConcurrent task
         QImage exportedImage;
-        QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10s);
         // The file lands inside QPixmap::save(), before the task reports back,
         // and the watcher is only cleared once it has - so this is what says the
         // pool thread has let go of the widget the fixture is about to delete
-        QTRY_VERIFY_WITH_TIMEOUT(!mp2dMap->mpExportWatcher, 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!mp2dMap->mpExportWatcher, 10s);
 
         // Both halves of the outline - the stub's and the arrowhead's - are
         // white, so this covers the pair jointly rather than either alone

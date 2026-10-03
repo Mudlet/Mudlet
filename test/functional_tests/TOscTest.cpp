@@ -266,7 +266,7 @@ private slots:
                      "for the step that timed out.");
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(5000)) {
+    if (!spy2.wait(5s)) {
       QFAIL("Could not connect with the host.");
     }
   }
