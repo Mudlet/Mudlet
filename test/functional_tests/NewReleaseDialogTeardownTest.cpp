@@ -35,6 +35,8 @@
 
 #include <memory>
 
+using namespace std::chrono_literals;
+
 /*
  * What the Updater has to clean up after itself: the dialog it owns, and the
  * files it leaves in the temp directory.
@@ -185,7 +187,7 @@ void NewReleaseDialogTeardownTest::updateDialogDestroyedBeforeApplicationTeardow
     auto* window = new QWidget;
     window->show();
     bool dialogAliveAfterQuit = false;
-    QTimer::singleShot(0, app.get(), [&window, &dialog, &dialogAliveAfterQuit]() {
+    QTimer::singleShot(0ms, app.get(), [&window, &dialog, &dialogAliveAfterQuit]() {
         window->close();
         delete window;
         // The dialog's own last-window-closed handler quits when no update is

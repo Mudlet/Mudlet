@@ -31,7 +31,6 @@
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
-#include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
@@ -664,7 +663,6 @@ public:
     void setCaretEnabled(bool enabled);
     bool caretShortcutMatches(const QKeyEvent*) const;
     void setFocusOnHostActiveCommandLine();
-    QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
     QMargins userBorders() const { return mUserBorders; }
     void setUserBorders(const QMargins);
@@ -673,8 +671,8 @@ public:
     bool saveMapFile(const QString& location, int saveVersion = 0);
     bool loadMapFile(const QString& location);
     bool importMapFile(const QString& location, QString* errMsg = nullptr);
-    std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
-    void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
+    std::tuple<QString, bool> getCmdLineSettings(const enums::CommandLineType, const QString&);
+    void setCmdLineSettings(const enums::CommandLineType, const bool, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }

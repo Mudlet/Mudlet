@@ -308,7 +308,7 @@ private slots:
                          [&]() {
                              return mpServer->sawSubnegotiationOf(kGmcp);
                          },
-                         8000),
+                         8s),
                  "no GMCP ever reached the first game");
 
         // The next game offers nothing at all.
@@ -340,7 +340,7 @@ private slots:
                              return telnet.isGMCPEnabled() && telnet.isMSDPEnabled() && telnet.isMSSPEnabled() && telnet.isMSPEnabled() && telnet.isMXPEnabled() && telnet.isCHARSETEnabled()
                                     && telnet.isNewEnvironEnabled() && telnet.isChannel102Enabled();
                          },
-                         8000),
+                         8s),
                  "the game's offers were not all accepted, so the reconnect below proves nothing");
 
         mpServer->setOffers({}); // the next game offers nothing at all
@@ -369,7 +369,7 @@ private slots:
                          [&]() {
                              return host->mTelnet.isATCPEnabled();
                          },
-                         8000),
+                         8s),
                  "the game's ATCP offer was not accepted, so the reconnect below proves nothing");
 
         mpServer->setOffers({});
@@ -464,7 +464,7 @@ private slots:
                          [&]() {
                              return host->mTelnet.isMXPEnabled();
                          },
-                         8000),
+                         8s),
                  "MXP was not negotiated, so this proves nothing");
 
         // A tag the game starts and never finishes, with no newline after it - in the mode this
@@ -505,7 +505,7 @@ private slots:
                          [&]() {
                              return host->mMSSPTlsPort == 9999;
                          },
-                         8000),
+                         8s),
                  "the game's advertised secure port was never recorded, so this proves nothing");
 
         mpServer->setOffers({});
@@ -543,7 +543,7 @@ private slots:
                          [&]() {
                              return host->mTelnet.isGMCPEnabled() && host->mTelnet.isMSDPEnabled();
                          },
-                         8000),
+                         8s),
                  "the profile does not think the renegotiated protocols are running");
         QVERIFY2(!host->mTelnet.isMSPEnabled(), "MSP was enabled despite the player switching it off");
     }
@@ -555,7 +555,7 @@ private:
                 [&]() {
                     return mpServer->sawReply(command, option);
                 },
-                8000);
+                8s);
     }
 
     bool bufferContains(Host* host, const QString& text)
@@ -575,7 +575,7 @@ private:
                 [&]() {
                     return bufferContains(host, text);
                 },
-                8000);
+                8s);
     }
 
     // Answers rather than asserting: a QVERIFY here would only return from this helper, leaving
@@ -599,7 +599,7 @@ private:
                     [&]() {
                         return !disconnected.isEmpty();
                     },
-                    8000)) {
+                    8s)) {
             qWarning("the profile never noticed the game dropping the connection");
             return false;
         }
@@ -618,7 +618,7 @@ private:
                 [&]() {
                     return mpServer->connectionCount() > before && !connected.isEmpty();
                 },
-                8000);
+                8s);
         if (!reconnected) {
             qWarning("the profile did not reconnect to the stub");
         }
@@ -639,7 +639,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }

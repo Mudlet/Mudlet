@@ -155,7 +155,7 @@ private:
                 [this, &marker]() {
                     return mpServer->received().contains(marker);
                 },
-                10000);
+                10s);
         if (!arrived) {
             // Mudlet answers a DO TIMING_MARK whatever else is going on, so this
             // is never a slow reply - the connection is gone and every "nothing

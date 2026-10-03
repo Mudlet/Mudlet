@@ -38,6 +38,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // Where a button bar ends up: a docked bar in the console's top, left or right
 // strip by its location, a floating toolbar (location 4) as a dock on the main
 // window, and neither left behind once its action stops being a root one.
@@ -80,7 +82,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -499,7 +501,7 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }

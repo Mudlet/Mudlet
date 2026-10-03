@@ -35,6 +35,7 @@
 #include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "TBuffer.h"
+#include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
@@ -4807,7 +4808,7 @@ void mudlet::endProfileLoad()
     mCloseRequestedDuringProfileLoad = false;
     // Queued: the load's caller is still on the stack, holding a Host this
     // close deletes
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         close();
     });
 }
@@ -8224,9 +8225,7 @@ void mudlet::activateProfile(Host* pHost)
     refreshAddonPlacement();
 
     // Reset the styles to reflect those of the now active profile:
-    mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+    setGlobalStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
 
     // Tell the new profile that it is gaining focus via a Mudlet event:
     TEvent focusGainedEvent{};

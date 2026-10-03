@@ -28,11 +28,13 @@
 #include "Host.h"
 #include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "T2DMap.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "HostManager.h"
+#include "TTabBar.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "TelnetServerStub.h"
@@ -53,6 +55,7 @@
 #include <QDockWidget>
 #include <QLabel>
 #include <QMenuBar>
+#include <QToolBar>
 #include <QTemporaryDir>
 
 #include <zip.h>
@@ -76,6 +79,7 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-Host-Widget-Decoupling";
+    const QString mSecondHostname = "Test-Host-Widget-Decoupling-Second";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QString mFirstAreaName = qsl("AAArea");
@@ -116,6 +120,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mSecondHostname);
     }
 
     // The dockable map widget used to be a QDockWidget member of Host; it now
@@ -494,12 +499,55 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
 
-        const QString styleSheet = qsl("QMenuBar { color: #123456; }");
-        QVERIFY2(mudlet::self()->menuBar()->styleSheet() != styleSheet, "SETUP: the menu bar already carries the style sheet, so the assertion below cannot fail.");
+        QMenuBar* menuBar = mudlet::self()->menuBar();
+        QToolBar* toolBar = mudlet::self()->mpMainToolBar;
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+
+        const QString styleSheet = qsl("QWidget { color: #123456; }");
+        QVERIFY2(menuBar->styleSheet() != styleSheet && toolBar->styleSheet() != styleSheet && tabBar->styleSheet() != styleSheet,
+                 "SETUP: a bar already carries the style sheet, so the assertions below cannot fail.");
 
         QVERIFY(host->setProfileStyleSheet(styleSheet));
 
-        QCOMPARE(mudlet::self()->menuBar()->styleSheet(), styleSheet);
+        QCOMPARE(menuBar->styleSheet(), styleSheet);
+        QCOMPARE(toolBar->styleSheet(), styleSheet);
+        QCOMPARE(tabBar->styleSheet(), styleSheet);
+    }
+
+    // The main window's bars are shared by every profile, so only the active
+    // one may restyle them.
+    void test_onlyTheActiveProfileStyleSheetReachesTheMainWindow()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        Host* first = mudlet::self()->getActiveHost();
+        QVERIFY2(first, "No active host after starting the first profile.");
+        startProfile(mSecondHostname, mLocalhost, mPort);
+        Host* second = mudlet::self()->getActiveHost();
+        QVERIFY2(second && second != first, "Starting the second profile did not make it the active one.");
+        QMenuBar* menuBar = mudlet::self()->menuBar();
+        QToolBar* toolBar = mudlet::self()->mpMainToolBar;
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+
+        const QString firstStyleSheet = qsl("QWidget { color: #111111; }");
+        QVERIFY(first->setProfileStyleSheet(firstStyleSheet));
+        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() != firstStyleSheet && tabBar->styleSheet() != firstStyleSheet,
+                 "A profile that is not the active one restyled the main window.");
+
+        const QString secondStyleSheet = qsl("QWidget { color: #222222; }");
+        QVERIFY(second->setProfileStyleSheet(secondStyleSheet));
+        QCOMPARE(menuBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(tabBar->styleSheet(), secondStyleSheet);
+
+        tabBar->setCurrentIndex(tabBar->tabIndex(first->getName()));
+        QCOMPARE(mudlet::self()->getActiveHost(), first);
+
+        QVERIFY(second->setProfileStyleSheet(qsl("QWidget { color: #333333; }")));
+        QCOMPARE(menuBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(tabBar->styleSheet(), firstStyleSheet);
     }
 
     // The central debug console follows the display font of a profile that
@@ -630,7 +678,7 @@ private slots:
         host->mInstalledPackages << qsl("reset-probe");
         QVERIFY2(host->uninstallPackage(qsl("reset-probe"), enums::PackageModuleType::Package), "The seeded package could not be uninstalled");
         // doCleanReset() defers the rebuild to the next event loop turn
-        QTest::qWait(50);
+        QTest::qWait(50ms);
 
         QVERIFY2(editor->mpTriggerBaseItem, "The rebuilt editor has no trigger tree root.");
         QCOMPARE(editor->mpTriggerBaseItem->childCount(), shown + 1);
@@ -893,6 +941,7 @@ private slots:
         mpServer = nullptr;
         delete mudlet::self();
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mSecondHostname);
     }
 
     // Utility function to manually start a profile like a user would do via the

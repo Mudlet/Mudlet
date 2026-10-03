@@ -98,6 +98,8 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+using namespace std::chrono_literals;
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
@@ -1405,7 +1407,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             qWarning("Could not connect to the stub");
             return nullptr;
         }
