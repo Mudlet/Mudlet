@@ -876,6 +876,8 @@ void TMap::initGraph()
 {
     QElapsedTimer _time;
     _time.start();
+    const ScriptCallbackScope callbackScope(this);
+    mGraphBuildInProgress = true;
     locations.clear();
     roomidToIndex.clear();
     g.clear();
@@ -968,6 +970,7 @@ void TMap::initGraph()
         }
     } // End of foreach(location l, locations)
 
+    mGraphBuildInProgress = false;
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
@@ -1055,18 +1058,22 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
 
 bool TMap::findPath(int from, int to)
 {
+    mPathList.clear();
+    mDirList.clear();
+    mWeightList.clear();
+    // Clear the previous path data here so that if the following test is
+    // passed, the data is empty - and valid for THAT case!
+
+    if (mGraphBuildInProgress) {
+        return false;
+    }
+
     if (mMapGraphNeedsUpdate) {
         initGraph();
     }
 
     QElapsedTimer t;
     t.start();
-
-    mPathList.clear();
-    mDirList.clear();
-    mWeightList.clear();
-    // Clear the previous path data here so that if the following test is
-    // passed, the data is empty - and valid for THAT case!
 
     if (from == to) {
         return true; // Take a short-cut for trivial "already there" case!
