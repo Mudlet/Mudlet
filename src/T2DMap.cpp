@@ -2870,9 +2870,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     if (mudlet::self()->mDrawUpperLowerLevels) {
         const TAreaGridIndex& gridIndex = pDrawnArea->getGridIndex();
-        // Zoomed out over the whole area, walking the index costs more than the flat room set
+        // Zoomed out over the whole area, walking the index costs more than the flat room set.
+        // The area keeps its y extremes negated, unlike roomBounds.
         const bool viewportHoldsArea =
-                roomBounds.left() <= pDrawnArea->min_x && roomBounds.right() >= pDrawnArea->max_x && roomBounds.top() <= pDrawnArea->min_y && roomBounds.bottom() >= pDrawnArea->max_y;
+                roomBounds.left() <= pDrawnArea->min_x && roomBounds.right() >= pDrawnArea->max_x && roomBounds.top() <= -pDrawnArea->max_y && roomBounds.bottom() >= -pDrawnArea->min_y;
         auto neighbouringLevelRooms = [&](const int z) {
             if (viewportHoldsArea) {
                 const QSet<int>& rooms = pDrawnArea->getRoomsForZ(z);
