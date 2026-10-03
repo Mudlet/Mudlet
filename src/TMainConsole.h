@@ -96,7 +96,6 @@ public:
     void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
     void deregisterSubCommandLine(TCommandLine* pCommandLine);
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int);
-    QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     std::optional<QString> getCmdLineStyleSheet(const QString& name) const;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
@@ -160,6 +159,8 @@ public:
     void watchVisibility(QWidget* pContainer);
     // For QMainWindow::restoreState(), which places hidden docks without an event.
     void reportDockGeometry();
+    // Copies getMainWindowSize() into Host's window registry, where Host::mainWindowSize() reads it.
+    void reportMainWindowSize();
     // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
     void registerSubConsole(const QString& name, TConsole* pConsole);
     TConsole* deregisterSubConsole(const QString& name);
@@ -373,7 +374,7 @@ public:
     void refreshSubconsoles();
 
 
-    mutable QMap<QString, QSize> mCachedWindowSizes;
+    QMap<QString, QSize> mCachedWindowSizes;
     // The log lifecycle lives in the core console model so a profile with no
     // view can run one; these four are references aliasing the model's fields,
     // the way buffer and mFgColor alias theirs. mLogToLogFile and mLogFileName
@@ -417,6 +418,8 @@ signals:
 
 
 private:
+    // The dock's console size, from reportGeometry(), for Host::userWindowSize().
+    void reportUserWindowSize(const QString& name, const QSize& size);
     dlgMapper* dockedMapper() const;
     void dockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);

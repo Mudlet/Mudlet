@@ -204,6 +204,19 @@ private slots:
                  qPrintable(qsl("a backgrounded profile's main window reported an empty geometry: %1x%2").arg(geometry->width()).arg(geometry->height())));
     }
 
+    // A backgrounded profile's console is hidden, so getMainWindowSize() measures the container it
+    // will be shown in, which resizes with the application window while the console gets no event.
+    void test_backgroundProfileFollowsTheApplicationWindowResizing()
+    {
+        const QSize before = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        mudlet::self()->resize(mudlet::self()->size() + QSize(-120, -80));
+        QTest::qWait(50);
+
+        const QSize after = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        QVERIFY2(after != before, "resizing the application window did not change a backgrounded profile's main window size");
+        QCOMPARE(after, mpBackgroundHost->mainConsoleView()->getMainWindowSize());
+    }
+
 private:
     QStringList elementNames() const { return {mLabelName, mConsoleName, mScrollBoxName, mCmdLineName, mTextEditName, mUserWindowName, mChildLabelName}; }
 

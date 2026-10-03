@@ -137,6 +137,61 @@ private:
     QString mName;
 };
 
+const QString mainWindowSizeReporterName = qsl("mudlet_mainWindowSizeReporter");
+
+// Keeps the core's copy of TConsole::getMainWindowSize() current. That is the console's size less its
+// toolbars and command line, or its container's while a tab switch hides it, so a resize of any of
+// them, the console being hidden or shown, and its moving to another container all change it.
+class MainWindowSizeReporter : public QObject
+{
+public:
+    MainWindowSizeReporter(TMainConsole* pConsole, const QList<QWidget*>& parts)
+    : QObject(pConsole)
+    , mpConsole(pConsole)
+    {
+        setObjectName(mainWindowSizeReporterName);
+        pConsole->installEventFilter(this);
+        for (auto pPart : parts) {
+            pPart->installEventFilter(this);
+        }
+        watchContainer();
+    }
+
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        switch (event->type()) {
+        case QEvent::ParentChange:
+            if (watched == mpConsole) {
+                watchContainer();
+            }
+            [[fallthrough]];
+        case QEvent::Resize:
+        case QEvent::ShowToParent:
+        case QEvent::HideToParent:
+            mpConsole->reportMainWindowSize();
+            break;
+        default:
+            break;
+        }
+        return false;
+    }
+
+private:
+    void watchContainer()
+    {
+        if (mpContainer) {
+            mpContainer->removeEventFilter(this);
+        }
+        mpContainer = mpConsole->parentWidget();
+        if (mpContainer) {
+            mpContainer->installEventFilter(this);
+        }
+    }
+
+    TMainConsole* mpConsole = nullptr;
+    QPointer<QWidget> mpContainer;
+};
+
 } // namespace
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
@@ -194,6 +249,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
+
+    new MainWindowSizeReporter(this, {mpLeftToolBar, mpRightToolBar, mpTopToolBar, mpCommandLine.data()});
+    reportMainWindowSize();
 }
 
 TMainConsole::~TMainConsole()
@@ -213,6 +271,7 @@ TMainConsole::~TMainConsole()
     }
     // Likewise for a HideToParent or Move reaching a child as ~QWidget tears it down
     qDeleteAll(findChildren<QObject*>(windowStateReporterName));
+    delete findChild<QObject*>(mainWindowSizeReporterName, Qt::FindDirectChildrenOnly);
 
     // Unlike labels and sub-consoles, these kinds don't deregister in their destructors, and their
     // destroyed() handlers are disconnected above or die with ~QObject. Docks need no sweep: closing the
@@ -425,9 +484,37 @@ void TMainConsole::reportGeometry(const QString& name)
             pW = pD;
         }
         mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(pW->pos(), pW->size()));
+        if (pW != pC.data()) {
+            reportUserWindowSize(name, pC->size());
+        }
     }
     if (auto pW = plainWindowWidget(name)) {
         mpHost->windowRegistry().setPlainWindowGeometry(name, QRect(pW->pos(), pW->size()));
+    }
+}
+
+void TMainConsole::reportUserWindowSize(const QString& name, const QSize& size)
+{
+    // Mid-switch the dock can be a few pixels wide, which nothing can be laid
+    // out in - keep the last size it really had. Only a size this small is
+    // refused: refusing one that has merely changed a lot would leave the
+    // cache as the yardstick for every size after it, and a window shrunk to
+    // under half its width could never be reported again.
+    const int minValidWidth = 50;
+    if (size.width() < minValidWidth && mCachedWindowSizes.contains(name)) {
+        mpHost->windowRegistry().setUserWindowSize(name, mCachedWindowSizes.value(name));
+        return;
+    }
+    if (size.width() >= minValidWidth) {
+        mCachedWindowSizes[name] = size;
+    }
+    mpHost->windowRegistry().setUserWindowSize(name, size);
+}
+
+void TMainConsole::reportMainWindowSize()
+{
+    if (mpHost) {
+        mpHost->windowRegistry().setMainWindowSize(getMainWindowSize());
     }
 }
 
@@ -3049,38 +3136,6 @@ bool TMainConsole::hideWindow(const QString& name)
         return true;
     }
     return false;
-}
-
-//getUserWindowSize for resizing in Geyser
-QSize TMainConsole::getUserWindowSize(const QString& windowname) const
-{
-    auto pW = mDockWidgetMap.value(windowname);
-
-    // Guard pW->widget(): a dock can briefly outlive its console (the console is
-    // deleted via deleteLater()), during which widget() is null - dereferencing
-    // it segfaults. Fall back to the main window size until the dock is gone.
-    if (pW && pW->widget()) {
-        const QSize windowSize = pW->widget()->size();
-        const int minValidWidth = 50;
-
-        // Mid-switch the dock can be a few pixels wide, which nothing can be laid
-        // out in - hand back the last size it really had. Only a size this small
-        // is refused: refusing one that has merely changed a lot would leave the
-        // cache as the yardstick for every size after it, and a window shrunk to
-        // under half its width could never be reported again.
-        if (windowSize.width() < minValidWidth) {
-            if (mCachedWindowSizes.contains(windowname)) {
-                return mCachedWindowSizes.value(windowname);
-            }
-            return windowSize;
-        }
-
-        // Size looks valid, cache and return it
-        mCachedWindowSizes[windowname] = windowSize;
-        return windowSize;
-    }
-
-    return getMainWindowSize();
 }
 
 void TMainConsole::setProfileName(const QString& newName)
