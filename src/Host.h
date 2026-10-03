@@ -303,8 +303,8 @@ public:
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     // The concrete main console widget, or nullptr while this profile has none.
-    // App-side code goes through these rather than mpConsole, which is to become
-    // the presentation-only interface core code talks to.
+    // Widget-side code uses these rather than mpConsole, so that mpConsole's type
+    // can change without touching widget code.
     TMainConsole* mainConsoleView() const { return mpConsole.data(); }
     void setMainConsoleView(TMainConsole* view) { mpConsole = view; }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
