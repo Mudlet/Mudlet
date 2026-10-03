@@ -1643,6 +1643,16 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
+// setFamilies() rather than QFont(name), which reads the name as a comma separated,
+// quoted list: "No Such Font," or "'" then names no family at all and gets the
+// default font, which is not the stand-in platformResolvesFontFamily() compares against
+static QString familyDrawnFor(const QString& name)
+{
+    QFont font;
+    font.setFamilies({name});
+    return QFontInfo(font).family();
+}
+
 // Whether the platform makes a font of the name itself: the font database lists only installed families,
 // but fontconfig resolves "Helvetica", "Times" or "monospace" and Windows has a substitution table. Qt
 // answers a meaningless name with one fixed stand-in, so landing elsewhere means recognised; an alias
@@ -1655,7 +1665,7 @@ static bool platformResolvesFontFamily(const QString& requested)
 
     // A UUID so that no machine can have a font by that name and make every unknown family look resolved
     static const QString unrecognisedName = QUuid::createUuid().toString();
-    static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
+    static const QString unrecognisedFamily = familyDrawnFor(unrecognisedName);
 
     static const bool nameResolutionIsReadable = []() {
         if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
@@ -1672,7 +1682,7 @@ static bool platformResolvesFontFamily(const QString& requested)
         return false;
     }
 
-    return QFontInfo(QFont(requested)).family() != unrecognisedFamily;
+    return familyDrawnFor(requested) != unrecognisedFamily;
 }
 
 // The font database's spelling, not the typed one: getFont() reports it and the Geyser wrappers remember it
