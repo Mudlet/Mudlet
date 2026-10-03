@@ -3283,4 +3283,54 @@ describe("Tests how raiseEvent finds the Lua event dispatcher", function()
     assert.is_true(ok, tostring(message))
     assert.are.same({"otherSpecDispatchSwapped"}, seen)
   end)
+
+  it("finds a dispatcher that only a globals metatable supplies", function()
+    local original = getfenv(0)
+    local seen = {}
+    raiseEvent("otherSpecDispatchSupplied", "before")
+    local swapped = setmetatable({}, {__index = function(_, key)
+      if key == "dispatchEventToFunctions" then
+        return function(event, ...)
+          seen[#seen + 1] = event
+          return original.dispatchEventToFunctions(event, ...)
+        end
+      end
+      return original[key]
+    end})
+    local ok, message = pcall(function()
+      setfenv(0, swapped)
+      raiseEvent("otherSpecDispatchSupplied", "after")
+    end)
+    setfenv(0, original)
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchSupplied"}, seen)
+  end)
+end)
+
+describe("Tests that raiseEvent hands numbers over unchanged", function()
+  local function roundTrip(value)
+    local received
+    local id = registerAnonymousEventHandler("otherSpecNumberRoundTrip", function(_, number)
+      received = number
+    end)
+    raiseEvent("otherSpecNumberRoundTrip", value)
+    killAnonymousEventHandler(id)
+    return received
+  end
+
+  it("keeps whole numbers, fractions and the largest exact integers", function()
+    for _, value in ipairs({0, 1, -1, 42, -123456789, 2^53 - 1, -(2^53 - 1), 2^53, 2^53 + 2, 2^63, 1e300, 0.1, -2.5, 1/3, 5e-324}) do
+      local received = roundTrip(value)
+      assert.are.equal("number", type(received))
+      assert.are.equal(string.format("%.17g", value), string.format("%.17g", received))
+    end
+  end)
+
+  it("keeps infinities and NaN", function()
+    assert.are.equal(math.huge, roundTrip(math.huge))
+    assert.are.equal(-math.huge, roundTrip(-math.huge))
+    local nan = roundTrip(0/0)
+    assert.is_true(nan ~= nan)
+  end)
 end)
