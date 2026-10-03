@@ -585,6 +585,9 @@ void CredentialManager::retrievePassword(
             qWarning().noquote().nospace() << "CredentialManager: gave up looking up the saved password for profile \"" << lookup->profileName << "\", key \"" << lookup->key << "\" after "
                                            << mOperationTimeoutMs << "ms, waiting on the read of the " << lookup->stages[lookup->currentStage].description
                                            << " (or on another keychain job ahead of it in the queue)";
+            // Before finishLookup() lets go of the read that is still out, even when the file answers:
+            // a keychain write leaves an older copy in the file, which the keychain's answer replaces
+            awaitLateAnswer(lookup);
             // The file needs nothing from the keychain, so a read stalled ahead of it is no reason
             // to leave it unread - and the next lookup would stall at the same read
             for (std::size_t index = lookup->currentStage + 1; index < lookup->stages.size(); ++index) {
@@ -597,8 +600,6 @@ void CredentialManager::retrievePassword(
                 }
                 break;
             }
-            // Before finishLookup() lets go of the read that is still out
-            awaitLateAnswer(lookup);
             finishLookup(lookup, false, QString(), qsl("Operation timed out"), true);
         });
         deadline->start(mOperationTimeoutMs);
