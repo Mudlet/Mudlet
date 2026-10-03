@@ -69,6 +69,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDialog>
+#include <QFutureWatcher>
 #include <QIcon>
 #include <QJsonArray>
 #include <QJsonDocument>

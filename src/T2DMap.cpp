@@ -59,6 +59,7 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QCursor>
+#include <QFutureWatcher>
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
 /* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
  * Debian and Ubuntu are missing the
@@ -6603,8 +6604,10 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QString extension = fileInfo.suffix();
         QString basePath = fileInfo.absolutePath();
 
-        // Export each Z level as a separate file
-        for (const int currentZLevel : std::as_const(pArea->zLevels)) {
+        // Iterates a copy: each export's calcSpan() replaces zLevels, which
+        // would free the list under this loop
+        const QList<int> zLevels = pArea->zLevels;
+        for (const int currentZLevel : zLevels) {
             QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
 
             // Recursively call this function for each Z level (without exportAllZLevels flag)
@@ -7298,26 +7301,24 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         format = qsl("png");
     }
 
-    // Clean up any existing export watcher
-    if (mpExportWatcher) {
-        mpExportWatcher->deleteLater();
-    }
-
-    // Create new watcher for this export task
-    mpExportWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
-    connect(mpExportWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this]() {
-        auto result = mpExportWatcher->result();
-        if (!result.first) {
-            // Only show errors, no success messages
-            mpHost->postMessage(tr("[MAP]: %1").arg(result.second));
+    // Each export has a watcher of its own: several can be in flight at once,
+    // from calls made back to back or one per z level
+    auto* pWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
+    connect(pWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this, pWatcher, profileName = mpHost->getName()]() {
+        const auto [saved, errorMessage] = pWatcher->result();
+        if (!saved) {
+            // This view can outlive its profile, which may have closed before the save reported back
+            if (mpHost) {
+                mpHost->postMessage(tr("[MAP]: %1").arg(errorMessage));
+            } else {
+                qWarning().noquote().nospace() << "T2DMap::exportAreaToImage() WARNING - profile \"" << profileName << "\" closed before this export finished: " << errorMessage;
+            }
         }
-        mpExportWatcher->deleteLater();
-        mpExportWatcher = nullptr;
+        pWatcher->deleteLater();
     });
 
-    // Start async save task - fire & forget
     auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, format).spawn();
-    mpExportWatcher->setFuture(future);
+    pWatcher->setFuture(future);
 
     return {true, {}};
 }
