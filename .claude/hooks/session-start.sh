@@ -92,11 +92,20 @@ TEST_PACKAGES=(
   ffmpeg
 )
 # Every package is asked about, as some arrive with unrelated ones - ffmpeg
-# brings libxcb-shape0. Not fatal: the steps after this one need none of them.
-if ! dpkg -s "${TEST_PACKAGES[@]}" >/dev/null 2>&1; then
+# brings libxcb-shape0 - and by status, since dpkg -s also succeeds for one that
+# was removed but not purged. Not fatal: the steps after this need none of them.
+test_packages_missing() {
+  local package
+  for package in "${TEST_PACKAGES[@]}"; do
+    [ "$(dpkg-query -W -f='${db:Status-Status}' "${package}" 2>/dev/null)" = installed ] || return 0
+  done
+  return 1
+}
+if test_packages_missing; then
   echo "Installing test-suite apt dependencies..."
-  { ${SUDO} apt-get update -qq \
-    && DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${TEST_PACKAGES[@]}"; } \
+  # The lists already on disk may still serve, so a failed update is no reason not to try
+  ${SUDO} apt-get update -qq || echo "WARNING: could not update the apt package lists"
+  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${TEST_PACKAGES[@]}" \
     || echo "WARNING: could not install the test-suite apt dependencies"
 fi
 
