@@ -591,10 +591,27 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
 
 void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout) const
 {
+    // A fill costs much the same whatever its width, and most cells in a line
+    // share a background, so abutting cells of one colour are filled together.
+    QRect pendingRect;
+    QColor pendingColor;
     for (const GraphemeRun& run : layout) {
-        if (run.fillsBackground) {
-            painter.fillRect(run.textRect, run.bgColor);
+        if (!run.fillsBackground) {
+            continue;
         }
+        if (!pendingRect.isNull() && run.bgColor == pendingColor && run.textRect.left() == pendingRect.right() + 1 && run.textRect.top() == pendingRect.top()
+            && run.textRect.height() == pendingRect.height()) {
+            pendingRect.setRight(run.textRect.right());
+            continue;
+        }
+        if (!pendingRect.isNull()) {
+            painter.fillRect(pendingRect, pendingColor);
+        }
+        pendingRect = run.textRect;
+        pendingColor = run.bgColor;
+    }
+    if (!pendingRect.isNull()) {
+        painter.fillRect(pendingRect, pendingColor);
     }
 }
 
@@ -1367,23 +1384,11 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     const bool bottomRowIsRepainted = drawTo == lastRow;
 
-    // Neither cache blit ran, so everything outside the band about to be redrawn
-    // is still the previous frame's ink rather than the transparency a newly
-    // allocated pixmap would have started with.
-    if (!reusedCachedScreenContent && !bufferWasJustCleared) {
-        p.setCompositionMode(QPainter::CompositionMode_Source);
-        p.fillRect(QRect(0, 0, mScreenWidth * mFontWidth, pixmapHeight), Qt::transparent);
-    }
-
-    //delete non used characters.
-    //needed for horizontal scrolling because there sometimes characters didn't get cleared
     int clearHeight = (drawTo + 1 - drawFrom) * mFontHeight;
     if (bottomRowIsRepainted) {
         clearHeight += mFontHeight;
     }
     const QRect deleteRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, clearHeight);
-    p.setCompositionMode(QPainter::CompositionMode_Source);
-    p.fillRect(deleteRect, Qt::transparent);
     // Scrolling shifts the cached screen by whole cells, which drops a complete
     // line of text into the spare row. Nothing but the bottom line's overflow
     // belongs there, so rebuild it from scratch whenever it is not already part
@@ -1391,7 +1396,24 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     QRect spareRowRect;
     if (!bottomRowIsRepainted) {
         spareRowRect = QRect(0, mScreenHeight * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
-        p.fillRect(spareRowRect, Qt::transparent);
+    }
+
+    p.setCompositionMode(QPainter::CompositionMode_Source);
+    if (!reusedCachedScreenContent) {
+        // Neither cache blit ran, so everything outside the band about to be
+        // redrawn is still the previous frame's ink rather than the transparency
+        // a newly allocated pixmap would have started with. Clearing all of it
+        // also clears the band and the spare row.
+        if (!bufferWasJustCleared) {
+            p.fillRect(QRect(0, 0, mScreenWidth * mFontWidth, pixmapHeight), Qt::transparent);
+        }
+    } else {
+        // The blit left the old rows' ink where the band and the spare row are
+        // about to be redrawn.
+        p.fillRect(deleteRect, Qt::transparent);
+        if (!spareRowRect.isNull()) {
+            p.fillRect(spareRowRect, Qt::transparent);
+        }
     }
 
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
