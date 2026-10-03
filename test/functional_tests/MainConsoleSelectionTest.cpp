@@ -853,6 +853,50 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
+    // The menu is non-modal, so a script can remove a mouse event while its
+    // entry is still showing. Picking it then indexed an empty list, so a
+    // regression aborts the run rather than failing this case.
+    void test_aMouseEventRemovedWhileItsMenuIsOpenDoesNothing()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("removedMouseEventRan = false\n"
+                                                                        "function removedMouseEventHandler() removedMouseEventRan = true end\n"
+                                                                        "registerAnonymousEventHandler('testRemovedMouseEvent', 'removedMouseEventHandler')\n"
+                                                                        "addMouseEvent('testRemovedMouseUnique', 'testRemovedMouseEvent', 'Removed while open')\n")),
+                 "the addMouseEvent() call failed");
+
+        const QPointF pos = cellInMiddleRow(pane, 5);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+
+        QAction* entry = nullptr;
+        for (QAction* pAction : menu->actions()) {
+            if (pAction->text() == qsl("Removed while open")) {
+                entry = pAction;
+                break;
+            }
+        }
+        QVERIFY2(entry, "the mouse event got no entry in the console's right-click menu");
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("removeMouseEvent('testRemovedMouseUnique')\n")), "the removeMouseEvent() call failed");
+        entry->trigger();
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "removedMouseEventRan");
+        const bool ran = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(!ran, "a removed mouse event still raised its event");
+        QVERIFY2(!host->mConsoleActions.contains(qsl("testRemovedMouseUnique")), "picking a removed mouse event left an empty entry behind");
+
+        menu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
     // TConsoleModel::selectSection() refuses a length that would put a selection's
     // end before its start, but TBuffer::replaceInLine() takes the two points
     // as it is given them, and its own bounds checks only ask that each column
