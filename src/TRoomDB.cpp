@@ -1361,6 +1361,7 @@ void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
     if (!pExisting || pExisting == pA) {
         return;
     }
+    mpMap->areasAboutToBeDeleted();
     // Prevent TArea::~TArea() from re-entrantly calling removeArea(this),
     // mirroring the pattern in TRoomDB::removeArea(int)
     pExisting->mpRoomDB = nullptr;

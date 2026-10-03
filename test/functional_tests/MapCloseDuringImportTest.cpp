@@ -58,6 +58,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "TArea.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mudlet.h"
@@ -232,14 +233,16 @@ private slots:
 
     void test_deletingAnAreaDuringAJsonExportStopsIt_data()
     {
-        QTest::addColumn<bool>("wholeMap");
-        QTest::newRow("deleteArea") << false;
-        QTest::newRow("deleteMap") << true;
+        QTest::addColumn<QString>("how");
+        QTest::newRow("deleteArea") << qsl("deleteArea");
+        QTest::newRow("deleteMap") << qsl("deleteMap");
+        // What restore() does to an area of the same id when createMapper() loads a map over one with no rooms
+        QTest::newRow("replaceArea") << qsl("replaceArea");
     }
 
     void test_deletingAnAreaDuringAJsonExportStopsIt()
     {
-        QFETCH(bool, wholeMap);
+        QFETCH(QString, how);
         Host* pHost = addProfile(qsl("MapAreaDeletedDuringExport-%1-Test").arg(QLatin1String(QTest::currentDataTag())));
         QVERIFY2(pHost, "failed to create the Host");
         buildMap(pHost);
@@ -261,10 +264,12 @@ private slots:
                 return;
             }
             deleted = true;
-            if (wholeMap) {
+            if (how == qsl("deleteMap")) {
                 pMap->mapClear();
-            } else {
+            } else if (how == qsl("deleteArea")) {
                 QVERIFY(pMap->mpRoomDB->removeArea(firstAreaWithRooms));
+            } else {
+                pMap->mpRoomDB->restoreSingleArea(firstAreaWithRooms, new TArea(pMap, pMap->mpRoomDB.get()));
             }
         });
         const auto [wrote, writeMessage] = pMap->writeJsonMapFile(qsl("%1/area-deleted-during-export.json").arg(mSaveDir.path()));
