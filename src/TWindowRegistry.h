@@ -147,7 +147,7 @@ public:
     void setMainWindowSize(const QSize& size) { mMainWindowSize = size; }
     QSize mainWindowSize() const { return mMainWindowSize; }
 
-    // Name only, like docks: core asks just whether a name exists and its kind.
+    // Name only: core asks just whether a name exists and its kind.
     // Three sets as the name spaces are independent; a name in several resolves in declaration order.
     void registerScrollBox(const QString& name) { mScrollBoxes.insert(name); }
     void deregisterScrollBox(const QString& name)
