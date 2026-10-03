@@ -156,6 +156,8 @@ public:
     void reportVisibility(const QString& name);
     // Every named window at or below pRoot, whose visibility follows its ancestors'.
     void reportVisibilityWithin(QWidget* pRoot);
+    // For a container holding named windows that is not one itself, as an MXP frame's.
+    void watchVisibility(QWidget* pContainer);
     // For QMainWindow::restoreState(), which places hidden docks without an event.
     void reportDockGeometry();
     // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
