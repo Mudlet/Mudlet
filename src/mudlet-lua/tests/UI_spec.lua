@@ -1676,6 +1676,26 @@ describe("Tests UI functions", function()
       hits = BaseUI.parseVitalsLine("HP: 900/999 MP: 110/250 [same shape]")
       assert.are.equal(900, reading(hits, "hp", "curmax").current)
       assert.are.equal(110, reading(hits, "mp", "curmax").current)
+      assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
+    end)
+
+    it("should not let a line whose numbers are a different length decide what another matches", function()
+      local function trusted(hits, stat)
+        for _, hit in ipairs(hits) do
+          if hit.stat == stat and hit.kind == "curmax" and not hit.windowed then
+            return hit
+          end
+        end
+      end
+      -- a SMAUG row anchor allows 15 characters of label, digits included
+      assert.is_nil(trusted(BaseUI.parseVitalsLine("Pract1234567890123: 5   Hitpoints: 90 of 90 [digit count]"), "hp"))
+      local hp = trusted(BaseUI.parseVitalsLine("Pract12: 5   Hitpoints: 90 of 90 [digit count]"), "hp")
+      assert.are.equal(90, hp and hp.max)
+      -- thousands separators only group in threes
+      BaseUI.parseVitalsLine("Health: 12,34/5,678 [digit count]")
+      hp = trusted(BaseUI.parseVitalsLine("Health: 1,234/5,678 [digit count]"), "hp")
+      assert.are.equal(1234, hp and hp.current)
+      assert.are.equal(5678, hp and hp.max)
     end)
 
     it("should parse labelled percentages without needing a maximum", function()
