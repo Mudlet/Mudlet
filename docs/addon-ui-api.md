@@ -13,7 +13,8 @@ desktop Mudlet. "Here is a command" maps onto whatever chrome a client has;
 
 Commands are identified by the numeric id returned at creation - names and
 labels carry no identity and may repeat freely. Every command belongs to the
-profile that created it and is removed when that profile closes or resets.
+profile that created it and is removed when that profile closes or resets,
+or when the package or module whose code created it is uninstalled.
 
 ## Placing a command
 
@@ -152,10 +153,25 @@ end)
    `removeCommand` is a Lua handler running from that very command's event;
    implementations must tolerate this (desktop Mudlet defers destruction past
    the event loop turn for exactly this reason).
-4. **Profile close and profile reset clean up.** Every command created by a
+4. **Profile close, profile reset and uninstalling clean up.** Every command created by a
    profile is removed when that profile closes *or* resets, without the
    package's involvement - a reset takes the Lua state with it, so the ids
    the package was holding die there and the commands must not outlive them.
+   Uninstalling a package or module removes the commands its code created:
+   the code that held their ids and answered their clicks is gone, and
+   nothing else knows to remove them. Reloading a module does not, since it
+   comes straight back with its Lua state, ids included - but updating a
+   package uninstalls it first, so a package must not keep a command's id
+   across its own uninstall and skip `addCommand` when installed again. The Lua that called
+   `addCommand` decides: one of the package's items, a function one of them
+   defined (an event handler, a timer closure), or a file in the folder
+   Mudlet unpacked the package into. Commands made from the command line, a profile's own items, code
+   compiled from a string (a string-code `tempTimer`, `loadstring`), or a
+   function whose item shares its name with another package's item or
+   one of the profile's belong to no package and stay - unless it is a
+   script's own body, or a function that body calls directly while it runs. A library package's helper
+   that calls `addCommand` for its callers makes commands that are the
+   library's.
 5. **Cycles leave no residue.** Repeated add/remove must not accumulate
    toolbar spacing, separators, or menu entries; emptied `menuPath` submenus
    disappear.

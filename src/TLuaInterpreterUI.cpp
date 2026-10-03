@@ -55,6 +55,7 @@
 #include "mudlet.h"
 
 #include <array>
+#include <cstring>
 #include <limits>
 #include <math.h>
 
@@ -4662,6 +4663,38 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
     return 1;
 }
 
+// Of same-named items, the running script owns its body and what that body calls
+// directly - not what it reaches through a C function such as raiseEvent()
+static QString packageOfFrame(lua_State* L, Host& host, const int level, const lua_Debug& frame)
+{
+    const QString source = QString::fromUtf8(frame.source);
+    const bool fromRunningScript = source == host.mRunningScript.chunkName;
+    if (fromRunningScript && !std::strcmp(frame.what, "main")) {
+        return host.mRunningScript.package;
+    }
+    const QSet<QString> owners = host.packagesOwningChunk(source);
+    if (owners.size() == 1) {
+        return *owners.constBegin();
+    }
+    if (fromRunningScript && owners.contains(host.mRunningScript.package)) {
+        lua_Debug caller;
+        for (int below = level + 1; lua_getstack(L, below, &caller) && lua_getinfo(L, "S", &caller); ++below) {
+            if (!caller.what || !caller.source || source != QString::fromUtf8(caller.source)) {
+                break;
+            }
+            if (!std::strcmp(caller.what, "main")) {
+                return host.mRunningScript.package;
+            }
+        }
+    }
+    if (owners.size() > 1 && TDebug::wants(TDebug::Category::LuaWarning)) {
+        TDebug(Qt::black, Qt::yellow, TDebug::Category::LuaWarning) << "addCommand: the code that called it could belong to any of " << QStringList(owners.cbegin(), owners.cend()).join(qsl(", "))
+                                                                    << " (an empty name is the profile), so this command will not be removed when a package is uninstalled\n"
+                >> &host;
+    }
+    return {};
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommand
 int TLuaInterpreter::addCommand(lua_State* L)
 {
@@ -4781,8 +4814,22 @@ int TLuaInterpreter::addCommand(lua_State* L)
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
+    // The nearest Lua frame decides: further up, a command typed through the
+    // "lua" alias would belong to whichever package provides that alias
+    QString package;
+    lua_Debug frame;
+    for (int level = 1; lua_getstack(L, level, &frame); ++level) {
+        if (!lua_getinfo(L, "S", &frame) || !frame.what || !std::strcmp(frame.what, "C")) {
+            continue;
+        }
+        if (frame.source) {
+            package = packageOfFrame(L, host, level, frame);
+        }
+        break;
+    }
+
     QString error;
-    const int commandId = pMudlet->addAddonCommand(request, &host, error);
+    const int commandId = pMudlet->addAddonCommand(request, &host, package, error);
     if (commandId < 0) {
         return warnArgumentValue(L, __func__, error.isEmpty() ? qsl("the command could not be placed") : error);
     }

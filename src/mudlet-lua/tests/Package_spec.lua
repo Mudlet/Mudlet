@@ -3187,6 +3187,223 @@ describe("Tests installing a module whose XML cannot be read", function()
   end)
 end)
 
+-- Once a package is gone nothing knows its commands' ids, so whatever its Lua
+-- placed has to go with it: left behind, a command stays on screen, keeps
+-- raising sysCommandClicked, and holds its shortcut against the same package's
+-- command when it is installed again.
+describe("Tests that uninstalling takes the addon commands it made", function()
+  local shortcut = "Ctrl+Alt+Shift+F11"
+
+  local function scriptXml(scriptName, code)
+    return '<Script isActive="yes" isFolder="no"><name>' .. scriptName .. '</name><packageName></packageName>'
+      .. "<script>" .. code .. "</script><eventHandlerList/></Script>"
+  end
+
+  local function scratchXml(name, body)
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    writePackageXml(path, body)
+    return path
+  end
+
+  -- Removed whatever happens, so a regression does not leave the key taken for
+  -- every spec after this one
+  local function forgetCommand(id)
+    if type(id) == "number" then
+      removeCommand(id)
+    end
+  end
+
+  local function placeCommand(globalName, label, withShortcut)
+    return globalName .. ' = addCommand{name = "' .. label .. '", menuPath = "MudletSpec"'
+      .. (withShortcut and (', shortcut = "' .. shortcut .. '"') or "") .. "}"
+  end
+
+  local function withScratchPackage(name, path, globals)
+    defer(function()
+      for _, global in ipairs(globals) do
+        forgetCommand(_G[global])
+        _G[global] = nil
+      end
+      removeFixturePackage(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the package " .. name)
+  end
+
+  it("removes a package's command, and lets the package have it back when reinstalled", function()
+    local name = "mudlet-spec-command"
+    local path = scratchXml(name, "<ScriptPackage>" .. scriptXml(name .. " script", placeCommand("mudletSpecPackageCommand", "mudlet-spec command", true)) .. "</ScriptPackage>")
+    local first
+    defer(function() forgetCommand(first) end)
+    withScratchPackage(name, path, {"mudletSpecPackageCommand"})
+    first = mudletSpecPackageCommand
+    assert.is_number(first, "the package's script could not place its command")
+
+    _G.mudletSpecPackageCommand = nil
+    removeFixturePackage(name)
+    assert.is_false(removeCommand(first), "the command outlived the package that made it")
+
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the command package, again")
+    assert.is_number(mudletSpecPackageCommand, "the reinstalled package could not place its command - the old one still holds the shortcut")
+  end)
+
+  -- Each of these is a different way for a package's code to be the caller:
+  -- a closure its script left behind, an alias, a trigger, a call through a C
+  -- function, and a file in the package's folder. Code a package merely runs
+  -- for someone else - here, Lua typed at a prompt the package provides - is
+  -- that someone's, which is why only the nearest Lua frame is asked.
+  it("removes the commands each kind of the package's code made, and only those", function()
+    local name = "mudlet-spec-command-kinds"
+    local trigger = "mudlet spec command kinds trigger"
+    local path = scratchXml(name, table.concat({
+      "<TriggerPackage>",
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      "<name>" .. name .. " trigger</name>",
+      "<script>" .. placeCommand("mudletSpecTriggerCommand", "mudlet-spec trigger command") .. "</script>",
+      "<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>",
+      "<mCommand></mCommand><packageName></packageName>",
+      "<regexCodeList><string>" .. trigger .. "</string></regexCodeList>",
+      "<regexCodePropertyList><integer>0</integer></regexCodePropertyList>",
+      "</Trigger>",
+      "</TriggerPackage>",
+      "<AliasPackage>",
+      '<Alias isActive="yes" isFolder="no">',
+      "<name>" .. name .. " alias</name><packageName></packageName>",
+      "<script>" .. placeCommand("mudletSpecAliasCommand", "mudlet-spec alias command") .. "</script>",
+      "<command></command><regex>^" .. name .. "$</regex>",
+      "</Alias>",
+      "</AliasPackage>",
+      "<ScriptPackage>",
+      scriptXml(name .. " script", table.concat({
+        'mudletSpecHandler = registerAnonymousEventHandler("mudletSpecMakeCommand", function() '
+          .. placeCommand("mudletSpecHandlerCommand", "mudlet-spec handler command") .. " end)",
+        'mudletSpecPcallCommand = select(2, pcall(addCommand, {name = "mudlet-spec pcall command", menuPath = "MudletSpec"}))',
+        -- not a tail call, which would take this function's own frame off the stack
+        "function mudletSpecRunTyped(code) local typed = assert(loadstring(code)) typed() end",
+        -- a tail call into a C function leaves the caller's frame where it was
+        'function mudletSpecTail() return addCommand{name = "mudlet-spec tail command", menuPath = "MudletSpec"} end',
+      }, "\n")),
+      "</ScriptPackage>",
+    }, "\n"))
+    local globals = {"mudletSpecTriggerCommand", "mudletSpecAliasCommand", "mudletSpecHandlerCommand",
+                     "mudletSpecPcallCommand", "mudletSpecFileCommand", "mudletSpecTypedCommand",
+                     "mudletSpecTailCommand"}
+    defer(function()
+      if mudletSpecHandler then
+        killAnonymousEventHandler(mudletSpecHandler)
+      end
+      _G.mudletSpecHandler, _G.mudletSpecRunTyped, _G.mudletSpecTail = nil, nil, nil
+    end)
+    withScratchPackage(name, path, globals)
+
+    raiseEvent("mudletSpecMakeCommand")
+    expandAlias(name, false)
+    feedTriggers("\n" .. trigger .. "\n")
+    pumpEvents(50)
+    local folder = getMudletHomeDir() .. "/" .. name
+    lfs.mkdir(folder)
+    local file = io.open(folder .. "/command.lua", "wb")
+    assert.is_not_nil(file, "could not write into the package's folder")
+    file:write(placeCommand("mudletSpecFileCommand", "mudlet-spec file command"))
+    file:close()
+    dofile(folder .. "/command.lua")
+    mudletSpecRunTyped(placeCommand("mudletSpecTypedCommand", "mudlet-spec typed command"))
+    _G.mudletSpecTailCommand = mudletSpecTail()
+
+    local ids = {}
+    for _, global in ipairs(globals) do
+      assert.is_number(_G[global], global .. " was never placed")
+      ids[global] = _G[global]
+    end
+
+    removeFixturePackage(name)
+
+    for _, global in ipairs(globals) do
+      if global ~= "mudletSpecTypedCommand" then
+        assert.is_false(removeCommand(ids[global]), global .. " outlived the package whose code made it")
+      end
+    end
+    assert.is_true(removeCommand(ids.mudletSpecTypedCommand), "a command typed through the package's prompt was taken as the package's")
+  end)
+
+  -- Packages name scripts after their files, so "init" in one package and in
+  -- the profile is ordinary - and must neither cost the package its cleanup
+  -- nor take the profile's command with it.
+  it("tells a package's script from a profile script of the same name", function()
+    local name = "mudlet-spec-command-collide"
+    local scriptName = name .. " script"
+    -- The profile's handler is reached from the package's body through
+    -- raiseEvent(), so it runs while a script of its own name is being compiled
+    permScript(scriptName, "", placeCommand("mudletSpecProfileCommand", "mudlet-spec profile command") .. "\n"
+      .. 'mudletSpecProfileHandler = registerAnonymousEventHandler("mudletSpecCollideEvent", function() '
+      .. placeCommand("mudletSpecProfileHandlerCommand", "mudlet-spec profile handler command") .. " end)")
+    defer(function()
+      forgetCommand(mudletSpecProfileCommand)
+      forgetCommand(mudletSpecProfileHandlerCommand)
+      if mudletSpecProfileHandler then
+        killAnonymousEventHandler(mudletSpecProfileHandler)
+      end
+      _G.mudletSpecProfileCommand, _G.mudletSpecProfileHandlerCommand, _G.mudletSpecProfileHandler = nil, nil, nil
+      disableScript(scriptName)
+    end)
+    assert.is_number(mudletSpecProfileCommand, "the profile's script could not place its command")
+    local path = scratchXml(name, "<ScriptPackage>" .. scriptXml(scriptName, table.concat({
+      placeCommand("mudletSpecCollideCommand", "mudlet-spec collide command"),
+      "local function place() " .. placeCommand("mudletSpecCollideLocalCommand", "mudlet-spec collide local command") .. " end",
+      "place()",
+      'raiseEvent("mudletSpecCollideEvent")',
+    }, "\n")) .. "</ScriptPackage>")
+    withScratchPackage(name, path, {"mudletSpecCollideCommand", "mudletSpecCollideLocalCommand"})
+    local packageCommand = mudletSpecCollideCommand
+    local localCommand = mudletSpecCollideLocalCommand
+    local handlerCommand = mudletSpecProfileHandlerCommand
+    assert.is_number(packageCommand, "the package's script could not place its command")
+    assert.is_number(localCommand, "the package's local function could not place its command")
+    assert.is_number(handlerCommand, "the profile's handler never placed its command")
+
+    removeFixturePackage(name)
+
+    assert.is_false(removeCommand(packageCommand), "the package's command outlived it because a profile script shares its script's name")
+    assert.is_false(removeCommand(localCommand), "a command from a function the package's body called outlived the package")
+    assert.is_true(removeCommand(mudletSpecProfileCommand), "uninstalling the package removed the profile's command")
+    assert.is_true(removeCommand(handlerCommand), "uninstalling the package removed a command the profile's handler made during the package's install")
+  end)
+
+  -- A reload brings the module straight back with its Lua state, so a command
+  -- it made once and kept the id of is not made again and has to survive
+  it("keeps a module's command through a reload, and removes it with the module", function()
+    local name = "mudlet-spec-command-module"
+    local path = scratchXml(name, "<ScriptPackage>" .. scriptXml(name .. " script",
+      "mudletSpecModuleLoads = (mudletSpecModuleLoads or 0) + 1 "
+      .. 'mudletSpecModuleCommand = mudletSpecModuleCommand or addCommand{name = "mudlet-spec module command", menuPath = "MudletSpec", shortcut = "' .. shortcut .. '"}')
+      .. "</ScriptPackage>")
+    defer(function()
+      forgetCommand(mudletSpecModuleCommand)
+      _G.mudletSpecModuleCommand, _G.mudletSpecModuleLoads = nil, nil
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the command module")
+    local id = mudletSpecModuleCommand
+    assert.is_number(id, "the module's script could not place its command")
+
+    local loads = mudletSpecModuleLoads
+    reloadModuleUntil(name, function() return mudletSpecModuleLoads > loads end)
+    assert.is_true(enableCommand(id), "reloading the module removed the command it keeps the id of")
+
+    loads = mudletSpecModuleLoads
+    removeFixtureModule(name)
+    -- a reload postponed by a profile save could otherwise be what removed it
+    assert.equals(loads, mudletSpecModuleLoads, "the module was reloaded while being removed")
+    assert.is_false(enableCommand(id), "the command outlived the module that made it")
+  end)
+end)
+
 describe("The package specs clean up after themselves", function()
   it("leaves no fixture package, module or folder behind", function()
     for _, name in ipairs(getPackages()) do

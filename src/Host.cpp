@@ -47,7 +47,12 @@
 #include "TMapViewManager.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
 #include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
 #include "utils.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
@@ -64,6 +69,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFileInfo>
 #include <QFontInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -73,6 +79,7 @@
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSet>
 #include <QScopeGuard>
 #include <QSettings>
 #include <QTemporaryFile>
@@ -3569,6 +3576,92 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
+QSet<QString> Host::packagesOwningChunk(const QString& chunkName)
+{
+    // A file loaded with dofile() or require() is named "@" and its path
+    if (chunkName.startsWith(QLatin1Char('@'))) {
+        const QString package = packageOwningFile(chunkName.mid(1));
+        return package.isEmpty() ? QSet<QString>() : QSet<QString>{package};
+    }
+
+    const qsizetype separator = chunkName.indexOf(qsl(": "));
+    if (separator < 0) {
+        return {};
+    }
+    const QStringView kind = QStringView(chunkName).left(separator);
+    const QString name = chunkName.mid(separator + 2);
+
+    QSet<QString> owners;
+    // Disabled items count: their code may already have run, and permScript()
+    // makes them disabled. Items with no code, like a package's folder, do not.
+    auto addOwner = [&owners](auto* item) {
+        if (!item || item->isTemporary() || item->getScript().isEmpty()) {
+            return;
+        }
+        auto* root = item;
+        while (root->getParent()) {
+            root = root->getParent();
+        }
+        owners.insert(root->mPackageName);
+    };
+
+    if (kind == u"Script") {
+        for (const int id : mScriptUnit.findItems(name)) {
+            addOwner(mScriptUnit.getScript(id));
+        }
+    } else if (kind == u"Trigger") {
+        for (const int id : mTriggerUnit.findItems(name)) {
+            addOwner(mTriggerUnit.getTrigger(id));
+        }
+    } else if (kind == u"Alias") {
+        for (const int id : mAliasUnit.findItems(name, true, true)) {
+            addOwner(mAliasUnit.getAlias(id));
+        }
+    } else if (kind == u"Timer") {
+        for (const int id : mTimerUnit.findItems(name)) {
+            addOwner(mTimerUnit.getTimer(id));
+        }
+    } else if (kind == u"Key") {
+        for (const int id : mKeyUnit.findItems(name, true, true)) {
+            addOwner(mKeyUnit.getKey(id));
+        }
+    } else if (kind == u"Button") {
+        for (const int id : mActionUnit.findItems(name)) {
+            addOwner(mActionUnit.getAction(id));
+        }
+    }
+    return owners;
+}
+
+QString Host::packageOwningFile(const QString& fileName)
+{
+    // Only the folder Mudlet unpacked a package into: a module file can sit
+    // anywhere, and the folder around it may hold the player's own Lua
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    const Qt::CaseSensitivity caseSensitivity = Qt::CaseInsensitive;
+#else
+    const Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive;
+#endif
+    auto canonical = [](const QString& path) {
+        const QString resolved = QFileInfo(path).canonicalFilePath();
+        return resolved.isEmpty() ? QDir::cleanPath(QDir(path).absolutePath()) : resolved;
+    };
+    const QString path = canonical(QDir::fromNativeSeparators(fileName));
+    const QString profileHome = canonical(MudletApp::getMudletPath(enums::profileHomePath, getName())) + QLatin1Char('/');
+    if (!path.startsWith(profileHome, caseSensitivity)) {
+        return {};
+    }
+    const QString folder = path.mid(profileHome.size()).section(QLatin1Char('/'), 0, 0);
+    QStringList candidates = mInstalledPackages;
+    candidates << mInstalledModules.keys();
+    for (const QString& name : candidates) {
+        if (!name.compare(folder, caseSensitivity)) {
+            return name;
+        }
+    }
+    return {};
+}
+
 void Host::removePackageInfo(const QString& packageName, const bool isModule)
 {
     if (isModule) {
@@ -3693,6 +3786,11 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
+    // Not for a ModuleSync, which brings the module back with its Lua state and
+    // ids - unless the name is also a package's, which a sync removes for good.
+    if (thing != enums::PackageModuleType::ModuleSync || installedBothWays) {
+        emit signal_packageRemoved(packageName);
+    }
     if (auto* fonts = FontManager::self()) {
         fonts->unloadFonts(getName(), packageName);
     }
