@@ -1553,6 +1553,21 @@ describe("Tests Other.lua functions", function()
       restore("mapRoomSize")
     end)
 
+    it("refuses a mapRoomSize below 1", function()
+      assert.is_true(openMapWidget(), "mapRoomSize cannot be set without the map widget")
+      snapshot("mapRoomSize")
+      finally(function() restore("mapRoomSize") end)
+      assert.is_true(setConfig("mapRoomSize", 7))
+      for _, size in ipairs({0, -3}) do
+        local ok, err = setConfig("mapRoomSize", size)
+        assert.is_nil(ok)
+        assert.equals("mapRoomSize must be at least 1, got " .. size, err)
+        assert.equals(7, getConfig("mapRoomSize"))
+      end
+      assert.is_true(setConfig("mapRoomSize", 1))
+      assert.equals(1, getConfig("mapRoomSize"))
+    end)
+
     it("validates the undoServerWrapWidth range when the option exists", function()
       if getConfig("undoServerWrapWidth") == nil then
         -- option not present in this build; setting it is rejected as unknown
