@@ -1387,8 +1387,8 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
 
         // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
         // console (as for an ordinary miniconsole) leaves the dock orphaned in
-        // the dock map with a now-null widget(), which later crashes - e.g. in
-        // getUserWindowSize() - when a window of the same name is recreated. Tear
+        // the dock map with a now-null widget(), which later crashes when a
+        // window of the same name is recreated. Tear
         // the dock down too; it owns the console as its child widget and deletes
         // it along with itself (mirrors the shutdown path in TConsole::closeEvent).
         if (pConsole->getType() == TConsole::UserWindow) {
