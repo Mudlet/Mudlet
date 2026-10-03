@@ -7250,6 +7250,10 @@ void mudlet::slot_replayStarted()
     mpTimerReplay->setSingleShot(false);
     connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::updateReplayTimeLabel);
 
+    // As wide as the readout gets while paused: otherwise pausing pushes the
+    // buttons along, and a second click meant for Resume lands on the label
+    mpLabelReplayTime->setText(replayTimeLabelText(QTime(0, 0).toString(mTimeFormat), true));
+    mpLabelReplayTime->setMinimumWidth(mpLabelReplayTime->sizeHint().width());
     updateReplayTimeLabel();
 
     mpLabelReplaySpeedDisplay->show();
@@ -7269,16 +7273,23 @@ void mudlet::updateReplayTimeLabel()
         return;
     }
 
-    //: Elapsed time readout on the replay toolbar. %1 is the time itself
-    QString text = tr("Time: %1").arg(mReplay.elapsed().toString(mTimeFormat));
     // A replay can be quiet for long stretches, so read "held" from the profile, not the button, to report
     // what playback is actually doing:
-    if (Host* pHost = mReplay.host(); pHost && pHost->mTelnet.replayPaused()) {
+    Host* pHost = mReplay.host();
+    const bool paused = pHost && pHost->mTelnet.replayPaused();
+    mpLabelReplayTime->setText(replayTimeLabelText(mReplay.elapsed().toString(mTimeFormat), paused));
+    mpLabelReplayTime->show();
+}
+
+QString mudlet::replayTimeLabelText(const QString& time, const bool paused) const
+{
+    //: Elapsed time readout on the replay toolbar. %1 is the time itself
+    QString text = tr("Time: %1").arg(time);
+    if (paused) {
         //: Replaces the elapsed-time readout on the replay toolbar while the replay is held. %1 is the already translated and formatted "Time: ..." text, so do not add a time prefix of your own
         text = tr("%1 (paused)").arg(text);
     }
-    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(text));
-    mpLabelReplayTime->show();
+    return qsl("<font size=25><b>%1</b></font>").arg(text);
 }
 
 void mudlet::slot_replayPauseToggled(const bool paused)

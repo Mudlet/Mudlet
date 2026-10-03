@@ -605,6 +605,7 @@ private:
     bool toolBarShouldBeVisible();
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
+    QString replayTimeLabelText(const QString& time, const bool paused) const;
     dlgTriggerEditor* createMudletEditor();
     static void showEditorRestoringWindowState(QWidget* editor);
 

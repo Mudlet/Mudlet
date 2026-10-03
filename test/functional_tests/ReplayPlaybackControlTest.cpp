@@ -313,6 +313,33 @@ private slots:
         QTRY_VERIFY(bufferContains(qsl("REPLAY_THREE")));
     }
 
+    // The readout gains "(paused)" while held, and a button that moved along
+    // for it would leave a second click meant for Resume on the label
+    void pausingLeavesTheButtonsWhereTheyAre()
+    {
+        const QString file = writeThreeChunkReplay(qsl("buttonsstay.dat"));
+        QVERIFY(!file.isEmpty());
+        QVERIFY(MudletReplay::self()->load(mpHost, file));
+
+        QAction* pause = replayAction(qsl("replay_pause_action"));
+        QToolBar* toolBar = replayToolBar();
+        QVERIFY(pause && toolBar);
+        QWidget* pauseButton = toolBar->widgetForAction(pause);
+        QWidget* stopButton = toolBar->widgetForAction(replayAction(qsl("replay_stop_action")));
+        QVERIFY(pauseButton && stopButton);
+        QTRY_VERIFY(pauseButton->isVisible() && pauseButton->x() > 0);
+        const int pauseBefore = pauseButton->x();
+        const int stopBefore = stopButton->x();
+
+        pause->trigger();
+        QVERIFY(replayTimeLabel() && replayTimeLabel()->text().contains(qsl("(paused)")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QCoreApplication::processEvents();
+
+        QCOMPARE(pauseButton->x(), pauseBefore);
+        QCOMPARE(stopButton->x(), stopBefore);
+    }
+
     // Resuming waits out what was left of the interrupted gap, not the whole of
     // it again. Nothing else here can tell those apart: both end with the chunk
     // arriving, they just differ by seconds.
