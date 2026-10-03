@@ -303,7 +303,7 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
         QPoint P(buffer.buffer.at(lineBeforeNewContent).size(), lineBeforeNewContent);
         const TChar format(mCommandFgColor, mCommandBgColor);
         buffer.insertInLine(P, msg, format);
-        const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        const int down = buffer.wrapLine(lineBeforeNewContent);
         buffer.promptBuffer[lineBeforeNewContent] = false;
         return {CommandEcho::Kind::PromptLine, lineBeforeNewContent, lineBeforeNewContent + 1 + down};
     }
@@ -431,7 +431,7 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
     int newX = mUserCursor.x() + text.size();
     int down = 0;
     if (text.indexOf(QChar::LineFeed) != -1) {
-        down = buffer.wrapLine(line, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        down = buffer.wrapLine(line);
         newX = std::max(0, static_cast<int>(text.size() - text.lastIndexOf(QChar::LineFeed) - 1));
     }
     QPoint newCursor(newX, line + down);
@@ -485,7 +485,7 @@ TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
     const int line = mUserCursor.y();
     int down = 0;
     if (text.indexOf(QChar::LineFeed) != -1) {
-        down = buffer.wrapLine(line, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        down = buffer.wrapLine(line);
     }
     return {false, line, line + down};
 }
