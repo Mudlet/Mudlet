@@ -5908,6 +5908,10 @@ std::pair<bool, QString> T2DMap::setMapZoom(const qreal zoom, const int areaId)
         return {false, qsl("no map loaded or no active mapper")};
     }
 
+    if (!qIsFinite(zoom)) {
+        return {false, qsl("zoom %1 is invalid, it must be a finite number").arg(QString::number(zoom))};
+    }
+
     if (zoom < TMap::scmMinXYZoom) {
         // That zoom level is too small:
         // We need to set a non-default precision as otherwise in the corner
