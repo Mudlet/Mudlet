@@ -164,16 +164,6 @@ static QString noEngineMessage()
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
 
-// A failed load leaves no model, and model-less backends never have one, so
-// "reload" is said only when there is one
-static QString errorStateStartMessage(const SpeechRecognizer* pRecognizer)
-{
-    if (pRecognizer->modelPath().isEmpty()) {
-        return qsl("speech recognition is in an error state - call stt.init() before listening again");
-    }
-    return qsl("speech recognition is in an error state - reload the model with stt.init() before listening again");
-}
-
 // words follows a symbol resolved from the library, so unloading or reloading it
 // changes what the backend can do without anything else happening. Announced
 // here because docs/stt-api.md tells consumers to re-read capabilities on a
@@ -569,14 +559,6 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
-    // Before initialized(), which is false in Error too. Reported to the caller:
-    // the fault took the microphone claim, so there is no owner to route by.
-    if (pRecognizer->state() == SpeechRecognizer::State::Error) {
-        const QString message = errorStateStartMessage(pRecognizer);
-        reportSpeechRefusalTo(getHostFromLua(L), message);
-        return warnArgumentValue(L, funcName, message);
-    }
-
     if (!pRecognizer->initialized()) {
         const QString message = qsl("speech recognizer not initialized with a model - call stt.init() first");
         reportSpeechRefusal(message);
@@ -732,12 +714,6 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     pMudlet->initSpeechRecognition(onDemandSpeechBackend());
 
     auto* pRecognizer = pMudlet->speechRecognizer();
-    // Asked first, as in stt.start()
-    if (pRecognizer && pRecognizer->state() == SpeechRecognizer::State::Error) {
-        const QString message = errorStateStartMessage(pRecognizer);
-        reportSpeechRefusalTo(getHostFromLua(L), message);
-        return warnArgumentValue(L, funcName, message);
-    }
     if (!pRecognizer || !pRecognizer->initialized()) {
         const QString message = pRecognizer ? qsl("speech recognizer not initialized - call stt.init() first") : noEngineMessage();
         reportSpeechRefusal(message);

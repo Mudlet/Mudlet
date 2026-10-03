@@ -76,28 +76,22 @@ fi
 # libxcb-shape0, which Ubuntu's own Qt would have pulled in), gstreamer for
 # Qt Multimedia, and the docs/demo-videos.md toolchain (openbox, xdotool,
 # imagemagick, ffmpeg) for driving and recording the real UI headlessly.
-TEST_PACKAGES=(
-  xvfb
-  libgstreamer-plugins-base1.0-0
-  libxcb-cursor0
-  libxcb-icccm4
-  libxcb-image0
-  libxcb-keysyms1
-  libxcb-render-util0
-  libxcb-shape0
-  libxcb-xinerama0
-  xdotool
-  openbox
-  imagemagick
-  ffmpeg
-)
-# Every package is asked about, as some of them arrive with unrelated packages.
-# Not fatal: the steps after this one do not need any of them.
-if ! dpkg -s "${TEST_PACKAGES[@]}" >/dev/null 2>&1; then
+if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
   echo "Installing test-suite apt dependencies..."
-  { ${SUDO} apt-get update -qq \
-    && DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${TEST_PACKAGES[@]}"; } \
-    || echo "WARNING: could not install the test-suite apt dependencies"
+  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends \
+    xvfb \
+    libgstreamer-plugins-base1.0-0 \
+    libxcb-cursor0 \
+    libxcb-icccm4 \
+    libxcb-image0 \
+    libxcb-keysyms1 \
+    libxcb-render-util0 \
+    libxcb-shape0 \
+    libxcb-xinerama0 \
+    xdotool \
+    openbox \
+    imagemagick \
+    ffmpeg
 fi
 
 # gcovr and jq for the improve-test-coverage skill. Guarded separately so
@@ -155,24 +149,6 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
     echo "export LUA_PATH='${LUA_PATH}'"
     echo "export LUA_CPATH='${LUA_CPATH}'"
   } >> "${CLAUDE_ENV_FILE}"
-fi
-
-# Let worktrees share ccache hits: base_dir makes paths below it relative, so
-# it is the main checkout's parent - never / or above /opt/qt and /usr, whose
-# include paths would then differ with worktree depth. hash_dir off keeps each
-# worktree's build directory out of the hash of a -g build. Both are global.
-CHECKOUT_ROOT=""
-if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
-  CHECKOUT_ROOT="$(cd "${CLAUDE_PROJECT_DIR}" && cd "$(git rev-parse --git-common-dir)/.." && pwd)" || CHECKOUT_ROOT=""
-fi
-CCACHE_BASE_DIR=""
-if [ -n "${CHECKOUT_ROOT}" ]; then
-  CCACHE_BASE_DIR="$(dirname "${CHECKOUT_ROOT}")"
-fi
-if command -v ccache >/dev/null 2>&1 && [ -n "${CCACHE_BASE_DIR}" ] && [ "${CCACHE_BASE_DIR}" != "/" ]; then
-  ccache --set-config=base_dir="${CCACHE_BASE_DIR}" \
-    && ccache --set-config=hash_dir=false \
-    || echo "WARNING: could not configure ccache for sharing between worktrees"
 fi
 
 # PR-review tooling for the agent. Installed at user scope, so it lands in

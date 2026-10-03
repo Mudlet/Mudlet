@@ -99,9 +99,11 @@ public:
             // without a state change.
             //
             // The first two are unreachable from Lua as things stand:
-            // sttStart() and sttToggle() refuse both states first and answer
-            // in their own words. Kept for a direct C++ caller, and because a
-            // bridge that stopped pre-gating would need them.
+            // sttStart() and sttToggle() both refuse on !initialized() first,
+            // which is exactly Uninitialized-or-Error, and answer in their own
+            // words. Kept for a direct C++ caller, and because a bridge that
+            // stopped pre-gating would need them - but nothing translated here
+            // reaches a player through those two paths today.
             if (state() == State::Uninitialized) {
                 //: Shown when speech recognition is asked to listen before a language model is loaded
                 emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
