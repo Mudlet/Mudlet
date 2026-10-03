@@ -152,6 +152,22 @@ private slots:
         assertVisibility(mpBackgroundHost, mLabelName, true, qsl("a label shown again on a backgrounded profile"));
     }
 
+    // A backgrounded profile's widgets are all invisible, so setWindow() moving a label into one
+    // shows it without the ShowToParent that would report it
+    void test_backgroundProfileFollowsALabelOutOfAHiddenScrollBox()
+    {
+        const QString scrollBox = qsl("wsgHiddenScrollBox");
+        const QString label = qsl("wsgMovedLabel");
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createScrollBox('%1', 0, 300, 100, 50)\n"
+                                                                           "createLabel('%1', '%2', 0, 0, 40, 20, 1)\n"
+                                                                           "hideWindow('%1')")
+                                                                               .arg(scrollBox, label));
+        assertVisibility(mpBackgroundHost, label, false, qsl("a label in a hidden scroll box"));
+
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindow('main', '%1', 0, 0, false)").arg(label));
+        assertVisibility(mpBackgroundHost, label, true, qsl("a label moved out of a hidden scroll box without being shown"));
+    }
+
     void test_frontProfileReportsEveryElementTypeAsVisible()
     {
         buildElements(mpFrontHost);
