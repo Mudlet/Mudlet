@@ -35,7 +35,7 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QRegularExpression>
-#include <QSet>
+#include <QHash>
 #include <QtConcurrentRun>
 
 #include <zip.h>
@@ -176,21 +176,39 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
     const QString homePath = MudletApp::getMudletPath(enums::profileHomePath, profileName);
     const QDir home(homePath);
     const QString archiveCanonical = QFileInfo(mArchivePathFileName).canonicalFilePath();
+    const QString profilesCanonical = QFileInfo(MudletApp::getMudletPath(enums::profilesPath)).canonicalFilePath();
 
     // Keyed by the path inside the profile folder; the values are where to read
     // each one from on disk.
     QMap<QString, QString> files;
-    QSet<QString> included;
+    // Files a save can rewrite are read now rather than when libzip gets to them,
+    // as another save may well land while the archive is compressed
+    QMap<QString, QByteArray> blobs;
+    auto snapshot = [&files, &blobs](const QString& name, const QString& path) {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            files.insert(name, path);
+            return;
+        }
+        blobs.insert(name, file.readAll());
+        files.remove(name);
+    };
+    QHash<QString, QString> included;
     QDirIterator walk(homePath, QDir::Files | QDir::Hidden | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
     while (walk.hasNext()) {
         const QString path = walk.next();
         const QString relative = home.relativeFilePath(path);
         const QString canonical = walk.fileInfo().canonicalFilePath();
-        if (leftBehind(relative) || (!archiveCanonical.isEmpty() && canonical == archiveCanonical)) {
+        if (canonical.isEmpty() || leftBehind(relative) || canonical == archiveCanonical) {
+            continue;
+        }
+        // A link is archived as what it points at, so that is what has to pass
+        if (walk.fileInfo().isSymLink() && !profilesCanonical.isEmpty() && canonical.startsWith(profilesCanonical + QLatin1Char('/'))
+            && leftBehind(canonical.mid(profilesCanonical.size() + 1).section(QLatin1Char('/'), 1))) {
             continue;
         }
         files.insert(relative, path);
-        included.insert(canonical);
+        included.insert(canonical, relative);
     }
 
     const QFileInfo profileXml(profileXmlPathFileName);
@@ -201,11 +219,10 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
         finish(false, tr("The profile could not be saved to \"%1\" - check that the disk has room and the folder can be written to.").arg(profileXmlPathFileName));
         return;
     }
-    files.insert(qsl("current/%1").arg(profileXml.fileName()), profileXml.absoluteFilePath());
+    snapshot(qsl("current/%1").arg(profileXml.fileName()), profileXml.absoluteFilePath());
 
     // Mudlet Web looks for each module at "<name>/<its file name>". Desktop reloads an
     // archive module from its archive, so that goes; the unpacked copy covers a lost one.
-    QMap<QString, QByteArray> blobs;
     for (const auto& [moduleName, entry] : mpHost->mInstalledModules.asKeyValueRange()) {
         const QString source = entry.value(0);
         const QFileInfo sourceInfo(source);
@@ -223,19 +240,11 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
             mWarnings << tr("Module \"%1\" was left out: its name is one Mudlet Web keeps for the profile's own folders.").arg(moduleName);
             continue;
         }
-        if (included.contains(sourceInfo.canonicalFilePath())) {
+        if (const QString inProfile = included.value(sourceInfo.canonicalFilePath()); !inProfile.isEmpty()) {
+            snapshot(inProfile, sourceInfo.absoluteFilePath());
             continue;
         }
-        if (isArchive(source)) {
-            // Read now, not when libzip gets to it: a synced module's archive is
-            // rewritten by any save, and one may well land during compression
-            QFile archiveFile(sourceInfo.absoluteFilePath());
-            if (archiveFile.open(QIODevice::ReadOnly)) {
-                blobs.insert(target, archiveFile.readAll());
-                continue;
-            }
-        }
-        files.insert(target, sourceInfo.absoluteFilePath());
+        snapshot(target, sourceInfo.absoluteFilePath());
     }
 
     // The map in memory carries what was mapped since the last autosave. An empty one
@@ -243,9 +252,13 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
     const QString mapStamp = QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"));
     if (!mpHost->mpMap || !mpHost->mpMap->mpRoomDB || mpHost->mpMap->mpRoomDB->size() == 0) {
         if (!mpHost->mpMap || !mpHost->mpMap->isUnsaved()) {
+            // The same files TMap::restore() picks from, as it only tries the newest
             const QDir mapDir(MudletApp::getMudletPath(enums::profileMapsPath, profileName));
-            const QFileInfoList maps = mapDir.entryInfoList({qsl("*.dat")}, QDir::Files, QDir::Time);
-            if (!maps.isEmpty()) {
+            const QFileInfoList maps = mapDir.entryInfoList({qsl("*.[dD][aA][tT]"), qsl("*.[jJ][sS][oO][nN]")}, QDir::Files, QDir::Time);
+            if (!maps.isEmpty() && maps.first().suffix().compare(qsl("json"), Qt::CaseInsensitive) == 0) {
+                //: Listed after exporting a profile for Mudlet Web. %1 is the map file.
+                mWarnings << tr("The map was left out: its newest file, \"%1\", is a JSON map, which Mudlet Web cannot import.").arg(maps.first().fileName());
+            } else if (!maps.isEmpty()) {
                 files.insert(qsl("map/%1").arg(maps.first().fileName()), maps.first().absoluteFilePath());
             }
         }
@@ -310,8 +323,8 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
     }
 
     // libzip reads the files and compresses them only now, which for a profile
-    // with sound packs is a long time to hold up the interface. The buffers the
-    // map was added from have to outlive that, so the task holds them.
+    // with sound packs is a long time to hold up the interface. The buffers
+    // added above have to outlive that, so the task holds them.
     auto watcher = new QFutureWatcher<QString>(this);
     connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher]() {
         const QString error = watcher->result();

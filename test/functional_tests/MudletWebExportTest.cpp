@@ -26,7 +26,9 @@
 
 #include <QtTest/QtTest>
 
+#include <QSemaphore>
 #include <QTemporaryDir>
+#include <QThreadPool>
 #include <chrono>
 #include <zip.h>
 
@@ -359,6 +361,63 @@ private slots:
         QFile::remove(archivePath);
     }
 
+    // Another save can rewrite a module while the archive is being compressed;
+    // what goes in is the file as the export found it, not a mix of two saves
+    void test_aModuleRewrittenDuringCompressionGoesInAsFound()
+    {
+        mpHost->waitForProfileSave();
+        const QByteArray found = readFile(xmlModulePath());
+        QThreadPool* pool = QThreadPool::globalInstance();
+        const int threads = pool->maxThreadCount();
+        QSemaphore running;
+        QSemaphore gate;
+        bool rewritten = false;
+
+        const QString archivePath = mOutputDir.filePath(qsl("rewritten.zip"));
+        MudletWebExport exporter(mpHost, archivePath);
+        QSignalSpy finished(&exporter, &MudletWebExport::finished);
+        // Heard before the export's own handler: the compression it queues waits
+        // for a thread until the module has been rewritten
+        auto holdThePool = connect(mpHost, &Host::profileSaveFinished, this, [&]() {
+            for (int i = 0; i < threads; ++i) {
+                pool->start([&running, &gate]() {
+                    running.release();
+                    gate.acquire();
+                });
+            }
+            running.acquire(threads);
+        });
+        exporter.start();
+        auto rewrite = connect(mpHost, &Host::profileSaveFinished, this, [&]() {
+            rewritten = writeFile(xmlModulePath(), moduleXml(qsl("rewritten module alias")));
+            gate.release(threads);
+        });
+        const bool done = !finished.isEmpty() || finished.wait(30s);
+        disconnect(holdThePool);
+        disconnect(rewrite);
+        QVERIFY(writeFile(xmlModulePath(), found));
+        QVERIFY2(done, "the export never finished");
+        QVERIFY2(rewritten, "the export's save finished without a background write to wait for");
+        QVERIFY2(finished.first().at(0).toBool(), qPrintable(finished.first().at(1).toString()));
+        QCOMPARE(readArchive(archivePath).value(mProfileName + qsl("/xml-module/xml-module.xml")), found);
+    }
+
+    // A link is read through to the file it points at, so a link to a password
+    // is the password
+    void test_aLinkToACredentialStaysOut()
+    {
+        const QString link = qsl("%1/notes/remember-me.lnk").arg(profileHome());
+        QVERIFY(QFile::link(qsl("%1/password").arg(profileHome()), link));
+        const QString archivePath = mOutputDir.filePath(qsl("linked-password.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QFile::remove(link);
+        QVERIFY2(ok, qPrintable(error));
+        const auto entries = readArchive(archivePath);
+        for (const auto& [name, contents] : entries.asKeyValueRange()) {
+            QVERIFY2(!contents.contains("hunter2"), qPrintable(qsl("The password went in as %1").arg(name)));
+        }
+    }
+
     // An archive that has since gone leaves desktop's unpacked copy, which Mudlet
     // Web reads in its place - so there is nothing to warn about
     void test_anArchivedModuleWithoutItsArchiveComesThroughItsFolder()
@@ -416,7 +475,24 @@ private slots:
         QCOMPARE(maps, QStringList{qsl("%1/map/%2").arg(mProfileName, onDisk.first().fileName())});
         QCOMPARE(entries.value(maps.first()), readFile(onDisk.first().absoluteFilePath()));
 
-        // ...but a map the player has just cleared stays cleared, not brought back
+        // Desktop loads only the newest map file, so when that is a JSON map that
+        // came to nothing, an older binary one is not the player's map either
+        const QString jsonPath = qsl("%1/map/2002-02-02#00-00-00map.json").arg(profileHome());
+        QVERIFY(writeFile(jsonPath, QByteArrayLiteral("{}")));
+        QFile json(jsonPath);
+        QVERIFY(json.open(QIODevice::ReadWrite));
+        QVERIFY(json.setFileTime(QDateTime::currentDateTime().addSecs(60), QFileDevice::FileModificationTime));
+        json.close();
+        const QString jsonArchivePath = mOutputDir.filePath(qsl("json-map.zip"));
+        auto [jsonOk, jsonError, jsonWarnings] = exportTo(jsonArchivePath);
+        QFile::remove(jsonPath);
+        QVERIFY2(jsonOk, qPrintable(jsonError));
+        QVERIFY2(jsonWarnings.filter(qsl("00-00-00map.json")).size() == 1, qPrintable(jsonWarnings.join(qsl("; "))));
+        for (const auto& name : readArchive(jsonArchivePath).keys()) {
+            QVERIFY2(!name.startsWith(mProfileName + qsl("/map/")), qPrintable(qsl("An older map stood in for the JSON one: %1").arg(name)));
+        }
+
+        // ...and a map the player has just cleared stays cleared, not brought back
         mpHost->mpMap->setUnsaved(__func__);
         const QString clearedPath = mOutputDir.filePath(qsl("cleared-map.zip"));
         auto [clearedOk, clearedError, clearedWarnings] = exportTo(clearedPath);
