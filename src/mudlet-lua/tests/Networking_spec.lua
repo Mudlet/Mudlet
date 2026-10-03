@@ -2783,3 +2783,99 @@ describe("sending protocol data to a game server that has not negotiated", funct
     assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
   end)
 end)
+
+-- A chat connection belongs to the profile whose server made it and must close
+-- with that profile, or it reads the far end's next message into a profile
+-- that is gone. Lua cannot start a chat server (mmcp.startServer is not
+-- registered), so a second profile auto-starts one from its saved settings and
+-- this one calls it.
+describe("MMCP chat with a profile that closes", function()
+  local name = "mudlet-spec-mmcp-closing"
+  local peerName = "SpecClosingPeer"
+  local profileDirectory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+
+  local function removeTree(path)
+    if lfs.attributes(path, "mode") ~= "directory" then
+      os.remove(path)
+      return
+    end
+    for entry in lfs.dir(path) do
+      if entry ~= "." and entry ~= ".." then
+        removeTree(path .. "/" .. entry)
+      end
+    end
+    lfs.rmdir(path)
+  end
+
+  local function loaded()
+    local entry = getProfiles()[name]
+    return entry ~= nil and entry.loaded
+  end
+
+  local function waitUntil(predicate)
+    for _ = 1, 100 do
+      if predicate() then
+        return true
+      end
+      pumpEvents(50)
+    end
+    return predicate()
+  end
+
+  local function peerConnected()
+    for _, client in ipairs(mmcp.getClientList() or {}) do
+      if client.name == peerName then
+        return true
+      end
+    end
+    return false
+  end
+
+  it("should hang up its calls when the profile running the server closes", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the chat traffic needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+      return
+    end
+    finally(function()
+      if peerConnected() then
+        mmcp.disconnect(peerName)
+        waitUntil(function() return not peerConnected() end)
+      end
+      if loaded() then
+        closeProfile(name)
+        waitUntil(function() return not loaded() end)
+      end
+      removeTree(profileDirectory)
+    end)
+
+    -- a port of its own, so a server left over from another run is not called;
+    -- math.random is unseeded here and would give every run the same one
+    local port = 20000 + os.time() % 40000
+    removeTree(profileDirectory)
+    lfs.mkdir(profileDirectory)
+    lfs.mkdir(profileDirectory .. "/current")
+    local file = io.open(profileDirectory .. "/current/2026-01-01#00-00-00.xml", "w")
+    file:write(string.format([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <HostPackage>
+    <Host>
+      <name>%s</name>
+      <MMCP chatName="%s" chatPort="%d" chatPrefix="" autostartServer="yes" allowPeekRequests="no" prefixEmotes="no" chatMessageNewline="no" autoAcceptCalls="yes" snoopInMain="no"/>
+    </Host>
+  </HostPackage>
+</MudletPackage>
+]], name, peerName, port))
+    file:close()
+
+    assert.is_true(loadProfile(name, true))
+    assert.is_true(mmcp.call("127.0.0.1", port))
+    assert.is_true(waitUntil(peerConnected), "the other profile's chat server did not accept the call")
+
+    assert.is_true(closeProfile(name))
+    assert.is_true(waitUntil(function() return not loaded() end))
+    -- an end left open by the closed profile would read this into freed memory
+    mmcp.chatAll("are you still there?")
+    assert.is_true(waitUntil(function() return not peerConnected() end), "the closed profile's end of the call was left open")
+  end)
+end)
