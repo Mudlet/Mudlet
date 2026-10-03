@@ -209,7 +209,8 @@ end
 
 -- [^%ad] is letters plus a literal d, so the previous safe_name dropped every
 -- digit and Database_stats.db is where "stats1" and "stats2" were both stored.
--- A blank legacy name is not a file we can fall back to.
+-- A name that was only digits landed in Database_.db, so an empty legacy name
+-- is that file, not "no file".
 function db:_legacy_safe_name(safe_name)
   return (safe_name:gsub("%d", ""))
 end
@@ -222,7 +223,7 @@ function db:_resolve_database_path(safe_name)
   end
 
   local legacy_name = db:_legacy_safe_name(safe_name)
-  if legacy_name ~= "" and legacy_name ~= safe_name then
+  if legacy_name ~= safe_name then
     local legacy = db:_database_path(legacy_name)
     if io.exists(legacy) then
       return legacy
@@ -230,6 +231,32 @@ function db:_resolve_database_path(safe_name)
   end
 
   return current
+end
+
+
+-- lk1 and lk2 both fall back to Database_lk.db. A second SQLite connection to
+-- that file drops the other name's writes and then reports the file locked.
+function db:_shared_connection(db_name)
+  local path = db:_resolve_database_path(db_name)
+  for other_name, other_conn in pairs(db.__conn) do
+    if other_conn and other_conn ~= "SQLite3 connection (closed)"
+        and db:_resolve_database_path(other_name) == path then
+      return other_conn
+    end
+  end
+end
+
+
+-- One file is one transaction. _begin on either name has to hold writes made
+-- through the other name, or the second add commits the first name's work.
+function db:_commits_after_write(db_name)
+  local conn = db.__conn[db_name]
+  for other_name, other_conn in pairs(db.__conn) do
+    if other_conn == conn and not db.__autocommit[other_name] then
+      return false
+    end
+  end
+  return true
 end
 
 
@@ -789,13 +816,17 @@ function db:create(db_name, sheets, force)
     -- the driver answers nil plus a reason for a file it can not open, which a
     -- read-only profile directory or a full disk both produce: without this the
     -- setautocommit below is the nil index instead
-    local conn, err = db.__env:connect(db:_resolve_database_path(db_name))
+    local conn = db:_shared_connection(db_name)
+    local err
     if not conn then
-      error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
+      conn, err = db.__env:connect(db:_resolve_database_path(db_name))
+      if not conn then
+        error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
+      end
+      conn:setautocommit(false)
     end
 
     db.__conn[db_name] = conn
-    conn:setautocommit(false)
     db.__autocommit[db_name] = true
   end
 
@@ -1660,7 +1691,7 @@ function db:add(sheet, ...)
       return nil, msg
     end
   end
-  if db.__autocommit[db_name] then
+  if db:_commits_after_write(db_name) then
     conn:commit()
   end
   return true
@@ -1913,7 +1944,7 @@ function db:delete(sheet, query)
 
   db:echo_sql(sql)
   assert(conn:execute(sql))
-  if db.__autocommit[db_name] then
+  if db:_commits_after_write(db_name) then
     conn:commit()
   end
 end
@@ -2065,7 +2096,7 @@ function db:update(sheet, tbl)
   local sql = table.concat(sql_chunks, " ")
   db:echo_sql(sql)
   assert(conn:execute(sql))
-  if db.__autocommit[db_name] then
+  if db:_commits_after_write(db_name) then
     conn:commit()
   end
 end
@@ -2135,7 +2166,7 @@ function db:set(field, value, query)
 
   db:echo_sql(sql)
   assert(conn:execute(sql))
-  if db.__autocommit[db_name] then
+  if db:_commits_after_write(db_name) then
     conn:commit()
   end
 end
@@ -2499,10 +2530,14 @@ function db:_closeAll()
   end
 
   local result, msgs = true, {}
+  local closed = {}
   for db_name, conn in pairs(db.__conn) do
-    if not conn:close() then
-      result = false
-      table.insert(msgs, "database object for "..db_name.." is already closed.")
+    if not closed[conn] then
+      closed[conn] = true
+      if not conn:close() then
+        result = false
+        table.insert(msgs, "database object for "..db_name.." is already closed.")
+      end
     end
   end
 
@@ -2537,9 +2572,22 @@ function db:close(db_name)
     return false, "can not close "..db_name.." because it does not exist.  Did you forget to call db:create?"
   end
 
-  if db.__conn[db_name]:close() then
-    db.__conn[db_name] = nil
+  local conn = db.__conn[db_name]
+  local still_open = false
+  for other_name, other_conn in pairs(db.__conn) do
+    if other_name ~= db_name and other_conn == conn then
+      still_open = true
+      break
+    end
+  end
 
+  db.__conn[db_name] = nil
+  db.__autocommit[db_name] = nil
+  if still_open then
+    return true, ""
+  end
+
+  if conn:close() then
     return true, ""
   else
 
