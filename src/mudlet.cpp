@@ -3663,18 +3663,25 @@ void mudlet::closeHost(const QString& name)
         return;
     }
 
-    if (pH->mpMap && pH->mpMap->mapOperationInProgress()) {
-        // A map import, export or download is on the stack, and it is that
-        // operation's own qApp->processEvents() that has delivered whatever
-        // asked for this close. Destroying the Host here would free the TMap
-        // under its running loop (#9520), so tell the operation to stop and try
-        // again once the stack has unwound. Retried on a timer rather than
-        // immediately: the retry would otherwise land back in the same pump,
-        // spinning until the operation ends instead of letting it get there.
-        if (!pH->mpMap->mapOperationAbortRequested()) {
-            qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
+    const bool mapOperationRunning = pH->mpMap && pH->mpMap->mapOperationInProgress();
+    // A map import, export or download is on the stack, and it is that
+    // operation's own qApp->processEvents() that has delivered whatever asked
+    // for this close. Destroying the Host here would free the TMap under its
+    // running loop (#9520), so tell the operation to stop and try again once
+    // the stack has unwound. The same goes for any Lua API that spins a nested
+    // event loop - loading or closing another profile, a modal dialog, a
+    // reconnect - after the profile's own script asked for the close: the
+    // script is still running, and destroying the Host would lua_close() the
+    // state under it. Retried on a timer rather than immediately: the retry
+    // would otherwise land back in the same pump, spinning until the operation
+    // ends instead of letting it get there.
+    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack()) {
+        if (mapOperationRunning) {
+            if (!pH->mpMap->mapOperationAbortRequested()) {
+                qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
+            }
+            pH->mpMap->requestMapOperationAbort();
         }
-        pH->mpMap->requestMapOperationAbort();
         const QPointer<Host> pClosingHost(pH);
         QTimer::singleShot(50ms, this, [this, name, pClosingHost]() {
             if (mHostManager.getHost(name) != pClosingHost) {
@@ -3688,6 +3695,7 @@ void mudlet::closeHost(const QString& name)
             // nothing. Left out, closing the last profile mid-operation ends
             // with no profile and no connection dialog either.
             updateMainWindowToolbarState();
+            updateMainWindowTitle();
             if (!mHostManager.getHostCount() && !mIsGoingDown) {
                 disableToolbarButtons();
                 slot_showConnectionDialog();
