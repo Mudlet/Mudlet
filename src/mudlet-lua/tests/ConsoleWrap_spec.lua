@@ -173,4 +173,30 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.matches("^%-+%s*$", getTimestamp(win, 2))
     end)
   end)
+
+  describe("Tests that a buffer keeps the wrap it is given", function()
+    local buffer = ("specWrapBuffer-%d-%d"):format(os.time(), math.random(100000))
+    local long = string.rep("a", 80)
+
+    local function firstLine()
+      clearWindow(buffer)
+      echo(buffer, long .. "\n")
+      return getLines(buffer, 0, 1)[1]
+    end
+
+    it("keeps its wrap width and indents when its colours are refreshed", function()
+      createBuffer(buffer)
+      setWindowWrap(buffer, 40)
+      setWindowWrapIndent(buffer, 6)
+      setWindowWrapHangingIndent(buffer, 2)
+      local wrapped = string.rep(" ", 6) .. string.rep("a", 34)
+      assert.are.equal(wrapped, firstLine())
+
+      -- like a theme change, this recolours the buffer from the profile
+      resetBackgroundImage(buffer)
+      assert.are.equal(wrapped, firstLine())
+      assert.are.equal(40, getWindowWrap(buffer))
+      assert.are.same({"  " .. string.rep("a", 38), "  " .. string.rep("a", 8)}, getLines(buffer, 1, 3))
+    end)
+  end)
 end)
