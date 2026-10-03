@@ -55,6 +55,13 @@ private slots:
         QCOMPARE(description(&button), qsl("Save the profile & close it. Nothing is sent to the game."));
     }
 
+    void imagesAreLeftOut()
+    {
+        QPushButton button;
+        button.setToolTip(qsl("<p><img src=':/icons/discord.png'> Discord <img src=':/icons/discord.png'></p>"));
+        QCOMPARE(description(&button), qsl("Discord"));
+    }
+
     void descriptionFollowsEachNewToolTip()
     {
         QPushButton button;

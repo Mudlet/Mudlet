@@ -65,9 +65,10 @@ private:
     QString plainText(const QString& html)
     {
         mDocument.setHtml(html);
-        // Block elements come out as separate lines, which read better as one
-        // announcement with a space between them
-        return mDocument.toPlainText().replace(scmWhitespaceRun, qsl(" ")).trimmed();
+        // An image comes out as U+FFFC, which has nothing to say. Block elements
+        // come out as separate lines, which read better as one announcement with
+        // a space between them.
+        return mDocument.toPlainText().remove(QChar::ObjectReplacementCharacter).replace(scmWhitespaceRun, qsl(" ")).trimmed();
     }
 
     inline static const QRegularExpression scmWhitespaceRun{qsl(R"(\s+)")};
