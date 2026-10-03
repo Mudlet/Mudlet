@@ -29,7 +29,7 @@
  */
 
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -39,6 +39,8 @@
 #include <QLineEdit>
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class ConnectionDialogNewProfileTest : public QObject
 {
@@ -54,7 +56,7 @@ private:
 
     dlgConnectionProfiles* dialog() const { return mudlet::self()->mpConnectionDialog.data(); }
 
-    QString profileFolder() const { return MudletPaths::getMudletPath(enums::profileHomePath, mProfileName); }
+    QString profileFolder() const { return MudletApp::getMudletPath(enums::profileHomePath, mProfileName); }
 
 private slots:
     void initTestCase()
@@ -70,7 +72,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -80,7 +82,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()
@@ -103,7 +105,7 @@ private slots:
         // the writes above go under the placeholder name, and are only dropped
         // while that profile has no folder - if one ever appears the rename
         // below carries them over and this case stops proving anything
-        QVERIFY2(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, placeholderName)).exists(), "The placeholder profile has a folder on disk, so the writes above had somewhere to go");
+        QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, placeholderName)).exists(), "The placeholder profile has a folder on disk, so the writes above had somewhere to go");
         QVERIFY2(pDialog->readProfileData(placeholderName, qsl("url")).isEmpty(), "The address reached disk before the name was committed, so there is nothing left to redo");
 
         pDialog->profile_name_entry->setText(mProfileName);

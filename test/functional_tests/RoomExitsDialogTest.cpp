@@ -49,7 +49,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -57,6 +57,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // ExitsTreeWidget keeps its column numbers in an enumeration only dlgRoomExits
 // and its delegate are friends of, so mirror them here; the columnCount() check
@@ -110,7 +112,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -207,7 +209,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -692,7 +694,7 @@ private slots:
         QVERIFY2(map()->isUnsaved(), "editing exits did not mark the map unsaved");
         // updateArea() queues a throttled repaint that emits signal_areaChanged
         // for the subject's area - drain the queued call and check it arrived.
-        QVERIFY2(areaChangedSpy.wait(1000), "updateArea() did not repaint the map (signal_areaChanged never fired)");
+        QVERIFY2(areaChangedSpy.wait(1s), "updateArea() did not repaint the map (signal_areaChanged never fired)");
         QCOMPARE(areaChangedSpy.count(), 1);
         QCOMPARE(areaChangedSpy.takeFirst().at(0).toInt(), subject()->getArea());
     }

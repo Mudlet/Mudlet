@@ -55,7 +55,7 @@
 #include <QTabBar>
 
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TGameDetails.h"
 #include "dlgConnectionProfiles.h"
@@ -121,11 +121,11 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{});
+        MudletApp::getQSettings()->setValue(qsl("deletedDefaultMuds"), QStringList{});
 
         QVERIFY2(TGameDetails::keys().contains(mSelfTest), "the self-test entry is missing from the games catalog");
         if (!(*TGameDetails::findGame(mSelfTest)).icon.isEmpty()) {
@@ -148,7 +148,7 @@ private slots:
         // an entry the catalog gives no artwork is not a failure, so it must
         // not be reported as one
         QTest::failOnWarning(QRegularExpression(qsl("doesn't have a valid icon")));
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mSelfTest)));
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mSelfTest)));
 
         auto* pDialog = new dlgConnectionProfiles();
         pDialog->show();
@@ -172,8 +172,8 @@ private slots:
     void test_theSelfTestEntryIsListedWithoutArtworkWithNoProfileDataOnDisk()
     {
         QTest::failOnWarning(QRegularExpression(qsl("doesn't have a valid icon")));
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mSelfTest)).removeRecursively();
-        QVERIFY(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, mSelfTest)).exists());
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mSelfTest)).removeRecursively();
+        QVERIFY(!QDir(MudletApp::getMudletPath(enums::profileHomePath, mSelfTest)).exists());
 
         auto* pDialog = new dlgConnectionProfiles();
         pDialog->show();
@@ -256,8 +256,8 @@ private slots:
     void test_aProfileIconThatCannotBeReadIsDrawnAsAPlateAndReported()
     {
         const QString profileName = qsl("Test-BrokenProfileIcon");
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)));
-        QFile iconFile(MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon")));
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profileName)));
+        QFile iconFile(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon")));
         QVERIFY(iconFile.open(QIODevice::WriteOnly));
         iconFile.close();
         QVERIFY2(iconFile.size() == 0, "SETUP: the stand-in for a corrupt icon file is not empty");
@@ -272,7 +272,7 @@ private slots:
         verifyPlateCanBeReadFrom(pItem, qsl("a profile whose stored icon could not be read"));
         QVERIFY2(pItem->toolTip().contains(qsl("artwork")), qPrintable(qsl("nothing in the entry says its icon is broken, only the tooltip '%1'").arg(pItem->toolTip())));
 
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, profileName)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, profileName)).removeRecursively();
         pDialog->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }

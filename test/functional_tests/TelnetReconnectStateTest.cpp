@@ -29,7 +29,7 @@
 #include <QtNetwork/QTcpSocket>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -275,7 +275,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -286,8 +286,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // A GMCP game earlier in the session must not leave Mudlet sending GMCP subnegotiations at a
@@ -308,7 +308,7 @@ private slots:
                          [&]() {
                              return mpServer->sawSubnegotiationOf(kGmcp);
                          },
-                         8000),
+                         8s),
                  "no GMCP ever reached the first game");
 
         // The next game offers nothing at all.
@@ -340,7 +340,7 @@ private slots:
                              return telnet.isGMCPEnabled() && telnet.isMSDPEnabled() && telnet.isMSSPEnabled() && telnet.isMSPEnabled() && telnet.isMXPEnabled() && telnet.isCHARSETEnabled()
                                     && telnet.isNewEnvironEnabled() && telnet.isChannel102Enabled();
                          },
-                         8000),
+                         8s),
                  "the game's offers were not all accepted, so the reconnect below proves nothing");
 
         mpServer->setOffers({}); // the next game offers nothing at all
@@ -369,7 +369,7 @@ private slots:
                          [&]() {
                              return host->mTelnet.isATCPEnabled();
                          },
-                         8000),
+                         8s),
                  "the game's ATCP offer was not accepted, so the reconnect below proves nothing");
 
         mpServer->setOffers({});
@@ -430,6 +430,26 @@ private slots:
         QVERIFY2(!mpServer->sawReply(kDont, kCompress), "Mudlet tried to decompress a game that had never negotiated MCCP v1");
     }
 
+    // A game can offer both MCCP versions, and the stream it then sends is v2. When that stream
+    // breaks, the refusal has to name v2: refusing v1 leaves the game compressing at a client that
+    // has stopped reading it.
+    void test_aBrokenMccpStreamIsRefusedAsTheVersionItUsed()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+
+        mpServer->setOffers({{kWill, kCompress}, {kWill, kCompress2}});
+        QVERIFY(reconnect(host));
+        QVERIFY2(waitForReply(kDo, kCompress) && waitForReply(kDo, kCompress2), "both MCCP versions were not negotiated, so this proves nothing");
+
+        QByteArray startSequence;
+        startSequence.append(TN_IAC).append(TN_SB).append(kCompress2).append(TN_IAC).append(TN_SE);
+        mpServer->sendRaw(startSequence + "this is not a compressed stream\r\n");
+
+        QVERIFY2(waitForReply(kDont, kCompress2), "the broken v2 stream was not refused as MCCP v2");
+        QVERIFY2(!mpServer->sawReply(kDont, kCompress), "MCCP v1 was refused for a v2 stream breaking");
+    }
+
     // MXP tags are built up across incoming bytes, and the tag builder is asked only whether the
     // MXP processor is on - not whether this game negotiated MXP. An unfinished tag left over from
     // the last game therefore gets flushed into the next game's output at the first escape code.
@@ -444,7 +464,7 @@ private slots:
                          [&]() {
                              return host->mTelnet.isMXPEnabled();
                          },
-                         8000),
+                         8s),
                  "MXP was not negotiated, so this proves nothing");
 
         // A tag the game starts and never finishes, with no newline after it - in the mode this
@@ -485,7 +505,7 @@ private slots:
                          [&]() {
                              return host->mMSSPTlsPort == 9999;
                          },
-                         8000),
+                         8s),
                  "the game's advertised secure port was never recorded, so this proves nothing");
 
         mpServer->setOffers({});
@@ -523,7 +543,7 @@ private slots:
                          [&]() {
                              return host->mTelnet.isGMCPEnabled() && host->mTelnet.isMSDPEnabled();
                          },
-                         8000),
+                         8s),
                  "the profile does not think the renegotiated protocols are running");
         QVERIFY2(!host->mTelnet.isMSPEnabled(), "MSP was enabled despite the player switching it off");
     }
@@ -535,7 +555,7 @@ private:
                 [&]() {
                     return mpServer->sawReply(command, option);
                 },
-                8000);
+                8s);
     }
 
     bool bufferContains(Host* host, const QString& text)
@@ -555,7 +575,7 @@ private:
                 [&]() {
                     return bufferContains(host, text);
                 },
-                8000);
+                8s);
     }
 
     // Answers rather than asserting: a QVERIFY here would only return from this helper, leaving
@@ -579,7 +599,7 @@ private:
                     [&]() {
                         return !disconnected.isEmpty();
                     },
-                    8000)) {
+                    8s)) {
             qWarning("the profile never noticed the game dropping the connection");
             return false;
         }
@@ -598,7 +618,7 @@ private:
                 [&]() {
                     return mpServer->connectionCount() > before && !connected.isEmpty();
                 },
-                8000);
+                8s);
         if (!reconnected) {
             qWarning("the profile did not reconnect to the stub");
         }
@@ -619,7 +639,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }
@@ -629,10 +649,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

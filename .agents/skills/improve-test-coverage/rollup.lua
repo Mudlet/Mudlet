@@ -1,14 +1,11 @@
 #!/usr/bin/env lua
--- Turns gcovr's CSV export into the two tables the coverage baseline needs:
--- a per-file listing sorted by uncovered-line MASS (not percentage) and a
--- subsystem rollup. Reads coverage.csv from the directory it is given.
---
+-- Turns gcovr's CSV into a subsystem rollup and a per-file list sorted by uncovered lines (not percentage).
 -- Usage: lua rollup.lua <coverage.csv> [outdir]
 
 local csvPath = arg[1] or "coverage.csv"
 local outDir = arg[2] or "."
 
--- gcovr's CSV has no embedded commas in our paths, so a plain split is enough.
+-- Our paths contain no commas, so a plain split is enough.
 local function splitCsv(line)
   local fields = {}
   for field in (line .. ","):gmatch("([^,]*),") do
@@ -17,8 +14,7 @@ local function splitCsv(line)
   return fields
 end
 
--- First match wins, so order matters: the mapper dialogs have to be claimed by
--- the map bucket before the generic dlg* pattern sees them.
+-- First match wins: the mapper dialogs must reach the map bucket before the generic dlg* pattern.
 local subsystems = {
   {name = "Map + mapper widgets", patterns = {
     "^TMap", "^TRoom", "^TArea", "^T2DMap", "^dlgMapper", "^dlgMapLabel", "^dlgRoomExits",
@@ -68,7 +64,6 @@ local subsystems = {
 }
 
 local function bucketFor(path)
-  -- Match on the path relative to src/ so nested directories keep their prefix.
   local rel = path:gsub("^src/", "")
   for _, subsystem in ipairs(subsystems) do
     for _, pattern in ipairs(subsystem.patterns) do
@@ -85,8 +80,7 @@ local header
 for line in io.lines(csvPath) do
   if not header then
     header = splitCsv(line)
-    -- Columns are read by position below; a gcovr that reorders them would
-    -- otherwise produce a silently zeroed report (tonumber(...) or 0).
+    -- Columns are read by position, so a reordered gcovr CSV would silently zero the report.
     local expected = { "filename", "line_total", "line_covered", nil, "branch_total", "branch_covered" }
     for i, name in pairs(expected) do
       if header[i] ~= name then
@@ -121,7 +115,6 @@ local function pct(covered, total)
   return string.format("%.1f%%", 100 * covered / total)
 end
 
--- Overall
 local all = {lineTotal = 0, lineCovered = 0, branchTotal = 0, branchCovered = 0}
 for _, r in ipairs(rows) do
   all.lineTotal = all.lineTotal + r.lineTotal
@@ -138,7 +131,6 @@ out:write(string.format("Overall src/ lines: %d covered / %d instrumented = %s\n
 out:write(string.format("Overall src/ branches: %d covered / %d = %s\n\n",
   all.branchCovered, all.branchTotal, pct(all.branchCovered, all.branchTotal)))
 
--- Subsystem rollup
 local buckets = {}
 local order = {}
 for _, r in ipairs(rows) do
@@ -165,7 +157,6 @@ for _, b in ipairs(order) do
     pct(b.lineCovered, b.lineTotal), pct(b.branchCovered, b.branchTotal)))
 end
 
--- Per-file, by uncovered mass
 table.sort(rows, function(a, b)
   if a.uncovered ~= b.uncovered then return a.uncovered > b.uncovered end
   return a.path < b.path

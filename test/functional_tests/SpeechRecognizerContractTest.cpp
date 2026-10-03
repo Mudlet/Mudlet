@@ -55,7 +55,7 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "SherpaRecognizer.h"
@@ -74,6 +74,8 @@
 
 #include <memory>
 #include <optional>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -370,7 +372,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
-        // VoskRecognizer's path helpers go through MudletPaths::getMudletPath(),
+        // VoskRecognizer's path helpers go through MudletApp::getMudletPath(),
         // which resolves the config root itself - so it is setupConfig() that
         // settles it on the redirected one, not mudlet::start()
         mudlet::start();
@@ -955,7 +957,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/vosk-model-small-en-us-0.15/am").arg(modelsDir)));
         QVERIFY(QDir().mkpath(qsl("%1/vosk-model-small-fr-0.22/am").arg(modelsDir)));
 
-        auto* pSettings = mudlet::getQSettings();
+        auto* pSettings = MudletApp::getQSettings();
         QVERIFY(pSettings);
         pSettings->beginGroup(qsl("SpeechRecognition"));
         pSettings->remove(qsl("selectedModel"));
@@ -1408,7 +1410,7 @@ private slots:
         // Not merely still pointed at: an engine retired the way the swap path
         // retires one is deleteLater()d, so the destruction only lands on an
         // event loop turn. Take one, then check the object is still there.
-        QTest::qWait(1);
+        QTest::qWait(1ms);
         QVERIFY2(!workingRecognizer.isNull(), "the working backend was torn down for a replacement that never arrived");
         QCOMPARE(mudlet::self()->speechRecognizer(), workingRecognizer.data());
 #else

@@ -18,8 +18,8 @@
  ***************************************************************************/
 
 /*
- * No profile is opened: the replay toolbar and its multiplier belong to the
- * main window, and the Host handed to replayStart() is only stored - every use
+ * No profile is opened: the multiplier belongs to MudletReplay and the toolbar
+ * to the main window, and the Host handed to start() is only stored - every use
  * of it (pause, resume, stop and the paused marker on the time readout) is
  * null-guarded, and none of them is on the Faster path this test drives.
  *
@@ -31,8 +31,9 @@
 #include <QtTest/QtTest>
 
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "MudletReplay.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -59,7 +60,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -69,7 +70,7 @@ private slots:
     {
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            mudlet::self()->replayOver();
+            MudletReplay::self()->over();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -79,20 +80,20 @@ private slots:
     // click, and clicking on took it past what an int holds.
     void test_speedingUpAReplayStopsAtTheCap()
     {
-        QVERIFY2(mudlet::self()->replayStart(nullptr), "the replay toolbar would not start, so there is no Faster button to press");
-        QCOMPARE(mudlet::self()->mReplaySpeed, 1);
+        QVERIFY2(MudletReplay::self()->start(nullptr), "the replay toolbar would not start, so there is no Faster button to press");
+        QCOMPARE(MudletReplay::self()->speed(), 1);
         QAction* pFaster = mudlet::self()->findChild<QAction*>(qsl("replay_speed_up_action"));
         QVERIFY2(pFaster, "the replay toolbar carries no Faster button");
 
         pFaster->trigger();
-        QCOMPARE(mudlet::self()->mReplaySpeed, 2);
+        QCOMPARE(MudletReplay::self()->speed(), 2);
 
         // far more clicks than the cap needs
         for (int click = 0; click < 20; ++click) {
             pFaster->trigger();
         }
 
-        QCOMPARE(mudlet::self()->mReplaySpeed, 1024);
+        QCOMPARE(MudletReplay::self()->speed(), 1024);
     }
 };
 

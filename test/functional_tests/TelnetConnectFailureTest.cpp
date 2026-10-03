@@ -29,7 +29,7 @@
 #include <QtNetwork/QTcpSocket>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -73,10 +73,10 @@ public:
         QElapsedTimer waited;
         waited.start();
         while (!mServer.listen(QHostAddress::LocalHost, mPort)) {
-            if (waited.hasExpired(5000)) {
+            if (waited.durationElapsed() > 5s) {
                 return false;
             }
-            QTest::qWait(100);
+            QTest::qWait(100ms);
         }
         return true;
     }
@@ -161,7 +161,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         // These assert on messages Mudlet writes, so they have to be the English ones whatever
@@ -175,8 +175,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // The control for the two below: unless a connection that is made puts its own text on screen
@@ -195,7 +195,7 @@ private slots:
                          [&]() {
                              return mpServer->connectionCount() > 1;
                          },
-                         8000),
+                         8s),
                  "the profile did not connect to the stub a second time");
 
         QVERIFY2(waitForTextInBuffer(host, qsl("connection made")), "a connection that was made put nothing on screen, so this test cannot see connection messages at all");
@@ -255,7 +255,7 @@ private slots:
                          [&]() {
                              return mpServer->connectionCount() > connectionsBefore;
                          },
-                         30000),
+                         30s),
                  "the profile never tried the game again, so reconnecting automatically is a single attempt");
     }
 
@@ -280,7 +280,7 @@ private slots:
                          [&]() {
                              return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                          },
-                         20000),
+                         20s),
                  "the profile was still trying to connect long after the disconnect");
         QTest::qWait(3s);
 
@@ -347,7 +347,7 @@ private slots:
                          [&]() {
                              return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
                          },
-                         20000),
+                         20s),
                  "the failed handshake was not reported by the disconnection path");
         QTest::qWait(1s);
         QVERIFY2(!bufferContains(host, qsl("Unable to connect")), "a failed handshake was reported as a failure to connect as well");
@@ -402,7 +402,7 @@ private:
                 [&]() {
                     return !disconnected.isEmpty();
                 },
-                8000);
+                8s);
     }
 
     // Events are only visible to a script, so one is asked to count every event it hears. Counted
@@ -432,7 +432,7 @@ private:
                 [&]() {
                     return recordedEventCount(host, event) > 0;
                 },
-                8000);
+                8s);
     }
 
     // Case-insensitively, because the message for a connection that was made reads "Open
@@ -477,7 +477,7 @@ private:
                 [&]() {
                     return bufferContains(host, text);
                 },
-                20000);
+                20s);
     }
 
     // Mirrors the helper the other functional tests use.
@@ -490,7 +490,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }
@@ -499,10 +499,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

@@ -28,12 +28,11 @@
  * still running: the process reports "QMutex: destroying locked mutex" and dies
  * inside freed plugin machinery.
  *
- * --version is the shortest path through main() that still starts the warm-up -
- * initSentry(), the application object, the warm-up itself and the translators,
- * then an immediate return from the version branch - so it leaves a background
- * task the least room to finish and fails first. Since #10873 that path builds
- * a QCoreApplication and runs neither mudlet::start() nor setupConfig(), which
- * is why the warm-up sits outside main()'s `if (app)` guard: inside it, this
+ * --version starts the warm-up immediately before main() returns - after
+ * initSentry(), the application object, the translators and the version text -
+ * so a background task has almost no room to finish before teardown. That path
+ * builds a QCoreApplication and runs neither mudlet::start() nor setupConfig(),
+ * which is why the version branch starts the warm-up itself: without that, this
  * case would spawn a process that starts no background task at all and would
  * pass with the #10460 fix reverted. Nothing on the path writes to the config
  * root; the sandbox below is for what it reads.
@@ -69,7 +68,7 @@ private:
     static QString appBinary() { return QString::fromUtf8(MUDLET_APP_BINARY); }
 
     // A portable.txt beside the shipped binary, or in $HOME/.config/mudlet,
-    // outranks XDG_CONFIG_HOME (MudletPaths::resolveConfigRoot()), so the child
+    // outranks XDG_CONFIG_HOME (MudletApp::resolveConfigRoot()), so the child
     // would read the real install's config instead of the sandbox's. Note the
     // directory checked is the application's, not this test binary's.
     // DialogTeardownTest and HeadlessVersionTest skip for the same reason.
@@ -90,7 +89,7 @@ private slots:
             // A root of its own per run, so the child reads none of the
             // developer's profiles and leaves nothing behind. Creating
             // mudlet/profiles is what makes XDG_CONFIG_HOME outrank the legacy
-            // ~/.config/mudlet, see MudletPaths::xdgConfigDir()
+            // ~/.config/mudlet, see MudletApp::xdgConfigDir()
             QTemporaryDir sandbox;
             QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
             QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
@@ -102,6 +101,11 @@ private slots:
             environment.insert(qsl("XDG_CACHE_HOME"), qsl("%1/cache").arg(sandbox.path()));
             environment.insert(qsl("QT_QPA_PLATFORM"), qsl("offscreen"));
             environment.insert(qsl("MUDLET_TEST_MODE"), qsl("1"));
+            // Has Qt log every plugin directory it searches, so the run below
+            // can tell whether the warm-up looked for a TLS backend at all. Forced
+            // to stderr, as macOS would send it to the system log instead.
+            environment.insert(qsl("QT_DEBUG_PLUGINS"), qsl("1"));
+            environment.insert(qsl("QT_FORCE_STDERR_LOGGING"), qsl("1"));
             // The warm-up leaves Qt's CA store loaded for the process lifetime,
             // so a leak check here would only ever report that. Appended
             // rather than replacing what ctest set, since the runtime
@@ -120,14 +124,20 @@ private slots:
             QVERIFY2(mudlet.waitForFinished(scmFinishTimeoutMs), qPrintable(qsl("%1: --version never finished").arg(where)));
 
             const QString output = QString::fromUtf8(mudlet.readAllStandardOutput());
-            const QString diagnostics = qsl("%1, stderr:\n%2").arg(where, QString::fromUtf8(mudlet.readAllStandardError()));
+            const QString standardError = QString::fromUtf8(mudlet.readAllStandardError());
+            const QString diagnostics = qsl("%1, stderr:\n%2").arg(where, standardError);
             QVERIFY2(mudlet.exitStatus() == QProcess::NormalExit, qPrintable(qsl("mudlet --version crashed on leaving main(); %1").arg(diagnostics)));
             QVERIFY2(mudlet.exitCode() == 0, qPrintable(qsl("mudlet --version exited %1; %2").arg(QString::number(mudlet.exitCode()), diagnostics)));
-            // Without this the case would still pass against a main() that
-            // returned before ever reaching the warm-up, and cover nothing. The
-            // application name is the one part of that banner no translation
-            // touches - mudlet, mudlet.exe or Mudlet, depending on the platform
+            // The application name is the one part of the banner no
+            // translation touches - mudlet, mudlet.exe or Mudlet, depending on
+            // the platform
             QVERIFY2(output.contains(qsl("mudlet"), Qt::CaseInsensitive), qPrintable(qsl("no version banner, so main() never reached the version branch; %1").arg(diagnostics)));
+            // Without a warm-up in flight at the return the case would pass with
+            // the #10460 fix reverted, and cover nothing. Nothing else on this
+            // path loads plugins, so a search of a tls directory is the warm-up's.
+            // Either stream: under MSYS2 main() sends debug output to stdout.
+            QVERIFY2(standardError.contains(qsl("/tls\"")) || output.contains(qsl("/tls\"")),
+                     qPrintable(qsl("Qt never searched for a TLS backend, so the SSL warm-up never ran; %1").arg(diagnostics)));
         }
     }
 };

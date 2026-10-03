@@ -36,8 +36,8 @@
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgNotepad.h"
 #include "ctelnet.h"
@@ -66,7 +66,7 @@ private:
 
     // The names the notepad writes and the ones it upgrades from, which the
     // tests below have to put in place or clear out before it starts up.
-    QString notesPath(const QString& fileName) const { return MudletPaths::getMudletPath(enums::profileDataItemPath, mHostname, fileName); }
+    QString notesPath(const QString& fileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, mHostname, fileName); }
 
     static QPlainTextEdit* editAt(dlgNotepad* notepad, const int index) { return qobject_cast<QPlainTextEdit*>(notepad->tabWidget->widget(index)); }
 
@@ -93,12 +93,12 @@ private:
                 [this, &text]() {
                     return mpServer->received().contains(text);
                 },
-                5000);
+                5s);
     }
 
     void writeNotesFile(const QString& fileName, const QByteArray& content) const
     {
-        QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
+        QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
         QFile file(notesPath(fileName));
         QVERIFY2(file.open(QIODevice::WriteOnly), "could not write the notes file the test needs in place");
         file.write(content);
@@ -107,7 +107,7 @@ private:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             const auto dialog = []() {
                 return mudlet::self()->mpConnectionDialog.data();
             };
@@ -118,7 +118,7 @@ private:
                         [&dialog]() {
                             return dialog() && dialog()->isVisible();
                         },
-                        5000)) {
+                        5s)) {
                 qWarning() << "the connection dialog never appeared";
                 return;
             }
@@ -128,7 +128,7 @@ private:
                             [field]() {
                                 return QApplication::focusWidget() == field;
                             },
-                            5000)) {
+                            5s)) {
                     return true;
                 }
                 qWarning() << "focus never reached the" << name << "field";
@@ -156,7 +156,7 @@ private:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             QFAIL("Profile took too long to load.");
         }
         auto* host = mudlet::self()->getActiveHost();
@@ -165,12 +165,12 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -202,7 +202,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -211,7 +211,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -340,7 +340,7 @@ private slots:
         auto* sendTimer = notepad->findChild<QTimer*>();
         QVERIFY2(sendTimer, "the notepad has no timer pacing the lines it sends");
         QSignalSpy firstLineSent(sendTimer, &QTimer::timeout);
-        QVERIFY2(firstLineSent.wait(5000), "the notepad never got round to sending the first line");
+        QVERIFY2(firstLineSent.wait(5s), "the notepad never got round to sending the first line");
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_stopSending"));
 
         QVERIFY2(waitForServerToReceive("north"), "the line already on its way when sending was stopped never reached the game");

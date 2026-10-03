@@ -35,7 +35,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "T2DMap.h"
 #include "TMap.h"
@@ -44,6 +44,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class MapAreaImageExportTest : public QObject
 {
@@ -64,7 +66,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -97,7 +99,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -172,11 +174,11 @@ private slots:
 
         // The export hands the actual file write to a QtConcurrent task
         QImage exportedImage;
-        QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10s);
         // The file lands inside QPixmap::save(), before the task reports back,
         // and the watcher is only cleared once it has - so this is what says the
         // pool thread has let go of the widget the fixture is about to delete
-        QTRY_VERIFY_WITH_TIMEOUT(!mp2dMap->mpExportWatcher, 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!mp2dMap->mpExportWatcher, 10s);
 
         // Both halves of the outline - the stub's and the arrowhead's - are
         // white, so this covers the pair jointly rather than either alone

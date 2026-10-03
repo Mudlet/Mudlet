@@ -274,6 +274,8 @@ if(CCACHE_FOUND)
   set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif(CCACHE_FOUND)
 
+include(PrecompiledHeaders)
+
 # credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
 macro(set_alternate_linker linker)
   find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
@@ -312,13 +314,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
 endif()
 add_subdirectory(3rdparty/communi)
-# Upstream ships this as a standalone library, so a plain add_subdirectory() adopts
-# its own install() rules and puts a header, a static library and CMake export files
-# into every "cmake --install" of this tree - and from there into the .deb, .rpm and
-# Flatpak payloads. EXCLUDE_FROM_ALL leaves the subdirectory out of the generated
-# install script, so no development files reach it; that is observed CMake behaviour
-# rather than documented, which is why the packaging scripts check the staged tree.
-# QTagEdit itself is still built, because mudlet_core links it.
+# Upstream ships a standalone library, so add_subdirectory() would adopt its install() rules and
+# put its dev files into every package. EXCLUDE_FROM_ALL keeps them out (observed, not documented
+# CMake behaviour, so the packaging scripts check the staged tree); mudlet_core still links it.
 add_subdirectory(3rdparty/qt-tags-widget EXCLUDE_FROM_ALL)
 add_subdirectory(translations/translated)
 add_subdirectory(src)

@@ -21,7 +21,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -105,7 +105,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -174,7 +174,7 @@ private slots:
                          [this]() {
                              return mPaintCount > 0;
                          },
-                         2000),
+                         2s),
                  "the pane never repainted at all in the 2s after the print, so the harness is dead rather than the pacer being at fault");
 
         // The wait above cannot say which repaint satisfied it - an unrelated one
@@ -195,7 +195,7 @@ private:
         }
 
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -215,7 +215,7 @@ private:
                 timeoutMs);
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -229,7 +229,7 @@ private:
 private slots:
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mpHostname);
         mpWatchedPane = nullptr;
         delete mudlet::self();
         delete mpServer;

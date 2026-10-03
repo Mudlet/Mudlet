@@ -21,13 +21,15 @@
 #include <QPushButton>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TFeatureCallout.h"
 #include "enums.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 /*
  * A feature callout is a Qt::ToolTip window, which the platforms Mudlet ships
@@ -53,9 +55,9 @@ private:
 
     QString shownCountKey() const { return qsl("whatsNew/%1/shownCount").arg(mFeatureId); }
 
-    bool dismissed() const { return mudlet::getQSettings()->value(dismissedKey(), false).toBool(); }
+    bool dismissed() const { return MudletApp::getQSettings()->value(dismissedKey(), false).toBool(); }
 
-    int shownCount() const { return mudlet::getQSettings()->value(shownCountKey(), 0).toInt(); }
+    int shownCount() const { return MudletApp::getQSettings()->value(shownCountKey(), 0).toInt(); }
 
     int anchorCentre() const { return mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0)).x(); }
 
@@ -83,7 +85,7 @@ private slots:
         qputenv("XDG_CONFIG_HOME", mConfig.path().toUtf8());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfig.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfig.path()));
     }
 
     void cleanupTestCase()
@@ -94,8 +96,8 @@ private slots:
 
     void init()
     {
-        mudlet::getQSettings()->remove(dismissedKey());
-        mudlet::getQSettings()->remove(shownCountKey());
+        MudletApp::getQSettings()->remove(dismissedKey());
+        MudletApp::getQSettings()->remove(shownCountKey());
         mpWindow = new QWidget;
         mpWindow->resize(400, 300);
         mpWindow->move(80, 80);
@@ -138,7 +140,7 @@ private slots:
                          [callout]() {
                              return callout->isVisible();
                          },
-                         3000),
+                         3s),
                  "the callout never appeared, so it is waiting for an activation that this platform does not report");
     }
 
@@ -161,7 +163,7 @@ private slots:
 
         callout->slot_applicationStateChanged(Qt::ApplicationInactive);
         mpWindow->move(mpWindow->x() + 120, mpWindow->y() + 60);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         callout->slot_applicationStateChanged(Qt::ApplicationActive);
 
         QVERIFY2(anchorCentre() != centreBefore, "the window did not actually move, so nothing was re-anchored");
@@ -205,7 +207,7 @@ private slots:
             callout->slot_applicationStateChanged(Qt::ApplicationActive);
         }
         // the balloon closes itself, which is a deferred delete
-        QTest::qWait(50);
+        QTest::qWait(50ms);
 
         QVERIFY2(!callout || !callout->isVisible(), "the callout came back pointing at an anchor that is no longer on screen");
         QVERIFY2(!dismissed(), "the anchor going away was recorded as the player having dealt with the callout");

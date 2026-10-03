@@ -38,6 +38,7 @@
 #include <QWidget>
 
 #include <chrono>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -48,6 +49,7 @@ class Host;
 class TBuffer;
 class TConsole;
 class TChar;
+class TGlyphCache;
 
 class QScrollBar;
 class QString;
@@ -191,6 +193,7 @@ private slots:
     void slot_copySelectionToClipboardImage();
 
 private:
+    void applyPendingScrollBarUpdate();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
@@ -211,8 +214,8 @@ private:
     std::pair<int, int> visibleLines();
     void expandSelectionToWords();
     void expandSelectionToLine(int);
-    inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QString&, int&) const;
-    inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QString&, int&) const;
+    inline void replaceControlCharacterWith_Picture(const uint, QStringView, const int, QStringView&, int&) const;
+    inline void replaceControlCharacterWith_OEMFont(const uint, QStringView, const int, QStringView&, int&) const;
     int offsetForPosition(int line, int column) const;
     bool hasBufferLine(int lineNumber) const;
     static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
@@ -225,7 +228,9 @@ private:
         QRect textRect;
         QColor fgColor;
         QColor bgColor;
-        QString grapheme;
+        // Points into TBuffer or at a static replacement glyph, so like style
+        // below it is only valid for the duration of one paint.
+        QStringView grapheme;
         // Borrowed from TBuffer::buffer, or from the caller's timestamp style.
         // Only valid for the duration of one paint, during which the buffer must
         // not be modified. A null pointer marks a background-only run, such as
@@ -241,16 +246,17 @@ private:
     // depend on that order, which is why none of this is reachable from outside.
     void layoutLine(int lineNumber, int lineOfScreen, const TChar& timeStampStyle, LineLayout& layout, int* offset = nullptr) const;
     void paintBackgrounds(QPainter&, const LineLayout&) const;
-    void paintForegrounds(QPainter&, const LineLayout&, const QRect& clip = QRect()) const;
+    void paintForegrounds(QPainter&, TGlyphCache&, const LineLayout&, const QRect& clip = QRect()) const;
     void drawCustomDecorations(QPainter&, const QColor&, const QRect&, const TChar&) const;
-    int layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QString& grapheme, const int column, const int line, const TChar& charStyle) const;
-    void paintGraphemeForeground(QPainter&, const GraphemeRun&) const;
+    int layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringView grapheme, const int column, const int line, const TChar& charStyle) const;
+    void paintGraphemeForeground(QPainter&, TGlyphCache&, const GraphemeRun&) const;
 
     // Reused between paints to keep their capacity rather than reallocating a
     // line's worth of graphemes on every repaint.
     mutable LineLayout mPreviousLineLayout;
     mutable LineLayout mCurrentLineLayout;
     mutable LineLayout mOverflowLineLayout;
+    std::unique_ptr<TGlyphCache> mpGlyphCache;
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate = false;
@@ -313,6 +319,12 @@ private:
     QElapsedTimer mSincePaint;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
+    // The scrollbar repaints on every range change, so new output moves it
+    // with the paced frame rather than with every packet.
+    bool mScrollBarUpdatePending = false;
+    // Set while updateScrollBar() is moving the bar itself, which
+    // slot_scrollBarMoved() must not mistake for the user dragging it.
+    bool mUpdatingScrollBar = false;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
     // How many "normal" width "characters" are each tab stop apart, while
     // there is no current mechanism to adjust this, sensible values will

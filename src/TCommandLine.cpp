@@ -24,7 +24,7 @@
 
 #include "TCommandLine.h"
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TEncodingHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -34,6 +34,8 @@
 #include "TTextEdit.h"
 #include "TEvent.h"
 #include "mudlet.h"
+
+#include <hunspell/hunspell.h>
 
 #include <QAbstractTextDocumentLayout>
 #include <QKeyEvent>
@@ -51,7 +53,7 @@
 
 using namespace std::chrono_literals;
 
-TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, const QString& name, enums::CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mCommandLineName(name)
 , mpHost(pHost)
@@ -68,7 +70,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     document()->setDocumentMargin(2);
 
     // Create password toggle button for MainCommandLine only
-    if (mType == MainCommandLine) {
+    if (mType == enums::MainCommandLine) {
         mpPasswordToggleButton = new QToolButton(this);
         mpPasswordToggleButton->setMinimumSize(QSize(20, 20));
         mpPasswordToggleButton->setMaximumSize(QSize(20, 20));
@@ -80,7 +82,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
         connect(mpPasswordToggleButton, &QToolButton::clicked, this, &TCommandLine::slot_togglePasswordVisibility);
     }
 
-    if (mType & (MainCommandLine | ConsoleCommandLine)) {
+    if (mType & (enums::MainCommandLine | enums::ConsoleCommandLine)) {
         // put an outline around the command line when it is integrated into
         // bottom of a TConsole - so that it can be visually separated from
         // the text output area - particulary when "dark" mode is in effect
@@ -96,7 +98,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     setPalette(mRegularPalette);
     //style subCommandLines by stylesheet
-    if (mType != MainCommandLine) {
+    if (mType != enums::MainCommandLine) {
         const QColor c = mpHost->mCommandLineBgColor;
         const QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
@@ -126,7 +128,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     // Forward textChanged signal for hyperlink visibility triggers
     connect(this, &QPlainTextEdit::textChanged, this, &TCommandLine::commandLineTextChanged);
 
-    if (mType == MainCommandLine) { // Limit to the main command line only
+    if (mType == enums::MainCommandLine) { // Limit to the main command line only
         connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
             this->setEchoSuppression(isRemoteEcho);
         });
@@ -147,7 +149,7 @@ void TCommandLine::processNormalKey(QEvent* event)
     }
 
     // Track if user types during echo suppression for content preservation logic
-    if (mIsEchoSuppressed && mType == MainCommandLine) {
+    if (mIsEchoSuppressed && mType == enums::MainCommandLine) {
         mUserTypedDuringEchoSuppression = true;
     }
 
@@ -646,8 +648,8 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (event->reason() != Qt::ActiveWindowFocusReason) {
-        mpHost->recordActiveCommandLine(this);
+    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost->mpConsole) {
+        mpHost->mpConsole->recordActiveCommandLine(this);
     }
 
     QPlainTextEdit::focusInEvent(event);
@@ -668,24 +670,20 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::hideEvent(QHideEvent* event)
 {
     // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
-    if (mType == SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
+    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
         mpHost->mpConsole->mpCommandLine->setFocus();
     }
 
     QPlainTextEdit::hideEvent(event);
 }
 
-// The height this many rows need, measured from the layout rather than from the font
-// metrics: a row is laid out a pixel or two taller than QFontMetrics::height(), and
-// coming up short is what leaves a scroll range behind. The first block stands in for
-// the rest - they all use the same font.
+// Measured from the layout, not font metrics: a row lays out a pixel or two taller than
+// QFontMetrics::height(), and falling short leaves a scroll range. All blocks share the first's font.
 int TCommandLine::heightForRows(const int rows) const
 {
     const QTextBlock firstBlock = document()->firstBlock();
     const qreal documentMargin = document()->documentMargin();
-    // blockBoundingRect() lays the block out if it has not been laid out yet, so this is
-    // right on the very first call too - but it also folds the document's bottom margin
-    // into whichever block is the last one, which for a one-block command line is this one
+    // blockBoundingRect() lays the block out if needed, but folds the document's bottom margin into the last block.
     qreal blockHeight = document()->documentLayout()->blockBoundingRect(firstBlock).height();
     if (!firstBlock.next().isValid()) {
         blockHeight -= documentMargin;
@@ -706,7 +704,7 @@ void TCommandLine::adjustHeight()
     int lines = static_cast<int>(document()->size().height());
     // Workaround for SubCommandLines textCursor not visible in some situations
     // SubCommandLines cannot autoresize
-    if (mType == SubCommandLine) {
+    if (mType == enums::SubCommandLine) {
         if (lines <= 1) {
             verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
         }
@@ -720,9 +718,8 @@ void TCommandLine::adjustHeight()
     }
     const int fontH = QFontMetrics(font()).height();
     const int marginH = lines > 1 ? 10 : 5;
-    // Coming up short of what the text needs leaves the vertical scroll bar with a
-    // range, and a click-drag inside the command line moves into it - with the scroll
-    // bar switched off nothing shows that the text moved, or drags it back:
+    // Falling short leaves the vertical scroll bar a range that a click-drag scrolls into,
+    // invisibly and irreversibly with the scroll bar switched off.
     int _height = std::max((fontH + 1) * lines + marginH, heightForRows(lines));
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
@@ -770,11 +767,11 @@ void TCommandLine::slot_popupMenu()
     c.removeSelectedText();
     c.insertText(t);
     c.clearSelection();
-    auto systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    auto systemDictionaryHandle = mpHost->spellChecker().systemHandle();
     if (systemDictionaryHandle) {
-        Hunspell_free_list(mpHost->mpConsole->getHunspellHandle_system(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
+        Hunspell_free_list(mpHost->spellChecker().systemHandle(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
     }
-    auto userDictionaryHandle = mpHost->mpConsole->getHunspellHandle_user();
+    auto userDictionaryHandle = mpHost->spellChecker().userHandle();
     if (userDictionaryHandle) {
         Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
     }
@@ -794,9 +791,9 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         return;
     }
 
-    auto codecName = mpHost->mpConsole->getHunspellCodecName_system();
-    auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
-    auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
+    auto codecName = mpHost->spellChecker().systemCodecName();
+    auto handle_system = mpHost->spellChecker().systemHandle();
+    auto handle_profile = mpHost->spellChecker().userHandle();
     bool haveAddOption = false;
     bool haveRemoveOption = false;
     QAction* action_addWord = nullptr;
@@ -812,7 +809,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         action_removeWord = new QAction(tr("Remove from user dictionary"));
         action_removeWord->setEnabled(false);
         // }
-        if (MudletPaths::usingMudletDictionaries()) {
+        if (MudletApp::usingMudletDictionaries()) {
             /*:
             This line is shown in the list of spelling suggestions on the profile's command
             line context menu to clearly divide up where the suggestions for correct
@@ -925,8 +922,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
         } else {
             QAction* pA = nullptr;
-            auto mainConsole = mpConsole->mpHost->mpConsole;
-            if (mainConsole->isUsingSharedDictionary()) {
+            if (mpHost->spellChecker().usingSharedDictionary()) {
                 /*:
                 Used when the command spelling checker using the dictionary shared between
                 profile has no words to suggest.
@@ -982,7 +978,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
     // Prevent selection, drag/drop of text in the command line when echo suppression is on
     // Allow right-click to show the context menu (enables Paste)
-    if (mIsEchoSuppressed && mType == MainCommandLine && event->button() != Qt::RightButton) {
+    if (mIsEchoSuppressed && mType == enums::MainCommandLine && event->button() != Qt::RightButton) {
         event->ignore();
         return;
     }
@@ -1044,13 +1040,13 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
-        if (mType != MainCommandLine && mActionFunction) {
+        if (mType != enums::MainCommandLine && mActionFunction) {
             mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
             mpHost->send(command);
         }
         // send command to your MiniConsole
-        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
+        if (mType == enums::ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
             // This usage of commandList modifies the content!!!
             mpConsole->printCommand(command);
         }
@@ -1288,7 +1284,7 @@ void TCommandLine::slot_removeWord()
         return;
     }
 
-    mpHost->mpConsole->removeWordFromSet(mSpellCheckedWord);
+    mpHost->spellChecker().removeWord(mSpellCheckedWord);
     // Redo spell check to update underlining
     spellCheck();
 }
@@ -1299,7 +1295,7 @@ void TCommandLine::slot_addWord()
         return;
     }
 
-    mpHost->mpConsole->addWordToSet(mSpellCheckedWord);
+    mpHost->spellChecker().addWord(mSpellCheckedWord);
     // Redo spell check to update underlining
     spellCheck();
 }
@@ -1310,7 +1306,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         return;
     }
 
-    Hunhandle* systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    Hunhandle* systemDictionaryHandle = mpHost->spellChecker().systemHandle();
     if (!systemDictionaryHandle) {
         return;
     }
@@ -1332,7 +1328,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
 
     // The dictionary used from "the system" may not be UTF-8 encoded so we
     // will need to transform the UTF-16BE "QString" to the appropriate encoding:
-    const QByteArray codecName = mpHost->mpConsole->getHunspellCodecName_system();
+    const QByteArray codecName = mpHost->spellChecker().systemCodecName();
     if (codecName.isEmpty()) {
         // If we don't know the encoding, we can't safely spell-check
         f.setFontUnderline(false);
@@ -1345,7 +1341,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     const QByteArray encodedText = TEncodingHelper::encode(spellCheckedWord, codecName);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
-        Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
+        Hunhandle* userDictionaryhandle = mpHost->spellChecker().userHandle();
         if (userDictionaryhandle) {
             // The per-profile/shared dictionary is always UTF-8 encoded - so
             // we can use QString::toUtf8() directly to get the bytes needed:
@@ -1505,7 +1501,7 @@ void TCommandLine::slot_adjustAccessibleNames()
     const bool multipleProfilesActive = (HostManager::self()->getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
-    case MainCommandLine:
+    case enums::MainCommandLine:
         if (multipleProfilesActive) {
             /*:
             Accessibility-friendly name to describe the main command line for a
@@ -1539,7 +1535,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case SubCommandLine:
+    case enums::SubCommandLine:
         if (multipleProfilesActive) {
             /*:
             Accessibility-friendly name to describe an extra command line on
@@ -1572,7 +1568,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case ConsoleCommandLine:
+    case enums::ConsoleCommandLine:
         // The mCommandLine for this type is the same as the parent TConsole
         if (multipleProfilesActive) {
             /*:
@@ -1606,7 +1602,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case UnknownType:
+    case enums::UnknownCommandLine:
         Q_UNREACHABLE();
     }
 }
@@ -1620,7 +1616,7 @@ void TCommandLine::restoreHistory()
         return;
     }
 
-    QString pathFileName{MudletPaths::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{MudletApp::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
@@ -1675,7 +1671,7 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
-    QString pathFileName{MudletPaths::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{MudletApp::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QTextStream ofs(&historyFile);
@@ -1715,7 +1711,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
 {
     // Echo suppression (password masking) only applies to the main command line
     // SubCommandLines and ConsoleCommandLines are not affected by server password prompts
-    if (mType != MainCommandLine) {
+    if (mType != enums::MainCommandLine) {
         return;
     }
 
@@ -1856,7 +1852,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
 void TCommandLine::paintEvent(QPaintEvent* event)
 {
     // Only mask text for the main command line when echo is suppressed and password is not visible
-    if (mIsEchoSuppressed && mType == MainCommandLine && !mPasswordVisible) {
+    if (mIsEchoSuppressed && mType == enums::MainCommandLine && !mPasswordVisible) {
         QPainter painter(viewport());
         QTextCursor cursor = textCursor();
         QTextBlock block = document()->firstBlock();
@@ -1877,7 +1873,7 @@ void TCommandLine::paintEvent(QPaintEvent* event)
 
 void TCommandLine::slot_togglePasswordVisibility()
 {
-    if (!mIsEchoSuppressed || mType != MainCommandLine) {
+    if (!mIsEchoSuppressed || mType != enums::MainCommandLine) {
         return;
     }
 

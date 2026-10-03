@@ -25,12 +25,10 @@
 
 
 #include "TAstar.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 #include "utils.h"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QJsonObject>
 #include <QMap>
@@ -127,7 +125,6 @@ public:
     void updateArea(int areaId);
 
     void audit();
-    // One switch for the whole application, not one per map.
     inline static bool smShowMapAuditErrors = false;
 
     QList<int> detectRoomCollisions(int id);
@@ -143,9 +140,6 @@ public:
     QString connectExitStubByToId(const int fromRoomId, const int toRoomId);
     QString connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId);
     void postMessage(QString text);
-
-    // Used by the 2D mapper to send view center coordinates to 3D one
-    void set3DViewCenter(int, int, int, int);
 
     void appendRoomErrorMsg(int, QString, bool isToSetFileViewingRecommended = false);
     void appendAreaErrorMsg(int, QString, bool isToSetFileViewingRecommended = false);
@@ -226,6 +220,9 @@ public:
     // spin-box offers. Zero and below blanks every symbol (issue #10176):
     static constexpr qreal scmMinimumSymbolFontFudgeFactor = 0.50;
     static constexpr qreal scmMaximumSymbolFontFudgeFactor = 2.00;
+    // The 2D zoom a new area starts at, and the smallest one a view accepts:
+    static constexpr qreal scmDefaultXYZoom = 20.0;
+    static constexpr qreal scmMinXYZoom = 3.0;
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
@@ -415,20 +412,13 @@ public slots:
 
 
 private:
-    // Puts the per-room search state back to its defaults at the given room
-    // count, sizing it to match.
     void resetSearchState(const std::size_t roomCount);
 
-    // A* from start to goal, leaving the route in mSearchPredecessor - see the
-    // definition for why this exists rather than boost::astar_search().
+    // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().
     bool searchGraph(const vertex start, const vertex goal);
 
-    // Per-room search state, kept between searches instead of being rebuilt for
-    // each one. The first three hold one entry per room and are refilled by
-    // initGraph(); mSearchTouched is instead a list of just the rooms the last
-    // search wrote to, which is what lets the next one restore the defaults
-    // without walking the whole map. initGraph() must put all four back in step
-    // with the graph, for the reason given there.
+    // Kept between searches. The first three have one entry per room; mSearchTouched lists only
+    // the rooms the last search wrote, so the next resets just those. initGraph() must resync all four.
     std::vector<vertex> mSearchPredecessor;
     std::vector<cost> mSearchDistance;
     std::vector<quint8> mSearchState;
@@ -514,6 +504,8 @@ private:
     qsizetype mProgressDialogRoomsCount = 0;
     qsizetype mProgressDialogLabelsTotal = 0;
     qsizetype mProgressDialogLabelsCount = 0;
+    // When incrementJsonProgressDialog() last showed the counts; invalid until it first does:
+    QElapsedTimer mJsonProgressShown;
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;

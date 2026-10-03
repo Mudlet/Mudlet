@@ -27,7 +27,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
@@ -132,7 +132,7 @@ private:
     // assertion ends the test instead of the null host doing it.
     Host* startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             const auto dialog = []() {
                 return mudlet::self()->mpConnectionDialog.data();
             };
@@ -143,7 +143,7 @@ private:
                         [&dialog]() {
                             return dialog() && dialog()->isVisible();
                         },
-                        5000)) {
+                        5s)) {
                 qWarning() << "the connection dialog never appeared";
                 return;
             }
@@ -153,7 +153,7 @@ private:
                             [field]() {
                                 return QApplication::focusWidget() == field;
                             },
-                            5000)) {
+                            5s)) {
                     return true;
                 }
                 qWarning() << "focus never reached the" << name << "field";
@@ -181,7 +181,7 @@ private:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             qWarning() << "Profile took too long to load.";
             return nullptr;
         }
@@ -192,14 +192,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             qWarning() << "Could not connect with the host.";
             return nullptr;
         }
         return host;
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -232,7 +232,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -241,7 +241,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -360,6 +360,29 @@ private slots:
         QCOMPARE(console->mCurrentSearchResult, dustyLine);
         QCOMPARE(markedCharactersOn(console, dustyLine), 5);
         QCOMPARE(markedCharactersOn(console, laterLine), 0);
+    }
+
+    // Trimming the oldest lines moves every line up, so the search has to move
+    // with them or the next step starts from a line it has not searched yet.
+    void test_aTrimMovesTheSearchWithTheLineItFound()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+
+        const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
+        console->mpBufferSearchBox->setText(qsl("gorbash"));
+        console->slot_searchBufferUp();
+        QCOMPARE(console->mCurrentSearchResult, laterLine);
+
+        QVERIFY2(console->buffer.size() < 100, "the buffer is already past the smallest limit, so the trim below would take the fixture with it");
+        console->buffer.setBufferSize(100, 1);
+        for (int i = 0; i < 200 && lineHolding(console, qsl("GORBASH stirs")) == laterLine; ++i) {
+            console->print(qsl("filler\n"));
+        }
+        const int movedTo = lineHolding(console, qsl("GORBASH stirs"));
+        QVERIFY2(movedTo >= 0 && movedTo < laterLine, "the buffer was never trimmed, so nothing here was exercised");
+
+        QCOMPARE(console->mCurrentSearchResult, movedTo);
     }
 
     void test_aTermThatIsNowhereInTheBufferSaysSo()

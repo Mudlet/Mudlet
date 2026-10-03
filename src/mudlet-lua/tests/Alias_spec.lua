@@ -706,6 +706,33 @@ describe("Alias processing", function()
             assert.are.equal("sword", _G.AliasSpec.what)
         end)
 
+        it("gives a child alias the command and its captures when its parent does not match", function()
+            _G.AliasSpec = {}
+            -- permanent aliases cannot be killed, so a profile that has run this
+            -- before already has them and only needs them switched back on
+            if exists("SpecParentNeverMatches", "alias") == 0 then
+                permAlias("SpecParentNeverMatches", "", "^spec_parent_never_matches$", [[_G.AliasSpec.parent = true]])
+                permAlias("SpecChildOfNonMatching", "SpecParentNeverMatches", [[^spec_child (\w+) ü (\d+)$]], [==[
+                    _G.AliasSpec.whole = matches[1]
+                    _G.AliasSpec.word = matches[2]
+                    _G.AliasSpec.number = matches[3]
+                ]==])
+            end
+            enableAlias("SpecParentNeverMatches")
+            enableAlias("SpecChildOfNonMatching")
+            finally(function()
+                disableAlias("SpecChildOfNonMatching")
+                disableAlias("SpecParentNeverMatches")
+            end)
+
+            expandAlias("spec_child héllo ü 42", false)
+
+            assert.is_nil(_G.AliasSpec.parent)
+            assert.are.equal("spec_child héllo ü 42", _G.AliasSpec.whole)
+            assert.are.equal("héllo", _G.AliasSpec.word)
+            assert.are.equal("42", _G.AliasSpec.number)
+        end)
+
         it("leaves out a named group that took no part in the match", function()
             _G.AliasSpec = {}
             local id = tempAlias([[^named_alias_alt (?:(?<left>aaa)|(?<right>bbb))$]], [==[
@@ -749,6 +776,24 @@ describe("Alias processing", function()
 
             assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
             assert.are.equal(0, _G.AliasSpec.bad, "an alias whose regex did not compile must not fire")
+        end)
+
+        it("does not fire an alias whose script failed to compile", function()
+            _G.AliasSpec = {good = 0}
+            local goodId = tempAlias([[^bad_alias_script$]], [==[_G.AliasSpec.good = _G.AliasSpec.good + 1]==])
+            local badId = tempAlias([[^bad_alias_script$]], [==[_G.AliasSpec.bad = true; this is not ( lua]==])
+            finally(function()
+                killAlias(goodId)
+                killAlias(badId)
+            end)
+            assert.is_true(badId > 0, "an uncompilable script still makes an alias, so that it can be seen and repaired")
+            assert.are.equal(1, isActive(tostring(goodId), "alias"), "the control alias should be switched on")
+            assert.are.equal(0, isActive(tostring(badId), "alias"), "an alias whose script did not compile cannot be switched on")
+
+            expandAlias("bad_alias_script", false)
+
+            assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
+            assert.is_nil(_G.AliasSpec.bad, "an alias whose script did not compile must not run any of it")
         end)
 
         it("does not fire an alias with an empty pattern", function()
@@ -889,9 +934,8 @@ describe("Alias processing", function()
         end)
 
         it("killAlias finds a temporary alias behind a same-named permanent one", function()
-            -- killAlias walks the root node list in creation order, so a permanent
-            -- alias restored from the profile sits in front of this session's
-            -- temporaries: it must be scanned past, not reported as a failure
+            -- a permanent alias can share a temporary's name (its id), and must
+            -- be passed over rather than reported as a failure
             local seed = tempAlias("^spec_kill_order_seed$", [[]])
             killAlias(seed)
             -- permAlias itself takes seed + 1, so the next temporary takes seed + 2

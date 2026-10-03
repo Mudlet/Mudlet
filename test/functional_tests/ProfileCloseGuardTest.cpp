@@ -37,7 +37,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TTabBar.h"
@@ -82,16 +82,16 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after creating the profile");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(2000), "could not connect the profile to the stub server");
+        QVERIFY2(connected.wait(2s), "could not connect the profile to the stub server");
         // otherwise closing the profile asks whether to save it, and the modal
         // question would hang the test
         QVERIFY2(mpHost->mFORCE_SAVE_ON_EXIT, "profiles must save without asking, or a close puts up a modal question");
@@ -104,7 +104,7 @@ private slots:
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mProfileName);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mProfileName);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }
@@ -162,7 +162,7 @@ private slots:
                          [this]() {
                              return !profileIsStillOpen();
                          },
-                         10000),
+                         10s),
                  "the profile never closed once the event loop got a turn");
     }
 };

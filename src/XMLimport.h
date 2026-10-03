@@ -56,16 +56,14 @@ public:
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<EditorViewType, int> importFromClipboard();
-    // Each item of the file just read whose Lua body did not compile, or stopped
-    // with an error while it ran, as "<item name>: <error>". A body that fails
-    // does not fail the read - the item is kept so that it can be fixed in the
-    // editor - so importPackage()'s own answer says nothing about it and this is
-    // where a caller has to look.
+    // Items whose Lua body failed to compile or run, as "<item name>: <error>". They are still
+    // imported so they can be fixed, so importPackage()'s result says nothing about them.
     const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
-    // The same items by name alone, for saying on the console which parts of a
-    // package are not working without the Lua error text, which is written for
-    // whoever wrote the item rather than for whoever installed it.
+    // The same items by name only, for the console: the Lua error is for the item's author, not the installer.
     const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
+    // A save file numbers the sixteen basic colours of a colour pattern its own
+    // way (see XMLexport::remapAnsiToColorNumber()), this turns them back.
+    static void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
 private:
     const QString YES = qsl("yes");
@@ -116,8 +114,6 @@ private:
     void readModulesDetailsMap(QMap<QString, QStringList>&);
     void getVersionString(QString&);
     QString readScriptElement();
-
-    void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
     bool readDefaultTrueBool(QString name);
 

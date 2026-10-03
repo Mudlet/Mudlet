@@ -20,7 +20,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -34,6 +34,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 /*
  * Dropping a variable whose structure markers do not balance is only worth
@@ -177,7 +179,7 @@ private:
             return nullptr;
         }
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QTest::qFail("Could not connect with the host.", __FILE__, __LINE__);
             return nullptr;
         }
@@ -203,7 +205,7 @@ private:
         return gained.join(QChar('\n'));
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -217,7 +219,7 @@ private:
 private slots:
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mpHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;

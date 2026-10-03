@@ -23,14 +23,16 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TConsole.h"
 #include "TLuaInterpreter.h"
+#include "TMainConsole.h"
 #include "TMxpFrameManager.h"
+#include "TMxpFrameWidgets.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -67,11 +69,7 @@ private:
     // payloads carry double quotes, hence the Lua long bracket
     void feed(const QString& data) { runLua(qsl("feedTriggers([[%1]] .. \"\\n\")").arg(data)); }
 
-    TConsole* frameConsole() const
-    {
-        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(mFrameName);
-        return frame ? frame->console : nullptr;
-    }
+    TConsole* frameConsole() const { return mpHost->mpConsole->mxpFrameWidgets().frameConsole(mFrameName); }
 
     // The frame, created and filled. Returns its console, or nullptr with the
     // failure already registered.
@@ -172,7 +170,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -181,7 +179,7 @@ private slots:
         // default is wide enough that coming down to 1200 is such a shrink
         mudlet::self()->resize(1200, 800);
 
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
@@ -189,7 +187,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -204,7 +202,7 @@ private slots:
         mpHost = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }

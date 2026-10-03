@@ -43,7 +43,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TBuffer.h"
@@ -59,6 +59,8 @@
 #include <cstdio>
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class MirrorToStdOutTest : public QObject
 {
@@ -123,7 +125,7 @@ private:
         // cases are about is what is on the line, so the separator comes off
         // here rather than being asserted on. Nothing else can leave a carriage
         // return at the end of one: cTelnet strips those the game sends and
-        // TConsole::echo() those a script sends.
+        // TConsoleModel::echo() those a script sends.
         for (QString& line : lines) {
             if (line.endsWith(QChar::CarriageReturn)) {
                 line.chop(1);
@@ -190,7 +192,7 @@ private:
     {
         startCapture();
         const bool succeeded = mpHost->getLuaInterpreter()->compileAndExecuteScript(script);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         stopCapture();
         return succeeded;
     }
@@ -216,19 +218,19 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -239,7 +241,7 @@ private slots:
                     [this]() {
                         return mpHost->mpConsole->buffer.lineBuffer.contains(mWelcomeMessage);
                     },
-                    5000)) {
+                    5s)) {
             QFAIL("The server stub's welcome message never reached the console.");
         }
 
@@ -258,7 +260,7 @@ private slots:
         mpHost = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -273,7 +275,7 @@ private slots:
         // and cTelnet only picks the shortened timeout up once it has.
         mudlet::smMirrorToStdOut = false;
         mpHost->mTelnet.setPostingTimeout(csmPostingTimeoutMs);
-        QTest::qWait(350);
+        QTest::qWait(350ms);
         mpHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
         mpHost->mpConsole->buffer.clear();
         mCapturedOutput.clear();
@@ -415,6 +417,19 @@ private slots:
         QVERIFY(runLua(qsl("echo(\"first half, \") echo(\"second half\\n\")")));
 
         QCOMPARE(mirroredLines(), QStringList{qsl("first half, second half")});
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
+    // A game line lands below a line the print path left unfinished, so the
+    // unfinished one is written out first, and client output after the game
+    // line follows it.
+    void test_anUnfinishedEchoIsMirroredAheadOfTheGameLineAfterIt()
+    {
+        QVERIFY(runLua(qsl("echo(\"left unfinished\")")));
+        feedLineFromServer("game line below it");
+        QVERIFY(runLua(qsl("echo(\"after the game line\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("left unfinished"), qsl("game line below it"), qsl("after the game line")}));
         QCOMPARE(mirroredLines(), shownLines());
     }
 

@@ -27,12 +27,9 @@
 #include "Host.h"
 #include "TKey.h"
 #include "Tree.h"
-#include "dlgTriggerEditor.h"
-#include "mudlet.h"
 #include "utils.h"
 
 #include <QFlags>
-#include <QKeySequence>
 #include <QLatin1Char>
 #include <QLatin1String>
 #include <QMutableSetIterator>
@@ -172,42 +169,13 @@ const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers m
     return nullptr;
 }
 
-void KeyUnit::warnIfAddonCommandHoldsKey(const TKey* pKey) const
-{
-    auto* pMudlet = mudlet::self();
-    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
-        return;
-    }
-    // A keypad or group-switch binding cannot be written as a key sequence, so
-    // no command's shortcut can be the one holding it
-    constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
-    if (pKey->getKeyModifiers() & ~sequenceModifiers) {
-        return;
-    }
-
-    const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
-    const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost);
-    if (holders.isEmpty()) {
-        return;
-    }
-    // Shown in the editor rather than on the main screen, for the reason
-    // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
-    // bindings at profile load would repeat this at every startup, and a line
-    // the player learns to ignore is worse than no line. The editor is where
-    // the binding is, and where it gets changed.
-    if (mpHost->mpEditorDialog) {
-        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
-        mpHost->mpEditorDialog->showWarning(
-                tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(sequence.toString(QKeySequence::NativeText), holders.join(qsl(", "))));
-    }
-}
-
 void KeyUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto key : mKeyRootNodeList) {
-        if (key->isActive()) {
-            key->compileAll();
-        }
+        key->compileAll();
     }
 }
 
@@ -276,9 +244,7 @@ bool KeyUnit::enableKey(const QString& name)
         // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshKeyIcon(pT->getID());
-        }
+        emit mpHost->signal_keyToggled(pT->getID());
     }
     return found;
 }
@@ -294,32 +260,34 @@ bool KeyUnit::disableKey(const QString& name)
         // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshKeyIcon(pT->getID());
-        }
+        emit mpHost->signal_keyToggled(pT->getID());
     }
     return found;
 }
 
 bool KeyUnit::killKey(QString& name)
 {
-    for (auto pChild : mKeyRootNodeList) {
-        if (pChild->getName() != name) {
+    // By the lookup table rather than a walk of every key; see TimerUnit::killTimer()
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TKey* pChild = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (pChild->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named key that cannot be killed - a permanent key loaded from the
-        // profile precedes this session's temporaries in this list, and reporting
-        // a failure over it would strand a killable key
+        // same-named key that cannot be killed - a permanent one would strand a
+        // killable temporary
         if (!pChild->isTemporary()) {
             // only temporary Keys can be killed
             continue;
         }
-        // An already killed key is only unlinked from this list once doCleanup()
+        // An already killed key is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while a key script is on the call
         // stack - so until then it is still findable by name. Killing it a second
         // time achieves nothing:
-        if (mCleanupSet.contains(pChild)) {
+        if (mCleanupSet.contains(pChild) || uninstallList.contains(pChild)) {
             continue;
         }
         pChild->setIsActive(false);
@@ -556,8 +524,6 @@ void KeyUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
     if (!hasPendingDeletes()) {
         return;
     }
@@ -570,9 +536,8 @@ void KeyUnit::doCleanup()
         deletedKeys.insert(pKey);
         delete pKey;
     }
-    // Not a no-op: the drain above frees no buckets, so without this every later
-    // flush re-scans an array sized for the largest batch the set has ever held.
-    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
     mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting

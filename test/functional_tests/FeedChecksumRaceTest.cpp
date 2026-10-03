@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "updater.h"
 #include "updater/Feed.h"
 #include "updater/Release.h"
@@ -52,6 +52,8 @@
 #include <QTimer>
 
 #include <memory>
+
+using namespace std::chrono_literals;
 
 /*
  * Regression test for https://github.com/Mudlet/Mudlet/issues/9938 (Sentry
@@ -433,7 +435,7 @@ protected:
                 // Deferred rather than immediate: the box is not in its own
                 // event loop yet, and closing it before exec() starts leaves
                 // exec() with nothing to return on
-                QTimer::singleShot(0, box, &QMessageBox::accept);
+                QTimer::singleShot(0ms, box, &QMessageBox::accept);
             }
         }
         return QObject::eventFilter(watched, event);
@@ -591,7 +593,7 @@ void FeedChecksumRaceTest::secondDownloadRequestDuringChecksumFetchDoesNotCrash(
 
     // Long enough for both checksum answers - including the deliberately late
     // one - and the download requests they lead to
-    QTest::qWait(1500);
+    QTest::qWait(1500ms);
 
     QCOMPARE(server.downloadRequests(), 1);
     QCOMPARE(server.checksumRequests(), 1);
@@ -921,16 +923,16 @@ void FeedChecksumRaceTest::theChangelogAfterAnUpdateListsWhatTheUpdateBrought()
 
     QTemporaryDir configRoot;
     QVERIFY2(configRoot.isValid(), qPrintable(configRoot.errorString()));
-    MudletPaths::setConfigPath(configRoot.path());
+    MudletApp::setConfigPath(configRoot.path());
     // Back to unresolved, which is where this binary starts: nothing else in it asks for a path
     const auto restoreConfigPath = qScopeGuard([]() {
-        MudletPaths::setConfigPath(QString());
+        MudletApp::setConfigPath(QString());
     });
 
     // Stands in for Updater::recordUpdatedVersion(), which writes this marker when an update is
     // applied but needs a mudlet instance to find the path. Only the reader is exercised here, so
     // the stream version has to stay in step with the writer by hand.
-    const QString markerPath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from"));
+    const QString markerPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from"));
     QFile marker(markerPath);
     QVERIFY2(marker.open(QIODevice::WriteOnly), qPrintable(marker.errorString()));
     QDataStream markerStream(&marker);

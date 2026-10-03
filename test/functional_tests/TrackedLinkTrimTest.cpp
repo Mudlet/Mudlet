@@ -34,7 +34,7 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -48,6 +48,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class TrackedLinkTrimTest : public QObject
 {
@@ -93,7 +95,7 @@ private slots:
         auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(host, "no active host available for the test");
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectionSpy.wait(2000), "could not connect with the host");
+        QVERIFY2(connectionSpy.wait(2s), "could not connect with the host");
 
         mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
@@ -143,7 +145,7 @@ private slots:
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
         buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
 
         fill(pConsole, qsl("seed"), 45);
@@ -174,7 +176,7 @@ private slots:
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         fill(pConsole, qsl("seed"), 3);
         const int goingId = appendLink(pConsole);
@@ -228,7 +230,7 @@ private slots:
         QVERIFY(manager.registerHyperlink(linkId, registeredOn, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
         QCOMPARE(pConsole->getLinkStore().getLinksConst(linkId), QStringList{mLinkCommand});
 
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
         qApp->processEvents();
 
         QVERIFY2(pConsole->getLinkStore().getLinksConst(linkId).isEmpty(), "clearing the window left the link's command behind");
@@ -241,7 +243,7 @@ private slots:
     {
         auto* pConsole = mpHost->mpConsole.data();
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         fill(pConsole, qsl("seed"), 3);
         const int linkId = appendLink(pConsole);
@@ -255,21 +257,21 @@ private slots:
         QVERIFY2(manager.mPendingHiddenCount > 0, "nothing was queued, so clearing it below proves nothing");
         QVERIFY2(manager.mpAnnouncementTimer->isActive(), "nothing was queued, so clearing it below proves nothing");
 
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         QCOMPARE(manager.mPendingHiddenCount, 0);
         QVERIFY2(!manager.mpAnnouncementTimer->isActive(), "the announcement still fires after the links it counts have gone");
     }
 
     // The main console's model outlives the view built on it and keeps taking
-    // lines meanwhile, so the tracked links have to follow a deletion whether or
-    // not anyone is watching. ~TConsole is what detaches it in production.
-    void test_deletingALineMovesTrackedLinksWithNoViewAttached()
+    // lines meanwhile, so the buffer moves the tracked links itself rather than
+    // leaving it to the view.
+    void test_deletingALineMovesTrackedLinks()
     {
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         fill(pConsole, qsl("seed"), 3);
         const int linkId = appendLink(pConsole);
@@ -285,9 +287,7 @@ private slots:
         manager.concealLink(linkId);
         QVERIFY2(lineContaining(buffer, mLinkText) < 0, "the link's text is still in the buffer, so a reveal would prove nothing");
 
-        buffer.detachConsole(pConsole);
         buffer.deleteLine(0);
-        buffer.setConsole(pConsole);
 
         manager.revealLink(linkId);
         qApp->processEvents();
@@ -301,7 +301,7 @@ private slots:
     {
         auto* pConsole = mpHost->mpConsole.data();
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         fill(pConsole, qsl("seed"), 3);
         const int linkId = appendLink(pConsole);
@@ -315,11 +315,7 @@ private slots:
         TBuffer viewlessSlice(mpHost);
         QVERIFY2(manager.trackedLinkIds().contains(linkId), "building a viewless buffer dropped another buffer's links");
 
-        // a scratch buffer handed a console it does not belong to
-        TBuffer consoleBoundScratch(mpHost, pConsole);
-        QVERIFY2(manager.trackedLinkIds().contains(linkId), "building a scratch buffer dropped the console's links");
-
-        consoleBoundScratch.deleteLine(0);
+        viewlessSlice.deleteLine(0);
         QCOMPARE(manager.mTrackedLinks[linkId].lineNumber, registeredOn);
     }
 
@@ -366,9 +362,10 @@ private:
     {
         QStringList commands{mLinkCommand};
         QStringList hints{mLinkHint};
-        TChar format(pConsole);
+        const TChar& current = pConsole->mFormatCurrent;
+        TChar format(current.foreground(), current.background(), current.allDisplayAttributes());
         pConsole->buffer.addLink(false, mLinkText, commands, hints, format);
-        pConsole->echo(qsl("\n"));
+        pConsole->print(qsl("\n"));
         return pConsole->getLinkStore().getCurrentLinkID();
     }
 
@@ -387,7 +384,7 @@ private:
     void fill(TConsole* pConsole, const QString& tag, const int lines) const
     {
         for (int i = 0; i < lines; ++i) {
-            pConsole->echo(qsl("%1 line %2\n").arg(tag).arg(i));
+            pConsole->print(qsl("%1 line %2\n").arg(tag).arg(i));
         }
     }
 
@@ -416,7 +413,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

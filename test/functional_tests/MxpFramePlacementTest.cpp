@@ -18,18 +18,26 @@
  ***************************************************************************/
 
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QSignalSpy>
+#include <QTabWidget>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TCommandLine.h"
 #include "TMainConsole.h"
+#include "TMxpFrameManager.h"
+#include "TMxpFrameWidgets.h"
+#include "TPrintSink.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -52,7 +60,9 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
+    QPointer<Host> mpSecondHost;
     const QString mHostname = "MxpFramePlacement-Test-Host";
+    const QString mSecondHostname = "MxpFramePlacement-Test-Second";
     QString mPort;
     const QString mLocalhost = "localhost";
 
@@ -64,13 +74,14 @@ private:
     // literal or against another widget's geometry instead.
     QRect area() const { return QRect(QPoint(0, 0), mpHost->mpConsole->getMainWindowSize()).marginsRemoved(mpHost->userBorders()); }
 
+    QWidget* frameWidget(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameWidget(name); }
+    TConsole* frameConsole(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameConsole(name); }
+    QTabWidget* frameTabs(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameTabs(name); }
+
     QRect frameGeometry(const QString& name) const
     {
-        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(name);
-        if (!frame || !frame->widget) {
-            return {};
-        }
-        return frame->widget->geometry();
+        const QWidget* widget = frameWidget(name);
+        return widget ? widget->geometry() : QRect();
     }
 
     bool createFrame(const QString& name, const QString& align, const QString& width, const QString& height, const QMap<QString, QString>& extraAttributes = {})
@@ -91,6 +102,33 @@ private:
 
     // border changes and window resizes reposition frames from a zero timer
     void settle() { QTest::qWait(50ms); }
+
+    void showTab(const QString& hostname) const
+    {
+        mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(hostname));
+        QTest::qWait(500ms);
+    }
+
+    // Loaded offline and only by the case that needs it. Reports rather than
+    // asserts, as a QVERIFY here would return from this helper and leave that
+    // case running on a profile that is not there.
+    bool ensureSecondProfile()
+    {
+        if (mpSecondHost) {
+            return true;
+        }
+        if (!QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletApp::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
+            || !MudletApp::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
+            return false;
+        }
+        runLua(qsl("loadProfile('%1', true)").arg(mSecondHostname));
+        for (int attempt = 0; attempt < 20 && mpSecondHost.isNull(); ++attempt) {
+            QTest::qWait(300ms);
+            mpSecondHost = HostManager::self()->getHost(mSecondHostname);
+        }
+        QTest::qWait(600ms);
+        return !mpSecondHost.isNull();
+    }
 
 private slots:
     void initTestCase()
@@ -115,7 +153,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -128,7 +166,7 @@ private slots:
         // coming down from that to 1200 is exactly the drop that gets ignored.
         mudlet::self()->resize(1200, 800);
 
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
@@ -136,7 +174,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -162,7 +200,7 @@ private slots:
         mpHost = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }
@@ -187,6 +225,8 @@ private slots:
         runLua(qsl("setBorderSizes(0)"));
         mudlet::self()->resize(1200, 800);
         settle();
+
+        QVERIFY2(!HostManager::self()->getHost(mSecondHostname), "the case left the second profile loaded");
     }
 
     void test_rightFrameKeepsClearOfAReservedRightBorder()
@@ -263,9 +303,8 @@ private slots:
         QCOMPARE(frameGeometry(qsl("status")).x(), area().right() + 1 - 200);
         // a container that moves without its text area following it would look
         // to the player like the frame did not move at all
-        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(qsl("status"));
-        QVERIFY(frame && frame->console);
-        QCOMPARE(frame->console->size(), frame->widget->size());
+        QVERIFY(frameConsole(qsl("status")));
+        QCOMPARE(frameConsole(qsl("status"))->size(), frameWidget(qsl("status"))->size());
     }
 
     void test_leftFrameStartsAfterAReservedLeftBorder()
@@ -369,17 +408,16 @@ private slots:
     void test_externalFrameIsLeftAloneByARelayout()
     {
         QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("200px"), qsl("150px"), {{qsl("EXTERNAL"), qsl("true")}}));
-        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(qsl("popup"));
-        QVERIFY(frame);
-        QVERIFY2(frame->widget && frame->widget->isWindow(), "the external frame is not a window of its own");
-        const QRect geometryBefore = frame->widget->geometry();
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY2(popup && popup->isWindow(), "the external frame is not a window of its own");
+        const QRect geometryBefore = popup->geometry();
         QCOMPARE(mpHost->borders(), QMargins());
 
         mudlet::self()->resize(1000, 700);
         settle();
 
         QCOMPARE(mpHost->borders(), QMargins());
-        QCOMPARE(frame->widget->geometry(), geometryBefore);
+        QCOMPARE(popup->geometry(), geometryBefore);
     }
 
     // closing the outer frame has to pull the inner one back out to the edge
@@ -410,20 +448,629 @@ private slots:
         QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Titled")}}));
         QVERIFY(createFrame(qsl("plain"), qsl("left"), qsl("120px"), qsl("100%")));
         QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
-        const TMxpFrame* titled = mpHost->mMxpFrameManager.getFrame(qsl("titled"));
-        QVERIFY2(titled && titled->tabWidget, "A titled frame should have taken the tabbed layout");
+        QVERIFY2(frameTabs(qsl("titled")), "A titled frame should have taken the tabbed layout");
 
         QWidget* commandLine = mpHost->mpConsole->mpCommandLine;
         QVERIFY(commandLine);
         for (const QString& name : {qsl("titled"), qsl("plain"), qsl("tab")}) {
-            const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(name);
-            QVERIFY2(frame && frame->widget && frame->console, qPrintable(qsl("Frame %1 should have a widget and a console").arg(name)));
-            QVERIFY2(frame->widget->isAncestorOf(frame->console), qPrintable(qsl("The console of %1 should live inside its frame widget").arg(name)));
-            QCOMPARE(frame->console->objectName(), name);
-            QCOMPARE(frame->console->focusProxy(), commandLine);
-            QCOMPARE(frame->console->mUpperPane->focusProxy(), commandLine);
-            QCOMPARE(frame->console->mLowerPane->focusProxy(), commandLine);
+            QWidget* widget = frameWidget(name);
+            TConsole* console = frameConsole(name);
+            QVERIFY2(widget && console, qPrintable(qsl("Frame %1 should have a widget and a console").arg(name)));
+            QVERIFY2(widget->isAncestorOf(console), qPrintable(qsl("The console of %1 should live inside its frame widget").arg(name)));
+            QCOMPARE(console->objectName(), name);
+            QCOMPARE(console->focusProxy(), commandLine);
+            QCOMPARE(console->mUpperPane->focusProxy(), commandLine);
+            QCOMPARE(console->mLowerPane->focusProxy(), commandLine);
         }
+    }
+
+    // A titled frame carries its title on the single tab of a header, an
+    // untitled one has no header. Either way the console is shown, registered
+    // under the frame's name and styled after the profile, a shade lighter so
+    // that the frame stands out from the main window.
+    void test_frameConsolesTakeTheProfilesLook()
+    {
+        // Colours and a font size a fresh console would not have by itself,
+        // and not black, which lighter() leaves as it is
+        TMainConsole* mainConsole = mpHost->mpConsole;
+        const QColor savedFgColor = mainConsole->mFgColor;
+        const QColor savedBgColor = mainConsole->mBgColor;
+        const int savedFontSize = mpHost->getDisplayFont().pointSize();
+        const auto restoreLook = qScopeGuard([&]() {
+            mainConsole->mFgColor = savedFgColor;
+            mainConsole->mBgColor = savedBgColor;
+            mpHost->setDisplayFontSize(savedFontSize);
+            settle();
+        });
+        mainConsole->mFgColor = QColor(200, 180, 160);
+        mainConsole->mBgColor = QColor(40, 60, 80);
+        mpHost->setDisplayFontSize(savedFontSize + 5);
+        settle();
+
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Status")}}));
+        QVERIFY(createFrame(qsl("plain"), qsl("left"), qsl("120px"), qsl("100%")));
+
+        QTabWidget* tabs = frameTabs(qsl("titled"));
+        QVERIFY2(tabs, "A titled frame should have a tab header");
+        QCOMPARE(tabs->count(), 1);
+        QCOMPARE(tabs->tabText(0), qsl("Status"));
+        QCOMPARE(tabs->currentIndex(), 0);
+        QVERIFY2(!frameTabs(qsl("plain")), "An untitled frame should have no tab header");
+
+        const int profileFontSize = savedFontSize + 5;
+        for (const QString& name : {qsl("titled"), qsl("plain")}) {
+            TConsole* console = frameConsole(name);
+            QVERIFY(console);
+            QVERIFY2(!console->isHidden(), qPrintable(qsl("The console of %1 should be shown").arg(name)));
+            QVERIFY2(!frameWidget(name)->isHidden(), qPrintable(qsl("Frame %1 should be shown").arg(name)));
+            QCOMPARE(mpHost->mpConsole->subConsoleWidget(name), console);
+            QCOMPARE(console->mDisplayFontDetails.mPointSize, profileFontSize);
+            // what the frame's text is printed in, until the game says otherwise
+            QCOMPARE(console->model().mFormatCurrent.foreground(), QColor(200, 180, 160));
+            QCOMPARE(console->model().mFormatCurrent.background(), QColor(40, 60, 80).lighter(115));
+            QVERIFY(console->getScrolling());
+        }
+    }
+
+    void test_scrollingNoTurnsScrollingOffInEveryLayout()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("SCROLLING"), qsl("NO")}, {qsl("TITLE"), qsl("Titled")}}));
+        QVERIFY(createFrame(qsl("plain"), qsl("left"), qsl("120px"), qsl("100%"), {{qsl("SCROLLING"), qsl("NO")}}));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("SCROLLING"), qsl("NO")}, {qsl("DOCK"), qsl("titled")}}));
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("200px"), qsl("150px"), {{qsl("SCROLLING"), qsl("NO")}, {qsl("EXTERNAL"), qsl("true")}}));
+
+        for (const QString& name : {qsl("titled"), qsl("plain"), qsl("tab"), qsl("popup")}) {
+            TConsole* console = frameConsole(name);
+            QVERIFY2(console, qPrintable(qsl("Frame %1 should have a console").arg(name)));
+            QVERIFY2(!console->getScrolling(), qPrintable(qsl("Frame %1 should not scroll").arg(name)));
+        }
+    }
+
+    // DOCK plus ALIGN=client adds a tab to the named frame's header. The first
+    // such tab is brought to the front, later ones are not.
+    void test_tabFramesJoinTheirParentsHeader()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("chat"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}, {qsl("TITLE"), qsl("Chat")}}));
+
+        QTabWidget* tabs = frameTabs(qsl("titled"));
+        QVERIFY(tabs);
+        QCOMPARE(tabs->count(), 2);
+        QCOMPARE(tabs->tabText(1), qsl("Chat"));
+        QCOMPARE(tabs->currentIndex(), 1);
+        QCOMPARE(tabs->widget(1), frameWidget(qsl("chat")));
+        QVERIFY(frameConsole(qsl("chat")));
+        QCOMPARE(mpHost->mpConsole->subConsoleWidget(qsl("chat")), frameConsole(qsl("chat")));
+        QVERIFY2(!frameConsole(qsl("chat"))->isHidden(), "The tab's console should be shown");
+
+        QVERIFY(createFrame(qsl("log"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        QCOMPARE(tabs->count(), 3);
+        QCOMPARE(tabs->tabText(2), qsl("log"));
+        QCOMPARE(tabs->currentIndex(), 1);
+    }
+
+    // closing a tab takes only that tab out of its parent's header
+    void test_closingATabFrameRemovesOnlyItsTab()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("chat"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        const QPointer<QWidget> chatPage = frameWidget(qsl("chat"));
+        const QMargins bordersBefore = mpHost->borders();
+
+        QVERIFY(mpHost->mMxpFrameManager.closeFrame(qsl("chat")));
+        settle();
+
+        QVERIFY(!mpHost->mMxpFrameManager.frameExists(qsl("chat")));
+        QVERIFY2(chatPage.isNull(), "The closed tab's page should have been deleted");
+        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("chat")));
+        QVERIFY(!mpHost->windowRegistry().hasSubConsole(qsl("chat")));
+        QCOMPARE(frameTabs(qsl("titled"))->count(), 1);
+        QVERIFY(frameConsole(qsl("titled")));
+        QCOMPARE(mpHost->borders(), bordersBefore);
+    }
+
+    // a DOCK into a frame without a header, or into no frame at all, falls
+    // back to a frame of its own on the main window
+    void test_dockWithoutATabbedParentFallsBackToAFrameOfItsOwn()
+    {
+        QVERIFY(createFrame(qsl("plain"), qsl("left"), qsl("120px"), qsl("100%")));
+        QVERIFY(createFrame(qsl("orphan"), qsl("client"), qsl("200px"), qsl("100%"), {{qsl("DOCK"), qsl("plain")}}));
+        QVERIFY(createFrame(qsl("lost"), qsl("client"), qsl("200px"), qsl("100%"), {{qsl("DOCK"), qsl("nowhere")}}));
+
+        QVERIFY(!frameTabs(qsl("plain")));
+        for (const QString& name : {qsl("orphan"), qsl("lost")}) {
+            QVERIFY2(frameWidget(name), qPrintable(qsl("Frame %1 should have a widget").arg(name)));
+            QCOMPARE(frameWidget(name)->parentWidget(), mpHost->mpConsole->mpMainFrame);
+            QCOMPARE(frameWidget(name)->width(), 200);
+            QVERIFY(frameConsole(name));
+        }
+    }
+
+    void test_closingAFrameClosesTheFramesNestedInIt()
+    {
+        QVERIFY(createFrame(qsl("outer"), qsl("right"), qsl("300px"), qsl("100%")));
+        mpHost->mMxpFrameManager.setDestination(qsl("outer"), false, false);
+        QVERIFY(createFrame(qsl("nested"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        const QPointer<QWidget> outer = frameWidget(qsl("outer"));
+        const QPointer<QWidget> nested = frameWidget(qsl("nested"));
+        QVERIFY(outer && nested);
+
+        QVERIFY(mpHost->mMxpFrameManager.closeFrame(qsl("outer")));
+        settle();
+
+        QCOMPARE(mpHost->mMxpFrameManager.frameCount(), 0);
+        QVERIFY(outer.isNull());
+        QVERIFY(nested.isNull());
+        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("outer")));
+        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("nested")));
+        QCOMPARE(mpHost->borders(), QMargins());
+    }
+
+    // ACTION=open on a frame that exists shows it again and brings it to the
+    // front, leaving its size alone
+    void test_openingAnExistingFrameShowsAndRaisesIt()
+    {
+        QVERIFY(createFrame(qsl("first"), qsl("right"), qsl("200px"), qsl("100%")));
+        QVERIFY(createFrame(qsl("second"), qsl("right"), qsl("200px"), qsl("100%")));
+        QWidget* first = frameWidget(qsl("first"));
+        QWidget* second = frameWidget(qsl("second"));
+        const QObjectList& siblings = mpHost->mpConsole->mpMainFrame->children();
+        QVERIFY(siblings.indexOf(first) < siblings.indexOf(second));
+        first->hide();
+
+        QVERIFY(createFrame(qsl("first"), qsl("right"), qsl("50px"), qsl("100%")));
+
+        QCOMPARE(mpHost->mMxpFrameManager.frameCount(), 2);
+        QCOMPARE(frameWidget(qsl("first")), first);
+        QVERIFY(!first->isHidden());
+        QVERIFY2(siblings.indexOf(first) > siblings.indexOf(second), "The reopened frame should have been raised");
+        QCOMPARE(first->width(), 200);
+    }
+
+    // Building a name again replaces the widgets it had rather than losing
+    // track of them.
+    void test_rebuildingAFramesWidgetsReplacesTheOldOnes()
+    {
+        TMxpFrameWidgets& widgets = mpHost->mpConsole->mxpFrameWidgets();
+        auto teardown = qScopeGuard([&widgets]() {
+            widgets.destroyFrame(qsl("twice"));
+        });
+        widgets.createInternalFrame(qsl("twice"), QString(), qsl("Twice"), QRect(0, 0, 200, 100), false, true);
+        QPointer<QWidget> first = frameWidget(qsl("twice"));
+        QVERIFY(first);
+
+        widgets.createInternalFrame(qsl("twice"), QString(), qsl("Twice"), QRect(0, 0, 200, 100), false, true);
+        QVERIFY(frameWidget(qsl("twice")));
+        QVERIFY2(first.isNull(), "Building the frame again left the first container orphaned.");
+    }
+
+    void test_focusActionRaisesAnExistingFrameOnly()
+    {
+        QVERIFY(createFrame(qsl("first"), qsl("right"), qsl("200px"), qsl("100%")));
+        QVERIFY(createFrame(qsl("second"), qsl("right"), qsl("200px"), qsl("100%")));
+        QWidget* first = frameWidget(qsl("first"));
+        QWidget* second = frameWidget(qsl("second"));
+        const QObjectList& siblings = mpHost->mpConsole->mpMainFrame->children();
+
+        QVERIFY(createFrame(qsl("first"), QString(), QString(), QString(), {{qsl("ACTION"), qsl("focus")}}));
+        QVERIFY2(siblings.indexOf(first) > siblings.indexOf(second), "The focused frame should have been raised");
+
+        QVERIFY(!createFrame(qsl("missing"), QString(), QString(), QString(), {{qsl("ACTION"), qsl("focus")}}));
+        QVERIFY(!mpHost->mMxpFrameManager.frameExists(qsl("missing")));
+    }
+
+    // an EXTERNAL frame is a titled window of its own, sized against the main console
+    void test_externalFrameIsATitledWindowOfItsOwn()
+    {
+        const QSize consoleSize = mpHost->mpConsole->size();
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("50%"), qsl("25%"), {{qsl("EXTERNAL"), qsl("true")}, {qsl("TITLE"), qsl("Popup")}}));
+
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup);
+        QVERIFY(popup->isWindow());
+        QVERIFY(!popup->isHidden());
+        QCOMPARE(popup->windowTitle(), qsl("Popup"));
+        QCOMPARE(popup->size(), QSize(consoleSize.width() * 50 / 100, consoleSize.height() * 25 / 100));
+        QCOMPARE(frameConsole(qsl("popup")), popup);
+        QCOMPARE(mpHost->mpConsole->subConsoleWidget(qsl("popup")), frameConsole(qsl("popup")));
+    }
+
+    // DEST prints into the frame's own console, whatever the layout, and into
+    // no frame once the redirect is over
+    void test_destinationPrintsIntoTheFramesConsole()
+    {
+        QVERIFY(createFrame(qsl("plain"), qsl("left"), qsl("120px"), qsl("100%")));
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("200px"), qsl("150px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        auto& manager = mpHost->mMxpFrameManager;
+
+        manager.setDestination(qsl("plain"), false, false);
+        QCOMPARE(manager.currentDestinationSink(), static_cast<TPrintSink*>(frameConsole(qsl("plain"))));
+        manager.setDestination(qsl("popup"), false, false);
+        QCOMPARE(manager.currentDestinationSink(), static_cast<TPrintSink*>(frameConsole(qsl("popup"))));
+        // an unknown frame leaves the redirect where it was
+        manager.setDestination(qsl("nowhere"), false, false);
+        QCOMPARE(manager.getCurrentDestination(), qsl("popup"));
+        QCOMPARE(manager.currentDestinationSink(), static_cast<TPrintSink*>(frameConsole(qsl("popup"))));
+
+        manager.clearDestination();
+        QVERIFY(!manager.currentDestinationSink());
+    }
+
+    void test_resetClosesEveryFrame()
+    {
+        const QStringList names{qsl("titled"), qsl("tab"), qsl("plain"), qsl("popup")};
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        QVERIFY(createFrame(qsl("plain"), qsl("left"), qsl("120px"), qsl("100%")));
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("200px"), qsl("150px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QList<QPointer<QWidget>> widgets;
+        for (const QString& name : names) {
+            widgets << QPointer<QWidget>(frameWidget(name));
+            QVERIFY(widgets.last());
+        }
+        mpHost->mMxpFrameManager.setDestination(qsl("plain"), false, false);
+
+        mpHost->mMxpFrameManager.resetAllFrames();
+        settle();
+
+        QCOMPARE(mpHost->mMxpFrameManager.frameCount(), 0);
+        QVERIFY(!mpHost->mMxpFrameManager.hasActiveDestination());
+        QCOMPARE(mpHost->borders(), QMargins());
+        for (const auto& widget : std::as_const(widgets)) {
+            QVERIFY(widget.isNull());
+        }
+        for (const QString& name : names) {
+            QVERIFY2(!mpHost->mpConsole->subConsoleWidget(name), qPrintable(qsl("%1 should no longer be registered").arg(name)));
+            QVERIFY2(!mpHost->windowRegistry().hasSubConsole(name), qPrintable(qsl("%1 should no longer be in the window registry").arg(name)));
+        }
+    }
+
+    // An INTERNAL frame belongs to the window it is opened in, so inside the
+    // DEST of an EXTERNAL frame it is shown in that window and placed in its
+    // coordinates, whatever the window's own position on the screen
+    void test_frameNestedInAnExternalFrameIsShownInsideIt()
+    {
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup && popup->isWindow());
+        popup->move(400, 300);
+        settle();
+
+        auto& manager = mpHost->mMxpFrameManager;
+        manager.setDestination(qsl("popup"), false, false);
+        QVERIFY(createFrame(qsl("inpopup"), qsl("top"), qsl("100%"), qsl("40px")));
+        manager.setDestination(qsl("inpopup"), false, false);
+        QVERIFY(createFrame(qsl("deeper"), qsl("top"), qsl("100%"), qsl("20px")));
+        manager.clearDestination();
+
+        QCOMPARE(mpHost->borders(), QMargins());
+        for (const QString& name : {qsl("inpopup"), qsl("deeper")}) {
+            QVERIFY(frameWidget(name));
+            QCOMPARE(frameWidget(name)->parentWidget(), popup);
+        }
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 300, 40));
+        QCOMPARE(frameGeometry(qsl("deeper")), QRect(0, 0, 300, 20));
+
+        mudlet::self()->resize(1000, 700);
+        settle();
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 300, 40));
+        QCOMPARE(frameGeometry(qsl("deeper")), QRect(0, 0, 300, 20));
+    }
+
+    // The player sizes an EXTERNAL frame's window, so a frame opened inside it
+    // later fits the size it has by then rather than the one it opened at
+    void test_frameNestedInAResizedExternalFrameFitsItsNewSize()
+    {
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup && popup->isWindow());
+        popup->resize(500, 350);
+        settle();
+        QCOMPARE(popup->size(), QSize(500, 350));
+
+        mpHost->mMxpFrameManager.setDestination(qsl("popup"), false, false);
+        QVERIFY(createFrame(qsl("inpopup"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 500, 40));
+    }
+
+    // Frames already open inside an EXTERNAL frame follow its window when the
+    // player or a script resizes it, as frames on the main window follow that
+    void test_frameNestedInAnExternalFrameFollowsItsResize()
+    {
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup && popup->isWindow());
+
+        mpHost->mMxpFrameManager.setDestination(qsl("popup"), false, false);
+        QVERIFY(createFrame(qsl("inpopup"), qsl("top"), qsl("100%"), qsl("40px")));
+        QVERIFY(createFrame(qsl("footer"), qsl("bottom"), qsl("100%"), qsl("25%")));
+        mpHost->mMxpFrameManager.clearDestination();
+        // the footer takes a quarter of what the top frame leaves
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 300, 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, 160, 300, 40));
+
+        // as the player dragging the window's edge does
+        popup->resize(500, 360);
+        settle();
+        QCOMPARE(popup->size(), QSize(500, 360));
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 500, 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, 280, 500, 80));
+        QVERIFY(frameConsole(qsl("footer")));
+        QCOMPARE(frameConsole(qsl("footer"))->size(), frameWidget(qsl("footer"))->size());
+
+        runLua(qsl("resizeWindow('popup', 400, 240)"));
+        settle();
+        QCOMPARE(popup->size(), QSize(400, 240));
+        QCOMPARE(frameGeometry(qsl("inpopup")), QRect(0, 0, 400, 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, 190, 400, 50));
+    }
+
+    // A script deleting an EXTERNAL frame's window leaves the frame open, so a
+    // frame later opened inside it is shown on the main window instead
+    void test_frameNestedInADeletedExternalFrameIsShownOnTheMainWindow()
+    {
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("EXTERNAL"), qsl("true")}}));
+        QVERIFY(frameWidget(qsl("popup")));
+        runLua(qsl("deleteMiniConsole('popup')"));
+        settle();
+        QVERIFY(!frameWidget(qsl("popup")));
+
+        mpHost->mMxpFrameManager.setDestination(qsl("popup"), false, false);
+        QVERIFY(createFrame(qsl("inpopup"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        QVERIFY(frameWidget(qsl("inpopup")));
+        QVERIFY(frameConsole(qsl("inpopup")));
+    }
+
+    // Inside a tab it is shown on the tab's page, against the space the header
+    // gives that page, which follows the header's frame across a relayout
+    void test_frameNestedInATabIsShownInsideIt()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        QWidget* page = frameWidget(qsl("tab"));
+        QVERIFY(page);
+        const QMargins bordersBefore = mpHost->borders();
+
+        mpHost->mMxpFrameManager.setDestination(qsl("tab"), false, false);
+        QVERIFY(createFrame(qsl("intab"), qsl("top"), qsl("100%"), qsl("40px")));
+        QVERIFY(createFrame(qsl("footer"), qsl("bottom"), qsl("100%"), qsl("30px")));
+        mpHost->mMxpFrameManager.clearDestination();
+
+        QCOMPARE(mpHost->borders(), bordersBefore);
+        for (const QString& name : {qsl("intab"), qsl("footer")}) {
+            QVERIFY(frameWidget(name));
+            QCOMPARE(frameWidget(name)->parentWidget(), page);
+        }
+        QVERIFY2(page->height() > 100, "the tab's page was never laid out");
+        QCOMPARE(frameGeometry(qsl("intab")), QRect(0, 0, page->width(), 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, page->height() - 30, page->width(), 30));
+
+        const int pageHeightBefore = page->height();
+        mudlet::self()->resize(1000, 700);
+        settle();
+        QVERIFY2(page->height() != pageHeightBefore, "the resize did not change the tab's page");
+        QCOMPARE(frameGeometry(qsl("intab")), QRect(0, 0, page->width(), 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, page->height() - 30, page->width(), 30));
+    }
+
+    // Every page of a header gets the same space, so a frame nested in a tab
+    // that is not at the front follows a resize as one at the front does
+    void test_frameNestedInATabBehindAnotherFollowsAResize()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("front"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        QVERIFY(createFrame(qsl("back"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        QTabWidget* tabs = frameTabs(qsl("titled"));
+        QWidget* front = frameWidget(qsl("front"));
+        QWidget* back = frameWidget(qsl("back"));
+        QVERIFY(tabs && front && back);
+        QCOMPARE(tabs->currentWidget(), front);
+
+        mpHost->mMxpFrameManager.setDestination(qsl("back"), false, false);
+        QVERIFY(createFrame(qsl("inback"), qsl("bottom"), qsl("100%"), qsl("30px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        QVERIFY2(front->height() > 100, "the tab's page was never laid out");
+        QCOMPARE(frameGeometry(qsl("inback")), QRect(0, front->height() - 30, front->width(), 30));
+
+        const QSize pageBefore = front->size();
+        mudlet::self()->resize(1000, 700);
+        settle();
+        const QSize page = front->size();
+        QVERIFY2(page != pageBefore, "the resize did not change the tab's page");
+        QCOMPARE(frameGeometry(qsl("inback")), QRect(0, page.height() - 30, page.width(), 30));
+
+        tabs->setCurrentWidget(back);
+        settle();
+        QCOMPARE(back->size(), page);
+        QCOMPARE(frameGeometry(qsl("inback")), QRect(0, page.height() - 30, page.width(), 30));
+    }
+
+    // what is shown inside a tab goes with it
+    void test_closingATabClosesTheFramesNestedInIt()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        mpHost->mMxpFrameManager.setDestination(qsl("tab"), false, false);
+        QVERIFY(createFrame(qsl("intab"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        const QPointer<QWidget> intab = frameWidget(qsl("intab"));
+        QVERIFY(intab);
+
+        QVERIFY(mpHost->mMxpFrameManager.closeFrame(qsl("tab")));
+        settle();
+
+        QVERIFY(!mpHost->mMxpFrameManager.frameExists(qsl("intab")));
+        QVERIFY(intab.isNull());
+        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("intab")));
+        QVERIFY(!mpHost->windowRegistry().hasSubConsole(qsl("intab")));
+        QCOMPARE(frameTabs(qsl("titled"))->count(), 1);
+    }
+
+    // A frame at LEFT/TOP takes no border, so nothing relayouts between it
+    // opening and a frame opening inside it: that one has to go by where the
+    // first was put when it opened.
+    void test_frameNestedInAnAbsolutelyPlacedOneSitsInsideIt()
+    {
+        QVERIFY(createFrame(qsl("outer"), qsl("left"), qsl("300px"), qsl("200px"), {{qsl("LEFT"), qsl("100")}, {qsl("TOP"), qsl("50")}}));
+        QCOMPARE(mpHost->borders(), QMargins());
+        const QRect outer = frameGeometry(qsl("outer"));
+        QCOMPARE(outer, QRect(area().topLeft() + QPoint(100, 50), QSize(300, 200)));
+
+        mpHost->mMxpFrameManager.setDestination(qsl("outer"), false, false);
+        QVERIFY(createFrame(qsl("nested"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+
+        QCOMPARE(frameGeometry(qsl("nested")), QRect(outer.topLeft(), QSize(outer.width(), 40)));
+    }
+
+    void test_nestedFrameFollowsItsParentAcrossAResize()
+    {
+        QVERIFY(createFrame(qsl("outer"), qsl("right"), qsl("300px"), qsl("100%")));
+        mpHost->mMxpFrameManager.setDestination(qsl("outer"), false, false);
+        QVERIFY(createFrame(qsl("nested"), qsl("top"), qsl("100%"), qsl("40px")));
+        mpHost->mMxpFrameManager.clearDestination();
+        const QRect outerBefore = frameGeometry(qsl("outer"));
+
+        mudlet::self()->resize(1000, 700);
+        settle();
+
+        const QRect outer = frameGeometry(qsl("outer"));
+        QVERIFY2(outer.x() != outerBefore.x(), "the resize did not move the parent");
+        QCOMPARE(frameGeometry(qsl("nested")), QRect(outer.topLeft(), QSize(outer.width(), 40)));
+    }
+
+    // A profile waiting in a background tab has no size of its own to measure,
+    // so a frame the game opens meanwhile goes in the window the profile will
+    // come back to, not the one it last had on screen
+    void test_frameOpenedInABackgroundTabIsPlacedInTheWindowItComesBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        // closed again here, as its tab bar would change the window every later case lays out in
+        const auto closeSecondProfile = qScopeGuard([this]() {
+            showTab(mHostname);
+            mudlet::self()->slot_closeProfileByName(mSecondHostname);
+            QTest::qWait(1000ms);
+        });
+        showTab(mSecondHostname);
+        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+
+        mudlet::self()->resize(1000, 700);
+        settle();
+        QVERIFY(createFrame(qsl("status"), qsl("right"), qsl("200px"), qsl("100%")));
+
+        const QRect whileHidden = frameGeometry(qsl("status"));
+        QCOMPARE(whileHidden.x(), area().right() + 1 - 200);
+        QCOMPARE(whileHidden.height(), area().height());
+
+        showTab(mHostname);
+        QCOMPARE(frameGeometry(qsl("status")), whileHidden);
+    }
+
+    // A header opened while its profile waits in a background tab is not laid
+    // out until the profile comes back, so what is nested in its tabs has to be
+    // placed again then, against the pages the header finally gives them
+    void test_frameNestedInATabOpenedInABackgroundTabFitsItsPage()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        // closed again here, as its tab bar would change the window every later case lays out in
+        const auto closeSecondProfile = qScopeGuard([this]() {
+            showTab(mHostname);
+            mudlet::self()->slot_closeProfileByName(mSecondHostname);
+            QTest::qWait(1000ms);
+        });
+        showTab(mSecondHostname);
+        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        mpHost->mMxpFrameManager.setDestination(qsl("tab"), false, false);
+        QVERIFY(createFrame(qsl("intab"), qsl("top"), qsl("100%"), qsl("40px")));
+        QVERIFY(createFrame(qsl("footer"), qsl("bottom"), qsl("100%"), qsl("30px")));
+        mpHost->mMxpFrameManager.clearDestination();
+
+        showTab(mHostname);
+        QWidget* page = frameWidget(qsl("tab"));
+        QVERIFY(page);
+        QVERIFY2(page->height() > 100, "the tab's page was never laid out");
+        QCOMPARE(frameGeometry(qsl("intab")), QRect(0, 0, page->width(), 40));
+        QCOMPARE(frameGeometry(qsl("footer")), QRect(0, page->height() - 30, page->width(), 30));
+    }
+
+    // The console reports its new size a turn after the resize, so a frame
+    // opened in between has to ask for it. One at LEFT/TOP takes no border, so
+    // nothing else moves it afterwards.
+    void test_frameOpenedStraightAfterAResizeIsPlacedInTheNewSize()
+    {
+        const QSize sizeBefore = mpHost->mpConsole->getMainWindowSize();
+        mudlet::self()->resize(1000, 700);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QVERIFY2(mpHost->mpConsole->getMainWindowSize() != sizeBefore, "the console did not see the resize");
+
+        QVERIFY(createFrame(qsl("status"), qsl("left"), qsl("200px"), qsl("100px"), {{qsl("LEFT"), qsl("50%")}, {qsl("TOP"), qsl("50%")}}));
+
+        const QRect expected(area().x() + area().width() / 2, area().y() + area().height() / 2, 200, 100);
+        QCOMPARE(frameGeometry(qsl("status")), expected);
+    }
+
+    // An EXTERNAL frame is never relaid out, so the size it opens with is the
+    // one it keeps
+    void test_externalFrameOpenedStraightAfterAResizeTakesTheNewSize()
+    {
+        const QSize sizeBefore = mpHost->mpConsole->size();
+        mudlet::self()->resize(1000, 700);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        const QSize consoleSize = mpHost->mpConsole->size();
+        QVERIFY2(consoleSize != sizeBefore, "the console did not see the resize");
+
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("50%"), qsl("25%"), {{qsl("EXTERNAL"), qsl("true")}}));
+
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup);
+        QCOMPARE(popup->size(), QSize(consoleSize.width() * 50 / 100, consoleSize.height() * 25 / 100));
+    }
+
+    // Whether a titled frame gets a header is decided once, when it opens
+    void test_titledFrameOpenedStraightAfterAnEnlargementGetsItsHeader()
+    {
+        mudlet::self()->resize(1200, 500);
+        settle();
+        const int heightBefore = area().height();
+        mudlet::self()->resize(1200, 800);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QVERIFY2(heightBefore * 10 / 100 < 50 && area().height() * 10 / 100 >= 50, "10% of the height has to be too short for a header before the resize and not after it");
+
+        QVERIFY(createFrame(qsl("status"), qsl("top"), QString(), qsl("10%"), {{qsl("TITLE"), qsl("Status")}}));
+
+        QVERIFY2(frameTabs(qsl("status")), "the frame was opened without its header");
+    }
+
+    // A button that widens a side toolbar narrows the main window without
+    // resizing the console, so nothing reports the new size: closing a frame
+    // has to measure it, or what is left moves back against the old one
+    void test_closingAFrameAfterAToolbarWidensPlacesTheRestInTheNarrowerWindow()
+    {
+        runLua(qsl("tempButtonToolbar('mxpTestBar', 1, 1) tempButton('mxpTestBar', 'a', 1) showToolBar('mxpTestBar')"));
+        const auto hideBar = qScopeGuard([this]() {
+            runLua(qsl("hideToolBar('mxpTestBar')"));
+            settle();
+        });
+        settle();
+        QVERIFY(createFrame(qsl("pin"), qsl("left"), qsl("100px"), qsl("100px"), {{qsl("LEFT"), qsl("10")}, {qsl("TOP"), qsl("10")}}));
+        QVERIFY(createFrame(qsl("status"), qsl("right"), qsl("200px"), qsl("100%")));
+        const int widthBefore = area().width();
+
+        runLua(qsl("tempButton('mxpTestBar', 'a caption long enough to widen the toolbar', 1)"));
+        settle();
+        QVERIFY2(area().width() < widthBefore, "the toolbar did not narrow the main window");
+
+        QVERIFY(mpHost->mMxpFrameManager.closeFrame(qsl("pin")));
+        settle();
+
+        QCOMPARE(frameGeometry(qsl("status")).x(), area().right() + 1 - 200);
     }
 
     // How the base UI reserves its space, so this is #9698 as reported. Declared

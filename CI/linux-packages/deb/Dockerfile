@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
-# Compiles, packages and install-tests Mudlet as a .deb. Run it through
-# CI/linux-packages/build, which passes the source checkout as the build context.
+# Builds, packages and install-tests a .deb; run it via CI/linux-packages/build (source checkout as context).
 
 ARG BASE_IMAGE=ubuntu:26.04
 

@@ -34,11 +34,14 @@
 #include <QMenu>
 #include <QScopeGuard>
 
-#include "MudletPaths.h"
+#include "HostDialogs.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TConsole.h"
+#include "TMap.h"
 #include "dlgTriggerEditor.h"
 #include "SingleLineTextEdit.h"
 #include "TelnetServerStub.h"
@@ -69,14 +72,14 @@ private:
     }
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
+    if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
       QFAIL("Could not connect with the host.");
     }
   }
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        MudletApp::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
     if (dir.exists()) {
       dir.removeRecursively();
@@ -106,7 +109,7 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
-    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
              qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
@@ -196,6 +199,21 @@ private slots:
     QCOMPARE(clipboard->text(), qsl("^pattern$"));
   }
 
+  // A pattern is one line, and the editor has no way to show a second one, so a
+  // multi-line paste has to be cut down to its first line rather than hiding the
+  // rest of what was pasted (#7633)
+  void test_pastingSeveralLinesIntoAPatternKeepsOnlyTheFirst() {
+    SingleLineTextEdit edit;
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("^first pattern$\n^second pattern$"));
+
+    QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(edit.toPlainText(), qsl("^first pattern$"));
+  }
+
   // The deselect on focus-out exists so a pattern line does not keep showing a
   // stale selection once another line is being edited, so it has to survive
   // only the reasons that give focus straight back
@@ -223,7 +241,7 @@ private slots:
   void test_luaToggleRepaintsTheTreeItem() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -286,7 +304,7 @@ private slots:
   void test_luaToggleRepaintsAliasTimerScriptKeyIcons() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -416,7 +434,7 @@ private slots:
   void test_luaToggleGreysScriptUnderADeactivatedGroup() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -458,7 +476,7 @@ private slots:
   void test_luaToggleQueuedWhileHiddenIsNotDroppedOnReshow() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -508,7 +526,7 @@ private slots:
   void test_luaToggleOfFolderDoesNotClearNotificationOfUnrelatedSelectedDescendant() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
-    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(pEditor, "the editor dialog was not created");
     TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
     QVERIFY(pLua->compileAndExecuteScript(
@@ -548,6 +566,90 @@ private slots:
     QVERIFY(pLua->compileAndExecuteScript(qsl("disableScript(\"qaNotifyFolder\")")));
     QTRY_COMPARE(pEditor->mScriptIconFlushCount, flushBefore + 1);
     QVERIFY(pEditor->mpSystemMessageArea->isVisible());
+  }
+
+  // Lua's error and debug output, and the map's errors, go to the editor's
+  // error console in the colours each sender picked
+  void test_errorAndDebugLinesReachTheErrorConsole() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("debugc(\"qaDebugProbe\")\n"
+            "showHandlerError(\"qaEventProbe\", \"qaHandlerProbe\")")));
+    // On its own and split, as printError() heads its line with the whole
+    // chunk's source
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("printError(\"qaPrint\" .. \"ErrorProbe\")")));
+    QVERIFY(!pLua->compileAndExecuteScript(qsl("error(\"qaLogErrorProbe\")")));
+    mpHost->mpMap->logError(qsl("qaMapProbe"));
+
+    const TBuffer &buffer = pEditor->mpErrorConsole->model().buffer;
+    auto colourOf = [&buffer](const QString &probe) {
+      for (int line = 0; line < buffer.lineBuffer.size(); ++line) {
+        if (const int column = buffer.lineBuffer.at(line).indexOf(probe); column >= 0) {
+          return buffer.buffer.at(line).at(column).foreground();
+        }
+      }
+      return QColor();
+    };
+    QCOMPARE(colourOf(qsl("qaDebugProbe")), QColor(Qt::green));
+    QCOMPARE(colourOf(qsl("qaPrintErrorProbe")), QColor(Qt::red));
+    QCOMPARE(colourOf(qsl("qaEventProbe")), QColor(Qt::green));
+    QCOMPARE(colourOf(qsl("qaHandlerProbe")), QColor(Qt::red));
+    QCOMPARE(colourOf(qsl("qaLogErrorProbe")), QColor(Qt::red));
+    QCOMPARE(colourOf(qsl("qaMapProbe")), QColor(255, 128, 0));
+  }
+
+  void test_setScriptRewritesTheScriptTheEditorShows() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permScript(\"qaShownScript\", \"\", \"-- before\")")));
+    pEditor->doCleanReset();
+
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaShownScript"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }), "the editor never rebuilt its tree around the planted script");
+    pEditor->slot_showScripts();
+    pEditor->slot_scriptsSelected(pItem);
+    QCOMPARE(pEditor->mpSourceEditorEdbeeDocument->text(), qsl("-- before"));
+
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("setScript(\"qaShownScript\", \"-- after\")")));
+    QCOMPARE(pEditor->mpSourceEditorEdbeeDocument->text(), qsl("-- after"));
+  }
+
+  // Items a script makes are picked up the next time the editor gets the
+  // mouse or the focus, and a recompile of every script rebuilds the trees
+  void test_scriptMadeItemsLeaveTheEditorStale() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    pEditor->mNeedUpdateData = false;
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permAlias(\"qaStaleAlias\", \"\", \"^qa stale$\", \"\")")));
+    QVERIFY2(pEditor->mNeedUpdateData, "the editor was not told a script made an alias");
+
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+    mpHost->getScriptUnit()->compileAll();
+    QVERIFY2(pEditor->mCleanResetQueued, "recompiling every script did not rebuild the editor's trees");
   }
 };
 

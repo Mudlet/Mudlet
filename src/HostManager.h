@@ -53,9 +53,8 @@ public:
     HostManager();
     ~HostManager();
 
-    // Held as a value member of the application object, so this is usable from
-    // that object's own constructor body - the member is built first - until its
-    // members are torn down, and null outside that window.
+    // A value member of the application object, so valid from that object's constructor body until its
+    // members are torn down; null outside that.
     static HostManager* self() { return smpSelf; }
 
     Host* getHost(const QString& hostname);

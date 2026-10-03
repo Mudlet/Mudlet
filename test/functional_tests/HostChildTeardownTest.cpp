@@ -18,12 +18,13 @@
  ***************************************************************************/
 
 /*
- * The notepad, the IRC client and the toolbars an action puts on the main
- * window are created without a Host parent, so nothing disposes of them along
- * with the profile unless the teardown does it by hand. Each test takes one of
- * the three orderings a Host goes away in and asserts the same thing: once the
- * Host is gone, so are its windows. The QPointers make a leak provable in any
- * build; an AddressSanitizer build additionally catches a double delete.
+ * The trigger editor, the notepad, the IRC client and the toolbars an action
+ * puts on the main window are created without a Host parent, so nothing
+ * disposes of them along with the profile unless the teardown does it by hand.
+ * Each test takes one of the three orderings a Host goes away in and asserts
+ * the same thing: once the Host is gone, so are its windows. The QPointers
+ * make a leak provable in any build; an AddressSanitizer build additionally
+ * catches a double delete.
  *
  * Run with: ctest -R HostChildTeardownTest -V
  */
@@ -37,12 +38,14 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPlainTextEdit>
+#include <QScopeGuard>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
@@ -52,6 +55,7 @@
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
 #include "dlgNotepad.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -71,7 +75,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -104,6 +108,7 @@ private:
 
     struct OpenWindows
     {
+        QPointer<dlgTriggerEditor> editor;
         QPointer<dlgNotepad> notePad;
         QPointer<dlgIRC> dlgIrc;
         // two of them, so that the loop in ~Host() is made to iterate
@@ -114,8 +119,11 @@ private:
     {
         OpenWindows windows;
 
+        // loading the profile opened this one already
+        windows.editor = HostDialogs::of(pHost).mpEditorDialog;
+
         mudlet::self()->slot_notes();
-        windows.notePad = pHost->mpNotePad;
+        windows.notePad = HostDialogs::of(pHost).mpNotePad;
         if (windows.notePad) {
             if (auto* note = qobject_cast<QPlainTextEdit*>(windows.notePad->tabWidget->widget(0))) {
                 note->setPlainText(csmNoteText);
@@ -131,7 +139,7 @@ private:
         createToolBarAction(pHost, qsl("HostChildTeardown toolbar"));
         createToolBarAction(pHost, qsl("HostChildTeardown second toolbar"));
         pHost->getActionUnit()->updateAllToolbars();
-        for (const auto& pToolBar : pHost->getActionUnit()->getToolBarList()) {
+        for (const auto& pToolBar : pHost->mpConsole->actionToolBars()) {
             windows.toolBars.append(pToolBar);
         }
         return windows;
@@ -140,6 +148,9 @@ private:
     static QStringList windowsLeftBehind(const OpenWindows& windows)
     {
         QStringList leftBehind;
+        if (windows.editor) {
+            leftBehind << qsl("the trigger editor");
+        }
         if (windows.notePad) {
             leftBehind << qsl("the notepad");
         }
@@ -154,13 +165,16 @@ private:
         return leftBehind;
     }
 
-    static bool everyWindowWasOpened(const OpenWindows& windows) { return windows.notePad && windows.dlgIrc && windows.toolBars.size() == 2 && windows.toolBars.at(0) && windows.toolBars.at(1); }
+    static bool everyWindowWasOpened(const OpenWindows& windows)
+    {
+        return windows.editor && windows.notePad && windows.dlgIrc && windows.toolBars.size() == 2 && windows.toolBars.at(0) && windows.toolBars.at(1);
+    }
 
     static inline const QString csmNoteText = qsl("HostChildTeardown note text");
 
     QString noteContentOnDisk(const QString& profileName) const
     {
-        QFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("notes.json")));
+        QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("notes.json")));
         if (!file.open(QIODevice::ReadOnly)) {
             return QString();
         }
@@ -202,7 +216,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -213,7 +227,7 @@ private slots:
     // the last test leaves open on purpose is deliberately not named here.
     void cleanup()
     {
-        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren")}) {
+        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren"), qsl("HostChildTeardown-First"), qsl("HostChildTeardown-Second")}) {
             if (HostManager::self()->getHost(profileName)) {
                 HostManager::self()->deleteHost(profileName);
             }
@@ -228,14 +242,15 @@ private slots:
 
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString leftOpenProfilePath = MudletPaths::getMudletPath(enums::profileHomePath, mProfileLeftOpenAtTheEnd);
+            const QString leftOpenProfilePath = MudletApp::getMudletPath(enums::profileHomePath, mProfileLeftOpenAtTheEnd);
 
             // The third ordering: a profile still loaded when the main window goes,
             // so the Host is destroyed with no close of any kind asked for.
-            QVERIFY2(mLeftOpenProfileWasSetUp, "The profile this checks on was never opened, so the check below would pass on three null pointers");
+            QVERIFY2(mLeftOpenProfileWasSetUp, "The profile this checks on was never opened, so the check below would pass on null pointers");
             delete mudlet::self();
-            // Only the notepad and the IRC client carry weight here: the toolbars
-            // are children of the main window, so ~QWidget frees them either way.
+            // Only the editor, the notepad and the IRC client carry weight here:
+            // the toolbars are children of the main window, so ~QWidget frees
+            // them either way.
             const QStringList leftBehind = windowsLeftBehind(mWindowsLeftOpenAtTheEnd);
             QVERIFY2(leftBehind.isEmpty(), qPrintable(qsl("Destroying the main window left %1 of the profile that was still loaded behind").arg(leftBehind.join(qsl(" and ")))));
 
@@ -262,7 +277,7 @@ private slots:
         pHost->mpConsole->close();
         QTRY_VERIFY2(pHost->mpConsole.isNull(), "The main console did not go away"); // Qt 6 disposes of a WA_DeleteOnClose widget by deleteLater()
         QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
-        QVERIFY2(pHost->mpNotePad, "requestClose() reached closeChildren() after all - this no longer tests a Host that skips it");
+        QVERIFY2(HostDialogs::of(pHost).mpNotePad, "requestClose() reached closeChildren() after all - this no longer tests a Host that skips it");
 
         const QPointer<Host> hostGuard(pHost);
         pHost = nullptr;
@@ -310,6 +325,56 @@ private slots:
         // anything ~Host() already took would land
         QTRY_VERIFY2(windowsLeftBehind(windows).isEmpty(), "Closing and then destroying the Host left one of its windows behind");
         deleteProfileDirectory(profileName);
+    }
+
+    // A second profile gets an editor of its own rather than the first one's,
+    // and opening one profile's notepad, or closing one profile, leaves the
+    // other's dialogs as they were.
+    void test_eachProfileKeepsItsOwnDialogs()
+    {
+        const QString firstName = qsl("HostChildTeardown-First");
+        const QString secondName = qsl("HostChildTeardown-Second");
+        // Closed properly even when an assertion stops the test early: dropping
+        // a Host whose console is still up leaves that console to crash later
+        auto closeBoth = qScopeGuard([&]() {
+            for (const QString& name : {firstName, secondName}) {
+                if (Host* pHost = HostManager::self()->getHost(name)) {
+                    pHost->forceClose();
+                    pHost->requestClose();
+                    HostManager::self()->deleteHost(name);
+                }
+            }
+        });
+
+        Host* pFirst = startProfile(firstName);
+        QVERIFY2(pFirst, "The first profile took too long to load");
+        // The connection dialog does not come back for a second profile, so it
+        // is loaded the way a script loads one
+        deleteProfileDirectory(secondName);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, secondName)));
+        QVERIFY(pFirst->getLuaInterpreter()->compileAndExecuteScript(qsl("loadProfile('%1', true)").arg(secondName)));
+        QTRY_VERIFY2(HostManager::self()->getHost(secondName), "The second profile did not load");
+        Host* pSecond = HostManager::self()->getHost(secondName);
+
+        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::of(pFirst).mpEditorDialog;
+        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::of(pSecond).mpEditorDialog;
+        QVERIFY2(firstEditor && secondEditor, "Loading a profile did not open its editor");
+        QVERIFY2(firstEditor != secondEditor, "Both profiles hold the same editor");
+
+        Host* pActive = mudlet::self()->getActiveHost();
+        QVERIFY(pActive == pFirst || pActive == pSecond);
+        Host* pOther = pActive == pFirst ? pSecond : pFirst;
+        mudlet::self()->slot_notes();
+        QVERIFY2(HostDialogs::of(pActive).mpNotePad, "The notepad did not open for the active profile");
+        QVERIFY2(!HostDialogs::of(pOther).mpNotePad, "Opening one profile's notepad gave the other profile one too");
+
+        pFirst->forceClose();
+        QVERIFY2(pFirst->requestClose(), "Closing the first profile was refused");
+        pFirst = nullptr;
+        HostManager::self()->deleteHost(firstName);
+        QTRY_VERIFY2(firstEditor.isNull(), "Closing the first profile left its editor behind");
+        QVERIFY2(secondEditor, "Closing the first profile took the second profile's editor with it");
+        QCOMPARE(HostDialogs::of(pSecond).mpEditorDialog.data(), secondEditor.data());
     }
 
     // cleanupTestCase() is what destroys the main window on top of it.

@@ -44,7 +44,7 @@
 #include <QSpinBox>
 #include <QStackedWidget>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -55,6 +55,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class SettingsLiveSyncTest : public QObject
 {
@@ -134,7 +136,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -363,7 +365,7 @@ private slots:
                          [this]() {
                              return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) != nullptr;
                          },
-                         2000),
+                         2s),
                  "the deep link never spotlighted anything, so this case is watching nothing");
 
         const int wrapFromAScript = mpHost->mWrapAt + 13;
@@ -377,7 +379,7 @@ private slots:
                          [this]() {
                              return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) == nullptr;
                          },
-                         5000),
+                         5s),
                  "the spotlight outlived its pulse once the settings had been re-read");
     }
 

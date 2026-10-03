@@ -34,7 +34,9 @@ endif()
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
+    AsciiLineBreakTest.cpp
     ConsoleModelExtractionTest.cpp
+    ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
@@ -42,6 +44,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     DockWidgetWithoutProfileTest.cpp
+    GlyphCacheTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
@@ -93,6 +96,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
+    ConnectionDialogKeychainWaitTest.cpp
     ConnectionDialogNewProfileTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
     ConnectionDialogOpenProfileTest.cpp
@@ -101,6 +105,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     DictionaryRoundTripTest.cpp
     ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
+    PortableRootNoticeTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileDictionaryTest.cpp
     ProfileFolderNameTest.cpp
@@ -112,11 +117,12 @@ set(PROFILE_GROUP_TEST_SOURCES
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp
     SelfTestProfileIconTest.cpp
+    SpellDictionaryFailureTest.cpp
     XMLexportVariablesTest.cpp
 )
 
-# Telnet and the other network protocols Mudlet speaks, and the escape sequences
-# carried over them
+# Telnet and the other network protocols Mudlet speaks, the escape sequences
+# carried over them, and the version identity Mudlet announces over them
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
@@ -125,6 +131,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetAtcpMspTest.cpp
     TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
+    TelnetLatePasswordTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     TelnetChannel102WireTest.cpp
@@ -132,7 +139,9 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
+    MMCPIncomingCallTest.cpp
     TelnetNewEnvironTest.cpp
+    TelnetPasswordMaskTimeoutTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp
@@ -141,8 +150,10 @@ set(TELNET_GROUP_TEST_SOURCES
     TOscTest.cpp
     MirrorToStdOutTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    MudletAppVersionTest.cpp
     IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
+    IrcLuaClientTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them
@@ -152,9 +163,11 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
+    PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
+    TreeChildTeardownTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
@@ -164,8 +177,10 @@ set(TRIGGER_GROUP_TEST_SOURCES
 set(EDITOR_GROUP_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EdbeeReinitTest.cpp
+    EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
     EditorReshowTest.cpp
     PackageExporterTest.cpp
@@ -216,6 +231,7 @@ endif()
 
 # Packages and modules: installing them, saving them and removing them
 set(PACKAGE_GROUP_TEST_SOURCES
+    ActionBarPlacementTest.cpp
     ActionSelfRemovalTest.cpp
     ActionToolbarMenuTest.cpp
     BrokenPackageNoticeTest.cpp
@@ -280,6 +296,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    MediaMuteStateTest.cpp
     SpeechBridgeLuaTest.cpp
     SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
@@ -295,9 +312,12 @@ set(FUNCTIONAL_TEST_UTILS
     DiscordIpcServerStub.cpp
 )
 
+mudlet_add_test_pch_provider(mudlet_functional_test_pch)
+
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 macro(add_functional_test_binary target)
     add_executable(${target} ${ARGN} ${FUNCTIONAL_TEST_UTILS})
+    mudlet_reuse_test_pch(${target} mudlet_functional_test_pch)
     add_dependencies(${target} ${LIB_MUDLET_TARGET})
     target_link_libraries(${target} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS ON)
@@ -548,6 +568,11 @@ set_tests_properties(MsdpMalformedDiagnosticTest PROPERTIES TIMEOUT 300)
 # both of which sanitiser builds stretch well past the default budget.
 set_tests_properties(TelnetLargeBurstTest PROPERTIES TIMEOUT 300)
 
+# TelnetLatePasswordTest boots a Mudlet and a profile for each of its cases and waits out the
+# auto-login timers in real time, which takes half the default budget without sanitisers and
+# more than all of it with them
+set_tests_properties(TelnetLatePasswordTest PROPERTIES TIMEOUT 300)
+
 # TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
 # real time by design - every round trip it times, and every stall it places, has
 # to be waited out - so it needs a longer timeout
@@ -569,10 +594,11 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
-# TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
-# full profile, which is nearly all of their runtime and the part a sanitizer and
-# a loaded runner stretch, so they get the same headroom as their neighbours
-set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
+# TelnetNewEnvironTest, TelnetOptionsReportTest, TelnetAtcpMspTest and
+# TelnetPasswordMaskTimeoutTest each boot a full profile, which is nearly all of
+# their runtime and the part a sanitizer and a loaded runner stretch, so they get
+# the same headroom as their neighbours
+set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest TelnetPasswordMaskTimeoutTest PROPERTIES TIMEOUT 300)
 
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout

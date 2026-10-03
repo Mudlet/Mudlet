@@ -39,13 +39,15 @@
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TLuaInterpreter.h"
 #include "TTrigger.h"
 #include "TriggerMatchPool.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class TriggerMatchPoolTest : public QObject
 {
@@ -94,7 +96,7 @@ private slots:
 
         // An empty save, so no default packages install; the dialogue slot is
         // what gives the profile the console feedTriggers() prints through.
-        const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QVERIFY(QDir().mkpath(folder));
         QFile save(qsl("%1/2020-01-01#00-00-00.xml").arg(folder));
         QVERIFY(save.open(QIODevice::WriteOnly | QIODevice::Text));
@@ -137,10 +139,11 @@ private slots:
         const QByteArray subject = line.toUtf8();
         const TBigramFilter unprepared(line, TBigramFilter::scmQuestionsWorthSummarising);
         const quint32 passId = TTrigger::nextPrescanPassId();
-        QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared));
+        QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared, false));
 
         TTrigger::setPrescanPassId(passId);
-        const bool matched = trigger->match(subject.constData(), static_cast<int>(subject.size()), line, 0, 0, &unprepared);
+        const TUtf8Subject matchSubject(subject.constData(), static_cast<int>(subject.size()));
+        const bool matched = trigger->match(matchSubject, line, 0, 0, &unprepared);
         TTrigger::setPrescanPassId(0);
         QVERIFY(matched);
         QCOMPARE(luaInteger(mpHost, "bigramHits"), 1);
@@ -156,11 +159,13 @@ private slots:
         QCOMPARE(pool.workerCount(), 2);
         const quint64 prescansBefore = pool.prescanCount();
         // The pool opens for a line on the strength of the searches the line
-        // before it ran, so the first line of a profile is always sequential;
-        // the trigger is not given anything to match on it.
+        // before it ran, so the first line of a profile is always sequential.
+        // That line has to hold the pattern's required literal, or the
+        // pre-check dismisses the trigger without a search and the line after
+        // it stays sequential too; the anchors keep it from matching.
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("needleCount = 0\n"
                                                                  "tempRegexTrigger('^needle$', [[needleCount = needleCount + 1]])\n"
-                                                                 "feedTriggers('haystack\\n')\n"
+                                                                 "feedTriggers('a needle in a haystack\\n')\n"
                                                                  "feedTriggers('needle\\n')\n"));
         // The line went through the pool and the trigger still fired, so the
         // helper has consumed a batch and is parked on its epoch.
@@ -168,7 +173,7 @@ private slots:
         QCOMPARE(luaInteger(mpHost, "needleCount"), 1);
         // Gives the helper time to finish its share and park. Nothing here can
         // observe that it has, so the case is only as strong as this wait.
-        QThread::msleep(50);
+        QThread::sleep(50ms);
 
         TriggerMatchPool::shutdown();
         QCOMPARE(pool.workerCount(), 0);
