@@ -55,17 +55,17 @@ void MMCPServer::incomingConnection(qintptr socketDescriptor)
 /**
  * Receive mud data from our current session
  */
-void MMCPServer::receiveFromPlayer(std::string& str)
+void MMCPServer::receiveFromPlayer(std::string& str, const bool endsWithPromptMarker)
 {
     if (mSnoopCount > 0) {
-        sendSnoopData(str);
+        sendSnoopData(str, endsWithPromptMarker);
     }
 }
 
 /**
  * Send mud data from our mud to all clients snooping us
  */
-void MMCPServer::sendSnoopData(std::string& lines)
+void MMCPServer::sendSnoopData(std::string& lines, const bool endsWithPromptMarker)
 {
 
     // Split the block into individual lines
@@ -80,9 +80,8 @@ void MMCPServer::sendSnoopData(std::string& lines)
     // clients and the other (outData2) which will be send to all other clients
 
     while (std::getline(iss, line)) {
-        // cTelnet ends a prompt with 0xff, always the block's last byte, and
-        // writeData() would show it to the snooper as a '?'
-        if (iss.eof() && !line.empty() && line.back() == '\xff') {
+        // writeData() would show the prompt marker to the snooper as a '?'
+        if (endsWithPromptMarker && iss.eof() && !line.empty() && line.back() == '\xff') {
             line.pop_back();
             // GA straight after a line ending marks no prompt text at all
             if (line.empty()) {

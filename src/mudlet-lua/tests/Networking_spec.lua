@@ -1776,6 +1776,15 @@ describe("MMCP effects against a scripted chat peer", function()
         return event.type == "command" and event.name == "SnoopData" and (event.text == "" or event.text == "?")
       end, 0)
       assert.is_nil(blank, "a bare GA reached the snooper as a line of its own")
+
+      -- a literal 0xff (IAC IAC) that ends a read is game text, not the marker
+      mark = captureSeq()
+      feedTelnet("a read that ends in \255\255")
+      local literal = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and contains(event.text, "a read that ends in")
+      end, 2000)
+      assert.is_table(literal, "a literal 0xff ending a read lost the snooper the frame")
+      assert.equals("a read that ends in ?", literal.text, "payload bytes: " .. literal.hex)
     end)
 
     it("raises sysMMCPIncomingSnoopMessage for snooped output", function()

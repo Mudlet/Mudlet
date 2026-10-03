@@ -5189,7 +5189,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
         }
     }
 
-    postData();
+    postData(true);
     mMudData = "";
     mIsTimerPosting = false;
 }
@@ -5303,7 +5303,7 @@ void cTelnet::slot_timerPosting()
     }
 }
 
-void cTelnet::postData()
+void cTelnet::postData(const bool endsWithPromptMarker)
 {
     if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
         return;
@@ -5326,7 +5326,7 @@ void cTelnet::postData()
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data);
+        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data, endsWithPromptMarker);
     }
 
     // Hand the capacity back so the next packet appends without a malloc. A
