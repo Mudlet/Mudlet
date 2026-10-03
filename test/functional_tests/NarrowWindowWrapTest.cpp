@@ -160,10 +160,12 @@ private slots:
         startProfile();
         auto* console = createTestMiniConsole();
         QVERIFY(console);
-        runLua(qsl("setWindowWrap('%1', 5)").arg(mMiniConsole));
+        // wrapLine() holds an indent to half the width, which leaves this pair
+        // as the one that still has less room than a wide glyph needs
+        runLua(qsl("setWindowWrap('%1', 2)").arg(mMiniConsole));
         // both, so that whichever of the two a line uses leaves a single column
-        runLua(qsl("setWindowWrapIndent('%1', 4)").arg(mMiniConsole));
-        runLua(qsl("setWindowWrapHangingIndent('%1', 4)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapIndent('%1', 1)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapHangingIndent('%1', 1)").arg(mMiniConsole));
 
         runWithWatchdog("echo of a wide glyph with the indent using up the wrap width", [this]() {
             runLua(qsl("echo('%1', '%2\\n')").arg(mMiniConsole, mWideText));
