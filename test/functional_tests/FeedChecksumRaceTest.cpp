@@ -53,6 +53,8 @@
 
 #include <memory>
 
+using namespace std::chrono_literals;
+
 /*
  * Regression test for https://github.com/Mudlet/Mudlet/issues/9938 (Sentry
  * MUDLET-4M): EXCEPTION_ACCESS_VIOLATION_READ at address 0x8 inside
@@ -433,7 +435,7 @@ protected:
                 // Deferred rather than immediate: the box is not in its own
                 // event loop yet, and closing it before exec() starts leaves
                 // exec() with nothing to return on
-                QTimer::singleShot(0, box, &QMessageBox::accept);
+                QTimer::singleShot(0ms, box, &QMessageBox::accept);
             }
         }
         return QObject::eventFilter(watched, event);
@@ -591,7 +593,7 @@ void FeedChecksumRaceTest::secondDownloadRequestDuringChecksumFetchDoesNotCrash(
 
     // Long enough for both checksum answers - including the deliberately late
     // one - and the download requests they lead to
-    QTest::qWait(1500);
+    QTest::qWait(1500ms);
 
     QCOMPARE(server.downloadRequests(), 1);
     QCOMPARE(server.checksumRequests(), 1);

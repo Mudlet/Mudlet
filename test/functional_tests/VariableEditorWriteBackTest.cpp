@@ -37,6 +37,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -55,6 +56,8 @@
 #include <QDropEvent>
 #include <QMimeData>
 #include <QTreeWidget>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -198,7 +201,7 @@ private slots:
         selectVariable(pMember);
         mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("edited member value"));
         mpEditor->slot_showTriggers();
-        QTest::qWait(20);
+        QTest::qWait(20ms);
 
         QCOMPARE(luaMemberCount(qsl("viewSwitchTable")), 1);
         QVERIFY2(luaHolds(qsl("viewSwitchTable[1/3]"), qsl("fraction member value")), "the edit reached a variable it was not meant to reach");
@@ -724,14 +727,14 @@ private:
     {
         if (!mpEditor) {
             mudlet::self()->slot_showScriptDialog();
-            QTest::qWait(100);
-            mpEditor = mpHost->mpEditorDialog;
+            QTest::qWait(100ms);
+            mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
             if (!mpEditor) {
                 return false;
             }
         }
         mpEditor->slot_showVariables();
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         return true;
     }
 
@@ -743,7 +746,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(1000)) {
+        if (!spy2.wait(1s)) {
             QFAIL("Could not connect with the host.");
         }
     }

@@ -867,6 +867,7 @@ public:
     static const QString csmInvalidItemID;
     static const QString csmInvalidAreaID;
     static const QString csmInvalidAreaName;
+    static const QStringList csmItemTypes;
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
@@ -892,6 +893,7 @@ private:
     static void errorArgumentType(lua_State*, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const QString& message, const bool useFalseInsteadofNil = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const char* message, const bool useFalseInsteadofNil = false);
+    static int warnArgumentChoice(lua_State*, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value);
     static int setLabelCallback(lua_State*, const char* funcName);
     static int movieFunc(lua_State*, const char* funcName);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
@@ -942,9 +944,8 @@ private:
     bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
     // What a dispatch does about "multimatches": only a multiline trigger's
-    // script is handed one of its own, and callMultiReturnBool() leaves the
-    // named captures out
-    enum class MultimatchesSource { Untouched, Captures, CapturesWithoutNames };
+    // script is handed one of its own
+    enum class MultimatchesSource { Untouched, Captures };
     void setMatches(lua_State*, const MultimatchesSource source = MultimatchesSource::Untouched);
     void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
     bool lazyGlobalsUsable(lua_State*);
@@ -955,7 +956,7 @@ private:
     void pushUnusedSpareMultimatches(lua_State*);
     void pushMatchesTable(lua_State*);
     void pushEmptyMatchesTable(lua_State*);
-    void pushMultimatchesTable(lua_State*, const bool withNames);
+    void pushMultimatchesTable(lua_State*);
     void pushPendingMultimatches(lua_State*);
     void pushUtf8String(lua_State*, const QString&);
     void materialisePendingCaptures(lua_State*);
@@ -1014,7 +1015,7 @@ private:
     // left out between dispatches too - see mSpareMultimatchesRef.
     bool mCaptureScopeOpen = false;
     bool mMatchesPending = false;
-    enum class PendingMultimatches { None, Spare, Captures, CapturesWithoutNames };
+    enum class PendingMultimatches { None, Spare, Captures };
     PendingMultimatches mMultimatchesPending = PendingMultimatches::None;
     int mEmptyMatchesRef = LUA_NOREF;
     // The empty table "multimatches" stands for between dispatches, left out of
@@ -1084,6 +1085,10 @@ private:
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
     void releaseNestedDispatchState(NestedDispatchState&);
+    // Registry references to the compiled "return <name>" chunk that
+    // callEventHandler() runs to find each handler, by handler name. They
+    // belong to pGlobalLua, so are dropped whenever it is replaced.
+    QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,

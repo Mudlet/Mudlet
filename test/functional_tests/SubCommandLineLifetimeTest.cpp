@@ -38,10 +38,14 @@
  * while it holds the keyboard focus has to pass that focus to the main command
  * line.
  *
+ * And the dock of a deleted user window, which has to leave the main window
+ * straight away rather than when its deferred delete gets round to it.
+ *
  * Bootstrap mirrors the other functional tests.
  */
 
 #include <QFileInfo>
+#include <QPointer>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -55,6 +59,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TDockWidget.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -126,7 +131,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -229,6 +234,34 @@ private slots:
         runDeferredDeletes();
     }
 
+    // A nested event loop (pumpEvents(), a JSON map import) can hold the dock's
+    // deferred delete back. Left in the dock layout until then, it keeps its share
+    // of the dock area from every user window docked after it, and left showing it
+    // is drawn over the main window.
+    void test_aDeletedUserWindowLeavesTheMainWindowAtOnce()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString windowName = qsl("undockedUserWindow");
+
+        auto [opened, openMsg] = mpHost->openWindow(windowName, /*loadLayout=*/false, /*autoDock=*/true, QString());
+        QVERIFY2(opened, qPrintable(openMsg));
+        const QPointer<TDockWidget> dock = console->dockWidget(windowName);
+        QVERIFY(dock);
+        QVERIFY2(mudlet::self()->layout()->indexOf(dock) != -1, "the user window was never docked, so it leaving the dock layout proves nothing");
+        QVERIFY2(!dock->isHidden(), "the user window was never shown, so it being hidden proves nothing");
+
+        auto [deleted, deleteMsg] = console->deleteMiniConsole(windowName);
+        QVERIFY2(deleted, qPrintable(deleteMsg));
+        // Deliberately no event loop turn here - the dock is still alive.
+        QVERIFY(dock);
+        const bool stillDocked = mudlet::self()->layout()->indexOf(dock) != -1;
+        const bool hidden = dock->isHidden();
+        runDeferredDeletes();
+
+        QVERIFY2(!stillDocked, "the deleted user window's dock was left in the main window's dock layout");
+        QVERIFY2(hidden, "the deleted user window's dock was left showing");
+    }
+
     // deleteCommandLine() must not leave the entry behind either - it takes the
     // entry itself, so the destructor has to cope with the name already gone.
     void test_deleteCommandLineDeregisters()
@@ -306,6 +339,114 @@ private slots:
         QVERIFY2(console->subCommandLineWidget(name) == replacement, "the old command line's deregistration took the replacement with it");
         console->deleteCommandLine(name);
         runDeferredDeletes();
+    }
+
+    // Host::setFocusOnHostActiveCommandLine() hands the focus back to the command
+    // line the player used last, even when another one holds it now
+    void test_hostFocusGoesToTheLastUsedCommandLine()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString name = qsl("lastUsedCmdLine");
+
+        auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(createMsg));
+        TCommandLine* subCommandLine = console->subCommandLineWidget(name);
+        QVERIFY(subCommandLine);
+
+        // The window stays up for the next test to take down: focus given after
+        // a hide() and a fresh show() never lands under the offscreen platform.
+        // The wait outlasts the delayed focus retries.
+        const auto tidyUp = qScopeGuard([this, console, name]() {
+            QTest::qWait(100ms);
+            console->deleteCommandLine(name);
+            runDeferredDeletes();
+        });
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::self()), "the main window never became active");
+        console->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        QTRY_VERIFY2(console->mpCommandLine->hasFocus(), "SETUP: the main command line never took the keyboard focus");
+        console->recordActiveCommandLine(subCommandLine);
+
+        mpHost->setFocusOnHostActiveCommandLine();
+
+        QTRY_VERIFY2(subCommandLine->hasFocus(), "the focus did not go to the command line used last");
+    }
+
+    // With no command line on record the main console's own one takes the focus
+    void test_hostFocusFallsBackToTheMainCommandLine()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString name = qsl("focusedAwayCmdLine");
+
+        auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(createMsg));
+        TCommandLine* subCommandLine = console->subCommandLineWidget(name);
+        QVERIFY(subCommandLine);
+
+        // The window stays up for the next test to take down: focus given after
+        // a hide() and a fresh show() never lands under the offscreen platform.
+        // The wait outlasts the delayed focus retries.
+        const auto tidyUp = qScopeGuard([this, console, name]() {
+            QTest::qWait(100ms);
+            console->deleteCommandLine(name);
+            runDeferredDeletes();
+        });
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::self()), "the main window never became active");
+        subCommandLine->setFocus(Qt::OtherFocusReason);
+        QTRY_VERIFY2(subCommandLine->hasFocus(), "SETUP: the sub command line never took the keyboard focus");
+        console->forgetCommandLine(subCommandLine);
+        console->forgetCommandLine(console->mpCommandLine);
+
+        mpHost->setFocusOnHostActiveCommandLine();
+
+        QTRY_VERIFY2(console->mpCommandLine->hasFocus(), "the focus did not fall back to the main command line");
+    }
+
+    // A command line on record that has since been destroyed is passed over for
+    // the one used before it, rather than ending the search at the main one
+    void test_hostFocusSkipsADestroyedCommandLine()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString survivorName = qsl("usedBeforeCmdLine");
+        const QString doomedName = qsl("destroyedCmdLine");
+
+        auto [survivorCreated, survivorMsg] = console->createCommandLine(QString(), survivorName, 0, 0, 100, 30);
+        QVERIFY2(survivorCreated, qPrintable(survivorMsg));
+        auto [doomedCreated, doomedMsg] = console->createCommandLine(QString(), doomedName, 0, 40, 100, 30);
+        QVERIFY2(doomedCreated, qPrintable(doomedMsg));
+        TCommandLine* survivor = console->subCommandLineWidget(survivorName);
+        QVERIFY(survivor);
+        QPointer<TCommandLine> doomed = console->subCommandLineWidget(doomedName);
+        QVERIFY(doomed);
+
+        // The window stays up for the next test to take down: focus given after
+        // a hide() and a fresh show() never lands under the offscreen platform.
+        // The wait outlasts the delayed focus retries.
+        const auto tidyUp = qScopeGuard([this, console, survivorName]() {
+            QTest::qWait(100ms);
+            console->deleteCommandLine(survivorName);
+            runDeferredDeletes();
+        });
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::self()), "the main window never became active");
+        console->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        QTRY_VERIFY2(console->mpCommandLine->hasFocus(), "SETUP: the main command line never took the keyboard focus");
+        console->recordActiveCommandLine(survivor);
+        console->recordActiveCommandLine(doomed);
+        console->deleteCommandLine(doomedName);
+        runDeferredDeletes();
+        QVERIFY2(!doomed, "SETUP: the second command line was not destroyed");
+
+        mpHost->setFocusOnHostActiveCommandLine();
+
+        QTRY_VERIFY2(survivor->hasFocus(), "the focus did not go to the command line used before the destroyed one");
     }
 
     // A sub command line that is hiding while it holds the keyboard focus has to

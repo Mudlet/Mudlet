@@ -48,10 +48,12 @@
 #include <QScopeGuard>
 #include <QTableWidget>
 
+#include "FontManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
 #include "TelnetServerStub.h"
@@ -64,6 +66,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class MapSymbolFontTest : public QObject
 {
@@ -114,11 +118,11 @@ private:
         mudlet::self()->showOptionsDialog(qsl("tab_mapper"), mpHost);
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
-                             return !mpHost->mpDlgProfilePreferences.isNull();
+                             return !HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull();
                          },
-                         5000),
+                         5s),
                  "Preferences dialog was not created");
-        mpPreferences = mpHost->mpDlgProfilePreferences.data();
+        mpPreferences = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(scalingSpinBox(), "The symbol scaling spin-box was not found in the Symbols group box");
     }
 
@@ -130,9 +134,9 @@ private:
         mpPreferences->close();
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
-                             return mpHost->mpDlgProfilePreferences.isNull();
+                             return HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull();
                          },
-                         5000),
+                         5s),
                  "Preferences dialog should have been destroyed by closing it");
         mpPreferences = nullptr;
     }
@@ -142,7 +146,7 @@ private:
     QString anotherFontFamily() const
     {
         const QString inUse = map()->getSymbolFont().family();
-        QStringList families = mudlet::self()->getAvailableFonts();
+        QStringList families = FontManager::availableFonts();
         families.sort();
         for (const QString& family : families) {
             if (family.compare(inUse, Qt::CaseInsensitive)) {
@@ -246,8 +250,8 @@ private slots:
     {
         // The whole class shares one profile, so a case that leaves the dialog
         // open or a setting changed would be writing the next one's fixture
-        if (!mpHost->mpDlgProfilePreferences.isNull()) {
-            delete mpHost->mpDlgProfilePreferences.data();
+        if (!HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull()) {
+            delete HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         }
         mpPreferences = nullptr;
         map()->setSymbolFont(mFontBefore);
@@ -477,7 +481,7 @@ private slots:
                          [this]() {
                              return glyphUsageTable() != nullptr;
                          },
-                         5000),
+                         5s),
                  "the glyph usage dialog did not appear");
 
         QTableWidget* pTable = glyphUsageTable();

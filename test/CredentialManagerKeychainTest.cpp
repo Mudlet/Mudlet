@@ -32,6 +32,8 @@
 
 #include <memory>
 
+using namespace std::chrono_literals;
+
 // Exercises CredentialManager's real keychain paths against the live platform credential
 // store, in particular the migrations for the qtkeychain 0.17.0 Windows naming change
 // (TargetName moved from the bare key to "key@service"). Unlike CredentialManagerTest,
@@ -464,7 +466,7 @@ public:
             }
             if (read && mAnswerReadsNotFound) {
                 watch(job);
-                QTimer::singleShot(0, job, [job, error = mNotFoundError]() {
+                QTimer::singleShot(0ms, job, [job, error = mNotFoundError]() {
                     answer(job, error, QStringLiteral("synthetic: nothing found"));
                 });
                 return false;
@@ -880,7 +882,7 @@ void CredentialManagerKeychainTest::testALookupAnswersWhenItsFirstReadStalls()
 
     // The read is still waiting on the keychain, and a backend that answers a deleted job reads freed
     // memory, so it has to be left to finish on its own.
-    QTest::qWait(100);
+    QTest::qWait(100ms);
     QVERIFY2(staller.firstStalledAlive(), "a read still waiting on the keychain was deleted");
 
     // Once the keychain answers, the read deletes itself - and the answer has to reach receivers other
@@ -971,7 +973,7 @@ void CredentialManagerKeychainTest::testALookupReadsEachPlaceOnceInOrder()
         expected.append({read.service, read.key});
     }
     QCOMPARE(recorder.reads(), expected);
-    QTest::qWait(200);
+    QTest::qWait(200ms);
     QCOMPARE(answer->count, 1);
 }
 
@@ -1050,7 +1052,7 @@ void CredentialManagerKeychainTest::testAStoreStartedFromATimedOutCallbackIsNotT
     QVERIFY2(waitForAnswer(second), "the store started from the timed-out callback was torn down by the cleanup of the operation that timed out, so it never answered - see #9072");
     QVERIFY(!second->success);
     QCOMPARE(second->error, QStringLiteral("Operation timed out"));
-    QTest::qWait(200);
+    QTest::qWait(200ms);
     QCOMPARE(first->count, 1);
     QCOMPARE(second->count, 1);
 }
@@ -1075,7 +1077,7 @@ void CredentialManagerKeychainTest::testALookupIsNotDisturbedByAnotherOnTheSameM
     QVERIFY2(waitForAnswer(first), "the stalled lookup never answered once another lookup started on its manager");
     QCOMPARE(first->error, QStringLiteral("Operation timed out"));
     staller.release();
-    QTest::qWait(200);
+    QTest::qWait(200ms);
     QCOMPARE(first->count, 1);
     QCOMPARE(second->count, 1);
 }
@@ -1094,7 +1096,7 @@ void CredentialManagerKeychainTest::testDeletingAManagerMidLookupLeavesItsReadTo
     // itself only once the keychain answers - which a real backend may well do moments later.
     manager.reset();
     QVERIFY2(staller.firstStalledAlive(), "a read still waiting on the keychain was deleted along with its manager");
-    QTest::qWait(100);
+    QTest::qWait(100ms);
     QCOMPARE(answer->count, 0);
 
     staller.release();
@@ -1125,7 +1127,7 @@ void CredentialManagerKeychainTest::testACallbackThatFlushesDeferredDeletesDoesN
                      },
                      kWaitMs),
              "the lookup never answered");
-    QTest::qWait(100);
+    QTest::qWait(100ms);
 }
 
 void CredentialManagerKeychainTest::testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat_data()
@@ -1723,7 +1725,7 @@ void CredentialManagerKeychainTest::testALookupThatAnswersInTimeOwesNoLateAnswer
     QVERIFY(!answers->first->success);
     QVERIFY2(!answers->timedOut, "a lookup that went all the way down its chain was reported as timed out");
     // Past where the deadline would have fallen
-    QTest::qWait(1500);
+    QTest::qWait(1500ms);
     QCOMPARE(answers->first->count, 1);
     QCOMPARE(answers->late->count, 0);
 }
@@ -1763,7 +1765,7 @@ void CredentialManagerKeychainTest::testALateAnswerFollowsALookupThatTimedOut()
     QVERIFY(!answers->late->success);
     QCOMPARE(answers->late->error,
              refused ? QStringLiteral("Could not read the keychain: synthetic: answered at last") : QStringLiteral("No password in the current format for profile %1").arg(mProfile));
-    QTest::qWait(100);
+    QTest::qWait(100ms);
     QCOMPARE(answers->first->count, 1);
     QCOMPARE(answers->late->count, 1);
 }
@@ -1787,7 +1789,7 @@ void CredentialManagerKeychainTest::testALateAnswerIsDroppedOnceWhatAskedForItHa
     lateContext.reset();
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("after its lookup had timed out, but whatever asked for it has gone")));
     JobStaller::answer(read, QKeychain::AccessDenied, QStringLiteral("synthetic: answered at last"));
-    QTest::qWait(100);
+    QTest::qWait(100ms);
     QCOMPARE(answers->late->count, 0);
 }
 

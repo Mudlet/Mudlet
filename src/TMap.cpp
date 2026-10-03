@@ -26,18 +26,13 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TArea.h"
-#include "TConsole.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
-#include "TMapView.h"
-#include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 
 #include <QBuffer>
 #include <QDataStream>
@@ -154,7 +149,6 @@ TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
 , mUnnamedAreaName(tr("Unnamed Area"))
 , mpRoomDB(std::make_unique<TRoomDB>(this))
-, mpViewManager(new TMapViewManager(pH, this))
 , mpHost(pH)
 , mProfileName(profileName)
 {
@@ -186,9 +180,7 @@ TMap::~TMap()
 
 void TMap::refreshMapperColours()
 {
-    if (mpMapper) {
-        mpMapper->refreshColours();
-    }
+    emit signal_mapperColoursChanged();
 }
 
 void TMap::mapClear()
@@ -216,25 +208,15 @@ void TMap::mapClear()
 
     // Must also reset the mapper area selection control to reflect that it now
     // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
-    if (mpMapper) {
-        mpMapper->updateAreaComboBox();
-
-        auto map = mpMapper->mp2dMap;
-        if (map) {
-            map->mMultiSelectionListWidget.clear();
-            map->mMultiSelectionListWidget.hide();
-        }
-    }
+    emit signal_mapCleared();
 }
 
 // The supplied message should contain a localised message and no "WARNING:" or other prefixes:
 void TMap::logError(const QString& msg)
 {
-    if (mpHost->mpEditorDialog) {
-        /*: Used to print a map error in the Errors console in the Editor, %1 is the
+    /*: Used to print a map error in the Errors console in the Editor, %1 is the
  message text and a line-feed is also appended.*/
-        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
-    }
+    emit mpHost->signal_errorConsolePrint(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
 }
 
 // Not used:
@@ -1949,7 +1931,7 @@ bool TMap::restore(QString location)
                 } else if (mVersion >= 17) {
                     ifs >> pA->mUserData;
                     const qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
-                    pA->mLast2DMapZoom = (fallback_map2DZoom >= T2DMap::csmMinXYZoom) ? fallback_map2DZoom : T2DMap::csmDefaultXYZoom;
+                    pA->mLast2DMapZoom = (fallback_map2DZoom >= scmMinXYZoom) ? fallback_map2DZoom : scmDefaultXYZoom;
                 }
                 if (mVersion >= 21) {
                     int mapLabelsCount = -1;
@@ -2421,9 +2403,7 @@ int TMap::createMapLabel(int area,
     const int labelId = pA->createLabelId();
     if (Q_LIKELY(labelId >= 0)) {
         pA->mMapLabels.insert(labelId, label);
-        if (mpMapper) {
-            mpMapper->mp2dMap->update();
-        }
+        emit signal_mapLabelsChanged();
     }
 
     if (!temporary) {
@@ -2460,9 +2440,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     const int labelId = pA->createLabelId();
     if (Q_LIKELY(labelId >= 0)) {
         pA->mMapLabels.insert(labelId, label);
-        if (mpMapper) {
-            mpMapper->mp2dMap->update();
-        }
+        emit signal_mapLabelsChanged();
     }
 
     if (!temporary) {
@@ -2489,9 +2467,7 @@ void TMap::deleteMapLabel(int area, int labelId)
         if (!label.temporary) {
             setUnsaved(__func__);
         }
-        if (mpMapper) {
-            mpMapper->mp2dMap->update();
-        }
+        emit signal_mapLabelsChanged();
     }
 }
 
@@ -2504,25 +2480,6 @@ void TMap::postMessage(const QString text)
             pHost->postMessage(mStoredMessages.takeFirst());
         }
     }
-}
-
-// Used by the 2D mapper to send view center coordinates to 3D one
-void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, const int zPos)
-{
-#if defined(INCLUDE_3DMAPPER)
-    if (mpM) {
-        if (auto* glWidget = dynamic_cast<GLWidget*>(mpM.data())) {
-            glWidget->setViewCenter(areaId, xPos, yPos, zPos);
-        } else if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpM.data())) {
-            modernWidget->setViewCenter(areaId, xPos, yPos, zPos);
-        }
-    }
-#else
-    Q_UNUSED(areaId)
-    Q_UNUSED(xPos)
-    Q_UNUSED(yPos)
-    Q_UNUSED(zPos)
-#endif
 }
 
 void TMap::appendRoomErrorMsg(const int roomId, const QString msg, const bool isToSetFileViewingRecommended)
@@ -2863,23 +2820,9 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     XMLimport reader(pHost);
     auto [success, message] = reader.importPackage(&file);
 
-    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
-        // probably not needed for the download but might be
-        // needed for local file case:
-        mpMapper->mp2dMap->init();
-        // No need to call audit() as XMLimport::importPackage() does it!
-        // audit() produces the successful ending [ OK ] message...!
-        mpMapper->updateAreaComboBox();
-        if (success) {
-            mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        } else {
-            // Failed...
-            if (errMsg) {
-                *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
-                             "in main console!");
-            }
-        }
-    }
+    // No need to call audit() as XMLimport::importPackage() does it!
+    // audit() produces the successful ending [ OK ] message...!
+    announceMapLoaded(success);
 
     if (!success && errMsg) {
         *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
@@ -2890,9 +2833,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         clearTransferProgress();
     }
 
-    if (!mpMapper.isNull()) {
-        mpMapper->show();
-    }
+    requestMapperShown();
 
     return success;
 }
@@ -3036,9 +2977,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         const QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
         postMessage(alertMsg);
     }
-    if (mpMapper) {
-        mpMapper->updateEmptyStateOverlay();
-    }
+    emit signal_mapDownloadEnded();
     cleanup();
 }
 
@@ -3325,22 +3264,7 @@ QStringList TMap::symbolsNotInFont(const QFont& font)
 // have to be dropped - the main mapper and any secondary map views.
 void TMap::flushSymbolCaches()
 {
-    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
-        mpMapper->mp2dMap->flushSymbolPixmapCache();
-        mpMapper->mp2dMap->update();
-        mpMapper->update();
-    }
-
-    if (!mpViewManager) {
-        return;
-    }
-    for (const int viewId : mpViewManager->getViewIds()) {
-        auto* pView = mpViewManager->getView(viewId);
-        if (pView && pView->get2DMap()) {
-            pView->get2DMap()->flushSymbolPixmapCache();
-            pView->get2DMap()->update();
-        }
-    }
+    emit signal_symbolCachesStale();
 }
 
 /*
@@ -3436,6 +3360,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mProgressDialogAreasCount = 0;
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsCount = 0;
+    mJsonProgressShown.invalidate();
     bool abort = false;
     QJsonArray areasArray;
     for (const auto area : mpRoomDB->getAreaMap()) {
@@ -3610,6 +3535,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
+    mJsonProgressShown.invalidate();
     mMapProgressStandalone = true;
     mMapProgressIsTransfer = false;
     mMapProgressCancelRequested = false;
@@ -3747,9 +3673,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     // Need to update the master copy of these details in the Host class:
     mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
     // And redraw the indicator if a 2D map is being shown:
-    if (mpMapper && mpMapper->mp2dMap) {
-        mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
-    }
+    emit signal_playerRoomStyleChanged();
     // As in restore(): the symbol settings above went straight into the members
     // so that loading does not mark the map unsaved, which leaves the rendered
     // symbol caches and any open preferences dialog to be told separately:
@@ -3855,6 +3779,14 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
         mProgressDialogLabelsCount += increment;
     }
 
+    // This is called for every ten rooms, and showing the counts - formatting the
+    // label, repainting the dialog and running the event loop so it can be seen
+    // and cancelled - cost several times what reading or writing them did:
+    if (mJsonProgressShown.isValid() && !mJsonProgressShown.hasExpired(50)) {
+        return mMapProgressCancelRequested;
+    }
+    mJsonProgressShown.start();
+
     emit signal_mapProgressSetValue(static_cast<int>(mProgressDialogRoomsCount));
     if (isExportNotImport) {
         emit signal_mapProgressSetLabel(tr("Exporting JSON map data from %1\n"
@@ -3881,6 +3813,51 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     return mMapProgressCancelRequested;
 }
 
+void TMap::announceMapLoaded(const bool showPlayerArea)
+{
+    emit signal_mapLoaded(showPlayerArea);
+}
+
+void TMap::requestMapperShown()
+{
+    emit signal_mapperShowRequested();
+}
+
+void TMap::announceAreaListChanged()
+{
+    emit signal_areaListChanged();
+}
+
+void TMap::announceAreaRenamed(const QString& oldName, const QString& newName)
+{
+    emit signal_areaRenamed(oldName, newName);
+}
+
+void TMap::requestPlayerAreaShown()
+{
+    emit signal_playerAreaShowRequested();
+}
+
+void TMap::announceDefaultAreaVisibilitySet(const bool wasShown)
+{
+    emit signal_defaultAreaVisibilitySet(wasShown);
+}
+
+void TMap::announceMapInfoContributorsChanged()
+{
+    emit signal_mapInfoContributorsChanged();
+}
+
+void TMap::requestMapRepaint()
+{
+    emit signal_mapRepaintRequested();
+}
+
+void TMap::announceMapperSettingChanged(const MapperSetting setting)
+{
+    emit signal_mapperSettingChanged(setting);
+}
+
 void TMap::updateArea(int areaId)
 {
     static bool debounce;
@@ -3888,19 +3865,6 @@ void TMap::updateArea(int areaId)
         debounce = true;
         QTimer::singleShot(0ms, this, [this, areaId]() {
             debounce = false;
-
-#if defined(INCLUDE_3DMAPPER)
-            if (mpM) {
-                mpM->update();
-            }
-#endif
-            if (mpMapper) {
-                if (mpMapper->mp2dMap) {
-                    mpMapper->mp2dMap->mNewMoveAction = true;
-                    mpMapper->mp2dMap->update();
-                }
-            }
-
             emit signal_areaChanged(areaId);
         });
     }
@@ -4038,8 +4002,6 @@ void TMap::setDefaultAreaShown(bool state)
 {
     if (mShowDefaultArea != state) {
         mShowDefaultArea = state;
-        if (!mpMapper.isNull()) {
-            mpMapper->updateAreaComboBox();
-        }
+        emit signal_areaListChanged();
     }
 }

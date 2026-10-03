@@ -25,9 +25,9 @@
 
 
 #include "Host.h"
+#include "TConsoleModel.h"
 #include "TTrigger.h"
 #include "TriggerMatchPool.h"
-#include "dlgTriggerEditor.h"
 
 #include <QScopeGuard>
 
@@ -619,7 +619,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Only while behind, i.e. a chunk carries many lines: a wake-up is repaid only when the next line is
     // already waiting, so at normal game speed it would spend CPU to save nothing perceptible.
     TriggerMatchPool& pool = TriggerMatchPool::instance();
-    const bool inFlood = pool.workerCount() > 0 && mpHost && mpHost->mpConsole && mpHost->mpConsole->buffer.pendingChunkLines() >= pool.floodChunkLines();
+    const bool inFlood = pool.workerCount() > 0 && mpHost && mpHost->mainConsoleModelOrNull() && mpHost->mainConsoleModel().buffer.pendingChunkLines() >= pool.floodChunkLines();
     const quint64 regexSearchesBefore = TTrigger::regexSearches();
     int prescanRegexSearches = 0;
     if (inFlood && mRegexSearchesOnTheLastLine >= pool.threshold()) {
@@ -685,7 +685,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
                     textDecided = true;
                 } else if (filter.mKind == TRootTriggerFilter::Kind::Color) {
                     if (!lineColorsKnown) {
-                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, static_cast<int>(data.length()), lineForeground, lineBackground);
+                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, lineForeground, lineBackground);
                         lineColorsKnown = true;
                     }
                     if (lineColorsUniform && filter.lacksColors(lineForeground, lineBackground)) {
@@ -738,10 +738,11 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
 void TriggerUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto trigger : mTriggerRootNodeList) {
-        if (trigger->isActive()) {
-            trigger->compileAll();
-        }
+        trigger->compileAll();
     }
 }
 
@@ -805,9 +806,7 @@ bool TriggerUnit::enableTrigger(const QString& name)
         }
         it.value()->setIsActive(true);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
-        }
+        emit mpHost->signal_triggerToggled(it.value()->getID());
     }
     return found;
 }
@@ -821,9 +820,7 @@ bool TriggerUnit::disableTrigger(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
-        }
+        emit mpHost->signal_triggerToggled(it.value()->getID());
     }
     return found;
 }

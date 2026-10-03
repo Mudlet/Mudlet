@@ -27,7 +27,6 @@
 #include "Host.h"
 #include "Tree.h"
 #include "TTimer.h"
-#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -126,10 +125,11 @@ void TimerUnit::stopAllTriggers()
 
 void TimerUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto timer : mTimerRootNodeList) {
-        if (timer->isActive()) {
-            timer->compileAll();
-        }
+        timer->compileAll();
     }
 }
 
@@ -402,9 +402,7 @@ bool TimerUnit::enableTimer(const QString& name)
         }
 
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTimerIcon(pT->getID());
-        }
+        emit mpHost->signal_timerToggled(pT->getID());
     }
     return found;
 }
@@ -425,9 +423,7 @@ bool TimerUnit::disableTimer(const QString& name)
 
         pT->disableTimer();
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTimerIcon(pT->getID());
-        }
+        emit mpHost->signal_timerToggled(pT->getID());
     }
     return found;
 }
@@ -461,23 +457,30 @@ std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch
 
 bool TimerUnit::killTimer(const QString& name)
 {
-    for (auto timer : mTimerRootNodeList) {
-        if (timer->getName() != name) {
+    // By the lookup table rather than a walk of every timer, as scripts kill and
+    // recreate temporary timers all the time. equal_range visits every
+    // same-named timer; constFind() + (++it) can start mid-run and skip
+    // duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TTimer* timer = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (timer->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named timer that cannot be killed - a permanent timer loaded from
-        // the profile precedes this session's temporaries in this list, and
-        // reporting a failure over it would strand a killable timer
+        // same-named timer that cannot be killed - a permanent one would strand
+        // a killable temporary
         if (!timer->isTemporary()) {
             // only temporary timers can be killed
             continue;
         }
-        // An already killed timer is only unlinked from this list once doCleanup()
+        // An already killed timer is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while a timer script is on the call
         // stack - so until then it is still findable by name. Killing it a second
         // time achieves nothing:
-        if (mCleanupSet.contains(timer)) {
+        if (mCleanupSet.contains(timer) || uninstallList.contains(timer)) {
             continue;
         }
         timer->killTimer();

@@ -32,6 +32,7 @@
 #include <chrono>
 
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -215,11 +216,11 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
@@ -236,8 +237,8 @@ private slots:
         // ~Host would do this, but only if the host is ever destroyed - deleting
         // the editor here keeps the leak checker satisfied either way
         if (mpHost) {
-            if (auto* pEditor = mpHost->mpEditorDialog.data()) {
-                mpHost->mpEditorDialog = nullptr;
+            if (auto* pEditor = HostDialogs::of(mpHost).mpEditorDialog.data()) {
+                HostDialogs::of(mpHost).mpEditorDialog = nullptr;
                 delete pEditor;
             }
         }

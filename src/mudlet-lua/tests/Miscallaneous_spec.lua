@@ -159,6 +159,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_string(getTimestamp(1))
       end)
 
+      it("should read the main console by an empty name or main", function()
+        local timestamp = getTimestamp(1)
+        assert.is_string(timestamp)
+        assert.are.equal(timestamp, getTimestamp("main", 1))
+        assert.are.equal(timestamp, getTimestamp("", 1))
+      end)
+
       it("should return nil+msg for an out-of-range line number", function()
         local timestamp, err = getTimestamp(getLineCount() + 1000)
         assert.is_nil(timestamp)
@@ -227,6 +234,17 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         expandAlias("mudletSpecSeparatorA" .. getCommandSeparator() .. "mudletSpecSeparatorB", false)
 
         assert.same({"A", "B"}, fired)
+      end)
+    end)
+
+    describe("Tests the functionality of getEpoch", function()
+      it("gives the seconds since the epoch, whatever the local time zone", function()
+        local before = os.time()
+        local epoch = getEpoch()
+        local after = os.time()
+        -- os.time() reads a coarser clock that can still be on the last second
+        -- for a few milliseconds after getEpoch()'s has moved on
+        assert.is_true(epoch >= before and epoch < after + 2, string.format("%f is not between %d and %d", epoch, before, after + 2))
       end)
     end)
 
@@ -1882,7 +1900,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           os.remove(first)
           os.remove(second)
         end)
-        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
+        -- Two chunks, so that the second is still in the file when the refused
+        -- call comes, and would be lost if that call touched the file
+        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n") .. chunk(10, "mudlet-spec-first-replay-tail\r\n"))
         writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
         local mark = getLastLineNumber("main")
 
@@ -1892,6 +1912,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_nil(ok)
         assert.is_true(contains(err, "already be in progress"), tostring(err))
         assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
+        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-tail"), "refusing the second replay cut the first one short")
         assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
@@ -1925,7 +1946,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       it("returns nil+msg for an item type it does not know", function()
         local ok, err = findItems("name", "sandwich")
         assert.is_nil(ok)
-        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+        assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "sandwich"', err)
       end)
 
       it("returns an empty table when nothing matches", function()
@@ -2009,6 +2030,45 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         insertHTML("<b>mudlet-spec-bold</b>")
 
         assert.equals("mudlet-spec-boldmudlet-spec-html-target", getCurrentLine())
+      end)
+    end)
+
+    describe("Tests the functionality of echo", function()
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() echo() end, "echo: bad argument #1 type")
+      end)
+
+      it("raises a Lua error for a console name that is not a string", function()
+        assertArgError(function() echo({}, "mudlet-spec-echo") end, "echo: bad argument #1 type")
+      end)
+
+      it("raises a Lua error for text that is not a string", function()
+        assertArgError(function() echo("main", {}) end, "echo: bad argument #2 type")
+      end)
+
+      it("writes to the main console and answers true, named or not", function()
+        local mark = getLastLineNumber("main")
+
+        assert.same({true}, {echo("mudlet-spec-echo-unnamed ")})
+        assert.same({true}, {echo("main", "mudlet-spec-echo-main ")})
+        assert.same({true}, {echo("", "mudlet-spec-echo-empty\n")})
+
+        assert.is_true(containsWrapped(textFrom(mark), "mudlet-spec-echo-unnamed mudlet-spec-echo-main mudlet-spec-echo-empty"), textFrom(mark))
+      end)
+
+      it("writes to a miniconsole and answers true", function()
+        local name = "mudlet-spec-echo-miniconsole"
+        createMiniConsole(name, 0, 0, 200, 100)
+        finally(function() deleteMiniConsole(name) end)
+
+        assert.same({true}, {echo(name, "mudlet-spec-echo-mini")})
+
+        local text = table.concat(getLines(name, 0, getLastLineNumber(name) + 1), "")
+        assert.is_true(contains(text, "mudlet-spec-echo-mini"), text)
+      end)
+
+      it("answers nil and a message for a console that does not exist", function()
+        assert.same({nil, "console/label 'mudlet-spec-echo-nowhere' does not exist"}, {echo("mudlet-spec-echo-nowhere", "text")})
       end)
     end)
 
@@ -2157,7 +2217,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       it("returns nil+msg for an item type it does not know", function()
         local ok, err = isAncestorsActive(1, "sandwich")
         assert.is_nil(ok)
-        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+        assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "sandwich"', err)
       end)
 
       it("is true for a temporary item, which has no ancestors at all", function()
@@ -2328,7 +2388,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       it("returns nil+msg for an item type it does not know", function()
         local ok, err = ancestors(1, "sandwich")
         assert.is_nil(ok)
-        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+        assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "sandwich"', err)
       end)
 
       it("returns an empty list for a temporary item, which has no ancestors", function()

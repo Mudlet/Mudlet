@@ -478,6 +478,7 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
+, xyzoom(TMap::scmDefaultXYZoom)
 {
     if (auto* app = qApp) {
         // This allows to forward clicks to widget even if popup menu is opened, therefore e.g. one click is enough to close popup and select room
@@ -642,6 +643,18 @@ void T2DMap::slot_shiftZdown()
     update();
 }
 
+void T2DMap::set3DViewCenter(const int areaId, const int x, const int y, const int z)
+{
+#if defined(INCLUDE_3DMAPPER)
+    GLWidgetFactory::setViewCenter(mpMap->mpM, areaId, x, y, z);
+#else
+    Q_UNUSED(areaId)
+    Q_UNUSED(x)
+    Q_UNUSED(y)
+    Q_UNUSED(z)
+#endif
+}
+
 void T2DMap::switchArea(const QString& newAreaName)
 {
     Host* pHost = mpHost;
@@ -702,9 +715,7 @@ void T2DMap::switchArea(const QString& newAreaName)
                 mMapCenterZ = pPlayerRoom->z();
                 xyzoom = mpMap->mpRoomDB->get2DMapZoom(mAreaID);
                 repaint();
-                // Pass the coordinates to the TMap instance to pass to the 3D
-                // mapper
-                mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
+                set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
                 if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
                     mpHost->raiseEvent(areaViewedChangedEvent);
                 }
@@ -868,8 +879,7 @@ void T2DMap::switchArea(const QString& newAreaName)
             }
             xyzoom = mpMap->mpRoomDB->get2DMapZoom(mAreaID);
             repaint();
-            // Pass the coordinates to the TMap instance to pass to the 3D mapper
-            mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
+            set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
             if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
                 mpHost->raiseEvent(areaViewedChangedEvent);
             }
@@ -3221,32 +3231,35 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor, xOffset, 20, width(), mFontHeight);
 
-    static bool isAreaWidgetValid = true; // Remember between uses
-    QFont _f = mpMap->mpMapper->comboBox_showArea->font();
-    if (isAreaWidgetValid) {
-        if (mAreaID == -1                       // the map being shown is the "default" area
-            && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
+    // The area combobox belongs to the main mapper, which a secondary view may exist without
+    if (!mIsSecondaryView && mpMap->mpMapper) {
+        static bool isAreaWidgetValid = true; // Remember between uses
+        QFont _f = mpMap->mpMapper->comboBox_showArea->font();
+        if (isAreaWidgetValid) {
+            if (mAreaID == -1                       // the map being shown is the "default" area
+                && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
-            isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
-            // Set the area widget to indicate the area widget is NOT
-            // showing valid text - so make it italic and crossed out
-            _f.setItalic(true);
-            _f.setUnderline(true);
-            _f.setStrikeOut(true);
-            _f.setOverline(true);
+                isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
+                // Set the area widget to indicate the area widget is NOT
+                // showing valid text - so make it italic and crossed out
+                _f.setItalic(true);
+                _f.setUnderline(true);
+                _f.setStrikeOut(true);
+                _f.setOverline(true);
+            }
+        } else {
+            if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
+                isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
+                // Reset to normal
+                _f.setItalic(false);
+                _f.setUnderline(false);
+                _f.setStrikeOut(false);
+                _f.setOverline(false);
+            }
         }
-    } else {
-        if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
-            isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
-            // Reset to normal
-            _f.setItalic(false);
-            _f.setUnderline(false);
-            _f.setStrikeOut(false);
-            _f.setOverline(false);
-        }
+
+        mpMap->mpMapper->comboBox_showArea->setFont(_f);
     }
-
-    mpMap->mpMapper->comboBox_showArea->setFont(_f);
 
     if (!mHelpMsg.isEmpty()) {
         painter.setPen(QColor(255, 155, 50));
@@ -5397,7 +5410,9 @@ void T2DMap::slot_newMap()
     mpMap->updateArea(-1);
     isCenterViewCall = false;
     mpMap->setUnsaved(__func__);
-    mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    if (mpMap->mpMapper) {
+        mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    }
 }
 
 void T2DMap::slot_setArea()
@@ -5464,7 +5479,9 @@ void T2DMap::slot_setArea()
             mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
             mpMap->setUnsaved(__func__);
 
-            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper) {
+                mpMap->mpMapper->updateAreaComboBox();
+            }
         }
         mMultiRect = QRect(0, 0, 0, 0);
         QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
@@ -5473,7 +5490,9 @@ void T2DMap::slot_setArea()
         }
         if (!mMultiSelectionSet.isEmpty()) {
             const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
-            mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            if (!mIsSecondaryView && mpMap->mpMapper) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            }
             switchArea(targetAreaName);
             // The rooms are still selected, so land on them rather than on
             // whichever room switchArea() would otherwise have picked:
@@ -5482,7 +5501,7 @@ void T2DMap::slot_setArea()
                 mMapCenterX = pCenterRoom->x();
                 mMapCenterY = -pCenterRoom->y();
                 mMapCenterZ = pCenterRoom->z();
-                mpMap->set3DViewCenter(newAreaId, mMapCenterX, -mMapCenterY, mMapCenterZ);
+                set3DViewCenter(newAreaId, mMapCenterX, -mMapCenterY, mMapCenterZ);
             }
         }
         update();
@@ -5491,7 +5510,11 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    if (!mIsSecondaryView && mpMap->mpMapper) {
+        arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    } else {
+        arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
+    }
 }
 
 
@@ -5836,7 +5859,7 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         // If invert zoom is enabled, use the traditional (inverted) behavior
         // Otherwise, use modern behavior (non-inverted)
         const int adjustedYDelta = mudlet::self()->invertMapZoom() ? yDelta : -yDelta;
-        xyzoom = qMax(csmMinXYZoom, xyzoom * pow(1.07, adjustedYDelta));
+        xyzoom = qMax(TMap::scmMinXYZoom, xyzoom * pow(1.07, adjustedYDelta));
         mpMap->mpRoomDB->getArea(mAreaID)->set2DMapZoom(xyzoom);
 
         if (!qFuzzyCompare(1.0 + oldZoom, 1.0 + xyzoom)) {
@@ -5885,13 +5908,13 @@ std::pair<bool, QString> T2DMap::setMapZoom(const qreal zoom, const int areaId)
         return {false, qsl("no map loaded or no active mapper")};
     }
 
-    if (zoom < csmMinXYZoom) {
+    if (zoom < TMap::scmMinXYZoom) {
         // That zoom level is too small:
         // We need to set a non-default precision as otherwise in the corner
         // case with the default precision we can get something with zoom
         // being 2.999999 we end up with a confusing:
         // "zoom 3 is invalid, it must not be less than 3"
-        return {false, qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(csmMinXYZoom, 'g', 16))};
+        return {false, qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(TMap::scmMinXYZoom, 'g', 16))};
     }
 
     TArea* pArea = nullptr;

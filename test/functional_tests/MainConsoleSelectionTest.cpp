@@ -853,7 +853,7 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
-    // TConsole::selectSection() refuses a length that would put a selection's
+    // TConsoleModel::selectSection() refuses a length that would put a selection's
     // end before its start, but TBuffer::replaceInLine() takes the two points
     // as it is given them, and its own bounds checks only ask that each column
     // is on the line. A reversed pair walked erase() over a range of negative
@@ -945,7 +945,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

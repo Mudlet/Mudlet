@@ -53,6 +53,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class HostConsolePrintTest : public QObject
 {
     Q_OBJECT
@@ -166,7 +168,7 @@ private slots:
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
         QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
         if (connected.isEmpty()) {
-            QVERIFY2(connected.wait(15000), "The test profile never connected to the stub server.");
+            QVERIFY2(connected.wait(15s), "The test profile never connected to the stub server.");
         }
         QVERIFY(mpHost->mpConsole);
         mSavedLogFileNameFormat = mpHost->mLogFileNameFormat;
@@ -259,6 +261,28 @@ private slots:
         QCOMPARE(buffer().mCursorY, buffer().size());
     }
 
+    // echo() marks the text it puts on the main console as echoed, and only
+    // that text: what is printed straight after it must not carry the mark.
+    void test_luaEchoMarksOnlyItsOwnText()
+    {
+        QVERIFY(runLua(qsl("echo('hcpt-echoed')")));
+        mpHost->printToMainConsole(qsl("hcpt-printed\n"));
+
+        const int line = lineContaining(qsl("hcpt-echoedhcpt-printed"));
+        QVERIFY(line >= 0);
+        const QString text = buffer().line(line);
+        const std::vector<TChar>& chars = buffer().buffer.at(line);
+        const int echoedFrom = text.indexOf(qsl("hcpt-echoed"));
+        const int printedFrom = text.indexOf(qsl("hcpt-printed"));
+        for (int i = echoedFrom; i < printedFrom; ++i) {
+            QVERIFY2(chars.at(i).mFlags & TChar::Echo, qPrintable(qsl("echoed character %1 of '%2' is not marked as echoed").arg(i).arg(text)));
+        }
+        for (int i = printedFrom; i < text.size(); ++i) {
+            QVERIFY2(!(chars.at(i).mFlags & TChar::Echo), qPrintable(qsl("printed character %1 of '%2' is marked as echoed").arg(i).arg(text)));
+        }
+        QVERIFY(!buffer().mEchoingText);
+    }
+
     void test_systemMessageIsLabelledAndColoured()
     {
         mpHost->printSystemMessage(qsl("careful\n"));
@@ -268,7 +292,7 @@ private slots:
         const QString text = buffer().line(line);
         QVERIFY2(text.endsWith(qsl("careful")), qPrintable(text));
         QVERIFY2(text != qsl("careful"), "the system message label is missing");
-        QCOMPARE(buffer().buffer.at(line).front().foreground(), mpHost->mpConsole->mSystemMessageFgColor);
+        QCOMPARE(buffer().buffer.at(line).front().foreground(), mpHost->mainConsoleModel().mSystemMessageFgColor);
         QCOMPARE(buffer().mCursorY, buffer().size());
     }
 
@@ -490,7 +514,7 @@ private slots:
         // QSignalSpy::wait() waits for the *next* signal after the ones it
         // already holds:
         if (disconnected.isEmpty()) {
-            QVERIFY2(disconnected.wait(15000), "the test profile never noticed the disconnection");
+            QVERIFY2(disconnected.wait(15s), "the test profile never noticed the disconnection");
         }
 
         QVERIFY(!telnet.recordingReplay());
