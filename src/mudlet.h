@@ -287,7 +287,7 @@ public:
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
-    void showTrayNotification(const QString& title, const QString& text, int msecs) override;
+    void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
     // Addon toolbar button management

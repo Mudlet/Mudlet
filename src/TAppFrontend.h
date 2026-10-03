@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <optional>
+
 class Host;
 class QString;
 
@@ -42,7 +44,8 @@ public:
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
     virtual void armForceClose() = 0;
     virtual bool openWebPage(const QString& url) = 0;
-    virtual void showTrayNotification(const QString& title, const QString& text, int msecs) = 0;
+    // Without msecs, the frontend picks how long the notification stays up.
+    virtual void showNotification(const QString& title, const QString& text, std::optional<int> msecs) = 0;
     virtual bool drawUpperLowerLevels() const = 0;
     virtual void setDrawUpperLowerLevels(bool draw) = 0;
     virtual void updateMapActionAvailability() = 0;

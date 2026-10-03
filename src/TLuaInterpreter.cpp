@@ -8775,8 +8775,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     const QString title{lua_tostring(L, 1)};
     const QString text = (n >= 2) ? QString{lua_tostring(L, 2)} : title;
 
-    // 10s is QSystemTrayIcon::showMessage()'s own default
-    TAppFrontend::instance()->showTrayNotification(title, text, notificationExpirationTime.value_or(10000));
+    TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime);
     lua_pushboolean(L, true);
     return 1;
 }

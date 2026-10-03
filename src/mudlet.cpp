@@ -4719,10 +4719,14 @@ void mudlet::setCompactInputLineChecked(Host* pHost, bool checked)
     }
 }
 
-void mudlet::showTrayNotification(const QString& title, const QString& text, int msecs)
+void mudlet::showNotification(const QString& title, const QString& text, std::optional<int> msecs)
 {
     mTrayIcon.show();
-    mTrayIcon.showMessage(title, text, mTrayIcon.icon(), msecs);
+    if (msecs.has_value()) {
+        mTrayIcon.showMessage(title, text, mTrayIcon.icon(), msecs.value());
+    } else {
+        mTrayIcon.showMessage(title, text, mTrayIcon.icon());
+    }
     mTrayIcon.hide();
 }
 
