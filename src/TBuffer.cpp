@@ -5198,34 +5198,39 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
         buffer.back().reserve(text.size());
     }
     QHash<int, int> remappedLinkIds;
-    const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
+    const qsizetype formatted = std::min(text.size(), static_cast<qsizetype>(formatting.size()));
     const TChar defaultChar;
-
-    for (qsizetype i = 0; i < length; ++i) {
-        if (i >= text.size()) {
+    // Each stretch between line feeds is copied whole, as copying it a
+    // character at a time cost more than everything else here put together
+    qsizetype runStart = 0;
+    while (true) {
+        qsizetype runEnd = text.indexOf(QChar::LineFeed, runStart);
+        if (runEnd < 0) {
+            runEnd = text.size();
+        }
+        if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            lineBuffer.back().append(QStringView(text).sliced(runStart, runLength));
+            std::vector<TChar>& chars = buffer.back();
+            const size_t first = chars.size();
+            const qsizetype copied = std::clamp<qsizetype>(formatted - runStart, 0, runLength);
+            chars.insert(chars.end(), formatting.begin() + runStart, formatting.begin() + runStart + copied);
+            chars.resize(first + runLength, defaultChar);
+            for (size_t i = first; i < chars.size(); ++i) {
+                if (chars[i].mLinkIndex) {
+                    chars[i].mLinkIndex = remapLinkId(sourceLinkStore, chars[i].mLinkIndex, remappedLinkIds);
+                }
+            }
+            if (firstChar) {
+                timeBuffer.back() = currentTimeStamp();
+                firstChar = false;
+            }
+        }
+        if (runEnd == text.size()) {
             break;
         }
-
-        const QChar ch = text.at(i);
-        if (ch == QChar::LineFeed) {
-            firstChar = true;
-            appendEmptyLine();
-            continue;
-        }
-
-        const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
-
-        const int destLinkId = remapLinkId(sourceLinkStore, srcChar.linkIndex(), remappedLinkIds);
-
-        lineBuffer.back().append(ch);
-        TChar destChar(srcChar);
-        destChar.mLinkIndex = destLinkId;
-        buffer.back().push_back(destChar);
-
-        if (firstChar) {
-            timeBuffer.back() = currentTimeStamp();
-            firstChar = false;
-        }
+        firstChar = true;
+        appendEmptyLine();
+        runStart = runEnd + 1;
     }
 
     appendEmptyLine();
