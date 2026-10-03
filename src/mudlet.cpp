@@ -3348,15 +3348,15 @@ void mudlet::slot_closeProfileRequested(int tab)
     });
 }
 
-// Closing a profile destroys the lua_State the pump is still executing on. The
-// application-wide close paths are deliberately not guarded like this: refusing
-// there would cancel a shutdown nobody would retry.
+// Closing a profile destroys the lua_State the pump is still executing on.
+// closeMudlet() waits for the pump instead, as refusing would cancel a shutdown
+// nobody would retry.
 bool mudlet::closeHeldOffByEventPump(Host* pHost) const
 {
     if (!pHost->getLuaInterpreter()->pumpingEvents()) {
         return false;
     }
-    qWarning() << "mudlet: asked to close profile" << pHost->getName() << "while the test-mode event pump is running on it, ignoring";
+    qWarning() << "mudlet: asked to close profile" << pHost->getName() << "while it is running a nested event loop, ignoring";
     return true;
 }
 
@@ -4725,6 +4725,16 @@ void mudlet::closeEvent(QCloseEvent* event)
         mCloseRequestedDuringProfileLoad = true;
         event->ignore();
         return;
+    }
+
+    for (auto pHost : mHostManager) {
+        // A profile already in its save question would be asked again, and
+        // closed under that question's loop; the tray's Quit stays usable then
+        if (pHost->getLuaInterpreter()->pumpingEvents()) {
+            qWarning().nospace().noquote() << "mudlet::closeEvent(...) WARNING - not closing, the profile \"" << pHost->getName() << "\" is still running a nested event loop.";
+            event->ignore();
+            return;
+        }
     }
 
     QStringList hostsToDestroy;
@@ -8563,10 +8573,11 @@ void mudlet::armForceClose()
     QTimer::singleShot(0ms, this, [this]() {
         // Deferring by one event loop iteration is meant to land outside Lua,
         // but the pump runs the event loop from inside Lua, so it can land
-        // right back in it. Retrying terminates: the pump is capped at 30s.
+        // right back in it. Retrying terminates: the pump is capped at 30s, and a
+        // profile's close ends once its save question is answered.
         for (auto pHost : mHostManager) {
             if (pHost->getLuaInterpreter()->pumpingEvents()) {
-                qWarning() << "mudlet::armForceClose() - the test-mode event pump is running, waiting for it to finish";
+                qWarning() << "mudlet::armForceClose() - a nested event loop is running, waiting for it to finish";
                 QTimer::singleShot(50ms, this, [this]() {
                     armForceClose();
                 });

@@ -848,8 +848,8 @@ public:
 
     // Called from Host::raiseEvent(), to unblock a waitForEvent() on that event.
     void captureEventForWaits(const TEvent&);
-    // Lets callers refuse anything that would lua_close() the state the pump is
-    // running Lua on. Always false outside MUDLET_TEST_MODE.
+    // Lets callers refuse anything that would lua_close() the state, or delete the
+    // console, under a nested event loop: the test-mode pump, or a profile's close.
     bool pumpingEvents() const { return !mPendingEventWaits.isEmpty() || mEventPumpDepth > 0; }
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {

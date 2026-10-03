@@ -23,8 +23,9 @@
  * shortcut held down while a profile loads (PR #8301, issue #7478), a startup
  * autologin for a profile that is already open (PR #8475, issue #1195), a
  * close that ran inside the keystroke that asked for it rather than once
- * everything else had finished (PR #7461), and a second close asked for while
- * the first one's save question is still open.
+ * everything else had finished (PR #7461), and a second close of the profile,
+ * or of the whole application, asked for while the first one's save question
+ * is still open.
  *
  * Run with: ctest -R ProfileCloseGuardTest -V
  */
@@ -156,8 +157,16 @@ private slots:
     // The save question runs the event loop, so a close of the same profile
     // reached from a script meanwhile asked again and then deleted the console
     // the first question was still running over.
+    void test_aCloseAskedForWhileTheSaveQuestionIsUpIsHeldOff_data()
+    {
+        QTest::addColumn<bool>("closeTheApplication");
+        QTest::newRow("profile") << false;
+        QTest::newRow("application") << true;
+    }
+
     void test_aCloseAskedForWhileTheSaveQuestionIsUpIsHeldOff()
     {
+        QFETCH(bool, closeTheApplication);
         mpHost->mFORCE_SAVE_ON_EXIT = false;
         const auto restoreForcedSave = qScopeGuard([this]() {
             mpHost->mFORCE_SAVE_ON_EXIT = true;
@@ -177,8 +186,12 @@ private slots:
                 firstQuestion = question;
                 ++questionsSeen;
                 waited.start();
-                QTimer::singleShot(0ms, this, [this, &secondCloseReturned]() {
-                    mudlet::self()->slot_closeProfileByName(mProfileName);
+                QTimer::singleShot(0ms, this, [this, closeTheApplication, &secondCloseReturned]() {
+                    if (closeTheApplication) {
+                        mudlet::self()->close();
+                    } else {
+                        mudlet::self()->slot_closeProfileByName(mProfileName);
+                    }
                     secondCloseReturned = true;
                 });
                 return;
