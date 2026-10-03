@@ -28,12 +28,11 @@
  * still running: the process reports "QMutex: destroying locked mutex" and dies
  * inside freed plugin machinery.
  *
- * --version is the shortest path through main() that still starts the warm-up -
- * initSentry(), the application object, the warm-up itself and the translators,
- * then an immediate return from the version branch - so it leaves a background
- * task the least room to finish and fails first. Since #10873 that path builds
- * a QCoreApplication and runs neither mudlet::start() nor setupConfig(), which
- * is why the warm-up sits outside main()'s `if (app)` guard: inside it, this
+ * --version starts the warm-up immediately before main() returns - after
+ * initSentry(), the application object, the translators and the version text -
+ * so a background task has almost no room to finish before teardown. That path
+ * builds a QCoreApplication and runs neither mudlet::start() nor setupConfig(),
+ * which is why the version branch starts the warm-up itself: without that, this
  * case would spawn a process that starts no background task at all and would
  * pass with the #10460 fix reverted. Nothing on the path writes to the config
  * root; the sandbox below is for what it reads.
@@ -124,9 +123,10 @@ private slots:
             QVERIFY2(mudlet.exitStatus() == QProcess::NormalExit, qPrintable(qsl("mudlet --version crashed on leaving main(); %1").arg(diagnostics)));
             QVERIFY2(mudlet.exitCode() == 0, qPrintable(qsl("mudlet --version exited %1; %2").arg(QString::number(mudlet.exitCode()), diagnostics)));
             // Without this the case would still pass against a main() that
-            // returned before ever reaching the warm-up, and cover nothing. The
-            // application name is the one part of that banner no translation
-            // touches - mudlet, mudlet.exe or Mudlet, depending on the platform
+            // returned before the version branch, which is where the warm-up
+            // starts, and cover nothing. The application name is the one part
+            // of that banner no translation touches - mudlet, mudlet.exe or
+            // Mudlet, depending on the platform
             QVERIFY2(output.contains(qsl("mudlet"), Qt::CaseInsensitive), qPrintable(qsl("no version banner, so main() never reached the version branch; %1").arg(diagnostics)));
         }
     }
