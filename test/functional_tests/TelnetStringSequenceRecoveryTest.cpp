@@ -141,11 +141,11 @@ private:
                 [this]() {
                     return mpHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                 },
-                5000);
+                5s);
         mpHost->mpConsole->buffer.clear();
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
         mpHost->mTelnet.connectIt(mLocalhost, mPort.toInt());
-        const bool reconnected = connectedSpy.wait(5000);
+        const bool reconnected = connectedSpy.wait(5s);
         const bool arrived = waitForBufferText(welcomeMessage);
         mpServer->setWelcomeMessage(QString());
         return wentOffline && reconnected && arrived;
@@ -200,7 +200,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

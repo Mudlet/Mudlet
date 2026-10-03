@@ -132,7 +132,7 @@ private:
     // assertion ends the test instead of the null host doing it.
     Host* startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             const auto dialog = []() {
                 return mudlet::self()->mpConnectionDialog.data();
             };
@@ -143,7 +143,7 @@ private:
                         [&dialog]() {
                             return dialog() && dialog()->isVisible();
                         },
-                        5000)) {
+                        5s)) {
                 qWarning() << "the connection dialog never appeared";
                 return;
             }
@@ -153,7 +153,7 @@ private:
                             [field]() {
                                 return QApplication::focusWidget() == field;
                             },
-                            5000)) {
+                            5s)) {
                     return true;
                 }
                 qWarning() << "focus never reached the" << name << "field";
@@ -181,7 +181,7 @@ private:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             qWarning() << "Profile took too long to load.";
             return nullptr;
         }
@@ -192,7 +192,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             qWarning() << "Could not connect with the host.";
             return nullptr;
         }

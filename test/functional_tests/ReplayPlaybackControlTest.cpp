@@ -67,6 +67,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class ReplayPlaybackControlTest : public QObject
 {
     Q_OBJECT
@@ -184,7 +186,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(pHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             return nullptr;
         }
         return pHost;
@@ -487,7 +489,7 @@ private slots:
         }
 
         QTRY_VERIFY(bufferContains(qsl("REPLAY_TWO")));
-        QTRY_VERIFY_WITH_TIMEOUT(bufferContains(qsl("REPLAY_THREE")), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(bufferContains(qsl("REPLAY_THREE")), 5s);
     }
 
     // The reason MudletReplay::start() takes a Host*: the buttons have to drive the

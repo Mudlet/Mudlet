@@ -86,6 +86,8 @@
 
 #include <chrono>
 
+using namespace std::chrono_literals;
+
 namespace {
 
 // The shape I.R.E. games serve: a <map> document of areas and rooms, which is
@@ -280,7 +282,7 @@ private:
     // is 64 slices, well over a second of an answer that reports several times
     // a second.
     static constexpr qsizetype scmSliceSize = 4096;
-    static constexpr auto scmSliceInterval = std::chrono::milliseconds(20);
+    static constexpr std::chrono::milliseconds scmSliceInterval = 20ms;
 
     QTcpServer mServer;
     QHash<QTcpSocket*, QByteArray> mBuffers;
@@ -348,7 +350,7 @@ private:
         TMap* pMap = mpHost->mpMap.data();
         QSignalSpy closeSpy(pMap, &TMap::signal_mapProgressClose);
         pMap->downloadMap(remoteUrl, localFileName);
-        return closeSpy.count() == 1 || closeSpy.wait(15000);
+        return closeSpy.count() == 1 || closeSpy.wait(15s);
     }
 
     void watchMapDownloadEvent() const
@@ -588,7 +590,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpTelnetServer->serverPort()));
         QVERIFY2(mpHost, "the test profile could not be created");
         QSignalSpy connectionSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectionSpy.count() == 1 || connectionSpy.wait(5000), "the test profile never connected to the stub game");
+        QVERIFY2(connectionSpy.count() == 1 || connectionSpy.wait(5s), "the test profile never connected to the stub game");
         QVERIFY(mpHost->mpConsole);
         // No mapper widget yet, so every download below takes the standalone
         // progress path the signals under test belong to, until the tests at the
@@ -822,7 +824,7 @@ private slots:
                          [this]() {
                              return !mpMapServer->requestedPaths().isEmpty();
                          },
-                         10000),
+                         10s),
                  "the first download never reached the server");
 
         pMap->downloadMap(mpMapServer->url(qsl("/map.xml")));
@@ -907,7 +909,7 @@ private slots:
                          [this]() {
                              return !mpMapServer->requestedPaths().isEmpty();
                          },
-                         10000),
+                         10s),
                  "the download never reached the server");
 
         pMap->slot_downloadCancel();
@@ -938,7 +940,7 @@ private slots:
                          [this]() {
                              return mpMapServer->requestedPaths().contains(qsl("/stalled.xml"));
                          },
-                         10000),
+                         10s),
                  "the download to be canceled never reached the server");
 
         pMap->slot_downloadCancel();
@@ -1205,7 +1207,7 @@ private slots:
                          [this]() {
                              return !mpMapServer->requestedPaths().isEmpty();
                          },
-                         10000),
+                         10s),
                  "the download never reached the server");
 
         auto* dialog = consoleProgressDialog();
@@ -1292,7 +1294,7 @@ private slots:
                 [pMap]() {
                     return !pMap->hasActiveTransferProgress();
                 },
-                15000);
+                15s);
 
         // Which file it landed on first: naming the destination the download
         // was given says what went wrong, where a download that did not finish
