@@ -32,6 +32,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "TMxpFrameManager.h"
 #include "TMxpFrameWidgets.h"

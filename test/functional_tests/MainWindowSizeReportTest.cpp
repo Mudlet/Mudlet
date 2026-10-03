@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TCommandLine.h"
 #include "TDockWidget.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
