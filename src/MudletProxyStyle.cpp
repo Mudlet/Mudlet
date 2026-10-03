@@ -27,10 +27,12 @@
 #include <windows.h>
 #elif defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 #include <QDBusConnection>
+#include <QDBusError>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusVariant>
+#include <QDebug>
 
 #include "utils.h"
 #endif
@@ -71,6 +73,8 @@ void MudletProxyStyle::watchScreenReaderStatus()
 #elif defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
     QDBusConnection bus = QDBusConnection::sessionBus();
     if (!bus.isConnected()) {
+        qDebug().nospace().noquote() << "MudletProxyStyle::watchScreenReaderStatus() INFO - no D-Bus session bus (" << bus.lastError().message()
+                                     << "), so screen readers cannot be detected and Alt-to-menu-bar navigation follows the preference only.";
         return;
     }
 
@@ -82,7 +86,10 @@ void MudletProxyStyle::watchScreenReaderStatus()
     auto* watcher = new QDBusPendingCallWatcher(bus.asyncCall(request), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher* call) {
         const QDBusPendingReply<QDBusVariant> reply = *call;
-        if (!reply.isError()) {
+        if (reply.isError()) {
+            qDebug().nospace().noquote() << "MudletProxyStyle::watchScreenReaderStatus() INFO - unable to read the screen reader status from " << csmA11yService << " (" << reply.error().name() << ": "
+                                         << reply.error().message() << "), so Alt-to-menu-bar navigation follows the preference only.";
+        } else {
             mScreenReaderRunning = reply.value().variant().toBool();
         }
         call->deleteLater();
