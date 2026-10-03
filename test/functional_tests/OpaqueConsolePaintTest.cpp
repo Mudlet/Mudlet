@@ -36,6 +36,8 @@
 
 using namespace std::chrono_literals;
 
+// Unnamed namespace: FrontendRefreshSeamTest, in the same grouped binary, has its own PaintCounter
+namespace {
 class PaintCounter : public QObject
 {
 public:
@@ -50,6 +52,7 @@ protected:
         return false;
     }
 };
+} // namespace
 
 /*
  * The main console's text pane paints its own background whenever nothing
