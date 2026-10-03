@@ -5311,11 +5311,15 @@ bool Host::createBuffer(const QString& name)
 // Doesn't work on the errors or central debug consoles:
 bool Host::clearWindow(const QString& name)
 {
-    if (!mpConsole) {
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
         return false;
     }
-
-    return mpConsole->clear(name);
+    pModel->buffer.clear();
+    // --mirror's pending line went with the buffer.
+    pModel->mMirrorPendingLine.clear();
+    emit pModel->mNotifier.bufferCleared();
+    return true;
 }
 
 bool Host::showWindow(const QString& name)

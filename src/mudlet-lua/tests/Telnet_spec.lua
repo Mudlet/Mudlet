@@ -1515,24 +1515,147 @@ describe("Tests MCCP compressed streams", function()
   -- zlib.compress("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK\r\n"),
   -- as the bytes a server would put on the wire after the start sequence
   local COMPRESSED = "\120\218\243\117\118\14\112\113\117\246\247\13\8\114\13\14\118\117\241\247\86\240\37\70\136\151\11\0\228\236\16\9"
+  -- zlib.compress("MCCPSECONDSTREAMOK MCCPSECONDSTREAMOK\r\n")
+  local COMPRESSED_SECOND = "\120\156\243\117\118\14\8\118\117\246\247\115\9\14\9\114\117\244\245\247\86\240\197\16\226\229\2\0\223\154\10\194"
+  -- zlib.compress("MCCPVERSIONONEOK MCCPVERSIONONEOK\r\n")
+  local COMPRESSED_V1 = "\120\156\243\117\118\14\8\115\13\10\246\244\247\243\247\115\245\247\86\240\69\19\224\229\2\0\183\122\9\194"
 
-  -- neither the end of a stream nor a broken one clears the WILL, so without this
-  -- every later spec's IAC SB is still a candidate MCCP start sequence
+  -- the end of a stream does not clear the WILL, so without this every later
+  -- spec's IAC SB is still a candidate MCCP start sequence
   after_each(function()
     feed("<T_IAC><T_WONT><O_MCCP2>")
+    feed("<T_IAC><T_WONT><O_MCCP>")
   end)
 
-  -- Both of these end their stream, and ending one leaks the zlib inflate state
-  -- for good (#10410), which turns the leak detection half of the Linux CI job
-  -- red. The fixture above and the helpers are kept so that un-parking them is
-  -- a one line change once that is fixed.
-
   it("shows the text a server sends once it switches to MCCP v2", function()
-    pending("running a compressed stream to its end leaks the inflate state (#10410)")
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED) .. "MCCPPLAINAFTEREND\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), shown)
+    -- the stream ended inside that read, so what follows it is plain text again
+    assert.is_truthy(shown:find("MCCPPLAINAFTEREND", 1, true), shown)
   end)
 
   it("warns and falls back to plain text when the compressed stream is broken", function()
-    pending("a failed inflate leaks the inflate state the same way (#10410)")
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>MCCPNOTCOMPRESSED\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    -- the text was never compressed, so none of it may go missing into the
+    -- stream header zlib tried to read out of it
+    assert.is_truthy(shown:find("MCCPNOTCOMPRESSED", 1, true), shown)
+    feed("MCCPPLAINAFTERBROKEN\r\n")
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERBROKEN", 1, true), shown)
+  end)
+
+  -- the end of a stream arms a fresh inflate state for the next one, and a
+  -- second start sequence used to allocate over it, leaking it (#10410) - only
+  -- the leak detection half of the Linux CI job can see that
+  it("decompresses a second stream once the first has ended", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+
+    -- this time the stream arrives in a read of its own after the start sequence
+    feed("MCCPSECONDSTART\r\n<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>")
+    feed(escaped(COMPRESSED_SECOND))
+    local shown = linesSince(mark)
+    local first = shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true)
+    local between = shown:find("MCCPSECONDSTART", 1, true)
+    local second = shown:find("MCCPSECONDSTREAMOK MCCPSECONDSTREAMOK", 1, true)
+    assert.is_truthy(first and between and second and first < between and between < second, shown)
+  end)
+
+  it("warns when a stream that started in an earlier read turns out to be broken", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>")
+    feed("MCCPLATERBROKEN\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPLATERBROKEN", 1, true), shown)
+  end)
+
+  it("shows all of a text that arrives instead of a stream split across reads", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    -- zlib takes the first byte on its own as half of a stream header
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>M")
+    feed("CCPSPLIT\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    -- once, and whole: the byte zlib held back must not be lost or shown twice
+    local _, occurrences = shown:gsub("%f[%w]MCCPSPLIT", "")
+    assert.equals(1, occurrences, shown)
+  end)
+
+  -- zlib reports a header asking for a preset dictionary without counting the
+  -- six bytes it read for it, so those have to be kept track of another way
+  it("shows all of a text that begins like a stream wanting a dictionary", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>8nMCCPDICT\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("8nMCCPDICT", 1, true), shown)
+  end)
+
+  -- a broken stream is refused on the wire, so a start sequence the game sends
+  -- after that is not the start of a stream until it offers MCCP again
+  it("stops decompressing after a broken stream until the game offers MCCP again", function()
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>MCCPNOTCOMPRESSED\r\n")
+
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED) .. "\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCPDECOMPRESSEDOK", 1, true), "a refused stream was decompressed: " .. shown)
+
+    mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
+  end)
+
+  it("shows the text a server sends once it switches to MCCP v1", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP>")
+    -- v1's start sequence is IAC SB COMPRESS WILL SE, not terminated by an IAC
+    feed("<T_IAC><T_SB><O_MCCP><T_WILL><T_SE>" .. escaped(COMPRESSED_V1) .. "MCCPV1PLAINAFTER\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPVERSIONONEOK MCCPVERSIONONEOK", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPV1PLAINAFTER", 1, true), shown)
+  end)
+
+  -- One read that inflates past the decompression bomb cap cannot be followed
+  -- to the end, and the part it drops leaves the stream unreadable, so the
+  -- stream has to be refused there rather than fed whatever comes next.
+  it("refuses a stream that inflates past the cap in one read", function()
+    -- zlib.compress(string.rep("\0", 1000000) .. "MCCPTAILOFBOMB\r\n", 9): NULs
+    -- are not displayed, so the cap is reached without drawing ~1 MB of text.
+    -- It has to inflate to more than scmMaxDecompressionRecursion * BUFFER_SIZE
+    -- (8 * 100000 bytes in ctelnet), or raising either leaves the cap unreached.
+    local bomb = "\120\218\237\193\209\9\0\16\20\0\64\223\202\80\40\165\188\248\176\255\44\6\113\119\41\1"
+      .. string.rep("\0", 968)
+      .. "\191\138\222\207\173\115\237\209\118\180\146\31\105\128\4\26"
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(bomb))
+    -- what a game sends once it has seen the DONT
+    feed("MCCPPLAINAFTERCAP\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), "the plain text was fed to the dropped stream: " .. shown)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERCAP", 1, true), shown)
+
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
   end)
 end)
 
