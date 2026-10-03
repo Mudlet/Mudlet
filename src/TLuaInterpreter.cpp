@@ -5673,6 +5673,23 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
     return true;
 }
 
+// Whether "return <name>" does nothing but read the global of that name. Of
+// the keywords only these three compile there, so they are the ones to exclude.
+static bool plainGlobalName(const QString& name)
+{
+    if (name.isEmpty() || name == QLatin1String("nil") || name == QLatin1String("true") || name == QLatin1String("false")) {
+        return false;
+    }
+    for (qsizetype i = 0; i < name.size(); ++i) {
+        const char16_t c = name.at(i).unicode();
+        const bool letter = (c >= u'a' && c <= u'z') || (c >= u'A' && c <= u'Z') || c == u'_';
+        if (!letter && (i == 0 || c < u'0' || c > u'9')) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
 {
@@ -5701,16 +5718,39 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     // Compiling the lookup costs far more than running it, and every event
     // pays for at least one - dispatchEventToFunctions is always registered -
     // so each handler name is compiled once. Running the chunk still looks the
-    // name up afresh, so a handler that is redefined or removed is seen:
+    // name up afresh, so a handler that is redefined or removed is seen. A
+    // plain global name skips the chunk: what the globals table holds under it
+    // is what "return name" would find, and only when it holds nothing - so a
+    // metamethod could supply or reject the name - does the chunk run instead:
+    const auto loadLookup = [L, &function] {
+        return luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+    };
     int error = 0;
+    bool resolved = false;
     if (const auto cached = mEventHandlerLookupRefs.constFind(function); cached != mEventHandlerLookupRefs.cend()) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, cached.value());
-        // A freshly loaded chunk would take whatever globals table the thread
-        // has now, which setfenv(0, ...) can have changed since this one was:
-        lua_pushvalue(L, LUA_GLOBALSINDEX);
-        lua_setfenv(L, -2);
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            lua_rawget(L, LUA_GLOBALSINDEX);
+            resolved = !lua_isnil(L, -1);
+            if (!resolved) {
+                lua_pop(L, 1);
+                // The chunk takes the name's place, so a name that only a
+                // metamethod supplies is not compiled again on every event:
+                error = loadLookup();
+                if (!error) {
+                    lua_pushvalue(L, -1);
+                    lua_rawseti(L, LUA_REGISTRYINDEX, cached.value());
+                }
+            }
+        } else {
+            // A freshly loaded chunk would take whatever globals table the
+            // thread has now, which setfenv(0, ...) can have changed since
+            // this one was:
+            lua_pushvalue(L, LUA_GLOBALSINDEX);
+            lua_setfenv(L, -2);
+        }
     } else {
-        error = luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+        error = loadLookup();
         if (!error) {
             // Script names come and go with renames, so keep this from growing
             // without bound - but far above the handler count of any real
@@ -5721,11 +5761,15 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
                 }
                 mEventHandlerLookupRefs.clear();
             }
-            lua_pushvalue(L, -1);
+            if (plainGlobalName(function)) {
+                lua_pushstring(L, function.toUtf8().constData());
+            } else {
+                lua_pushvalue(L, -1);
+            }
             mEventHandlerLookupRefs.insert(function, luaL_ref(L, LUA_REGISTRYINDEX));
         }
     }
-    if (!error) {
+    if (!error && !resolved) {
         error = lua_pcall(L, 0, LUA_MULTRET, 0);
     }
     if (error) {

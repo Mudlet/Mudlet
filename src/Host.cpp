@@ -2782,27 +2782,30 @@ void Host::raiseEvent(const TEvent& pE)
         mScriptUnit.doCleanup();
     });
 
-    if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
-        QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
-        for (auto& script : scriptList) {
+    // Each list is copied before it runs, as a handler can register or kill
+    // handlers and so change the map under it
+    const QString& name = pE.mArgumentList.at(0);
+    if (const auto it = mEventHandlerMap.constFind(name); it != mEventHandlerMap.cend()) {
+        const QList<TScript*> scriptList = it.value();
+        for (auto* script : scriptList) {
             script->callEventHandler(pE);
         }
     }
-    if (mEventHandlerMap.contains(star)) {
-        QList<TScript*> scriptList = mEventHandlerMap.value(star);
-        for (auto& script : scriptList) {
+    if (const auto it = mEventHandlerMap.constFind(star); it != mEventHandlerMap.cend()) {
+        const QList<TScript*> scriptList = it.value();
+        for (auto* script : scriptList) {
             script->callEventHandler(pE);
         }
     }
 
-    if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
-        const QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
+    if (const auto it = mAnonymousEventHandlerFunctions.constFind(name); it != mAnonymousEventHandlerFunctions.cend()) {
+        const QStringList functionsList = it.value();
         for (const QString& function : functionsList) {
             mLuaInterpreter.callEventHandler(function, pE);
         }
     }
-    if (mAnonymousEventHandlerFunctions.contains(star)) {
-        const QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
+    if (const auto it = mAnonymousEventHandlerFunctions.constFind(star); it != mAnonymousEventHandlerFunctions.cend()) {
+        const QStringList functionsList = it.value();
         for (const QString& function : functionsList) {
             mLuaInterpreter.callEventHandler(function, pE);
         }
