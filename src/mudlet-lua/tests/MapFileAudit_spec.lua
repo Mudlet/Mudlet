@@ -268,6 +268,8 @@ describe("Tests the audit of a damaged binary map file", function()
       -- and is found where it stands, not under the ID it was loaded with
       local x, y, z = getRoomCoordinates(renumbered)
       assert.are.same({renumbered}, getRoomsByPosition1(area, x, y, z))
+      assert.are.same({renumbered}, getAllRoomEntrances(from))
+      assert.are.same({from}, getAllRoomEntrances(renumbered))
     end)
 
     it("renumbers a room whose ID is -1 without giving it every absent exit on the map", function()
@@ -364,6 +366,7 @@ describe("Tests the audit of a damaged binary map file", function()
       -- audit could send it to the renumbered room
       assert.is_nil(getRoomExits(from)["east"])
       assert.are.equal(from, getRoomExits(renumbered)["west"])
+      assert.are.same({renumbered}, getAllRoomEntrances(from))
     end)
   end)
 
