@@ -557,6 +557,11 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    if (mpHost->getLuaInterpreter()->buildingCaptureTables()) {
+        qWarning() << "TriggerUnit::processDataStream(...) WARNING - not running triggers on a line a garbage collection finaliser fed while the capture tables were being built.";
+        return;
+    }
+
     // Encoded, when a perl pattern asks, into storage borrowed from the unit so only a line longer than
     // any before allocates. Moved out rather than lent, so a nested pass finds the member empty and
     // cannot resize the outer pass's buffer.

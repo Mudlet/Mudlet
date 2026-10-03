@@ -299,6 +299,11 @@ bool AliasUnit::processDataStream(const QString& data)
     }
 
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
+    if (Lua->buildingCaptureTables()) {
+        qWarning().nospace() << "AliasUnit::processDataStream(...) WARNING - not expanding " << data
+                             << " as a garbage collection finaliser sent it while the capture tables were being built; it goes to the game unexpanded.";
+        return false;
+    }
     Lua->set_lua_string(qsl("command"), data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
