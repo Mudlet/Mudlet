@@ -209,12 +209,16 @@ private slots:
     void test_backgroundProfileFollowsTheApplicationWindowResizing()
     {
         const QSize before = mpBackgroundHost->mainWindowSize().value_or(QSize());
-        mudlet::self()->resize(mudlet::self()->size() + QSize(-120, -80));
+        const QSize windowSize = mudlet::self()->size();
+        mudlet::self()->resize(windowSize + QSize(-120, -80));
         QTest::qWait(50);
 
         const QSize after = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        const QSize measured = mpBackgroundHost->mainConsoleView()->getMainWindowSize();
+        mudlet::self()->resize(windowSize);
+        QTest::qWait(50);
         QVERIFY2(after != before, "resizing the application window did not change a backgrounded profile's main window size");
-        QCOMPARE(after, mpBackgroundHost->mainConsoleView()->getMainWindowSize());
+        QCOMPARE(after, measured);
     }
 
     // A detached window's background tab is hidden at its full size, so its command line growing is
