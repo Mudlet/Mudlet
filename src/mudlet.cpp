@@ -2545,7 +2545,7 @@ void mudlet::warnAboutRejectedPortableRoot()
     // Qt::AutoText - a path holding a '<' would be taken for markup and mangled,
     // and this is the one message that has to name the file exactly right
     notice->setTextFormat(Qt::PlainText);
-    //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
+    //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use, or names none at all
     notice->setWindowTitle(tr("Portable data directory unusable"));
     if (rejectedRoot.isEmpty()) {
         //: %1 is the full path of a portable.txt file whose first line is empty or that could not be read, so it names no data directory
