@@ -196,8 +196,19 @@ else
           if [[ -n "${BUILD_COMMIT}" ]] \
               && { [[ "${BUILD_COMMIT}" == "${existing_commit}"* ]] \
                 || [[ "${existing_commit}" == "${BUILD_COMMIT}"* ]]; }; then
-            echo "=== PTB already exists for commit ${BUILD_COMMIT} (${existing_tag}), aborting public test build generation ==="
-            exit 0
+            # A PTB exists for this commit, but the platforms build in parallel
+            # and share one release - only skip if the Windows asset is already
+            # published. Otherwise a sibling platform (or a re-run) created the
+            # release first and we still owe it our asset, so one platform racing
+            # ahead or failing never blocks the others.
+            if gh release view "${existing_tag}" --repo "${GITHUB_REPOSITORY}" \
+                  --json assets --jq '.assets[].name' 2>/dev/null \
+                  | grep -q -- '-windows-64\.exe$'; then
+              echo "=== PTB ${existing_tag} already has the Windows asset for ${BUILD_COMMIT}, skipping rebuild ==="
+              exit 0
+            fi
+            echo "=== PTB ${existing_tag} exists for ${BUILD_COMMIT} but has no Windows asset yet - building to add it ==="
+            break
           fi
         done <<< "${existing_ptb_tags}"
       else

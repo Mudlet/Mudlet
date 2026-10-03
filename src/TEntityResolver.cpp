@@ -89,6 +89,11 @@ bool TEntityResolver::unregisterEntity(const QString& entity)
 
 QString TEntityResolver::resolveCode(const QString& entityValue)
 {
+    if (entityValue.isEmpty()) {
+        // A malformed numeric entity such as "&#;" yields an empty value here;
+        // guard against calling front() on it (undefined behaviour).
+        return entityValue;
+    }
     return entityValue.front() == 'x' ? resolveCode(entityValue.mid(1), 16) : resolveCode(entityValue, 10);
 }
 

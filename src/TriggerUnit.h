@@ -24,20 +24,30 @@
  ***************************************************************************/
 
 
+#include "TTriggerPrescan.h"
 #include "utils.h"
 
+#include <QByteArray>
+#include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QHash>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
 
+#include <limits>
 #include <list>
+#include <memory>
+#include <vector>
 
 class Host;
 class TTrigger;
+struct TRootTriggerFilter;
 
 class TriggerUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(TriggerUnit) // Needed so we can use tr() even though TriggerUnit is NOT derived from QObject
     friend class XMLexport;
     friend class XMLimport;
 
@@ -72,11 +82,68 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
+    // Call on any change to whether a trigger can be ruled out of a line by its text alone.
+    void markPrescanStale(TTrigger* pT);
+    // As above, for a change made mid-line: that line's candidate list is already settled, so the
+    // epoch sends the rest of it down the unfiltered path.
+    void markPrescanStaleForLineInFlight(TTrigger* pT)
+    {
+        ++mUnfilterableEpoch;
+        ++mRootFilterEpoch;
+        markPrescanStale(pT);
+    }
+    // How many times a change has been announced to the passes that pinned a copy of the root
+    // triggers' filters. Moves only for a change one of those copies could be of, so a spec can tell a
+    // needed announcement from one that cost a line its filters for nothing.
+    quint32 rootFilterEpoch() const { return mRootFilterEpoch; }
+    // Both paths build the same index, so this is how a test checks the incremental path keeps full
+    // rebuilds flat.
+    quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
 
+    int processingDepth() const { return mProcessingDepth; }
+    // Raw pointer is safe: a trigger outlives its own execute() frame, as deletion
+    // is deferred to doCleanup() once mProcessingDepth returns to 0.
+    const QString* currentExecutingTriggerName() const { return mpCurrentExecutingTriggerName; }
+    void setCurrentExecutingTriggerName(const QString* pName) { mpCurrentExecutingTriggerName = pName; }
+    // The same-line creation lineage of the root of the trigger whose script is
+    // running, so a trigger it creates joins that lineage rather than starting
+    // one - see registerTrigger(). Zero while no trigger script is running (an
+    // alias or a timer counts as none), or while the running one predates the
+    // line being processed.
+    int currentSameLineChainId() const { return mCurrentSameLineChainId; }
+    int currentSameLineGeneration() const { return mCurrentSameLineGeneration; }
+    void setCurrentSameLineChain(const int chainId, const int generation)
+    {
+        mCurrentSameLineChainId = chainId;
+        mCurrentSameLineGeneration = generation;
+    }
+    // Turns an endless self-feeding-trigger loop into a catchable Lua error before
+    // it overflows the stack. Sized for the smallest platform stack (~1MB on
+    // Windows, where the original crash hit before Lua's own 200-C-call guard):
+    // a few times any legitimate nesting, comfortably below the native limit.
+    inline static const int scmMaxProcessingDepth = 50;
+    // How many creations deep one lineage of same-line creations may go while a
+    // single line is processed. Separate from the depth above, which measures the
+    // C stack: nothing recurses here, it is the list processDataStream() walks
+    // that grows. Generations rather than a head count is what separates the two
+    // shapes: a script arming a batch produces one generation however big the
+    // batch, while a trigger that re-creates itself adds a generation per round
+    // and is the only thing that can go on forever. 1000 is far past any chain a
+    // real script builds.
+    inline static const int scmMaxSameLineGenerations = 1000;
+    // Generations alone do not bound what one line costs: a lineage that widens
+    // as it deepens multiplies. Past this many creations new triggers stop being
+    // offered the line, and since matching is what makes them create more, that
+    // ends the growth. Nothing is stopped or disowned here - all of them are
+    // still armed for the lines that follow - so it can sit well clear of any
+    // legitimate batch.
+    inline static const qsizetype scmMaxSameLineCreationsPerLine = 20000;
+
     QList<TTrigger*> uninstallList;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
 private:
     TriggerUnit() = default;
@@ -86,10 +153,61 @@ private:
     void addTrigger(TTrigger* pT);
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
+    void startOrExtendSameLineChain(TTrigger* pT);
+    void collectPrescanTasks(TTrigger* pT);
+    void rebuildPrescanTasksIfStale();
+    void stopSameLineCreationLoop(const int chainId);
+    void markRootNodeAppended(TTrigger* pT);
+    void markRootNodeRemoved(TTrigger* pT);
+    // For changes that move existing triggers, which the snapshot and its index can only follow by rebuilding
+    void markRootNodeListReordered()
+    {
+        mRootNodeSnapshotStale = true;
+        mRootNodeSnapshotNeedsRebuild = true;
+    }
+    void refreshRootNodeSnapshot();
 
     QPointer<Host> mpHost;
+    // mUtf8Scratch is kept between lines only for its capacity, which is dropped past this size so one
+    // outsized line cannot hold it all session: 3 bytes per QChar of a line longer than any game sends.
+    static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
+    QByteArray mUtf8Scratch;
+    // Handed to the match pool as one list per line; see collectPrescanTasks()
+    std::vector<TTrigger*> mPrescanTasks;
+    quint64 mPrescanTasksGeneration = std::numeric_limits<quint64>::max();
+    // Estimates the work the pool could share out on this line. Not the count of regex triggers: most
+    // may be disabled or settled before their regex is reached.
+    int mRegexSearchesOnTheLastLine = 0;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
+    // What processDataStream() iterates instead of mTriggerRootNodeList. A pass pins the snapshot current
+    // when it started, so a mid-pass mutation only affects the next pass. Every mutation of
+    // mTriggerRootNodeList must set the flag below, or a pass would walk freed triggers.
+    // The prescan files triggers by snapshot position, so the two are rebuilt and pinned together.
+    // mFilters runs parallel to mNodes; what it says about a trigger holds only while mRootFilterEpoch
+    // stands still - see processDataStream().
+    struct RootNodeSnapshot
+    {
+        std::vector<TTrigger*> mNodes;
+        std::vector<TRootTriggerFilter> mFilters;
+        TTriggerPrescan mPrescan;
+    };
+    std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
+    bool mRootNodeSnapshotStale = true;
+    bool mRootNodeSnapshotNeedsRebuild = true;
+    // Pending snapshot updates, so scripts arming and killing temporary triggers cost one entry each, not
+    // a rebuild per line. Removals and refiles hold positions since the trigger may be freed before the
+    // next line reads them; a removed position is never reused.
+    std::vector<TTrigger*> mRootNodesAppended;
+    std::vector<int> mRootNodesRemoved;
+    std::vector<int> mRootNodesRefiled;
+    std::vector<int> mCandidateScratch;
+    std::vector<int> mCandidates;
+    quint64 mPrescanRebuilds = 0;
+    quint32 mUnfilterableEpoch = 0;
+    // Moves whenever a trigger changes in a way its TRootTriggerFilter copies,
+    // which a pass that has pinned those copies has no other way to hear of
+    quint32 mRootFilterEpoch = 0;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;
@@ -99,6 +217,25 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // Decides whether summarising the next line is worth it; see TBigramFilter
+    int mSubstringQuestionsOnTheLastLine = 0;
+    const QString* mpCurrentExecutingTriggerName = nullptr;
+    // Root triggers registered while processDataStream() is running, so each
+    // pass can match the ones created during it against the line being
+    // processed - see processDataStream(). Cleared once the outermost pass ends.
+    QList<TTrigger*> mRootNodesAddedWhileProcessing;
+    // The name of the trigger whose script started each same-line creation
+    // lineage, for the message when one runs away. Keyed by chain id, so a
+    // trigger dying mid-line cannot leave a stale pointer behind. Cleared once
+    // the outermost pass ends.
+    QHash<int, QString> mSameLineChainStarters;
+    int mCurrentSameLineChainId = 0;
+    int mCurrentSameLineGeneration = 0;
+    // Handed out monotonically and never deliberately recycled: an id that
+    // outlived the pass it was given out in would otherwise be misfiled under a
+    // later lineage. Zero means "none".
+    int mLastSameLineChainId = 0;
+    QElapsedTimer mSameLineLoopReportTimer;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

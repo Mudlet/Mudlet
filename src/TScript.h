@@ -25,8 +25,13 @@
 #include "Tree.h"
 
 #include <QDebug>
+#include <QDebugStateSaver>
+#include <QList>
 #include <QPointer>
+#include <QString>
 #include <QStringList>
+#include <QtGlobal>
+
 #include <optional>
 
 class Host;

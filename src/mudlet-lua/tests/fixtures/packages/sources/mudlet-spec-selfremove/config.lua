@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-selfremove]]
+author = [[Mudlet test suite]]
+title = [[Fixture package that uninstalls itself while it is being installed]]
+version = [[1.0]]
+description = [[Regression fixture for the self-uninstall-during-install crash (#10867).]]

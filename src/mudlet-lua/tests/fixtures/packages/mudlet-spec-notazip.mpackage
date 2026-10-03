@@ -1,0 +1,2 @@
+This file is deliberately not a zip archive, so that installPackage() has to
+reject it. Keeping it as plain text also keeps the fixture reviewable.

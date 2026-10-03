@@ -40,7 +40,6 @@
 #include <QQueue>
 #include <QThread>
 #include <QTimer>
-#include <edbee/texteditorwidget.h>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
@@ -59,6 +58,7 @@ extern "C" {
 
 #include <list>
 #include <string>
+#include <vector>
 #include <memory>
 #include <optional>
 
@@ -83,6 +83,8 @@ class TLuaInterpreter : public QThread
 
     friend class TForkedProcess;
     friend class LuaInterface;
+    // reads the parked capture vectors' capacity, which nothing else exposes
+    friend class CaptureGroupParkingTest;
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
@@ -103,10 +105,10 @@ public:
     bool callMulti(const QString& function, const QString& mName);
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void* pT);
+    bool call_luafunction(void* pT, const QString& itemName = QString());
     void delete_luafunction(void* pT);
     void delete_luafunction(const QString& name);
-    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
+    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     void setAtcpTable(const QString&, const QString&);
@@ -130,12 +132,20 @@ public:
     int check_for_custom_speedwalk();
     void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
+    void setLineGlobal(const QString& line);
+    void flushDeferredGlobals();
+    void setLazyCaptureGlobals(const bool);
+    bool lazyCaptureGlobals() const { return mLazyCaptureGlobals; }
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
     void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
+    void setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameMatches);
+    void takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
+    int pushNestedDispatchState();
+    void popNestedDispatchState(const int depth);
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -250,6 +260,36 @@ public:
     static int setIrcServer(lua_State*);
     static int setIrcChannels(lua_State*);
     static int restartIrc(lua_State*);
+    // Speech-to-text (STT) functions
+    static int sttInit(lua_State*);
+    static int sttStart(lua_State*);
+    static int sttStop(lua_State*);
+    static int sttCancel(lua_State*);
+    static int sttToggle(lua_State*);
+    static int sttIsListening(lua_State*);
+    static int sttIsAvailable(lua_State*);
+    static int sttIsInitialized(lua_State*);
+    static int sttGetInfo(lua_State*);
+    static int sttGetModelPath(lua_State*);
+    static int sttGetLibraryPath(lua_State*);
+    static int sttListModels(lua_State*);
+    static int sttClose(lua_State*);
+    static int sttGetPlatformKey(lua_State*);
+    static int sttReloadLibrary(lua_State*);
+    static int sttUnloadLibrary(lua_State*);
+    static int sttSetSilenceTimeout(lua_State*);
+    static int sttSetSensitivity(lua_State*);
+    static int sttSetVocabulary(lua_State*);
+    // Addon toolbar/menu functions
+    static int addCommand(lua_State*);
+    static int removeCommand(lua_State*);
+    static int enableCommand(lua_State*);
+    static int disableCommand(lua_State*);
+    static int setCommandChecked(lua_State*);
+    static int setCommandPinned(lua_State*);
+    static int setCommandIcon(lua_State*);
+    static int setCommandTooltip(lua_State*);
+    static int setCommandPulse(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
     static int setProfileStyleSheet(lua_State*);
@@ -371,6 +411,7 @@ public:
     static int getFontSize(lua_State*);
     static int openUserWindow(lua_State*);
     static int setUserWindowTitle(lua_State*);
+    static int getUserWindowTitle(lua_State*);
     static int echoUserWindow(lua_State*);
     static int clearUserWindow(lua_State*);
     static int enableTimer(lua_State*);
@@ -396,6 +437,9 @@ public:
     static int selectCaptureGroup(lua_State*);
     static int tempLineTrigger(lua_State*);
     static int raiseEvent(lua_State*);
+    static int waitForEvent(lua_State*);
+    static int pumpEvents(lua_State*);
+    static int rearmLazyGlobals(lua_State*);
     static int deleteLine(lua_State*);
     static int copy(lua_State*);
     static int cut(lua_State*);
@@ -445,8 +489,8 @@ public:
     static int createMiniConsole(lua_State*);
     static int createScrollBox(lua_State*);
     static int createLabel(lua_State*);
-    static int createLabelMainWindow(lua_State*, const QString& labelName);
-    static int createLabelUserWindow(lua_State*, const QString& windowName, const QString& labelName);
+    static int createLabelMainWindow(lua_State*, const char* labelName);
+    static int createLabelUserWindow(lua_State*, const char* windowName, const char* labelName);
     static int deleteLabel(lua_State*);
     static int deleteMiniConsole(lua_State*);
     static int deleteCommandLine(lua_State*);
@@ -463,12 +507,14 @@ public:
     static int setTextEditTabMovesFocus(lua_State*);
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
+    static int getLabelToolTip(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
     static int moveWindow(lua_State*);
     static int setWindow(lua_State*);
     static int openMapWidget(lua_State*);
     static int closeMapWidget(lua_State*);
+    static int getMapWidgetGeometry(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
     static int resetBackgroundImage(lua_State*);
@@ -485,6 +531,7 @@ public:
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
     static int setCmdLineStyleSheet(lua_State*);
+    static int getCmdLineStyleSheet(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
@@ -494,8 +541,10 @@ public:
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);
     static int getUserWindowSize(lua_State*);
+    static int getWindowGeometry(lua_State*);
+    static int windowVisible(lua_State*);
+    static int getLabelText(lua_State*);
     static int getMousePosition(lua_State*);
-    static int setMiniConsoleFontSize(lua_State*);
     static int setProfileIcon(lua_State*);
     static int resetProfileIcon(lua_State*);
     static int getCurrentLine(lua_State*);
@@ -557,6 +606,7 @@ public:
     static int getConsoleBufferSize(lua_State*);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
+    static int getScrollBarVisible(lua_State*);
     static int disableScrollBar(lua_State*);
     static int disableHorizontalScrollBar(lua_State*);
     static int enableHorizontalScrollBar(lua_State*);
@@ -568,6 +618,13 @@ public:
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
     static int setLabelStyleSheet(lua_State*);
+    static int setSvgTint(lua_State*);
+    static int resetSvgTint(lua_State*);
+    static int setSvgRotation(lua_State*);
+    static int resetSvgRotation(lua_State*);
+    static int setSvgShear(lua_State*);
+    static int resetSvgShear(lua_State*);
+    static int resetSvgTransform(lua_State*);
     static int setLinkStyle(lua_State*);
     static int resetLinkStyle(lua_State*);
     static int clearVisitedLinks(lua_State*);
@@ -596,6 +653,7 @@ public:
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setUserWindowStyleSheet(lua_State*);
+    static int getUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);
@@ -724,6 +782,7 @@ public:
     static int getConnectionInfo(lua_State*);
     static int unzipAsync(lua_State*);
     static int setMapWindowTitle(lua_State*);
+    static int getMapWindowTitle(lua_State*);
     static int getMudletInfo(lua_State*);
     static int getMapBackgroundColor(lua_State*);
     static int setMapBackgroundColor(lua_State*);
@@ -780,7 +839,14 @@ public:
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
     void freeLuaRegistryIndex(int index);
+    int duplicateLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
+
+    // Called from Host::raiseEvent(), to unblock a waitForEvent() on that event.
+    void captureEventForWaits(const TEvent&);
+    // Lets callers refuse anything that would lua_close() the state the pump is
+    // running Lua on. Always false outside MUDLET_TEST_MODE.
+    bool pumpingEvents() const { return !mPendingEventWaits.isEmpty() || mEventPumpDepth > 0; }
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
             {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
@@ -801,6 +867,7 @@ public:
     static const QString csmInvalidItemID;
     static const QString csmInvalidAreaID;
     static const QString csmInvalidAreaName;
+    static const QStringList csmItemTypes;
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
@@ -811,6 +878,14 @@ public slots:
 private:
     static bool getVerifiedBool(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkStringArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkIntArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkBoolArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkNumberArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkStringOrIntegerArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool checkCommandOrFunctionArg(lua_State*, const char* functionName, const int pos);
+    static bool checkCommandsOrFunctionsTable(lua_State*, const char* functionName, const int index);
+    static bool checkHintsTable(lua_State*, const char* functionName, const int index);
     static int getVerifiedInt(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static float getVerifiedFloat(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static double getVerifiedDouble(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -818,18 +893,21 @@ private:
     static void errorArgumentType(lua_State*, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const QString& message, const bool useFalseInsteadofNil = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const char* message, const bool useFalseInsteadofNil = false);
-    static int setLabelCallback(lua_State*, const QString& funcName);
-    static int movieFunc(lua_State*, const QString& funcName);
+    static int warnArgumentChoice(lua_State*, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value);
+    static int setLabelCallback(lua_State*, const char* funcName);
+    static int movieFunc(lua_State*, const char* funcName);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
-    static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
+    static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb);
+    static void validateHttpHeaders(lua_State*, const int index, const char* functionName);
+    static void applyHttpHeaders(lua_State*, const int index, QNetworkRequest& request);
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     static void pushMapLabelPropertiesToLua(lua_State*, const TMapLabel& label);
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
-    static int loadMediaFileAsOrderedArguments(lua_State*, const char*);
-    static int loadMediaFileAsTableArgument(lua_State*, const char*);
+    static int loadMediaFileAsOrderedArguments(lua_State*, const char*, const TMediaData::MediaType);
+    static int loadMediaFileAsTableArgument(lua_State*, const char*, const TMediaData::MediaType);
     static int playMusicFileAsOrderedArguments(lua_State*, const char*);
     static int playMusicFileAsTableArgument(lua_State*, const char*);
     static int playSoundFileAsOrderedArguments(lua_State*, const char*);
@@ -863,8 +941,34 @@ private:
     void logEventError(const QString& event, const QString& error);
     std::pair<bool, QString> validLuaCode(const QString& code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
+    bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
-    void setMatches(lua_State*);
+    // What a dispatch does about "multimatches": only a multiline trigger's
+    // script is handed one of its own
+    enum class MultimatchesSource { Untouched, Captures };
+    void setMatches(lua_State*, const MultimatchesSource source = MultimatchesSource::Untouched);
+    void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
+    bool lazyGlobalsUsable(lua_State*);
+    bool globalsHandlersInPlace(lua_State*);
+    void standDownDeferral(lua_State*);
+    void stripGlobalsHandlers(lua_State*);
+    bool restoreGlobalsHandlers(lua_State*, const int metatable);
+    void pushUnusedSpareMultimatches(lua_State*);
+    void pushMatchesTable(lua_State*);
+    void pushEmptyMatchesTable(lua_State*);
+    void pushMultimatchesTable(lua_State*);
+    void pushPendingMultimatches(lua_State*);
+    void pushUtf8String(lua_State*, const QString&);
+    void materialisePendingCaptures(lua_State*);
+    void materialisePendingGlobals(lua_State*);
+    void installBetweenDispatchMultimatches(lua_State*);
+    void installLazyGlobals();
+    bool installGlobalsMetatableGuard(lua_State*, const char* library, const char* function, const int slot);
+    bool globalsMetatableHandedOut(lua_State*, const int index);
+    void forgetLazyGlobals();
+    static int lazyGlobalsIndex(lua_State*);
+    static int lazyGlobalsNewindex(lua_State*);
+    static int globalsMetatableGuard(lua_State*);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
@@ -886,14 +990,121 @@ private:
 
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
-    std::list<std::string> mCaptureGroupList;
-    std::list<int> mCaptureGroupPosList;
+    std::vector<std::string> mCaptureGroupList;
+    std::vector<int> mCaptureGroupPosList;
+    // clearCaptureGroups() parks emptied storage here so the next fire reuses the strings' buffers
+    std::vector<std::string> mSpareCaptureGroupList;
+    std::vector<int> mSpareCaptureGroupPosList;
+    static constexpr std::size_t scmMaxParkedCaptures = 512;
+    static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
+    // Well past the cap, so a trigger slightly over it doesn't reallocate each way per fire
+    static constexpr std::size_t scmMaxParkedCaptureSlack = 4 * scmMaxParkedCaptures;
+    QString mLastGlobalName;
+    QByteArray mLastGlobalNameUtf8;
+    // set_lua_string()'s encode buffer, kept for its capacity; dropped past a length no game line reaches
+    static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
+    QByteArray mUtf8Scratch;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
+    // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
+    // builds them on first read. "matches" is left out only while a capture
+    // scope is open, as clearCaptureGroups() puts it back; "multimatches" is
+    // left out between dispatches too - see mSpareMultimatchesRef.
+    bool mCaptureScopeOpen = false;
+    bool mMatchesPending = false;
+    enum class PendingMultimatches { None, Spare, Captures };
+    PendingMultimatches mMultimatchesPending = PendingMultimatches::None;
+    int mEmptyMatchesRef = LUA_NOREF;
+    // The empty table "multimatches" stands for between dispatches, left out of
+    // the globals table there too so that every read is noticed. It is replaced
+    // once read, so no two fires are handed the same one.
+    int mSpareMultimatchesRef = LUA_NOREF;
+    bool mSpareMultimatchesSeen = false;
+    // "line" is left out the same way, from the moment a line arrives until a
+    // script reads it, which for most lines is never
+    bool mLinePending = false;
+    QString mPendingLine;
+    // Registry references to the interned key strings, which pushing a literal
+    // would have to hash again on every fire, and the addresses of the three
+    // that the handlers recognise their keys by
+    int mMatchesKeyRef = LUA_NOREF;
+    int mMultimatchesKeyRef = LUA_NOREF;
+    int mLineKeyRef = LUA_NOREF;
+    // The two metamethod names, for the same reason: they are looked for on the
+    // globals metatable before anything is left out
+    int mIndexKeyRef = LUA_NOREF;
+    int mNewindexKeyRef = LUA_NOREF;
+    const char* mMatchesKey = nullptr;
+    const char* mMultimatchesKey = nullptr;
+    const char* mLineKey = nullptr;
+    bool mLazyGlobalsInstalled = false;
+    // The profile's setting, which outlives a Lua reset; off, nothing is left out
+    bool mLazyCaptureGlobals = true;
+    // The globals table the handlers were put on, which setfenv(0, ...) can
+    // take away from under the thread while it still owes values
+    const void* mGlobalsTable = nullptr;
+    int mGlobalsTableRef = LUA_NOREF;
+    // The C functions getmetatable(), setmetatable() and their debug library
+    // twins held before globalsMetatableGuard() took their place. A script
+    // holding the metatable of the globals table can change it at any moment,
+    // so once either getter hands it out or either setter puts one on the
+    // globals table, nothing is left out for the rest of the session.
+    // Those four names as they stand once Mudlet's own scripts have loaded are
+    // the whole of what this watches: a package that replaces one of them
+    // afterwards hands the metatable out past the guard, with nothing here to
+    // notice. lazyGlobalsUsable() still asks whether the handlers are there
+    // before anything is left out, which covers a change made that way before
+    // a line, though not one made while a script is running.
+    lua_CFunction mStockMetatableFunctions[4] = {};
+    bool mGlobalsMetatableTouched = false;
+    // Once nothing is left out the handlers only cost every read of a global
+    // that is not there a C call, so the next line takes them off. Not in the
+    // guard itself, so that a getter hands the script the metatable as it was
+    // when asked for.
+    bool mGlobalsHandlersLinger = false;
+    int mIndexHandlerRef = LUA_NOREF;
+    int mNewindexHandlerRef = LUA_NOREF;
+    // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
+    // nesting level) and restored when the pass returns.
+    struct NestedDispatchState
+    {
+        std::vector<std::string> captureGroupList;
+        std::vector<int> captureGroupPosList;
+        std::list<std::list<std::string>> multiCaptureGroupList;
+        std::list<std::list<int>> multiCaptureGroupPosList;
+        NameGroupMatches capturedNameGroups;
+        NamedMatchesRanges capturedNameGroupsPosList;
+        QVector<NameGroupMatches> multiCaptureNameGroups;
+        int matchesRef = LUA_NOREF;
+        int multimatchesRef = LUA_NOREF;
+        int commandRef = LUA_NOREF;
+        bool captureScopeOpen = false;
+    };
+    std::vector<NestedDispatchState> mNestedDispatchStates;
+    void releaseNestedDispatchState(NestedDispatchState&);
+    // Registry references to the compiled "return <name>" chunk that
+    // callEventHandler() runs to find each handler, by handler name. They
+    // belong to pGlobalLua, so are dropped whenever it is replaced.
+    QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
+
+    // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,
+    // so it has to be unref'd once the waiter has read it.
+    struct TEventWait
+    {
+        QString mName;
+        int mArgsRef = LUA_NOREF;
+        bool mCaptured = false;
+    };
+    QList<TEventWait*> mPendingEventWaits;
+    // pumpEvents() registers no TEventWait of its own, so it needs its own
+    // counter to be visible to pumpingEvents().
+    int mEventPumpDepth = 0;
+    int createEventArgsTableRef(const TEvent&);
+
     lua_State* pGlobalLua = nullptr;
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
     QPointer<Host> mpHost;
@@ -914,5 +1125,7 @@ private:
 };
 
 Host& getHostFromLua(lua_State*);
+// The same lookup for a state that may belong to no profile, as in a harness
+Host* findHostFromLua(lua_State*);
 
 #endif // MUDLET_LUAINTERPRETER_H

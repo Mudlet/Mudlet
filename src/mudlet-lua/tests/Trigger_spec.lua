@@ -1,5 +1,58 @@
 describe("Trigger processing", function()
 
+    local function contains(list, value)
+        for _, v in ipairs(list) do
+            if v == value then
+                return true
+            end
+        end
+        return false
+    end
+
+    -- Both of the package fixtures below are installed at run time, and while a
+    -- profile save is running an uninstall is refused outright and an install is
+    -- postponed, so both are asked again until they take. A postponed install
+    -- answers even a path it would otherwise refuse with a bare true, which is
+    -- how a spec can tell a save is still going - at the price of one console
+    -- error line per probe when the save ends and the empty path is retried.
+    local function packageInstalled(packageName)
+        return contains(getPackages(), packageName)
+    end
+
+    local function waitUntil(condition, milliseconds)
+        local waited = 0
+        while waited < milliseconds do
+            if condition() then
+                return true
+            end
+            pumpEvents(50)
+            waited = waited + 50
+        end
+        return condition() and true or false
+    end
+
+    local function waitForProfileSaveToPass()
+        return waitUntil(function() return installPackage("") == nil end, 5000)
+    end
+
+    -- The self-test profile is kept between runs, so a package under a fixture's
+    -- name can be one an interrupted run left installed rather than the fixture
+    -- in this checkout. Both fixtures are removed before they are installed for
+    -- that reason, and their teardowns remove them the same way.
+    local function removePackage(packageName)
+        local reason
+        for _ = 1, 3 do
+            if not packageInstalled(packageName) then
+                break
+            end
+            waitForProfileSaveToPass()
+            local _, message = uninstallPackage(packageName)
+            reason = message or reason
+            pumpEvents(200)
+        end
+        return not packageInstalled(packageName), reason
+    end
+
     -- Test for nested trigger processing with self-deletion
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     -- (same fix as for aliases - see Alias_spec.lua for detailed explanation)
@@ -125,5 +178,5580 @@ describe("Trigger processing", function()
             killTrigger(outer_id)
         end)
 
+    end)
+
+    -- Color triggers must match the colors a line arrived with, even when an
+    -- earlier trigger in the same pass has already recolored it. The display
+    -- must still show the recolored version. Recoloring uses the same
+    -- TConsole::setFgColor path as the colorizer trigger checkbox, so this
+    -- covers both channels.
+    --
+    -- Assertions check containment rather than a fired flag because
+    -- default-palette text also matches ANSI white-on-black, so these triggers
+    -- can fire on lines other than the one under test.
+    describe("color trigger original-color matching", function()
+
+        it("should match original colors after an earlier trigger recolors the line", function()
+            _G.colorSnapshotMatches = {}
+            local highlighted = false
+            local lineNumber = nil
+
+            local highlightTrigger = tempRegexTrigger("^ColorSnapshotTest$", function()
+                lineNumber = getLineNumber()
+                if selectString("ColorSnapshotTest", 1) > -1 then
+                    setFgColor(255, 0, 0)
+                    setBgColor(255, 255, 0)
+                    highlighted = true
+                end
+                resetFormat()
+            end)
+            -- ANSI 7 = white foreground, ANSI 0 = black background
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.colorSnapshotMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mColorSnapshotTest\27[0m\n")
+
+            local matched = contains(_G.colorSnapshotMatches, "ColorSnapshotTest")
+            killTrigger(highlightTrigger)
+            killTrigger(colorTrigger)
+            _G.colorSnapshotMatches = nil
+
+            assert.is_true(highlighted, "Highlighting trigger should have run")
+            assert.is_true(matched, "Color trigger should match the original colors despite the recoloring")
+
+            -- The display must keep the recolored version
+            moveCursor(0, lineNumber)
+            selectString("ColorSnapshotTest", 1)
+            local r, g, b = getFgColor()
+            deselect()
+            resetFormat()
+            assert.are.equal(255, r, "Display should show the recolored foreground")
+            assert.are.equal(0, g)
+            assert.are.equal(0, b)
+        end)
+
+        it("should match original colors when the color trigger runs before the recoloring one", function()
+            _G.colorControlMatches = {}
+            local highlighted = false
+
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.colorControlMatches, matches[1])]])
+            local highlightTrigger = tempRegexTrigger("^ColorSnapshotControl$", function()
+                if selectString("ColorSnapshotControl", 1) > -1 then
+                    setFgColor(255, 0, 0)
+                    highlighted = true
+                end
+                resetFormat()
+            end)
+
+            feedTriggers("\n\27[37;40mColorSnapshotControl\27[0m\n")
+
+            local matched = contains(_G.colorControlMatches, "ColorSnapshotControl")
+            killTrigger(colorTrigger)
+            killTrigger(highlightTrigger)
+            _G.colorControlMatches = nil
+
+            assert.is_true(matched, "Color trigger should match when it runs first")
+            assert.is_true(highlighted, "Highlighting trigger should have run")
+        end)
+
+        it("should capture the whole line when every character shares one color", function()
+            _G.uniformColorMatches = {}
+            -- ANSI 2 = green foreground, -1 = any background
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.uniformColorMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mevery character here is green\27[0m\n")
+
+            killTrigger(colorTrigger)
+            local captured = _G.uniformColorMatches
+            _G.uniformColorMatches = nil
+
+            assert.are.equal(1, #captured, "A single-colored line should produce one match")
+            assert.are.equal("every character here is green", captured[1])
+        end)
+
+        it("should capture only the colored run on a line of mixed colors", function()
+            _G.mixedColorMatches = {}
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.mixedColorMatches, matches[1])]])
+
+            feedTriggers("\nplain \27[32mgreen\27[0m plain\n")
+
+            killTrigger(colorTrigger)
+            local captured = _G.mixedColorMatches
+            _G.mixedColorMatches = nil
+
+            assert.are.equal(1, #captured, "Only the green run should have matched")
+            assert.are.equal("green", captured[1])
+        end)
+
+        it("should not match a line that is uniformly a different color", function()
+            _G.otherColorMatches = {}
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.otherColorMatches, matches[1])]])
+
+            feedTriggers("\n\27[31mevery character here is red\27[0m\n")
+
+            killTrigger(colorTrigger)
+            local captured = _G.otherColorMatches
+            _G.otherColorMatches = nil
+
+            assert.are.equal(0, #captured, "A red line should not match a green color trigger")
+        end)
+
+        it("re-reads a line's colors after a trigger inserts text into it", function()
+            _G.uniformInsertMatches = {}
+            local inserted = false
+
+            -- reads the line while it is still all green, so the answer is
+            -- already worked out by the time the insert changes it
+            local beforeTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.uniformInsertMatches, matches[1])]])
+            local insertTrigger = tempRegexTrigger("^greengreen$", function()
+                moveCursor(5, getLineNumber())
+                cinsertText("<red>PLAIN")
+                resetFormat()
+                inserted = true
+            end)
+            local afterTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.uniformInsertMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mgreengreen\27[0m\n")
+
+            killTrigger(beforeTrigger)
+            killTrigger(insertTrigger)
+            killTrigger(afterTrigger)
+            local captured = _G.uniformInsertMatches
+            _G.uniformInsertMatches = nil
+
+            assert.is_true(inserted, "the inserting trigger should have run")
+            assert.are.equal(2, #captured, "got: [" .. table.concat(captured, "][") .. "]")
+            assert.are.equal("greengreen", captured[1], "before the insert every character of the line is green")
+            assert.are.equal("green", captured[2], "the inserted text is not green, so it must not be swept into the capture")
+        end)
+
+        it("judges a line's colors from the snapshot, not from a recolored buffer", function()
+            _G.uniformRecolorMatches = {}
+            local recolored = false
+
+            local recolorTrigger = tempRegexTrigger("^plain green$", function()
+                if selectString("plain green", 1) > -1 then
+                    setFgColor(255, 0, 0)
+                    recolored = true
+                end
+                resetFormat()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.uniformRecolorMatches, matches[1])]])
+
+            feedTriggers("\nplain \27[32mgreen\27[0m\n")
+
+            killTrigger(recolorTrigger)
+            killTrigger(colorTrigger)
+            local captured = _G.uniformRecolorMatches
+            _G.uniformRecolorMatches = nil
+
+            assert.is_true(recolored, "the recoloring trigger should have run")
+            assert.are.equal(1, #captured, "recoloring the whole line red must not make it match green")
+            assert.are.equal("green", captured[1])
+        end)
+
+        it("should keep the outer line's original colors across a nested feedTriggers", function()
+            _G.innerSnapshotMatches = {}
+            _G.outerSnapshotMatches = {}
+
+            local outerTrigger = tempRegexTrigger("^OuterSnapshotLine$", function()
+                if selectString("OuterSnapshotLine", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                -- ANSI 32/41 = green foreground on red background
+                feedTriggers("\n\27[32;41mInnerSnapshotLine\27[0m\n")
+            end)
+            local innerColorTrigger = tempAnsiColorTrigger(2, 1,
+                [[table.insert(_G.innerSnapshotMatches, matches[1])]])
+            local outerColorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.outerSnapshotMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mOuterSnapshotLine\27[0m\n")
+
+            local innerMatched = contains(_G.innerSnapshotMatches, "InnerSnapshotLine")
+            local outerMatched = contains(_G.outerSnapshotMatches, "OuterSnapshotLine")
+            killTrigger(outerTrigger)
+            killTrigger(innerColorTrigger)
+            killTrigger(outerColorTrigger)
+            _G.innerSnapshotMatches = nil
+            _G.outerSnapshotMatches = nil
+
+            assert.is_true(innerMatched, "Inner pass should match the inner line's original colors")
+            assert.is_true(outerMatched, "Outer pass should still match its original colors after the nested pass")
+        end)
+
+        it("judges a nested line's colors on its own, not on the outer line's", function()
+            _G.nestedOwnColorMatches = {}
+
+            -- runs before the feeder, so the outer line is read - and found to
+            -- be all one color - before the nested line is ever processed
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.nestedOwnColorMatches, matches[1])]])
+            local feeder = tempRegexTrigger("^OUTERALLGREEN$", function()
+                feedTriggers("\n\27[32mINNERGREEN\27[0m plaintail\n")
+            end)
+
+            feedTriggers("\n\27[32mOUTERALLGREEN\27[0m\n")
+
+            killTrigger(colorTrigger)
+            killTrigger(feeder)
+            local captured = _G.nestedOwnColorMatches
+            _G.nestedOwnColorMatches = nil
+
+            assert.are.equal(2, #captured, "got: [" .. table.concat(captured, "][") .. "]")
+            assert.are.equal("OUTERALLGREEN", captured[1])
+            assert.are.equal("INNERGREEN", captured[2], "the nested line is only green up to its tail, whatever the outer line was")
+        end)
+
+        it("judges the outer line's colors on its own after a nested feedTriggers", function()
+            _G.nestedOuterColorMatches = {}
+
+            local feeder = tempRegexTrigger("^GREENSTART plaintail$", function()
+                feedTriggers("\n\27[32mINNERALLGREEN\27[0m\n")
+            end)
+            -- runs after the feeder, so it reads the outer line only once the
+            -- nested pass has been and gone
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.nestedOuterColorMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mGREENSTART\27[0m plaintail\n")
+
+            killTrigger(feeder)
+            killTrigger(colorTrigger)
+            local captured = _G.nestedOuterColorMatches
+            _G.nestedOuterColorMatches = nil
+
+            assert.are.equal(2, #captured, "got: [" .. table.concat(captured, "][") .. "]")
+            assert.are.equal("INNERALLGREEN", captured[1])
+            assert.are.equal("GREENSTART", captured[2], "the outer line is only green up to its tail, whatever the nested line was")
+        end)
+
+        it("should capture only the colored run when a line varies by background alone", function()
+            _G.backgroundRunMatches = {}
+            -- ANSI 44 = blue background; the foreground is never set, so it is
+            -- the same on every character and only the background varies
+            local colorTrigger = tempAnsiColorTrigger(-1, 4,
+                [[table.insert(_G.backgroundRunMatches, matches[1])]])
+
+            feedTriggers("\n\27[44mBLUEBG\27[0m plain\n")
+
+            killTrigger(colorTrigger)
+            local captured = _G.backgroundRunMatches
+            _G.backgroundRunMatches = nil
+
+            assert.are.equal(1, #captured, "got: [" .. table.concat(captured, "][") .. "]")
+            assert.are.equal("BLUEBG", captured[1])
+        end)
+
+        -- A trigger script that calls feedTriggers() re-enters trigger processing.
+        -- The outer and inner lines are deliberately different lengths: an equal
+        -- length lets the colour scan window line up by luck, which is why the
+        -- spec above passes even without the fix.
+        local outerLine = "OuterMarkerLineIsLonger"
+        local innerLine = "InnerShort"
+
+        it("should still match later triggers against the outer line after a nested feedTriggers", function()
+            _G.reentrancySubstring = false
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- a substring trigger reads the haystack string itself, so it is the
+            -- kind the aliasing silenced; "Marker" is only in the outer line
+            local watcher = tempTrigger("Marker", function()
+                _G.reentrancySubstring = true
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local fired = _G.reentrancySubstring
+            killTrigger(feeder)
+            killTrigger(watcher)
+            _G.reentrancySubstring = nil
+
+            assert.is_true(fired, "A substring trigger should still see the outer line after an earlier trigger fed text")
+        end)
+
+        it("should leave the outer line selectable after a nested feedTriggers", function()
+            _G.reentrancySelect = -1
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- a regex trigger matches whatever the haystack is, so what this pins
+            -- is which line the cursor is left pointing at
+            local selector = tempRegexTrigger("Marker", function()
+                _G.reentrancySelect = selectString("Marker", 1)
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local selected = _G.reentrancySelect
+            killTrigger(feeder)
+            killTrigger(selector)
+            _G.reentrancySelect = nil
+
+            assert.is_true(selected > -1, "selectString should still find the outer line, not the line that was fed")
+        end)
+
+        it("should restore the line variable after a nested feedTriggers", function()
+            _G.reentrancyLine = nil
+            local feeder = tempRegexTrigger("^" .. outerLine .. "$", function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            local reader = tempRegexTrigger("Marker", function()
+                _G.reentrancyLine = line
+            end)
+
+            feedTriggers("\n" .. outerLine .. "\n")
+
+            local seen = _G.reentrancyLine
+            killTrigger(feeder)
+            killTrigger(reader)
+            _G.reentrancyLine = nil
+
+            assert.are.equal(outerLine, seen)
+        end)
+
+        -- printOnDisplay() is where a nested feed lands, so clearing its trigger
+        -- flag outright leaves the rest of the outer pass outside trigger context.
+        -- What that flag gates is not whether inserted text lands inline - the
+        -- ordinary path inserts inline too whenever the cursor is not at the end
+        -- of the buffer - but whether the capture positions are shifted to follow
+        -- it. Without that, a capture selected after an insert is off by the
+        -- length inserted.
+        it("should keep captures selectable after an insert across a nested feedTriggers", function()
+            _G.reentrancyCapture = nil
+            -- unanchored: this line carries the marker text after the outer line
+            local feeder = tempRegexTrigger("^" .. outerLine, function()
+                feedTriggers("\n" .. innerLine .. "\n")
+            end)
+            -- selectCaptureGroup(1) selects the whole match, so that is what the
+            -- insert has to leave correctly positioned
+            local inserter = tempRegexTrigger("Marker (\\w+)$", function()
+                moveCursor(0, getLineNumber())
+                insertText("ZZZZ")
+                selectCaptureGroup(1)
+                _G.reentrancyCapture = getSelection()
+            end)
+
+            feedTriggers("\n" .. outerLine .. " Marker payload\n")
+
+            local selected = _G.reentrancyCapture
+            killTrigger(feeder)
+            killTrigger(inserter)
+            _G.reentrancyCapture = nil
+
+            assert.are.equal("Marker payload", selected,
+                "the match should still be selectable after text was inserted before it")
+        end)
+
+        -- Editing a line that a trigger pass is still running over shifts every
+        -- character after the edit, so the retained original colors have to be
+        -- rebased. Without that, a later color trigger matches at the pre-edit
+        -- offsets and captures a span of text that was never that color.
+        -- The green run is recolored first so that the originals are actually
+        -- retained: with nothing retained the live line answers correctly on its
+        -- own and the rebase is not what is under test.
+        it("should match original colors at their new offsets after text is inserted", function()
+            _G.insertShiftMatches = {}
+
+            local inserter = tempRegexTrigger("^AAAABBBB$", function()
+                if selectString("BBBB", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                moveCursor(0, getLineNumber())
+                insertText("ZZZZ")
+            end)
+            -- ANSI 1 = red foreground, -1 = ignore the background
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.insertShiftMatches, matches[1])]])
+
+            -- SGR 31 = red foreground, 32 = green foreground
+            feedTriggers("\n\27[31mAAAA\27[32mBBBB\27[0m\n")
+
+            local matchedShifted = contains(_G.insertShiftMatches, "AAAA")
+            local matchedStale = contains(_G.insertShiftMatches, "ZZZZ")
+            killTrigger(inserter)
+            killTrigger(colorTrigger)
+            _G.insertShiftMatches = nil
+
+            assert.is_true(matchedShifted, "The red run should be matched where the insert moved it to")
+            assert.is_false(matchedStale, "The inserted text must not be matched as though it were the red run")
+        end)
+
+        -- An empty replacement is the deletion path, and it returns from
+        -- insertInLine() before that function's own rebase, so replaceInLine()'s
+        -- is the only one covering it.
+        it("should match original colors at their new offsets after part of the line is deleted", function()
+            _G.deleteShiftMatches = {}
+
+            local deleter = tempRegexTrigger("^CCCCDDDD$", function()
+                if selectString("DDDD", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                if selectString("CC", 1) > -1 then
+                    replace("")
+                end
+                resetFormat()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.deleteShiftMatches, matches[1])]])
+
+            feedTriggers("\n\27[31mCCCC\27[32mDDDD\27[0m\n")
+
+            local matchedShifted = contains(_G.deleteShiftMatches, "CC")
+            local matchedStale = contains(_G.deleteShiftMatches, "CCDD")
+            killTrigger(deleter)
+            killTrigger(colorTrigger)
+            _G.deleteShiftMatches = nil
+
+            assert.is_true(matchedShifted, "The red run left behind should be matched at its new length")
+            assert.is_false(matchedStale, "The green text pulled left must not be matched as red")
+        end)
+
+        -- A nested pass takes the retained originals over for its own line, so
+        -- the enclosing line's have to be retained before that happens. A recolor
+        -- made from inside the nested pass is the only way to reach that window.
+        it("should keep the outer line's original colors when a nested pass recolors it", function()
+            _G.nestedRecolorMatches = {}
+            _G.nestedRecolorLine = nil
+
+            -- fires first in the outer pass, so it is created first
+            local feeder = tempRegexTrigger("^OuterRecolorLine$", function()
+                _G.nestedRecolorLine = getLineNumber()
+                feedTriggers("\nNestedRecolorInner\n")
+            end)
+            -- matches only the fed line, so it runs inside the nested pass
+            local recolorer = tempRegexTrigger("^NestedRecolorInner$", function()
+                moveCursor(0, _G.nestedRecolorLine)
+                if selectString("OuterRecolorLine", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                deselect()
+                resetFormat()
+            end)
+            -- ANSI 7 = white foreground, 0 = black background, as the line arrived
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.nestedRecolorMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mOuterRecolorLine\27[0m\n")
+
+            local outerMatched = contains(_G.nestedRecolorMatches, "OuterRecolorLine")
+            killTrigger(feeder)
+            killTrigger(recolorer)
+            killTrigger(colorTrigger)
+            _G.nestedRecolorMatches = nil
+            _G.nestedRecolorLine = nil
+
+            assert.is_true(outerMatched,
+                "the outer pass must still see the colors the game sent, not the ones a nested pass painted on")
+        end)
+
+        -- wrapLine() rebuilds the line out of the buffer, so calling it on the
+        -- line being processed swaps out the very characters the pass is matching
+        -- against.
+        it("should keep the original colors when a trigger wraps the line being processed", function()
+            _G.wrapPassMatches = {}
+            -- longer than the console's wrap width, so the line really is split
+            local longLine = string.rep("WRAPME AAAA BBBB CCCC DDDD ", 8)
+
+            local wrapper = tempRegexTrigger("^WRAPME", function()
+                wrapLine("main", getLineNumber())
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.wrapPassMatches, matches[1])]])
+
+            feedTriggers("\n\27[31m" .. longLine .. "\27[0m\n")
+
+            local matchedAny = #_G.wrapPassMatches > 0
+            killTrigger(wrapper)
+            killTrigger(colorTrigger)
+            _G.wrapPassMatches = nil
+
+            assert.is_true(matchedAny, "the red text should still be matched after the line was wrapped")
+        end)
+
+    end)
+
+    describe("tempAnsiColorTrigger callbacks", function()
+
+        it("should fire a function callback when the expiry argument is omitted", function()
+            _G.ansiColorFunctionFired = false
+            -- ANSI 7 = white foreground, ANSI 0 = black background
+            local colorTrigger = tempAnsiColorTrigger(7, 0, function()
+                _G.ansiColorFunctionFired = true
+            end)
+
+            feedTriggers("\n\27[37;40mAnsiColorFunctionCallback\27[0m\n")
+
+            local fired = _G.ansiColorFunctionFired
+            killTrigger(colorTrigger)
+            _G.ansiColorFunctionFired = nil
+
+            assert.is_true(fired, "Function callback without an expiry argument should fire")
+        end)
+
+        it("should match on background colour alone when the foreground is ignored", function()
+            _G.ansiBackgroundOnlyFired = false
+            -- -1 ignores the foreground colour, ANSI 4 is a blue background:
+            -- match any foreground as long as the background is blue.
+            local colorTrigger, err = tempAnsiColorTrigger(-1, 4, function()
+                _G.ansiBackgroundOnlyFired = true
+            end)
+
+            assert.is_number(colorTrigger, "Ignoring the foreground with a background colour set should create a trigger, got: " .. tostring(err))
+
+            -- Green foreground (32) on a non-matching black background (40): it
+            -- must NOT fire, proving the background is genuinely discriminated
+            -- rather than the trigger having ignored both colours.
+            feedTriggers("\n\27[32;40mAnsiBackgroundNonMatch\27[0m\n")
+            assert.is_false(_G.ansiBackgroundOnlyFired, "A background-only trigger must not fire on a non-matching background")
+
+            -- Red foreground (31) on the matching blue background (44): the
+            -- foreground differs from any fixed value yet the trigger should
+            -- still match on the background alone.
+            feedTriggers("\n\27[31;44mAnsiBackgroundOnlyMatch\27[0m\n")
+
+            local fired = _G.ansiBackgroundOnlyFired
+            if type(colorTrigger) == "number" then
+                killTrigger(colorTrigger)
+            end
+            _G.ansiBackgroundOnlyFired = nil
+
+            assert.is_true(fired, "A background-only ANSI colour trigger (ignored foreground) should fire on a matching background")
+        end)
+
+        it("should still reject ignoring the foreground when the background is omitted", function()
+            -- (-1, code) omits the background, so both colours would be ignored:
+            -- this must remain an error, not create a match-everything trigger.
+            local colorTrigger, err = tempAnsiColorTrigger(-1, function() end)
+
+            if type(colorTrigger) == "number" then
+                killTrigger(colorTrigger)
+            end
+
+            assert.is_nil(colorTrigger, "Ignoring the foreground with the background omitted should be rejected")
+            assert.is_string(err, "A rejection should return an error message")
+            assert.is_truthy(err:find("ignore both foreground and background", 1, true), "The error should explain both colours cannot be ignored, got: " .. tostring(err))
+        end)
+
+    end)
+
+    -- scmDefault (-2) is the only colour code re-resolved while a line is being
+    -- matched; every other code is resolved once, when the trigger is created,
+    -- and cached in the pattern. Only the last spec here tells the two apart:
+    -- for an unmoved console the cached copy equals the live one, so the first
+    -- two would still match if the live read went away.
+    describe("default-colour trigger matching", function()
+
+        local liveTriggerId, savedBg
+
+        setup(function()
+            savedBg = {getBackgroundColor()}
+        end)
+
+        -- A colour trigger with one channel ignored and the other set to the
+        -- default matches almost every line the rest of the suite feeds, and its
+        -- body indexes a global this clears, so a copy surviving a failed
+        -- assertion would error on all of them. The background is restored here
+        -- for the same reason: it is the profile's, and it is saved on exit.
+        after_each(function()
+            if liveTriggerId then
+                killTrigger(liveTriggerId)
+                liveTriggerId = nil
+            end
+            setBackgroundColor(savedBg[1], savedBg[2], savedBg[3], savedBg[4])
+            _G.TrigSpec = nil
+        end)
+
+        -- Captures rather than a fired flag: a colour trigger fires once per
+        -- matching run, so a boolean cannot say which of the two fed lines
+        -- matched, which is the whole point of the negative assertion.
+        it("matches the console's default foreground and not an explicit one", function()
+            _G.TrigSpec = {}
+            liveTriggerId = tempAnsiColorTrigger(-2, -1, [[table.insert(_G.TrigSpec, matches[1])]])
+            assert.is_true(liveTriggerId > 0, "the colour trigger was not created")
+
+            feedTriggers("\n\27[31mSpecDefaultFgExplicit\27[0m\n")
+            feedTriggers("\n\27[39mSpecDefaultFgMatch\n")
+
+            assert.is_false(contains(_G.TrigSpec, "SpecDefaultFgExplicit"), "a default-foreground trigger must not match explicitly coloured text")
+            assert.is_true(contains(_G.TrigSpec, "SpecDefaultFgMatch"), "a default-foreground trigger should match text carrying the console's default foreground")
+        end)
+
+        it("matches the console's default background and not an explicit one", function()
+            _G.TrigSpec = {}
+            liveTriggerId = tempAnsiColorTrigger(-1, -2, [[table.insert(_G.TrigSpec, matches[1])]])
+            assert.is_true(liveTriggerId > 0, "the colour trigger was not created")
+
+            feedTriggers("\n\27[41mSpecDefaultBgExplicit\27[0m\n")
+            feedTriggers("\n\27[49mSpecDefaultBgMatch\n")
+
+            assert.is_false(contains(_G.TrigSpec, "SpecDefaultBgExplicit"), "a default-background trigger must not match explicitly coloured text")
+            assert.is_true(contains(_G.TrigSpec, "SpecDefaultBgMatch"), "a default-background trigger should match text carrying the console's default background")
+        end)
+
+        -- Moving the profile's background after the trigger was created is what
+        -- separates the live read from the cached copy: the fed text is stamped
+        -- with the new colour, which the cache no longer holds. Without the move
+        -- this spec is only a slower copy of the one above, so the move itself
+        -- is asserted.
+        it("reads the console's background live rather than the copy cached at creation", function()
+            _G.TrigSpec = {}
+            liveTriggerId = tempAnsiColorTrigger(-1, -2, [[table.insert(_G.TrigSpec, matches[1])]])
+            assert.is_true(liveTriggerId > 0, "the colour trigger was not created")
+
+            assert.is_true(setBackgroundColor(17, 34, 51), "setBackgroundColor refused, so the cached and live colours never diverged")
+            assert.are_not.same({17, 34, 51, 255}, savedBg, "the profile already uses this background, so nothing diverged")
+            assert.are.same({17, 34, 51, 255}, {getBackgroundColor()}, "the console background did not move")
+
+            feedTriggers("\n\27[41mSpecMovedBgExplicit\27[0m\n")
+            feedTriggers("\n\27[49mSpecMovedBgMatch\n")
+
+            assert.is_false(contains(_G.TrigSpec, "SpecMovedBgExplicit"), "a default-background trigger must not match explicitly coloured text after the background moved")
+            assert.is_true(contains(_G.TrigSpec, "SpecMovedBgMatch"), "the trigger did not follow the console's new background")
+        end)
+
+    end)
+
+    -- feedTelnet only performs injection while the telnet socket is unconnected;
+    -- otherwise it refuses with nil + a message. That is the state --offline
+    -- leaves the profile in, so the injection path runs here against the real
+    -- telnet parser.
+    describe("feedTelnet contract", function()
+
+        local function feedOrExplain(data)
+            local ok, msg = feedTelnet(data)
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+        end
+
+        -- every injection below leaves the buffer somewhere the specs after it
+        -- read from, and an assert that throws would otherwise skip the restore
+        after_each(function()
+            deselect()
+            feedTelnet("\r\n")
+            setConfig("specialForceGAOff", false)
+        end)
+
+        it("raises an error when the data argument is not a string", function()
+            -- a table is never string-coercible, unlike a number
+            assert.has_error(function() feedTelnet({}) end)
+        end)
+
+        it("runs against a profile that reports no connection", function()
+            local _, _, connected = getConnectionInfo()
+            assert.is_false(connected, "getConnectionInfo() must not report an established connection")
+        end)
+
+        it("injects server data for the telnet parser to decode", function()
+            -- reading the colour back proves the bytes travelled through the
+            -- telnet parser rather than being appended as plain text
+            feedOrExplain("\27[31mSpecFedRedLine\27[0m\r\n")
+            assert.is_true(selectString("SpecFedRedLine", 1) >= 0, "the injected line did not reach the buffer")
+            assert.are.same(color_table.ansi_red, {getFgColor()})
+        end)
+
+        it("treats a line ended by IAC GA as a prompt", function()
+            feedOrExplain("SpecFedPrompt> <T_IAC><T_GA>")
+            assert.is_true(isPrompt(), "IAC GA should have marked the fed line a prompt")
+        end)
+
+        it("stops honouring IAC GA once the profile forces GA off", function()
+            setConfig("specialForceGAOff", true)
+            feedOrExplain("SpecGaForcedOff> <T_IAC><T_GA>")
+            assert.is_false(isPrompt(), "a forced-off GA must not mark the fed line a prompt")
+        end)
+
+        it("refuses to inject while the socket is not unconnected", function()
+            -- safety property: feedTelnet never injects into a live connection.
+            -- Establish the precondition here rather than relying on the
+            -- profile's ambient socket state, which other specs may have cleared
+            -- with disconnect(): reconnect() starts a fresh lookup and leaves the
+            -- unconnected state synchronously, without the connection needing to
+            -- succeed. Restore a clean state afterwards with disconnect().
+            reconnect()
+            local ok, msg = feedTelnet("some server data")
+            disconnect()
+            assert.is_nil(ok, "feedTelnet must not succeed against a non-unconnected socket")
+            assert.is_string(msg)
+            assert.is_truthy(msg:find("refused", 1, true), "expected a refusal message, got: " .. tostring(msg))
+        end)
+
+    end)
+
+    describe("feedTriggers contract", function()
+
+        it("raises an error when the data argument is not a string", function()
+            assert.has_error(function() feedTriggers({}) end)
+        end)
+
+    end)
+
+    describe("temporary trigger creation and firing", function()
+
+        after_each(function()
+            _G.TrigSpec = nil
+        end)
+
+        it("tempTrigger fires on a substring match", function()
+            _G.TrigSpec = {fired = false}
+            local id = tempTrigger("substr_needle", function() _G.TrigSpec.fired = true end)
+            assert.is_number(id)
+            feedTriggers("\nhere is a substr_needle inside a line\n")
+            local fired = _G.TrigSpec.fired
+            killTrigger(id)
+            assert.is_true(fired, "a substring trigger should fire when its pattern appears anywhere in the line")
+        end)
+
+        it("tempExactMatchTrigger fires only on an exact whole-line match", function()
+            _G.TrigSpec = {count = 0}
+            local id = tempExactMatchTrigger("exact_line_only", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            assert.is_number(id)
+            feedTriggers("\nexact_line_only and more\n")
+            assert.is_equal(0, _G.TrigSpec.count, "an exact-match trigger must not fire on a superset line")
+            feedTriggers("\nexact_line_only\n")
+            local count = _G.TrigSpec.count
+            killTrigger(id)
+            assert.is_equal(1, count, "an exact-match trigger should fire on the exact line")
+        end)
+
+        it("tempBeginOfLineTrigger matches at the start of a line only", function()
+            _G.TrigSpec = {count = 0}
+            local id = tempBeginOfLineTrigger("bol_marker", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            assert.is_number(id)
+            feedTriggers("\nnot at start bol_marker\n")
+            assert.is_equal(0, _G.TrigSpec.count, "a begin-of-line trigger must not fire mid-line")
+            feedTriggers("\nbol_marker at the start\n")
+            local count = _G.TrigSpec.count
+            killTrigger(id)
+            assert.is_equal(1, count, "a begin-of-line trigger should fire when the pattern starts the line")
+        end)
+
+        it("tempRegexTrigger accepts a string body and fires on a regex match", function()
+            _G.TrigSpec = {fired = false}
+            local id = tempRegexTrigger("^regex_str_body\\d+$", [[_G.TrigSpec.fired = true]])
+            assert.is_number(id)
+            feedTriggers("\nregex_str_body123\n")
+            local fired = _G.TrigSpec.fired
+            killTrigger(id)
+            assert.is_true(fired, "a regex trigger created from a string body should fire")
+        end)
+
+        -- The engine appends a newline to the line before handing it to the
+        -- matchers, and a pattern is free to anchor on it. Neither an exact
+        -- match nor a bare $ can tell when it goes missing - exact-match chops a
+        -- trailing newline itself, and $ matches with or without one - so an
+        -- explicit \n is what pins it. The newline belongs to the matchers' copy
+        -- alone, so the line variable a script reads must not carry it.
+        it("hands the matchers a line that still ends in its newline", function()
+            _G.TrigSpec = {fired = false}
+            local id = tempRegexTrigger("SpecHaystackEol\\n$", function()
+                _G.TrigSpec.fired = true
+                _G.TrigSpec.line = line
+            end)
+            assert.is_true(id > 0, "the regex trigger was not created")
+            feedTriggers("\nSpecHaystackEol\n")
+            local fired = _G.TrigSpec.fired
+            local lineVariable = _G.TrigSpec.line
+            killTrigger(id)
+            assert.is_true(fired, "the line the matchers received had lost the newline the pattern anchors on")
+            assert.are.equal("SpecHaystackEol", lineVariable, "the matchers' trailing newline leaked into the line variable")
+        end)
+
+        it("tempLineTrigger fires for lines inside its window", function()
+            _G.TrigSpec = {count = 0}
+            -- a wide window from the current line so the fed lines fall inside it
+            -- regardless of the exact off-by-one of the window start
+            local id = tempLineTrigger(0, 10, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            assert.is_number(id)
+            feedTriggers("\nline_window_one\n")
+            feedTriggers("\nline_window_two\n")
+            feedTriggers("\nline_window_three\n")
+            local count = _G.TrigSpec.count
+            -- a line trigger matches by position, not content, so disable it
+            -- immediately: killTrigger's cleanup is deferred and a still-live line
+            -- trigger would otherwise fire on lines fed by later specs
+            disableTrigger(id)
+            killTrigger(id)
+            -- three content lines fed into a 10-line window, none truncated
+            assert.is_true(count >= 3, "a line trigger should fire for every line inside its window, fired " .. count .. " times")
+        end)
+
+        it("tempLineTrigger requires numeric line arguments", function()
+            assert.has_error(function() tempLineTrigger("start", 2, [[]]) end)
+        end)
+
+    end)
+
+    describe("substring pattern matching", function()
+
+        local line = "ab café the quick brown fox jumps over the lazy dog. 🐉"
+
+        -- Mudlet only summarises a line's character pairs once a profile has
+        -- enough substring patterns for the summary to pay for itself. These
+        -- match nothing and exist only to carry a profile well past that
+        -- threshold, so that raising it later cannot quietly move these specs
+        -- off the summarised path they are written to cover.
+        local function installBallast()
+            local ids = {}
+            for i = 1, 20 do
+                ids[i] = tempTrigger("SpecBigramBallast" .. i, function() end)
+            end
+            return ids
+        end
+
+        local function killAll(ids)
+            for _, id in ipairs(ids) do
+                disableTrigger(id)
+                killTrigger(id)
+            end
+        end
+
+        -- Whether to summarise a line is judged from the line before it, so the
+        -- line is fed twice and only the second pass counted.
+        local function hitsFor(needles)
+            local hits = {}
+            local ids = installBallast()
+            for _, needle in ipairs(needles) do
+                hits[needle] = 0
+                ids[#ids + 1] = tempTrigger(needle, function()
+                    hits[needle] = hits[needle] + 1
+                end)
+            end
+
+            feedTriggers("\n" .. line .. "\n")
+            for _, needle in ipairs(needles) do
+                hits[needle] = 0
+            end
+            feedTriggers("\n" .. line .. "\n")
+
+            killAll(ids)
+            return hits
+        end
+
+        it("matches substrings of every shape that occur in the line", function()
+            local needles = {"a", "ab", "café", "é the", "🐉", "the quick", "brown fox", "over the lazy", "dog."}
+            local hits = hitsFor(needles)
+            for _, needle in ipairs(needles) do
+                assert.are.equal(1, hits[needle], "'" .. needle .. "' occurs in the line and should have matched")
+            end
+        end)
+
+        it("does not match text the line only appears to contain", function()
+            -- each of these is built from characters, and "quick the" from
+            -- character pairs, that the line itself does have
+            local needles = {"ZZ", "Fox", "cafe", "quick the", "abé", "dog.."}
+            local hits = hitsFor(needles)
+            for _, needle in ipairs(needles) do
+                assert.are.equal(0, hits[needle], "'" .. needle .. "' does not occur in the line and should not have matched")
+            end
+        end)
+
+        it("fires regex, start of line and exact match triggers only where they match", function()
+            local hits = {}
+            local ids = installBallast()
+            local function counter(name)
+                hits[name] = 0
+                return function() hits[name] = hits[name] + 1 end
+            end
+            ids[#ids + 1] = tempRegexTrigger("quick (\\w+) fox", counter("regex"))
+            ids[#ids + 1] = tempRegexTrigger("^\\w+ quick the", counter("regex from present pairs"))
+            ids[#ids + 1] = tempRegexTrigger("(\\w+) Fox", counter("regex from a missing pair"))
+            ids[#ids + 1] = tempBeginOfLineTrigger("ab café", counter("start"))
+            ids[#ids + 1] = tempBeginOfLineTrigger("café", counter("start elsewhere"))
+            ids[#ids + 1] = tempExactMatchTrigger(line, counter("exact"))
+            ids[#ids + 1] = tempExactMatchTrigger("ab café", counter("exact part"))
+
+            feedTriggers("\n" .. line .. "\n")
+            for name in pairs(hits) do
+                hits[name] = 0
+            end
+            feedTriggers("\n" .. line .. "\n")
+
+            killAll(ids)
+            assert.are.same({
+                ["regex"] = 1, ["regex from present pairs"] = 0, ["regex from a missing pair"] = 0,
+                ["start"] = 1, ["start elsewhere"] = 0, ["exact"] = 1, ["exact part"] = 0
+            }, hits)
+        end)
+
+        it("matches a capture the filtering parent carried over from an earlier line", function()
+            _G.TrigBigramCarried = 0
+            local code = [==[ ]==]
+            -- enough plain substring triggers that the profile summarises its
+            -- lines at all, which is the condition this spec is about
+            local ballast = installBallast()
+            feedTriggers("warming the line summary\n")
+
+            tempComplexRegexTrigger("SpecBigramParent", [[^first (\w+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecBigramParent", [[^second (\w+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            permSubstringTrigger("SpecBigramChild", "SpecBigramParent", {"zebra"},
+                                 [==[_G.TrigBigramCarried = _G.TrigBigramCarried + 1]==])
+
+            feedTriggers("first zebra\n")
+            feedTriggers("second wombat\n")
+
+            local fires = _G.TrigBigramCarried
+            killTrigger("SpecBigramChild")
+            killTrigger("SpecBigramParent")
+            killAll(ballast)
+            _G.TrigBigramCarried = nil
+            assert.are.equal(1, fires, "the child searches its parent's capture, which need not come from the line that completed the match")
+        end)
+
+    end)
+
+    describe("the matches table between fires", function()
+
+        it("is handed on unchanged to a trigger that captures nothing", function()
+            local seen = {}
+            local id = tempLineTrigger(1, 2, function()
+                matches.fires = (matches.fires or 0) + 1
+                seen[#seen + 1] = matches.fires
+            end)
+            feedTriggers("\nfirst\nsecond\nthird\n")
+            killTrigger(id)
+            assert.are.same({1, 2}, seen, "a trigger without captures should see the matches the previous one left")
+        end)
+
+        it("is a plain empty table after a fire, whatever a script did to the last one", function()
+            local id = tempTrigger("zzmatchesreset", function() end)
+            feedTriggers("\nzzmatchesreset\n")
+            setmetatable(matches, {__index = function() return "stale" end})
+            feedTriggers("\nzzmatchesreset\n")
+            killTrigger(id)
+            assert.is_nil(getmetatable(matches))
+            assert.is_nil(matches[2])
+        end)
+
+    end)
+
+    describe("temporary trigger argument validation", function()
+
+        it("tempTrigger rejects a non-string, non-function body", function()
+            -- a table is not string-coercible (a number would be accepted as code)
+            assert.has_error(function() tempTrigger("pat", {}) end)
+        end)
+
+        it("tempTrigger rejects an expiration count below one", function()
+            local id, err = tempTrigger("pat", [[]], 0)
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_nil(id, "an expiry count of zero should be rejected")
+            assert.is_string(err)
+            assert.is_truthy(err:find("greater than zero", 1, true), "got: " .. tostring(err))
+        end)
+
+        it("tempTrigger rejects a non-number, non-nil expiration count", function()
+            assert.has_error(function() tempTrigger("pat", [[]], "soon") end)
+        end)
+
+        it("tempRegexTrigger rejects a non-string, non-function body", function()
+            assert.has_error(function() tempRegexTrigger("^pat$", {}) end)
+        end)
+
+        it("tempExactMatchTrigger rejects a non-string, non-function body", function()
+            assert.has_error(function() tempExactMatchTrigger("pat", true) end)
+        end)
+
+        it("tempBeginOfLineTrigger rejects a non-number, non-nil expiration count", function()
+            assert.has_error(function() tempBeginOfLineTrigger("pat", [[]], "later") end)
+        end)
+
+    end)
+
+    describe("temporary trigger expiration", function()
+
+        after_each(function()
+            _G.TrigSpecExpire = nil
+        end)
+
+        it("a trigger with expiration count N fires exactly N times", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_me", [[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1]], 2)
+            assert.is_number(id)
+            -- fed more times than the expiry count: it must stop after the second
+            feedTriggers("\nexpire_me\n")
+            feedTriggers("\nexpire_me\n")
+            feedTriggers("\nexpire_me\n")
+            feedTriggers("\nexpire_me\n")
+            local count = _G.TrigSpecExpire.count
+            _G.TrigSpecExpire = nil
+            -- if it somehow survived, make sure it is gone
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_equal(2, count, "a trigger set to expire after 2 fires should fire exactly twice")
+        end)
+
+        -- Regression: the C++ helpers that run trigger/alias/script code used to
+        -- read the script's return value from an absolute stack slot and then
+        -- wipe the whole shared Lua stack. Running inside feedTriggers() those
+        -- slots hold feedTriggers' own arguments, so the Utf8Encoded boolean
+        -- below was mistaken for "the script returned true" and kept renewing
+        -- the expiry count, and the wipe took the caller's arguments with it.
+        it("expires on schedule when fed by a call that has arguments on the Lua stack", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_me_utf8", [[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1]], 1)
+            assert.is_number(id)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            feedTriggers("\nexpire_me_utf8\n", true)
+            local count = _G.TrigSpecExpire.count
+            _G.TrigSpecExpire = nil
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_equal(1, count, "a trigger set to expire after 1 fire must not be renewed by the caller's stack")
+        end)
+
+        -- a script that returns true is asking for one more fire, so the
+        -- expiring trigger only goes when it stops asking
+        it("renews the expiry count while the script returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_renewed", [[
+                _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                return _G.TrigSpecExpire.count < 3
+            ]], 1)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger(id) end end)
+
+            for _ = 1, 5 do
+                feedTriggers("\nexpire_renewed\n")
+            end
+
+            assert.are.equal(3, _G.TrigSpecExpire.count, "a trigger set to expire after one fire should be renewed for as long as it returns true")
+        end)
+
+        it("renews the expiry count of a function body that returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_renewed_fn", function()
+                _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                return _G.TrigSpecExpire.count < 2
+            end, 1)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger(id) end end)
+
+            for _ = 1, 5 do
+                feedTriggers("\nexpire_renewed_fn\n")
+            end
+
+            assert.are.equal(2, _G.TrigSpecExpire.count, "a callback body should renew the expiry count the same way a script one does")
+        end)
+
+        -- tempComplexRegexTrigger's arguments after the script: multiline flag,
+        -- fg and bg colour, filter, match all, highlight fg and bg, sound, fire
+        -- length, line delta and then the expiry count
+        local function expiringMultiline(name, pattern, script, expireAfter)
+            return tempComplexRegexTrigger(name, pattern, script, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, expireAfter)
+        end
+
+        it("renews an expiring multi-line trigger while its script returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = expiringMultiline("SpecExpireMulti", [[^expire_multi_renewed$]], [[
+                _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                return _G.TrigSpecExpire.count < 3
+            ]], 1)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecExpireMulti") end)
+
+            for _ = 1, 5 do
+                feedTriggers("\nexpire_multi_renewed\n")
+            end
+
+            assert.are.equal(3, _G.TrigSpecExpire.count, "a multi-line trigger should be renewed for as long as its script returns true")
+        end)
+
+        it("hands an expiring multi-line trigger's script the lines it matched", function()
+            _G.TrigSpecExpire = {}
+            local id = expiringMultiline("SpecExpireMultimatches", [[^expire_multi_(\w+)$]], [[
+                _G.TrigSpecExpire.whole = multimatches[1][1]
+                _G.TrigSpecExpire.capture = multimatches[1][2]
+            ]], 1)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecExpireMultimatches") end)
+
+            feedTriggers("\nexpire_multi_wombat\n")
+
+            assert.are.equal("expire_multi_wombat", _G.TrigSpecExpire.whole)
+            assert.are.equal("wombat", _G.TrigSpecExpire.capture)
+        end)
+
+        -- A script that raises has returned nothing, so it has not asked to be
+        -- renewed - the trigger has to count down as if it had returned false,
+        -- rather than either living forever or taking the triggers after it down.
+        describe("with a script that raises an error", function()
+            local function feedAndCount(line, times)
+                for _ = 1, times do
+                    assert.is_true(feedTriggers("\n" .. line .. "\n"))
+                end
+                -- without this a script that just returned would count the same
+                assert.is_nil(_G.TrigSpecExpire.pastError, "the script ran on past the error it raised")
+                return _G.TrigSpecExpire.count
+            end
+
+            local function watchLine(line)
+                _G.TrigSpecExpire.after = 0
+                local watcher = tempExactMatchTrigger(line, [[_G.TrigSpecExpire.after = _G.TrigSpecExpire.after + 1]])
+                return watcher
+            end
+
+            it("still expires a script body", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempTrigger("expire_raises_script", [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 2)
+                local watcher = watchLine("expire_raises_script")
+                finally(function() killTrigger(id); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_script", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("still expires a function body", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempTrigger("expire_raises_fn", function()
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                end, 2)
+                local watcher = watchLine("expire_raises_fn")
+                finally(function() killTrigger(id); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_fn", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("still expires a multi-line script", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = expiringMultiline("SpecExpireMultiRaises", [[^expire_raises_multi$]], [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 2)
+                assert.is_number(id)
+                local watcher = watchLine("expire_raises_multi")
+                finally(function() killTrigger("SpecExpireMultiRaises"); killTrigger(watcher) end)
+
+                assert.are.equal(2, feedAndCount("expire_raises_multi", 4))
+                assert.are.equal(4, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+
+            it("keeps firing a multi-line trigger that never expires", function()
+                _G.TrigSpecExpire = {count = 0}
+                local id = tempComplexRegexTrigger("SpecMultiRaises", [[^multi_raises$]], [[
+                    _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                    error("raised on purpose by the expiring trigger spec")
+                    _G.TrigSpecExpire.pastError = true
+                ]], 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+                assert.is_number(id)
+                local watcher = watchLine("multi_raises")
+                finally(function() killTrigger("SpecMultiRaises"); killTrigger(watcher) end)
+
+                assert.are.equal(3, feedAndCount("multi_raises", 3))
+                assert.are.equal(3, _G.TrigSpecExpire.after, "a trigger after the one that raised should still have fired")
+            end)
+        end)
+
+        -- the same again for a multiline trigger with two conditions, which
+        -- only fires once the second line arrives within the line delta
+        it("renews the expiry count of a two-condition multiline trigger while its script returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local code = [==[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1; return _G.TrigSpecExpire.count < 3]==]
+            tempComplexRegexTrigger("SpecMLExpiryRenew", [[^mlrenew one$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1)
+            tempComplexRegexTrigger("SpecMLExpiryRenew", [[^mlrenew two$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1)
+            finally(function() killTrigger("SpecMLExpiryRenew") end)
+
+            for _ = 1, 5 do
+                feedTriggers("mlrenew one\n")
+                feedTriggers("mlrenew two\n")
+            end
+
+            assert.are.equal(3, _G.TrigSpecExpire.count, "a multiline trigger set to expire after one fire should be renewed for as long as it returns true")
+        end)
+
+        it("expires a multiline trigger after its expiry count", function()
+            _G.TrigSpecExpire = {count = 0}
+            local code = [==[_G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1]==]
+            tempComplexRegexTrigger("SpecMLExpiryGone", [[^mlgone one$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 2)
+            tempComplexRegexTrigger("SpecMLExpiryGone", [[^mlgone two$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 2)
+
+            for _ = 1, 4 do
+                feedTriggers("mlgone one\n")
+                feedTriggers("mlgone two\n")
+            end
+
+            local count = _G.TrigSpecExpire.count
+            local killed = killTrigger("SpecMLExpiryGone")
+            assert.are.equal(2, count, "a multiline trigger set to expire after 2 fires should fire exactly twice")
+            assert.is_false(killed, "the expired trigger should already be gone")
+        end)
+
+    end)
+
+    describe("tempColorTrigger legacy colour remap", function()
+
+        after_each(function()
+            _G.TrigSpec = nil
+        end)
+
+        -- tempColorTrigger applies a fossilised 0-16 remap table; argument 4 maps
+        -- to Mudlet colour index 1 (red), NOT the ANSI blue that a naive reading
+        -- of "4" would suggest. This pins that remap.
+        it("remaps its colour arguments and matches the remapped SGR colours", function()
+            _G.TrigSpec = {fired = false}
+            -- fg arg 4 -> index 1 (red -> SGR 31); bg arg 2 -> index 0 (black -> SGR 40)
+            local id = tempColorTrigger(4, 2, function() _G.TrigSpec.fired = true end)
+            assert.is_number(id)
+            -- blue foreground (SGR 34) must NOT match: proves 4 is not used literally
+            feedTriggers("\n\27[34;40mColorTrigNoMatch\27[0m\n")
+            local firedOnNonMatch = _G.TrigSpec.fired
+            -- red foreground (SGR 31) on black background (SGR 40) must match
+            feedTriggers("\n\27[31;40mColorTrigMatch\27[0m\n")
+            local fired = _G.TrigSpec.fired
+            -- kill before asserting: a leaked colour trigger matches by SGR and
+            -- would fire on later ANSI-colour specs' fed lines
+            killTrigger(id)
+            assert.is_false(firedOnNonMatch, "arg 4 must remap to red, so blue text must not fire it")
+            assert.is_true(fired, "the remapped red-on-black colour trigger should fire on red-on-black text")
+        end)
+
+        -- a colour argument past the 256-colour table has no colour to match
+        -- against, and it must not fall back to matching some colour instead
+        it("never matches a foreground code the colour table has no colour for", function()
+            _G.TrigSpec = {fired = false}
+            -- bg arg 4 -> index 1 (red -> SGR 41); fg 300 is outside the table
+            local id = tempColorTrigger(300, 4, function() _G.TrigSpec.fired = true end)
+            assert.is_number(id)
+            -- black on red: black is what a colour the table cannot supply
+            -- would decay to if it were compared as a colour at all
+            feedTriggers("\n\27[30;41mColorTrigNoTableColor\27[0m\n")
+            local fired = _G.TrigSpec.fired
+            killTrigger(id)
+            assert.is_false(fired, "a foreground code outside the colour table must not match any text")
+        end)
+
+        it("rejects ignoring both foreground and background", function()
+            local id, err = tempColorTrigger(-1, -1, function() end)
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_nil(id)
+            assert.is_string(err)
+            assert.is_truthy(err:find("only one of foreground and background", 1, true), "got: " .. tostring(err))
+        end)
+
+        it("rejects a non-string, non-function body", function()
+            assert.has_error(function() tempColorTrigger(1, 1, {}) end)
+        end)
+
+    end)
+
+    describe("tempComplexRegexTrigger", function()
+
+        after_each(function()
+            _G.TrigSpec = nil
+        end)
+
+        -- 14-positional-argument API; here as a plain (non-colour, non-highlight,
+        -- non-sound) perl regex trigger: multiline 0, fg/bg numeric (so not a
+        -- colour trigger), filter 0, matchAll 0, highlight fg/bg numeric, sound
+        -- numeric (so no sound), fireLength 0, lineDelta 0.
+        it("creates a firing perl regex trigger", function()
+            _G.TrigSpec = {fired = false}
+            local id = tempComplexRegexTrigger("SpecComplexOne", "^complex_match$",
+                function() _G.TrigSpec.fired = true end,
+                0, -1, -1, 0, 0, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            feedTriggers("\ncomplex_match\n")
+            local fired = _G.TrigSpec.fired
+            assert.is_true(killTrigger("SpecComplexOne"), "a temporary complex trigger should be removable by name")
+            assert.is_true(fired, "a complex regex trigger should fire on its pattern")
+        end)
+
+        -- The match-all (/g) loop steps one byte after an empty match, so on a line
+        -- holding a multi-byte character it can land mid-character. pcre2 then
+        -- rejects the offset and TTrigger::match_perl() ends the loop, dropping
+        -- every capture past that character (#10112). matchAll is argument 8.
+        it("keeps collecting captures past a multi-byte character", function()
+            -- feedTriggers() transcodes into the server encoding, so a non-UTF-8
+            -- one would strip the character and let this pass without testing it
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed a multi-byte character")
+            _G.TrigSpec = {seen = {}, selected = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllUtf8", [[(\d*)]],
+                function()
+                    _G.TrigSpec.seen = {}
+                    _G.TrigSpec.selected = {}
+                    for i = 1, #matches do
+                        _G.TrigSpec.seen[i] = matches[i]
+                        selectCaptureGroup(i)
+                        _G.TrigSpec.selected[i] = getSelection()
+                        deselect()
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllUtf8") end end)
+            feedTriggers("\ncaf\195\169 9\n")
+            local seen = _G.TrigSpec.seen
+            local selected = _G.TrigSpec.selected
+            assert.is_true(killTrigger("SpecComplexMatchAllUtf8"), "a temporary complex trigger should be removable by name")
+            local found = false
+            for i, capture in ipairs(seen) do
+                if capture == "9" then
+                    found = true
+                    -- the empty matches this pattern collects along the way are
+                    -- given no position at all, so the one capture that has a
+                    -- position has to still be reported past the multi-byte
+                    -- character it sits after
+                    assert.are.equal("9", selected[i], "the capture after the multi-byte character was reported at the wrong position")
+                end
+            end
+            assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
+        -- Every capture a match-all fire collects at a non-empty match carries
+        -- the position it sits at, and selectCaptureGroup() selects by that
+        -- position, so a line that mixes plain text with characters taking more
+        -- than one byte - and, for the dragon, more than one UTF-16 code unit -
+        -- pins both what was captured and where each capture was found.
+        it("reports the text and the position of every match-all capture", function()
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed multi-byte characters")
+            local sharpS = "\195\159"
+            local dragon = "\240\159\144\137"
+            local words = {"alpha", sharpS .. "eta", dragon, "42"}
+            _G.TrigSpec = {captures = {}, selections = {}, starts = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllPositions", [[(\S+)]],
+                function()
+                    -- a fire of its own each time: an earlier one's tail would
+                    -- otherwise survive at the indices this one does not reach
+                    _G.TrigSpec = {captures = {}, selections = {}, starts = {}}
+                    for i = 1, #matches do
+                        _G.TrigSpec.captures[i] = matches[i]
+                        selectCaptureGroup(i)
+                        -- selectCaptureGroup() leaves the previous selection in
+                        -- place when it refuses one, so clear it every time
+                        _G.TrigSpec.selections[i], _G.TrigSpec.starts[i] = getSelection()
+                        deselect()
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllPositions") end end)
+            feedTriggers("\n" .. table.concat(words, " ") .. "\n")
+            local captures = _G.TrigSpec.captures
+            local selections = _G.TrigSpec.selections
+            local starts = _G.TrigSpec.starts
+            assert.is_true(killTrigger("SpecComplexMatchAllPositions"), "a temporary complex trigger should be removable by name")
+            -- the whole match and its only capture group are the same text, so
+            -- every word arrives twice
+            local expected = {"alpha", "alpha", sharpS .. "eta", sharpS .. "eta", dragon, dragon, "42", "42"}
+            assert.are.same(expected, captures)
+            assert.are.same(expected, selections, "a capture's position should select the capture's own text")
+            -- the dragon is one character but two UTF-16 code units, so "42"
+            -- starts at 14 and not at 13
+            assert.are.same({0, 0, 6, 6, 11, 11, 14, 14}, starts, "a capture should be reported at the code unit it sits at")
+        end)
+
+        -- Those positions used to be counted from the start of the line for
+        -- every capture, which made a match-all line cost the square of its
+        -- length rather than growing with it (#10869).
+        --
+        -- What is compared is the whole cost of feeding each line with the
+        -- trigger armed, not what arming it adds. The console's own per-line
+        -- work is linear, and so is the trigger once the walk is, so eight
+        -- times the line is eight times the total whatever share of it the
+        -- trigger holds: measured at 7.1 to 8.3 with the walk linear against
+        -- 54 to 58 with it quadratic, so sixteen lies between the two. Each
+        -- measurement is the cheapest of three runs, because scheduling noise
+        -- only ever adds.
+        --
+        -- Subtracting an unarmed baseline to leave only what the trigger adds
+        -- is what this did first, and it could not be made to hold. On the
+        -- 8 kB line that difference is about two milliseconds - the size of
+        -- the noise a shared CI runner puts on either measurement on its own -
+        -- so it came out anywhere from double to negative, and the long line's
+        -- cost was then divided by it. A negative one made the bound tighter
+        -- than the constant meant to absorb it, which no amount of speed could
+        -- then satisfy.
+        it("costs under sixteen times as much for eight times the line", function()
+            -- "word " is five bytes, so this is an 8 kB line and one eight times longer
+            local shortReps, longReps = 1638, 13104
+            local function costOf(repeats)
+                local line = string.rep("word ", repeats)
+                local best
+                for _ = 1, 3 do
+                    -- os.clock() resolves to about a millisecond on Windows,
+                    -- which is the whole cost of the shorter line there, so a
+                    -- single feed can measure exactly 0 and leave the ratio
+                    -- below nothing to divide by. Feeding until the run is
+                    -- clear of that floor and dividing by the number of feeds
+                    -- keeps both measurements per-feed and comparable.
+                    local feeds, taken = 0, 0
+                    local started = os.clock()
+                    repeat
+                        feedTriggers("\n" .. line .. "\n")
+                        feeds = feeds + 1
+                        taken = os.clock() - started
+                    -- a clock that never advanced would spin here forever and
+                    -- hang CI with no diagnostic, which is worse than the
+                    -- failure this loop replaced. 100 feeds is far more than
+                    -- any platform needs, so giving up past it leaves the
+                    -- short > 0 assertion below to report the dead clock.
+                    until taken >= 0.02 or feeds >= 100
+                    taken = taken / feeds
+                    if not best or taken < best then
+                        best = taken
+                    end
+                end
+                return best
+            end
+            _G.TrigSpec = {captures = 0}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllCost", [[(\S+)]],
+                [[_G.TrigSpec.captures = #matches]],
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end end)
+            local short = costOf(shortReps)
+            local shortCaptures = _G.TrigSpec.captures
+            local long = costOf(longReps)
+            local longCaptures = _G.TrigSpec.captures
+            assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
+            -- without this the trigger could have stopped matching, or stopped
+            -- matching all, and the two costs would agree on measuring nothing
+            assert.are.equal(shortReps * 2, shortCaptures, "match-all should collect the whole match and its capture group for every word")
+            assert.are.equal(longReps * 2, longCaptures, "match-all should collect the whole match and its capture group for every word")
+            assert.is_true(short > 0, "os.clock() did not resolve the 8 kB line's cost, so the ratio below has nothing to divide by")
+            assert.is_true(long <= short * 16,
+                string.format("feeding a 64 kB line took %.3fs against %.3fs for an 8 kB one, %.1fx for eight times the line - the capture positions may be counted from the start of the line again",
+                    long, short, long / short))
+        end)
+
+        it("rejects a non-string, non-function body (argument 3)", function()
+            -- a table is not string-coercible (a number would be accepted as code)
+            assert.has_error(function()
+                tempComplexRegexTrigger("SpecComplexBad", "^x$", {}, 0, -1, -1, 0, 0, -1, -1, 0, 0, 0)
+            end)
+        end)
+
+        it("rejects a non-number multiline flag (argument 4)", function()
+            assert.has_error(function()
+                tempComplexRegexTrigger("SpecComplexBad", "^x$", [[]], "yes", -1, -1, 0, 0, -1, -1, 0, 0, 0)
+            end)
+        end)
+
+        it("rejects a non-number filter flag (argument 7)", function()
+            assert.has_error(function()
+                tempComplexRegexTrigger("SpecComplexBad", "^x$", [[]], 0, -1, -1, "no", 0, -1, -1, 0, 0, 0)
+            end)
+        end)
+
+        it("rejects a non-number match-all flag (argument 8)", function()
+            assert.has_error(function()
+                tempComplexRegexTrigger("SpecComplexBad", "^x$", [[]], 0, -1, -1, 0, "no", -1, -1, 0, 0, 0)
+            end)
+        end)
+
+    end)
+
+    -- A highlight trigger recolours what it matched; tempComplexRegexTrigger's
+    -- arguments 9 and 10 are the colours. When the pattern has capture groups
+    -- the whole match is deliberately skipped so that only the groups are
+    -- recoloured.
+    describe("highlighting triggers", function()
+
+        local defaultForeground = {192, 192, 192}
+
+        local function coloursOf(lineNumber, text)
+            moveCursor(0, lineNumber)
+            assert.is_true(selectString(text, 1) >= 0, "'" .. text .. "' should be on line " .. tostring(lineNumber))
+            local colours = {foreground = {getFgColor()}, background = {getBgColor()}}
+            deselect()
+            return colours
+        end
+
+        after_each(function()
+            deselect()
+            _G.TrigHighlight = nil
+        end)
+
+        it("recolours the whole match when the pattern has no capture groups", function()
+            feedTriggers("highlight_none control\n")
+            local before = coloursOf(getLineNumber(), "highlight_none")
+            assert.are.same(defaultForeground, before.foreground, "the text has to start out uncoloured for the highlight to mean anything")
+            assert.are_not.same(color_table.blue, before.background, "the background has to start out unhighlighted too")
+
+            _G.TrigHighlight = {}
+            tempComplexRegexTrigger("SpecHighlightWhole", [[^highlight_none control$]],
+                [==[_G.TrigHighlight.line = getLineNumber()]==],
+                0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecHighlightWhole") end)
+            feedTriggers("highlight_none control\n")
+
+            local line = _G.TrigHighlight.line
+            assert.is_number(line, "the highlight trigger should have fired")
+            local after = coloursOf(line, "highlight_none")
+            assert.are.same(color_table.red, after.foreground)
+            assert.are.same(color_table.blue, after.background)
+        end)
+
+        it("recolours only the capture groups when the pattern has them", function()
+            feedTriggers("highlight_groups aaa and bbb\n")
+            local before = coloursOf(getLineNumber(), "aaa")
+            assert.are.same(defaultForeground, before.foreground, "the text has to start out uncoloured for the highlight to mean anything")
+
+            _G.TrigHighlight = {}
+            tempComplexRegexTrigger("SpecHighlightGroups", [[^highlight_groups (\w+) and (\w+)$]],
+                [==[_G.TrigHighlight.line = getLineNumber()]==],
+                0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecHighlightGroups") end)
+            feedTriggers("highlight_groups aaa and bbb\n")
+
+            local line = _G.TrigHighlight.line
+            assert.is_number(line, "the highlight trigger should have fired")
+            assert.are.same(color_table.red, coloursOf(line, "aaa").foreground)
+            assert.are.same(color_table.red, coloursOf(line, "bbb").foreground)
+            assert.are.same(defaultForeground, coloursOf(line, "highlight_groups").foreground,
+                            "the whole match is skipped when the pattern has capture groups")
+        end)
+
+    end)
+
+    -- A colour trigger's pattern is a pair of ANSI colour numbers rather than
+    -- text. tempComplexRegexTrigger makes one when arguments 5 and 6 are not
+    -- numbers - their values are then unused, the pattern carries the colours -
+    -- and it is the only route to one that also highlights what it matched.
+    describe("colour pattern triggers", function()
+
+        after_each(function()
+            deselect()
+            _G.TrigColourPattern = nil
+        end)
+
+        it("matches the coloured run and highlights only that run", function()
+            _G.TrigColourPattern = {}
+            tempComplexRegexTrigger("SpecColourPatternHighlight", "ANSI_COLORS_F{002}_B{IGNORE}",
+                [==[_G.TrigColourPattern.line = getLineNumber(); _G.TrigColourPattern.match = matches[1]]==],
+                0, "fg", "bg", 0, 0, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecColourPatternHighlight") end)
+            feedTriggers("colour_pattern plain \27[32mgreenrun\27[0m plain\n")
+
+            local line = _G.TrigColourPattern.line
+            assert.is_number(line, "a colour trigger should fire on the colour its pattern names")
+            assert.are.equal("greenrun", _G.TrigColourPattern.match, "the capture should be the coloured run, not the whole line")
+
+            moveCursor(0, line)
+            assert.is_true(selectString("greenrun", 1) >= 0)
+            local highlighted = {getFgColor()}
+            deselect()
+            assert.is_true(selectString("colour_pattern", 1) >= 0)
+            local untouched = {getFgColor()}
+            deselect()
+            assert.are.same(color_table.red, highlighted, "the matched run should carry the highlight colour")
+            assert.are_not.same(color_table.red, untouched, "text outside the coloured run should keep its own colour")
+        end)
+
+        it("never fires when both colours are set to ignore", function()
+            _G.TrigColourPattern = {fires = 0, control = 0}
+            local id = tempComplexRegexTrigger("SpecColourPatternIgnored", "ANSI_COLORS_F{IGNORE}_B{IGNORE}",
+                [==[_G.TrigColourPattern.fires = _G.TrigColourPattern.fires + 1]==],
+                0, "fg", "bg", 0, 0, 0, 0, 0, 0, 0)
+            tempComplexRegexTrigger("SpecColourPatternControl", "ANSI_COLORS_F{002}_B{IGNORE}",
+                [==[_G.TrigColourPattern.control = _G.TrigColourPattern.control + 1]==],
+                0, "fg", "bg", 0, 0, 0, 0, 0, 0, 0)
+            finally(function()
+                killTrigger("SpecColourPatternIgnored")
+                killTrigger("SpecColourPatternControl")
+            end)
+            assert.is_true(id > 0, "the trigger is still created so that it can be seen and repaired")
+
+            feedTriggers("colour_pattern_ignored \27[32mgreenrun\27[0m\n")
+
+            assert.are.equal(1, _G.TrigColourPattern.control, "the control trigger shows a coloured run does reach the colour pattern engine")
+            assert.are.equal(0, _G.TrigColourPattern.fires, "a colour pattern that ignores both colours has nothing to match")
+        end)
+
+        -- like a regex that does not compile, a colour pattern that names no
+        -- colour leaves its trigger in place but switched off, so that it can
+        -- be seen and repaired
+        it("switches off a trigger whose colour pattern names no ANSI colour", function()
+            _G.TrigColourPattern = {fires = 0}
+            tempComplexRegexTrigger("SpecColourPatternUnusable", "ANSI_COLORS_F{002}_B{IGNORE}",
+                [==[_G.TrigColourPattern.fires = _G.TrigColourPattern.fires + 1]==], 0, "fg", "bg", 0, 0, 0, 0, 0, 0, 0)
+            assert.are.equal(1, isActive("SpecColourPatternUnusable", "trigger"), "a usable colour pattern should leave the trigger on")
+            tempComplexRegexTrigger("SpecColourPatternUnusable", "ANSI_COLORS_F{999}_B{IGNORE}",
+                [==[_G.TrigColourPattern.fires = _G.TrigColourPattern.fires + 1]==], 0, "fg", "bg", 0, 0, 0, 0, 0, 0, 0)
+            finally(function() killTrigger("SpecColourPatternUnusable") end)
+
+            feedTriggers("colour_pattern_unusable \27[32mgreenrun\27[0m\n")
+
+            assert.are.equal(1, exists("SpecColourPatternUnusable", "trigger"))
+            assert.are.equal(0, isActive("SpecColourPatternUnusable", "trigger"))
+            assert.are.equal(0, _G.TrigColourPattern.fires, "a switched off trigger should not fire even on the colour its other pattern names")
+        end)
+
+        it("can be a condition of a multiline trigger", function()
+            _G.TrigColourPattern = {fires = 0}
+            local code = [==[_G.TrigColourPattern.fires = _G.TrigColourPattern.fires + 1; _G.TrigColourPattern.rows = {multimatches[1][1], multimatches[2][2]}]==]
+            tempComplexRegexTrigger("SpecColourMultiline", "ANSI_COLORS_F{002}_B{IGNORE}", code, 1, "fg", "bg", 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecColourMultiline", [[^colour_ml then (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            finally(function() killTrigger("SpecColourMultiline") end)
+
+            feedTriggers("colour_ml then early\n")
+            feedTriggers("colour_ml \27[32mgreenrun\27[0m first\n")
+            assert.are.equal(0, _G.TrigColourPattern.fires, "the state should wait for the line after the coloured run")
+
+            feedTriggers("colour_ml then later\n")
+            assert.are.equal(1, _G.TrigColourPattern.fires, "the perl line after the coloured run should complete the state")
+            assert.are.same({"greenrun", "later"}, _G.TrigColourPattern.rows)
+        end)
+
+    end)
+
+    describe("patterns that fail to compile", function()
+
+        it("does not fire a trigger whose perl pattern failed to compile", function()
+            _G.TrigBadPattern = {good = 0, bad = 0}
+            local goodId = tempRegexTrigger([[^bad_pattern_line$]], [==[_G.TrigBadPattern.good = _G.TrigBadPattern.good + 1]==])
+            local badId = tempRegexTrigger([[^bad_pattern_line($]], [==[_G.TrigBadPattern.bad = _G.TrigBadPattern.bad + 1]==])
+            -- busted keeps only the last finally(), so this undoes everything at once
+            finally(function()
+                killTrigger(goodId)
+                killTrigger(badId)
+                _G.TrigBadPattern = nil
+            end)
+            assert.is_true(badId > 0, "an uncompilable pattern still makes a trigger, so that it can be seen and repaired")
+
+            feedTriggers("bad_pattern_line\n")
+
+            assert.are.equal(1, _G.TrigBadPattern.good, "the control trigger shows the line does reach the trigger engine")
+            assert.are.equal(0, _G.TrigBadPattern.bad, "a trigger whose regex did not compile must not fire")
+        end)
+
+    end)
+
+    describe("sound triggers", function()
+
+        -- a sound trigger asks the media player for its file before running its
+        -- own script, so a file that is not there must not swallow the script
+        it("runs its script even when the sound file is missing", function()
+            _G.TrigSound = {fired = false}
+            tempComplexRegexTrigger("SpecSoundMissingFile", [[^sound_trigger_line$]],
+                [==[_G.TrigSound.fired = true]==],
+                0, 0, 0, 0, 0, 0, 0, "no-such-sound-file-for-specs.wav", 0, 0)
+            finally(function()
+                killTrigger("SpecSoundMissingFile")
+                _G.TrigSound = nil
+            end)
+
+            feedTriggers("sound_trigger_line\n")
+
+            assert.is_true(_G.TrigSound.fired, "a missing sound file should not stop the trigger's script")
+        end)
+
+    end)
+
+    describe("permanent triggers", function()
+
+        -- permanent triggers cannot be removed with killTrigger, so give them
+        -- unique names and disable them after each test to avoid leaking firing
+        -- state into other specs.
+        after_each(function()
+            disableTrigger("SpecPermRegex")
+            disableTrigger("SpecPermSubstring")
+            disableTrigger("SpecPermBeginOfLine")
+            disableTrigger("SpecPermExact")
+            disableTrigger("SpecPermBlankPattern")
+            disableTrigger("SpecPermTwoBlankPatterns")
+            _G.TrigSpec = nil
+        end)
+
+        it("permRegexTrigger creates a firing trigger from a pattern table", function()
+            _G.TrigSpec = {fired = false}
+            local id = permRegexTrigger("SpecPermRegex", "", {"^perm_regex_hit$"}, [[_G.TrigSpec.fired = true]])
+            assert.is_number(id)
+            assert.is_true(id > 0)
+            feedTriggers("\nperm_regex_hit\n")
+            assert.is_true(_G.TrigSpec.fired, "a permanent regex trigger should fire on its pattern")
+        end)
+
+        it("permSubstringTrigger creates a firing trigger", function()
+            _G.TrigSpec = {fired = false}
+            local id = permSubstringTrigger("SpecPermSubstring", "", {"perm_sub_hit"}, [[_G.TrigSpec.fired = true]])
+            assert.is_number(id)
+            feedTriggers("\nsomething perm_sub_hit here\n")
+            assert.is_true(_G.TrigSpec.fired, "a permanent substring trigger should fire when the substring appears")
+        end)
+
+        it("permBeginOfLineStringTrigger creates a firing trigger", function()
+            _G.TrigSpec = {fired = false}
+            local id = permBeginOfLineStringTrigger("SpecPermBeginOfLine", "", {"perm_bol_hit"}, [[_G.TrigSpec.fired = true]])
+            assert.is_number(id)
+            feedTriggers("\nnope perm_bol_hit\n")
+            assert.is_false(_G.TrigSpec.fired, "a begin-of-line trigger must not fire mid-line")
+            feedTriggers("\nperm_bol_hit at start\n")
+            assert.is_true(_G.TrigSpec.fired, "a begin-of-line trigger should fire when the string starts the line")
+        end)
+
+        it("permExactMatchTrigger creates a firing trigger", function()
+            _G.TrigSpec = {count = 0}
+            local id = permExactMatchTrigger("SpecPermExact", "", {"perm_exact_hit"}, [[_G.TrigSpec.count = _G.TrigSpec.count + 1]])
+            assert.is_number(id)
+            feedTriggers("\nperm_exact_hit trailing\n")
+            assert.is_equal(0, _G.TrigSpec.count, "an exact-match trigger must not fire on a superset line")
+            feedTriggers("\nperm_exact_hit\n")
+            assert.is_equal(1, _G.TrigSpec.count, "an exact-match trigger should fire on the exact line")
+        end)
+
+        it("permRegexTrigger errors when the pattern argument is not a table", function()
+            assert.has_error(function()
+                permRegexTrigger("SpecPermRegex", "", "^not a table$", [[]])
+            end)
+        end)
+
+        it("permSubstringTrigger errors when the pattern argument is not a table", function()
+            assert.has_error(function()
+                permSubstringTrigger("SpecPermSubstring", "", "not a table", [[]])
+            end)
+        end)
+
+        -- Guards that the error names this function (a past audit flagged a
+        -- sibling message that misreported itself as "permRegexTrigger").
+        it("permBeginOfLineStringTrigger errors when the pattern argument is not a table", function()
+            local ok, err = pcall(function()
+                permBeginOfLineStringTrigger("SpecPermBeginOfLine", "", "not a table", [[]])
+            end)
+            assert.is_false(ok, "a non-table pattern argument should error")
+            assert.is_truthy(tostring(err):find("permBeginOfLineStringTrigger", 1, true),
+                "the error should name permBeginOfLineStringTrigger, got: " .. tostring(err))
+        end)
+
+        -- Blank patterns are skipped when the pattern list is stored, so the stored
+        -- list is compacted while the list passed in is not, and a pattern following
+        -- a blank one must still be matched with its own regex. A pattern table with
+        -- more than one entry makes the trigger multiline, so its captures arrive in
+        -- multimatches rather than matches even though only one pattern survives.
+        -- A permanent trigger saved by an earlier run reloads with its blank pattern
+        -- already stripped, i.e. healed, so it has to be cleared out first or it
+        -- fires and masks the result.
+        it("a blank pattern before a real one does not stop the real one matching", function()
+            _G.TrigSpec = {capture = nil}
+            killTrigger("SpecPermBlankPattern")
+            disableTrigger("SpecPermBlankPattern")
+            local id = permRegexTrigger("SpecPermBlankPattern", "", {"", "^You see (\\w+)$"},
+                                        [==[_G.TrigSpec.capture = multimatches[1][2]]==])
+            assert.is_number(id)
+            assert.is_true(id > 0)
+            feedTriggers("\nYou see sword\n")
+            assert.is_equal("sword", _G.TrigSpec.capture,
+                "a pattern after a blank one should match and report its own capture")
+        end)
+
+        it("two blank patterns before a real one do not shift its regex", function()
+            _G.TrigSpec = {capture = nil}
+            killTrigger("SpecPermTwoBlankPatterns")
+            disableTrigger("SpecPermTwoBlankPatterns")
+            local id = permRegexTrigger("SpecPermTwoBlankPatterns", "", {"", "", "^probe (\\w+)$"},
+                                        [==[_G.TrigSpec.capture = multimatches[1][2]]==])
+            assert.is_number(id)
+            feedTriggers("\nprobe alpha\n")
+            assert.is_equal("alpha", _G.TrigSpec.capture,
+                "the shift should be corrected for any number of leading blank patterns")
+        end)
+
+        it("killTrigger returns false for a permanent trigger (they cannot be killed)", function()
+            local id = permRegexTrigger("SpecPermRegex", "", {"^perm_kill_probe$"}, [[]])
+            assert.is_true(id > 0)
+            assert.is_false(killTrigger("SpecPermRegex"), "permanent triggers cannot be removed with killTrigger")
+        end)
+
+    end)
+
+    describe("enable, disable, isActive and exists for triggers", function()
+
+        after_each(function()
+            _G.TrigSpec = nil
+        end)
+
+        it("disableTrigger stops a trigger firing and enableTrigger restores it", function()
+            _G.TrigSpec = {count = 0}
+            local id = tempRegexTrigger("^toggle_me$", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            feedTriggers("\ntoggle_me\n")
+            assert.is_equal(1, _G.TrigSpec.count, "an enabled trigger should fire")
+
+            assert.is_true(disableTrigger(id), "disableTrigger should report it found the trigger")
+            feedTriggers("\ntoggle_me\n")
+            assert.is_equal(1, _G.TrigSpec.count, "a disabled trigger must not fire")
+
+            assert.is_true(enableTrigger(id), "enableTrigger should report it found the trigger")
+            feedTriggers("\ntoggle_me\n")
+            assert.is_equal(2, _G.TrigSpec.count, "a re-enabled trigger should fire again")
+
+            killTrigger(id)
+        end)
+
+        it("enableTrigger and disableTrigger return false for an unknown name", function()
+            assert.is_false(enableTrigger("no_such_trigger_name"))
+            assert.is_false(disableTrigger("no_such_trigger_name"))
+        end)
+
+        it("isActive reflects a trigger's enabled state", function()
+            local id = tempRegexTrigger("^active_probe$", [[]])
+            assert.is_equal(1, isActive(id, "trigger"), "a freshly created trigger should be active")
+            disableTrigger(id)
+            assert.is_equal(0, isActive(id, "trigger"), "a disabled trigger should not be active")
+            enableTrigger(id)
+            assert.is_equal(1, isActive(id, "trigger"), "a re-enabled trigger should be active")
+            killTrigger(id)
+        end)
+
+        it("isActive rejects an invalid item type", function()
+            local ok, err = isActive(1, "notarealtype")
+            assert.is_nil(ok)
+            assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "notarealtype"', err)
+        end)
+
+        it("isActive rejects a negative numeric ID", function()
+            local ok, err = isActive(-5, "trigger")
+            assert.is_nil(ok)
+            assert.is_string(err)
+        end)
+
+        it("exists round-trips a temporary trigger by ID", function()
+            local id = tempRegexTrigger("^exists_probe$", [[]])
+            assert.is_equal(1, exists(id, "trigger"), "the trigger should exist after creation")
+            assert.is_true(killTrigger(id), "killTrigger should report success for a temporary trigger")
+            -- feed a line to let the trigger unit run its deferred cleanup
+            feedTriggers("\nflush\n")
+            assert.is_equal(0, exists(id, "trigger"), "the trigger should be gone after kill and cleanup")
+        end)
+
+        it("killTrigger returns false for a name that does not exist", function()
+            assert.is_false(killTrigger("no_such_trigger_name"))
+        end)
+
+        it("killTrigger returns false the second time, as the trigger is already dead", function()
+            local id = tempRegexTrigger("^double_kill_probe$", [[]])
+            assert.is_true(killTrigger(id), "killing a live temporary trigger should report success")
+            -- the trigger is still present here: only the deferred cleanup frees it,
+            -- so the second kill really is being told about a corpse it can find
+            assert.is_equal(1, exists(id, "trigger"), "the killed trigger is still present until cleanup runs")
+            assert.is_equal(0, isActive(id, "trigger"), "a killed trigger is no longer active")
+            assert.is_false(killTrigger(id),
+                "killing an already killed trigger achieves nothing and has to say so")
+            -- a fed line runs that cleanup, and the answer has to be the same after it
+            feedTriggers("\ndouble_kill_flush\n")
+            assert.is_equal(0, exists(id, "trigger"), "the trigger should be gone after kill and cleanup")
+            assert.is_false(killTrigger(id), "a freed trigger cannot be killed either")
+        end)
+
+        it("a trigger killed earlier in a line's pass does not fire on that line", function()
+            _G.TrigSpec = {count = 0, witness = 0}
+            -- the killer is created first, so the trigger unit reaches it first and
+            -- its victim is still in the list this pass is walking; only the cleanup
+            -- at the end of the line frees the victim. The witness is created last so
+            -- that it proves the pass really did carry on past the killer
+            local victimId
+            local killerId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.killed = killTrigger(victimId)
+            end)
+            victimId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.count = _G.TrigSpec.count + 1
+            end)
+            local witnessId = tempRegexTrigger("^kill_stops_firing$", function()
+                _G.TrigSpec.witness = _G.TrigSpec.witness + 1
+            end)
+            feedTriggers("\nkill_stops_firing\n")
+            killTrigger(killerId)
+            killTrigger(witnessId)
+            assert.is_true(_G.TrigSpec.killed, "the first trigger should have killed the second")
+            assert.is_equal(1, _G.TrigSpec.witness, "the line should still reach triggers behind the killer")
+            assert.is_equal(0, _G.TrigSpec.count,
+                "a killed trigger must no more fire on the rest of the line than a disabled one does")
+        end)
+
+        it("killTrigger returns false for a trigger that has used up its last firing", function()
+            -- an expiring trigger queues itself for the same deferred cleanup a killed
+            -- one does, so it is just as dead - as killTimer reports for a one-shot
+            -- timer that has already fired
+            _G.TrigSpec = {}
+            local expiringId = tempRegexTrigger("^expiry_kill_probe$", [[]], 1)
+            local killerId = tempRegexTrigger("^expiry_kill_probe$", function()
+                _G.TrigSpec.killedExpired = killTrigger(expiringId)
+            end)
+            feedTriggers("\nexpiry_kill_probe\n")
+            killTrigger(killerId)
+            assert.is_not_nil(_G.TrigSpec.killedExpired, "the killing trigger should have fired")
+            assert.is_false(_G.TrigSpec.killedExpired,
+                "a trigger that just used up its last firing cannot be killed again")
+        end)
+
+        it("killTrigger returns false the second time inside the trigger's own script", function()
+            _G.TrigSpec = {}
+            local id
+            id = tempRegexTrigger("^self_kill_probe$", function()
+                _G.TrigSpec.killed = killTrigger(id)
+                _G.TrigSpec.killedAgain = killTrigger(id)
+            end)
+            feedTriggers("\nself_kill_probe\n")
+            assert.is_not_nil(_G.TrigSpec.killed, "the trigger should have fired")
+            assert.is_true(_G.TrigSpec.killed,
+                "killTrigger should report success from inside the trigger's own script")
+            assert.is_false(_G.TrigSpec.killedAgain,
+                "killing the same trigger twice from its own script must fail the second time")
+        end)
+
+        it("exists rejects an invalid item type", function()
+            local ok, err = exists(1, "notarealtype")
+            assert.is_nil(ok)
+            assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "notarealtype"', err)
+        end)
+
+    end)
+
+    -- enableTrigger/disableTrigger must toggle EVERY trigger sharing a name, not
+    -- just the first (QMultiMap equal_range fix, PR #9366).
+    describe("enable/disable with duplicate trigger names", function()
+
+        before_each(function()
+            _G.DuplicateTrigTest = {fired = {}}
+        end)
+
+        after_each(function()
+            -- permanent triggers cannot be killed; disable so they stop firing
+            disableTrigger("Spec Dup Triggers")
+            disableTrigger("Spec Other Trigger")
+            _G.DuplicateTrigTest = nil
+        end)
+
+        it("toggles every trigger sharing the same name, not just the first", function()
+            local id1 = permRegexTrigger("Spec Dup Triggers", "", {"^trig_dup_one$"}, [[_G.DuplicateTrigTest.fired.one = true]])
+            local id2 = permRegexTrigger("Spec Dup Triggers", "", {"^trig_dup_two$"}, [[_G.DuplicateTrigTest.fired.two = true]])
+            assert.is_true(id1 > 0, "first duplicate-named trigger should be created")
+            assert.is_true(id2 > 0, "second duplicate-named trigger should be created")
+            -- by-name count paths (exists/isActive) walk the whole equal_range;
+            -- assert invariants rather than exact counts, since permanent triggers
+            -- from earlier local runs accumulate under this name in the profile
+            assert.is_true(exists("Spec Dup Triggers", "trigger") >= 2, "at least the two duplicates exist under this name")
+
+            feedTriggers("\ntrig_dup_one\n")
+            feedTriggers("\ntrig_dup_two\n")
+            assert.is_true(_G.DuplicateTrigTest.fired.one, "trigger 1 should fire while enabled")
+            assert.is_true(_G.DuplicateTrigTest.fired.two, "trigger 2 should fire while enabled")
+
+            _G.DuplicateTrigTest.fired = {}
+            disableTrigger("Spec Dup Triggers")
+            assert.is_equal(0, isActive("Spec Dup Triggers", "trigger"), "disabling by name must leave zero of the duplicates active")
+            feedTriggers("\ntrig_dup_one\n")
+            feedTriggers("\ntrig_dup_two\n")
+            assert.is_nil(_G.DuplicateTrigTest.fired.one, "trigger 1 should be disabled")
+            assert.is_nil(_G.DuplicateTrigTest.fired.two, "trigger 2 (the second duplicate) should ALSO be disabled")
+
+            _G.DuplicateTrigTest.fired = {}
+            enableTrigger("Spec Dup Triggers")
+            -- enabling by name reactivates every same-named trigger, so the active
+            -- count equals the total count regardless of how many accumulated
+            assert.is_equal(exists("Spec Dup Triggers", "trigger"), isActive("Spec Dup Triggers", "trigger"),
+                "enabling by name must reactivate every duplicate")
+            feedTriggers("\ntrig_dup_one\n")
+            feedTriggers("\ntrig_dup_two\n")
+            assert.is_true(_G.DuplicateTrigTest.fired.one, "trigger 1 should be re-enabled")
+            assert.is_true(_G.DuplicateTrigTest.fired.two, "trigger 2 (the second duplicate) should ALSO be re-enabled")
+
+            -- a differently-named trigger must stay untouched
+            local idOther = permRegexTrigger("Spec Other Trigger", "", {"^trig_dup_other$"}, [[_G.DuplicateTrigTest.fired.other = true]])
+            assert.is_true(idOther > 0)
+            disableTrigger("Spec Dup Triggers")
+            _G.DuplicateTrigTest.fired = {}
+            feedTriggers("\ntrig_dup_other\n")
+            assert.is_true(_G.DuplicateTrigTest.fired.other, "the differently-named trigger must stay enabled")
+        end)
+
+    end)
+
+    describe("setTriggerStayOpen", function()
+
+        it("requires a numeric number-of-lines argument", function()
+            assert.has_error(function() setTriggerStayOpen("main", "lots") end)
+        end)
+
+        it("accepts a window name and a line count without error", function()
+            -- returns nothing; success is simply not raising
+            local ok = pcall(setTriggerStayOpen, "main", 0)
+            assert.is_true(ok, "setTriggerStayOpen with valid arguments should not error")
+        end)
+
+        -- these fires come from the stay-open window rather than from a match:
+        -- the trigger's pattern is in none of the lines fed here
+        it("fires a trigger on the following lines without a match", function()
+            _G.TrigStayOpen = 0
+            local id = tempTrigger("stay_open_pattern", [==[_G.TrigStayOpen = _G.TrigStayOpen + 1]==])
+            finally(function()
+                killTrigger(id)
+                _G.TrigStayOpen = nil
+            end)
+
+            feedTriggers("stay_open_unrelated\n")
+            feedTriggers("stay_open_unrelated\n")
+            assert.are.equal(0, _G.TrigStayOpen, "a trigger does not fire on lines its pattern is not in")
+
+            setTriggerStayOpen(tostring(id), 2)
+            feedTriggers("stay_open_unrelated\n")
+            feedTriggers("stay_open_unrelated\n")
+            assert.are.equal(2, _G.TrigStayOpen, "a trigger held open for two lines should fire on both of them")
+
+            feedTriggers("stay_open_unrelated\n")
+            assert.are.equal(2, _G.TrigStayOpen, "and stop once the window has run out")
+        end)
+
+    end)
+
+    -- Prompt pipeline, driven through the real telnet parser: a prompt trigger
+    -- matches on the line carrying the prompt mark and on nothing else, and
+    -- that mark is set by the line terminator the telnet parser hands the
+    -- buffer - which is why the spec below fires one with the IAC GA the
+    -- feedTelnet block above injects rather than with feedTriggers().
+    describe("prompt triggers and isPrompt", function()
+
+        -- Killed here rather than at the end of the spec that made it: a
+        -- prompt trigger has no pattern to be choosy about, so one left behind
+        -- by a failed assertion would fire on every prompt the rest of the
+        -- suite feeds.
+        local liveTriggerId
+
+        after_each(function()
+            if liveTriggerId then
+                killTrigger(liveTriggerId)
+                liveTriggerId = nil
+            end
+            disableTrigger("SpecPermPrompt")
+            _G.TrigSpec = nil
+        end)
+
+        it("isPrompt reports false when the cursor is not on a prompt line", function()
+            assert.is_false(isPrompt())
+        end)
+
+        it("tempPromptTrigger creates a trigger from a function body", function()
+            local id = tempPromptTrigger(function() end)
+            assert.is_number(id)
+            assert.are.equal(1, exists(id, "trigger"))
+            killTrigger(id)
+        end)
+
+        it("permPromptTrigger creates a trigger and returns its id", function()
+            -- relative baseline: permanent triggers from earlier local runs
+            -- accumulate under this name in the saved profile
+            local before = exists("SpecPermPrompt", "trigger")
+            local id = permPromptTrigger("SpecPermPrompt", "", [[]])
+            assert.is_number(id)
+            assert.is_true(id > 0)
+            assert.are.equal(before + 1, exists("SpecPermPrompt", "trigger"), "creating the prompt trigger should add exactly one")
+        end)
+
+        it("tempPromptTrigger rejects a non-string, non-function body", function()
+            -- a table is not string-coercible (a number would be accepted as code)
+            assert.has_error(function() tempPromptTrigger({}) end)
+        end)
+
+        it("tempPromptTrigger rejects an expiration count below one", function()
+            local id, err = tempPromptTrigger([[]], 0)
+            if type(id) == "number" and id > 0 then killTrigger(id) end
+            assert.is_nil(id)
+            assert.is_string(err)
+            assert.is_truthy(err:find("greater than zero", 1, true), "got: " .. tostring(err))
+        end)
+
+        it("tempPromptTrigger fires on a line the server ended with IAC GA", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function()
+                _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+                -- read from inside the trigger, which is the only place the
+                -- cursor is on the line that matched
+                _G.TrigSpec.wasPrompt = isPrompt()
+            end)
+            assert.is_number(liveTriggerId)
+            assert.is_true(liveTriggerId > 0)
+
+            local ok, msg = feedTelnet("SpecPromptFires> <T_IAC><T_GA>")
+            local afterPrompt = _G.TrigSpec.fired
+            local wasPrompt = _G.TrigSpec.wasPrompt
+            -- the GA leaves the prompt line open, and the specs after this one
+            -- read the buffer
+            feedTelnet("\r\n")
+            -- an ordinary line carries no prompt mark, so it must leave the
+            -- count where the prompt put it
+            feedTelnet("SpecPromptOrdinaryLine\r\n")
+            local afterOrdinary = _G.TrigSpec.fired
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, afterPrompt, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(1, afterOrdinary, "the prompt trigger fired on a line that was not a prompt")
+            assert.is_true(wasPrompt, "isPrompt() was false on the line a prompt trigger matched")
+        end)
+
+        -- isPrompt() answers from the buffer line the cursor sits on, and a
+        -- prompt is the last line in the buffer while its triggers run, so a
+        -- trigger that gags it leaves the cursor past the end and the engine's
+        -- trigger-context prompt flag as the only source of an answer.
+        -- deleteLine() reports nothing back, so the gag is confirmed through the
+        -- line count rather than assumed: without it these two specs answer from
+        -- the buffer and gate nothing.
+        local function gagAndReadIsPrompt()
+            _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+            _G.TrigSpec.linesBefore = getLineCount()
+            deleteLine()
+            _G.TrigSpec.linesAfter = getLineCount()
+            _G.TrigSpec.wasPrompt = isPrompt()
+        end
+
+        it("isPrompt stays true after a prompt trigger gags the line it matched", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(gagAndReadIsPrompt)
+            assert.is_true(liveTriggerId > 0, "the prompt trigger was not created")
+
+            local ok, msg = feedTelnet("SpecPromptGagged> <T_IAC><T_GA>")
+            local spec = _G.TrigSpec
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, spec.fired, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(spec.linesBefore - 1, spec.linesAfter, "the trigger did not gag the line it matched")
+            assert.is_true(spec.wasPrompt, "isPrompt() was false on a prompt line the trigger had just gagged")
+        end)
+
+        it("isPrompt stays false after an ordinary trigger gags the line it matched", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempRegexTrigger("^SpecOrdinaryGagged$", gagAndReadIsPrompt)
+            assert.is_true(liveTriggerId > 0, "the regex trigger was not created")
+
+            feedTriggers("\nSpecOrdinaryGagged\n")
+            local spec = _G.TrigSpec
+            deselect()
+
+            assert.are.equal(1, spec.fired, "the trigger did not fire on the fed line")
+            assert.are.equal(spec.linesBefore - 1, spec.linesAfter, "the trigger did not gag the line it matched")
+            assert.is_false(spec.wasPrompt, "isPrompt() was true on an ordinary line the trigger had just gagged")
+        end)
+
+        it("tempPromptTrigger stops firing once its expiration count is used up", function()
+            -- the second argument is the whole point of the expiring form, and
+            -- until a prompt could be fed there was no way to see it run out
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function() _G.TrigSpec.fired = _G.TrigSpec.fired + 1 end, 1)
+            assert.is_number(liveTriggerId)
+            assert.is_true(liveTriggerId > 0)
+
+            local ok, msg = feedTelnet("SpecPromptExpiresOne> <T_IAC><T_GA>")
+            local afterFirst = _G.TrigSpec.fired
+            feedTelnet("\r\n")
+            feedTelnet("SpecPromptExpiresTwo> <T_IAC><T_GA>")
+            local afterSecond = _G.TrigSpec.fired
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, afterFirst, "the expiring prompt trigger did not fire on the first prompt")
+            assert.are.equal(1, afterSecond, "the prompt trigger fired again after its one firing was used up")
+        end)
+
+    end)
+
+    -- The delete of an expired or killed trigger is deferred until the outermost
+    -- processDataStream() pass ends, so everything between the queueing and the
+    -- free has to behave as if the trigger were already gone.
+    describe("deferred deletion", function()
+
+        it("does not let an expired trigger fire again from a nested feed", function()
+            local fires = 0
+            -- expireAfter = 1, so this must fire exactly once no matter how many
+            -- lines reach it
+            tempRegexTrigger("^expiry_reentry$", function() fires = fires + 1 end, 1)
+
+            local nestedFed = false
+            local reentrantId = tempRegexTrigger("^expiry_reentry$", function()
+                if not nestedFed then
+                    nestedFed = true
+                    -- re-enters trigger processing while the expired trigger is
+                    -- still queued for deletion
+                    feedTriggers("\nexpiry_reentry\n")
+                end
+            end)
+            finally(function() killTrigger(reentrantId) end)
+
+            feedTriggers("\nexpiry_reentry\n")
+
+            assert.is_true(nestedFed, "the re-entrant trigger should have fed a nested line")
+            assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
+        end)
+
+        it("does not let an expiring trigger fire again from its own nested feed", function()
+            -- A separate defect from the one above, found while fixing it: the
+            -- expiry count is decremented at the end of match(), after execute()
+            -- has run, so a trigger whose own script re-feeds the matching line is
+            -- still at its old count and still active when the nested pass reaches
+            -- it. Fixing that means moving the expiry accounting ahead of
+            -- execute(), which also has to keep the "return true to extend the
+            -- expiry" contract working - out of scope for the deactivate() fix.
+            pending("expiry is accounted after execute(), so a self-refeeding trigger overshoots expireAfter")
+            local fires = 0
+            local nestedFed = false
+            tempRegexTrigger("^self_expiry_reentry$", function()
+                fires = fires + 1
+                if not nestedFed then
+                    nestedFed = true
+                    feedTriggers("\nself_expiry_reentry\n")
+                end
+            end, 1)
+
+            feedTriggers("\nself_expiry_reentry\n")
+
+            assert.is_true(nestedFed)
+            assert.are.equal(1, fires, "a trigger with expireAfter = 1 must not fire a second time")
+        end)
+
+        it("does not let enableTrigger revive a trigger that is waiting to be freed", function()
+            -- a killed trigger stays findable by name until the deferred delete
+            -- runs, so enabling it again would resurrect it
+            local name = "Spec Enable Resurrection"
+            _G.EnableResurrectionSpec = 0
+            finally(function() _G.EnableResurrectionSpec = nil end)
+
+            tempComplexRegexTrigger(name, "^enable_resurrection$",
+                [[_G.EnableResurrectionSpec = _G.EnableResurrectionSpec + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.is_true(killTrigger(name))
+            assert.is_false(enableTrigger(name), "a killed trigger must not be re-enabled before it is freed")
+
+            feedTriggers("\nenable_resurrection\n")
+
+            assert.are.equal(0, _G.EnableResurrectionSpec, "a killed trigger must not fire, whatever enableTrigger was told")
+        end)
+
+        it("keeps a same-named permanent trigger in the lookup table", function()
+            local name = "Spec Name Eviction"
+            _G.NameEvictionSpec = 0
+            finally(function()
+                disableTrigger(name)
+                _G.NameEvictionSpec = nil
+            end)
+
+            -- permanent triggers cannot be deleted from Lua, so earlier local runs
+            -- leave same-named ones behind: work from a relative baseline
+            assert.is_true(permRegexTrigger(name, "", {"^name_eviction_perm$"}, [[_G.NameEvictionSpec = (_G.NameEvictionSpec or 0) + 1]]) > 0)
+            local permanents = exists(name, "trigger")
+            assert.is_true(permanents >= 1)
+
+            -- tempComplexRegexTrigger is the one temporary-trigger API that takes a
+            -- user-supplied name, so sharing one with a permanent trigger is easy.
+            -- Note it copies the pattern list of the trigger it finds under that
+            -- name, so this temporary also carries ^name_eviction_perm$ - harmless
+            -- here, since it is killed before anything is fed
+            tempComplexRegexTrigger(name, "^name_eviction_temp$", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.are.equal(permanents + 1, exists(name, "trigger"))
+
+            killTrigger(name) -- only the temporary one can be killed
+            feedTriggers("\nname_eviction_perm\n") -- the pass ends, flushing the deferred delete
+
+            assert.are.equal(permanents, exists(name, "trigger"), "only the temporary trigger should leave the lookup table")
+            assert.is_true(_G.NameEvictionSpec >= 1, "the permanent trigger should still fire")
+            assert.is_true(disableTrigger(name), "the permanent trigger must still be reachable by name")
+        end)
+
+    end)
+
+    -- Multiline triggers: a state completes only once every pattern has matched
+    -- within the condition line delta. tempComplexRegexTrigger() is the only Lua
+    -- function that can set that delta, and calling it twice under one name
+    -- accumulates the patterns into a single trigger - so each spec below uses a
+    -- name of its own, because a second call against a surviving trigger would
+    -- add a third condition rather than start afresh.
+    describe("multiline trigger state", function()
+
+        it("fires once with the captures from both of its lines", function()
+            _G.MLCaps = {fires = 0, caps = ""}
+            local code = [==[
+                _G.MLCaps.fires = _G.MLCaps.fires + 1
+                _G.MLCaps.caps = multimatches[1][2] .. "," .. multimatches[2][2]
+            ]==]
+            tempComplexRegexTrigger("SpecMLCaps", [[^one (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecMLCaps", [[^two (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+
+            feedTriggers("one aaa\n")
+            feedTriggers("two bbb\n")
+
+            local fires, caps = _G.MLCaps.fires, _G.MLCaps.caps
+            killTrigger("SpecMLCaps")
+            _G.MLCaps = nil
+            assert.are.equal(1, fires)
+            assert.are.equal("aaa,bbb", caps, "both lines' captures should reach the script through multimatches")
+        end)
+
+        -- Both sides are asserted: a count of zero on its own is also what a
+        -- silently broken setup produces.
+        it("drops a state whose line delta has run out", function()
+            _G.MLExpiry = 0
+            local code = [==[_G.MLExpiry = _G.MLExpiry + 1]==]
+            tempComplexRegexTrigger("SpecMLExpiry", [[^first$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+            tempComplexRegexTrigger("SpecMLExpiry", [[^second$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+
+            feedTriggers("first\n")
+            feedTriggers("second\n")
+            local consecutive = _G.MLExpiry
+            feedTriggers("first\n")
+            feedTriggers("padding\n")
+            feedTriggers("second\n")
+            local padded = _G.MLExpiry
+
+            killTrigger("SpecMLExpiry")
+            _G.MLExpiry = nil
+            assert.are.equal(1, consecutive, "a state within its line delta should complete")
+            assert.are.equal(1, padded, "a state whose delta has run out should not be completed by a later line")
+        end)
+
+        it("passes a filtering trigger's captures to its children", function()
+            _G.MLFilter = {}
+            tempComplexRegexTrigger("SpecMLFilterParent", [[^hit (\w+) for (\d+)$]], [==[ ]==], 0, 0, 0, 1, 0, 0, 0, 0, 0, 0)
+            permRegexTrigger("SpecMLFilterChild", "SpecMLFilterParent", {[[(\w+)]]},
+                             [==[table.insert(_G.MLFilter, matches[2])]==])
+
+            feedTriggers("hit orc for 12\n")
+
+            local seen = table.concat(_G.MLFilter, ",")
+            killTrigger("SpecMLFilterChild")
+            killTrigger("SpecMLFilterParent")
+            _G.MLFilter = nil
+            assert.are.equal("orc,12", seen, "a filter trigger should offer each of its captures to its children")
+        end)
+
+        it("fires a state created and completed inside a nested feed exactly once", function()
+            _G.MLNested = 0
+            tempComplexRegexTrigger("SpecMLNestedOuter", [[^outer$]], [===[
+                tempComplexRegexTrigger("SpecMLNestedInner", [[^alpha$]], [==[_G.MLNested = _G.MLNested + 1]==], 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                tempComplexRegexTrigger("SpecMLNestedInner", [[^beta$]], [==[_G.MLNested = _G.MLNested + 1]==], 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                feedTriggers("alpha\n")
+                feedTriggers("beta\n")
+            ]===], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+            feedTriggers("outer\n")
+
+            local fires = _G.MLNested
+            killTrigger("SpecMLNestedInner")
+            killTrigger("SpecMLNestedOuter")
+            _G.MLNested = nil
+            assert.are.equal(1, fires, "a state created and completed within a nested pass should fire once, in that pass")
+        end)
+
+        it("fires both states that complete on the same line", function()
+            _G.MLDrain = 0
+            local code = [==[_G.MLDrain = _G.MLDrain + 1]==]
+            tempComplexRegexTrigger("SpecMLDrain", [[^ss$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5)
+            tempComplexRegexTrigger("SpecMLDrain", [[^tt$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5)
+
+            -- two "ss" lines leave two states each waiting for "tt", so the "tt"
+            -- line completes both of them at once
+            feedTriggers("ss\n")
+            feedTriggers("ss\n")
+            feedTriggers("tt\n")
+
+            local fires = _G.MLDrain
+            killTrigger("SpecMLDrain")
+            _G.MLDrain = nil
+            assert.are.equal(2, fires, "every state completing on one line should fire, not just the first")
+        end)
+
+        it("keeps firing for the length set by fireLength", function()
+            _G.MLKeep = 0
+            local code = [==[_G.MLKeep = _G.MLKeep + 1]==]
+            tempComplexRegexTrigger("SpecMLKeep", [[^go$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3)
+            tempComplexRegexTrigger("SpecMLKeep", [[^now$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3)
+
+            feedTriggers("go\n")
+            feedTriggers("now\n")
+            feedTriggers("filler\n")
+            feedTriggers("filler\n")
+
+            local fires = _G.MLKeep
+            killTrigger("SpecMLKeep")
+            _G.MLKeep = nil
+            assert.are.equal(3, fires, "fireLength should keep the trigger firing on the lines after it completed")
+        end)
+
+        it("carries each line's named captures into multimatches", function()
+            _G.MLNamed = {}
+            local code = [==[
+                _G.MLNamed.positional = multimatches[1][2]
+                _G.MLNamed.first = multimatches[1]["alpha"]
+                _G.MLNamed.second = multimatches[2]["beta"]
+                _G.MLNamed.absent = multimatches[1]["beta"]
+            ]==]
+            tempComplexRegexTrigger("SpecMLNamed", [[^named one (?<alpha>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecMLNamed", [[^named two (?<beta>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+
+            feedTriggers("named one aaa\n")
+            feedTriggers("named two bbb\n")
+
+            local named = _G.MLNamed
+            killTrigger("SpecMLNamed")
+            _G.MLNamed = nil
+            assert.are.equal("aaa", named.positional, "the state should have completed at all")
+            assert.are.equal("aaa", named.first, "a name from the first line should reach that line's multimatches entry")
+            assert.are.equal("bbb", named.second, "a name from the second line should reach that line's multimatches entry")
+            assert.is_nil(named.absent, "each line only carries the names its own pattern defined")
+        end)
+
+        -- Mudlet issue #10403: an expiring trigger runs its script through a different
+        -- call path (so a true return can extend the expiry), and that path used to
+        -- build multimatches without the named captures
+        it("carries named captures into multimatches when the trigger has an expiry count", function()
+            _G.MLNamedExpiry = {}
+            local code = [==[
+                _G.MLNamedExpiry.positional = multimatches[1][2]
+                _G.MLNamedExpiry.first = multimatches[1]["alpha"]
+                _G.MLNamedExpiry.second = multimatches[2]["beta"]
+                _G.MLNamedExpiry.absent = multimatches[1]["beta"]
+            ]==]
+            -- an expiry of 5 would otherwise outlive a feedTriggers() that raises
+            finally(function()
+                killTrigger("SpecMLNamedExpiry")
+                _G.MLNamedExpiry = nil
+            end)
+            tempComplexRegexTrigger("SpecMLNamedExpiry", [[^expiring one (?<alpha>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 5)
+            tempComplexRegexTrigger("SpecMLNamedExpiry", [[^expiring two (?<beta>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 5)
+
+            feedTriggers("expiring one aaa\n")
+            feedTriggers("expiring two bbb\n")
+
+            local named = _G.MLNamedExpiry
+            killTrigger("SpecMLNamedExpiry")
+            _G.MLNamedExpiry = nil
+            assert.are.equal("aaa", named.positional, "the state should have completed at all")
+            assert.are.equal("aaa", named.first, "a name from the first line should reach that line's multimatches entry")
+            assert.are.equal("bbb", named.second, "a name from the second line should reach that line's multimatches entry")
+            assert.is_nil(named.absent, "each line only carries the names its own pattern defined")
+        end)
+
+        -- a Lua function as the body runs through yet another call path, which
+        -- used to set matches but never multimatches
+        for _, expiry in ipairs({0, 5}) do
+            it("gives a Lua function body multimatches" .. (expiry > 0 and " with an expiry count" or ""), function()
+                local name = "SpecMLFunction" .. expiry
+                local seen = {}
+                finally(function()
+                    killTrigger(name)
+                end)
+                local body = function()
+                    seen.fired = (seen.fired or 0) + 1
+                    seen.count = #multimatches
+                    seen.positional = multimatches[1][2]
+                    seen.first = multimatches[1]["alpha"]
+                    seen.second = multimatches[2]["beta"]
+                end
+                for _, pattern in ipairs({[[^function one (?<alpha>\w+)$]], [[^function two (?<beta>\w+)$]]}) do
+                    if expiry > 0 then
+                        tempComplexRegexTrigger(name, pattern, body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, expiry)
+                    else
+                        tempComplexRegexTrigger(name, pattern, body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                    end
+                end
+
+                feedTriggers("function one aaa\n")
+                feedTriggers("function two bbb\n")
+
+                assert.are.equal(1, seen.fired, "the state should have completed and run the function once")
+                assert.are.same({count = 2, positional = "aaa", first = "aaa", second = "bbb"},
+                    {count = seen.count, positional = seen.positional, first = seen.first, second = seen.second})
+            end)
+        end
+
+        -- the captures are handed to a function body only while its multiline
+        -- state is firing, not to whatever function-bodied trigger fires later
+        it("does not hand a multiline function body's captures to a later trigger", function()
+            local seen = {}
+            local laterId
+            finally(function()
+                killTrigger("SpecMLFunctionLeak")
+                if laterId then
+                    killTrigger(laterId)
+                end
+            end)
+            local body = function()
+                seen.multiline = #multimatches
+            end
+            tempComplexRegexTrigger("SpecMLFunctionLeak", [[^leak one (\w+)$]], body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecMLFunctionLeak", [[^leak two (\w+)$]], body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            laterId = tempRegexTrigger("^leak later$", function()
+                seen.later = #multimatches
+            end)
+
+            feedTriggers("leak one aaa\n")
+            feedTriggers("leak two bbb\n")
+            feedTriggers("leak later\n")
+
+            assert.are.equal(2, seen.multiline, "the multiline state should have completed with both lines")
+            assert.are.equal(0, seen.later, "a later single-line trigger saw the multiline trigger's multimatches")
+        end)
+
+    end)
+
+    -- A colour-pattern trigger that is the child of a filter parent ("only pass
+    -- matches") has to fire when the filtered capture carries the wanted colours,
+    -- and only scan that capture. No Lua API builds that tree - only the perm*
+    -- family takes a parent name, and none of them makes a colour pattern - so
+    -- it comes out of a package fixture. A perl child rides along in the same
+    -- fixture: it is measured rather than scanned, which is what the multibyte
+    -- case below needs.
+    describe("colour trigger children of a filter parent", function()
+
+        local packageName = "mudlet-spec-colorfilter"
+        local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+        assert(specDirectory, "Trigger_spec.lua has to be run from a file so that it can find its fixtures")
+        local fixture = specDirectory .. "/fixtures/packages/sources/" .. packageName .. "/" .. packageName .. ".xml"
+
+        if not os.getenv("MUDLET_TEST_MODE") then
+            it("needs test mode", function()
+                pending("installing the filter-tree fixture needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+            end)
+            return
+        end
+
+        local previousEncoding
+
+        setup(function()
+            -- the multibyte block below is not encoding agnostic: feedTriggers
+            -- transcodes its UTF-8 argument into the server encoding, and under
+            -- anything else the capture stops being multibyte at all
+            previousEncoding = getServerEncoding()
+            assert.is_true(setServerEncoding("UTF-8"), "the profile has to be able to carry the multibyte capture below")
+            _G.ColorFilterSpec = {}
+            removePackage(packageName)
+            local reason
+            for _ = 1, 3 do
+                if packageInstalled(packageName) then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = installPackage(fixture)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_true(packageInstalled(packageName), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+        end)
+
+        teardown(function()
+            if previousEncoding then
+                setServerEncoding(previousEncoding)
+            end
+            local gone, reason = removePackage(packageName)
+            assert.is_true(gone, "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            _G.ColorFilterSpec = nil
+        end)
+
+        before_each(function()
+            _G.ColorFilterSpec = {}
+        end)
+
+        -- feedTriggers refuses text the server encoding cannot carry, which
+        -- would leave the assertions below reading a line that never arrived
+        local function feed(text)
+            local ok, message = feedTriggers(text)
+            assert.is_true(ok, "feedTriggers refused: " .. tostring(message))
+        end
+
+        it("fires a top-level colour trigger on the colour it was given", function()
+            local id = tempAnsiColorTrigger(3, -1, [[_G.ColorFilterSpec.topLevelFired = true]])
+            feed("\27[33mtop level control\27[0m\n")
+            killTrigger(id)
+            assert.is_true(_G.ColorFilterSpec.topLevelFired, "a top-level colour trigger should fire on yellow text")
+        end)
+
+        it("fires a colour child on a filter parent's yellow capture", function()
+            feed("\27[33mhello world\27[0m\n")
+            assert.is_true(_G.ColorFilterSpec.filterChildFired,
+                "a colour trigger child of a filter parent should fire on a yellow capture")
+        end)
+
+        it("scans only the parent's capture, not the whole line", function()
+            -- only "hello" is yellow while the parent passes just "world" on, so
+            -- the child must see no yellow at all
+            feed("\27[33mhello\27[0m world\n")
+            assert.is_nil(_G.ColorFilterSpec.captureChildFired,
+                "a colour child must not fire when the yellow text lies outside the parent's capture")
+
+            feed("hello \27[33mworld\27[0m\n")
+            assert.is_true(_G.ColorFilterSpec.captureChildFired,
+                "a colour child should fire when the parent's capture is yellow")
+        end)
+
+        it("offers a perl child the whole of a multibyte capture", function()
+            -- the child's pattern is anchored at both ends, so it only matches if
+            -- the capture it is offered runs to the end. The dragon is four UTF-8
+            -- bytes but two UTF-16 units (what QString::length() counts), and the
+            -- Cyrillic two bytes each, so a length taken in units rather than
+            -- bytes would stop the child short of its anchor.
+            feed("Цель: 🐉 Оружие: меч\n")
+            assert.are.equal("меч", _G.ColorFilterSpec.perlChildWeapon)
+        end)
+
+    end)
+
+    -- The pattern kinds and options below have no Lua API that reaches them:
+    -- only a package can carry a substring, exact or start-of-line trigger that
+    -- also recolours what it matched, a substring trigger with "match all"
+    -- turned on, a lua code condition, a line spacer, or a trigger that sends a
+    -- command of its own. They all sit in one fixture, disabled, and each spec
+    -- enables just the one it is about.
+    describe("trigger kinds that only a package can carry", function()
+
+        local packageName = "mudlet-spec-triggerkinds"
+        local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+        assert(specDirectory, "Trigger_spec.lua has to be run from a file so that it can find its fixtures")
+        local fixture = specDirectory .. "/fixtures/packages/sources/" .. packageName .. "/" .. packageName .. ".xml"
+
+        if not os.getenv("MUDLET_TEST_MODE") then
+            it("needs test mode", function()
+                pending("installing the trigger-kinds fixture needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+            end)
+            return
+        end
+
+        setup(function()
+            _G.TriggerKindsSpec = {}
+            removePackage(packageName)
+            local reason
+            for _ = 1, 3 do
+                if packageInstalled(packageName) then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = installPackage(fixture)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_true(packageInstalled(packageName), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+        end)
+
+        teardown(function()
+            local gone, reason = removePackage(packageName)
+            assert.is_true(gone, "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            _G.TriggerKindsSpec = nil
+        end)
+
+        before_each(function()
+            _G.TriggerKindsSpec = {}
+        end)
+
+        -- every top-level trigger in the fixture is saved disabled, so nothing
+        -- it carries can fire in the thousands of specs that run after these;
+        -- the children of the filter parents are saved enabled, as they only
+        -- ever see what their disabled parent hands them
+        local function withTrigger(name, body)
+            -- busted keeps only the last finally() a test registers, so a body
+            -- that needs cleanup of its own hands it over rather than
+            -- registering another
+            local ownCleanup
+            enableTrigger(packageName .. " " .. name)
+            finally(function()
+                if ownCleanup then
+                    ownCleanup()
+                end
+                disableTrigger(packageName .. " " .. name)
+                deselect()
+            end)
+            body(function(cleanup) ownCleanup = cleanup end)
+        end
+
+        it("collects every occurrence of a match-all substring pattern", function()
+            withTrigger("matchall three", function()
+                feedTriggers("tkabc only once\n")
+                assert.are.equal(1, _G.TriggerKindsSpec.matchAllThree, "a line with one occurrence gives one capture")
+
+                feedTriggers("tkabc tkabx tzzzc tkabc\n")
+                local line = getLineNumber()
+                assert.are.equal(2, _G.TriggerKindsSpec.matchAllThree, "match all should capture both occurrences")
+
+                -- "tkabx" shares the needle's first characters and "tzzzc" its
+                -- first and last, so a search that stopped comparing properly
+                -- would colour one of them too
+                moveCursor(0, line)
+                assert.is_true(selectString("tkabc", 2) >= 0)
+                local second = {getFgColor()}
+                deselect()
+                assert.is_true(selectString("tzzzc", 1) >= 0)
+                local nearMiss = {getFgColor()}
+                deselect()
+                assert.are.same(color_table.red, second, "the second occurrence should be recoloured as well as the first")
+                assert.are.same({192, 192, 192}, nearMiss, "text that only looks like the needle must be left alone")
+            end)
+        end)
+
+        it("collects every occurrence of a two character needle", function()
+            withTrigger("matchall two", function()
+                feedTriggers("qwerty qxerty qw\n")
+                assert.are.equal(2, _G.TriggerKindsSpec.matchAllTwo,
+                                 "a needle with nothing between its first and last character still has to match")
+            end)
+        end)
+
+        it("collects every occurrence of a single character needle", function()
+            withTrigger("matchall one", function()
+                feedTriggers("wxwxw\n")
+                assert.are.equal(3, _G.TriggerKindsSpec.matchAllOne)
+            end)
+        end)
+
+        it("recolours an exact match and ignores a longer line", function()
+            withTrigger("colourise exact", function()
+                feedTriggers("tkexact line trailing\n")
+                assert.is_nil(_G.TriggerKindsSpec.exactFired, "an exact match trigger should not fire on a line that only starts with its pattern")
+
+                feedTriggers("tkexact line\n")
+                local line = getLineNumber()
+                assert.is_true(_G.TriggerKindsSpec.exactFired)
+
+                moveCursor(0, line)
+                assert.is_true(selectString("tkexact", 1) >= 0)
+                local foreground = {getFgColor()}
+                deselect()
+                assert.are.same(color_table.red, foreground, "an exact match trigger should recolour the line it matched")
+            end)
+        end)
+
+        it("recolours a start of line match and ignores the same text later on", function()
+            withTrigger("colourise start", function()
+                feedTriggers("not at tkstart\n")
+                assert.is_nil(_G.TriggerKindsSpec.startFired, "a start of line trigger should not fire on its text elsewhere in the line")
+
+                feedTriggers("tkstart of the line\n")
+                local line = getLineNumber()
+                assert.is_true(_G.TriggerKindsSpec.startFired)
+
+                moveCursor(0, line)
+                assert.is_true(selectString("tkstart", 1) >= 0)
+                local matched = {getFgColor()}
+                deselect()
+                assert.is_true(selectString("line", 1) >= 0)
+                local rest = {getFgColor()}
+                deselect()
+                assert.are.same(color_table.red, matched, "the matched text should be recoloured")
+                assert.are.same({192, 192, 192}, rest, "only the pattern itself is the match, not the whole line")
+            end)
+        end)
+
+        it("fires a lua code condition only while it returns true", function()
+            withTrigger("lua condition", function()
+                _G.TriggerKindsSpec.allow = false
+                feedTriggers("tkcondition here\n")
+                assert.is_nil(_G.TriggerKindsSpec.luaConditionFired, "a condition returning false should not fire the trigger")
+
+                _G.TriggerKindsSpec.allow = true
+                feedTriggers("tkcondition here\n")
+                assert.are.equal(1, _G.TriggerKindsSpec.luaConditionFired, "a condition returning true should fire the trigger")
+
+                feedTriggers("nothing to see\n")
+                assert.are.equal(1, _G.TriggerKindsSpec.luaConditionFired, "the condition reads the line, so an unrelated line should not fire it")
+            end)
+        end)
+
+        it("completes a multiline trigger through a line spacer", function()
+            withTrigger("line spacer", function()
+                feedTriggers("tkspacer start\n")
+                feedTriggers("tkspacer end\n")
+                assert.is_nil(_G.TriggerKindsSpec.spacerFired, "the end line arrived before the spacer had counted its lines")
+
+                -- let the state above run past its line delta before starting a new one
+                for i = 1, 8 do
+                    feedTriggers("spacer flush " .. i .. "\n")
+                end
+                assert.is_nil(_G.TriggerKindsSpec.spacerFired)
+
+                feedTriggers("tkspacer start\n")
+                feedTriggers("spacer gap one\n")
+                feedTriggers("spacer gap two\n")
+                feedTriggers("tkspacer end\n")
+                assert.are.equal(1, _G.TriggerKindsSpec.spacerFired, "the end line should complete the state once the spacer has counted its lines")
+
+                for i = 1, 8 do
+                    feedTriggers("spacer settle " .. i .. "\n")
+                end
+                assert.are.equal(1, _G.TriggerKindsSpec.spacerFired, "no second state should be left waiting behind it")
+            end)
+        end)
+
+        -- Only a perl regex contributes named captures, but every matched pattern
+        -- owns a row of multimatches - so the rows that have none still have to
+        -- take an empty slot, or a later pattern's named capture surfaces on an
+        -- earlier pattern's row (#8748).
+        it("keeps a named capture with its own pattern past patterns that have none", function()
+            withTrigger("named chain", function()
+                feedTriggers("tknamed alpha\n")
+                feedTriggers("chain gap\n")
+                feedTriggers("tkmiddle here\n")
+                feedTriggers("tknamed end omega\n")
+
+                local seen = _G.TriggerKindsSpec.namedChain
+                assert.is_table(seen, "the multiline trigger never completed, so nothing was read")
+                assert.are.equal(4, seen.rows, "a pattern of the chain took no multimatches row of its own")
+                assert.are.equal("alpha", seen.first, "the first pattern's named capture left row 1")
+                assert.are.equal("omega", seen.last, "the last pattern's named capture was not in its own row")
+                assert.is_nil(seen.spacerName, "the line spacer's row should carry no named capture")
+                assert.is_nil(seen.middleName, "the substring pattern's row should carry no named capture")
+            end)
+        end)
+
+        it("sends the command a trigger carries", function()
+            withTrigger("command", function(cleanup)
+                local aliasId = tempAlias("^tkcommand sent$", [==[_G.TriggerKindsSpec.commandSeen = true]==])
+                cleanup(function() killAlias(aliasId) end)
+
+                feedTriggers("tkcommand nothing\n")
+                assert.is_nil(_G.TriggerKindsSpec.commandSeen, "the trigger did not match, so nothing should have been sent")
+
+                feedTriggers("tkcommand trigger\n")
+                assert.is_true(_G.TriggerKindsSpec.commandSeen, "a trigger's command should be sent the way a typed one is")
+            end)
+        end)
+
+        -- A filter ("only pass matches") parent hands its children the text it
+        -- matched instead of the line, whatever kind of pattern did the matching.
+        -- Each child below matches ^(.+)$ and records what it was given.
+        describe("filter parents", function()
+
+            it("passes a start of line match on as just the matched text", function()
+                withTrigger("filter start", function()
+                    feedTriggers("not tkfstart at the start\n")
+                    assert.is_nil(_G.TriggerKindsSpec.filterStartSeen, "the parent should not have matched, so its child should see nothing")
+
+                    feedTriggers("tkfstart and the rest of the line\n")
+                    assert.are.same({"tkfstart"}, _G.TriggerKindsSpec.filterStartSeen)
+                end)
+            end)
+
+            it("passes an exact match on to its children", function()
+                withTrigger("filter exact", function()
+                    feedTriggers("tkfexact line and more\n")
+                    assert.is_nil(_G.TriggerKindsSpec.filterExactSeen, "a longer line is not an exact match, so the child should see nothing")
+
+                    feedTriggers("tkfexact line\n")
+                    assert.are.same({"tkfexact line"}, _G.TriggerKindsSpec.filterExactSeen)
+                end)
+            end)
+
+            it("passes a substring match on as just the matched text", function()
+                withTrigger("filter substring", function()
+                    feedTriggers("somewhere tkfsub in here\n")
+                    assert.are.same({"tkfsub"}, _G.TriggerKindsSpec.filterSubstringSeen)
+                end)
+            end)
+
+            it("passes every coloured run on as its own capture", function()
+                withTrigger("filter colour", function()
+                    feedTriggers("plain \27[32mfirst run\27[0m plain \27[32msecond\27[0m end\n")
+                    assert.are.same({"first run", "second"}, _G.TriggerKindsSpec.filterColourSeen)
+                end)
+            end)
+
+            -- a multiline filter passes on the captures of every line of the
+            -- state: a regex line's capture groups without its whole match, and
+            -- the matched text of a line whose pattern has no groups
+            it("passes a completed multiline state's captures on", function()
+                withTrigger("multiline filter", function()
+                    feedTriggers("tkmlf alpha\n")
+                    assert.is_nil(_G.TriggerKindsSpec.multilineFilterSeen, "nothing should pass before the state completes")
+
+                    feedTriggers("then tkmlf end of it\n")
+                    assert.are.equal(1, _G.TriggerKindsSpec.multilineFilterFired, "the multiline parent should have fired")
+                    assert.are.same({"alpha", "tkmlf end"}, _G.TriggerKindsSpec.multilineFilterSeen)
+                end)
+            end)
+
+        end)
+
+        it("completes a multiline trigger through start of line, exact, lua and substring conditions", function()
+            withTrigger("multiline kinds", function()
+                feedTriggers("tkmlk start here\n")
+                feedTriggers("tkmlk exact line\n")
+                feedTriggers("the tkmlk lua line\n")
+                assert.is_nil(_G.TriggerKindsSpec.multilineKinds, "the state should still be waiting for its last condition")
+
+                feedTriggers("it has tkmlk middle in it\n")
+                -- start of line, exact and substring conditions capture their
+                -- own pattern; a lua condition captures nothing but still takes
+                -- its row
+                assert.are.same({"tkmlk start", "tkmlk exact line", "", "tkmlk middle"}, _G.TriggerKindsSpec.multilineKinds)
+
+                -- a longer line is no exact match, so the state has to stay on
+                -- that condition and the lines for the later ones cannot finish it
+                _G.TriggerKindsSpec.multilineKinds = nil
+                feedTriggers("tkmlk start here\n")
+                feedTriggers("tkmlk exact line but longer\n")
+                feedTriggers("the tkmlk lua line\n")
+                feedTriggers("it has tkmlk middle in it\n")
+                assert.is_nil(_G.TriggerKindsSpec.multilineKinds, "a line only starting with the exact pattern satisfied the exact condition")
+            end)
+        end)
+
+        it("completes a multiline trigger on a prompt", function()
+            withTrigger("multiline prompt", function()
+                local ok, msg = feedTelnet("tkmlp ready\r\n")
+                assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+                feedTelnet("tkmlp not a prompt\r\n")
+                local beforePrompt = _G.TriggerKindsSpec.multilinePrompt
+
+                feedTelnet("tkmlp> <T_IAC><T_GA>")
+                local afterPrompt = _G.TriggerKindsSpec.multilinePrompt
+                -- the GA leaves the prompt line open for whatever comes next
+                feedTelnet("\r\n")
+
+                assert.is_nil(beforePrompt, "an ordinary line should not satisfy a prompt condition")
+                assert.are.equal(1, afterPrompt, "the prompt should complete the state")
+            end)
+        end)
+
+    end)
+
+    -- A trigger created from another trigger's script (tempTrigger() & Co.) still
+    -- gets to match the line being processed - room-capture scripts depend on it -
+    -- and a lineage of such triggers that keeps re-creating itself is stopped
+    -- rather than left to freeze the profile.
+    --
+    -- Block order is load-bearing. TriggerUnit reports an abort to the console at
+    -- most once every ten seconds, so every block that asserts the report is
+    -- absent runs before the first runaway, and the single block that reads the
+    -- report is that first runaway - of the whole suite, since nothing else in it
+    -- makes one. The later runaways read the stopped lineage itself instead,
+    -- which is not throttled. If anything ever does trip the budget earlier, the
+    -- absence assertions go quietly vacuous and "names the trigger in the abort
+    -- report" is what fails to say so.
+    describe("triggers created while a line is being processed", function()
+
+        -- TriggerUnit::scmMaxSameLineGenerations, which has no Lua accessor
+        local maxGenerations = 1000
+        local abortReport = "Trigger processing stopped to prevent a freeze"
+
+        local created = {}
+        local permanentNames = {}
+
+        local function track(id)
+            -- a nil here would not grow the table, so the trigger would be left
+            -- armed for the rest of the suite without anything saying so
+            assert(type(id) == "number", "arming a trigger did not return an id")
+            created[#created + 1] = id
+            return id
+        end
+
+        local function trackPermanent(name)
+            permanentNames[#permanentNames + 1] = name
+            return name
+        end
+
+        -- The report is printed onto the line the runaway text is still on, so
+        -- the mark is that line rather than the one after it.
+        local function consoleMark()
+            return getLastLineNumber("main")
+        end
+
+        -- The console wraps the report over several buffer lines and eats the
+        -- space it broke at, so both sides are matched with all whitespace gone.
+        local function consoleSince(mark)
+            local last = getLastLineNumber("main")
+            -- getLines() answers an out-of-range index with "ERROR: invalid line
+            -- number" rather than failing, which would make every scan below
+            -- match nothing and pass
+            assert.is_true(mark <= last, "the console buffer trimmed past the mark, so this scan would read outside it")
+            return (table.concat(getLines("main", mark, last + 1), ""):gsub("%s+", ""))
+        end
+
+        -- The report is a tr() string, so the blocks that assert it is absent
+        -- stop meaning anything if the wording changes; the one block that
+        -- asserts it is present is what fails to say so.
+        local function contains(haystack, needle)
+            return haystack:find((needle:gsub("%s+", "")), 1, true) ~= nil
+        end
+
+        before_each(function()
+            created = {}
+            permanentNames = {}
+            _G.SameLineSpec = {}
+        end)
+
+        after_each(function()
+            -- a runaway arms a thousand triggers that outlive their line, and
+            -- left behind every one of them would be scanned on every line the
+            -- rest of the suite feeds
+            for _, id in ipairs(created) do
+                killTrigger(id)
+            end
+            -- permanent items have no removal API, so they are switched off
+            -- instead; that state is saved, so re-running the suite against the
+            -- same profile finds them inert rather than firing. The return is
+            -- not checked because a child of a temporary parent goes when its
+            -- parent is killed above, and answers "not found" here.
+            for _, name in ipairs(permanentNames) do
+                disableTrigger(name)
+            end
+            created = {}
+            permanentNames = {}
+            _G.SameLineSpec = {}
+        end)
+
+        teardown(function()
+            _G.SameLineSpec = nil
+        end)
+
+        it("lets a temp trigger created in a trigger match the current line", function()
+            local captured = {}
+            track(tempRegexTrigger("^Room 74042", function()
+                track(tempRegexTrigger("^(.*)$", function() captured[#captured + 1] = matches[2] end, 200))
+            end))
+
+            feedTriggers("Room 74042: The Bitter Almond Grove\n")
+            feedTriggers("Exits: North South West\n")
+
+            assert.are.equal("Room 74042: The Bitter Almond Grove|Exits: North South West", table.concat(captured, "|"),
+                "the temp trigger created on the room title line should capture that same line first, then the next line")
+        end)
+
+        it("offers a new trigger the current line after the existing ones", function()
+            local order = {}
+            track(tempRegexTrigger("^o$", function()
+                order[#order + 1] = "first"
+                track(tempRegexTrigger("^o$", function() order[#order + 1] = "created" end))
+            end))
+            track(tempRegexTrigger("^o$", function() order[#order + 1] = "second" end))
+
+            feedTriggers("o\n")
+
+            assert.are.equal("first,second,created", table.concat(order, ","),
+                "the mid-pass trigger should fire on the current line after all pre-existing triggers")
+        end)
+
+        it("lets a chain of creations all match the current line", function()
+            local chain = {}
+            track(tempRegexTrigger("^c$", function()
+                chain[#chain + 1] = "creator"
+                track(tempRegexTrigger("^c$", function()
+                    chain[#chain + 1] = "A"
+                    track(tempRegexTrigger("^c$", function() chain[#chain + 1] = "B" end))
+                end))
+            end))
+
+            feedTriggers("c\n")
+
+            assert.are.equal("creator,A,B", table.concat(chain, ","),
+                "each generation of mid-pass triggers should still match the current line")
+        end)
+
+        it("spends a single shot on the line that created it", function()
+            local expiryLine = ""
+            track(tempRegexTrigger("^e", function()
+                track(tempRegexTrigger("^(.*)$", function() expiryLine = expiryLine .. matches[2] .. ";" end, 1))
+            end, 1))
+
+            feedTriggers("e one\n")
+            feedTriggers("e two\n")
+
+            assert.are.equal("e one;", expiryLine,
+                "the single-shot temp trigger should fire once, on the line that created it")
+        end)
+
+        it("starts a mid-pass line trigger on the current line", function()
+            local lineGrabs = {}
+            track(tempRegexTrigger("^lstart$", function()
+                track(tempLineTrigger(0, 2, function() lineGrabs[#lineGrabs + 1] = getCurrentLine() end))
+            end, 1))
+
+            feedTriggers("lstart\n")
+            feedTriggers("second\n")
+            feedTriggers("third\n")
+
+            assert.are.equal("lstart,second", table.concat(lineGrabs, ","),
+                "the mid-pass line trigger should grab the creating line and the one after it")
+        end)
+
+        it("matches both the nested line and the outer one", function()
+            local nested = {}
+            track(tempRegexTrigger("^outer$", function()
+                track(tempRegexTrigger("^(.*)$", function() nested[#nested + 1] = matches[2] end, 10))
+                feedTriggers("inner\n")
+            end, 1))
+
+            feedTriggers("outer\n")
+
+            assert.are.equal("inner,outer", table.concat(nested, ","),
+                "the mid-pass trigger should match the nested line first, then the outer line it was created on")
+        end)
+
+        it("leaves a finite creation chain alone", function()
+            local fires = 0
+            local step
+            step = function()
+                fires = fires + 1
+                if fires < 10 then
+                    track(tempRegexTrigger("^chain$", step, 1))
+                end
+            end
+            track(tempRegexTrigger("^chain$", step, 1))
+
+            local mark = consoleMark()
+            feedTriggers("chain\n")
+
+            assert.are.equal(10, fires, "all ten generations of the finite chain should match the current line")
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a chain that ends on its own must not trip the same-line generation budget")
+        end)
+
+        it("does not stop a batch of unrelated creations", function()
+            -- each of them starts a creation chain of its own, and none of those
+            -- chains ever gets a second link
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            track(tempRegexTrigger("^bulkgate$", function()
+                for _ = 1, bulkCount do
+                    track(tempRegexTrigger("^bulkpay$", function() fires = fires + 1 end))
+                end
+            end, 1))
+
+            local mark = consoleMark()
+            feedTriggers("bulkgate\n")
+            feedTriggers("bulkpay\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a batch of unrelated triggers must not be mistaken for a trigger re-creating itself")
+            assert.are.equal(bulkCount, fires, "every trigger armed on the previous line should survive and fire")
+        end)
+
+        it("keeps both sets when two scripts arm past the budget between them", function()
+            -- anything armed from a script that predates the line starts a
+            -- lineage of its own, so neither script can exhaust the other's
+            local eachCount = (maxGenerations / 2) + 1
+            local firesA, firesB = 0, 0
+            track(tempRegexTrigger("^sharedgate$", function()
+                for _ = 1, eachCount do
+                    track(tempRegexTrigger("^payA$", function() firesA = firesA + 1 end))
+                end
+            end, 1))
+            track(tempRegexTrigger("^sharedgate$", function()
+                for _ = 1, eachCount do
+                    track(tempRegexTrigger("^payB$", function() firesB = firesB + 1 end))
+                end
+            end, 1))
+
+            feedTriggers("sharedgate\n")
+            feedTriggers("payA\n")
+            feedTriggers("payB\n")
+
+            assert.are.equal(eachCount, firesA, "the first script should keep every trigger it armed")
+            assert.are.equal(eachCount, firesB, "the second script should keep every trigger it armed")
+        end)
+
+        it("does not stop a batch armed by a trigger created on the same line", function()
+            -- creator and batch share a lineage here, which is the room-capture
+            -- shape: the room-title trigger creates the capture trigger, and the
+            -- capture trigger is what arms the batch
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            track(tempRegexTrigger("^deepgate$", function()
+                track(tempRegexTrigger("^deepgate$", function()
+                    for _ = 1, bulkCount do
+                        track(tempRegexTrigger("^deeppay$", function() fires = fires + 1 end))
+                    end
+                end, 1))
+            end, 1))
+
+            local mark = consoleMark()
+            feedTriggers("deepgate\n")
+            feedTriggers("deeppay\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a batch is one generation wherever it is armed from")
+            assert.are.equal(bulkCount, fires,
+                "every trigger armed by a trigger created on the same line should survive and fire")
+        end)
+
+        it("does not stop a batch of permanent creations", function()
+            -- the more painful loss: a "rebuild my triggers when the game says X"
+            -- routine arms permanent triggers in bulk
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            _G.SameLineSpec.permBulkStep = function() fires = fires + 1 end
+            _G.SameLineSpec.armPermBulk = function()
+                for i = 1, bulkCount do
+                    permRegexTrigger(trackPermanent("SpecPermBulk" .. i), "", {"^permpay$"}, [[_G.SameLineSpec.permBulkStep()]])
+                end
+            end
+            track(tempRegexTrigger("^permgate$", function() _G.SameLineSpec.armPermBulk() end, 1))
+
+            feedTriggers("permgate\n")
+            feedTriggers("permpay\n")
+
+            assert.are.equal(bulkCount, fires,
+                "every permanent trigger armed on the previous line should survive and fire")
+            assert.are.equal(1, isActive("SpecPermBulk" .. bulkCount, "trigger"),
+                "the permanent triggers should be left switched on")
+        end)
+
+        it("leaves a chain of exactly the budget's length alone", function()
+            -- the trip is on the generation after this one, which the runaway
+            -- block below pins from the other side: both land on the same fire
+            -- count, so what tells them apart is whether the lineage was stopped
+            local fires = 0
+            local armed = {}
+            local step
+            step = function()
+                fires = fires + 1
+                if fires <= maxGenerations then
+                    armed[#armed + 1] = track(tempRegexTrigger("^boundline$", step, 1))
+                end
+            end
+            armed[#armed + 1] = track(tempRegexTrigger("^boundline$", step, 1))
+
+            local mark = consoleMark()
+            feedTriggers("boundline\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a chain of exactly the budget's length ends on its own and must not be stopped")
+            assert.are.equal(maxGenerations + 1, fires, "the chain should run to its own end")
+            assert.are.equal(maxGenerations + 1, #armed, "the chain should stop arming of its own accord")
+        end)
+
+        it("starts fresh chains for a trigger that outlived its line", function()
+            -- otherwise it would carry its creator's chain around for the rest of
+            -- the session
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            track(tempRegexTrigger("^egate$", function()
+                track(tempRegexTrigger("^esecond$", function()
+                    for _ = 1, bulkCount do
+                        track(tempRegexTrigger("^epay$", function() fires = fires + 1 end))
+                    end
+                end, 1))
+            end, 1))
+
+            local mark = consoleMark()
+            feedTriggers("egate\n")
+            feedTriggers("esecond\n")
+            feedTriggers("epay\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a trigger created on an earlier line is not part of a chain any more and must arm freely")
+            assert.are.equal(bulkCount, fires, "every trigger armed on the later line should survive and fire")
+        end)
+
+        it("does not stop a batch armed inside a nested pass", function()
+            -- creations made inside a nested pass are appended to the same list
+            -- the outer pass is walking, so a batch armed there is one generation
+            -- just the same
+            local bulkCount = maxGenerations + 1
+            local fires = 0
+            track(tempRegexTrigger("^crossout$", function()
+                track(tempRegexTrigger("^crossin$", function()
+                    for _ = 1, bulkCount do
+                        track(tempRegexTrigger("^crosspay$", function() fires = fires + 1 end))
+                    end
+                end, 1))
+                feedTriggers("crossin\n")
+            end, 1))
+
+            local mark = consoleMark()
+            feedTriggers("crossout\n")
+            feedTriggers("crosspay\n")
+
+            assert.is_false(contains(consoleSince(mark), abortReport),
+                "a batch armed inside a nested pass is still one generation")
+            assert.are.equal(bulkCount, fires,
+                "every trigger armed inside the nested pass should survive and fire")
+        end)
+
+        local reportedAt
+
+        -- The first runaway of the run, so the report is not throttled yet and
+        -- this is the one block that can read it.
+        it("names the trigger in the abort report", function()
+            local armNamed
+            armNamed = function()
+                track(tempComplexRegexTrigger("hpWatcher", "^hpnamed$", armNamed, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+            end
+            armNamed()
+
+            local mark = consoleMark()
+            feedTriggers("hpnamed\n")
+            local reported = consoleSince(mark)
+
+            reportedAt = os.time()
+            assert.is_true(contains(reported, abortReport), "the abort should be reported to the console")
+            assert.is_true(contains(reported, "trigger 'hpWatcher'"),
+                "the report should name the trigger that keeps re-creating itself")
+        end)
+
+        -- Immediately after the block above, so the ten-second window it opened
+        -- is still shut. Everything below depends on that window, and this is
+        -- where it is checked rather than assumed.
+        it("reports a second runaway within the throttle window only once", function()
+            local fires = 0
+            local arm
+            arm = function()
+                track(tempRegexTrigger("^throttled$", function()
+                    fires = fires + 1
+                    arm()
+                end, 1))
+            end
+            arm()
+
+            local mark = consoleMark()
+            feedTriggers("throttled\n")
+
+            assert.are.equal(1 + maxGenerations, fires, "the second runaway should be stopped just the same")
+            -- a runner slow enough to have spent the window between the two
+            -- blocks has nothing to say about the throttle, rather than a
+            -- wall-clock failure to report
+            if reportedAt and os.time() - reportedAt < 9 then
+                assert.is_false(contains(consoleSince(mark), abortReport),
+                    "a runaway whose creator outlives the line trips on every matching line, and repeating the report would bury the game text")
+            end
+        end)
+
+        it("stops a trigger that re-creates itself", function()
+            -- the naive "one-shot that re-arms itself at the end of its own
+            -- handler" is the shape users write; without the budget it hangs
+            local fires = 0
+            local armed = {}
+            local arm
+            arm = function()
+                armed[#armed + 1] = track(tempRegexTrigger("^hploop$", function()
+                    fires = fires + 1
+                    arm()
+                end, 1))
+            end
+            arm()
+
+            feedTriggers("hploop\n")
+
+            assert.are.equal(1 + maxGenerations, fires,
+                "one fire from the trigger already there, then one per budgeted creation")
+            assert.are.equal(2 + maxGenerations, #armed, "the generation over the budget is created before it is refused")
+            assert.are.equal(0, isActive(armed[#armed], "trigger"),
+                "the generation that tripped the budget should have been stopped, not left armed")
+        end)
+
+        it("charges each line its own budget", function()
+            -- without disowning what the loop created, each line would cost a
+            -- multiple of the one before it and the freeze would only be postponed
+            local fires = 0
+            local arm
+            arm = function()
+                track(tempRegexTrigger("^kept$", function()
+                    fires = fires + 1
+                    arm()
+                end))
+            end
+            arm()
+
+            feedTriggers("kept\n")
+            feedTriggers("kept\n")
+
+            assert.are.equal(2 * (1 + maxGenerations), fires,
+                "the second line should cost the same as the first, not a multiple of it")
+        end)
+
+        it("stops a permanent trigger that re-creates itself without deleting it", function()
+            -- permanent triggers are saved with the profile, so they are stopped
+            -- with deactivate(), which leaves the user-active state XMLexport
+            -- writes alone
+            local name = trackPermanent("SpecSameLinePermLoop")
+            local fires = 0
+            _G.SameLineSpec.armPerm = function()
+                permRegexTrigger(name, "", {"^permloop$"}, [[_G.SameLineSpec.permStep()]])
+            end
+            _G.SameLineSpec.permStep = function()
+                fires = fires + 1
+                _G.SameLineSpec.armPerm()
+            end
+            local existedBefore = exists(name, "trigger")
+            local activeBefore = isActive(name, "trigger")
+            _G.SameLineSpec.armPerm()
+
+            feedTriggers("permloop\n")
+
+            assert.are.equal(1 + maxGenerations, fires, "the re-arming permanent trigger should fire once per budgeted creation")
+            assert.are.equal(activeBefore + 1, isActive(name, "trigger"),
+                "only the trigger that predates the line should still be active")
+            assert.are.equal(existedBefore + 2 + maxGenerations, exists(name, "trigger"),
+                "the stopped permanent triggers should still exist - stopping them is not deleting them")
+        end)
+
+        it("spares triggers another script armed on the same line", function()
+            local innocentFires = 0
+            local runaway = {}
+            local armRunaway
+            armRunaway = function()
+                runaway[#runaway + 1] = track(tempRegexTrigger("^runline$", armRunaway, 1))
+            end
+            armRunaway()
+            track(tempRegexTrigger("^runline$", function()
+                track(tempRegexTrigger("^innocent$", function() innocentFires = innocentFires + 1 end))
+            end, 1))
+
+            feedTriggers("runline\n")
+            feedTriggers("innocent\n")
+
+            -- pin the chain length first: isActive() answers 0 for an id that no
+            -- longer exists too, so on its own it would also be happy with a
+            -- chain that never got past its first link
+            assert.are.equal(2 + maxGenerations, #runaway, "the runaway should have re-created itself once per budgeted generation")
+            assert.are.equal(0, isActive(runaway[#runaway], "trigger"), "the self-recreating chain should still be stopped")
+            assert.are.equal(1, innocentFires,
+                "the trigger armed by an unrelated script on the same line should survive the runaway's abort and fire")
+        end)
+
+        it("stops a runaway that crosses into a nested pass whole", function()
+            -- the lineage has members either side of the nested pass's first-node
+            -- index, so stopping it scans the whole list rather than the tail of
+            -- the tripping pass; scanning only the tail leaves the first link
+            -- alive and the outer pass trips on the same lineage all over again
+            local nestFires, nestSafeFires = 0, 0
+            local armNested
+            armNested = function()
+                track(tempRegexTrigger("^nestin$", function()
+                    nestFires = nestFires + 1
+                    armNested()
+                end))
+            end
+            track(tempRegexTrigger("^nestout$", function()
+                armNested()
+                track(tempRegexTrigger("^nestsafe$", function() nestSafeFires = nestSafeFires + 1 end))
+                feedTriggers("nestin\n")
+            end, 1))
+
+            feedTriggers("nestout\n")
+            local firesInsideTheNestedPass = nestFires
+            nestFires = 0
+            feedTriggers("nestin\n")
+            feedTriggers("nestsafe\n")
+
+            assert.are.equal(maxGenerations, firesInsideTheNestedPass,
+                "the runaway should cost one budget, not one per pass the lineage is spread across")
+            assert.are.equal(0, nestFires, "no member of the stopped lineage should be left armed, wherever in the list it sat")
+            assert.are.equal(1, nestSafeFires,
+                "a trigger armed by an unrelated script on the outer line should survive the nested pass's abort")
+        end)
+
+        it("counts a folder child's creations against its root", function()
+            -- only root triggers carry a lineage, so a trigger sitting in a folder
+            -- creates on the folder's behalf. Reading the child's own (always
+            -- empty) lineage instead would start a fresh one every round, which
+            -- never deepens and so never trips.
+            local fires, generation = 0, 0
+            _G.SameLineSpec.makeFolderGen = function()
+                generation = generation + 1
+                local folder = trackPermanent("SpecFGen" .. generation)
+                permGroup(folder, "trigger")
+                permRegexTrigger(trackPermanent("SpecFChild" .. generation), folder, {"^folderloop$"}, [[_G.SameLineSpec.folderStep()]])
+            end
+            _G.SameLineSpec.folderStep = function()
+                fires = fires + 1
+                _G.SameLineSpec.makeFolderGen()
+            end
+            _G.SameLineSpec.makeFolderGen()
+
+            feedTriggers("folderloop\n")
+
+            assert.are.equal(1 + maxGenerations, fires,
+                "the folder's lineage should deepen by one per round, so the generation budget is what ends it")
+            assert.are.equal(2 + maxGenerations, generation, "the generation over the budget is created before it is refused")
+            assert.is_true(exists("SpecFGen" .. generation, "trigger") >= 1, "the last folder should have been created")
+            assert.are.equal(0, isActive("SpecFGen" .. generation, "trigger"),
+                "the folder that tripped the budget should have been switched off, not left armed")
+        end)
+
+        it("counts a filter chain child's creations against its root", function()
+            -- the same for a filter chain, where the child is reached through the
+            -- parent's capture rather than by the root list passing data down
+            local fires, generation = 0, 0
+            _G.SameLineSpec.makeFilterGen = function()
+                generation = generation + 1
+                local parent = "SpecFiltP" .. generation
+                track(tempComplexRegexTrigger(parent, "^(filterloop)$", "", 0, 0, 0, 1, 0, 0, 0, 0, 0, 0))
+                permRegexTrigger(trackPermanent("SpecFiltC" .. generation), parent, {"filterloop"}, [[_G.SameLineSpec.filterStep()]])
+            end
+            _G.SameLineSpec.filterStep = function()
+                fires = fires + 1
+                _G.SameLineSpec.makeFilterGen()
+            end
+            _G.SameLineSpec.makeFilterGen()
+
+            feedTriggers("filterloop\n")
+
+            assert.are.equal(1 + maxGenerations, fires,
+                "the filter parent's lineage should deepen by one per round, so the generation budget is what ends it")
+            assert.are.equal(2 + maxGenerations, generation, "the generation over the budget is created before it is refused")
+            assert.are.equal(0, exists("SpecFiltP" .. generation, "trigger"),
+                "the temporary filter parent that tripped the budget should have been removed")
+        end)
+
+        it("leaves the outer line's own triggers alone when a nested pass aborts", function()
+            local seen = {}
+            local inner = {}
+            local armInner
+            armInner = function()
+                inner[#inner + 1] = track(tempRegexTrigger("^inner$", armInner, 1))
+            end
+            armInner()
+            track(tempRegexTrigger("^outer$", function()
+                track(tempRegexTrigger("^(.*)$", function() seen[#seen + 1] = matches[2] end, 10))
+                feedTriggers("inner\n")
+            end, 1))
+
+            feedTriggers("outer\n")
+
+            assert.are.equal(2 + maxGenerations, #inner, "the runaway should have re-created itself once per budgeted generation")
+            assert.are.equal(0, isActive(inner[#inner], "trigger"), "the runaway in the nested pass should be stopped")
+            assert.are.equal("inner,outer", table.concat(seen, ","),
+                "the capture trigger created by the outer line should survive the nested pass's abort and still match the outer line")
+        end)
+
+        it("stops a runaway driven by server text", function()
+            -- not a feedTriggers() curiosity: server text takes the same path
+            local fires = 0
+            local armed = {}
+            local arm
+            arm = function()
+                armed[#armed + 1] = track(tempRegexTrigger("^HP: 100/100$", function()
+                    fires = fires + 1
+                    arm()
+                end, 1))
+            end
+            arm()
+
+            local ok, message = feedTelnet("HP: 100/100\r\n")
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(message))
+
+            assert.are.equal(1 + maxGenerations, fires, "server text should reach the same-line generation budget")
+            assert.are.equal(0, isActive(armed[#armed], "trigger"),
+                "the generation that tripped the budget should have been stopped, not left armed")
+        end)
+
+    end)
+
+    -- The capture tables a trigger script is handed belong to that fire. A
+    -- script that keeps a reference to one - to compare against the next fire,
+    -- or to hand to a coroutine that runs later - has always been able to rely
+    -- on that, and multimatches is the one that catches a table being reused,
+    -- since a single-line trigger leaves it empty and an empty table is exactly
+    -- what looks safe to hand out again.
+    describe("capture table identity", function()
+        local triggerId
+
+        after_each(function()
+            if triggerId then
+                killTrigger(triggerId)
+                triggerId = nil
+            end
+        end)
+
+        it("should hand each fire its own capture tables", function()
+            local seenMatches = {}
+            local seenMultimatches = {}
+            triggerId = tempRegexTrigger("^CaptureIdentity(\\d+)$", function()
+                seenMatches[#seenMatches + 1] = matches
+                seenMultimatches[#seenMultimatches + 1] = multimatches
+            end)
+            assert.is_true(triggerId > 0, "the trigger was not created")
+
+            feedTriggers("\nCaptureIdentity1\n")
+            feedTriggers("\nCaptureIdentity2\n")
+
+            assert.are.equal(2, #seenMatches, "the trigger should have fired twice")
+            assert.is_true(not rawequal(seenMultimatches[1], seenMultimatches[2]),
+                "the second fire was handed the first fire's multimatches table")
+            assert.is_true(not rawequal(seenMatches[1], seenMatches[2]),
+                "the second fire was handed the first fire's matches table")
+            assert.are.equal("CaptureIdentity1", seenMatches[1][1],
+                "the first fire's full match was overwritten by the second fire")
+            assert.are.equal("1", seenMatches[1][2],
+                "the first fire's capture was overwritten by the second fire")
+        end)
+
+    end)
+
+    -- "matches", "multimatches" and "line" are only built for a script that
+    -- reads them. These cases pin what scripts rely on, and the ones that
+    -- install a metatable are the profiles laziness has to stand aside for.
+    describe("capture globals a script may never read", function()
+        local triggerIds, triggerNames, aliasIds = {}, {}, {}
+
+        local function trigger(id)
+            triggerIds[#triggerIds + 1] = id
+            return id
+        end
+
+        local function alias(id)
+            aliasIds[#aliasIds + 1] = id
+            return id
+        end
+
+        local function multiline(name, patterns, code)
+            triggerNames[#triggerNames + 1] = name
+            for _, pattern in ipairs(patterns) do
+                tempComplexRegexTrigger(name, pattern, code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            end
+        end
+
+        -- Once the metatable of the globals table is handed out Mudlet leaves
+        -- nothing out for the rest of the session, and busted hands it out
+        -- around every file, so the deferral is put back through a hook that
+        -- only exists in test mode
+        local function rearm()
+            rearmLazyGlobals()
+        end
+
+        -- "multimatches" is nil in a profile until the first dispatch is over.
+        -- The generic mapper reads line on every line, which would leave nothing
+        -- out for the cases about line.
+        setup(function()
+            disableTrigger("onNewLine Trigger")
+            local id = tempRegexTrigger("^LazyGlobalsPrimer$", function() end)
+            feedTriggers("\nLazyGlobalsPrimer\n")
+            killTrigger(id)
+        end)
+
+        teardown(function()
+            enableTrigger("onNewLine Trigger")
+        end)
+
+        before_each(rearm)
+
+        after_each(function()
+            for _, id in ipairs(triggerIds) do
+                killTrigger(id)
+            end
+            for _, name in ipairs(triggerNames) do
+                killTrigger(name)
+            end
+            for _, id in ipairs(aliasIds) do
+                killAlias(id)
+            end
+            triggerIds, triggerNames, aliasIds = {}, {}, {}
+            _G.LazyGlobalsSpec = nil
+        end)
+
+        it("leaves them out of the globals table until a script reads them", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyLeftOut (\\w+)$", function()
+                seen.matches = rawget(_G, "matches")
+                seen.multimatches = rawget(_G, "multimatches")
+                seen.line = rawget(_G, "line")
+                seen.capture = matches[2]
+            end))
+
+            -- rearm() put multimatches back, until the end of the next dispatch
+            feedTriggers("\nLazyLeftOut first\n")
+            feedTriggers("\nLazyLeftOut word\n")
+
+            assert.is_nil(seen.matches)
+            assert.is_nil(seen.multimatches)
+            assert.is_nil(seen.line)
+            assert.are.equal("word", seen.capture)
+        end)
+
+        -- The rest must also pass with nothing left out
+        it("hands a fire its own tables however few of the fires before it looked", function()
+            local fires = 0
+            local kept = {}
+            trigger(tempRegexTrigger("^LazyFresh(\\d+)$", function()
+                fires = fires + 1
+                if fires ~= 2 then
+                    kept[fires] = {matches = matches, multimatches = multimatches}
+                    matches.note = "fire " .. fires
+                    multimatches.note = "fire " .. fires
+                end
+            end))
+
+            feedTriggers("\nLazyFresh1\n")
+            feedTriggers("\nLazyFresh2\n")
+            feedTriggers("\nLazyFresh3\n")
+
+            assert.are.equal(3, fires, "the trigger should have fired three times")
+            assert.are.equal("1", kept[1].matches[2], "the first fire's capture did not survive the later fires")
+            assert.are.equal("3", kept[3].matches[2], "the third fire was not handed its own capture")
+            assert.are.equal("fire 1", kept[1].matches.note, "what the first fire put into its matches was lost")
+            assert.are.equal("fire 1", kept[1].multimatches.note, "what the first fire put into its multimatches was lost")
+            assert.are.equal("fire 3", kept[3].multimatches.note)
+            assert.is_true(not rawequal(kept[1].matches, kept[3].matches), "two fires were handed one matches table")
+            assert.is_true(not rawequal(kept[1].multimatches, kept[3].multimatches), "two fires were handed one multimatches table")
+            assert.is_nil(matches.note, "what is in place after the fires is a table one of them was handed")
+            assert.is_nil(multimatches.note, "what is in place after the fires is a table one of them was handed")
+        end)
+
+        it("reads as empty tables between dispatches", function()
+            local fires = 0
+            trigger(tempRegexTrigger("^LazyIdle(\\d+)$", function()
+                fires = fires + 1
+            end))
+
+            feedTriggers("\nLazyIdle1\n")
+
+            assert.are.equal(1, fires)
+            for _, name in ipairs({"matches", "multimatches"}) do
+                assert.are.equal("table", type(_G[name]), name .. " should never read as nil")
+                assert.is_nil(next(_G[name]), name .. " should be empty outside a dispatch")
+            end
+            assert.are.equal("table", type(rawget(_G, "matches")), "matches should be in the globals table outside a dispatch")
+        end)
+
+        -- busted gives a spec file an environment of its own, so a function
+        -- written here assigns into that. A script that is to assign to the
+        -- globals the way a profile's scripts do has to be handed over as text.
+        it("lets a script put a value of its own in place for the rest of its fire", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyAssign (\\w+)$", [==[
+                local seen = _G.LazyGlobalsSpec
+                if seen.assigned then
+                    seen.nextFire = matches[2]
+                    seen.nextFireMultimatches = type(multimatches)
+                else
+                    matches = {"mine"}
+                    multimatches = "also mine"
+                    seen.assigned = matches[1]
+                    seen.assignedMultimatches = multimatches
+                end
+            ]==]))
+            trigger(tempRegexTrigger("^LazyAssign (\\w+)$", [==[
+                _G.LazyGlobalsSpec.sameLine = matches[2]
+                _G.LazyGlobalsSpec.sameLineMultimatches = type(multimatches)
+            ]==]))
+
+            feedTriggers("\nLazyAssign first\n")
+            local afterMatches, afterMultimatches = matches, multimatches
+            feedTriggers("\nLazyAssign second\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("mine", seen.assigned, "the script did not read back what it assigned to matches")
+            assert.are.equal("also mine", seen.assignedMultimatches, "the script did not read back what it assigned to multimatches")
+            assert.are.equal("second", seen.sameLine, "the next trigger on the line was not handed its own captures")
+            assert.are.equal("table", seen.sameLineMultimatches)
+            assert.are.equal("table", type(afterMatches), "the script's matches outlived the pass")
+            assert.is_nil(next(afterMatches), "the script's matches outlived the pass")
+            assert.are.equal("table", type(afterMultimatches), "the script's multimatches outlived the pass")
+            assert.are.equal("second", seen.nextFire, "the next fire was not handed its own captures")
+            assert.are.equal("table", seen.nextFireMultimatches)
+        end)
+
+        it("lets a script clear them before it has read them", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyClear (\\w+)$", [==[
+                matches = nil
+                multimatches = nil
+                _G.LazyGlobalsSpec.matches = type(matches)
+                _G.LazyGlobalsSpec.multimatches = type(multimatches)
+            ]==]))
+
+            feedTriggers("\nLazyClear word\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("nil", seen.matches, "matches came back after the script cleared it")
+            assert.are.equal("nil", seen.multimatches, "multimatches came back after the script cleared it")
+            assert.are.equal("table", type(matches), "matches should be back once the fire is over")
+            assert.are.equal("table", type(multimatches), "multimatches should be back once the fire is over")
+        end)
+
+        it("lets a script clear them after it has read them", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyClearLate (\\w+)$", [==[
+                local seen = _G.LazyGlobalsSpec
+                seen.capture = matches[2]
+                seen.before = type(multimatches)
+                matches = nil
+                multimatches = nil
+                seen.matches = type(matches)
+                seen.multimatches = type(multimatches)
+            ]==]))
+
+            feedTriggers("\nLazyClearLate word\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("word", seen.capture)
+            assert.are.equal("table", seen.before)
+            assert.are.equal("nil", seen.matches, "matches came back after the script cleared it")
+            assert.are.equal("nil", seen.multimatches, "multimatches came back after the script cleared it")
+            assert.are.equal("table", type(matches), "matches should be back once the fire is over")
+        end)
+
+        it("keeps what a script rawset over a global it had not read yet", function()
+            local seen = {}
+            alias(tempAlias("^lazyrawsetinner$", function() end))
+            trigger(tempRegexTrigger("^LazyRawset (\\w+)$", function()
+                local mine = {"mine"}
+                rawset(_G, "matches", mine)
+                rawset(_G, "line", "mine")
+                expandAlias("lazyrawsetinner", false)
+                getmetatable(_G)
+                seen.matches = rawequal(matches, mine)
+                seen.line = line
+            end))
+
+            feedTriggers("\nLazyRawset word\n")
+
+            assert.is_true(seen.matches, "an alias pass replaced the matches the script had rawset")
+            assert.are.equal("mine", seen.line, "reaching for the metatable replaced the line the script had rawset")
+        end)
+
+        it("hands a fire its captures over a matches its feeding script rawset", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyRawsetInner (\\w+)$", function()
+                seen.capture = matches[2]
+            end))
+            trigger(tempRegexTrigger("^LazyRawsetOuter$", function()
+                rawset(_G, "matches", {"stale", "stale"})
+                feedTriggers("\nLazyRawsetInner word\n")
+            end))
+
+            feedTriggers("\nLazyRawsetOuter\n")
+
+            assert.are.equal("word", seen.capture)
+        end)
+
+        it("hands a multiline fire its captures over a multimatches its feeding script rawset", function()
+            _G.LazyGlobalsSpec = {
+                feed = function()
+                    rawset(_G, "multimatches", {{"stale", "stale"}})
+                    feedTriggers("lazyrawsetinner one aaa\nlazyrawsetinner two bbb\n")
+                end
+            }
+            multiline("LazyRawsetInner", {[[^lazyrawsetinner one (\w+)$]], [[^lazyrawsetinner two (\w+)$]]}, [==[
+                LazyGlobalsSpec.first = multimatches[1] and multimatches[1][2]
+            ]==])
+            multiline("LazyRawsetOuter", {[[^lazyrawsetouter one$]], [[^lazyrawsetouter two$]]}, [==[
+                LazyGlobalsSpec.feed()
+            ]==])
+
+            feedTriggers("lazyrawsetouter one\nlazyrawsetouter two\n")
+
+            assert.are.equal("aaa", _G.LazyGlobalsSpec.first)
+        end)
+
+        it("builds a matches table that behaves like any other", function()
+            local seen
+            trigger(tempRegexTrigger("^LazyShape (?<first>\\w+) (?<blank>\\w*)!(\\d+)$", function()
+                local positional, total = 0, 0
+                for _ in ipairs(matches) do
+                    positional = positional + 1
+                end
+                for _ in pairs(matches) do
+                    total = total + 1
+                end
+                seen = {
+                    length = #matches,
+                    positional = positional,
+                    total = total,
+                    first = matches.first,
+                    blank = matches.blank,
+                    blankPositional = matches[3],
+                    joined = table.concat(matches, "|"),
+                    unpacked = select("#", unpack(matches)),
+                    last = (select(4, unpack(matches))),
+                    beyond = matches[5],
+                }
+            end))
+
+            feedTriggers("\nLazyShape word !42\n")
+
+            assert.is_truthy(seen, "the trigger did not fire")
+            assert.are.equal(4, seen.length)
+            assert.are.equal(4, seen.positional, "ipairs() should stop after the last capture, not at the empty one")
+            assert.are.equal(6, seen.total, "pairs() should visit the four positions and the two names")
+            assert.are.equal("word", seen.first)
+            assert.are.equal("", seen.blank, "a capture that matched nothing is an empty string, not nil")
+            assert.are.equal("", seen.blankPositional, "a capture that matched nothing is an empty string, not nil")
+            assert.are.equal("LazyShape word !42|word||42", seen.joined)
+            assert.are.equal(4, seen.unpacked)
+            assert.are.equal("42", seen.last)
+            assert.is_nil(seen.beyond)
+        end)
+
+        -- f() looks names up with rawget() once it has run out of locals
+        it("answers f() for them", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyF (\\w+)$", [==[
+                LazyGlobalsSpec.single = f"{matches[2]}|{line}|{type(multimatches)}"
+            ]==]))
+            multiline("SpecLazyMultiF", {[[^lazyf one (\w+)$]], [[^lazyf two (\w+)$]]}, [==[
+                LazyGlobalsSpec.multi = f"{multimatches[1][2]},{multimatches[2][2]}"
+            ]==])
+
+            feedTriggers("\nLazyF word\n")
+            feedTriggers("lazyf one aaa\n")
+            feedTriggers("lazyf two bbb\n")
+
+            assert.are.equal("word|LazyF word|table", _G.LazyGlobalsSpec.single)
+            assert.are.equal("aaa,bbb", _G.LazyGlobalsSpec.multi)
+        end)
+
+        it("hands a multiline trigger its multimatches and matches together", function()
+            _G.LazyGlobalsSpec = {kept = {}}
+            multiline("SpecLazyMulti", {[[^lazy one (?<alpha>\w+)$]], [[^lazy two (\w+)$]]}, [==[
+                local spec = _G.LazyGlobalsSpec
+                spec.kept[#spec.kept + 1] = multimatches
+                spec.first = multimatches[1][2]
+                spec.second = multimatches[2][2]
+                spec.named = multimatches[1].alpha
+                spec.count = #multimatches
+                spec.matches = type(matches)
+            ]==])
+
+            feedTriggers("lazy one aaa\n")
+            feedTriggers("lazy two bbb\n")
+            feedTriggers("lazy one ccc\n")
+            feedTriggers("lazy two ddd\n")
+
+            local spec = _G.LazyGlobalsSpec
+            assert.are.equal(2, #spec.kept, "the multiline trigger should have fired twice")
+            assert.are.equal("ccc", spec.first)
+            assert.are.equal("ddd", spec.second)
+            assert.are.equal("ccc", spec.named)
+            assert.are.equal(2, spec.count)
+            assert.are.equal("table", spec.matches)
+            assert.is_true(not rawequal(spec.kept[1], spec.kept[2]), "two fires were handed one multimatches table")
+            assert.are.equal("aaa", spec.kept[1][1][2], "the first fire's multimatches was overwritten by the second")
+            assert.are.equal("bbb", spec.kept[1][2][2], "the first fire's multimatches was overwritten by the second")
+            assert.is_nil(next(multimatches), "multimatches should be empty again outside the dispatch")
+        end)
+
+        it("leaves a multiline trigger's multimatches alone when the script never reads it", function()
+            _G.LazyGlobalsSpec = {fires = 0}
+            multiline("SpecLazyMultiQuiet", {[[^quiet one (\w+)$]], [[^quiet two (\w+)$]]}, [==[
+                _G.LazyGlobalsSpec.fires = _G.LazyGlobalsSpec.fires + 1
+            ]==])
+            local seen = {}
+            trigger(tempRegexTrigger("^quiet three (\\w+)$", function()
+                seen.type = type(multimatches)
+                seen.empty = next(multimatches) == nil
+            end))
+
+            feedTriggers("quiet one aaa\n")
+            feedTriggers("quiet two bbb\n")
+            feedTriggers("quiet three ccc\n")
+
+            assert.are.equal(1, _G.LazyGlobalsSpec.fires)
+            assert.are.equal("table", seen.type)
+            assert.is_true(seen.empty, "a later trigger was handed the multiline trigger's multimatches")
+        end)
+
+        it("hands a multiline trigger with an expiry count its multimatches", function()
+            _G.LazyGlobalsSpec = {}
+            triggerNames[#triggerNames + 1] = "SpecLazyMultiExpiry"
+            for _, pattern in ipairs({[[^expiry one (\w+)$]], [[^expiry two (\w+)$]]}) do
+                tempComplexRegexTrigger("SpecLazyMultiExpiry", pattern, [==[
+                    _G.LazyGlobalsSpec.caps = multimatches[1][2] .. "," .. multimatches[2][2]
+                ]==], 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 5)
+            end
+
+            feedTriggers("expiry one aaa\n")
+            feedTriggers("expiry two bbb\n")
+
+            assert.are.equal("aaa,bbb", _G.LazyGlobalsSpec.caps)
+        end)
+
+        it("hands a single-line fire the multimatches a script left in place", function()
+            local mine, seen = {}, nil
+            trigger(tempRegexTrigger("^LazyOwnMultimatches$", function()
+                seen = multimatches
+            end))
+
+            _G.multimatches = mine
+            feedTriggers("\nLazyOwnMultimatches\n")
+
+            assert.is_true(rawequal(mine, seen), "a single-line fire replaced the multimatches a script had left in place")
+        end)
+
+        it("hands a fire a multimatches no event handler is still holding", function()
+            local kept, seen
+            local handler = registerAnonymousEventHandler("LazySpareHolder", function()
+                kept = multimatches
+            end)
+            trigger(tempRegexTrigger("^LazyHolderQuiet$", function() end))
+            trigger(tempRegexTrigger("^LazyHolderReads$", function()
+                seen = multimatches
+            end))
+
+            raiseEvent("LazySpareHolder")
+            feedTriggers("\nLazyHolderQuiet\n")
+            feedTriggers("\nLazyHolderReads\n")
+            killAnonymousEventHandler(handler)
+
+            assert.are.equal("table", type(kept))
+            assert.is_true(not rawequal(kept, seen), "a fire was handed the table an event handler kept before an earlier fire")
+        end)
+
+        it("hands the next fire another multimatches when a fire kept its own after an alias pass", function()
+            local kept = {}
+            alias(tempAlias("^lazysparenested$", function() end))
+            trigger(tempRegexTrigger("^LazySpareNested(\\d)$", function()
+                if matches[2] == "1" then
+                    expandAlias("lazysparenested", false)
+                end
+                kept[#kept + 1] = multimatches
+            end))
+
+            feedTriggers("\nLazySpareNested1\n")
+            feedTriggers("\nLazySpareNested2\n")
+
+            assert.are.equal(2, #kept)
+            assert.is_true(not rawequal(kept[1], kept[2]), "two fires were handed one multimatches table")
+        end)
+
+        it("hands a fire back its captures after an alias pass it started", function()
+            local seen = {inner = {}}
+            alias(tempAlias("^lazynested (\\w+)$", function()
+                seen.inner[#seen.inner + 1] = matches[2]
+            end))
+            alias(tempAlias("^lazynestedquiet (\\w+)$", function() end))
+            trigger(tempRegexTrigger("^LazyOuter (\\w+)$", function()
+                expandAlias("lazynested one", false)
+                expandAlias("lazynestedquiet two", false)
+                seen.unread = matches[2]
+                seen.unreadMultimatches = type(multimatches)
+            end))
+            trigger(tempRegexTrigger("^LazyOuter (\\w+)$", function()
+                local before, beforeMultimatches = matches, multimatches
+                expandAlias("lazynested three", false)
+                expandAlias("lazynestedquiet four", false)
+                seen.sameTable = rawequal(before, matches)
+                seen.sameMultimatches = rawequal(beforeMultimatches, multimatches)
+                seen.read = matches[2]
+            end))
+
+            feedTriggers("\nLazyOuter outer\n")
+
+            assert.are.equal("one,three", table.concat(seen.inner, ","), "the nested aliases were not handed their own captures")
+            assert.are.equal("outer", seen.unread, "a fire that had not looked at matches yet lost it to the nested pass")
+            assert.are.equal("table", seen.unreadMultimatches)
+            assert.are.equal("outer", seen.read, "a fire that had looked at matches lost it to the nested pass")
+            assert.is_true(seen.sameTable, "the nested pass handed back a different matches table")
+            assert.is_true(seen.sameMultimatches, "the nested pass handed back a different multimatches table")
+        end)
+
+        it("hands a multiline fire back its multimatches after an alias pass it started", function()
+            _G.LazyGlobalsSpec = {}
+            alias(tempAlias("^lazymultinested (\\w+)$", function()
+                _G.LazyGlobalsSpec.inner = matches[2]
+            end))
+            multiline("SpecLazyMultiNested", {[[^nested one (\w+)$]], [[^nested two (\w+)$]]}, [==[
+                expandAlias("lazymultinested inner", false)
+                _G.LazyGlobalsSpec.first = multimatches[1][2]
+                _G.LazyGlobalsSpec.second = multimatches[2][2]
+            ]==])
+
+            feedTriggers("nested one aaa\n")
+            feedTriggers("nested two bbb\n")
+
+            assert.are.equal("inner", _G.LazyGlobalsSpec.inner)
+            assert.are.equal("aaa", _G.LazyGlobalsSpec.first, "a fire that had not looked at multimatches yet lost it to the nested pass")
+            assert.are.equal("bbb", _G.LazyGlobalsSpec.second, "a fire that had not looked at multimatches yet lost it to the nested pass")
+        end)
+
+        it("leaves a fire the empty table after a trigger pass it started", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyFeedInner (\\w+)$", function()
+                seen.inner = matches[2]
+            end))
+            trigger(tempRegexTrigger("^LazyFeedOuter (\\w+)$", function()
+                feedTriggers("\nLazyFeedInner inner\n")
+                seen.type = type(matches)
+                seen.capture = matches[2]
+            end))
+            trigger(tempRegexTrigger("^LazyFeedNothing (\\w+)$", function()
+                feedTriggers("\nnothing matches this\n")
+                seen.untouched = matches[2]
+            end))
+
+            feedTriggers("\nLazyFeedOuter outer\n")
+            feedTriggers("\nLazyFeedNothing outer\n")
+
+            assert.are.equal("inner", seen.inner)
+            assert.are.equal("table", seen.type)
+            assert.is_nil(seen.capture, "a nested trigger pass that fired leaves the empty table behind it")
+            assert.are.equal("outer", seen.untouched, "a nested pass that fired nothing should leave matches alone")
+        end)
+
+        it("stays consistent after a script raises", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyRaise (\\w+)$", function()
+                if matches[2] == "reads" then
+                    local capture = matches[2]
+                    error("raised after reading " .. capture)
+                end
+                error("raised without reading")
+            end))
+            trigger(tempRegexTrigger("^LazyAfterRaise (\\w+)$", function()
+                seen[#seen + 1] = matches[2]
+            end))
+
+            feedTriggers("\nLazyRaise reads\n")
+            local afterRead = matches
+            feedTriggers("\nLazyAfterRaise one\n")
+            feedTriggers("\nLazyRaise quietly\n")
+            local afterUnread = matches
+            feedTriggers("\nLazyAfterRaise two\n")
+
+            assert.are.equal("table", type(afterRead))
+            assert.is_nil(next(afterRead), "a fire that raised left its captures in place")
+            assert.are.equal("table", type(afterUnread))
+            assert.is_nil(next(afterUnread), "a fire that raised left its captures in place")
+            assert.are.equal("one,two", table.concat(seen, ","), "the fires after a raise were not handed their own captures")
+        end)
+
+        it("keeps line for after the pass", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyLine (\\w+)$", function()
+                seen[#seen + 1] = line
+            end))
+
+            feedTriggers("\nLazyLine read\n")
+            local afterRead = line
+            feedTriggers("\nLazyLine unread by anything else\n")
+            feedTriggers("\nLazyLineNobodyReads\n")
+
+            assert.are.equal("LazyLine read", seen[1])
+            assert.are.equal("LazyLine read", afterRead, "line should outlive the pass that set it")
+            assert.are.equal("LazyLineNobodyReads", line, "line should be the last line to have arrived, read or not")
+        end)
+
+        it("lets a script put its own line in place until the next one arrives", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyLineAssign (\\w+)$", [==[
+                local seen = _G.LazyGlobalsSpec
+                if matches[2] == "unread" then
+                    line = "mine"
+                elseif matches[2] == "read" then
+                    seen.before = line
+                    line = "mine too"
+                else
+                    line = nil
+                end
+                seen[matches[2]] = line
+            ]==]))
+
+            feedTriggers("\nLazyLineAssign unread\n")
+            local afterUnread = line
+            feedTriggers("\nLazyLineAssign read\n")
+            local afterRead = line
+            feedTriggers("\nLazyLineAssign cleared\n")
+            local afterCleared = line
+            feedTriggers("\nLazyLineAssignOver\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("mine", seen.unread)
+            assert.are.equal("mine", afterUnread, "the script's line should stay until the next line arrives")
+            assert.are.equal("LazyLineAssign read", seen.before)
+            assert.are.equal("mine too", seen.read)
+            assert.are.equal("mine too", afterRead)
+            assert.is_nil(seen.cleared, "line came back after the script cleared it")
+            assert.is_nil(afterCleared, "line came back after the script cleared it")
+            assert.are.equal("LazyLineAssignOver", line, "the next line should replace whatever the script left")
+        end)
+
+        it("puts line back after a nested pass whether or not anything had read it", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyLineInner (\\w+)$", function()
+                if matches[2] == "reads" then
+                    seen.inner = line
+                end
+            end))
+            trigger(tempRegexTrigger("^LazyLineOuter (\\w+)$", function()
+                local how = matches[2]
+                if how == "reads" then
+                    seen.outerBefore = line
+                end
+                feedTriggers("\nLazyLineInner " .. how .. "\n")
+                seen[how] = line
+            end))
+
+            feedTriggers("\nLazyLineOuter reads\n")
+            feedTriggers("\nLazyLineOuter quietly\n")
+
+            assert.are.equal("LazyLineOuter reads", seen.outerBefore)
+            assert.are.equal("LazyLineInner reads", seen.inner)
+            assert.are.equal("LazyLineOuter reads", seen.reads, "line was not put back after a nested pass that read its own")
+            assert.are.equal("LazyLineOuter quietly", seen.quietly, "line was not put back after a nested pass nobody read line in")
+        end)
+
+        it("answers a sandbox that falls back on the globals table", function()
+            local seen = {}
+            local sandbox = setmetatable({}, {__index = _G})
+            local reader = setfenv(function()
+                seen.capture = matches[2]
+                seen.line = line
+                seen.multimatches = type(multimatches)
+                seen.own = rawget(sandbox, "matches")
+            end, sandbox)
+            trigger(tempRegexTrigger("^LazySandbox (\\w+)$", reader))
+
+            feedTriggers("\nLazySandbox word\n")
+
+            assert.are.equal("word", seen.capture)
+            assert.are.equal("LazySandbox word", seen.line)
+            assert.are.equal("table", seen.multimatches)
+            assert.is_nil(seen.own, "reading through the sandbox should not write into it")
+        end)
+
+        it("hands a coroutine resumed later whatever is in place by then", function()
+            local seen = {}
+            local reader
+            trigger(tempRegexTrigger("^LazyCoroutine (\\w+)$", function()
+                reader = coroutine.create(function()
+                    seen.during = matches[2]
+                    coroutine.yield()
+                    seen.afterType = type(matches)
+                    seen.after = matches[2]
+                    seen.line = line
+                end)
+                coroutine.resume(reader)
+            end))
+
+            feedTriggers("\nLazyCoroutine word\n")
+            feedTriggers("\nLazyCoroutineOver\n")
+            coroutine.resume(reader)
+
+            assert.are.equal("word", seen.during)
+            assert.are.equal("table", seen.afterType)
+            assert.is_nil(seen.after, "a coroutine resumed after the dispatch reads the empty table like anything else")
+            assert.are.equal("LazyCoroutineOver", seen.line)
+        end)
+
+        it("answers only for the globals table, not for a table handed its metatable", function()
+            local seen = {}
+            local sharing = setmetatable({}, getmetatable(_G))
+            rearm()
+            trigger(tempRegexTrigger("^LazySharing (\\w+)$", setfenv(function()
+                seen.fired = true
+                seen.matches = matches
+                seen.multimatches = multimatches
+                seen.line = line
+            end, sharing)))
+
+            feedTriggers("\nLazySharing word\n")
+
+            assert.is_true(seen.fired, "the trigger did not fire")
+            assert.is_nil(seen.matches, "a table that is not the globals table was handed matches")
+            assert.is_nil(seen.multimatches, "a table that is not the globals table was handed multimatches")
+            assert.is_nil(seen.line, "a table that is not the globals table was handed line")
+            assert.is_nil(next(sharing), "reading through the table wrote into it")
+        end)
+
+        it("does not let a table handed its metatable take a name from the globals table", function()
+            local seen = {}
+            local sharing = setmetatable({}, getmetatable(_G))
+            rearm()
+            local function readGlobals()
+                return matches, multimatches, line
+            end
+            trigger(tempRegexTrigger("^LazySharingWrite (\\w+)$", setfenv(function()
+                matches, multimatches, line = "sandboxed", "sandboxed", "sandboxed"
+                seen.matches, seen.multimatches, seen.line = readGlobals()
+            end, sharing)))
+
+            feedTriggers("\nLazySharingWrite word\n")
+
+            assert.are.equal("word", seen.matches and seen.matches[2])
+            assert.are.equal("table", type(seen.multimatches))
+            assert.are.equal("LazySharingWrite word", seen.line)
+            assert.are.equal("sandboxed", rawget(sharing, "matches"))
+        end)
+
+        it("refuses a write through a userdata handed its metatable", function()
+            local proxy = newproxy(true)
+            debug.setmetatable(proxy, debug.getmetatable(_G))
+            local ok, message = pcall(function()
+                proxy.LazyGlobalsSpecField = 1
+            end)
+            debug.setmetatable(proxy, nil)
+
+            assert.is_false(ok, "writing through a userdata did not raise")
+            assert.is_truthy(tostring(message):find("table expected", 1, true), tostring(message))
+        end)
+
+        -- setfenv(0, ...) gives the thread another globals table. That is where
+        -- Mudlet puts a fire's captures from then on, and where code compiled
+        -- from then on looks for them.
+        it("follows the thread to another globals table", function()
+            _G.LazyGlobalsSpec = {}
+            local original = getfenv(0)
+            local swapped = setmetatable({}, {__index = original})
+            local ok, message = pcall(function()
+                setfenv(0, swapped)
+                trigger(tempRegexTrigger("^LazySwapped (\\w+)$", [==[
+                    LazyGlobalsSpec.raw = rawget(getfenv(0), "matches")
+                    LazyGlobalsSpec.capture = matches[2]
+                    LazyGlobalsSpec.multimatches = type(multimatches)
+                    LazyGlobalsSpec.line = line
+                ]==]))
+                feedTriggers("\nLazySwapped word\n")
+            end)
+            setfenv(0, original)
+
+            assert.is_true(ok, tostring(message))
+            assert.are.equal("word", _G.LazyGlobalsSpec.capture)
+            assert.are.equal("table", _G.LazyGlobalsSpec.multimatches)
+            assert.are.equal("LazySwapped word", _G.LazyGlobalsSpec.line)
+            assert.are.equal("word", _G.LazyGlobalsSpec.raw and _G.LazyGlobalsSpec.raw[2], "matches did not go where the thread's globals now are")
+        end)
+
+        -- What a fire was owed goes back where it was left out from
+        for _, nested in ipairs({
+            {name = "an alias pass", run = function() expandAlias("lazysettleinner", false) end},
+            {name = "a trigger pass", run = function() feedTriggers("\nLazySettleInner other\n") end},
+        }) do
+            it("hands a fire back its captures after " .. nested.name .. " under another globals table", function()
+                local seen = {}
+                alias(tempAlias("^lazysettleinner$", function() end))
+                trigger(tempRegexTrigger("^LazySettleInner (\\w+)$", function() end))
+                trigger(tempRegexTrigger("^LazySettleOuter (\\w+)$", function()
+                    local original = getfenv(0)
+                    setfenv(0, setmetatable({}, {__index = original}))
+                    nested.run()
+                    setfenv(0, original)
+                    seen.capture = matches and matches[2]
+                    seen.multimatches = type(multimatches)
+                    seen.line = line
+                end))
+
+                feedTriggers("\nLazySettleOuter word\n")
+
+                assert.are.equal("word", seen.capture)
+                assert.are.equal("table", seen.multimatches)
+                assert.are.equal("LazySettleOuter word", seen.line)
+            end)
+        end
+
+        -- Code compiled before the swap still reads the table it was compiled with
+        it("leaves a fire's matches in the globals table setfenv(0) took away", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazySwappedAway (\\w+)$", function()
+                seen.original = getfenv(0)
+                setfenv(0, setmetatable({}, {__index = seen.original}))
+            end))
+
+            local ok, message = pcall(feedTriggers, "\nLazySwappedAway word\n")
+            if seen.original then
+                setfenv(0, seen.original)
+            end
+
+            assert.is_true(ok, tostring(message))
+            local left = rawget(seen.original, "matches")
+            assert.are.equal("word", left and left[2])
+        end)
+
+        it("leaves a multiline fire's multimatches in the globals table setfenv(0) took away", function()
+            _G.LazyGlobalsSpec = {}
+            local spec = _G.LazyGlobalsSpec
+            multiline("LazySwappedAwayMulti", {[[^lazyswappedaway one (\w+)$]], [[^lazyswappedaway two (\w+)$]]}, [==[
+                LazyGlobalsSpec.original = getfenv(0)
+                setfenv(0, setmetatable({}, {__index = LazyGlobalsSpec.original}))
+            ]==])
+
+            feedTriggers("lazyswappedaway one aaa\n")
+            local ok, message = pcall(feedTriggers, "lazyswappedaway two bbb\n")
+            if spec.original then
+                setfenv(0, spec.original)
+            end
+
+            assert.is_true(ok, tostring(message))
+            local left = rawget(spec.original, "multimatches")
+            assert.are.equal("aaa", left and left[1] and left[1][2])
+        end)
+
+        -- Any allocation can run a garbage collection step, and with it a __gc
+        -- finaliser that reads or assigns these names while Mudlet is between
+        -- leaving one out and putting it back
+        describe("read by a finaliser", function()
+            local finaliser = {armed = false, watching = false, runs = 0}
+
+            -- Each finaliser leaves another proxy behind for the next step
+            local function chain()
+                local proxy = newproxy(true)
+                getmetatable(proxy).__gc = function()
+                    if not finaliser.armed then
+                        return
+                    end
+                    if finaliser.watching then
+                        finaliser.runs = finaliser.runs + 1
+                        finaliser.onRun()
+                    end
+                    chain()
+                end
+            end
+
+            -- With a pause of 0 every allocation finishes a whole cycle
+            local function withFinaliserAtEveryAllocation(run)
+                local pause = collectgarbage("setpause", 0)
+                local stepmul = collectgarbage("setstepmul", 0)
+                finaliser.armed, finaliser.watching, finaliser.runs = true, false, 0
+                chain()
+                collectgarbage()
+                local ok, message = pcall(run)
+                finaliser.armed, finaliser.watching = false, false
+                collectgarbage("setpause", pause)
+                collectgarbage("setstepmul", stepmul)
+                collectgarbage()
+                assert(ok, message)
+            end
+
+            local function recordNils(nils)
+                return function()
+                    for _, name in ipairs({"matches", "multimatches", "line"}) do
+                        if _G[name] == nil then
+                            nils[#nils + 1] = name
+                        end
+                    end
+                end
+            end
+
+            before_each(function()
+                feedTriggers("\nLazyFinaliserSettle\n")
+            end)
+
+            it("finds every name there once a fire is over", function()
+                local nils = {}
+                trigger(tempRegexTrigger("^LazyFinaliserAfter (\\w+)$", function()
+                    finaliser.watching = true
+                end))
+                finaliser.onRun = recordNils(nils)
+                matches.dirty = true
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserAfter word\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran after the script")
+                assert.are.same({}, nils)
+            end)
+
+            it("finds every name there once a fire that read multimatches is over", function()
+                local nils = {}
+                trigger(tempRegexTrigger("^LazyFinaliserSpare (\\w+)$", function()
+                    local _ = multimatches
+                    finaliser.watching = true
+                end))
+                finaliser.onRun = recordNils(nils)
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserSpare word\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran after the script")
+                assert.are.same({}, nils)
+            end)
+
+            it("finds every name there once an alias pass under a multiline fire is over", function()
+                local nils = {}
+                alias(tempAlias("^lazyfinaliserinner$", function()
+                    finaliser.watching = true
+                end))
+                _G.LazyGlobalsSpec = {run = function() expandAlias("lazyfinaliserinner", false) end}
+                multiline("LazyFinaliserNested", {[[^lazyfinalisernested one (\w+)$]], [[^lazyfinalisernested two (\w+)$]]}, [==[
+                    LazyGlobalsSpec.run()
+                ]==])
+                finaliser.onRun = recordNils(nils)
+
+                feedTriggers("lazyfinalisernested one aaa\n")
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("lazyfinalisernested two bbb\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran after the script")
+                assert.are.same({}, nils)
+            end)
+
+            it("hands a script the matches a finaliser read while it was being built", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyFinaliserBuild (\\w+)$", function()
+                    finaliser.watching = true
+                    local read = matches
+                    seen.same = rawequal(read, seen.finaliserRead)
+                    seen.capture = read[2]
+                end))
+                finaliser.onRun = function()
+                    finaliser.watching = false
+                    seen.finaliserRead = matches
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserBuild word\n")
+                end)
+
+                assert.is_not_nil(seen.finaliserRead, "no finaliser ran inside the read")
+                assert.are.equal("word", seen.capture)
+                assert.is_true(seen.same, "the finaliser and the script were handed different tables")
+            end)
+
+            it("keeps the line a finaliser assigned while it was being built", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyFinaliserLine (\\w+)$", function()
+                    finaliser.watching = true
+                    local _ = line
+                    seen.line = rawget(_G, "line")
+                end))
+                finaliser.onRun = function()
+                    finaliser.watching = false
+                    _G.line = "from the finaliser"
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserLine word\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran inside the read")
+                assert.are.equal("from the finaliser", seen.line)
+            end)
+
+            -- The line is encoded into a buffer the interpreter keeps between
+            -- calls, and lua_pushstring() runs a collection step before it
+            -- copies the bytes out of it. A finaliser that gets another string
+            -- encoded there - an alias pass caches its command the same way -
+            -- writes over the bytes this read is still waiting for.
+            for _, size in ipairs({
+                {name = "a line", length = 40},
+                -- long enough that the buffer the inner call is left holding is
+                -- over the cap, which is where it used to go back to the
+                -- allocator while the outer call was still reading it
+                {name = "a line past the scratch buffer cap", length = 2000},
+            }) do
+                it("keeps " .. size.name .. " a finaliser had another string encoded under", function()
+                    local seen = {}
+                    local text = "LazyFinaliserScratch " .. string.rep("abcdefghij", size.length)
+                    alias(tempAlias("^lazyfinaliserscratch$", function() end))
+                    trigger(tempRegexTrigger("^LazyFinaliserScratch .*$", function()
+                        finaliser.watching = true
+                        seen.line = line
+                        finaliser.watching = false
+                    end))
+                    finaliser.onRun = function()
+                        finaliser.watching = false
+                        expandAlias("lazyfinaliserscratch", false)
+                    end
+
+                    withFinaliserAtEveryAllocation(function()
+                        feedTriggers("\n" .. text .. "\n")
+                    end)
+
+                    assert.is_true(finaliser.runs > 0, "no finaliser ran inside the read")
+                    assert.are.equal(#text, #tostring(seen.line), "the line came back a different length")
+                    assert.are.equal(text, seen.line)
+                end)
+            end
+        end)
+
+        -- A strict-globals package polices __index and __newindex on the
+        -- globals table, and must never be asked about a name Mudlet sets. Every
+        -- way one gets installed, before the line and between two fires on it.
+        describe("under a metatable that polices the globals table", function()
+            local original, originalIndex, originalNewindex
+            local complaints
+
+            local mudletSets = {matches = true, multimatches = true, line = true}
+
+            local function police(_, key)
+                if mudletSets[key] then
+                    complaints[#complaints + 1] = "read " .. key
+                end
+                return nil
+            end
+
+            local function policeNew(globals, key, value)
+                if mudletSets[key] then
+                    complaints[#complaints + 1] = "write " .. key
+                end
+                rawset(globals, key, value)
+            end
+
+            local function installByReplacing()
+                setmetatable(_G, {__index = police, __newindex = policeNew})
+            end
+
+            local function installInPlace()
+                local metatable = getmetatable(_G)
+                metatable.__index = police
+                metatable.__newindex = policeNew
+            end
+
+            local function installInPlaceByDebug()
+                local metatable = debug.getmetatable(_G)
+                metatable.__index = police
+                metatable.__newindex = policeNew
+            end
+
+            before_each(function()
+                complaints = {}
+                original = getmetatable(_G)
+                originalIndex = rawget(original, "__index")
+                originalNewindex = rawget(original, "__newindex")
+                rearm()
+            end)
+
+            after_each(function()
+                rawset(original, "__index", originalIndex)
+                rawset(original, "__newindex", originalNewindex)
+                setmetatable(_G, original)
+            end)
+
+            local function readEverything(seen, tag)
+                seen[tag] = {
+                    capture = matches[2],
+                    multimatches = type(multimatches),
+                    line = line,
+                }
+            end
+
+            for _, install in ipairs({
+                {name = "replaced", apply = installByReplacing},
+                {name = "changed in place", apply = installInPlace},
+                {name = "changed in place through the debug library", apply = installInPlaceByDebug},
+            }) do
+
+                it("never asks it for a name Mudlet sets - " .. install.name .. " before the line", function()
+                    local seen = {}
+                    trigger(tempRegexTrigger("^LazyPoliced (\\w+)$", function()
+                        readEverything(seen, "first")
+                    end))
+                    trigger(tempRegexTrigger("^LazyPoliced (\\w+)$", function()
+                        readEverything(seen, "second")
+                    end))
+
+                    install.apply()
+                    feedTriggers("\nLazyPoliced word\n")
+                    local afterMatches, afterMultimatches, afterLine = matches, multimatches, line
+
+                    assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                    for _, tag in ipairs({"first", "second"}) do
+                        assert.is_truthy(seen[tag], "the " .. tag .. " trigger did not fire")
+                        assert.are.equal("word", seen[tag].capture)
+                        assert.are.equal("table", seen[tag].multimatches)
+                        assert.are.equal("LazyPoliced word", seen[tag].line)
+                    end
+                    assert.are.equal("table", type(afterMatches))
+                    assert.are.equal("table", type(afterMultimatches))
+                    assert.are.equal("LazyPoliced word", afterLine)
+                end)
+
+                it("never asks it for a name Mudlet sets - " .. install.name .. " between two fires on a line", function()
+                    local seen = {}
+                    trigger(tempRegexTrigger("^LazyPolicedMid (\\w+)$", function()
+                        if not seen.installed then
+                            seen.installed = true
+                            install.apply()
+                        end
+                        readEverything(seen, "first " .. matches[2])
+                    end))
+                    trigger(tempRegexTrigger("^LazyPolicedMid (\\w+)$", function()
+                        readEverything(seen, "second " .. matches[2])
+                    end))
+
+                    feedTriggers("\nLazyPolicedMid word\n")
+                    feedTriggers("\nLazyPolicedMid again\n")
+
+                    assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                    for _, capture in ipairs({"word", "again"}) do
+                        for _, tag in ipairs({"first", "second"}) do
+                            local fire = seen[tag .. " " .. capture]
+                            assert.is_truthy(fire, "the " .. tag .. " trigger did not fire on " .. capture)
+                            assert.are.equal(capture, fire.capture)
+                            assert.are.equal("table", fire.multimatches)
+                            assert.are.equal("LazyPolicedMid " .. capture, fire.line)
+                        end
+                    end
+                end)
+
+            end
+
+            it("never asks it for a name Mudlet sets - taken off the globals table altogether", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyBare (\\w+)$", function()
+                    readEverything(seen, "first")
+                end))
+
+                setmetatable(_G, nil)
+                feedTriggers("\nLazyBare word\n")
+
+                assert.are.equal("word", seen.first.capture)
+                assert.are.equal("table", seen.first.multimatches)
+                assert.are.equal("LazyBare word", seen.first.line)
+                assert.are.equal("table", type(matches))
+            end)
+
+            it("never asks it for a name Mudlet sets - put in place through the debug library", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyDebug (\\w+)$", function()
+                    if not seen.installed then
+                        seen.installed = true
+                        debug.setmetatable(_G, {__index = police, __newindex = policeNew})
+                    end
+                    readEverything(seen, matches[2])
+                end))
+
+                feedTriggers("\nLazyDebug word\n")
+                feedTriggers("\nLazyDebug again\n")
+
+                assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                for _, capture in ipairs({"word", "again"}) do
+                    assert.is_truthy(seen[capture], "the trigger did not fire on " .. capture)
+                    assert.are.equal(capture, seen[capture].capture)
+                    assert.are.equal("table", seen[capture].multimatches)
+                    assert.are.equal("LazyDebug " .. capture, seen[capture].line)
+                end
+            end)
+
+            -- Whoever was handed the metatable once can change it at any moment after
+            for _, fetch in ipairs({{name = "getmetatable()", apply = getmetatable}, {name = "debug.getmetatable()", apply = debug.getmetatable}}) do
+                it("never asks it for a name Mudlet sets - changed in place through what " .. fetch.name .. " handed out before the line", function()
+                    local seen = {}
+                    local kept = fetch.apply(_G)
+                    trigger(tempRegexTrigger("^LazyKept (\\w+)$", function()
+                        kept.__index, kept.__newindex = police, policeNew
+                        readEverything(seen, "first")
+                    end))
+
+                    feedTriggers("\nLazyKept word\n")
+
+                    assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                    assert.is_truthy(seen.first, "the script raised reading its own captures")
+                    assert.are.equal("word", seen.first.capture)
+                    assert.are.equal("LazyKept word", seen.first.line)
+                end)
+            end
+
+            it("never asks it for a name Mudlet sets - changed in place through a table that shares it", function()
+                local seen = {}
+                local sharing = setmetatable({}, original)
+                trigger(tempRegexTrigger("^LazyShared (\\w+)$", function()
+                    local metatable = getmetatable(sharing)
+                    metatable.__index, metatable.__newindex = police, policeNew
+                    readEverything(seen, "first")
+                end))
+
+                feedTriggers("\nLazyShared word\n")
+
+                assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                assert.is_truthy(seen.first, "the script raised reading its own captures")
+                assert.are.equal("word", seen.first.capture)
+                assert.are.equal("LazyShared word", seen.first.line)
+            end)
+
+            it("never asks it for a name Mudlet sets - replaced by one keeping only Mudlet's __newindex", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyHalfIndex (\\w+)$", function()
+                    readEverything(seen, "first")
+                end))
+
+                setmetatable(_G, {__index = police, __newindex = originalNewindex})
+                feedTriggers("\nLazyHalfIndex word\n")
+
+                assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                assert.are.equal("word", seen.first.capture)
+                assert.are.equal("LazyHalfIndex word", seen.first.line)
+            end)
+
+            it("never tells it of a name Mudlet sets - replaced by one keeping only Mudlet's __index", function()
+                _G.LazyGlobalsSpec = {}
+                trigger(tempRegexTrigger("^LazyHalfNewindex (\\w+)$", [==[
+                    matches, multimatches, line = {"mine"}, {}, "mine"
+                    LazyGlobalsSpec.matches = matches[1]
+                ]==]))
+
+                setmetatable(_G, {__index = originalIndex, __newindex = policeNew})
+                feedTriggers("\nLazyHalfNewindex word\n")
+
+                assert.are.equal("", table.concat(complaints, ","), "the package's metatable was told of a name Mudlet sets")
+                assert.are.equal("mine", _G.LazyGlobalsSpec.matches)
+            end)
+
+        end)
+
+        -- A package that replaced getmetatable() after Mudlet's scripts loaded
+        -- holds the metatable without the guard having seen it go, so the
+        -- deferral is still on. Changing a handler on it is an assignment to a
+        -- key that already has a value, so no metamethod hears about it either.
+        -- Nothing may be left out after that: the read that would build it
+        -- never reaches the handler. rearmLazyGlobals() stands in for that
+        -- package, putting the deferral back on a table the script holds.
+        describe("a metatable the globals table is given and then changed", function()
+            local function readEverythingIn(seen)
+                return function()
+                    seen.rawMatches = rawget(_G, "matches")
+                    seen.matches = matches
+                    seen.multimatches = multimatches
+                    seen.line = line
+                end
+            end
+
+            it("keeps answering after the script takes Mudlet's __index off it", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyKeptMetatable (\\w+)$", readEverythingIn(seen)))
+
+                setmetatable(_G, copy)
+                rearmLazyGlobals()
+                copy.__index = nil
+                local ok, message = pcall(feedTriggers, "\nLazyKeptMetatable word\n")
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(message))
+                assert.is_not_nil(seen.matches, "matches read as nil - a name was left out with no handler to build it")
+                assert.is_not_nil(seen.multimatches, "multimatches read as nil")
+                assert.are.equal("LazyKeptMetatable word", seen.line)
+            end)
+
+            it("hands a script its captures after the metatable gets a strict __index", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local asked = {}
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyStrictLater (\\w+)$", function()
+                    seen.capture = matches[2]
+                end))
+
+                setmetatable(_G, copy)
+                rearmLazyGlobals()
+                copy.__index = function(_, key)
+                    asked[key] = true
+                    return nil
+                end
+                local ok, message = pcall(feedTriggers, "\nLazyStrictLater word\n")
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(message))
+                assert.are.equal("word", seen.capture, "the script was handed something other than its capture")
+                assert.is_nil(asked.matches, "the package's metatable was asked for a name Mudlet sets")
+            end)
+
+            -- The control: the same shape with the handlers left alone, so a
+            -- case that stops reaching any of this cannot pass quietly
+            it("still leaves them out when the metatable is only copied", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyCopiedMetatable (\\w+)$", readEverythingIn(seen)))
+
+                setmetatable(_G, copy)
+                rearmLazyGlobals()
+                local ok, message = pcall(feedTriggers, "\nLazyCopiedMetatable word\n")
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(message))
+                assert.is_nil(seen.rawMatches, "nothing was left out, so the cases above prove nothing")
+                assert.is_not_nil(seen.matches)
+                assert.are.equal("LazyCopiedMetatable word", seen.line)
+            end)
+        end)
+
+        -- Once nothing is left out the handlers have nothing to answer for, and
+        -- every read of a global that is not there would still pay a C call
+        describe("the handlers once the metatable is handed out", function()
+            it("come off the globals metatable at the next line", function()
+                local metatable = getmetatable(_G)
+                local before = rawget(metatable, "__index")
+
+                feedTriggers("\nLazyHandlersIdle\n")
+                local index, newindex = rawget(metatable, "__index"), rawget(metatable, "__newindex")
+
+                assert.is_not_nil(before, "the handlers were not there to begin with, so this proves nothing")
+                assert.is_nil(index, "__index stayed on after nothing was left out any more")
+                assert.is_nil(newindex, "__newindex stayed on after nothing was left out any more")
+            end)
+
+            it("stay off when that metatable is put back on the globals table", function()
+                local metatable = getmetatable(_G)
+                feedTriggers("\nLazyHandlersIdle\n")
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyHandlersBack (\\w+)$", function()
+                    seen.rawMatches = rawget(_G, "matches")
+                    seen.capture = matches[2]
+                end))
+
+                setmetatable(_G, metatable)
+                feedTriggers("\nLazyHandlersBack word\n")
+
+                assert.is_not_nil(seen.rawMatches, "a name was left out after the script put a metatable it still holds back")
+                assert.are.equal("word", seen.capture)
+                assert.is_nil(rawget(metatable, "__index"), "the handlers went back on a metatable the script still holds")
+            end)
+
+            it("leave a handler a package put there alone", function()
+                local original = getmetatable(_G)
+                local function theirs() return nil end
+                local replacement = {__index = theirs}
+
+                setmetatable(_G, replacement)
+                feedTriggers("\nLazyHandlersIdle\n")
+                local kept = rawget(replacement, "__index")
+                setmetatable(_G, original)
+
+                assert.are.equal(theirs, kept, "the package's own __index was taken off")
+            end)
+        end)
+
+        describe("the lazyCaptureGlobals setting", function()
+            after_each(function()
+                setConfig("lazyCaptureGlobals", true)
+            end)
+
+            it("is on by default", function()
+                assert.is_true(getConfig("lazyCaptureGlobals"))
+            end)
+
+            it("sets matches, multimatches and line up front when switched off", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazySettingOff (\\w+)$", function()
+                    seen.matches = rawget(_G, "matches")
+                    seen.line = rawget(_G, "line")
+                end))
+
+                setConfig("lazyCaptureGlobals", false)
+                feedTriggers("\nLazySettingOff word\n")
+
+                assert.is_false(getConfig("lazyCaptureGlobals"))
+                assert.is_not_nil(seen.matches, "matches was left out with the setting off")
+                assert.are.equal("word", seen.matches[2])
+                assert.are.equal("LazySettingOff word", seen.line, "line was left out with the setting off")
+                assert.is_not_nil(rawget(_G, "multimatches"), "multimatches was left out between dispatches with the setting off")
+            end)
+
+            -- Read straight after switching off, as the getter hands out the
+            -- metatable as it stands
+            it("takes Mudlet's handlers off the globals metatable when switched off", function()
+                setConfig("lazyCaptureGlobals", false)
+                local metatable = getmetatable(_G)
+
+                assert.is_nil(rawget(metatable, "__index"), "__index stayed on with the setting off")
+                assert.is_nil(rawget(metatable, "__newindex"), "__newindex stayed on with the setting off")
+            end)
+
+            it("hands a fire what it is owed when switched off during it", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazySettingMidFire (\\w+)$", function()
+                    setConfig("lazyCaptureGlobals", false)
+                    seen.matches = rawget(_G, "matches")
+                    seen.line = rawget(_G, "line")
+                end))
+
+                feedTriggers("\nLazySettingMidFire word\n")
+
+                assert.is_not_nil(seen.matches, "the fire's matches were not put in when the setting went off")
+                assert.are.equal("word", seen.matches[2])
+                assert.are.equal("LazySettingMidFire word", seen.line, "the fire's line was not put in when the setting went off")
+            end)
+
+            it("leaves them out again once switched back on", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazySettingBack (\\w+)$", function()
+                    seen.matches = rawget(_G, "matches")
+                    seen.capture = matches[2]
+                end))
+
+                setConfig("lazyCaptureGlobals", false)
+                setConfig("lazyCaptureGlobals", true)
+                feedTriggers("\nLazySettingBack word\n")
+
+                assert.is_nil(seen.matches, "matches was set up front after the setting went back on")
+                assert.are.equal("word", seen.capture)
+            end)
+        end)
+
+        -- Before, a metatable carrying both handlers put back on the globals
+        -- table turned the deferral on again - on a table the script still
+        -- held, and could change in place mid-fire, where nothing Mudlet
+        -- checks before a line could see it
+        describe("a metatable a script put on the globals table and kept", function()
+            local original, copy
+
+            before_each(function()
+                original = getmetatable(_G)
+                copy = {__index = rawget(original, "__index"), __newindex = rawget(original, "__newindex")}
+            end)
+
+            after_each(function()
+                setmetatable(_G, original)
+            end)
+
+            it("hands a fire its matches after the script changes it mid-fire", function()
+                local seen = "unset"
+                trigger(tempRegexTrigger("^LazyKeptMid (\\w+)$", function()
+                    copy.__index = nil
+                    seen = matches
+                end))
+
+                setmetatable(_G, copy)
+                feedTriggers("\nLazyKeptMid word\n")
+
+                assert.are.equal("table", type(seen), "matches read as nil after the metatable was changed in place mid-fire")
+                assert.are.equal("word", seen[2])
+            end)
+
+            it("hands a script the line after it changes the metatable between lines", function()
+                setmetatable(_G, copy)
+                feedTriggers("\nLazyKeptLine word\n")
+                copy.__index = nil
+
+                assert.are.equal("LazyKeptLine word", line)
+            end)
+
+            it("hands a fire its matches when a strict __index goes on for a moment", function()
+                local strict = function() return nil end
+                local seen = "unset"
+                trigger(tempRegexTrigger("^LazyKeptToggle (\\w+)$", function()
+                    local previous = rawget(original, "__index")
+                    rawset(original, "__index", strict)
+                    seen = matches
+                    rawset(original, "__index", previous)
+                end))
+
+                setmetatable(_G, original)
+                feedTriggers("\nLazyKeptToggle word\n")
+
+                assert.are.equal("table", type(seen), "matches read as nil while a strict __index was on")
+            end)
+        end)
+
+    end)
+
+    -- Once a profile holds enough plain-text triggers, the engine files them by
+    -- their own characters and offers a line only the ones that could match it.
+    -- The filter is meant to be invisible, so every case here runs with enough
+    -- filler triggers to switch it on and then asserts the ordinary behaviour.
+    describe("large plain-text trigger sets", function()
+        local fillerIds = {}
+        local ids = {}
+        local permNames = {}
+
+        -- comfortably past the point where filtering switches on
+        local function addFillers()
+            for i = 1, 80 do
+                fillerIds[#fillerIds + 1] = tempTrigger("zqxjfiller" .. i .. "vkw", function() end)
+            end
+        end
+
+        local function track(id)
+            ids[#ids + 1] = id
+            return id
+        end
+
+        local function trackPerm(name, id)
+            permNames[#permNames + 1] = name
+            return id
+        end
+
+        before_each(function()
+            _G.TrigSpec = {count = 0, seen = {}}
+            addFillers()
+        end)
+
+        after_each(function()
+            for _, id in ipairs(fillerIds) do killTrigger(id) end
+            for _, id in ipairs(ids) do killTrigger(id) end
+            -- cleanup is deferred, so stop them firing before asking for it
+            for _, name in ipairs(permNames) do disableTrigger(name); killTrigger(name) end
+            fillerIds, ids, permNames = {}, {}, {}
+        end)
+
+        it("still fires a plain substring trigger", function()
+            track(tempTrigger("needle_in_haystack", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nsome needle_in_haystack text\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a substring trigger stopped firing among many others")
+        end)
+
+        it("fires when the pattern sits at either end of the line", function()
+            track(tempTrigger("edgepattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nedgepattern trails\n")
+            feedTriggers("\nleads edgepattern\n")
+            assert.are.equal(2, _G.TrigSpec.count, "a pattern at the start or end of a line was missed")
+        end)
+
+        it("fires on a pattern that is the whole line", function()
+            track(tempTrigger("wholelinepattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nwholelinepattern\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a pattern filling the whole line was missed")
+        end)
+
+        it("still fires a pattern too short to be filed by content", function()
+            track(tempTrigger("ab", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nc ab d\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a short substring trigger stopped firing")
+        end)
+
+        it("keeps substring matching case sensitive", function()
+            track(tempTrigger("CaseSensitivePattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\ncasesensitivepattern\n")
+            assert.are.equal(0, _G.TrigSpec.count, "a substring trigger fired on the wrong case")
+            feedTriggers("\nCaseSensitivePattern\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a substring trigger missed its own case")
+        end)
+
+        it("still fires on a non-ASCII pattern", function()
+            track(tempTrigger("Ünicöde_pattern_ähm", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nsagt Ünicöde_pattern_ähm hier\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a non-ASCII substring trigger stopped firing")
+        end)
+
+        it("hands a substring trigger its capture", function()
+            track(tempTrigger("capture_me_here", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = matches[1] end))
+            feedTriggers("\npadding capture_me_here padding\n")
+            assert.are.equal("capture_me_here", _G.TrigSpec.seen[1], "a substring trigger's capture was lost")
+        end)
+
+        it("still fires exact match and begin of line triggers", function()
+            track(tempExactMatchTrigger("exact_whole_line_here", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            track(tempBeginOfLineTrigger("startmarker", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end))
+            feedTriggers("\nexact_whole_line_here\n")
+            assert.are.equal(1, _G.TrigSpec.count, "an exact match trigger stopped firing")
+            feedTriggers("\nstartmarker and more\n")
+            assert.are.equal(101, _G.TrigSpec.count, "a begin of line trigger stopped firing")
+            feedTriggers("\nnot startmarker\n")
+            assert.are.equal(101, _G.TrigSpec.count, "a begin of line trigger fired mid-line")
+        end)
+
+        it("still fires a regex trigger", function()
+            track(tempRegexTrigger("^regex_among_many_(\\d+)$", function() _G.TrigSpec.count = _G.TrigSpec.count + tonumber(matches[2]) end))
+            feedTriggers("\nregex_among_many_7\n")
+            assert.are.equal(7, _G.TrigSpec.count, "a regex trigger stopped firing among many substring ones")
+        end)
+
+        it("still fires a line trigger on lines that match nothing", function()
+            local id = tempLineTrigger(0, 10, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            feedTriggers("\nnothing here at all\n")
+            feedTriggers("\nnor here either\n")
+            feedTriggers("\nnor on this one\n")
+            local count = _G.TrigSpec.count
+            -- a line trigger matches by position, and killTrigger's cleanup is
+            -- deferred, so disable it before it can reach a later spec's lines
+            disableTrigger(id)
+            killTrigger(id)
+            assert.is_true(count >= 3, "a line trigger stopped firing on non-matching lines, fired " .. count .. " times")
+        end)
+
+        -- The one case where a trigger fires on a line it does not match: after
+        -- a hit it stays open for a set number of lines, so it cannot be filtered
+        -- out of them.
+        it("keeps a stay-open trigger firing on lines it does not match", function()
+            trackPerm("SpecStayOpenSubstring",
+                permSubstringTrigger("SpecStayOpenSubstring", "", {"stayopen_marker"},
+                    [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+            -- setTriggerStayOpen makes it fire on the next lines whether or not
+            -- they match, which is exactly the state it must not be filtered out
+            -- of. A match would end that, because matching resets the countdown
+            -- to the trigger's own stay-open length, which here is zero.
+            setTriggerStayOpen("SpecStayOpenSubstring", 3)
+            feedTriggers("\nan unrelated line\n")
+            assert.is_true(_G.TrigSpec.count >= 1,
+                "a stay-open trigger did not fire on a line that does not contain its pattern")
+            -- and it still closes: well past its window the count has to settle
+            for _ = 1, 8 do feedTriggers("\nanother unrelated line\n") end
+            local settled = _G.TrigSpec.count
+            feedTriggers("\nyet another unrelated line\n")
+            assert.are.equal(settled, _G.TrigSpec.count, "a stay-open trigger never stopped firing")
+        end)
+
+        it("offers the current line to a trigger created while it is processing", function()
+            track(tempTrigger("spawner_pattern", function()
+                track(tempTrigger("spawner_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            end))
+            feedTriggers("\nspawner_pattern arrives\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a trigger created mid-line did not see that line")
+        end)
+
+        -- Filtering hands back positions in the root list, not the order the
+        -- patterns happen to appear in the line, and an unfilterable trigger
+        -- keeps its place among the filtered ones.
+        it("fires triggers in creation order wherever their text sits", function()
+            track(tempTrigger("alpha_marker_one", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "A" end))
+            track(tempRegexTrigger("^beta", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "B" end))
+            track(tempTrigger("beta_marker_two", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "C" end))
+            -- C's text deliberately sits before A's on the line
+            feedTriggers("\nbeta_marker_two then alpha_marker_one\n")
+            assert.are.same({"A", "B", "C"}, _G.TrigSpec.seen, "filtering changed the order triggers fire in")
+        end)
+
+        -- A colour trigger carries a pattern string that it never matches by
+        -- text, so filing it under that text would leave it never reached.
+        it("still fires a colour trigger", function()
+            local id = tempColorTrigger(4, 2, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            feedTriggers("\n\27[31;40mcolour among many\27[0m\n")
+            -- kill before asserting: a leaked colour trigger matches by SGR and
+            -- would fire on later specs' fed lines
+            killTrigger(id)
+            assert.are.equal(1, _G.TrigSpec.count, "a colour trigger stopped firing among many substring ones")
+        end)
+
+        -- A firing script can feed more text through the same unit, so the
+        -- candidate list the outer pass is walking has to survive the nested one.
+        it("keeps the outer line's remaining triggers across a nested feed", function()
+            track(tempTrigger("nested_inner_line", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "inner" end))
+            track(tempTrigger("outer_feeder_here", function()
+                _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "feeder"
+                feedTriggers("\ncontains nested_inner_line now\n")
+            end))
+            track(tempTrigger("outer_trailer_here", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "trailer" end))
+            feedTriggers("\nouter_feeder_here and outer_trailer_here\n")
+            assert.are.same({"feeder", "inner", "trailer"}, _G.TrigSpec.seen,
+                "a nested feedTriggers disturbed the outer line's remaining triggers")
+        end)
+
+        -- The candidate list for a line is settled before any trigger runs, so a
+        -- script that makes a LATER trigger fire without matching has to reach
+        -- the line already in flight.
+        it("fires a trigger opened by an earlier trigger on that same line", function()
+            -- the opener is created first, so the trigger it opens is still ahead
+            -- of it in the list when the line is only part way through
+            track(tempTrigger("opener_fires_here", function()
+                setTriggerStayOpen("SpecOpenedMidLine", 3)
+            end))
+            trackPerm("SpecOpenedMidLine",
+                permSubstringTrigger("SpecOpenedMidLine", "", {"never_on_this_line"},
+                    [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+            feedTriggers("\nopener_fires_here now\n")
+            assert.are.equal(1, _G.TrigSpec.count,
+                "a trigger made stay-open mid-line did not fire on that line")
+        end)
+
+        it("keeps offering the right triggers after some are killed", function()
+            local doomed = tempTrigger("doomed_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end)
+            track(tempTrigger("survivor_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            killTrigger(doomed)
+            feedTriggers("\ndoomed_pattern and survivor_pattern\n")
+            assert.are.equal(1, _G.TrigSpec.count, "killing one trigger disturbed which others a line reached")
+        end)
+
+        -- The index follows an arming or a killing rather than being built
+        -- again, and reclaims what the killings leave behind once enough have
+        -- accumulated. These four are what say the bookkeeping stayed honest
+        -- across that, since a slot pointing at the wrong trigger still
+        -- produces a plausible-looking candidate list.
+        it("keeps firing while triggers are armed and killed on every line", function()
+            track(tempTrigger("steady_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            track(tempTrigger("churn_pattern", function()
+                killTrigger(tempTrigger("throwaway_pattern", function() end))
+            end))
+            for _ = 1, 200 do
+                feedTriggers("\nsteady_pattern and churn_pattern\n")
+            end
+            assert.are.equal(200, _G.TrigSpec.count, "a trigger stopped being offered lines once others churned around it")
+        end)
+
+        it("still fires a trigger armed after many others were killed", function()
+            local doomed = {}
+            for i = 1, 60 do
+                doomed[i] = tempTrigger("doomedchurn" .. i .. "pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end)
+            end
+            for _, id in ipairs(doomed) do killTrigger(id) end
+            feedTriggers("\nnothing of interest here\n")
+            track(tempTrigger("latecomer_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nlatecomer_pattern arrives\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a trigger armed into a slot freed by an earlier killing was not offered the line")
+        end)
+
+        it("goes on matching once killings drop the set below the filtering threshold", function()
+            track(tempTrigger("remainder_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            for _, id in ipairs(fillerIds) do killTrigger(id) end
+            fillerIds = {}
+            feedTriggers("\nremainder_pattern survives\n")
+            assert.are.equal(1, _G.TrigSpec.count, "emptying the set out from under the filter lost a trigger")
+        end)
+
+        -- A pattern shorter than the longest n-gram is filed under one of its
+        -- own length rather than being left out of the index, so these say the
+        -- shorter lengths reach their triggers at all. Below two characters
+        -- there is nothing to file, and such a trigger is offered every line.
+        it("fires a short substring trigger among many long ones", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "3" end))
+            track(tempTrigger("gold", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "4" end))
+            track(tempTrigger("HP", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "2" end))
+            track(tempTrigger("x", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "1" end))
+            feedTriggers("\nan orc drops gold, HP: 40, x marks it\n")
+            assert.are.same({"3", "4", "2", "1"}, _G.TrigSpec.seen, "a short pattern was not offered a line that contains it")
+        end)
+
+        it("does not offer a short pattern a line without it", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end))
+            track(tempTrigger("gold", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\na pile of gold and nothing else\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a short pattern fired on a line that does not contain it")
+        end)
+
+        -- One trigger holding both a short and a long pattern has to be reached
+        -- by either, which means it is filed at two different gram lengths.
+        -- Patterns of different lengths are filed under n-grams of different
+        -- lengths, so a line has to be walked at each length in use for both to
+        -- be reached from the same pass.
+        it("reaches triggers of several pattern lengths on one line", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "short" end))
+            track(tempTrigger("a_much_longer_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "long" end))
+            feedTriggers("\nan orc guards a_much_longer_pattern\n")
+            assert.are.same({"short", "long"}, _G.TrigSpec.seen, "a line did not reach triggers of both pattern lengths")
+        end)
+
+        it("keeps creation order after killings have left gaps", function()
+            _G.TrigSpec.seen = {}
+            local doomed = tempTrigger("gapmaker_pattern", function() end)
+            track(tempTrigger("orderfirst_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "first" end))
+            killTrigger(doomed)
+            track(tempTrigger("ordersecond_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "second" end))
+            feedTriggers("\nordersecond_pattern then orderfirst_pattern\n")
+            assert.are.same({"first", "second"}, _G.TrigSpec.seen, "a gap left by a killed trigger reordered the ones around it")
+        end)
+
+        -- A stay-open window makes a trigger fire on lines it never matches, so
+        -- it has to keep reaching the trigger while the window is open and hand
+        -- it back to the index once it shuts. Each target below carries a
+        -- pattern its lines never contain, so every fire it records can only
+        -- have come from the window, and a setTriggerStayOpen() that quietly
+        -- did nothing at all could not pass.
+        describe("stay-open windows set from a script", function()
+            it("keeps firing a trigger a script holds open on every line", function()
+                local lines = 20
+                trackPerm("SpecStayOpenSteady",
+                    permSubstringTrigger("SpecStayOpenSteady", "", {"qqneverinalineqq"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                -- The same count every line, which is the shape a script that
+                -- re-holds a trigger open produces, and the one where the
+                -- engine has nothing to change: the window is reopened at 3
+                -- before it can ever count down to 0, so the trigger is open on
+                -- every line fed below. Each feed carries the empty line ahead
+                -- of the text as well, and an open window fires on both.
+                track(tempTrigger("steady_probe_line", function()
+                    setTriggerStayOpen("SpecStayOpenSteady", 3)
+                end))
+
+                -- One feed first, so the window is already open when the
+                -- counting starts: on the feed that opens it the trigger fires
+                -- on the text line only, having missed the blank line ahead of
+                -- it, and would count differently from every later one.
+                feedTriggers("\nsteady_probe_line warmup\n")
+                _G.TrigSpec.count = 0
+
+                for i = 1, lines do
+                    feedTriggers("\nsteady_probe_line " .. i .. "\n")
+                end
+
+                assert.are.equal(2 * lines, _G.TrigSpec.count,
+                    "a trigger held open by a repeated setTriggerStayOpen() stopped firing")
+            end)
+
+            it("files a trigger back into the index once its window closes", function()
+                trackPerm("SpecStayOpenClosed",
+                    permSubstringTrigger("SpecStayOpenClosed", "", {"closedstayopen_pattern"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                setTriggerStayOpen("SpecStayOpenClosed", 5)
+                feedTriggers("\nwhile the window is open\n")
+                assert.is_true(_G.TrigSpec.count > 0, "an opened stay-open window did not fire")
+
+                setTriggerStayOpen("SpecStayOpenClosed", 0)
+                _G.TrigSpec.count = 0
+                feedTriggers("\nafter the window was closed\n")
+                assert.are.equal(0, _G.TrigSpec.count, "a closed stay-open window went on firing")
+
+                -- Closing it hands the trigger back to the index, and a filing
+                -- that went wrong there leaves it unreachable by its own line
+                -- rather than merely firing at the wrong time.
+                feedTriggers("\nthis line has closedstayopen_pattern in it\n")
+                assert.are.equal(1, _G.TrigSpec.count,
+                    "a trigger whose stay-open window closed was not filed back into the index, so its own line never reached it")
+            end)
+
+            -- A regex or color trigger has nothing in the index to change when
+            -- its window opens, but it still has to stop being dismissed by its
+            -- pattern. These lines are fed without a leading blank line, which
+            -- an open window fires on too and which has no one color to rule a
+            -- color trigger out by, so it would hide a miss.
+            it("keeps firing a regex trigger opened between lines", function()
+                trackPerm("SpecStayOpenRegex",
+                    permRegexTrigger("SpecStayOpenRegex", "", {"^regexstayopen (\\w+) marker$"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                -- filed while closed, so opening it has a copy to go stale
+                feedTriggers("before the window opens\n")
+                setTriggerStayOpen("SpecStayOpenRegex", 3)
+                for i = 1, 3 do
+                    feedTriggers("unrelated window line " .. i .. "\n")
+                end
+                assert.are.equal(3, _G.TrigSpec.count, "a regex trigger opened between lines did not fire on the lines after")
+            end)
+
+            it("fires a regex trigger opened by an earlier trigger on the same line", function()
+                track(tempTrigger("samelineopener_probe", function()
+                    setTriggerStayOpen("SpecStayOpenRegexSameLine", 1)
+                end))
+                trackPerm("SpecStayOpenRegexSameLine",
+                    permRegexTrigger("SpecStayOpenRegexSameLine", "", {"^regexsameline (\\w+) marker$"},
+                        [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+                feedTriggers("samelineopener_probe on this line\n")
+                assert.are.equal(1, _G.TrigSpec.count, "a regex trigger opened earlier on the line did not fire on it")
+            end)
+
+            it("keeps firing a color trigger opened between lines", function()
+                -- 4, 2 remaps to red on black
+                local id = track(tempColorTrigger(4, 2, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+                feedTriggers("\27[32;40mbefore the window opens\27[0m\n")
+                setTriggerStayOpen(tostring(id), 3)
+                for i = 1, 3 do
+                    feedTriggers("\27[32;40mgreen window line " .. i .. "\27[0m\n")
+                end
+                assert.are.equal(3, _G.TrigSpec.count, "a color trigger opened between lines did not fire on lines of another color")
+            end)
+        end)
+    end)
+
+    -- A trigger's echo joins the line being processed instead of starting new
+    -- lines, and still does once the trigger has fed text of its own.
+    describe("echo from a trigger", function()
+        it("joins the trigger's line after a nested feedTriggers", function()
+            local addedLines
+            local innerId = tempExactMatchTrigger("nested echo inner", function() end)
+            local outerId = tempExactMatchTrigger("nested echo outer", function()
+                feedTriggers("nested echo inner\n")
+                local before = getLineCount()
+                echo(" joined\nstill joined")
+                addedLines = getLineCount() - before
+            end)
+            feedTriggers("nested echo outer\n")
+            killTrigger(innerId)
+            killTrigger(outerId)
+
+            assert.are.equal(0, addedLines)
+        end)
+    end)
+
+    -- A line is held up against copies of what the top-level triggers look for,
+    -- taken before any script has run, and a trigger the copy rules out is never
+    -- asked. Every case here changes a trigger after its copy was taken. A copy
+    -- only rules text out once several patterns asked about the previous line,
+    -- so each case first feeds a line that all of these fillers sit in.
+    describe("triggers ruled out from a copy of their pattern", function()
+        local ids = {}
+        local warmUpLine
+
+        local function track(id)
+            ids[#ids + 1] = id
+            return id
+        end
+
+        before_each(function()
+            _G.TrigSpec = {count = 0, seen = {}}
+            local fillers = {}
+            for i = 1, 8 do
+                fillers[i] = "ruledoutfill" .. i .. "qzv"
+                track(tempTrigger(fillers[i], function() end))
+            end
+            warmUpLine = "\n" .. table.concat(fillers, " ") .. "\n"
+        end)
+
+        after_each(function()
+            for _, id in ipairs(ids) do killTrigger(id) end
+            ids = {}
+            _G.TrigSpec = nil
+        end)
+
+        it("leaves the pinned filters alone when a trigger creates another trigger", function()
+            -- A pass pins a copy of every root trigger's pattern summary and
+            -- stops trusting those copies the moment one of the triggers they
+            -- were taken from changes. A trigger a script creates from inside a
+            -- trigger - a one-shot, a prompt capture, a combat follow-up - is in
+            -- none of those copies, because no snapshot has ever filed it, so
+            -- announcing it would cost every root trigger left on the line its
+            -- copy for nothing. This reads the announcement counter rather than
+            -- a firing, as the filters only decide how a line is walked and
+            -- never which triggers fire on it.
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("counting announcements to a line in progress needs MUDLET_TEST_MODE")
+            end
+            local function epoch()
+                return getProfileStats().triggers.rootFilterEpoch
+            end
+
+            track(tempTrigger("ruledoutmaker_fires", function()
+                track(tempTrigger("ruledoutmade_qzv_never_sent", function() end))
+            end))
+            -- files the maker itself, so the line below changes nothing else
+            feedTriggers(warmUpLine)
+
+            local before = epoch()
+            feedTriggers("\nruledoutmaker_fires now\n")
+            assert.are.equal(before, epoch(),
+                             "creating a trigger mid-line staled filter copies that could not have been of it")
+
+            -- A control, so the assertion above cannot pass on a counter that
+            -- never moves: a line trigger fires on its position rather than on
+            -- text, which every pinned copy has to hear about at once.
+            local lineId = tempLineTrigger(0, 1, function() end)
+            assert.is_true(epoch() > before, "a change every pinned copy has to hear about went unannounced")
+            disableTrigger(lineId)
+            killTrigger(lineId)
+        end)
+
+        it("fires a regex whose brace is the brace itself and not a quantifier", function()
+            track(tempRegexTrigger("^{OOC|IC} (\\w+) says", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers(warmUpLine)
+            feedTriggers("\n{OOC Bob waves\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a regex was ruled out by text its alternation lets a match do without")
+        end)
+
+        it("fires a trigger that an earlier one on the line held open", function()
+            local held
+            track(tempTrigger("holder_fires_here", function() setTriggerStayOpen(tostring(held), 2) end))
+            held = track(tempTrigger("xkcdwvu_never_sent", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers(warmUpLine)
+            feedTriggers("\nholder_fires_here now\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a trigger held open mid-line was ruled out of that line by its pattern")
+        end)
+
+        it("fires a trigger that its own match in a nested feed held open", function()
+            track(tempTrigger("feeder_fires_here", function() feedTriggers("\njqzpwy_nested_text arrives\n") end))
+            -- not multiline, and stays open for two lines after a match; killed by
+            -- name, as the ID it returns is not what killTrigger() looks it up by
+            tempComplexRegexTrigger(track("SpecRuledOutNested"), "jqzpwy_nested_text", [[_G.TrigSpec.count = _G.TrigSpec.count + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0)
+            feedTriggers(warmUpLine)
+            feedTriggers("\nfeeder_fires_here now\n")
+            assert.are.equal(2, _G.TrigSpec.count, "a trigger its nested match held open was ruled out of the outer line by its pattern")
+        end)
+
+        it("keeps a trigger firing through the lines its own match held open", function()
+            tempComplexRegexTrigger(track("SpecRuledOutWindow"), "vbnmwq_window_text", [[_G.TrigSpec.count = _G.TrigSpec.count + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0)
+            feedTriggers(warmUpLine)
+            feedTriggers("\nvbnmwq_window_text arrives\n")
+            -- the blank line each feed opens with is one of the two
+            feedTriggers(warmUpLine)
+            assert.are.equal(3, _G.TrigSpec.count, "a trigger was ruled out of the lines its own match held it open for")
+            feedTriggers(warmUpLine)
+            assert.are.equal(3, _G.TrigSpec.count, "and it has to close again once they have passed")
+        end)
+
+        it("judges a color trigger afresh once an earlier trigger has edited the line", function()
+            -- whatever the profile's palette makes of ANSI 91
+            local r, g, b
+            local probe = tempTrigger("ruledoutprobe", function()
+                selectString("ruledoutprobe", 1)
+                r, g, b = getFgColor()
+                deselect()
+            end)
+            feedTriggers("\n\27[91mruledoutprobe\27[0m\n")
+            killTrigger(probe)
+            assert.is_truthy(r, "the probe line should have told the palette's light red")
+
+            -- ruled out while the line is still green throughout, which is what
+            -- works the line's colors out before the edit below changes them
+            track(tempAnsiColorTrigger(9, -1, function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "early " .. matches[1] end))
+            track(tempTrigger("greengreen", function()
+                moveCursor(5, getLineNumber())
+                dinsertText(string.format("<%d,%d,%d>EDITED", r, g, b))
+                resetFormat()
+            end))
+            track(tempAnsiColorTrigger(9, -1, function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = matches[1] end))
+
+            feedTriggers("\n\27[32mgreengreen\27[0m\n")
+            assert.are.same({"EDITED"}, _G.TrigSpec.seen, "a color trigger was judged by the colors the line had before an earlier trigger edited it")
+        end)
     end)
 end)

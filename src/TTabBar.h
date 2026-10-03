@@ -55,6 +55,8 @@ public:
 
     void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget = nullptr) const override;
     QRect subElementRect(SubElement element, const QStyleOption* option, const QWidget* widget = nullptr) const override;
+    QSize sizeFromContents(ContentsType type, const QStyleOption* option, const QSize& contentsSize, const QWidget* widget = nullptr) const override;
+    int pixelMetric(PixelMetric metric, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override;
     void setTabBold(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mBoldTabsSet); }
     void setTabBold(const int index, const bool state) { setIndexedTabState(index, state, mBoldTabsSet); }
     void setTabItalic(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mItalicTabsSet); }
@@ -157,6 +159,7 @@ public:
     void removeTab(const QString& tabName);
     void removeTab(int);
     QStringList tabNames() const;
+    void refreshAfterApplicationStyleChange();
 
 signals:
     void tabDetachRequested(int index, const QPoint& globalPos);
@@ -170,7 +173,7 @@ private:
     QPoint mDragStartPos;
     int mDragIndex = -1;
     bool mDetachEnabled = true;
-    static const int DETACH_DISTANCE_THRESHOLD = 50;
+    static const int DETACH_DISTANCE_THRESHOLD = 80;
     qint64 mDragStartTime = 0;
     bool mPendingDetach = false;
 

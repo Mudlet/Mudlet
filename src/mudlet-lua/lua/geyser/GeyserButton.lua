@@ -52,7 +52,12 @@ function Geyser.Button:new(cons, container)
   local me = self.parent:new(cons, container)
   setmetatable(me, self)
   me:setClickCallback(function() me:press() end)
-  me:setState(me.state)
+  -- an unusable state constraint would otherwise leave the button holding it
+  -- and never painted, since setState returns before drawing anything
+  if not me:setState(me.state) then
+    me.state = "up"
+    me:setState("up")
+  end
   me:resize() -- to pick up the Geyser.Button default size rather than Geyser.Label's
   return me
 end
@@ -70,6 +75,9 @@ function Geyser.Button:setState(state)
   if state ~= "up" and state ~= "down" then
     return nil, f"bad argument #1 value (state must be one of 'up' or 'down', got {state})"
   end
+  if state == "down" and not self.twoState then
+    return nil, "cannot set a single state button's state to 'down', only 'up'"
+  end
   self.state = state
   if state == "up" then
     self:echo(self.msg)
@@ -85,9 +93,6 @@ function Geyser.Button:setState(state)
     self:setToolTip(self.tooltip, self.toolTipDuration)
     return true
   end
-  if not self.twoState then
-    return nil, "cannot set a single state button's state to 'down', only 'up'"
-  end
   self:echo(self.downMsg)
   if self.downStyle then
     if type(self.downStyle) == "table" then
@@ -99,6 +104,9 @@ function Geyser.Button:setState(state)
     self.parent.setColor(self, self.downColor)
   end
   self:setToolTip(self.downTooltip, self.toolTipDuration)
+  -- both branches report success, otherwise a legitimate 'down' is
+  -- indistinguishable from the refusals above
+  return true
 end
 
 --- Handles clicking the button. If the button is twoState, also handles switching the button's state

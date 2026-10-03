@@ -37,9 +37,11 @@ function Geyser.TextEdit:setStyleSheet(css)
   self.stylesheet = css
 end
 
---- @param font the font family name
+--- @param font the font family name. A family the font database does not list is
+-- passed on for Qt to substitute for
+-- @return true, or nil+error if there is no text edit by that name
 function Geyser.TextEdit:setFont(font)
-  setTextEditFont(self.name, font)
+  return setTextEditFont(self.name, font)
 end
 
 --- @param size the font size in points
@@ -62,11 +64,14 @@ function Geyser.TextEdit:new (cons, container)
   setmetatable(me, self)
   self.__index = self
 
-  createTextEdit(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+  local ok, err = createTextEdit(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+    printError(string.format("Geyser.TextEdit '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+  end
   if me.stylesheet then
     me:setStyleSheet()
   end
-  -- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end

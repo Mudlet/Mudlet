@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/lang">
         <file>mudlet_ar_SA.qm</file>
+        <file>mudlet_cs_CZ.qm</file>
         <file>mudlet_de_DE.qm</file>
         <file>mudlet_el_GR.qm</file>
         <file>mudlet_en_GB.qm</file>

@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-module]]
+author = [[Mudlet test suite]]
+title = [[Module fixture for Package_spec.lua]]
+version = [[3.1]]
+description = [[Counts how often its script has been compiled, so a reload is observable.]]

@@ -77,12 +77,17 @@ function Geyser:base_add (window, cons)
 end
 
 --- Add a window to the list that this container manages.
--- The window will be shown after added to the container
+-- The window will be shown after added to the container, unless the container
+-- itself is hidden, in which case it joins the container's hidden children
 -- @param window The window to add this container
 -- @param cons table of Geyser window options such as name, width, and height
 function Geyser:add (window, cons)
   self:base_add(window, cons)
-  window:show()
+  if self.hidden or self.auto_hidden then
+    window:hide(true)
+  else
+    window:show()
+  end
 end
 
 --- Add a window to the list that this container manages. 

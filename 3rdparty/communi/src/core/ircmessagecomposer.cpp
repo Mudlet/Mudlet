@@ -29,6 +29,7 @@
 #include "ircmessagecomposer_p.h"
 #include "ircmessage.h"
 #include "irccore_p.h"
+#include "ircdebug_p.h"
 #include "irc.h"
 
 IRC_BEGIN_NAMESPACE
@@ -82,7 +83,25 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         d.messages.top()->setParameters(QStringList(message->parameters().value(0)));
         break;
     case Irc::RPL_MOTD:
-        d.messages.top()->setParameters(d.messages.top()->parameters() << message->parameters().value(1));
+        // A server is free to send an RPL_MOTD outside an RPL_MOTDSTART...RPL_ENDOFMOTD
+        // block, or to repeat one after that block has closed, and then there is no
+        // IrcMotdMessage under construction to add the line to. top() on an empty stack
+        // is undefined behaviour, and adding the line to whatever else happens to be
+        // being composed would corrupt that message.
+        //
+        // Dropping the line instead would lose it for good: IrcNumericMessage::isComposed()
+        // answers per code rather than per message, so RPL_MOTD is suppressed wherever a
+        // client shows numerics, on the understanding that it will arrive as part of an
+        // IrcMotdMessage. Give it one of its own, finished immediately, so the line is
+        // shown and nothing is left on the stack for an unrelated "end of" numeric to pop.
+        if (!d.messages.isEmpty() && d.messages.top()->type() == IrcMessage::Motd) {
+            d.messages.top()->setParameters(d.messages.top()->parameters() << message->parameters().value(1));
+        } else {
+            d.messages.push(new IrcMotdMessage(d.connection));
+            d.messages.top()->setPrefix(message->prefix());
+            d.messages.top()->setParameters(QStringList() << message->parameters().value(0) << message->parameters().value(1));
+            finishCompose(message);
+        }
         break;
     case Irc::RPL_ENDOFMOTD:
         finishCompose(message);
@@ -246,12 +265,21 @@ void IrcMessageComposer::finishCompose(IrcMessage* message)
 
 void IrcMessageComposer::replaceParam(int index, const QString& param)
 {
-    if (!d.messages.isEmpty()) {
-        QStringList params = d.messages.top()->parameters();
-        if (index < params.count())
-            params.replace(index, param);
-        d.messages.top()->setParameters(params);
+    // Every caller is a WHOIS or WHOWAS numeric, and the indexes are the slots
+    // IrcMessageComposer::composeMessage() lays those two out in. Sent by a server
+    // while something else is being composed - a MOTD, a names list - they would
+    // otherwise overwrite a line of it. There is no message of their own to fall back
+    // to, since a single WHOIS field is not one, so an orphaned one is dropped; the
+    // debug channel says so, as it is not visible anywhere else.
+    if (d.messages.isEmpty() || (d.messages.top()->type() != IrcMessage::Whois && d.messages.top()->type() != IrcMessage::Whowas)) {
+        ircDebug(d.connection, IrcDebug::Status) << "dropping orphaned WHOIS/WHOWAS parameter" << index << param;
+        return;
     }
+
+    QStringList params = d.messages.top()->parameters();
+    if (index < params.count())
+        params.replace(index, param);
+    d.messages.top()->setParameters(params);
 }
 #endif // IRC_DOXYGEN
 

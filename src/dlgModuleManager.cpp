@@ -24,6 +24,7 @@
 #include "dlgModuleManager.h"
 
 #include "mudlet.h"
+#include "MudletApp.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -39,6 +40,9 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
 {
     setupUi(this);
 
+    // nothing is selected yet, so there is no help to show
+    helpButton->setDisabled(true);
+
     layoutModules();
     connect(uninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstallModule);
     connect(installButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
@@ -46,6 +50,13 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     connect(moduleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
     connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
+    connect(mpHost, &Host::signal_packageListChanged, this, &dlgModuleManager::layoutModules);
+    connect(mpHost, &Host::signal_moduleListChangedByScript, this, [this]() {
+        if (moduleTable->isVisible()) {
+            layoutModules();
+        }
+    });
+    connect(mpHost, &Host::signal_moduleSyncChangedByScript, this, &dlgModuleManager::showModuleSync);
     setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -65,10 +76,7 @@ void dlgModuleManager::layoutModules()
     moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
     moduleTable->setShowGrid(true);
-    //clear everything
-    for (int i = 0; i <= moduleTable->rowCount(); i++) {
-        moduleTable->removeRow(i);
-    }
+    moduleTable->setRowCount(0);
     //order modules by priority and then alphabetically
     QMap<int, QStringList> mOrder;
     while (it.hasNext()) {
@@ -123,13 +131,26 @@ void dlgModuleManager::layoutModules()
     moduleTable->resizeColumnsToContents();
 }
 
+void dlgModuleManager::showModuleSync(const QString& module, const bool sync)
+{
+    for (int row = 0; row < moduleTable->rowCount(); ++row) {
+        if (auto* nameItem = moduleTable->item(row, 0); !nameItem || nameItem->text() != module) {
+            continue;
+        }
+        if (auto* checkItem = moduleTable->item(row, 2)) {
+            checkItem->setCheckState(sync ? Qt::Checked : Qt::Unchecked);
+        }
+        return;
+    }
+}
+
 void dlgModuleManager::slot_installModule()
 {
     if (!mpHost) {
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
     //: Module manager - import modules from file dialog (multi-select enabled)
@@ -145,13 +166,12 @@ void dlgModuleManager::slot_installModule()
     QStringList failedModules;
 
     for (const QString& fileName : fileNames) {
-        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
-        if (success) {
+        if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
             mpHost->waitForProfileSave();
         } else {
             const QString baseName = QFileInfo(fileName).fileName();
             failedModules << baseName;
-            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName << ":" << errorMsg;
+            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName;
         }
     }
 
@@ -175,12 +195,25 @@ void dlgModuleManager::slot_uninstallModule()
 
     const int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
-    if (pI) {
-        mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::ModuleFromUI);
+    if (!pI) {
+        return;
     }
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
+    // Read before uninstalling: that pumps the event loop while a save finishes, and a handler that
+    // removes a module rebuilds this table, deleting this row's item.
+    const QString moduleName = pI->text();
+    if (!mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
+        QString msg;
+        if (mpHost->currentlySavingProfile()) {
+            //: %1 is the name of the module the user asked to remove
+            msg = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(moduleName);
+        } else {
+            //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
+            msg = tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(moduleName);
+        }
+        //: Title of the dialog that says why a module the user asked to remove was not removed
+        QMessageBox::warning(this, tr("Removal failed"), msg);
     }
+    // Rebuild even if refused: only that clears a stale row
     layoutModules();
 }
 
@@ -205,11 +238,17 @@ void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
         return;
     }
 
-    if (mpHost->moduleHelp.contains(entry->text())) {
-        helpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL")) || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
-    } else {
-        helpButton->setDisabled(true);
+    helpButton->setDisabled(moduleHelpUrl(entry->text()).isEmpty());
+}
+
+QString dlgModuleManager::moduleHelpUrl(const QString& moduleName) const
+{
+    const QString url = mpHost->mModuleInfo.value(moduleName).value(qsl("helpURL"));
+    if (!url.isEmpty()) {
+        return url;
     }
+    // fall back to the legacy source populated by XML-imported <HelpPackage> data
+    return mpHost->moduleHelp.value(moduleName).value(qsl("helpURL"));
 }
 
 void dlgModuleManager::slot_moduleChanged(QTableWidgetItem* pItem)
@@ -247,22 +286,24 @@ void dlgModuleManager::slot_helpModule()
     if (!pI) {
         return;
     }
-    if (mpHost->moduleHelp.value(pI->text()).contains(QLatin1String("helpURL")) && !mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")).isEmpty()) {
-        if (!mudlet::self()->openWebPage(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
-            //failed first open, try for a module related path
-            QTableWidgetItem* item = moduleTable->item(cRow, 3);
-            if (!item) {
-                return;
-            }
-            const QString itemPath = item->text();
-            QStringList path = itemPath.split(QDir::separator());
-            path.pop_back();
-            path.append(QDir::separator());
-            path.append(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")));
-            const QString path2 = path.join(QString());
-            if (!mudlet::self()->openWebPage(path2)) {
-                helpButton->setDisabled(true);
-            }
+    const QString helpUrl = moduleHelpUrl(pI->text());
+    if (helpUrl.isEmpty()) {
+        return;
+    }
+    if (!mudlet::self()->openWebPage(helpUrl)) {
+        //failed first open, try for a module related path
+        QTableWidgetItem* item = moduleTable->item(cRow, 3);
+        if (!item) {
+            return;
+        }
+        const QString itemPath = item->text();
+        QStringList path = itemPath.split(QDir::separator());
+        path.pop_back();
+        path.append(QDir::separator());
+        path.append(helpUrl);
+        const QString path2 = path.join(QString());
+        if (!mudlet::self()->openWebPage(path2)) {
+            helpButton->setDisabled(true);
         }
     }
 }

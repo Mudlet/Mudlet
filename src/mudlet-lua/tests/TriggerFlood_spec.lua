@@ -1,0 +1,367 @@
+-- A line arriving on its own and the same line arriving in the middle of a
+-- burst do not take the same path through the trigger engine. A chunk carrying
+-- MUDLET_MATCH_FLOOD_LINES lines or more (8 by default), in a profile whose
+-- previous line ran MUDLET_MATCH_THRESHOLD regex searches or more (128), opens
+-- the parallel prescan in TriggerMatchPool: worker threads decide up front
+-- which regex triggers cannot match the line, and TTrigger::match() then skips
+-- those. The first line of a burst is judged by the line before the burst.
+--
+-- That decision is a second implementation of the matching rules, so if it ever
+-- drifts from the first, triggers stop firing and nothing says so. These specs
+-- feed the same lines both ways and require the same firings.
+--
+-- The pool needs two threads to share a batch between (MUDLET_MATCH_THREADS,
+-- default min(4, cores / 2)) and turns itself off below that, so by default a
+-- machine with fewer than four cores never runs it. The counter that proves a
+-- burst reached the pool is reported under MUDLET_TEST_MODE only. Without
+-- either there is nothing here worth running, and these report as pending
+-- rather than passing on a comparison that never happened.
+--
+-- Worth running under more than the defaults - see "Runtime tuning" in
+-- docs/platform-builds.md. MUDLET_MATCH_SPIN_US=0 matters most here: the lines
+-- these specs feed arrive far enough apart that a parked helper meets every
+-- one of them cold, which is the path a warm burst never touches.
+describe("trigger matching under a flood", function()
+
+    -- Enough regex triggers, each searching every line, to clear the prescan's
+    -- threshold without depending on what else the profile happens to have
+    -- loaded. Only regex searches count: the other kinds are cheap enough to
+    -- answer on the main thread, and so is a pattern with one run of text every
+    -- match has to hold, which a line lacking it is dismissed from without
+    -- pcre2 being asked. The alternation below is what leaves these with no
+    -- such run, so that each of them really does search every line.
+    local paddingTriggers = 130
+
+    local ids
+    local fired
+
+    local function track(id)
+        ids[#ids + 1] = id
+        return id
+    end
+
+    local function note(key)
+        fired[key] = (fired[key] or 0) + 1
+    end
+
+    local function filler(count, replacements)
+        local lines = {}
+        for index = 1, count do
+            lines[index] = "flood quiet filler " .. index
+        end
+        for index, text in pairs(replacements or {}) do
+            lines[index] = text
+        end
+        return lines
+    end
+
+    -- Nothing here is worth running without the pool, and a pass would be a lie
+    -- about a comparison that never happened.
+    local function itFlood(name, body)
+        it(name, function()
+            local workers = getProfileStats().triggers.prescanWorkers
+            if not workers then
+                pending("counting what reaches the prescan needs MUDLET_TEST_MODE")
+            end
+            -- the count includes the calling thread, and is zero when the
+            -- pool declined to start, so this asks whether the parallel path
+            -- exists at all rather than how wide it is
+            if workers < 2 then
+                pending("this machine has too few cores to run the parallel prescan")
+            end
+            body()
+        end)
+    end
+
+    -- Every burst goes through here so that no spec below can quietly pass on a
+    -- run where the prescan never engaged, which is what a broken flood gate
+    -- would otherwise look like.
+    local function feedAsBurst(lines)
+        local before = getProfileStats().triggers.prescans
+        feedTriggers(table.concat(lines, "\n") .. "\n")
+        assert.is_true(getProfileStats().triggers.prescans > before,
+                       "the burst did not reach the parallel prescan, so this spec compared nothing")
+    end
+
+    before_each(function()
+        ids = {}
+        fired = {}
+        -- permRegexTrigger takes its script as source, so the counter has to be
+        -- reachable by name from it.
+        _G.FloodSpecNote = note
+        for index = 1, paddingTriggers do
+            track(tempRegexTrigger("^(?:flood_padding_matches_nothing_" .. index .. "|flood_padding_never_" .. index .. ")$", function() note("padding") end))
+        end
+    end)
+
+    after_each(function()
+        -- Newest first, so a child goes before the parent that owns it.
+        for index = #ids, 1, -1 do
+            disableTrigger(ids[index])
+            killTrigger(ids[index])
+        end
+        ids = nil
+        _G.FloodSpecNote = nil
+    end)
+
+    itFlood("fires the same triggers whether the lines trickle in or arrive at once", function()
+        track(tempTrigger("flood substring bait", function() note("substring") end))
+        track(tempBeginOfLineTrigger("flood_prefix", function() note("beginOfLine") end))
+        track(tempExactMatchTrigger("flood_exact_line", function() note("exact") end))
+        track(tempRegexTrigger([[^You gain (\d+) gold]], function() note("regex") end))
+
+        local corpus = filler(12, {
+            [2] = "there is flood substring bait on this line",
+            [4] = "flood_prefix and then some",
+            [6] = "flood_exact_line",
+            [8] = "You gain 15 gold from the corpse.",
+            [10] = "flood_prefix again",
+            [12] = "and flood substring bait once more",
+        })
+
+        -- One line per call is below the flood threshold, so no prescan runs and
+        -- this is the behaviour the burst below has to reproduce.
+        for _, line in ipairs(corpus) do
+            feedTriggers(line .. "\n")
+        end
+        local trickle = {}
+        for key, count in pairs(fired) do
+            trickle[key] = count
+        end
+
+        assert.are.equal(2, trickle.substring, "substring trigger, lines fed one at a time")
+        assert.are.equal(2, trickle.beginOfLine, "begin-of-line trigger, lines fed one at a time")
+        assert.are.equal(1, trickle.exact, "exact-match trigger, lines fed one at a time")
+        assert.are.equal(1, trickle.regex, "regex trigger, lines fed one at a time")
+        assert.is_nil(trickle.padding, "a padding trigger matched the corpus, so the comparison below proves nothing")
+
+        feedAsBurst(corpus)
+
+        for _, key in ipairs({"substring", "beginOfLine", "exact", "regex"}) do
+            assert.are.equal(2 * trickle[key], fired[key],
+                             key .. " fired " .. tostring(fired[key]) .. " times over both runs, but "
+                             .. tostring(trickle[key]) .. " when the same lines arrived one at a time")
+        end
+    end)
+
+    itFlood("fires a filter chain's child on a capture the line itself does not match", function()
+        -- The child is anchored, so it matches the capture and never the whole
+        -- line: judging it against the line would rule it out wrongly.
+        track(tempComplexRegexTrigger("FloodFilterParent", [[^You gain (\w+) essence\.$]], [==[ ]==],
+                                      0, 0, 0, 1, 0, 0, 0, 0, 0, 0))
+        track(permRegexTrigger("FloodFilterChild", "FloodFilterParent", {[[^divine$]]},
+                               [==[FloodSpecNote("filterChild")]==]))
+
+        feedAsBurst(filler(11, {[6] = "You gain divine essence."}))
+
+        assert.are.equal(1, fired.filterChild, "a filter chain's child should still see the parent's capture in a burst")
+    end)
+
+    itFlood("fires triggers whose outcome the line text alone does not decide", function()
+        -- Multiline state, a line counter and a colour scan all depend on more
+        -- than the text of the line, so the prescan has to let all three through.
+        local multilineCode = [==[FloodSpecNote("multiline")]==]
+        track(tempComplexRegexTrigger("FloodMultiline", [[^flood_multiline_one$]], multilineCode,
+                                      1, 0, 0, 0, 0, 0, 0, 0, 0, 4))
+        tempComplexRegexTrigger("FloodMultiline", [[^flood_multiline_two$]], multilineCode,
+                                1, 0, 0, 0, 0, 0, 0, 0, 0, 4)
+        -- Green on red, which no ordinary line carries.
+        track(tempAnsiColorTrigger(2, 1, [==[FloodSpecNote("colour")]==]))
+        local lineTrigger = track(tempLineTrigger(0, 20, [==[FloodSpecNote("line")]==]))
+
+        local corpus = filler(12, {
+            [3] = "flood_multiline_one",
+            [5] = "flood_multiline_two",
+            [9] = "\27[32;41mflood coloured line\27[0m",
+        })
+        feedAsBurst(corpus)
+        -- A line trigger fires on position rather than text, so it has to stop
+        -- before any later spec feeds a line.
+        disableTrigger(lineTrigger)
+
+        assert.are.equal(1, fired.multiline, "a multiline trigger should complete inside a burst")
+        assert.are.equal(1, fired.colour, "a colour trigger should fire inside a burst")
+        assert.is_true((fired.line or 0) >= #corpus,
+                       "a line trigger should fire for every line of the burst, fired " .. tostring(fired.line or 0))
+    end)
+
+    itFlood("fires a trigger that an earlier trigger in the same burst enabled", function()
+        -- The prescan judged this one while it was still inactive, and an
+        -- inactive trigger has no verdict worth keeping: by the time the line
+        -- reaches it, it is live and its pattern matches.
+        local lateId = track(tempRegexTrigger([[^flood_late_line$]], function() note("late") end))
+        disableTrigger(lateId)
+        track(tempRegexTrigger([[^flood_enable_the_late_one$]], function() enableTrigger(lateId) end))
+
+        feedAsBurst(filler(12, {
+            [4] = "flood_enable_the_late_one",
+            [9] = "flood_late_line",
+        }))
+
+        assert.are.equal(1, fired.late, "a trigger enabled mid-burst should fire on a later line of the same burst")
+    end)
+
+    itFlood("keeps a stay-open trigger's children running over the lines that follow", function()
+        -- mKeepFiring is what carries a stay-open trigger past the line it
+        -- matched, and it can be raised after the prescan has already run, so
+        -- the skip has to re-read it rather than trust the verdict.
+        track(tempComplexRegexTrigger("FloodStayOpen", [[^flood_open_the_window$]], [==[ ]==],
+                                      0, 0, 0, 0, 0, 0, 0, 0, 6, 0))
+        track(permRegexTrigger("FloodStayOpenChild", "FloodStayOpen", {[[flood quiet filler]]},
+                               [==[FloodSpecNote("stayOpenChild")]==]))
+
+        feedAsBurst(filler(12, {[3] = "flood_open_the_window"}))
+
+        assert.is_true((fired.stayOpenChild or 0) > 0,
+                       "a stay-open trigger should keep offering later lines to its children during a burst")
+    end)
+
+    itFlood("fires a pattern whose required text the line holds only once encoded", function()
+        -- A perl pattern that every match has to hold one run of literal text
+        -- is dismissed from a line without that run before pcre2 is asked, on
+        -- the prescan's threads as much as on this one. The two look for the
+        -- run in the line as Qt holds it but run the pattern against its UTF-8,
+        -- and those carry the same text for every line but one: an unpaired
+        -- surrogate has no UTF-8 of its own, so encoding drops it and puts the
+        -- text either side of it together. "abcd" is not in this line - the
+        -- surrogate splits it - and is in the bytes pcre2 reads, so a prescan
+        -- that skips the dismissal for such a line keeps the trigger and one
+        -- that does not loses a match nothing would report.
+        track(tempRegexTrigger("abcd", function() note("split") end))
+        setConfig("specialForceMXPProcessorOn", true)
+        finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+
+        feedAsBurst(filler(12, {[6] = "zqab&#xD800;cd"}))
+
+        assert.are.equal(1, fired.split,
+                         "a burst dropped a match whose required text only the encoded line holds")
+    end)
+
+    itFlood("fires a pattern whose required text the line holds outright", function()
+        -- The other side of the same dismissal, on a line whose UTF-8 holds
+        -- what it holds: "flood_literal_" is the run every match needs, so the
+        -- line carrying it reaches pcre2 and fires, the line spelling it with
+        -- spaces is dismissed before pcre2 is asked, and the line carrying the
+        -- run but not matching is dismissed by pcre2 itself. All three have to
+        -- come out of a burst the way they come out of a trickle.
+        track(tempRegexTrigger([[^flood_literal_(\d+)_tail$]], function() note("literal") end))
+
+        feedAsBurst(filler(12, {
+            [4] = "flood_literal_7_tail",
+            [8] = "flood literal 7 tail",
+            [10] = "flood_literal_seven_tail",
+        }))
+
+        assert.are.equal(1, fired.literal,
+                         "a burst should keep a pattern whose required text the line holds, and only that line")
+    end)
+
+    -- Only a trigger with a regex among its patterns is prescanned, so the
+    -- prescan judges the other kinds only when they share a trigger with one.
+    -- No Lua API mixes pattern kinds in one trigger, hence the fixture.
+    describe("triggers that mix a regex with other pattern kinds", function()
+
+        local packageName = "mudlet-spec-floodmixed"
+        local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+        assert(specDirectory, "TriggerFlood_spec.lua has to be run from a file so that it can find its fixtures")
+        local fixture = specDirectory .. "/fixtures/packages/sources/" .. packageName .. "/" .. packageName .. ".xml"
+
+        -- the same retries as Trigger_spec.lua's fixtures, which says why
+        local function packageInstalled()
+            return table.contains(getPackages(), packageName)
+        end
+
+        local function waitForProfileSaveToPass()
+            for _ = 1, 100 do
+                if installPackage("") == nil then
+                    return
+                end
+                pumpEvents(50)
+            end
+        end
+
+        local function removePackage()
+            local reason
+            for _ = 1, 3 do
+                if not packageInstalled() then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = uninstallPackage(packageName)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            return not packageInstalled(), reason
+        end
+
+        setup(function()
+            -- itFlood() reports pending without test mode or a working pool,
+            -- so there is nothing to install for; installing also needs
+            -- pumpEvents(), which does nothing without test mode
+            local workers = getProfileStats().triggers.prescanWorkers
+            if not os.getenv("MUDLET_TEST_MODE") or not workers or workers < 2 then
+                return
+            end
+            removePackage()
+            local reason
+            for _ = 1, 3 do
+                if packageInstalled() then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = installPackage(fixture)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_true(packageInstalled(), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+        end)
+
+        teardown(function()
+            if packageInstalled() then
+                local gone, reason = removePackage()
+                assert.is_true(gone, "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            end
+        end)
+
+        itFlood("fires the same way whether the lines trickle in or arrive at once", function()
+            -- saved disabled, so that nothing in the fixture fires outside this spec
+            enableTrigger(packageName .. " text kinds")
+            enableTrigger(packageName .. " lua kind")
+            finally(function()
+                disableTrigger(packageName .. " text kinds")
+                disableTrigger(packageName .. " lua kind")
+            end)
+
+            -- every kind gets a line it matches and a near miss next to it
+            local corpus = filler(12, {
+                [2] = "there is flood mixed bait on this line",
+                [3] = "bait mixed flood, the words but not the phrase",
+                [4] = "flood_mixed_prefix starts this line",
+                [5] = "this line ends with flood_mixed_prefix",
+                [6] = "flood_mixed_exact",
+                [7] = "flood_mixed_exact and then some",
+                [9] = "flood_mixed_lua",
+                [10] = "not quite flood_mixed_lua",
+            })
+            local kinds = {"flood mixed bait", "flood_mixed_prefix", "flood_mixed_exact", "lua"}
+
+            for _, line in ipairs(corpus) do
+                feedTriggers(line .. "\n")
+            end
+            for _, key in ipairs(kinds) do
+                assert.are.equal(1, fired[key], key .. " should fire once when the lines are fed one at a time")
+            end
+
+            feedAsBurst(corpus)
+
+            -- every kind that went astray is named at once, rather than just the first
+            local astray = {}
+            for _, key in ipairs(kinds) do
+                if fired[key] ~= 2 then
+                    astray[#astray + 1] = key .. " fired " .. tostring(fired[key]) .. " times over both runs"
+                end
+            end
+            assert.are.same({}, astray, "each kind fired once when the same lines arrived one at a time")
+        end)
+    end)
+end)

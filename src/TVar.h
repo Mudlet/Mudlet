@@ -58,6 +58,7 @@ public:
     QString getName() const;
     QString getNewName() const;
     void clearNewName();
+    void abandonNewName();
     int getKeyType() const;
     int getNewKeyType() const;
     int getValueType() const;

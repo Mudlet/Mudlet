@@ -27,8 +27,11 @@
 
 
 #include <QDebug>
+#include <QDebugStateSaver>
 #include <QPointer>
+#include <QString>
 #include <QTime>
+#include <QtGlobal>
 
 class Host;
 
@@ -51,11 +54,13 @@ public:
     const QString& getName() const { return mName; }
     void setName(const QString& name);
     const QTime& getTime() const { return mTime; }
-    void compile();
     bool checkRestart();
     bool compileScript();
     void execute();
     void setTime(QTime time);
+    // Not part of setTime(): a new timer has no time yet, and whether it needs one depends on its
+    // parent, which drag and drop can change
+    void validateTime();
     const QString& getCommand() const { return mCommand; }
     void setCommand(const QString& cmd) { mCommand = cmd; }
     const QString& getScript() const { return mScript; }
@@ -66,8 +71,6 @@ public:
     void start();
     void enableTimer();
     void disableTimer();
-    void enableTimer(const QString&);
-    void disableTimer(const QString&);
     void enableTimer(int);
     void disableTimer(int);
     void killTimer();
@@ -100,8 +103,6 @@ public:
     // property into the QTimer that mpQTimer points to as well:
     void setID(int) override;
     QString packageName(TTimer* pTimer);
-    QString moduleName(TTimer* pTimer);
-
 
 
     // specifies whenever the payload is Lua code as a string
@@ -110,7 +111,6 @@ public:
     bool exportItem = true;
     bool mModuleMasterFolder = false;
 
-    static const char* scmProperty_HostName;
     static const char* scmProperty_TTimerId;
 
     // temporary timers are single-shot by default, unless repeating is set
@@ -118,6 +118,12 @@ public:
 
 private:
     TTimer() = default;
+    // A tempTimer() Lua function lives in the Lua registry, so such a timer's script is empty
+    bool hasPayload() const { return !mScript.isEmpty() || !mCommand.isEmpty() || mRegisteredAnonymousLuaFunction; }
+    // Hides the non-virtual Tree<TTimer>::activate(); Tree's call in setIsActive() skips the time
+    // validation, so setIsActive() validates for itself
+    bool activate();
+
     QString mName;
     QString mScript;
     QTime mTime;

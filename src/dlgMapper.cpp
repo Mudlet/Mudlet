@@ -25,6 +25,7 @@
 #include "dlgMapper.h"
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -32,6 +33,7 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
+#include <QApplication>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFileDialog>
@@ -46,6 +48,7 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QSettings>
+#include <QTimer>
 #include <QVBoxLayout>
 
 using namespace std::chrono_literals;
@@ -126,8 +129,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     } else {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
-    //stops inheritance of palette from mpConsole->mpMainFrame
-    setPalette(QApplication::palette());
+    refreshColours();
 
     connect(mpMap->mMapInfoContributorManager, &MapInfoContributorManager::signal_contributorsUpdated, this, &dlgMapper::slot_updateInfoContributors);
     slot_updateInfoContributors();
@@ -166,6 +168,12 @@ static void centerOverlayIn(QFrame* overlay, QWidget* parent, int minWidth)
     const int w = qMin(qMax(hint.width(), minWidth), available);
     const int h = hint.height();
     overlay->setGeometry((parent->width() - w) / 2, (parent->height() - h) / 2, w, h);
+}
+
+// Set explicitly, or the mapper inherits mpConsole->mpMainFrame's palette.
+void dlgMapper::refreshColours()
+{
+    setPalette(QApplication::palette());
 }
 
 void dlgMapper::setupEmptyStateOverlay()
@@ -338,8 +346,8 @@ void dlgMapper::loadMapFromFile()
     auto* dialog = new QFileDialog(this);
     //: Title of the file dialog used to pick a map file to load.
     dialog->setWindowTitle(tr("Load Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
-    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
@@ -354,7 +362,7 @@ void dlgMapper::loadMapFromFile()
         }
         bool success = false;
         if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-            success = pHost->mpConsole->importMap(fileName);
+            success = pHost->importMapFile(fileName);
         } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
             auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
             success = ok;
@@ -362,12 +370,12 @@ void dlgMapper::loadMapFromFile()
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
             }
         } else {
-            success = pHost->mpConsole->loadMap(fileName);
+            success = pHost->loadMapFile(fileName);
         }
         if (success) {
             pHost->mpMap->audit();
             mEmptyStateDismissed = true;
-            mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+            MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
         updateEmptyStateOverlay();
     });
@@ -505,13 +513,18 @@ void dlgMapper::slot_toggleStrongHighlight(int toggle)
 
 void dlgMapper::slot_togglePanel()
 {
-    dlgMapper::slot_setMapperPanelVisible(!widget_panel->isVisible());
+    // The host holds the setting; widget_panel->isVisible() is also false while
+    // the whole map dock is hidden, which would make this a no-op:
+    const bool show = !mpHost->mShowPanel;
+    // This widget is not necessarily the one the host knows as mpMap->mpMapper,
+    // which is all the setter pushes the change to:
+    slot_setMapperPanelVisible(show);
+    mpHost->setMapperPanelVisible(show);
 }
 
 void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
 {
     widget_panel->setVisible(panelVisible);
-    mpHost->mShowPanel = panelVisible;
 }
 
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
@@ -599,12 +612,6 @@ void dlgMapper::slot_roomSize(int size)
 {
     const float floatSize = static_cast<float>(size / 10.0);
     mp2dMap->setRoomSize(floatSize);
-    mp2dMap->update();
-}
-
-void dlgMapper::slot_exitSize(int size)
-{
-    mp2dMap->setExitSize(size);
     mp2dMap->update();
 }
 
@@ -989,10 +996,8 @@ void dlgMapper::slot_showSaveWarningMenu()
 
     auto* retryAction = new QAction(tr("Retry save"), this);
     connect(retryAction, &QAction::triggered, this, [this]() {
-        if (mpHost && mpHost->mpConsole) {
-            if (mpHost->mpConsole->saveMap(QString())) {
-                mpMap->setSaveError(false);
-            }
+        if (mpHost && mpHost->saveMapFile(QString())) {
+            mpMap->setSaveError(false);
         }
     });
     menu->addAction(retryAction);

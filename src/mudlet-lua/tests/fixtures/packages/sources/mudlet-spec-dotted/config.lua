@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-dotted.xml]]
+author = [[Mudlet test suite]]
+title = [[Fixture whose config.lua names it with a file extension, for Package_spec.lua]]
+version = [[3.3]]
+description = [[The name in this manifest is trimmed before the package is installed under it, which is how the details end up filed under a name nothing is installed as.]]

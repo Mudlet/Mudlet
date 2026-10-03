@@ -253,22 +253,37 @@ function Geyser.Label:processFormatString(format)
   end
 end
 
---- Sets the font face for the label, use empty string to clear the font and use css/default. Returns true if the font changed, nil+error if not.
+--- Sets the font face for the label, use empty string to clear the font and use css/default.
+-- Returns true whenever it was given a string: an installed family, or a "Family Style"
+-- name, is applied to the label's widget font and remembered as the font database spells
+-- it, while a name the database does not list is passed on to the markup for Qt to
+-- substitute for, with a warning through debugc(). Only a font that is not a string is
+-- refused, with nil+error, and leaves the current font alone. A font inherited from
+-- a label used as a prototype was never set on this label's widget, so it reaches the
+-- markup only - self.font and getFont(self.name) can differ for that one case.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
-  local af = getAvailableFonts()
-  if not (af[font] or font == "") then
-    local err = "Geyser.Label:setFont(): attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options\n"
-    err = err .. "In the meantime, we will use a similar font which isn't the one you asked for but we hope is close enough"
-    debugc(err)
+  if type(font) ~= "string" then
+    local err = "font must be a string, got " .. type(font)
+    debugc("Geyser.Label:setFont(): " .. err .. "; the label keeps its current font")
+    return nil, err
+  end
+  if font ~= "" then
+    -- setFont() resolves the name the way it does for every other window (an
+    -- installed family, or a "Family Style" name split into base family and
+    -- weight) and applies it to the label's own widget font
+    local ok, err = setFont(self.name, font)
+    if ok then
+      -- the family as the font database spells it, so what is remembered here and
+      -- what the widget was given cannot drift apart
+      font = getFont(self.name)
+    else
+      debugc("Geyser.Label:setFont(): " .. err .. " - see getAvailableFonts() for valid options. Letting Qt pick the closest match it has")
+    end
   end
   self.font = font
-  -- Apply the profile's antialiasing settings to the label for static font compatibility
-  -- Use existing setFont() function with label name - this handles static fonts and antialiasing
-  if font ~= "" then
-    setFont(self.name, font)
-  end
   self:echo()
+  return true
 end
 
 --- return the size hint (the suggested size) of the label
@@ -439,11 +454,6 @@ function Geyser.Label:setFontSize(fontSize)
   self.formatTable.fontSize = fontSize
   self.format = self.format:gsub("%d", "")
   self.format = self.format .. fontSize
-  -- Apply the profile's antialiasing settings to the label when font size changes
-  -- Use existing setFont() function - it will preserve the font family and apply antialiasing
-  if self.font and self.font ~= "" then
-    setFont(self.name, self.font)
-  end
   self:echo()
 end
 
@@ -484,10 +494,94 @@ function Geyser.Label:clear()
 end
 
 --- Sets a background image for this label.
+-- An SVG file is drawn as a layer behind the label's text or movie, scaled to fit
+-- the label while keeping its proportions and re-rendered crisply on every resize
+-- - see setSvgTint, setSvgRotation and setSvgShear.
+-- It fills the area inside the label's border, and is not clipped to a
+-- border-radius, so a rounded label shows the SVG square in its corners.
+-- Any other image type is drawn at its own size as the label's content, in place
+-- of any text the label is showing. Which of the two it is comes from the file's
+-- content rather than from its name.
+-- resetBackgroundImage takes off the SVG layer, a raster image and a movie in one
+-- call, and leaves the label's text where it is.
+-- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
-  setBackgroundImage(self.name, imageFileName)
+  local ok, err = setBackgroundImage(self.name, imageFileName)
   self:autoAdjustSize()
+  return ok, err
+end
+
+--- Sets a tint color on the label's SVG background image.
+-- Every visible pixel of the SVG takes the given color and keeps its own
+-- transparency, so a multi-color SVG becomes a single-color silhouette.
+-- The tint is a property of the label, not of the document: it can be set before
+-- any SVG is there and applies as soon as one arrives, and no image operation
+-- changes it - it is kept until resetSvgTint is called.
+-- Accepts any color format supported by Geyser.Color.parse:
+-- RGB integers (r, g, b), hex string ("#ff0000"), or named color ("red").
+-- Returns true, or nil and an error message when the color cannot be read.
+-- @param r The red component (0-255), or a color string (e.g. "#ff0000", "red").
+-- @param g The green component (0-255). Omit when using a color string.
+-- @param b The blue component (0-255). Omit when using a color string.
+function Geyser.Label:setSvgTint (r, g, b)
+  -- Geyser.Color.parse returns nil for a component a short hex string like "#ff"
+  -- has no digits for, and raises rather than returning it for the one after that
+  local parsed, red, green, blue = pcall(Geyser.Color.parse, r, g, b)
+  if not (parsed and red and green and blue) then
+    if type(r) == "string" then
+      -- the global resolves colour names itself and explains what it cannot
+      return setSvgTint(self.name, r)
+    end
+    return nil, "setSvgTint: could not parse the colour given"
+  end
+  return setSvgTint(self.name, red, green, blue)
+end
+
+--- Resets the tint color on the label's SVG background image,
+-- restoring the original SVG colors.
+function Geyser.Label:resetSvgTint ()
+  return resetSvgTint(self.name)
+end
+
+--- Sets the rotation angle for the label's SVG background image.
+-- The SVG is rotated around its center; label text and background are unaffected.
+-- Content rotated beyond the label's edges is clipped, so a square image loses
+-- its corners at 45 degrees - a circular design, or padding inside the SVG,
+-- avoids that.
+-- Like the tint, the angle is a property of the label: it can be set before any
+-- SVG is there and applies as soon as one arrives, and no image operation changes
+-- it - it is kept until resetSvgRotation or resetSvgTransform is called.
+-- @param angle Rotation angle in degrees (positive = clockwise).
+function Geyser.Label:setSvgRotation (angle)
+  return setSvgRotation(self.name, angle)
+end
+
+--- Resets the SVG background image rotation to 0 degrees.
+function Geyser.Label:resetSvgRotation ()
+  return resetSvgRotation(self.name)
+end
+
+--- Sets the shear (skew) for the label's SVG background image.
+-- The SVG is sheared around its center; label text and background are unaffected.
+-- As with rotation, content sheared outside the label is clipped.
+-- Like the tint, the shear is a property of the label: it can be set before any
+-- SVG is there and applies as soon as one arrives, and no image operation changes
+-- it - it is kept until resetSvgShear or resetSvgTransform is called.
+-- @param shearX Horizontal shear factor.
+-- @param shearY Vertical shear factor.
+function Geyser.Label:setSvgShear (shearX, shearY)
+  return setSvgShear(self.name, shearX, shearY)
+end
+
+--- Resets the SVG background image shear to (0, 0).
+function Geyser.Label:resetSvgShear ()
+  return resetSvgShear(self.name)
+end
+
+--- Resets all SVG transforms (rotation and shear) but preserves tint.
+function Geyser.Label:resetSvgTransform ()
+  return resetSvgTransform(self.name)
 end
 
 --- Sets a tiled background image for this label.
@@ -514,8 +608,8 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setDoubleClickCallback (func, ...)
   setLabelDoubleClickCallback(self.name, func, ...)
-  self.doubleclickCallback = func
-  self.doubleclickArgs = { ... }
+  self.doubleClickCallback = func
+  self.doubleClickArgs = { ... }
 end
 
 --- Sets a callback to be used when a mouse click is released over this label. When this
@@ -987,14 +1081,18 @@ function Geyser.Label:new (cons, container)
 
   -- workaround for createLabel possibly being overwritten and not understanding the new parent argument
   -- see https://github.com/Mudlet/Mudlet/issues/3393
+  local ok, err
   if me.windowname == "main" then
-    createLabel(me.name, me:get_x(), me:get_y(),
+    ok, err = createLabel(me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   else
-    createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
+    ok, err = createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   end
--- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+    printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+  end
+-- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end
@@ -1003,7 +1101,19 @@ function Geyser.Label:new (cons, container)
 
   -- Set any defined colors
   Geyser.Color.applyColors(me)
-  me:echo()
+  -- the constraints table is copied wholesale, so a font entry lands in me.font
+  -- without ever reaching the label; clear it first and put it back through
+  -- setFont(), which echoes for itself when it takes the font, and does not when
+  -- it refuses a font that is not a string. Nothing is written to me.font when
+  -- the constraints carry no font: an own field would shadow a prototype's.
+  if cons.font ~= nil then
+    me.font = ""
+    if not me:setFont(cons.font) then
+      me:echo()
+    end
+  else
+    me:echo()
+  end
 
   -- Set up mouse hover as the callback if we have one
   if cons.nestflyout then
@@ -1344,7 +1454,7 @@ function Geyser.Label:findMenuElement(name, parent, findParent)
     end
     if type(item) == "table" then
       local itemParent = menu[i-1]
-      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent])
+      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent], findParent)
       if element then
         return element, menuTable
       end
@@ -1405,12 +1515,24 @@ end
 --- adds a new item to the right click menu
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
--- @param index of the new menu item (optional)
+-- @param index of the new menu item (optional). Not usable together with a nested
+--        parent: an item is named for the parent it sits in, so the index lookup
+--        misses and raises.
+-- @return true, or false plus a message when the item cannot be added
 function Geyser.Label:addMenuLabel(name, parent, index)
+  if type(name) ~= "string" then
+    return false, "addMenuLabel: needs the name of the item to add as a string, got "..type(name)
+  end
+
   local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
 
-  if parent and not menuParent then
-    error ("showMenuLabel: Couldn't find menu parent "..parent)
+  -- findMenuElement reports failure as nil plus a message, so the second return
+  -- is a string rather than nil when it fails and cannot be tested for absence -
+  -- the element is what has to be checked. With findParent set it only answers
+  -- for a parent that is followed by a submenu table, so a parent declared
+  -- without one lands here as well: appending to it has nowhere to go.
+  if parent and not menuElement then
+    return false, "addMenuLabel: Couldn't find menu parent "..parent
   end
 
   menuElement = menuElement or self.rightClickMenu
@@ -1433,6 +1555,8 @@ function Geyser.Label:addMenuLabel(name, parent, index)
   if index then
     self:changeMenuIndex(parent..name, index)
   end
+
+  return true
 end
 
 --- changes a right click menu items index

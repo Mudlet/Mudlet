@@ -55,6 +55,10 @@ public:
 
     // Bulk operations
     void updateAllViews();
+    // Moves every view still showing areaId to another area - used after
+    // that area is deleted, so paintEvent() isn't left drawing one that no
+    // longer exists.
+    void switchViewsShowingArea(int areaId);
 
 signals:
     void viewCreated(int viewId);

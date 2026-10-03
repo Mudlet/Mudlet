@@ -1,0 +1,1 @@
+Mudlet self-test HTTP fixture.

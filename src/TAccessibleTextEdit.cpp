@@ -513,8 +513,8 @@ QString TAccessibleTextEdit::attributes(int offset, int* startOffset, int* endOf
     // same attribute signature so the screen reader doesn't have to re-query
     // for every single character. Per the IAccessible2 spec, *startOffset and
     // *endOffset describe the range over which the returned attributes apply.
-    const QColor& sigFg = charStyle.foreground();
-    const QColor& sigBg = charStyle.background();
+    const QRgb sigFg = charStyle.foregroundRgba();
+    const QRgb sigBg = charStyle.backgroundRgba();
     const bool sigSelected = charStyle.isSelected();
     const int caretCol = edit->mCaretColumn;
     const bool caretOnThisLine = edit->mpHost->caretEnabled() && edit->mCaretLine == line;
@@ -532,7 +532,7 @@ QString TAccessibleTextEdit::attributes(int offset, int* startOffset, int* endOf
             return false;
         }
         const TChar& other = bufferLine.at(col);
-        return other.linkIndex() == linkIndex && other.allDisplayAttributes() == attributes && other.foreground() == sigFg && other.background() == sigBg && other.isSelected() == sigSelected;
+        return other.linkIndex() == linkIndex && other.allDisplayAttributes() == attributes && other.foregroundRgba() == sigFg && other.backgroundRgba() == sigBg && other.isSelected() == sigSelected;
     };
 
     int runStartCol = column;

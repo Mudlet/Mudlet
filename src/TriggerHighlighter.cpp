@@ -21,6 +21,7 @@
 #include "Host.h"
 #include "TrailingWhitespaceMarker.h"
 #include "TriggerHighlighter.h"
+#include "edbee/edbee.h"
 #include "edbee/views/texttheme.h"
 #include "edbee/models/textdocumentscopes.h"
 
@@ -58,6 +59,9 @@ void TriggerHighlighter::setTheme(const QString& themeName)
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
     edbee::TextTheme* theme = themeManager->theme(themeName);
+    if (!theme) {
+        theme = themeManager->fallbackTheme();
+    }
 
     // set defaults from chosen theme
     edbee::TextThemeRule defaultRule("default", "selector", theme->foregroundColor(), theme->backgroundColor(), false, false, false);
