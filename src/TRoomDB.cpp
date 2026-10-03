@@ -29,6 +29,7 @@
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QRegularExpression>
+#include <QVarLengthArray>
 
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
@@ -160,8 +161,6 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
     // rooms and know which other rooms are impacted by this change in a single lookup.
     if (pR) {
         const int id = pR->getId();
-        QHash<int, int> const exits = pR->getExits();
-        QList<int> const toExits = exits.keys();
         QString values;
         // to update this we need to iterate the entire entranceMap and remove invalid
         // connections. I'm not sure if this is efficient for every update, and given
@@ -174,7 +173,15 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
         if (!isMapLoading) {
             deleteValuesFromEntranceMap(id); // When LOADING a map, will never need to do this
         }
-        for (const int toExit : toExits) {
+        // Read straight off the room, without building a hash of its exits per
+        // room - twice per room while a map loads. A destination that several
+        // exits share is looked up once, as a busy room has many entrances to walk:
+        QVarLengthArray<int, 16> filed;
+        const auto fileEntrance = [this, id, &values, &filed](const int toExit) {
+            if (filed.contains(toExit)) {
+                return;
+            }
+            filed.append(toExit);
             if (showDebug) {
                 values.append(qsl("%1,").arg(toExit));
             }
@@ -185,6 +192,14 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
                 entranceMap.insert(toExit, id);
                 entranceMapBySource.insert(id, toExit);
             }
+        };
+        for (const int toExit : {pR->north, pR->northeast, pR->east, pR->southeast, pR->south, pR->southwest, pR->west, pR->northwest, pR->up, pR->down, pR->in, pR->out}) {
+            if (toExit != -1) {
+                fileEntrance(toExit);
+            }
+        }
+        for (const int toExit : std::as_const(pR->mSpecialExits)) {
+            fileEntrance(toExit);
         }
         if (showDebug) {
             if (!values.isEmpty()) {
@@ -989,37 +1004,43 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRoom.next();
             TRoom* pR = itRoom.value();
 
-            // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT:
-            // Exit stubs:
-            int _listCount = pR->exitStubs.count();
+            // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT.
             // These next few construction of a QSet from a QList or vice versa
             // are probably safe as both iterators refer to the SAME instance
-            // that is persistent:
-            QSet<int> _set{pR->exitStubs.begin(), pR->exitStubs.end()};
-            if (_set.count() < _listCount) {
-                if (TMap::smShowMapAuditErrors) {
-                    const QString infoMsg = tr("[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an\n"
-                                               "anomaly but has been cleaned up easily.")
-                                                    .arg(itRoom.key());
-                    mpMap->postMessage(infoMsg);
+            // that is persistent. A list too short to hold a duplicate is left
+            // alone: building even an empty QSet allocates its buckets, and
+            // walking those is costly per room.
+            // Exit stubs:
+            if (pR->exitStubs.count() > 1) {
+                const int stubCount = pR->exitStubs.count();
+                const QSet<int> _set{pR->exitStubs.begin(), pR->exitStubs.end()};
+                if (_set.count() < stubCount) {
+                    if (TMap::smShowMapAuditErrors) {
+                        const QString infoMsg = tr("[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an\n"
+                                                   "anomaly but has been cleaned up easily.")
+                                                        .arg(itRoom.key());
+                        mpMap->postMessage(infoMsg);
+                    }
+                    mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
                 }
-                mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
+                pR->exitStubs = QList<int>{_set.begin(), _set.end()};
             }
-            pR->exitStubs = QList<int>{_set.begin(), _set.end()};
 
             // Exit locks:
-            _listCount = pR->exitLocks.count();
-            _set = QSet<int>{pR->exitLocks.begin(), pR->exitLocks.end()};
-            if (_set.count() < _listCount) {
-                if (TMap::smShowMapAuditErrors) {
-                    const QString infoMsg = tr("[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an\n"
-                                               "anomaly but has been cleaned up easily.")
-                                                    .arg(itRoom.key());
-                    mpMap->postMessage(infoMsg);
+            if (pR->exitLocks.count() > 1) {
+                const int lockCount = pR->exitLocks.count();
+                const QSet<int> _set{pR->exitLocks.begin(), pR->exitLocks.end()};
+                if (_set.count() < lockCount) {
+                    if (TMap::smShowMapAuditErrors) {
+                        const QString infoMsg = tr("[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an\n"
+                                                   "anomaly but has been cleaned up easily.")
+                                                        .arg(itRoom.key());
+                        mpMap->postMessage(infoMsg);
+                    }
+                    mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
                 }
-                mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
+                pR->exitLocks = QList<int>{_set.begin(), _set.end()};
             }
-            pR->exitLocks = QList<int>{_set.begin(), _set.end()};
 
             // TASK 9 IS DONE INSIDE THIS METHOD:
             pR->audit(roomRemapping, areaRemapping);
