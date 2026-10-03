@@ -127,11 +127,11 @@ private slots:
 
         // A shallow region, which is what the fallback measured unpatched.
         pane->repaint(QRect(0, 0, pane->width(), 3 * pane->mFontHeight));
-        const QImage afterIncremental = pane->mScreenMap.toImage();
+        const QImage afterIncremental = pane->cachedScreen().copy();
 
         pane->forceUpdate();
         pane->repaint();
-        const QImage authoritative = pane->mScreenMap.toImage();
+        const QImage authoritative = pane->cachedScreen().copy();
 
         QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
         QCOMPARE(afterIncremental.size(), authoritative.size());
@@ -167,18 +167,61 @@ private slots:
         QVERIFY2(partial.height() < pane->rect().height(), "the repaint has to be partial to exercise the path");
         pane->repaint(partial);
 
-        const QImage afterIncremental = pane->mScreenMap.toImage();
+        const QImage afterIncremental = pane->cachedScreen().copy();
 
         // What the same buffer looks like when every row is re-rendered.
         pane->forceUpdate();
         pane->repaint();
-        const QImage authoritative = pane->mScreenMap.toImage();
+        const QImage authoritative = pane->cachedScreen().copy();
 
         QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
         QCOMPARE(afterIncremental.size(), authoritative.size());
         QVERIFY2(afterIncremental == authoritative,
                  "a partial repaint that met a pending scroll drew the pre-scroll screen and then discarded the scroll, so the line that arrived "
                  "is missing from the pane until something unrelated forces a full repaint");
+    }
+
+    // The cached screen slides over a buffer twice its height and moves the rows
+    // it keeps back to the far end whenever it reaches an end, so each direction
+    // scrolls more than a screen's worth to cross both ends at least once.
+    void test_scrollingBothWaysAcrossTheCachedScreensEnds()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mpConsole, "no main console");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+        auto* lua = host->getLuaInterpreter();
+
+        // Each line a different length, so that a row kept from the wrong place
+        // cannot pass for the right one
+        lua->compileAndExecuteScript(qsl("for i = 1, 400 do echo(string.format('LINE %03d %s\\n', i, string.rep('#', i % 37))) end\n"));
+        qApp->processEvents();
+        // Leaving the bottom opens the split screen and resizes the pane, so do
+        // that before the steps under test
+        pane->scrollUp(100);
+        qApp->processEvents();
+        pane->forceUpdate();
+        pane->repaint();
+        const int screenHeight = pane->mScreenHeight;
+        QVERIFY2(screenHeight > 4, "the pane is too short for this test to mean anything");
+        QVERIFY2(pane->imageTopLine() > 2 * screenHeight + 10, "too little buffer above the view to scroll up through both ends");
+
+        int step = 0;
+        for (const bool up : {true, false}) {
+            for (int scrolled = 0; scrolled <= 2 * screenHeight;) {
+                const int lines = 1 + step++ % 3;
+                up ? pane->scrollUp(lines) : pane->scrollDown(lines);
+                scrolled += lines;
+                pane->repaint();
+                const QImage afterIncremental = pane->cachedScreen().copy();
+                pane->forceUpdate();
+                pane->repaint();
+                const QImage authoritative = pane->cachedScreen().copy();
+                QVERIFY2(!afterIncremental.isNull() && afterIncremental == authoritative,
+                         qPrintable(qsl("scrolling %1 by %2 line(s), %3 lines in, left the cached screen different from a full redraw").arg(up ? qsl("up") : qsl("down")).arg(lines).arg(scrolled)));
+            }
+        }
     }
 
     // Output that arrives soon after a paint leaves the scrollbar to the paint
