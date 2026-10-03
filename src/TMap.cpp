@@ -711,6 +711,10 @@ void TMap::audit()
     }
 
     mpRoomDB->auditRooms(roomRemapping, areaRemapping);
+    // The player's room was read from the file under the id the audit just replaced
+    for (int& playerRoomId : mRoomIdHash) {
+        playerRoomId = roomRemapping.value(playerRoomId, playerRoomId);
+    }
 
     // The second half of old mpRoomDB->initAreasForOldMaps() - needed to fixup
     // all the (TArea *)->areaExits() that were built wrongly previously,
