@@ -3094,6 +3094,10 @@ void dlgProfilePreferences::connectApplyTriggers()
     for (auto* pDateTimeEdit : findChildren<QDateTimeEdit*>()) {
         connect(pDateTimeEdit, &QDateTimeEdit::dateTimeChanged, this, &dlgProfilePreferences::slot_scheduleApply, Qt::UniqueConnection);
     }
+    for (auto* pAbstractSpinBox : findChildren<QAbstractSpinBox*>()) {
+        // Return on a QDateTimeEdit leaves its line edit modified and emits nothing from it
+        connect(pAbstractSpinBox, &QAbstractSpinBox::editingFinished, this, &dlgProfilePreferences::slot_lineEditFinished, Qt::UniqueConnection);
+    }
     for (auto* pLineEdit : findChildren<QLineEdit*>()) {
         if (pLineEdit == mpLineEdit_search) {
             continue;
@@ -3157,6 +3161,10 @@ static enums::controlsVisibility visibilityFromComboIndex(const int index)
 // field holds a half-typed word, which neither the apply nor the snapshot takes as a setting.
 static bool beingTypedInto(const QObject* pControl)
 {
+    // A spin box types into a line edit of its own, while emitting valueChanged() for each digit that makes a number
+    if (const auto* pSpinBox = qobject_cast<const QAbstractSpinBox*>(pControl)) {
+        pControl = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
     const auto* pLineEdit = qobject_cast<const QLineEdit*>(pControl);
     return pLineEdit && pLineEdit->hasFocus() && pLineEdit->isModified();
 }
@@ -6852,7 +6860,11 @@ void dlgProfilePreferences::slot_scheduleApply()
 void dlgProfilePreferences::slot_lineEditFinished()
 {
     // Clearing the modified flag marks this edit finished - see beingTypedInto()
-    if (auto* pLineEdit = qobject_cast<QLineEdit*>(sender()); pLineEdit) {
+    QObject* pEditor = sender();
+    if (auto* pSpinBox = qobject_cast<QAbstractSpinBox*>(pEditor)) {
+        pEditor = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
+    if (auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor); pLineEdit) {
         pLineEdit->setModified(false);
     }
     slot_scheduleApply();
