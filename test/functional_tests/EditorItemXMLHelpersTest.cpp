@@ -553,10 +553,13 @@ private slots:
         QVERIFY2(brokenRegex->isActive(), "undoing the edit that broke the trigger's regex left it switched off");
 
         TScript* brokenLua = newScript(qsl("eixh script given broken Lua"));
+        // compile() rather than setScript() alone: a bare Host blocks compiling until a profile has loaded
         brokenLua->setScript(qsl("local eixh = 1"));
+        brokenLua->compile();
         QVERIFY(brokenLua->setIsActive(true));
         const QString compiling = exportScriptToXML(brokenLua);
         brokenLua->setScript(qsl("if then end"));
+        brokenLua->compile();
         brokenLua->setIsActive(true);
         QVERIFY(!brokenLua->isActive());
         QVERIFY(updateScriptFromXML(brokenLua, compiling));
