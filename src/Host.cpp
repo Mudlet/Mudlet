@@ -1103,7 +1103,7 @@ bool Host::resetProfile_phase1()
     // Phase 2 lua_close()s the very state the pump is running Lua code on, so
     // refuse rather than reset into a use-after-free.
     if (mLuaInterpreter.pumpingEvents()) {
-        qWarning() << "Host::resetProfile_phase1() called while the test-mode event pump is running, ignoring";
+        qWarning() << "Host::resetProfile_phase1() called while a nested event loop is running, ignoring";
         return false;
     }
 
