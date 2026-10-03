@@ -42,8 +42,10 @@
  */
 
 #include <QFocusEvent>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QTemporaryDir>
+#include <QVBoxLayout>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -420,6 +422,34 @@ private slots:
         QVERIFY2(previewList->focusProxy() == previewComponent, "the preview editor's suggestion list would still take the keyboard focus");
         QCOMPARE(previewList->focusPolicy(), Qt::NoFocus);
         QVERIFY2(previewList->parentWidget()->testAttribute(Qt::WA_ShowWithoutActivating), "the preview editor's popup window is not marked as not activating");
+    }
+
+    // A focus policy set on the list passes to its focus proxy, the editor, and
+    // only a click shows it: setFocus(), which the cases above use, works whatever
+    // the policy.
+    void test_clickingIntoTheEditorGivesItTheKeyboard()
+    {
+        QWidget window;
+        auto* layout = new QVBoxLayout(&window);
+        auto* nameField = new QLineEdit(&window);
+        layout->addWidget(nameField);
+        auto* editor = new edbee::TextEditorWidget(&window);
+        layout->addWidget(editor);
+        new EditorAutoCompleteFocusHandler(editor, editor);
+        window.resize(640, 400);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+        auto* component = editor->textEditorComponent();
+        QCOMPARE(component->focusPolicy(), Qt::WheelFocus);
+        nameField->setFocus();
+        QCOMPARE(window.focusWidget(), nameField);
+
+        QTest::mouseClick(component, Qt::LeftButton, Qt::NoModifier, component->rect().center());
+        QVERIFY2(window.focusWidget() == component, "a click into the code area left the keyboard with the field that had it before");
+
+        QCOMPARE(mpEditorComponent->focusPolicy(), Qt::WheelFocus);
+        QCOMPARE(mpPreviewEditor->textEditorComponent()->focusPolicy(), Qt::WheelFocus);
     }
 };
 
