@@ -26,10 +26,8 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TArea.h"
-#include "TConsole.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
-#include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
@@ -151,7 +149,6 @@ TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
 , mUnnamedAreaName(tr("Unnamed Area"))
 , mpRoomDB(std::make_unique<TRoomDB>(this))
-, mpViewManager(new TMapViewManager(pH, this))
 , mpHost(pH)
 , mProfileName(profileName)
 {

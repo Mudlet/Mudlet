@@ -286,6 +286,7 @@ public:
 
 
     std::unique_ptr<TRoomDB> mpRoomDB;
+    // Made by the GUI when it gives the profile a console, so null without one.
     // Non-owning: Qt parent-child system (TMap as parent) handles lifetime.
     TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
@@ -293,6 +294,7 @@ public:
     QString mProfileName;
 
     TMapViewManager* getViewManager() { return mpViewManager; }
+    void setViewManager(TMapViewManager* pViewManager) { mpViewManager = pViewManager; }
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name

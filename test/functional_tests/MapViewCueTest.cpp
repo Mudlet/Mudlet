@@ -21,7 +21,8 @@
  * TMap tells the mapper drawing it (TMap::mpMapper) what changed through
  * signals, and dlgMapper acts on them. Each case here is one of those cues and
  * what the drawing mapper does with it, plus the rule that a second mapper of
- * the same profile, which is not drawing the map, ignores them.
+ * the same profile, which is not drawing the map, ignores them. The map's
+ * error log reaches the trigger editor's error console too.
  *
  * What the mapper does - its area dropdown, its selection list, its repaints,
  * its palette - is widget state no Lua function reads, so this cannot be a
@@ -43,16 +44,19 @@
 #include <memory>
 
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
+#include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -354,6 +358,23 @@ private slots:
         QVERIFY(!loaded.isEmpty());
         QCOMPARE(loaded.last().at(0).toBool(), false);
         QVERIFY2(!mpMapper->isHidden(), "a failed import did not show the mapper");
+    }
+
+    void test_aMapErrorIsPrintedInTheEditorsErrorConsole()
+    {
+        QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog, "the profile has no trigger editor");
+        const TBuffer& errors = HostDialogs::of(mpHost).mpEditorDialog->mpErrorConsole->buffer;
+        const QString expected = qsl(R"([MAP ERROR:] Area not added. An area called "Ground" already exists!)");
+
+        QCOMPARE(map()->mpRoomDB->addArea(qsl("Ground")), 0);
+
+        int line = errors.lineBuffer.size() - 1;
+        while (line >= 0 && !errors.lineBuffer.at(line).contains(expected)) {
+            --line;
+        }
+        QVERIFY2(line >= 0, "the map error never reached the editor's error console");
+        const int column = errors.lineBuffer.at(line).indexOf(expected);
+        QCOMPARE(errors.buffer.at(line).at(column).foreground(), QColor(255, 128, 0));
     }
 
     // A second mapper of the same profile - one in a detached window, say -
