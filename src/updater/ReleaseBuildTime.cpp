@@ -1,8 +1,6 @@
-#ifndef MUDLET_GLWIDGET_INTEGRATION_H
-#define MUDLET_GLWIDGET_INTEGRATION_H
-
 /***************************************************************************
- *   Copyright (C) 2025 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2017 by Philipp Medien - hello@dblsqd.com               *
+ *   Copyright (C) 2026 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,21 +18,27 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "glwidget.h"
-#include "modern_glwidget.h"
+// Kept apart from Release.cpp so it can be built without the precompiled header
+// and its relaxed ccache settings, which would let ccache hand back an object
+// carrying some earlier build's __DATE__ and __TIME__.
 
-class TMap;
-class Host;
-class QWidget;
+#include "Release.h"
 
-namespace GLWidgetFactory {
-QOpenGLWidget* createGLWidget(TMap* pMap, Host* pHost, QWidget* parent = nullptr);
-bool isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost);
-QString getWidgetTypeName(QOpenGLWidget* widget);
-void setViewCenter(QOpenGLWidget* widget, int areaId, int x, int y, int z);
+#include "../utils.h"
+
+#include <QCoreApplication>
+#include <QLocale>
+
+namespace dblsqd {
+
+dblsqd::Release Release::getCurrentRelease()
+{
+    // embed build time so public test releases, which cannot be compared via semver, can be compared via datetime
+    QString buildDateTime = QString(__DATE__) + " " + QString(__TIME__);
+    // locale-independent datetime parsing (C locale matches __DATE__'s English format)
+    QDateTime date = QLocale::c().toDateTime(buildDateTime.simplified(), qsl("MMM d yyyy hh:mm:ss"));
+
+    return dblsqd::Release(QCoreApplication::applicationVersion(), date);
 }
 
-// Factory functions provide runtime widget creation
-// Legacy GLWidget class name remains available for existing code
-
-#endif // MUDLET_GLWIDGET_INTEGRATION_H
+} // namespace dblsqd

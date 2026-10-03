@@ -25,12 +25,10 @@
 
 
 #include "TAstar.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 #include "utils.h"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QJsonObject>
 #include <QMap>
@@ -143,9 +141,6 @@ public:
     QString connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId);
     void postMessage(QString text);
 
-    // Used by the 2D mapper to send view center coordinates to 3D one
-    void set3DViewCenter(int, int, int, int);
-
     void appendRoomErrorMsg(int, QString, bool isToSetFileViewingRecommended = false);
     void appendAreaErrorMsg(int, QString, bool isToSetFileViewingRecommended = false);
     void appendErrorMsg(QString, bool isToSetFileViewingRecommended = false);
@@ -225,6 +220,9 @@ public:
     // spin-box offers. Zero and below blanks every symbol (issue #10176):
     static constexpr qreal scmMinimumSymbolFontFudgeFactor = 0.50;
     static constexpr qreal scmMaximumSymbolFontFudgeFactor = 2.00;
+    // The 2D zoom a new area starts at, and the smallest one a view accepts:
+    static constexpr qreal scmDefaultXYZoom = 20.0;
+    static constexpr qreal scmMinXYZoom = 3.0;
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
@@ -506,6 +504,8 @@ private:
     qsizetype mProgressDialogRoomsCount = 0;
     qsizetype mProgressDialogLabelsTotal = 0;
     qsizetype mProgressDialogLabelsCount = 0;
+    // When incrementJsonProgressDialog() last showed the counts; invalid until it first does:
+    QElapsedTimer mJsonProgressShown;
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;

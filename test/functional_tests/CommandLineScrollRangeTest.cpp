@@ -258,7 +258,7 @@ private slots:
         QVERIFY2(pMiniConsole, "could not create the miniconsole");
         pMiniConsole->setCmdVisible(true); // what Lua enableCommandLine(name) does
         QVERIFY(pMiniConsole->mpCommandLine);
-        QCOMPARE(pMiniConsole->mpCommandLine->getType(), TCommandLine::ConsoleCommandLine);
+        QCOMPARE(pMiniConsole->mpCommandLine->getType(), enums::ConsoleCommandLine);
 
         pMiniConsole->setFontSize(24);
         fill(pMiniConsole->mpCommandLine, rowsOfText(2));
