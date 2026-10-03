@@ -1907,7 +1907,8 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     }
 
     if (roomObj.contains(QLatin1String("weight")) && roomObj.value(QLatin1String("weight")).isDouble()) {
-        weight = roomObj.value(QLatin1String("weight")).toInt();
+        // As in restore(): a weight below one breaks the route costs findPath() relies on
+        weight = qMax(1, roomObj.value(QLatin1String("weight")).toInt());
     }
 
     if (roomObj.contains(QLatin1String("symbol")) && roomObj.value(QLatin1String("symbol")).isObject()) {
