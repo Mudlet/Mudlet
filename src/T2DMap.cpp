@@ -4747,6 +4747,8 @@ void T2DMap::slot_setPlayerLocation()
 
     const int _newRoomId = *(mMultiSelectionSet.constBegin());
     if (auto* pR = mpMap->mpRoomDB->getRoom(_newRoomId)) {
+        // Read before the event: its Lua handlers can delete the room (or the whole map)
+        const int areaId = pR->getArea();
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
@@ -4756,7 +4758,7 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
-        mpMap->updateArea(pR->getArea());
+        mpMap->updateArea(areaId);
     }
 }
 
