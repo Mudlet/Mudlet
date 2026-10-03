@@ -395,7 +395,7 @@ private slots:
         mpHost->setLogin(qsl("morquin"));
         mpHost->mSecuredPasswordPending = true;
         QVERIFY(mpHost->hasAutoLoginCredentials());
-        mpHost->mTelnet.mTimerPass->start(60000ms);
+        mpHost->mTelnet.mTimerPass->start(1min);
         mpHost->mTelnet.setAutoLoginPending(true);
 
         serverSaysEcho(TN_WILL);
@@ -458,7 +458,7 @@ private slots:
         const auto tidy = qScopeGuard([this]() {
             runLua(qsl("killAnonymousEventHandler(policyHandlerId)\nkillAlias(policyAliasId)\n"));
         });
-        mpHost->mTelnet.mTimerLogin->start(60000ms);
+        mpHost->mTelnet.mTimerLogin->start(1min);
 
         QVERIFY2(mpHost->sendPasswordEntry(qsl("x;;y")), "the box's line was not written to the server");
         QVERIFY2(waitForServerToReceive(asSent(qsl("x;;y"))), "the box's line did not reach the server whole");

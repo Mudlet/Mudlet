@@ -573,7 +573,7 @@ private slots:
     void test_aScriptAppendingToMainDoesNotCancelTheAutoLogin()
     {
         mpHost->setLogin(qsl("morquin"));
-        mpHost->mTelnet.mTimerLogin->start(60000ms);
+        mpHost->mTelnet.mTimerLogin->start(1min);
         serverSaysEcho(TN_WILL);
         QVERIFY(box());
         QVERIFY(runLua(qsl("appendCmdLine('main', 'x')")));
@@ -758,7 +758,7 @@ private slots:
     {
         mpHost->setLogin(qsl("morquin"));
         mpHost->setPass(qsl("hunter2"));
-        mpHost->mTelnet.mTimerPass->start(60000ms);
+        mpHost->mTelnet.mTimerPass->start(1min);
         mpHost->mTelnet.setAutoLoginPending(true);
 
         serverSaysEcho(TN_WILL);
@@ -822,7 +822,7 @@ private slots:
     void test_theFirstEditInTheBoxCancelsTheAutoLogin()
     {
         mpHost->setLogin(qsl("morquin"));
-        mpHost->mTelnet.mTimerLogin->start(60000ms);
+        mpHost->mTelnet.mTimerLogin->start(1min);
         mpHost->mTelnet.mAutoLoginPasswordOutstanding = true;
         serverSaysEcho(TN_WILL);
         QVERIFY(box());
@@ -837,7 +837,7 @@ private slots:
     void test_textMovedIntoTheBoxCountsAsItsFirstEditUnlessEmpty()
     {
         mpHost->setLogin(qsl("morquin"));
-        mpHost->mTelnet.mTimerLogin->start(60000ms);
+        mpHost->mTelnet.mTimerLogin->start(1min);
         typeIntoWindow(qsl("b"));
         pressInWindow(Qt::Key_Backspace);
         QCOMPARE(commandLine()->toPlainText(), QString());
