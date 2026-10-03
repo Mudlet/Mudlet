@@ -4446,3 +4446,122 @@ describe("Tests the profile colour set behind setCustomEnvColor", function()
     end
   end)
 end)
+
+describe("Tests closing another profile that opened a map widget", function()
+  local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
+  local name = "mudlet-spec-map-widget-close"
+
+  local function removeTree(path)
+    if lfs.symlinkattributes(path, "mode") ~= "directory" then
+      os.remove(path)
+      return
+    end
+    for entry in lfs.dir(path) do
+      if entry ~= "." and entry ~= ".." then
+        removeTree(path .. "/" .. entry)
+      end
+    end
+    lfs.rmdir(path)
+  end
+
+  -- Only a folder carrying this file was made by this spec, so a real profile
+  -- that happens to share the name is never deleted
+  local ownerMarker = profilesDirectory .. "/" .. name .. "/mudlet-spec-owned"
+
+  local function removeOwnedProfile()
+    if io.exists(ownerMarker) then
+      removeTree(profilesDirectory .. "/" .. name)
+    end
+  end
+
+  local function loaded()
+    local entry = getProfiles()[name]
+    return entry ~= nil and entry.loaded
+  end
+
+  local function waitUntil(condition)
+    for _ = 1, 200 do
+      if condition() then
+        return true
+      end
+      pumpEvents(50)
+    end
+    return condition()
+  end
+
+  -- The new profile has no mapper script, so opening its map widget pops up the
+  -- mapper script reminder dialog, which takes activation from the main window;
+  -- the main window then remembers the closing profile's command line to give
+  -- focus back to once it is active again
+  it("survives the main window being activated again after the close", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the other profile needs pumpEvents()")
+      return
+    end
+    assert.is_true(lfs.attributes(profilesDirectory .. "/" .. name) == nil or io.exists(ownerMarker),
+      "refusing to touch " .. profilesDirectory .. "/" .. name .. ", which this spec did not create")
+    -- closing a profile saves the shared window layout beside the profiles
+    -- directory, which the next Mudlet start reads, so put it back afterwards
+    local configurationDirectory = profilesDirectory:match("^(.*)[/\\]")
+    local layoutFiles = {
+      configurationDirectory .. "/windowLayout.dat",
+      configurationDirectory .. "/windowLayoutGeometry.dat",
+    }
+    local layoutBefore = {}
+    for _, path in ipairs(layoutFiles) do
+      local handle = io.open(path, "rb")
+      if handle then
+        layoutBefore[path] = handle:read("*a")
+        handle:close()
+      end
+    end
+    local opened
+    local handler = registerAnonymousEventHandler("mudletSpecMapWidgetOpened", function(_, result)
+      opened = result
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      if loaded() then
+        closeProfile(name)
+      end
+      waitUntil(function() return not loaded() end)
+      removeOwnedProfile()
+      for _, path in ipairs(layoutFiles) do
+        if layoutBefore[path] then
+          local handle = assert(io.open(path, "wb"))
+          handle:write(layoutBefore[path])
+          handle:close()
+        else
+          os.remove(path)
+        end
+      end
+    end)
+
+    -- left behind by a run that crashed or was killed
+    removeOwnedProfile()
+    assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. name))
+    io.open(ownerMarker, "w"):close()
+    assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. name .. "/current"))
+    local file = assert(io.open(profilesDirectory .. "/" .. name .. "/current/2020-01-01#00-00-00.xml", "w"))
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<HostPackage><Host></Host></HostPackage>',
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no"><name>mudletSpecMapWidget</name><packageName></packageName>',
+      '<script>tempTimer(0, function() raiseGlobalEvent("mudletSpecMapWidgetOpened", tostring(openMapWidget())) end)</script>',
+      '<eventHandlerList/></Script>',
+      '</ScriptPackage>',
+      '</MudletPackage>',
+    }, "\n"))
+    file:close()
+
+    assert.is_true(loadProfile(name, true))
+    assert.is_true(waitUntil(function() return opened ~= nil end), "the other profile never opened its map widget")
+    assert.equals("true", opened)
+    assert.is_true(closeProfile(name))
+    assert.is_true(waitUntil(function() return not loaded() end), "the other profile did not close")
+    pumpEvents(500)
+  end)
+end)
