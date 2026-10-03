@@ -36,6 +36,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+using namespace std::chrono_literals;
 using StatusCode = QHttpServerResponse::StatusCode;
 
 namespace {
@@ -630,7 +631,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         request.setRawHeader("MCP-Protocol-Version", currentVersion.toUtf8());
         request.setRawHeader("Mcp-Method", "server/discover");
         const QScopedPointer<QNetworkReply> reply(manager.post(request, bodyFor(qsl("server/discover"))));
-        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5s);
         QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 200);
 
         server->stopServer();
@@ -674,7 +675,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         request.setRawHeader("Mcp-Method", "server/discover");
 
         const QScopedPointer<QNetworkReply> reply(manager.post(request, bodyFor(qsl("server/discover"))));
-        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5s);
 
         QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 200);
         const QJsonObject result = QJsonDocument::fromJson(reply->readAll()).object().value(qsl("result")).toObject();
@@ -691,7 +692,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QNetworkAccessManager manager;
         const QScopedPointer<QNetworkReply> reply(manager.get(QNetworkRequest{QUrl(server->getEndpoint())}));
-        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5s);
 
         QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 405);
 
@@ -707,7 +708,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QNetworkAccessManager manager;
         const QScopedPointer<QNetworkReply> reply(manager.deleteResource(QNetworkRequest{QUrl(server->getEndpoint())}));
-        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(reply->isFinished(), 5s);
 
         QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 405);
 

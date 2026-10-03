@@ -35,6 +35,8 @@
 #include <unistd.h>
 #endif
 
+using namespace std::chrono_literals;
+
 namespace {
 QJsonObject parse(const QByteArray& json)
 {
@@ -1168,7 +1170,7 @@ struct BridgeProcess
         QElapsedTimer timer;
         timer.start();
         while (!process.canReadLine() && timer.elapsed() < 15000) {
-            QTest::qWait(25);
+            QTest::qWait(25ms);
         }
         if (!process.canReadLine()) {
             // Distinguishes a hung bridge from an empty reply in the failure output.
