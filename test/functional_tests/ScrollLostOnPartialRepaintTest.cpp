@@ -181,6 +181,80 @@ private slots:
                  "is missing from the pane until something unrelated forces a full repaint");
     }
 
+    // Abutting cells of one background are filled as one rectangle, so each
+    // cell still has to come out in its own color - both on a full redraw and
+    // on a scroll that redraws only the rows it brought into view.
+    void test_backgroundRunsKeepTheirColors()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mpConsole, "no main console");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+        auto* lua = host->getLuaInterpreter();
+
+        lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
+        qApp->processEvents();
+        pane->forceUpdate();
+        pane->repaint();
+        qApp->processEvents();
+        QVERIFY2(pane->mScreenHeight > 4, "the pane is too short for this test to mean anything");
+
+        // Runs of one, two and more cells, with colors recurring after others so
+        // that a fill reaching past the end of its run lands on a different one.
+        const QList<std::pair<QColor, int>> runs{{QColor(255, 0, 0), 3},
+                                                 {QColor(0, 0, 255), 1},
+                                                 {QColor(255, 0, 0), 2},
+                                                 {QColor(0, 160, 0), 4},
+                                                 {QColor(0, 0, 255), 2},
+                                                 {QColor(255, 0, 0), 1},
+                                                 {QColor(0, 160, 0), 1},
+                                                 {QColor(255, 255, 0), 5}};
+        QString decho;
+        QList<QColor> cellColors;
+        for (const auto& [color, cells] : runs) {
+            // Spaces, so that no glyph ink lands on the pixels sampled below
+            decho += qsl("<255,255,255:%1,%2,%3>%4").arg(color.red()).arg(color.green()).arg(color.blue()).arg(QString(cells, QChar::Space));
+            for (int i = 0; i < cells; ++i) {
+                cellColors.append(color);
+            }
+        }
+        const QString script = qsl("decho('%1<r>\\n')\n").arg(decho);
+        lua->compileAndExecuteScript(script);
+        lua->compileAndExecuteScript(qsl("echo('BETWEEN\\n')\n"));
+        qApp->processEvents();
+        pane->repaint();
+
+        // Scrolled by a line during a partial repaint, the reused rows and the
+        // freshly drawn one have to agree with a full redraw.
+        lua->compileAndExecuteScript(script);
+        pane->repaint(QRect(0, 0, pane->width(), pane->height() / 2));
+        const QImage afterIncremental = pane->mScreenMap.toImage();
+        pane->forceUpdate();
+        pane->repaint();
+        const QImage authoritative = pane->mScreenMap.toImage();
+        QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
+        QVERIFY2(afterIncremental == authoritative, "the scroll left the background runs drawn differently from a full redraw");
+
+        const QString pattern(cellColors.size(), QChar::Space);
+        QList<int> patternRows;
+        for (int line = pane->imageTopLine(); line < pane->imageTopLine() + pane->mScreenHeight; ++line) {
+            if (line < host->mpConsole->buffer.lineBuffer.size() && host->mpConsole->buffer.lineBuffer.at(line) == pattern) {
+                patternRows.append(line - pane->imageTopLine());
+            }
+        }
+        QCOMPARE(patternRows.size(), 2);
+        const qreal dpr = authoritative.devicePixelRatio();
+        for (const int row : patternRows) {
+            const int y = qFloor((row + 0.5) * pane->mFontHeight * dpr);
+            for (int cell = 0; cell < cellColors.size(); ++cell) {
+                const int x = qFloor((cell + 0.5) * pane->mFontWidth * dpr);
+                QVERIFY2(authoritative.pixelColor(x, y) == cellColors.at(cell),
+                         qPrintable(qsl("row %1, cell %2 is %3 rather than %4").arg(row).arg(cell).arg(authoritative.pixelColor(x, y).name(), cellColors.at(cell).name())));
+            }
+        }
+    }
+
     // Output that arrives soon after a paint leaves the scrollbar to the paint
     // pacer, and a full repaint landing first must not take that with it
     void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
