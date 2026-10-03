@@ -790,6 +790,40 @@ private slots:
         QCOMPARE(luaGlobalString(host, "wdogCapture"), qsl("<send"));
     }
 
+    // The line a disconnect writes out is from the game too
+    void test_aHeldServerWrappedLineWrittenOutByADisconnectRunsItsTriggersInTriggerContext()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host,
+               qsl("dcCapture = 'trigger never ran'\n"
+                   "dcTriggerId = tempRegexTrigger([[^x+ (alpha)$]], function()\n"
+                   "  selectString('xxxx', 1)\n"
+                   "  replace('y')\n"
+                   "  selectCaptureGroup(2)\n"
+                   "  dcCapture = getSelection()\n"
+                   "  deselect()\n"
+                   "end)"));
+        TBuffer& buffer = host->mainConsoleModel().buffer;
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        auto restoreWrap = qScopeGuard([host]() { host->mUndoServerWrap = false; });
+
+        // 70 characters, inside the join band for a wrap column of 80
+        const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
+        std::string data = heldLine.toStdString() + "\n";
+        buffer.translateToPlainText(data, true);
+        QCOMPARE(buffer.mServerWrapPendingLine, heldLine);
+
+        host->mTelnet.slot_socketDisconnected();
+        runLua(host, qsl("killTrigger(dcTriggerId)"));
+        QVERIFY2(buffer.mServerWrapPendingLine.isEmpty(), "The disconnect did not write the held line out.");
+        QCOMPARE(luaGlobalString(host, "dcCapture"), qsl("alpha"));
+    }
+
     // Writing the stalled tag out commits it and finalizes through the main
     // console's view, so with none the watchdog has to leave it be rather than
     // reach for one.
