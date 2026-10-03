@@ -28,9 +28,7 @@ class QString;
 class TAppFrontend
 {
 public:
-    virtual ~TAppFrontend() = default;
-
-    // nullptr until the main window exists, and again once it is being destroyed.
+    // nullptr until the main window exists, and again from the end of its destructor.
     static TAppFrontend* instance() { return smpInstance; }
     static void setInstance(TAppFrontend* frontend) { smpInstance = frontend; }
 
@@ -42,7 +40,10 @@ public:
     virtual void handleTelnetUri(const QString& uri) = 0;
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
-    virtual void updateDiscordNamedIcon() = 0;
+
+protected:
+    // The main window owns itself, so nothing deletes it through this interface.
+    ~TAppFrontend() = default;
 
 private:
     inline static TAppFrontend* smpInstance = nullptr;

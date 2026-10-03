@@ -336,7 +336,7 @@ public:
     void startAutoLogin(const QStringList&, bool offline = false);
     void setStorePasswordsSecurely(bool storeSecurely);
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
-    void updateDiscordNamedIcon() override;
+    void updateDiscordNamedIcon();
     void updateMultiViewControls();
     void writeSettings();
     bool profileExists(const QString& profileName);
