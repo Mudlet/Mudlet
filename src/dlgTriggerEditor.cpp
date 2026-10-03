@@ -7053,6 +7053,20 @@ void dlgTriggerEditor::showKeyTakenWarning(QTreeWidgetItem* pItem, const QString
     pItem->setData(0, Qt::AccessibleDescriptionRole, description);
 }
 
+// Only after an explicit save: saveKey() also runs on leaving the keys view, where the warning
+// would stay over the next view and keep its intro from showing
+void dlgTriggerEditor::rewarnAboutCurrentKey()
+{
+    if (!mpCurrentKeyItem) {
+        return;
+    }
+    const TKey* pT = mpHost->getKeyUnit()->getKey(mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
+    // A failed compile's error is what the banner should keep showing
+    if (pT && pT->state()) {
+        showKeyTakenWarning(mpCurrentKeyItem, takenKeyWarning(pT), false);
+    }
+}
+
 int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int newValueType)
 {
     //basic checks, return 1 if we can recast, 2 if no need to recast, 0 if we can't recast
@@ -11173,6 +11187,7 @@ void dlgTriggerEditor::slot_saveEdits()
         break;
     case EditorViewType::cmKeysView:
         saveKey();
+        rewarnAboutCurrentKey();
         break;
     case EditorViewType::cmVarsView:
         saveVar();
@@ -11438,6 +11453,7 @@ void dlgTriggerEditor::slot_saveSelectedItem()
         break;
     case EditorViewType::cmKeysView:
         saveKey();
+        rewarnAboutCurrentKey();
         break;
     case EditorViewType::cmVarsView:
         saveVar();
