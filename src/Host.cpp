@@ -1643,13 +1643,9 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
-// Whether the platform makes a font of the name itself: the font database lists only installed families,
-// but fontconfig resolves "Helvetica", "Times" or "monospace" and Windows has a substitution table. Qt
-// answers a meaningless name with one fixed stand-in, so landing elsewhere means recognised; an alias
-// resolving to that stand-in ("sans-serif" on most GNU/Linux) can't be told apart and counts as missing.
 // setFamilies() rather than QFont(name), which reads the name as a comma separated,
 // quoted list: "No Such Font," or "'" then names no family at all and gets the
-// default font, which is not the stand-in, so it looked resolved
+// default font, which is not the stand-in platformResolvesFontFamily() compares against
 static QString familyDrawnFor(const QString& name)
 {
     QFont font;
@@ -1657,6 +1653,10 @@ static QString familyDrawnFor(const QString& name)
     return QFontInfo(font).family();
 }
 
+// Whether the platform makes a font of the name itself: the font database lists only installed families,
+// but fontconfig resolves "Helvetica", "Times" or "monospace" and Windows has a substitution table. Qt
+// answers a meaningless name with one fixed stand-in, so landing elsewhere means recognised; an alias
+// resolving to that stand-in ("sans-serif" on most GNU/Linux) can't be told apart and counts as missing.
 static bool platformResolvesFontFamily(const QString& requested)
 {
     if (requested.isEmpty()) {
