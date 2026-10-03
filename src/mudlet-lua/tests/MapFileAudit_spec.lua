@@ -230,6 +230,37 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests exit stubs", function()
+    -- the JSON export has no name for a direction that is not one of the twelve
+    it("removes a stub whose direction is not one of the twelve and keeps the rest", function()
+      local jsonPath = mapDirectory .. "/mapfileaudit_spec_stubs.json"
+      local area = newArea("MapFileAuditSpecStubs")
+      local room = newRoom(area, 0)
+      local neighbour = newRoom(area, 1, distantRoomId)
+      assert.is_true(setExit(room, neighbour, "east"))
+      setExitStub(room, "north", true)
+      setExitStub(room, "up", true)
+
+      reloadWith(function(data)
+        -- the east exit now leads to a room the file does not have, which the
+        -- audit turns into a stub, so the stub planted beside it must stay
+        data = planted(data, minusOne .. minusOne .. int32(neighbour) .. minusOne,
+                       minusOne .. minusOne .. int32(otherDistantRoomId) .. minusOne, 1)
+        -- the stub list is a count followed by the direction codes
+        return planted(data, int32(2) .. int32(1) .. int32(9),
+                       int32(4) .. int32(1) .. int32(9) .. int32(4) .. int32(35580), 1)
+      end)
+
+      local stubs = getExitStubs1(room)
+      table.sort(stubs)
+      assert.are.same({1, 4, 9}, stubs) -- DIR_NORTH, DIR_EAST, DIR_UP
+      assert.is_nil(getRoomExits(room)["east"])
+      assert.are.equal(tostring(otherDistantRoomId), getRoomUserData(room, "audit.made_stub_of_valid_but_missing_exit.4"))
+      assert.is_true(saveJsonMap(jsonPath))
+      os.remove(jsonPath)
+    end)
+  end)
+
   describe("Tests room IDs", function()
     it("renumbers a room whose ID is below one and keeps its area, exits and hash", function()
       local area = newArea("MapFileAuditSpecBadRoomId")
