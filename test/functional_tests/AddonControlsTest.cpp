@@ -705,6 +705,10 @@ private slots:
         pEditor->slot_saveSelectedItem();
         const QString savedText = editorSaid(pEditor);
         const QString savedDescription = accessibleDescription(pTaken);
+        // The Save Item action goes through slot_saveEdits() rather than slot_saveSelectedItem()
+        pEditor->showInfo(QString());
+        pEditor->slot_saveEdits();
+        const QString saveItemText = editorSaid(pEditor);
         // Leaving the keys view saves the binding too, and the warning is no
         // concern of the view switched to
         pEditor->slot_showTriggers();
@@ -716,6 +720,7 @@ private slots:
         pEditor->mpUndoStack->clear();
         QVERIFY2(selectedText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("selecting a binding on one of Mudlet's own keys did not warn about it: %1").arg(selectedText)));
         QVERIFY2(savedText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("saving a binding on one of Mudlet's own keys took its warning away: %1").arg(savedText)));
+        QVERIFY2(saveItemText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("the Save Item action took a taken key's warning away: %1").arg(saveItemText)));
         QVERIFY2(savedDescription.count(pEditor->descKeyTaken) == 1, qPrintable(qsl("a saved binding on a taken key should say so to a screen reader once: %1").arg(savedDescription)));
         QVERIFY2(!otherViewText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("a binding's warning followed the player into another view: %1").arg(otherViewText)));
     }
