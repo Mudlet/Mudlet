@@ -95,7 +95,7 @@ private:
                 [this, &text]() {
                     return mpServer->received().contains(text);
                 },
-                5000);
+                5s);
     }
 
     QString consoleText() const { return mpHost->mpConsole->buffer.lineBuffer.join(QChar::LineFeed); }

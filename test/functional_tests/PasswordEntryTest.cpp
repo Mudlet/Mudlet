@@ -179,7 +179,7 @@ private:
                 [this, &text]() {
                     return wireText().contains(text);
                 },
-                5000);
+                5s);
     }
 
     TCommandLine* freshSubCommandLine()
@@ -203,12 +203,12 @@ private:
     void runDeferredDeletes() { QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete); }
 
     // Host::setFocusOnHostActiveCommandLine() leaves 10 ms and 50 ms focus
-    // retries behind. A plain qWait(60) can end with the 50 ms one still pending
+    // retries behind. A plain qWait(60ms) can end with the 50 ms one still pending
     // (seen on the macOS runner), so: past both due times, then one more event pass.
     static void drainFocusRetries()
     {
-        QTest::qWait(70);
-        QTest::qWait(0);
+        QTest::qWait(70ms);
+        QTest::qWait(0ms);
     }
 
     void resetState()
@@ -470,7 +470,7 @@ private slots:
 
         serverSaysEcho(TN_WONT);
         QTRY_VERIFY(!box());
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         QCOMPARE(wireText(), QByteArray());
         QCOMPARE(commandLine()->toPlainText(), qsl("look"));
     }
@@ -878,14 +878,14 @@ private slots:
 
         typeIntoWindow(qsl("a"));
         QCOMPARE(pBox->text(), qsl("a"));
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         QVERIFY2(!wireText().contains("fromletter"), "a binding on a plain letter ate a character of the password");
 
         pressInWindow(Qt::Key_Up, Qt::AltModifier);
         QVERIFY2(waitForServerToReceive(asSent({qsl("frommodifiedup")})), "a binding on a modified arrow key did not run from the box");
         QCOMPARE(focusWidget(), pBox.data());
         pressInWindow(Qt::Key_Down);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         QVERIFY2(!wireText().contains("fromplaindown"), "a binding on a plain arrow key ran from the box");
         QCOMPARE(pBox->text(), qsl("a"));
     }
@@ -1008,7 +1008,7 @@ private slots:
         serverSaysEcho(TN_WILL);
         QVERIFY(box());
         QCOMPARE(focusWidget(), &editor);
-        QTest::qWait(60);
+        QTest::qWait(60ms);
         QCOMPARE(focusWidget(), &editor);
 
         commandLine()->setFocus();
@@ -1028,7 +1028,7 @@ private slots:
         serverSaysEcho(TN_WONT);
         QTRY_VERIFY(!box());
         QCOMPARE(focusWidget(), pSubLine);
-        QTest::qWait(60);
+        QTest::qWait(60ms);
         QCOMPARE(focusWidget(), pSubLine);
     }
 
@@ -1150,7 +1150,7 @@ private slots:
         mpHost->mTelnet.disconnectIt();
         QTRY_COMPARE(mpHost->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
         // The disconnect's reset() runs from the socket's signal a moment later
-        QTest::qWait(200);
+        QTest::qWait(200ms);
         mpHost->setRemoteEchoingActive(true);
         QTRY_VERIFY(box());
         QTRY_COMPARE(focusWidget(), box());
