@@ -370,6 +370,7 @@ void TRoomDB::removeRoom(QSet<int>& ids)
 bool TRoomDB::removeArea(int id)
 {
     if (TArea* pA = areas.value(id)) {
+        mpMap->areasAboutToBeDeleted();
         if (!rooms.isEmpty()) {
             // During map deletion rooms will already
             // have been cleared so this would not
@@ -1165,6 +1166,7 @@ void TRoomDB::clearMapDB()
     timer.start();
 
     ++mMapGeneration;
+    mpMap->areasAboutToBeDeleted();
 
     // Set bulk deletion mode to prevent expensive individual cleanup
     mBulkDeletionMode = true;
@@ -1359,6 +1361,7 @@ void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
     if (!pExisting || pExisting == pA) {
         return;
     }
+    mpMap->areasAboutToBeDeleted();
     // Prevent TArea::~TArea() from re-entrantly calling removeArea(this),
     // mirroring the pattern in TRoomDB::removeArea(int)
     pExisting->mpRoomDB = nullptr;
