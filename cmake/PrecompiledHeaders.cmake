@@ -56,7 +56,7 @@ if(CCACHE_FOUND AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   list(REMOVE_ITEM ccacheSloppiness "")
   list(REMOVE_DUPLICATES ccacheSloppiness)
   list(JOIN ccacheSloppiness "," ccacheSloppiness)
-  set(pchLauncherEnvironment "CCACHE_SLOPPINESS=${ccacheSloppiness}")
+  set(pchLauncherEnvironment "CCACHE_SLOPPINESS=${ccacheSloppiness}" ${MUDLET_CCACHE_ENV})
   # A Clang precompiled header names the build tree it was made in and fails to
   # load once that tree is gone, so one must never reach another checkout
   # through a base_dir cache hit. Target-wide, as the objects using it hash its
