@@ -426,14 +426,18 @@ int main(int argc, char* argv[])
     // constructing thread, inside profile load; warming up on a pool thread now usually finishes first.
     // A local pool, so every early return joins it: the warm-up holds Qt's TLS backend mutex while loading
     // the plugin, and static destruction tears those down. Not the global pool: waiting on it would also
-    // wait for QtConcurrent work a profile left running. Runs on print-and-exit paths too, which is how
-    // AppStartupTeardownTest drives that race via --version.
+    // wait for QtConcurrent work a profile left running. --version starts it as it returns, only so
+    // AppStartupTeardownTest can drive that race: any earlier, it and this thread fill Qt's unguarded
+    // caches at once, which a QCoreApplication leaves empty - a double free.
     QThreadPool sslWarmupPool;
-    sslWarmupPool.start([]() {
-        QSslConfiguration::defaultConfiguration();
-    });
+    const auto startSslWarmup = [&sslWarmupPool]() {
+        sslWarmupPool.start([]() {
+            QSslConfiguration::defaultConfiguration();
+        });
+    };
 
     if (app) {
+        startSslWarmup();
         mudlet::start();
         // GUI runs settle the config path here, before any file is read; a
         // print-and-exit run has MudletApp resolve it on first use instead.
@@ -578,6 +582,9 @@ int main(int argc, char* argv[])
                                                           "This is free software: you are free to change and redistribute it.\n"
                                                           "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
+        if (!app) {
+            startSslWarmup();
+        }
         return 0;
     }
 
