@@ -270,9 +270,32 @@ private slots:
 
         returnToTheDialog();
 
-        QCOMPARE(mpPreferences->spinBox_roomSize->value(), 7);
+        QCOMPARE(mpPreferences->spinBox_roomSize->value(), 8);
         QCOMPARE(mpHost->mRoomSize, sizeFromAScript);
         QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "re-reading the settings applied them");
+    }
+
+    // The re-read after an apply must land on the step the box was moved to:
+    // a size stored as a float tenth reads back a hair below 7 or 9
+    void test_aRoomSizeSetFromTheBoxReadsBackAsTheSameStep()
+    {
+        const double priorRoomSize = mpHost->mRoomSize;
+        mpHost->mRoomSize = 0.5;
+        openPreferences();
+
+        for (const int step : {7, 9}) {
+            QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+            mpPreferences->spinBox_roomSize->setValue(step);
+            QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the room size back");
+            QCoreApplication::processEvents();
+            QCOMPARE(mpPreferences->spinBox_roomSize->value(), step);
+        }
+
+        // As setConfig("mapRoomSize", 7) stores it
+        mpHost->mRoomSize = 0.7f;
+        returnToTheDialog();
+        QCOMPARE(mpPreferences->spinBox_roomSize->value(), 7);
+        mpHost->mRoomSize = priorRoomSize;
     }
 
     // An apply is the other moment nothing of the user's is outstanding, so the
