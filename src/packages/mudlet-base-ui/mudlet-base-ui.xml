@@ -1355,10 +1355,14 @@ local function readShape(index, pattern, visit, state, first, second)
 end
 
 -- a literal digit, a backreference or a condition on a group lets a regex tell
--- digits apart, and the memo below is only sound while none can
-local function shapesTreatDigitsAlike()
-  for _, pattern in ipairs(vitalsLinePatterns) do
+-- digits apart, and the memo below is only sound while none can. The braces of
+-- a \x or \o escape name a character, which may be a digit, not a count
+local function shapesTreatDigitsAlike(patterns)
+  for _, pattern in ipairs(patterns or vitalsLinePatterns) do
     for _, regex in ipairs({ pattern.regex, pattern.prefix or "" }) do
+      if regex:find("\\[xo]{") then
+        return false
+      end
       regex = regex:gsub("{%d*,?%d*}", "")
       if regex:find("%d") or regex:find("\\[kg]") or regex:find("(?P=", 1, true) or regex:find("(?(", 1, true) then
         return false

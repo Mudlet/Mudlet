@@ -2095,6 +2095,12 @@ describe("Tests UI functions", function()
 
       it("remembers what a line matched only while no shape tells digits apart", function()
         assert.is_true(BaseUI.shapesTreatDigitsAlike())
+        assert.is_true(BaseUI.shapesTreatDigitsAlike({ { regex = [[^HP: (\d{1,3})/(\d{2,})]] } }))
+        for _, regex in ipairs({ [[^HP: 1(\d+)]], [[^HP: (\d)\1]], [[^HP: (?<n>\d)\k<n>]],
+            [[^HP: (?<n>\d)(?P=n)]], [[^HP: (\d)(?(1)x)]], [[^HP: \x{31}(\d+)]], [[^HP: \o{61}(\d+)]] }) do
+          assert.is_false(BaseUI.shapesTreatDigitsAlike({ { regex = regex } }), regex)
+          assert.is_false(BaseUI.shapesTreatDigitsAlike({ { regex = "^HP: (\\d+)", prefix = regex } }), regex)
+        end
       end)
 
       it("matches the same shapes whatever digits a line holds", function()
