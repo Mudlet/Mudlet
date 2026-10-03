@@ -252,6 +252,28 @@ describe("addon commands", function()
         "the refusal quotes the binding's id as though it were a name: " .. tostring(why))
     end)
 
+    -- enableKey() does not look for commands, and scripts commonly switch groups
+    -- of bindings on and off, so a switched off binding still holds its key
+    it("refuses one a switched off key binding has", function()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F7, [[echo("bound")]])
+      disableKey(tostring(key))
+
+      local id, why = place{name = "DisabledKeyClashSpec", shortcut = "Alt+F7"}
+      killKey(tostring(key))
+
+      assert.is_nil(id, "a command took the key of a switched off binding, which then never fires once switched on")
+      assert.is_string(why)
+    end)
+
+    -- A killed binding lingers until the key unit next tidies up, but can never fire again
+    it("hands out the key of a killed binding", function()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F6, [[echo("bound")]])
+      killKey(tostring(key))
+
+      local id, why = place{name = "KilledKeySpec", shortcut = "Alt+F6"}
+      assert.is_number(id, "a killed binding still held its key: " .. tostring(why))
+    end)
+
     -- The other direction - a binding made over a command's key - is warned
     -- about rather than refused, since the binding is the player's own item.
     -- That warning is shown in the editor rather than on the main screen, so
