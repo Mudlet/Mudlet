@@ -485,30 +485,12 @@ void TMainConsole::reportGeometry(const QString& name)
         }
         mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(pW->pos(), pW->size()));
         if (pW != pC.data()) {
-            reportUserWindowSize(name, pC->size());
+            mpHost->windowRegistry().setUserWindowSize(name, pC->size());
         }
     }
     if (auto pW = plainWindowWidget(name)) {
         mpHost->windowRegistry().setPlainWindowGeometry(name, QRect(pW->pos(), pW->size()));
     }
-}
-
-void TMainConsole::reportUserWindowSize(const QString& name, const QSize& size)
-{
-    // Mid-switch the dock can be a few pixels wide, which nothing can be laid
-    // out in - keep the last size it really had. Only a size this small is
-    // refused: refusing one that has merely changed a lot would leave the
-    // cache as the yardstick for every size after it, and a window shrunk to
-    // under half its width could never be reported again.
-    const int minValidWidth = 50;
-    if (size.width() < minValidWidth && mCachedWindowSizes.contains(name)) {
-        mpHost->windowRegistry().setUserWindowSize(name, mCachedWindowSizes.value(name));
-        return;
-    }
-    if (size.width() >= minValidWidth) {
-        mCachedWindowSizes[name] = size;
-    }
-    mpHost->windowRegistry().setUserWindowSize(name, size);
 }
 
 void TMainConsole::reportMainWindowSize()
@@ -1383,7 +1365,7 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
 
     auto pConsole = deregisterSubConsole(name);
     if (pConsole) {
-        mCachedWindowSizes.remove(name);
+        mpHost->windowRegistry().forgetUserWindowSize(name);
 
         // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
         // console (as for an ordinary miniconsole) leaves the dock orphaned in

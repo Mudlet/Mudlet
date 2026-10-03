@@ -6,6 +6,26 @@ describe("window sizes", function()
   end
 
   describe("getMainWindowSize", function()
+    local restoreWidth, restoreHeight
+
+    -- Earlier specs can leave the main window a few pixels high, which gives a
+    -- command line or button bar nothing to take its room from
+    setup(function()
+      local width, height = getMainWindowSize()
+      setMainWindowSize(1000, 1400)
+      pumpEvents(100)
+      local innerWidth, innerHeight = getMainWindowSize()
+      -- setMainWindowSize() sizes the whole window and getMainWindowSize() the
+      -- console in it, so put back the chrome measured around it here
+      restoreWidth, restoreHeight = width + 1000 - innerWidth, height + 1400 - innerHeight
+      assert.is_true(innerHeight > 200, "could not make the main window tall enough")
+    end)
+
+    teardown(function()
+      setMainWindowSize(restoreWidth, restoreHeight)
+      pumpEvents(100)
+    end)
+
     -- Only the command line is resized as it grows, not the console around it
     it("follows the command line as it grows with its text", function()
       finally(function()

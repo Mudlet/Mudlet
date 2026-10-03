@@ -374,7 +374,6 @@ public:
     void refreshSubconsoles();
 
 
-    QMap<QString, QSize> mCachedWindowSizes;
     // The log lifecycle lives in the core console model so a profile with no
     // view can run one; these four are references aliasing the model's fields,
     // the way buffer and mFgColor alias theirs. mLogToLogFile and mLogFileName
@@ -418,8 +417,6 @@ signals:
 
 
 private:
-    // The dock's console size, from reportGeometry(), for Host::userWindowSize().
-    void reportUserWindowSize(const QString& name, const QSize& size);
     dlgMapper* dockedMapper() const;
     void dockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);
