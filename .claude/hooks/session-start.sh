@@ -76,22 +76,27 @@ fi
 # libxcb-shape0, which Ubuntu's own Qt would have pulled in), gstreamer for
 # Qt Multimedia, and the docs/demo-videos.md toolchain (openbox, xdotool,
 # imagemagick, ffmpeg) for driving and recording the real UI headlessly.
-if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
+TEST_PACKAGES=(
+  xvfb
+  libgstreamer-plugins-base1.0-0
+  libxcb-cursor0
+  libxcb-icccm4
+  libxcb-image0
+  libxcb-keysyms1
+  libxcb-render-util0
+  libxcb-shape0
+  libxcb-xinerama0
+  xdotool
+  openbox
+  imagemagick
+  ffmpeg
+)
+# Every package is asked about: some arrive with other packages, so testing for
+# one of them alone skipped the rest and left Qt's xcb plugin unable to start.
+if ! dpkg -s "${TEST_PACKAGES[@]}" >/dev/null 2>&1; then
   echo "Installing test-suite apt dependencies..."
-  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends \
-    xvfb \
-    libgstreamer-plugins-base1.0-0 \
-    libxcb-cursor0 \
-    libxcb-icccm4 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-xinerama0 \
-    xdotool \
-    openbox \
-    imagemagick \
-    ffmpeg
+  ${SUDO} apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${TEST_PACKAGES[@]}"
 fi
 
 # gcovr and jq for the improve-test-coverage skill. Guarded separately so
@@ -159,12 +164,10 @@ fi
 # the Qt include paths become relative too and differ with worktree depth.
 # With hash_dir off a cached object can carry another worktree's build
 # directory in its debug info, which only matters when stepping through it in
-# a debugger. One Debug build fills ~5GiB, so the default size evicted a
-# branch's objects as soon as a second one was built.
+# a debugger.
 if command -v ccache >/dev/null 2>&1; then
   ccache --set-config=base_dir="$(dirname "${CLAUDE_PROJECT_DIR:-$PWD}")"
   ccache --set-config=hash_dir=false
-  ccache --set-config=max_size=15G
 fi
 
 # PR-review tooling for the agent. Installed at user scope, so it lands in
