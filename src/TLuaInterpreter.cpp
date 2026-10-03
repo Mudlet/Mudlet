@@ -1333,6 +1333,7 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
         return warnArgumentValue(L, __func__, "module doesn't exist");
     }
     host.mModulePriorities[moduleName] = modulePriority;
+    emit host.signal_moduleListChangedByScript();
     return 0;
 }
 
