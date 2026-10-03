@@ -78,6 +78,8 @@ struct TLabelModel
     double mSvgShearY = 0.0;
     // The widget's pos() and size(), kept current by the view as Qt moves or resizes it.
     QRect mGeometry;
+    // QWidget::isVisibleTo() the main console, kept current by the view.
+    bool mVisible = false;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);

@@ -134,7 +134,6 @@ public:
     bool setLabelSvgShear(const QString& name, double shearX, double shearY);
     bool resetLabelSvgShear(const QString& name);
     bool resetLabelSvgTransform(const QString& name);
-    std::optional<bool> getLabelVisible(const QString& name) const;
     std::optional<QFont> getLabelFont(const QString& name) const;
     bool setLabelFont(const QString& name, const QFont& font);
     std::optional<QString> getLabelText(const QString& name) const;
@@ -153,6 +152,12 @@ public:
     // its model), where Host::windowGeometry() reads them. Every view op that moves or resizes a
     // widget calls it, as a hidden widget gets no events to report its own.
     void reportGeometry(const QString& name);
+    // As reportGeometry(), for QWidget::isVisibleTo() this console.
+    void reportVisibility(const QString& name);
+    // Every named window at or below pRoot, whose visibility follows its ancestors'.
+    void reportVisibilityWithin(QWidget* pRoot);
+    // For a container holding named windows that is not one itself, as an MXP frame's.
+    void watchVisibility(QWidget* pContainer);
     // For QMainWindow::restoreState(), which places hidden docks without an event.
     void reportDockGeometry();
     // All sub-console and dock map changes go through these four, keeping Host's window registry in step.
@@ -184,7 +189,6 @@ public:
     bool resetSubConsoleBackgroundImage(const QString& name);
     bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color);
-    std::optional<bool> getSubConsoleVisible(const QString& name) const;
     void setDockLayoutChanged(const QString& name);
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
@@ -270,7 +274,6 @@ public:
     bool hidePlainWindow(const QString& name);
     bool resizePlainWindow(const QString& name, int width, int height);
     bool movePlainWindow(const QString& name, int x, int y);
-    std::optional<bool> getPlainWindowVisible(const QString& name) const;
     bool setCommandLineAction(const QString& name, const int func);
     bool resetCommandLineAction(const QString& name);
     void showStatistics();
@@ -447,8 +450,8 @@ private:
     QWidget* parentWidgetFor(const QString& windowname) const;
     // Resolves the three name-only kinds in the same order as the core.
     QWidget* plainWindowWidget(const QString& name) const;
-    void watchGeometry(const QString& name, QWidget* pWidget);
-    void reportGeometry(const QStringList& names);
+    void watchWindowState(const QString& name, QWidget* pWidget);
+    void reportWindowState(const QStringList& names);
     std::pair<bool, QString> placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     TCommandLine* commandLineNamed(const QString& name) const;
     TConsole* consoleNamed(const QString& name);

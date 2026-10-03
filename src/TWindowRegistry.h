@@ -87,6 +87,23 @@ public:
         return {it->geometry};
     }
 
+    // A user window's is its dock's. As QWidget::isVisibleTo() the main console, written by the view.
+    void setSubConsoleVisible(const QString& name, const bool visible)
+    {
+        if (auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {
+            it->visible = visible;
+        }
+    }
+
+    std::optional<bool> subConsoleVisible(const QString& name) const
+    {
+        const auto it = mSubConsoles.constFind(name);
+        if (it == mSubConsoles.constEnd()) {
+            return {};
+        }
+        return {it->visible};
+    }
+
     std::optional<SubConsoleKind> subConsoleKind(const QString& name) const
     {
         const auto it = mSubConsoles.constFind(name);
@@ -114,7 +131,7 @@ public:
     void deregisterScrollBox(const QString& name)
     {
         mScrollBoxes.remove(name);
-        forgetPlainWindowGeometry(name);
+        forgetPlainWindowState(name);
     }
     bool hasScrollBox(const QString& name) const { return mScrollBoxes.contains(name); }
 
@@ -125,7 +142,7 @@ public:
     void deregisterCommandLine(const QString& name)
     {
         mCommandLines.remove(name);
-        forgetPlainWindowGeometry(name);
+        forgetPlainWindowState(name);
     }
     bool hasCommandLine(const QString& name) const { return mCommandLines.contains(name); }
 
@@ -133,17 +150,17 @@ public:
     void deregisterTextBox(const QString& name)
     {
         mTextBoxes.remove(name);
-        forgetPlainWindowGeometry(name);
+        forgetPlainWindowState(name);
     }
     bool hasTextBox(const QString& name) const { return mTextBoxes.contains(name); }
 
     bool hasPlainWindow(const QString& name) const { return hasScrollBox(name) || hasCommandLine(name) || hasTextBox(name); }
 
-    // The geometry of whichever plain window the name resolves to, written by the view like a sub-console's.
+    // The state of whichever plain window the name resolves to, written by the view like a sub-console's.
     void setPlainWindowGeometry(const QString& name, const QRect& geometry)
     {
         if (hasPlainWindow(name)) {
-            mPlainWindowGeometry.insert(name, geometry);
+            mPlainWindowStates[name].geometry = geometry;
         }
     }
 
@@ -152,7 +169,22 @@ public:
         if (!hasPlainWindow(name)) {
             return {};
         }
-        return {mPlainWindowGeometry.value(name)};
+        return {mPlainWindowStates.value(name).geometry};
+    }
+
+    void setPlainWindowVisible(const QString& name, const bool visible)
+    {
+        if (hasPlainWindow(name)) {
+            mPlainWindowStates[name].visible = visible;
+        }
+    }
+
+    std::optional<bool> plainWindowVisible(const QString& name) const
+    {
+        if (!hasPlainWindow(name)) {
+            return {};
+        }
+        return {mPlainWindowStates.value(name).visible};
     }
 
 private:
@@ -161,12 +193,19 @@ private:
         TConsoleModel* pModel = nullptr;
         SubConsoleKind kind = SubConsoleKind::Other;
         QRect geometry;
+        bool visible = false;
     };
 
-    void forgetPlainWindowGeometry(const QString& name)
+    struct PlainWindowState
+    {
+        QRect geometry;
+        bool visible = false;
+    };
+
+    void forgetPlainWindowState(const QString& name)
     {
         if (!hasPlainWindow(name)) {
-            mPlainWindowGeometry.remove(name);
+            mPlainWindowStates.remove(name);
         }
     }
 
@@ -176,7 +215,7 @@ private:
     QSet<QString> mScrollBoxes;
     QSet<QString> mCommandLines;
     QSet<QString> mTextBoxes;
-    QMap<QString, QRect> mPlainWindowGeometry;
+    QMap<QString, PlainWindowState> mPlainWindowStates;
 };
 
 #endif // MUDLET_TWINDOWREGISTRY_H
