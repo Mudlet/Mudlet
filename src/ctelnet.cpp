@@ -5551,6 +5551,8 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
 void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
+        // testReadReplayFile() can leave the status of a short final payload behind
+        replayStream.resetStatus();
         qint32 amount = 0;
         qint32 offset = 0;
         if (mReplayHasFaultyFormat) {
@@ -5566,7 +5568,16 @@ void cTelnet::loadReplayChunk()
 
         replayStream >> amount;
 
-        loadedBytes = replayStream.readRawData(loadBuffer, amount);
+        // testReadReplayFile() vetted the file before playback, but the file can
+        // still change or stop being readable while it plays
+        const bool headerUsable = replayStream.status() == QDataStream::Ok && offset >= 0 && amount >= 0 && amount <= static_cast<qint32>(BUFFER_SIZE);
+        loadedBytes = headerUsable ? replayStream.readRawData(loadBuffer, amount) : -1;
+        if (loadedBytes < 0) {
+            loadedBytes = 0;
+            //: Console message when a replay stops because its file could not be read. The [ WARN ] prefix is column padding shared with Mudlet's other console messages, keep it as it is
+            endReplay(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
+            return;
+        }
         // Previous use of loadedBytes + 1 caused a spurious character at end of
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
