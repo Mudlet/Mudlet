@@ -86,6 +86,48 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
     }
 }
 
+// Qt gives a dock added beside visible ones only its minimum size along the
+// area, which for a console is nothing, so it comes up without a single line.
+// Measured after the layout has run, so a size a saved layout restored stays.
+void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
+{
+    using namespace std::chrono_literals;
+    QTimer::singleShot(0ms, dock, [dock]() {
+        mudlet* window = mudlet::self();
+        if (!window || dock->isFloating() || !dock->widget()) {
+            return;
+        }
+        // Hidden before its first layout, as Geyser does to a window created hidden, it keeps no size of
+        // its own and is squeezed the same way when shown
+        if (!dock->isVisible()) {
+            const auto retry = [dock]() {
+                shareDockAreaIfSqueezed(dock);
+            };
+            QObject::connect(dock.data(), &QDockWidget::visibilityChanged, dock.data(), retry, Qt::SingleShotConnection);
+            return;
+        }
+        const Qt::DockWidgetArea area = window->dockWidgetArea(dock);
+        const Qt::Orientation orientation = (area == Qt::TopDockWidgetArea || area == Qt::BottomDockWidgetArea) ? Qt::Horizontal : Qt::Vertical;
+        const auto extent = [orientation](const QWidget* widget) {
+            return orientation == Qt::Vertical ? widget->height() : widget->width();
+        };
+        if (extent(dock->widget()) >= dock->fontMetrics().height()) {
+            return;
+        }
+        int total = 0;
+        int docks = 0;
+        for (auto* other : window->findChildren<QDockWidget*>()) {
+            if (other->isVisible() && !other->isFloating() && other->parentWidget() == window && window->dockWidgetArea(other) == area) {
+                total += extent(other);
+                ++docks;
+            }
+        }
+        if (docks > 1) {
+            window->resizeDocks({dock.data()}, {total / docks}, orientation);
+        }
+    });
+}
+
 } // namespace
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
@@ -402,6 +444,7 @@ std::pair<bool, QString> TMainConsole::openUserWindow(const QString& name, bool 
     auto dockwidget = dockWidget(name);
     if (!dockwidget) {
         dockwidget = createUserWindow(name);
+        shareDockAreaIfSqueezed(dockwidget);
     }
     dockwidget->update();
 
