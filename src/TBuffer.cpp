@@ -56,6 +56,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <utility>
 #include <chrono>
@@ -775,14 +776,6 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     if (requestedLinesLimit < 100) {
         requestedLinesLimit = 100;
     }
-    if (batch >= requestedLinesLimit) {
-        batch = requestedLinesLimit / 10;
-    }
-    // shrinkBuffer() pops one line per batch step, so a batch of none at all
-    // switches trimming off and lets the buffer grow past its limit
-    if (batch < 1) {
-        batch = 1;
-    }
     // clip the maximum to something reasonable that the machine can handle
     auto max = getMaxBufferSize();
     if (requestedLinesLimit > max) {
@@ -790,6 +783,17 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
         mLinesLimit = max;
     } else {
         mLinesLimit = requestedLinesLimit;
+    }
+    // checked against the clipped limit: shrinkBuffer() pops a whole batch as
+    // soon as the buffer passes it, and a batch bigger than that pops lines
+    // that are not there
+    if (batch >= mLinesLimit) {
+        batch = mLinesLimit / 10;
+    }
+    // shrinkBuffer() pops one line per batch step, so a batch of none at all
+    // switches trimming off and lets the buffer grow past its limit
+    if (batch < 1) {
+        batch = 1;
     }
 
     mBatchDeleteSize = batch;
@@ -802,13 +806,17 @@ int TBuffer::getMaxBufferSize()
     // Mudlet is 32bit mainly on Windows, see where the practical limit for a process 2GB:
     // https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-and-address-space-limits
     // 64bit: set to 80% of what is available to us, swap not included
-    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (memoryTotal * 0.80);
+    // the query answers -1 when it fails, which would leave room for no lines at all
+    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32 || memoryTotal <= 0) ? 1600_MB : (memoryTotal * 0.80);
     auto maxLines = (maxProcessMemoryBytes / TCHAR_IN_BYTES) / mpHost->mWrapAt;
     // now we've calculated how many lines can we fit in 80% of memory, ignoring memory use for other things like triggers/aliases, Lua scripts, etc
     // so shave that down by 20%
     maxLines = (maxLines / 100) * 80;
 
-    return maxLines;
+    // a huge wrap width divides the estimate down to nothing, but few lines
+    // are ever that long, so keep the floor setBufferSize() gives a request;
+    // a wrap of 1 on a machine with a lot of memory overflows an int
+    return static_cast<int>(std::clamp<int64_t>(maxLines, 100, std::numeric_limits<int>::max()));
 }
 
 void TBuffer::updateColors()
