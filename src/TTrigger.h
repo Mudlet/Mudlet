@@ -301,9 +301,6 @@ public:
     void setIsColorizerTrigger(const bool b) { mIsColorizerTrigger = b; }
     void compile();
     void execute();
-    // Only Lua reads a fire's captures, and handing them over costs more than a fire that runs no
-    // script. A command's send and a sound's playback can raise events, so those count as reaching Lua.
-    bool fireReachesLua() const { return mRegisteredAnonymousLuaFunction || !mScript.isEmpty() || !mCommand.isEmpty() || mSoundTrigger; }
     bool isFilterChain();
     bool setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger = true);
     void rebuildPrescanGrams();
@@ -488,6 +485,11 @@ private:
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
+    bool fireReachesLua() const;
+    void executeWithCaptures(const std::list<std::string>& captureList,
+                             const std::list<int>& posList,
+                             const NameGroupMatches* nameGroups = nullptr,
+                             const QMap<QString, QPair<int, int>>* namePositions = nullptr);
     const std::string& patternUtf8(int patternNumber) const;
 
 

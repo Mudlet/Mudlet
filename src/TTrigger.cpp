@@ -1117,15 +1117,7 @@ END: {
         updateMultistates(patternNumber, captureList, posList, &nameGroups);
         return;
     }
-    if (fireReachesLua()) {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        pL->setCaptureNameGroups(nameGroups, namePositions);
-        execute();
-        pL->clearCaptureGroups();
-    } else {
-        execute();
-    }
+    executeWithCaptures(captureList, posList, &nameGroups, &namePositions);
     if (mFilterTrigger) {
         if (captureList.size() > 1) {
             const int total = captureList.size();
@@ -1206,14 +1198,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    if (fireReachesLua()) {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        execute();
-        pL->clearCaptureGroups();
-    } else {
-        execute();
-    }
+    executeWithCaptures(captureList, posList);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
@@ -1345,14 +1330,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         updateMultistates(regexNumber, captureList, posList);
         return;
     }
-    if (fireReachesLua()) {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        execute();
-        pL->clearCaptureGroups();
-    } else {
-        execute();
-    }
+    executeWithCaptures(captureList, posList);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
@@ -1492,14 +1470,7 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    if (fireReachesLua()) {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        execute();
-        pL->clearCaptureGroups();
-    } else {
-        execute();
-    }
+    executeWithCaptures(captureList, posList);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             auto it1 = captureList.begin();
@@ -1638,14 +1609,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    if (fireReachesLua()) {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        execute();
-        pL->clearCaptureGroups();
-    } else {
-        execute();
-    }
+    executeWithCaptures(captureList, posList);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
@@ -1897,18 +1861,21 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                 }
                 conditionMet = true;
                 TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-                if (mFilterTrigger) {
+                if (!fireReachesLua()) {
+                    execute();
+                } else if (mFilterTrigger) {
                     // A filter reads the captures again once the script has run
                     pL->setMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList, matchState->nameCaptures);
                     execute();
+                    pL->clearCaptureGroups();
                 } else {
                     pL->setMultiCaptureGroups(std::move(matchState->multiCaptureList), std::move(matchState->multiCapturePosList), std::move(matchState->nameCaptures));
                     execute();
                     // Back into the state, whose destructor parks the nodes for
                     // the next fire to reuse
                     pL->takeBackMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList);
+                    pL->clearCaptureGroups();
                 }
-                pL->clearCaptureGroups();
                 if (mFilterTrigger) {
                     const std::list<std::list<std::string>>& multiCaptureList = matchState->multiCaptureList;
                     for (const auto& captures : multiCaptureList) {
@@ -2223,6 +2190,30 @@ private:
     int mPreviousGeneration;
 };
 } // namespace
+
+// Has to cover everything execute() does that can end up in Lua: a command's
+// send and a sound's playback can raise events as well as the script can.
+bool TTrigger::fireReachesLua() const
+{
+    return mRegisteredAnonymousLuaFunction || !mScript.isEmpty() || !mCommand.isEmpty() || mSoundTrigger;
+}
+
+// Only Lua reads a fire's captures, and handing them over and back costs more
+// than a fire that runs no script.
+void TTrigger::executeWithCaptures(const std::list<std::string>& captureList, const std::list<int>& posList, const NameGroupMatches* nameGroups, const QMap<QString, QPair<int, int>>* namePositions)
+{
+    if (!fireReachesLua()) {
+        execute();
+        return;
+    }
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
+    if (nameGroups && namePositions) {
+        pL->setCaptureNameGroups(*nameGroups, *namePositions);
+    }
+    execute();
+    pL->clearCaptureGroups();
+}
 
 void TTrigger::execute()
 {

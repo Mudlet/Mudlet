@@ -3137,6 +3137,21 @@ describe("Trigger processing", function()
             end)
         end)
 
+        it("hands its captures to what its command sets off, though it has no script", function()
+            withTrigger("command", function(cleanup)
+                local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                    if command == "tkcommand sent" then
+                        _G.TriggerKindsSpec.commandSelection = selectCaptureGroup(1)
+                    end
+                end)
+                cleanup(function() killAnonymousEventHandler(handler) end)
+
+                feedTriggers("tkcommand trigger\n")
+                assert.is_number(_G.TriggerKindsSpec.commandSelection, "sending the command should raise sysDataSendRequest")
+                assert.is_true(_G.TriggerKindsSpec.commandSelection >= 0, "the handler should be able to select the trigger's match")
+            end)
+        end)
+
         -- A filter ("only pass matches") parent hands its children the text it
         -- matched instead of the line, whatever kind of pattern did the matching.
         -- Each child below matches ^(.+)$ and records what it was given.
