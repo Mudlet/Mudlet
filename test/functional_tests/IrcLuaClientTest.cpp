@@ -622,6 +622,27 @@ private slots:
         QCOMPARE(bufferTitles(), QStringList({mServerHost}));
     }
 
+    void test_closingAChannelShowsTheServerBufferAfterTheServerRenamedIt()
+    {
+        QVERIFY(openJoinedClient());
+        const int connection = mpIrcServer->connectionCount() - 1;
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY(QTest::qWaitFor(
+                [this]() {
+                    return bufferTitles().contains(mServerName);
+                },
+                5s));
+        QVERIFY(showBuffer(mChannel));
+
+        QVERIFY(typeLine(qsl("/close")));
+        QVERIFY(waitForLine(connection, qsl("PART %1").arg(mChannel).toUtf8()));
+
+        const auto* shown = mpHost->mpDlgIRC->bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
+        QVERIFY2(shown && shown == mpHost->mpIrcClient->serverBuffer(), "the server buffer was not shown after the channel closed");
+        QVERIFY(typeLine(qsl("hello after close")));
+        QVERIFY2(waitForLine(connection, qsl("PRIVMSG %1 :hello after close").arg(mServerName).toUtf8()), qPrintable(mpIrcServer->lines(connection).join('\n')));
+    }
+
     // The reply is timed from when the ping was typed, not from when it arrived
     void test_aTypedPingIsTimedFromWhenItWasSent()
     {
