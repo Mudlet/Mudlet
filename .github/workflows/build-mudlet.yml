@@ -3,6 +3,8 @@
 # ccache/Lua/Lua rocks/xcb-util-cursor save steps below: only builds of
 # development write these shared caches, every other build restores
 # read-only, so build-mudlet-pr.yml has no equivalent save steps at all.
+# build-mudlet-pr.yml also runs its macOS C++ tests after packaging, alongside
+# the Lua tests; here they stay ahead of a package step that can publish.
 name: 🔨 Build Mudlet
 on:
   push:
