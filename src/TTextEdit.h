@@ -136,6 +136,7 @@ public:
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class MainConsoleSelectionTest;
+    friend class OpaqueConsolePaintTest;
     friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
     friend class PipelineBenchmark;
@@ -205,6 +206,8 @@ private:
     // Borrows mScreenBuffer's rows, so it must not outlive a reallocation of it.
     QImage cachedScreen();
     void slideScreenWindow(int deviceRows);
+    bool backgroundIsOpaque() const;
+    void paintNothing(const QRect&);
     // Coalescing replacement for update() on the paths that new output drives.
     // Those paints run inside the receive loop, so one per network packet
     // delays the next packet; capping them at one per csmPaintPaceMs lets a
@@ -305,6 +308,9 @@ private:
     // window's damaged rows, as they must leave the cached screen as they
     // found it. The other rows hold stale ink that is never shown.
     QImage mRenderBuffer;
+    // What the cached screen was last cleared to, so a change of it can retire
+    // the cached ink drawn over the old one.
+    QColor mCacheClearColor = Qt::transparent;
     // Buffer lines whose text changed where it stands, so the cached screen
     // cannot be trusted for the rows they land on. -1 for "none pending".
     int mDirtyFirstLine = -1;
