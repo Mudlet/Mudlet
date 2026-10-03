@@ -1692,7 +1692,18 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           end
           lfs.rmdir(path)
         end
-        finally(function() removeTree(profileDirectory) end)
+        -- written into the profile made here, so a profile of the same name that
+        -- this spec did not make is never deleted
+        local marker = profileDirectory .. "/mudlet-spec-fixture"
+        if lfs.attributes(marker) then
+          removeTree(profileDirectory)
+        end
+        assert.is_nil(lfs.attributes(profileDirectory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+        finally(function()
+          if lfs.attributes(marker) then
+            removeTree(profileDirectory)
+          end
+        end)
 
         -- Enough empty entries that the extraction is still running when the profile
         -- has gone; empty ones need no checksum, so the archive is quick to write here
@@ -1719,6 +1730,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local unzipped = profileDirectory .. string.format("/unzipped/f%05d", entries)
 
         lfs.mkdir(profileDirectory)
+        writeFile(marker, "")
         lfs.mkdir(profileDirectory .. "/current")
         writeFile(archive, table.concat(localHeaders) .. directory .. le(0x06054b50, 4) .. le(0, 2) .. le(0, 2) .. le(entries, 2) .. le(entries, 2) .. le(#directory, 4) .. le(offset, 4) .. le(0, 2))
 
