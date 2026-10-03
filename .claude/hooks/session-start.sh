@@ -76,22 +76,28 @@ fi
 # libxcb-shape0, which Ubuntu's own Qt would have pulled in), gstreamer for
 # Qt Multimedia, and the docs/demo-videos.md toolchain (openbox, xdotool,
 # imagemagick, ffmpeg) for driving and recording the real UI headlessly.
-if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
+TEST_PACKAGES=(
+  xvfb
+  libgstreamer-plugins-base1.0-0
+  libxcb-cursor0
+  libxcb-icccm4
+  libxcb-image0
+  libxcb-keysyms1
+  libxcb-render-util0
+  libxcb-shape0
+  libxcb-xinerama0
+  xdotool
+  openbox
+  imagemagick
+  ffmpeg
+)
+# Every package is asked about, as some arrive with unrelated ones - ffmpeg
+# brings libxcb-shape0. Not fatal: the steps after this one need none of them.
+if ! dpkg -s "${TEST_PACKAGES[@]}" >/dev/null 2>&1; then
   echo "Installing test-suite apt dependencies..."
-  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends \
-    xvfb \
-    libgstreamer-plugins-base1.0-0 \
-    libxcb-cursor0 \
-    libxcb-icccm4 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-xinerama0 \
-    xdotool \
-    openbox \
-    imagemagick \
-    ffmpeg
+  { ${SUDO} apt-get update -qq \
+    && DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${TEST_PACKAGES[@]}"; } \
+    || echo "WARNING: could not install the test-suite apt dependencies"
 fi
 
 # gcovr and jq for the improve-test-coverage skill. Guarded separately so
