@@ -8220,9 +8220,7 @@ void mudlet::activateProfile(Host* pHost)
     refreshAddonPlacement();
 
     // Reset the styles to reflect those of the now active profile:
-    mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+    setGlobalStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
 
     // Tell the new profile that it is gaining focus via a Mudlet event:
     TEvent focusGainedEvent{};
