@@ -1650,8 +1650,8 @@ void TConsole::setCmdVisible(bool isVisible)
     setProxyForFocus(isVisible ? mpCommandLine : nullptr);
     // Need to remove the TCommandLine from the last used stack
     // if it has been explicitly hidden:
-    if (!isVisible && mpHost) {
-        mpHost->forgetCommandLine(mpCommandLine);
+    if (!isVisible && mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->forgetCommandLine(mpCommandLine);
     }
 }
 
@@ -2425,11 +2425,13 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     // This ensures clicking on a console focuses its own command line
     if (mpCommandLine && mpCommandLine->isVisible()) {
         mpCommandLine->setFocus(Qt::MouseFocusReason);
-        mpHost->recordActiveCommandLine(mpCommandLine);
+        if (mpHost->mpConsole) {
+            mpHost->mpConsole->recordActiveCommandLine(mpCommandLine);
+        }
     } else if (mType == MainConsole) {
         // Main console always has its command line
         mpHost->mpConsole->mpCommandLine->setFocus(Qt::MouseFocusReason);
-        mpHost->recordActiveCommandLine(mpHost->mpConsole->mpCommandLine);
+        mpHost->mpConsole->recordActiveCommandLine(mpHost->mpConsole->mpCommandLine);
     } else {
         // Fallback to the old behavior for other cases
         mpHost->setFocusOnHostActiveCommandLine();
