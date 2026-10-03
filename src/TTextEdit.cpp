@@ -1294,10 +1294,28 @@ void TTextEdit::slideScreenWindow(const int deviceRows)
     mScreenTop = newTop;
 }
 
+// Whether the widgets behind the text area show only this solid color, so it
+// can paint every pixel itself and spare Qt repainting them on every frame.
+bool TTextEdit::backgroundIsOpaque() const
+{
+    return mpConsole->getType() == TConsole::MainConsole && !mpConsole->mBgImageMode && mpConsole->getConsoleBgColor().alpha() == 255;
+}
+
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
     mHasBlinkingContent = false;
     bool reusedCachedScreenContent = false;
+    // Qt has already decided whether to paint what lies beneath this frame, so
+    // the attribute rather than the current colors says which kind it must be.
+    const bool opaque = testAttribute(Qt::WA_OpaquePaintEvent);
+    const QColor clearColor = opaque ? QColor(mpConsole->getConsoleBgColor().rgb()) : QColor(Qt::transparent);
+    // An opaque cache without an alpha channel is what lets Qt copy it out
+    // instead of blending it, whichever of the two formats the window uses.
+    const QImage::Format cacheFormat = opaque ? QImage::Format_RGB32 : QImage::Format_ARGB32_Premultiplied;
+    if (clearColor != mCacheClearColor) {
+        mCacheClearColor = clearColor;
+        mCachedScreenSize = QSize();
+    }
 
     qreal dpr = devicePixelRatioF();
     // One spare row below the last character cell, so that ink which overflows
@@ -1373,10 +1391,11 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // all of them did, so it is only done when there is no buffer to reuse -
     // the pane changed size or resolution, or nothing has been painted yet.
     bool bufferWasJustCleared = false;
-    if (mScreenBuffer.width() != surfaceSize.width() || mScreenBuffer.height() != 2 * surfaceSize.height() || !qFuzzyCompare(mScreenBuffer.devicePixelRatio(), dpr)) {
-        QImage resized(surfaceSize.width(), 2 * surfaceSize.height(), QImage::Format_ARGB32_Premultiplied);
+    if (mScreenBuffer.format() != cacheFormat || mScreenBuffer.width() != surfaceSize.width() || mScreenBuffer.height() != 2 * surfaceSize.height()
+        || !qFuzzyCompare(mScreenBuffer.devicePixelRatio(), dpr)) {
+        QImage resized(surfaceSize.width(), 2 * surfaceSize.height(), cacheFormat);
         resized.setDevicePixelRatio(dpr);
-        resized.fill(Qt::transparent);
+        resized.fill(clearColor);
         if (reusedCachedScreenContent) {
             QPainter carry(&resized);
             carry.setCompositionMode(QPainter::CompositionMode_Source);
@@ -1397,14 +1416,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // Nothing is reused, so whatever the window holds is the previous frame's
     // ink - including the sliver past the last cell, which no band fill reaches.
     if (!reusedCachedScreenContent && !bufferWasJustCleared) {
-        screen.fill(Qt::transparent);
+        screen.fill(clearColor);
     }
     QImage* target = &screen;
     if (noCopy) {
-        if (mRenderBuffer.size() != surfaceSize || !qFuzzyCompare(mRenderBuffer.devicePixelRatio(), dpr)) {
-            mRenderBuffer = QImage(surfaceSize, QImage::Format_ARGB32_Premultiplied);
+        if (mRenderBuffer.format() != cacheFormat || mRenderBuffer.size() != surfaceSize || !qFuzzyCompare(mRenderBuffer.devicePixelRatio(), dpr)) {
+            mRenderBuffer = QImage(surfaceSize, cacheFormat);
             mRenderBuffer.setDevicePixelRatio(dpr);
-            mRenderBuffer.fill(Qt::transparent);
+            mRenderBuffer.fill(clearColor);
         }
         // The widget clips this paint to r and everything drawn here composites
         // pixel by pixel, so rows outside r cannot reach the screen and need not
@@ -1449,7 +1468,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     const QRect deleteRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, clearHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
-    p.fillRect(deleteRect, Qt::transparent);
+    p.fillRect(deleteRect, clearColor);
     // Scrolling shifts the cached screen by whole cells, which drops a complete
     // line of text into the spare row. Nothing but the bottom line's overflow
     // belongs there, so rebuild it from scratch whenever it is not already part
@@ -1457,7 +1476,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     QRect spareRowRect;
     if (!bottomRowIsRepainted) {
         spareRowRect = QRect(0, mScreenHeight * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
-        p.fillRect(spareRowRect, Qt::transparent);
+        p.fillRect(spareRowRect, clearColor);
     }
 
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
@@ -1515,6 +1534,16 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     painter.setBackgroundMode(Qt::BGMode::TransparentMode);
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawImage(QPointF(0, 0), *target);
+    if (opaque) {
+        // Past the last whole cell, where the cached screen does not reach
+        const QSizeF cachedArea = QSizeF(surfaceSize) / dpr;
+        if (width() > cachedArea.width()) {
+            painter.fillRect(QRectF(cachedArea.width(), 0, width() - cachedArea.width(), height()), clearColor);
+        }
+        if (height() > cachedArea.height()) {
+            painter.fillRect(QRectF(0, cachedArea.height(), cachedArea.width(), height() - cachedArea.height()), clearColor);
+        }
+    }
     if (!noCopy) {
         mCachedScreenSize = surfaceSize;
     }
@@ -1564,6 +1593,18 @@ bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool
     return isBlinkClientRegistered && reusedCachedScreenContent;
 }
 
+// For a frame with no rows to draw, which Qt may already have told that
+// nothing beneath it shows.
+void TTextEdit::paintNothing(const QRect& r)
+{
+    if (!testAttribute(Qt::WA_OpaquePaintEvent)) {
+        return;
+    }
+    QPainter painter(this);
+    painter.fillRect(r, QColor(mpConsole->getConsoleBgColor().rgb()));
+    setAttribute(Qt::WA_OpaquePaintEvent, false);
+}
+
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     mSincePaint.restart();
@@ -1579,6 +1620,7 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     const QRect& rect = e->rect();
 
     if (mFontWidth <= 0 || mFontHeight <= 0) {
+        paintNothing(rect);
         return;
     }
 
@@ -1586,6 +1628,7 @@ void TTextEdit::paintEvent(QPaintEvent* e)
         mScreenHeight = height() / mFontHeight;
         mScreenWidth = 100;
         if (mScreenHeight <= 0) {
+            paintNothing(rect);
             return;
         }
         if (mpConsole->getType() == TConsole::MainConsole && !mIsLowerPane) {
@@ -1599,6 +1642,15 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     }
     painter.setFont(font());
     drawForeground(painter, rect);
+    painter.end();
+
+    // Takes effect from the next frame, as this one's background was settled
+    // before it was asked to paint.
+    const bool opaque = backgroundIsOpaque();
+    if (testAttribute(Qt::WA_OpaquePaintEvent) != opaque) {
+        setAttribute(Qt::WA_OpaquePaintEvent, opaque);
+        update();
+    }
 }
 
 // highlights the currently selected text.

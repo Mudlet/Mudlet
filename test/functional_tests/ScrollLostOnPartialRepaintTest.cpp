@@ -185,14 +185,31 @@ private slots:
     // The cached screen slides over a buffer twice its height and moves the rows
     // it keeps back to the far end whenever it reaches an end, so each direction
     // scrolls more than a screen's worth to cross both ends at least once.
+    void test_scrollingBothWaysAcrossTheCachedScreensEnds_data()
+    {
+        QTest::addColumn<QString>("background");
+        QTest::addColumn<bool>("opaque");
+        // The cached screen is cleared to the background when the pane can paint
+        // it itself, so a color other than the default black shows a row cleared
+        // to the wrong one; translucent keeps the cleared-to-transparent kind
+        QTest::newRow("default") << QString() << true;
+        QTest::newRow("opaque") << qsl("20, 40, 90") << true;
+        QTest::newRow("translucent") << qsl("20, 40, 90, 128") << false;
+    }
+
     void test_scrollingBothWaysAcrossTheCachedScreensEnds()
     {
+        QFETCH(QString, background);
+        QFETCH(bool, opaque);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host && host->mpConsole, "no main console");
         TTextEdit* pane = host->mpConsole->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
+        if (!background.isEmpty()) {
+            lua->compileAndExecuteScript(qsl("setBackgroundColor(%1)\n").arg(background));
+        }
 
         // Each line a different length, so that a row kept from the wrong place
         // cannot pass for the right one
@@ -202,8 +219,12 @@ private slots:
         // that before the steps under test
         pane->scrollUp(100);
         qApp->processEvents();
-        pane->forceUpdate();
-        pane->repaint();
+        // Twice, as a change of background takes effect from the next frame
+        for (int frame = 0; frame < 2; ++frame) {
+            pane->forceUpdate();
+            pane->repaint();
+        }
+        QCOMPARE(pane->testAttribute(Qt::WA_OpaquePaintEvent), opaque);
         const int screenHeight = pane->mScreenHeight;
         QVERIFY2(screenHeight > 4, "the pane is too short for this test to mean anything");
         QVERIFY2(pane->imageTopLine() > 2 * screenHeight + 10, "too little buffer above the view to scroll up through both ends");
@@ -284,7 +305,7 @@ private slots:
             const QColor stale(Qt::magenta);
             const QImage cached = pane->cachedScreen();
             const qreal dpr = cached.devicePixelRatio();
-            pane->mRenderBuffer = QImage(cached.size(), QImage::Format_ARGB32_Premultiplied);
+            pane->mRenderBuffer = QImage(cached.size(), cached.format());
             pane->mRenderBuffer.setDevicePixelRatio(dpr);
             pane->mRenderBuffer.fill(stale);
 

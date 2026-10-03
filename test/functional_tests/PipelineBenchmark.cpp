@@ -1117,6 +1117,8 @@ private slots:
 
         emitMetric("display_tail_small_paint_ms", small.paintMs);
         emitMetric("display_tail_large_paint_ms", large.paintMs);
+        emitMetric("display_tail_small_window_paint_ms", small.windowPaintMs);
+        emitMetric("display_tail_large_window_paint_ms", large.windowPaintMs);
         // Cells drawn at each size: invariants, because two builds that drew
         // differently sized screens did not do the same work.
         emitMetric("display_tail_small_cells", static_cast<qint64>(small.cells));
@@ -1254,6 +1256,7 @@ private:
     struct TailResult
     {
         double paintMs = 0.0;
+        double windowPaintMs = 0.0;
         // Character cells on screen. Proportional to the painted pixel area, and
         // unlike a pixel count it does not move with the platform's font metrics.
         double cells = 0.0;
@@ -1320,6 +1323,22 @@ private:
             best = std::min(best, timer.nsecsElapsed() / 1.0e9);
         }
         result.paintMs = (best / kDisplayTailPaints) * 1000.0;
+
+        // The same paints made the way the application makes them, through the
+        // window, where Qt also repaints whatever lies beneath the pane that the
+        // pane does not cover itself. render() only ever draws the pane.
+        QVERIFY2(pane->isVisible(), "the display pane is not on screen, so repainting it through the window would draw nothing");
+        best = std::numeric_limits<double>::max();
+        for (int pass = 0; pass < kDisplayPasses; ++pass) {
+            QElapsedTimer timer;
+            timer.start();
+            for (int i = 0; i < kDisplayTailPaints; ++i) {
+                pane->scrollTo(firstLine + i);
+                pane->repaint();
+            }
+            best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+        }
+        result.windowPaintMs = (best / kDisplayTailPaints) * 1000.0;
     }
 
     // Fills `result` for the reason measureTailPaints() gives.
