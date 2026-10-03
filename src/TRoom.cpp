@@ -36,7 +36,9 @@
 #include <QString>
 #include <QStringBuilder>
 
+#include <algorithm>
 #include <cstddef>
+#include <limits>
 
 
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
@@ -1534,6 +1536,41 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             mpRoomDB->mpMap->postMessage(infoMsg);
         }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
+    }
+
+    // Only a corrupt file can hold a custom line point outside the range of room
+    // coordinates, and the 2D map's arithmetic overflows to infinity on one
+    {
+        QStringList outOfRange;
+        for (auto itCustomLine = customLines.cbegin(); itCustomLine != customLines.cend(); ++itCustomLine) {
+            const QList<QPointF>& points = itCustomLine.value();
+            if (!std::all_of(points.cbegin(), points.cend(), [](const QPointF& point) {
+                    // NaN fails these comparisons too
+                    return qAbs(point.x()) <= std::numeric_limits<int>::max() && qAbs(point.y()) <= std::numeric_limits<int>::max();
+                })) {
+                outOfRange.append(itCustomLine.key());
+            }
+        }
+        for (const QString& exitKey : std::as_const(outOfRange)) {
+            customLines.remove(exitKey);
+            customLinesColor.remove(exitKey);
+            customLinesStyle.remove(exitKey);
+            customLinesArrow.remove(exitKey);
+            customLinesCopy.remove(exitKey);
+            customLinesColorCopy.remove(exitKey);
+            customLinesStyleCopy.remove(exitKey);
+            customLinesArrowCopy.remove(exitKey);
+        }
+        if (!outOfRange.isEmpty()) {
+            //: %1 is the room ID, %2 is a list of exits whose custom lines were removed
+            const QString infoMsg = tr("[ INFO ]  - In room with ID: %1 found one or more custom lines with a point outside the range of room coordinates, which were removed: %2.")
+                                            .arg(id)
+                                            .arg(outOfRange.join(QLatin1String(", ")));
+            if (TMap::smShowMapAuditErrors) {
+                mpRoomDB->mpMap->postMessage(infoMsg);
+            }
+            mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
+        }
     }
 
     // Custom Lines - points - the master element - if the entry for an exit is
