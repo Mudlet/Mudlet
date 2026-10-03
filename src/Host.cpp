@@ -5311,9 +5311,7 @@ bool Host::clearWindow(const QString& name)
     if (!pModel) {
         return false;
     }
-    pModel->buffer.clear();
-    // --mirror's pending line went with the buffer.
-    pModel->mMirrorPendingLine.clear();
+    pModel->clear();
     emit pModel->mNotifier.bufferCleared();
     return true;
 }
