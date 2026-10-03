@@ -450,13 +450,17 @@ private:
     }
 
     // Answers the factor dialog that Spread and Shrink put up; a factor of 0
-    // cancels it instead.
-    bool pickFactorItem(const QString& text, const int factor)
+    // cancels it instead. A script given here runs while the dialog is up,
+    // just before it is answered.
+    bool pickFactorItem(const QString& text, const int factor, const QString& scriptWhileUp = QString())
     {
-        answerNextModalDialog([factor](QWidget* pDialog) {
+        answerNextModalDialog([this, factor, scriptWhileUp](QWidget* pDialog) {
             auto* pInput = qobject_cast<QInputDialog*>(pDialog);
             if (!pInput) {
                 return false;
+            }
+            if (!scriptWhileUp.isEmpty()) {
+                runLua(scriptWhileUp);
             }
             if (factor) {
                 pInput->setIntValue(factor);
@@ -471,13 +475,16 @@ private:
 
     // Answers the coordinates dialog Move to position puts up. Its three
     // fields are the only line edits on it and are made in x, y, z order.
-    bool pickMoveToPosition(const int x, const int y, const int z)
+    bool pickMoveToPosition(const int x, const int y, const int z, const QString& scriptWhileUp = QString())
     {
-        answerNextModalDialog([x, y, z](QWidget* pDialog) {
+        answerNextModalDialog([this, x, y, z, scriptWhileUp](QWidget* pDialog) {
             auto* pMoveDialog = qobject_cast<QDialog*>(pDialog);
             const QList<QLineEdit*> fields = pDialog->findChildren<QLineEdit*>();
             if (!pMoveDialog || fields.size() != 3) {
                 return false;
+            }
+            if (!scriptWhileUp.isEmpty()) {
+                runLua(scriptWhileUp);
             }
             fields[0]->setText(QString::number(x));
             fields[1]->setText(QString::number(y));
@@ -2731,6 +2738,55 @@ private slots:
         QCOMPARE(roomPosition(kEastRoomId), QVector3D(4, 2, 1));
         QCOMPARE(roomPosition(kNorthRoomId), QVector3D(0, 1, 0));
         QVERIFY(map()->isUnsaved());
+    }
+
+    // The factor and coordinates dialogs run their own event loop, in which a
+    // script can delete the room the selection is centred on.
+    void test_spreadingAroundARoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickFactorItem(qsl("Spread..."), 3, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 0, 0));
+    }
+
+    void test_shrinkingAroundARoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        QVERIFY(map()->setRoomCoordinates(kWestRoomId, -4, 0, 0));
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 4, 0, 0));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-4.5, 0.5), pointUnitsFromCentre(4.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(4, 0));
+
+        QVERIFY(pickFactorItem(qsl("Shrink..."), 2, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-4, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(4, 0, 0));
+    }
+
+    void test_movingASelectionWhoseHighlightedRoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickMoveToPosition(3, 2, 1, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 0, 0));
     }
 
     void test_moveToPositionCarriesTheCustomLinesAlong()
