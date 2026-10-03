@@ -84,6 +84,10 @@ void MMCPServer::sendSnoopData(std::string& lines)
         // writeData() would show it to the snooper as a '?'
         if (iss.eof() && !line.empty() && line.back() == '\xff') {
             line.pop_back();
+            // GA straight after a line ending marks no prompt text at all
+            if (line.empty()) {
+                break;
+            }
         }
         QByteArray outData1, outData2;
         outData1.append(static_cast<char>(SnoopData));

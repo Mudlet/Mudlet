@@ -1764,6 +1764,18 @@ describe("MMCP effects against a scripted chat peer", function()
         assert.is_table(prompt)
         assert.equals("<100hp 50mp> ", prompt.text, "payload bytes: " .. prompt.hex)
       end
+
+      -- and a GA straight after a line ending sends no blank line of its own
+      local mark = captureSeq()
+      feedTelnet("a line before a bare GA\r\n\255\249")
+      feedTelnet("the next line\r\n")
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and contains(event.text, "the next line")
+      end, 2000))
+      local blank = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and (event.text == "" or event.text == "?")
+      end, 0)
+      assert.is_nil(blank, "a bare GA reached the snooper as a line of its own")
     end)
 
     it("raises sysMMCPIncomingSnoopMessage for snooped output", function()
