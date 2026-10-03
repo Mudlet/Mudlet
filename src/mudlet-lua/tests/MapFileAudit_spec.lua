@@ -295,6 +295,30 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.equal(renumbered, getPlayerRoom())
     end)
 
+    it("leaves a player in no room there when it renumbers a room 0", function()
+      local area = newArea("MapFileAuditSpecNoPlayerRoom")
+      local gone = newRoom(area, 0)
+      newRoom(area, 1, distantRoomId)
+      setRoomName(distantRoomId, "MapFileAuditSpecNoPlayerRoom")
+      centerview(gone)
+      deleteRoom(gone)
+      assert.are.equal(0, getPlayerRoom())
+
+      reloadWith(function(data)
+        -- the room's own key and its place in its area's list of rooms
+        return planted(data, int32(distantRoomId), int32(0), 2)
+      end)
+
+      local renumbered
+      for id, name in pairs(getRooms()) do
+        if name == "MapFileAuditSpecNoPlayerRoom" then
+          renumbered = id
+        end
+      end
+      assert.is_not_nil(renumbered, "room 0 was lost")
+      assert.are.equal(0, getPlayerRoom())
+    end)
+
     it("renumbers a room whose ID is -1 without giving it every absent exit on the map", function()
       local distantRoomId = 0x5A5B5C01
       local area = addAreaName("MapFileAuditSpecMinusOneRoomId")

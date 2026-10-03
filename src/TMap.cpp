@@ -711,9 +711,12 @@ void TMap::audit()
     }
 
     mpRoomDB->auditRooms(roomRemapping, areaRemapping);
-    // The player's room was read from the file under the id the audit just replaced
+    // The player's room was read from the file under the id the audit just replaced;
+    // 0 is no room at all, not a room 0 the file may also hold
     for (int& playerRoomId : mRoomIdHash) {
-        playerRoomId = roomRemapping.value(playerRoomId, playerRoomId);
+        if (playerRoomId) {
+            playerRoomId = roomRemapping.value(playerRoomId, playerRoomId);
+        }
     }
 
     // The second half of old mpRoomDB->initAreasForOldMaps() - needed to fixup
