@@ -3513,12 +3513,14 @@ QFont TMainConsole::displayFont() const
 void TMainConsole::applyBorders()
 {
     // A console put away by a tab switch is zero pixels wide, so the resize
-    // event below tells it nothing about the room its new borders leave
+    // event below tells it nothing about the room its new borders leave, and
+    // scripts are told about the container it comes back to instead
     syncHiddenScreenDimensions();
     const QSize s = size();
     QResizeEvent event(s, s);
     QCoreApplication::sendEvent(this, &event);
-    raiseMudletSysWindowResizeEvent(s.width(), s.height());
+    const QSize reported = isHidden() && parentWidget() ? parentWidget()->size() : s;
+    raiseMudletSysWindowResizeEvent(reported.width(), reported.height());
 }
 
 // createMapper() records the embedded mapper here and puts it in the main frame
