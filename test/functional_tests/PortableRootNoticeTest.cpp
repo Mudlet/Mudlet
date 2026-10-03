@@ -192,15 +192,15 @@ private slots:
         const QString text = shown.first()->text();
         const QString informativeText = shown.first()->informativeText();
         shown.first()->close();
+        // Put back before anything can fail, for the cases below
+        QVERIFY(writeRejectedMarker());
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
+        mudlet::self()->setupConfig();
 
         QVERIFY2(text.contains(mMarker), qPrintable(qsl("the notice does not name %1: \"%2\"").arg(mMarker, text)));
         QVERIFY2(!text.contains(qsl("names the data directory")), qPrintable(qsl("the notice quotes a directory the file does not name: \"%1\"").arg(text)));
         QVERIFY2(!informativeText.contains(qsl("will not be listed")),
                  qPrintable(qsl("the notice speaks of portable profiles going unlisted, with no portable directory named: \"%1\"").arg(informativeText)));
-
-        QVERIFY(writeRejectedMarker());
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
-        mudlet::self()->setupConfig();
     }
 
     void test_initLeavesTheNoticeToMain()
