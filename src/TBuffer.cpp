@@ -5191,6 +5191,12 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     materialisePreTriggerPassLine(lastLineBeforeWrap);
 
     bool firstChar = lineBuffer.back().isEmpty();
+    // Only into an empty line: reserving exactly ahead of a line that keeps
+    // being added to would regrow it on every call rather than geometrically
+    if (firstChar) {
+        lineBuffer.back().reserve(text.size());
+        buffer.back().reserve(text.size());
+    }
     QHash<int, int> remappedLinkIds;
     const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
     const TChar defaultChar;
@@ -5399,14 +5405,15 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
 // P2 is exclusive: P2.x() is one past the last character copied, matching every
 // other consumer of a P_begin/P_end pair. Still poorly designed in that no
 // consideration is given to P2.y() != P1.y(), i.e. a copy of more than one line.
-TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
+// slice is cleared and refilled rather than built afresh: constructing a TBuffer
+// costs more than copying a line into one, and the clipboard is copied into a lot.
+void TBuffer::copyInto(const QPoint& P1, const QPoint& P2, TBuffer& slice) const
 {
-    TBuffer slice(mpHost);
     slice.clear();
     const int y = P1.y();
     int x = P1.x();
     if (y < 0 || y >= static_cast<int>(buffer.size())) {
-        return slice;
+        return;
     }
 
     // Ensure x starts within the valid range, and adjust P2.x() if it's out of bounds
@@ -5419,16 +5426,14 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         const std::vector<TChar> formatting(buffer.at(y).cbegin() + x, buffer.at(y).cbegin() + P2x_corrected);
         slice.appendFormatted(lineBuffer.at(y).mid(x, P2x_corrected - x), formatting, mLinkStore);
     }
-    return slice;
 }
 
 // This is constrained to P1.y() == P2.y()....
-TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
+void TBuffer::cutInto(QPoint& P1, QPoint& P2, TBuffer& slice)
 {
-    TBuffer slice = copy(P1, P2);
+    copyInto(P1, P2, slice);
     TChar format = currentFormat();
     replaceInLine(P1, P2, QString(), format);
-    return slice;
 }
 
 // Only the first line of chunk is pasted, and it goes in at P:
