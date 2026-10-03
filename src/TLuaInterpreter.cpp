@@ -129,6 +129,7 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
 TLuaInterpreter::~TLuaInterpreter()
 {
     stopSpawnedProcesses();
+    mClosingGlobalLua = true;
     lua_close(pGlobalLua);
 }
 
@@ -829,7 +830,13 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 int TLuaInterpreter::spawn(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    return TForkedProcess::startProcess(host.getLuaInterpreter(), L);
+    TLuaInterpreter* interpreter = host.getLuaInterpreter();
+    if (interpreter->mClosingGlobalLua) {
+        lua_pushnil(L);
+        lua_pushstring(L, "spawn: the Lua state is closing, so nothing would be left to receive the output");
+        return 2;
+    }
+    return TForkedProcess::startProcess(interpreter, L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
@@ -6335,7 +6342,9 @@ void TLuaInterpreter::initLuaGlobals()
         mNestedDispatchStates.clear();
         mEventHandlerLookupRefs.clear();
         stopSpawnedProcesses();
+        mClosingGlobalLua = true;
         lua_close(pGlobalLua);
+        mClosingGlobalLua = false;
         forgetLazyGlobals();
     }
 

@@ -164,6 +164,13 @@ describe("spawn", function()
     local function makeProfile(name, script)
       local directory = profilesDirectory .. "/" .. name
       local survivor = getMudletHomeDir() .. "/" .. name .. "-survivor"
+      -- written into the profile made here, so a profile of the same name that
+      -- this spec did not make is never deleted
+      local marker = directory .. "/mudlet-spec-fixture"
+      if lfs.attributes(marker) then
+        removeTree(directory)
+      end
+      assert.is_nil(lfs.attributes(directory), "a profile named " .. name .. " already exists and is not this spec's to delete")
       onCleanup(function()
         if loaded(name) then
           closeProfile(name)
@@ -174,12 +181,14 @@ describe("spawn", function()
           end
           pumpEvents(50)
         end
-        removeTree(directory)
+        if lfs.attributes(marker) then
+          removeTree(directory)
+        end
         os.remove(survivor)
       end)
       os.remove(survivor)
-      removeTree(directory)
       lfs.mkdir(directory)
+      io.open(marker, "w"):close()
       lfs.mkdir(directory .. "/current")
       local command = string.format("sleep 1; echo spawnAfterTeardown; sleep 1; touch '%s'", survivor)
       local child = string.format([[spawn(function(line) raiseGlobalEvent("mudletSpecSpawnLine", line) end, "/bin/sh", "-c", %q)]], command)
@@ -259,6 +268,34 @@ end]])
       assert.are.equal(1, reruns)
       assert.are.same({}, lines)
       assert.is_nil(lfs.attributes(survivor), "the reset profile's process was still running")
+    end)
+
+    -- finalizers run inside lua_close(), after the profile's processes were ended
+    it("should not start a process from a finalizer run as its profile is reset", function()
+      if skipped() then
+        return
+      end
+      local name = "mudlet-spec-spawn-finalizer"
+      local lines = collectLines()
+      local survivor = makeProfile(name, [[
+local marker = getMudletHomeDir() .. "/mudlet-spec-spawned"
+if not io.exists(marker) then
+  io.open(marker, "w"):close()
+  local proxy = newproxy(true)
+  getmetatable(proxy).__gc = function()
+    %s
+  end
+  mudletSpecSpawnProxy = proxy
+  tempTimer(0, function() resetProfile() end)
+end]])
+
+      assert.is_true(loadProfile(name, true))
+      for _ = 1, 30 do
+        pumpEvents(100)
+      end
+
+      assert.are.same({}, lines)
+      assert.is_nil(lfs.attributes(survivor), "the finalizer started a process the reset left running")
     end)
 
   end)
