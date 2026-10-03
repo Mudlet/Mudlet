@@ -94,6 +94,20 @@ describe("Tests functionality of Geyser.Color", function()
       assert.is_nil(Geyser.Color.parse("gcsGoneColour"))
     end)
 
+    it("asks a find_color_name() a script put in place about a colour it read before", function()
+      local original = Geyser.Color.find_color_name
+      finally(function() Geyser.Color.find_color_name = original end)
+      assert.are.same({255, 255, 255, 255}, {Geyser.Color.parse("white")})
+      assert.are.equal("#ffffff", Geyser.Color.hex("white"))
+      Geyser.Color.find_color_name = function(color)
+        return color == "white" and "red" or original(color)
+      end
+      assert.are.same({255, 0, 0, 255}, {Geyser.Color.parse("white")})
+      assert.are.equal("#ff0000", Geyser.Color.hex("white"))
+      Geyser.Color.find_color_name = original
+      assert.are.same({255, 255, 255, 255}, {Geyser.Color.parse("white")})
+    end)
+
     it("gives nothing for a colour it cannot read", function()
       assert.is_nil(Geyser.Color.parse("no_such_colour_at_all"))
       assert.is_nil(Geyser.Color.parse(nil))

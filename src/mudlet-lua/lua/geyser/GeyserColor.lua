@@ -19,13 +19,15 @@ local colorNamesByLowerCase
 -- entry's four components as they were, colorNamesByLowerCase as it was }. A
 -- name is only trusted while find_color_name() would still find that same
 -- entry holding the same components, as scripts and the ANSI palette rewrite
--- color_table. Bounded like parsedColorStrings.
+-- color_table, and while no script has put its own find_color_name() in place.
+-- Bounded like parsedColorStrings.
 local namedColors = {}
 local namedColorCount = 0
+local findColorName
 
 local function rememberedName(name)
   local known = namedColors[name]
-  if not known then
+  if not known or Geyser.Color.find_color_name ~= findColorName then
     return nil
   end
   local entry = known[7]
@@ -238,6 +240,9 @@ function Geyser.Color.parse(red, green, blue, alpha)
     a = tonumber(components[4], 10)
   end
   local r, g, b = tonumber(n >= 1 and components[1] or nil, 10), tonumber(n >= 2 and components[2] or nil, 10), tonumber(n >= 3 and components[3] or nil, 10)
+  if Geyser.Color.find_color_name ~= findColorName then
+    return r, g, b, a
+  end
   if namedColorCount >= 1000 then
     namedColors = {}
     namedColorCount = 0
@@ -290,6 +295,7 @@ function Geyser.Color.find_color_name(color)
   end
   return false
 end
+findColorName = Geyser.Color.find_color_name
 
 --- Applies colors to a window drawing from defaults and overridden values.
 -- @param cons The window to apply colors to
