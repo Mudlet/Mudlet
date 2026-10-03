@@ -247,8 +247,9 @@ worktree that first compiled the object; the line numbers are still right, so re
 to your own checkout. `base_dir` rewrites path arguments but not a path inside a `-D` value, so a
 define carrying `CMAKE_SOURCE_DIR` or a build-tree path makes every file it reaches miss in every
 other checkout: put such defines on the source files that read them (`set_property(SOURCE …)`), not
-on a whole target. Clang builds share no precompiled-header objects between checkouts:
-`cmake/PrecompiledHeaders.cmake` turns `base_dir` off for them.
+on a whole target. Under Clang, targets with a precompiled header share nothing between
+checkouts: the header records its build tree's path and fails to load from another, so
+`cmake/PrecompiledHeaders.cmake` turns `base_dir` off for those targets.
 
 **Sanitizers are on by default** on every non-Windows build, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile

@@ -59,7 +59,8 @@ if(CCACHE_FOUND AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   set(pchLauncherEnvironment "CCACHE_SLOPPINESS=${ccacheSloppiness}")
   # A Clang precompiled header names the build tree it was made in and fails to
   # load once that tree is gone, so one must never reach another checkout
-  # through a base_dir cache hit
+  # through a base_dir cache hit. Target-wide, as the objects using it hash its
+  # contents and so could only hit alongside it.
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     list(APPEND pchLauncherEnvironment "CCACHE_BASEDIR=")
   endif()
