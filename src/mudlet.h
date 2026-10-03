@@ -316,8 +316,10 @@ public:
     // long after a package has taken F3 - at which point Qt disables both.
     // A command belonging to another profile is reported without its name:
     // that is the other package's business and nothing this profile can act
-    // on, the same rule addonShortcutUsable() follows.
-    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    // on, the same rule addonShortcutUsable() follows. pinnedOnlyFromOtherProfiles
+    // is for a key that is only live while pHost is shown, when another profile's
+    // command is hidden unless pinned.
+    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost, const bool pinnedOnlyFromOtherProfiles = false) const;
     // What Mudlet's own shortcut on this key is called, empty when Mudlet has
     // nothing on it or a key binding there would still win
     QString ownShortcutUsingKey(const Qt::Key, const Qt::KeyboardModifiers) const;
