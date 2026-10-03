@@ -227,7 +227,7 @@ private slots:
     {
         TMainConsole* pConsole = mpFrontHost->mainConsoleView();
         pConsole->hide();
-        QVERIFY2(pConsole->width() > 0, "hiding the console took its width, so there is nothing to test here");
+        const int hiddenWidth = pConsole->width();
         const QSize before = pConsole->getMainWindowSize();
 
         mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("printCmdLine('main', 'one\\ntwo\\nthree\\nfour')"));
@@ -237,6 +237,7 @@ private slots:
         pConsole->show();
         QTest::qWait(50);
 
+        QVERIFY2(hiddenWidth > 0, "hiding the console took its width, so there is nothing to test here");
         QVERIFY2(measured.height() < before.height(), "the command line did not grow, so there is nothing to test here");
         QCOMPARE(grown, measured);
     }
