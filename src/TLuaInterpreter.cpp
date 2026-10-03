@@ -128,6 +128,8 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
 
 TLuaInterpreter::~TLuaInterpreter()
 {
+    stopSpawnedProcesses();
+    mClosingGlobalLua = true;
     lua_close(pGlobalLua);
 }
 
@@ -621,6 +623,17 @@ void TLuaInterpreter::slot_purge()
 }
 
 // No documentation available in wiki - internal function
+// A spawn()ed process calls back into, and holds a reference in, the Lua state
+// that started it, so it cannot outlive that state: each one is ended before
+// the state is closed. The finished ones still waiting for slot_purge() go
+// first so that list holds nothing deleted here.
+void TLuaInterpreter::stopSpawnedProcesses()
+{
+    slot_purge();
+    qDeleteAll(findChildren<TForkedProcess*>(Qt::FindDirectChildrenOnly));
+}
+
+// No documentation available in wiki - internal function
 int TLuaInterpreter::Wait(lua_State* L)
 {
     const int n = lua_gettop(L);
@@ -817,7 +830,13 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 int TLuaInterpreter::spawn(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    return TForkedProcess::startProcess(host.getLuaInterpreter(), L);
+    TLuaInterpreter* interpreter = host.getLuaInterpreter();
+    if (interpreter->mClosingGlobalLua) {
+        lua_pushnil(L);
+        lua_pushstring(L, "spawn: the Lua state is closing, so nothing would be left to receive the output");
+        return 2;
+    }
+    return TForkedProcess::startProcess(interpreter, L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
@@ -6322,7 +6341,10 @@ void TLuaInterpreter::initLuaGlobals()
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
         mEventHandlerLookupRefs.clear();
+        stopSpawnedProcesses();
+        mClosingGlobalLua = true;
         lua_close(pGlobalLua);
+        mClosingGlobalLua = false;
         forgetLazyGlobals();
     }
 
