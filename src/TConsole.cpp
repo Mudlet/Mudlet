@@ -1028,8 +1028,6 @@ void TConsole::refresh()
 void TConsole::clear()
 {
     buffer.clear();
-    // The caret indexes the buffer, and the caret keys read the line it is on
-    mUpperPane->initializeCaret();
     // --mirror's pending line went with the buffer.
     mpModel->mMirrorPendingLine.clear();
     bufferCleared();
@@ -1037,6 +1035,8 @@ void TConsole::clear()
 
 void TConsole::bufferCleared()
 {
+    // The caret indexes the buffer, and the caret keys read the line it is on
+    mUpperPane->initializeCaret();
     mUpperPane->resetHScrollbar();
     clearSelection();
     clearSplit();
