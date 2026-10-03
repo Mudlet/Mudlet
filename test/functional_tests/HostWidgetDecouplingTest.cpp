@@ -631,7 +631,7 @@ private slots:
         host->mInstalledPackages << qsl("reset-probe");
         QVERIFY2(host->uninstallPackage(qsl("reset-probe"), enums::PackageModuleType::Package), "The seeded package could not be uninstalled");
         // doCleanReset() defers the rebuild to the next event loop turn
-        QTest::qWait(50);
+        QTest::qWait(50ms);
 
         QVERIFY2(editor->mpTriggerBaseItem, "The rebuilt editor has no trigger tree root.");
         QCOMPARE(editor->mpTriggerBaseItem->childCount(), shown + 1);

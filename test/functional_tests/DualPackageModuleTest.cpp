@@ -33,6 +33,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // One name installed as both a package and a module cannot be made any more -
 // installPackage() refuses the second half - but a profile saved before it did
 // still holds the combination, and has to go on loading. The item units take
@@ -107,7 +109,7 @@ private:
     void settleSaves(Host* host)
     {
         for (int i = 0; i < 200 && (host->hasPendingProfileSave() || host->currentlySavingProfile()); ++i) {
-            QTest::qWait(20);
+            QTest::qWait(20ms);
             host->waitForProfileSave();
         }
     }
@@ -224,7 +226,7 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
@@ -360,7 +362,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
