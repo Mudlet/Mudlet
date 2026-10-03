@@ -5128,6 +5128,32 @@ describe("Window and label state", function()
       assert.are.equal(("window '%s' not found"):format(unknown), err)
     end)
 
+    -- Qt does not refuse the parent cycle this would make, and then hangs walking it
+    it("refuses to move a scroll box into itself or into one of its own children", function()
+      local outer = name("wlsCycleOuter")
+      local inner = name("wlsCycleInner")
+      local innermost = name("wlsCycleInnermost")
+      finally(function()
+        deleteScrollBox(innermost)
+        deleteScrollBox(inner)
+        deleteScrollBox(outer)
+      end)
+      assert.is_true(createScrollBox(outer, 0, 0, 300, 300))
+      assert.is_true(createScrollBox(outer, inner, 0, 0, 200, 200))
+      assert.is_true(createScrollBox(inner, innermost, 0, 0, 100, 100))
+
+      for _, destination in ipairs({outer, inner, innermost}) do
+        local ok, err = setWindow(destination, outer, 0, 0, true)
+        assert.is_nil(ok, destination)
+        assert.are.equal(("element '%s' cannot be moved into itself or into one of its own children"):format(outer), err)
+      end
+      assert.are.same({0, 0, 300, 300}, {getWindowGeometry(outer)})
+
+      -- moving a box up and out of the one holding it is no cycle
+      assert.is_true(setWindow(outer, innermost, 5, 6, true))
+      assert.are.same({5, 6, 100, 100}, {getWindowGeometry(innermost)})
+    end)
+
     -- Moving the map out of its dock widget would split it from a parent it
     -- cannot be put back into, and naming that widget as a destination would
     -- otherwise fall through to a plain "not found", reading as though the
