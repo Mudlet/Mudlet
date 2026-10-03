@@ -737,7 +737,7 @@ void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActio
                     }
                 }
                 if (!pTB) {
-                    pTB = createEasyButtonBar(rootAction, childAction->getName());
+                    pTB = createEasyButtonBar(childAction, childAction->getName());
                     mEasyButtonBarList.emplace_back(pTB);
                     setActionEasyButtonBar(childAction, pTB); // needed for drag&drop
                 }

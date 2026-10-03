@@ -497,6 +497,37 @@ private slots:
         QVERIFY(!host->commitLayoutUpdates());
     }
 
+    // Its settings are its own, not those of the package it sits in
+    void test_aButtonBarInAPackageIsStyledByItsOwnStyleSheet()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementStyledPackage"), 0, false);
+        package->mPackageName = qsl("placementStyledPackage");
+        auto* packaged = new TAction(package, host);
+        packaged->setName(qsl("placementStyledBar"));
+        packaged->setIsFolder(true);
+        packaged->setIsActive(true);
+        packaged->css = qsl("background-color: red;");
+        host->getActionUnit()->registerAction(packaged);
+        auto* button = new TAction(packaged, host);
+        button->setName(qsl("placementStyledBar button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(packaged);
+        QVERIFY2(bar, "a bar directly in a package should have been given a button bar");
+        QCOMPARE(bar->styleSheet(), qsl("background-color: red;"));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledBar', 'background-color: blue;')")));
+        QCOMPARE(console->actionEasyButtonBar(packaged), bar.data());
+        QCOMPARE(bar->styleSheet(), qsl("background-color: blue;"));
+    }
+
     void cleanup()
     {
         if (auto* self = mudlet::self()) {
