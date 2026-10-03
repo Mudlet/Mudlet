@@ -68,6 +68,8 @@
 #include <QPainter>
 #include <QVideoWidget>
 
+#include <chrono>
+
 namespace {
 // See TWindowRegistry::SubConsoleKind for what Other is for.
 TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType type)
@@ -392,6 +394,55 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
     mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
     console->setFontSize(10);
     return dockwidget;
+}
+
+std::pair<bool, QString> TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+{
+    // Host::openWindow() has refused a name holding a console or a dock but not both
+    auto dockwidget = dockWidget(name);
+    if (!dockwidget) {
+        dockwidget = createUserWindow(name);
+    }
+    dockwidget->update();
+
+    if (loadLayout && !dockwidget->hasLayoutAlready) {
+        mudlet::self()->loadWindowLayout();
+        dockwidget->hasLayoutAlready = true;
+    }
+    dockwidget->show();
+    dockwidget->setAllowedAreas(autoDock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
+
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!dockwidget->isFloating()) {
+            dockwidget->setFloating(true);
+        }
+        return {true, QString()};
+    }
+    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+        return {true, QString()};
+    }
+    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
+        return {true, QString()};
+    }
+    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
+        return {true, QString()};
+    }
+    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+        dockwidget->setFloating(false);
+        mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
+        return {true, QString()};
+    }
+    return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
 }
 
 void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
@@ -1482,13 +1533,74 @@ void TMainConsole::setCommandLineText(const QString& text)
     mpCommandLine->selectAll();
 }
 
-TCommandLine* TMainConsole::raiseCommandLine()
+void TMainConsole::recordActiveCommandLine(TCommandLine* pCommandLine)
 {
-    mpCommandLine->activateWindow();
-    show();
-    raise();
-    repaint();
-    return mpCommandLine;
+    if (!pCommandLine || (mpHost && mpHost->isClosingDown())) {
+        return;
+    }
+    mLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    mLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
+}
+
+void TMainConsole::forgetCommandLine(TCommandLine* pCommandLine)
+{
+    if (pCommandLine && !(mpHost && mpHost->isClosingDown())) {
+        mLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    }
+}
+
+TCommandLine* TMainConsole::activeCommandLine()
+{
+    TCommandLine* pCommandLine = nullptr;
+    if ((mpHost && mpHost->isClosingDown()) || mLastCommandLineUsed.isEmpty()) {
+        return nullptr;
+    }
+
+    do {
+        pCommandLine = mLastCommandLineUsed.top();
+        if (!pCommandLine) {
+            mLastCommandLineUsed.pop();
+        }
+    } while (!mLastCommandLineUsed.isEmpty() && !pCommandLine);
+
+    return pCommandLine;
+}
+
+void TMainConsole::focusActiveCommandLine()
+{
+    using namespace std::chrono_literals;
+
+    TCommandLine* pCommandLine = activeCommandLine();
+    TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
+    if (!targetCommandLine) {
+        return;
+    }
+
+    targetCommandLine->activateWindow();
+    TConsole* pConsole = pCommandLine ? pCommandLine->console() : this;
+    pConsole->show();
+    pConsole->raise();
+    pConsole->repaint();
+    targetCommandLine->setFocus(Qt::OtherFocusReason);
+
+    // For Steam Deck and other environments where focus might be unreliable,
+    // add additional focus attempts with slight delays. The command line
+    // can be destroyed before they fire - a user window closing, or the
+    // view going down while the Host stays - and a raw pointer would then
+    // be read off freed memory, so they hold it by QPointer. They are timed
+    // against the Host so that they end with the profile, not with this console.
+    const QPointer<TCommandLine> pTarget(targetCommandLine);
+    QTimer::singleShot(10ms, mpHost, [pTarget]() {
+        if (pTarget && !pTarget->hasFocus()) {
+            pTarget->setFocus(Qt::OtherFocusReason);
+        }
+    });
+
+    QTimer::singleShot(50ms, mpHost, [pTarget]() {
+        if (pTarget && !pTarget->hasFocus()) {
+            pTarget->setFocus(Qt::OtherFocusReason);
+        }
+    });
 }
 
 TCommandLine* TMainConsole::commandLineNamed(const QString& name) const
@@ -2650,8 +2762,9 @@ bool TMainConsole::resetCommandLineAction(const QString& name)
     return true;
 }
 
-void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)
+void TMainConsole::setProfileStyleSheet(const QString& styleSheet)
 {
+    setStyleSheet(styleSheet);
     for (auto& pDockWidget : mDockWidgetMap) {
         pDockWidget->setStyleSheet(styleSheet);
     }
@@ -2859,6 +2972,8 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 
 void TMainConsole::setProfileName(const QString& newName)
 {
+    // mudlet::slot_tabMoved() finds the console for each tab by this
+    setProperty("HostName", newName);
     TConsole::setProfileName(newName);
 
     for (const auto& pC : std::as_const(mSubConsoleMap)) {
@@ -3250,9 +3365,174 @@ bool TMainConsole::hideMapWidget()
     return true;
 }
 
-void TMainConsole::showMapWidget()
+void TMainConsole::showNewMapperDock()
 {
+    dockMapWidget(Qt::RightDockWidgetArea);
+
+    // XXX: should this be called multiple times?
+    mudlet::self()->loadWindowLayout();
+
+    // loadWindowLayout() may have restored a previous hidden state, but a
+    // mapper that has just been made is always shown.
+    mpHost->mpMap->mpMapper->show();
     mpDockableMapWidget->show();
+    mpHost->mpMap->mpMapper->updateEmptyStateOverlay();
+}
+
+void TMainConsole::showLoadedMap()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return;
+    }
+
+    mapper->mp2dMap->init();
+    mapper->updateAreaComboBox();
+    mapper->resetAreaComboBoxToPlayerRoomArea();
+    mapper->show();
+}
+
+void TMainConsole::showMapAfterFailedLoad()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return;
+    }
+
+    mapper->mp2dMap->init();
+    mapper->updateAreaComboBox();
+    mapper->show();
+}
+
+void TMainConsole::showMapAtPlayerArea()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return;
+    }
+
+    mapper->updateAreaComboBox();
+    mapper->resetAreaComboBoxToPlayerRoomArea();
+    mapper->show();
+}
+
+bool TMainConsole::mapperShown() const
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return false;
+    }
+    if (mapper->isFloatAndDockable()) {
+        // The dock rather than the mapper, so that a dock closed by its own
+        // button counts as not shown.
+        return mapper->parentWidget()->isVisible();
+    }
+    return mapper->isVisible();
+}
+
+void TMainConsole::setMapperShown(const bool shown)
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper) {
+        return;
+    }
+    if (!mapper->isFloatAndDockable()) {
+        mapper->setVisible(shown);
+        return;
+    }
+
+    // Hiding the mapper inside the dock rather than the dock would shrink the
+    // mapper to a minimal size, as for a TConsole in TDockWidget::setVisible().
+    if (shown) {
+        mapper->show();
+        mapper->parentWidget()->setVisible(true);
+    } else {
+        mapper->parentWidget()->setVisible(false);
+    }
+}
+
+void TMainConsole::setMapperPanelVisible(const bool visible)
+{
+    if (auto* mapper = mpHost->mpMap->mpMapper.data()) {
+        mapper->slot_setMapperPanelVisible(visible);
+    }
+}
+
+void TMainConsole::setMapLargeAreaExitArrows(const bool enabled)
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (!mapper || !mapper->mp2dMap) {
+        return;
+    }
+
+    mapper->mp2dMap->mLargeAreaExitArrows = enabled;
+    mapper->mp2dMap->update();
+}
+
+void TMainConsole::requestMapRepaint()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+    if (mapper && mapper->mp2dMap) {
+        mapper->mp2dMap->update();
+    }
+#if defined(INCLUDE_3DMAPPER)
+    if (mpHost->mpMap->mpM) {
+        mpHost->mpMap->mpM->update();
+    }
+#endif
+}
+
+void TMainConsole::requestRepaintAfterCommand()
+{
+    auto* mapper = mpHost->mpMap->mpMapper.data();
+#if defined(INCLUDE_3DMAPPER)
+    // With a 3D mapper this repaint is superfluous and causes problems on macOS
+    if (!mapper || !mapper->glWidget) {
+#else
+    if (!mapper) {
+#endif
+        requestRepaint();
+    }
+}
+
+bool TMainConsole::requestClose()
+{
+    return close();
+}
+
+void TMainConsole::requestRepaint()
+{
+    update();
+}
+
+QFont TMainConsole::displayFont() const
+{
+    return font();
+}
+
+void TMainConsole::applyBorders()
+{
+    // A console put away by a tab switch is zero pixels wide, so the resize
+    // event below tells it nothing about the room its new borders leave
+    syncHiddenScreenDimensions();
+    const QSize s = size();
+    QResizeEvent event(s, s);
+    QCoreApplication::sendEvent(this, &event);
+    raiseMudletSysWindowResizeEvent(s.width(), s.height());
+}
+
+// createMapper() records the embedded mapper here and puts it in the main frame
+// or a user window, so a profile that has one is never the docked mapper case.
+void TMainConsole::restoreOwnMapper()
+{
+    if (mpMapper) {
+        mpHost->mpMap->mpMapper = mpMapper;
+    } else if (auto* hostMapper = dockedMapper()) {
+        mpHost->mpMap->mpMapper = hostMapper;
+    }
+#if defined(DEBUG_WINDOW_HANDLING)
+    qDebug() << "TMainConsole::restoreOwnMapper:" << mpHost->getName() << "- map is now drawn by" << mpHost->mpMap->mpMapper.data();
+#endif
 }
 
 dlgMapper* TMainConsole::dockedMapper() const
@@ -3677,23 +3957,4 @@ void TMainConsole::closeEvent(QCloseEvent* event)
         mEnableClose = true;
         event->accept();
     }
-}
-
-bool TMainConsole::clear(const QString& name)
-{
-    if (name.isEmpty() || !name.compare(QLatin1String("main"))) {
-        TConsole::clear();
-        mUpperPane->showNewLines();
-        mUpperPane->forceUpdate();
-        mLowerPane->forceUpdate();
-        return true;
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (pC) {
-        pC->clear();
-        return true;
-    }
-
-    return false;
 }

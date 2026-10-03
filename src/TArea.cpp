@@ -26,7 +26,6 @@
 
 
 #include "Host.h"
-#include "T2DMap.h"
 #include "TRoomDB.h"
 
 #include <QBuffer>
@@ -54,7 +53,7 @@ static const int kPixmapDataLineSize = 64;
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)
 , mpMap(pMap)
-, mLast2DMapZoom(T2DMap::csmDefaultXYZoom)
+, mLast2DMapZoom(TMap::scmDefaultXYZoom)
 {
 }
 
@@ -1188,7 +1187,7 @@ bool TArea::hasPermanentLabels() const
 
 void TArea::set2DMapZoom(const qreal zoom)
 {
-    if (zoom >= T2DMap::csmMinXYZoom) {
+    if (zoom >= TMap::scmMinXYZoom) {
         mLast2DMapZoom = zoom;
     }
 }

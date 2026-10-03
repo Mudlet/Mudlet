@@ -4463,7 +4463,7 @@ void TLuaInterpreter::pushMatchesTable(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::pushMultimatchesTable(lua_State* L, const bool withNames)
+void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 {
     int k = 1;
     lua_newtable(L);
@@ -4477,12 +4477,10 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L, const bool withNames)
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);
         }
-        if (withNames) {
-            for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
-                lua_pushstring(L, name.toUtf8().constData());
-                lua_pushstring(L, capture.toUtf8().constData());
-                lua_settable(L, -3);
-            }
+        for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
+            lua_pushstring(L, name.toUtf8().constData());
+            lua_pushstring(L, capture.toUtf8().constData());
+            lua_settable(L, -3);
         }
         lua_settable(L, -3);
     }
@@ -4690,7 +4688,7 @@ void TLuaInterpreter::deferDispatchGlobals(lua_State* L, const MultimatchesSourc
         lua_pushnil(L);
         lua_rawset(L, LUA_GLOBALSINDEX);
     }
-    mMultimatchesPending = source == MultimatchesSource::Captures ? PendingMultimatches::Captures : PendingMultimatches::CapturesWithoutNames;
+    mMultimatchesPending = PendingMultimatches::Captures;
 }
 
 // No documentation available in wiki - internal function
@@ -4701,10 +4699,7 @@ void TLuaInterpreter::pushPendingMultimatches(lua_State* L)
         lua_rawgeti(L, LUA_REGISTRYINDEX, mSpareMultimatchesRef);
         break;
     case PendingMultimatches::Captures:
-        pushMultimatchesTable(L, true);
-        break;
-    case PendingMultimatches::CapturesWithoutNames:
-        pushMultimatchesTable(L, false);
+        pushMultimatchesTable(L);
         break;
     case PendingMultimatches::None:
         Q_UNREACHABLE();
@@ -5079,7 +5074,7 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
         lua_setglobal(L, "matches");
     }
     if (source != MultimatchesSource::Untouched) {
-        pushMultimatchesTable(L, source == MultimatchesSource::Captures);
+        pushMultimatchesTable(L);
         lua_setglobal(L, "multimatches");
     }
 }
@@ -5099,6 +5094,10 @@ bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName)
     lua_gettable(L, LUA_REGISTRYINDEX);
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        // A multiline trigger's Lua function gets multimatches just as its script would
+        if (!mMultiCaptureGroupList.empty()) {
+            setMatches(L, MultimatchesSource::Captures);
+        }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
             std::string e = "";
@@ -5177,6 +5176,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const
 
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        if (!mMultiCaptureGroupList.empty()) {
+            setMatches(L, MultimatchesSource::Captures);
+        }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
             std::string e = "";
@@ -5455,7 +5457,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     bool returnValue = false;
 
     if (!mMultiCaptureGroupList.empty()) {
-        setMatches(L, MultimatchesSource::CapturesWithoutNames);
+        setMatches(L, MultimatchesSource::Captures);
     }
 
     lua_getglobal(L, function.toUtf8().constData());

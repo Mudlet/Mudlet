@@ -224,6 +224,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::linesChanged, this, &TConsole::markLinesDirty);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::newLinesWritten, this, &TConsole::showNewLines);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::timeStampsToggled, this, &TConsole::applyTimeStamps);
+    connect(&mpModel->mNotifier, &TConsoleModelNotifier::bufferCleared, this, &TConsole::bufferCleared);
     connect(&mpModel->mNotifier, &TConsoleModelNotifier::spoilerRevealed, this, qOverload<>(&QWidget::update));
 
     // Every console, not just the main one: the manager is per model, and only
@@ -1026,14 +1027,23 @@ void TConsole::refresh()
 
 void TConsole::clear()
 {
-    mUpperPane->resetHScrollbar();
-    // before the buffer goes, or the selection is left pointing at lines that
-    // no longer exist and the copy actions work on out of range indices
-    clearSelection();
     buffer.clear();
     // --mirror's pending line went with the buffer.
     mpModel->mMirrorPendingLine.clear();
+    bufferCleared();
+}
+
+void TConsole::bufferCleared()
+{
+    mUpperPane->resetHScrollbar();
+    clearSelection();
     clearSplit();
+    if (mType == MainConsole) {
+        mUpperPane->showNewLines();
+        mUpperPane->forceUpdate();
+        mLowerPane->forceUpdate();
+        return;
+    }
     mUpperPane->update();
     mLowerPane->update();
 }
@@ -1650,8 +1660,8 @@ void TConsole::setCmdVisible(bool isVisible)
     setProxyForFocus(isVisible ? mpCommandLine : nullptr);
     // Need to remove the TCommandLine from the last used stack
     // if it has been explicitly hidden:
-    if (!isVisible && mpHost) {
-        mpHost->forgetCommandLine(mpCommandLine);
+    if (!isVisible && mpHost && mpHost->mpConsole) {
+        mpHost->mpConsole->forgetCommandLine(mpCommandLine);
     }
 }
 
@@ -1711,12 +1721,6 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         refreshView();
         raiseFontChangeEvent();
     }
-}
-
-void TConsole::setFontName(const QString& fontName)
-{
-    mDisplayFontDetails.mName = fontName;
-    setFont(mDisplayFontDetails.makeFont(), true);
 }
 
 int TConsole::getLastLineNumber()
@@ -2425,11 +2429,13 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     // This ensures clicking on a console focuses its own command line
     if (mpCommandLine && mpCommandLine->isVisible()) {
         mpCommandLine->setFocus(Qt::MouseFocusReason);
-        mpHost->recordActiveCommandLine(mpCommandLine);
+        if (mpHost->mpConsole) {
+            mpHost->mpConsole->recordActiveCommandLine(mpCommandLine);
+        }
     } else if (mType == MainConsole) {
         // Main console always has its command line
         mpHost->mpConsole->mpCommandLine->setFocus(Qt::MouseFocusReason);
-        mpHost->recordActiveCommandLine(mpHost->mpConsole->mpCommandLine);
+        mpHost->mpConsole->recordActiveCommandLine(mpHost->mpConsole->mpCommandLine);
     } else {
         // Fallback to the old behavior for other cases
         mpHost->setFocusOnHostActiveCommandLine();
