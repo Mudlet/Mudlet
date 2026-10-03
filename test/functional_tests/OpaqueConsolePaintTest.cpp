@@ -272,6 +272,8 @@ private slots:
     }
 
     // Whatever the pane paints for itself has to match the background it hides.
+    // Only backgrounds are compared: glyphs can rasterize differently onto an
+    // opaque target than onto a transparent one, and on macOS they differ outright.
     void test_paintingTheBackgroundLooksLikeBlendingOverIt()
     {
         TTextEdit* pane = startPane();
@@ -279,7 +281,8 @@ private slots:
         Host* host = mudlet::self()->getActiveHost();
         auto* lua = host->getLuaInterpreter();
         lua->compileAndExecuteScript(qsl("setBackgroundColor(20, 40, 90)\n"
-                                         "for i = 1, 60 do cecho(string.format('<red>LINE %d <white:blue>%s<reset> tail\\n', i, string.rep('#', i % 23))) end\n"));
+                                         "clearWindow()\n"
+                                         "for i = 1, 60 do cecho(string.format('<:red>%s<:blue>%s<reset>\\n', string.rep(' ', i % 7 + 1), string.rep(' ', i % 23))) end\n"));
         moveOffTheCellGrid(pane);
         settle(pane);
         QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
@@ -293,17 +296,25 @@ private slots:
         QVERIFY2(pane->testAttribute(Qt::WA_OpaquePaintEvent), "the pane did not go back to opaque painting after one frame");
 
         QCOMPARE(painted.size(), blended.size());
-        // Antialiased ink rounds differently drawn straight onto a color than
-        // drawn onto nothing and blended over it
         int worst = 0;
+        QPoint worstAt;
         for (int y = 0; y < painted.height(); ++y) {
             const auto* a = reinterpret_cast<const QRgb*>(painted.constScanLine(y));
             const auto* b = reinterpret_cast<const QRgb*>(blended.constScanLine(y));
             for (int x = 0; x < painted.width(); ++x) {
-                worst = std::max({worst, std::abs(qRed(a[x]) - qRed(b[x])), std::abs(qGreen(a[x]) - qGreen(b[x])), std::abs(qBlue(a[x]) - qBlue(b[x]))});
+                const int difference = std::max({std::abs(qRed(a[x]) - qRed(b[x])), std::abs(qGreen(a[x]) - qGreen(b[x])), std::abs(qBlue(a[x]) - qBlue(b[x]))});
+                if (difference > worst) {
+                    worst = difference;
+                    worstAt = QPoint(x, y);
+                }
             }
         }
-        QVERIFY2(worst <= 2, qPrintable(qsl("painting the background differed from blending over it by %1 in one channel").arg(worst)));
+        QVERIFY2(worst == 0,
+                 qPrintable(qsl("painting the background differed from blending over it by %1 in one channel at (%2, %3): %4 against %5")
+                                    .arg(worst)
+                                    .arg(worstAt.x())
+                                    .arg(worstAt.y())
+                                    .arg(painted.pixelColor(worstAt).name(), blended.pixelColor(worstAt).name())));
     }
 
 private:
