@@ -1620,13 +1620,14 @@ std::optional<QString> TMainConsole::getCommandLineText(const QString& name) con
     return {pN->toPlainText()};
 }
 
-// The caret goes to the end of the first line, with nothing selected.
+// The caret goes to the end, with nothing selected.
 static void putTextOnCommandLine(TCommandLine* pN, const QString& text)
 {
     pN->setPlainText(text);
     QTextCursor cur = pN->textCursor();
     cur.clearSelection();
-    cur.movePosition(QTextCursor::EndOfLine);
+    // Not EndOfLine: that is the end of the first row of text that has a newline or wraps
+    cur.movePosition(QTextCursor::End);
     pN->setTextCursor(cur);
     pN->adjustHeight();
 }
