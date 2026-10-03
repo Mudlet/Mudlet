@@ -72,7 +72,6 @@ public:
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
-    bool clear(const QString& name);
     void setProfileName(const QString&) override;
     // What Host needs of this console's own widget, named rather than reached
     // through the QWidget API so that a view with no widget could answer too.
