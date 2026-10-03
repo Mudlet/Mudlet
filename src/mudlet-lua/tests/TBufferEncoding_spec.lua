@@ -380,6 +380,21 @@ describe("Tests EUC-KR decoding", function()
   end)
 end)
 
+describe("Tests changing from one double byte encoding to another", function()
+
+  it("decodes with the encoding most recently selected", function()
+    using("GBK")
+    assert.equals("你", decoded(bytes(0xC4, 0xE3)))
+
+    -- GBK would read this pair as a private use character
+    assert.is_true(setServerEncoding("BIG5"))
+    assert.equals("你", decoded(bytes(0xA7, 0x41)))
+
+    assert.is_true(setServerEncoding("EUC-KR"))
+    assert.equals("한", decoded(bytes(0xC7, 0xD1)))
+  end)
+end)
+
 describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", function()
 
   -- Only a byte from 0x80 to 0xBF can continue a sequence, so any other byte
