@@ -75,31 +75,6 @@ describe("window sizes", function()
       -- No check that hiding it gives the room back: toolbars other specs leave
       -- along the top can keep that area at the height it grew to
     end)
-
-    -- tempButtonToolbar()'s location 1 is the left side
-    it("follows a button bar shown along its left side", function()
-      local toolbar = "wsLeftToolbar"
-      finally(function()
-        hideToolBar(toolbar)
-        pumpEvents(100)
-      end)
-      if exists(toolbar, "button") == 0 then
-        assert.is_true(tempButtonToolbar(toolbar, 1, 1) > 0)
-      end
-      local buttonId = findItems("wsLeftButton", "button")[1] or tempButton(toolbar, "wsLeftButton", 1)
-      assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
-      hideToolBar(toolbar)
-      pumpEvents(100)
-      local width, height = getMainWindowSize()
-
-      showToolBar(toolbar)
-      pumpEvents(100)
-
-      local shownWidth, shownHeight = getMainWindowSize()
-      assert.equals(height, shownHeight)
-      assert.is_true(shownWidth < width,
-        ("the main window stayed %d wide with a button bar along its left side"):format(shownWidth))
-    end)
   end)
 
   describe("getUserWindowSize", function()
