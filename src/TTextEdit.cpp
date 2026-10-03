@@ -3765,9 +3765,14 @@ void TTextEdit::slot_mouseAction(const QString& uniqueName)
         return;
     }
 
+    // The menu is non-modal, so a script can removeMouseEvent() while it is still open
+    const QStringList mouseEvent = mpHost->mConsoleActions.value(uniqueName);
+    if (mouseEvent.isEmpty()) {
+        return;
+    }
+
     TEvent event{};
-    QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
-    event.mArgumentList.append(mouseEvent[0]);
+    event.mArgumentList.append(mouseEvent.at(0));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(uniqueName);
 
