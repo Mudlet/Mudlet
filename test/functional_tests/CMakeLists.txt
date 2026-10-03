@@ -48,6 +48,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
+    DetachedWindowTabActivityTest.cpp
     AboutDialogLicencesTest.cpp
     LabelAnchorInteractionTest.cpp
     MainWindowTitleTest.cpp
@@ -68,6 +69,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     NotepadTest.cpp
+    TabActivityMarkTest.cpp
     MenuShortcutTeardownTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
