@@ -3580,8 +3580,20 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
-QString Host::packageOwningChunk(const QString& chunkName)
+QString Host::packageOwningChunk(const QString& chunkName, bool* pAmbiguous)
 {
+    // A file loaded with dofile() or require() is named "@" and its path, and a
+    // package's own files are unpacked into a folder of the profile named after it
+    if (chunkName.startsWith(QLatin1Char('@'))) {
+        const QString profileHome = MudletApp::getMudletPath(enums::profileHomePath, getName()) + QLatin1Char('/');
+        const QString path = QDir::cleanPath(QDir::fromNativeSeparators(chunkName.mid(1)));
+        if (!path.startsWith(profileHome)) {
+            return {};
+        }
+        const QString folder = path.mid(profileHome.size()).section(QLatin1Char('/'), 0, 0);
+        return (mInstalledPackages.contains(folder) || mInstalledModules.contains(folder)) ? folder : QString();
+    }
+
     const qsizetype separator = chunkName.indexOf(qsl(": "));
     if (separator < 0) {
         return {};
@@ -3620,6 +3632,9 @@ QString Host::packageOwningChunk(const QString& chunkName)
         collectOwners(mActionUnit.getActionRootNodeList());
     } else {
         return {};
+    }
+    if (pAmbiguous) {
+        *pAmbiguous = owners.size() > 1;
     }
     return owners.size() == 1 ? *owners.constBegin() : QString();
 }
@@ -3748,9 +3763,12 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
-    // ModuleSync included: the reload re-runs the module's scripts, and a command
-    // left behind would still hold the shortcut the fresh copy asks for.
-    emit signal_packageRemoved(packageName);
+    // Not for a ModuleSync: the module comes straight back with its Lua state
+    // intact, and a command it made from a handler, or behind an "id = id or
+    // addCommand{}" guard, would not be made again.
+    if (thing != enums::PackageModuleType::ModuleSync) {
+        emit signal_packageRemoved(packageName);
+    }
     if (auto* fonts = FontManager::self()) {
         fonts->unloadFonts(getName(), packageName);
     }

@@ -300,9 +300,9 @@ public:
         CommandSurface surfaces = CommandSurface::Both;
     };
 
-    // Why a command could not be placed, so the binding can say which
-    // package is the package or module whose code asked, empty for none: its
-    // commands go when it is uninstalled, the Lua holding their ids going with it
+    // package is the package or module whose code asked, empty for none, and
+    // its commands are removed when it is uninstalled. error says why a command
+    // could not be placed, so the binding can say which.
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error);
     bool removeAddonCommand(int commandId, Host* pHost);
     bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost);

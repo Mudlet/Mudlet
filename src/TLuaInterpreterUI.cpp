@@ -4792,8 +4792,20 @@ int TLuaInterpreter::addCommand(lua_State* L)
         if (!lua_getinfo(L, "S", &frame) || !frame.what || !std::strcmp(frame.what, "C")) {
             continue;
         }
-        if (frame.source) {
-            package = host.packageOwningChunk(QString::fromUtf8(frame.source));
+        if (!frame.source) {
+            break;
+        }
+        const QString source = QString::fromUtf8(frame.source);
+        if (source == host.mRunningScript.chunkName) {
+            package = host.mRunningScript.package;
+            break;
+        }
+        bool ambiguous = false;
+        package = host.packageOwningChunk(source, &ambiguous);
+        if (ambiguous && TDebug::wants(TDebug::Category::LuaWarning)) {
+            TDebug(Qt::black, Qt::yellow, TDebug::Category::LuaWarning)
+                            << "addCommand: more than one package has an item that compiled as \"" << source << "\", so this command will not be removed when either is uninstalled\n"
+                    >> &host;
         }
         break;
     }

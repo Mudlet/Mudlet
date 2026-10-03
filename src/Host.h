@@ -522,11 +522,20 @@ public:
     // alone even when that is not registered, there being nothing better to move
     // it to. Returns true when the display font was changed.
     bool substituteMissingDisplayFont();
-    // The package or module owning the item a compiled chunk is named after,
-    // from the "Script: name" style names items compile under. Empty for any
-    // other chunk, an item in no package, or a name items in more than one
-    // place share.
-    QString packageOwningChunk(const QString& chunkName);
+    // The package or module owning the code a Lua chunk came from: an item, by
+    // the "Script: name" style names items compile under, or a file in the
+    // package's folder. Empty for anything else, an item in no package, a
+    // temporary item, or a name items of more than one package share - items
+    // in no package counting as one.
+    QString packageOwningChunk(const QString& chunkName, bool* pAmbiguous = nullptr);
+    // The script whose top-level code is running, so code it runs directly can
+    // be told apart from another script of the same name in another package
+    struct RunningScript
+    {
+        QString chunkName;
+        QString package;
+    };
+    RunningScript mRunningScript;
     // What to write into the profile: the display font with the family the profile
     // asked for put back in place of any stand-in the above had to pick. Saving the
     // stand-in instead would make this machine's lack of a font the profile's own

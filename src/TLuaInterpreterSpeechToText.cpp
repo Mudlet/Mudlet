@@ -164,8 +164,14 @@ static QString noEngineMessage()
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
 
-static QString errorStateStartMessage()
+// A fault while listening keeps the model, but a failed load leaves none - and
+// the model-less backends never have one - so "reload" is said only when there
+// is one to reload
+static QString errorStateStartMessage(const SpeechRecognizer* pRecognizer)
 {
+    if (pRecognizer->modelPath().isEmpty()) {
+        return qsl("speech recognition is in an error state - call stt.init() before listening again");
+    }
     return qsl("speech recognition is in an error state - reload the model with stt.init() before listening again");
 }
 
@@ -564,12 +570,12 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
-    // Asked before initialized(), which is false here too: a model is loaded
-    // and getInfo() names it, so the answer is to reload it, not to load one.
-    // Reported to the caller, as stt.cancel() does - the fault took the
-    // microphone claim with it, so there is no owner to route by.
+    // Asked before initialized(), which is false here too and would answer
+    // "not initialized" for an engine that is. Reported to the caller, as
+    // stt.cancel() does - the fault took the microphone claim with it, so
+    // there is no owner to route by.
     if (pRecognizer->state() == SpeechRecognizer::State::Error) {
-        const QString message = errorStateStartMessage();
+        const QString message = errorStateStartMessage(pRecognizer);
         reportSpeechRefusalTo(getHostFromLua(L), message);
         return warnArgumentValue(L, funcName, message);
     }
@@ -729,9 +735,9 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     pMudlet->initSpeechRecognition(onDemandSpeechBackend());
 
     auto* pRecognizer = pMudlet->speechRecognizer();
-    // As stt.start(): an error state has a model to reload, not one missing
+    // Asked first, as in stt.start()
     if (pRecognizer && pRecognizer->state() == SpeechRecognizer::State::Error) {
-        const QString message = errorStateStartMessage();
+        const QString message = errorStateStartMessage(pRecognizer);
         reportSpeechRefusalTo(getHostFromLua(L), message);
         return warnArgumentValue(L, funcName, message);
     }

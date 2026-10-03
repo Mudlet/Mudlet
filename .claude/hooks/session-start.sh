@@ -156,18 +156,16 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   } >> "${CLAUDE_ENV_FILE}"
 fi
 
-# Let worktrees share ccache hits. By default ccache hashes the absolute paths
-# CMake passes and, for a -g build, the working directory too, so a worktree
-# beside this checkout missed on every file its sibling had already compiled.
-# base_dir has ccache rewrite paths below it as relative ones, which are the
-# same in every worktree; it has to sit above them all but below /opt/qt, or
-# the Qt include paths become relative too and differ with worktree depth.
-# With hash_dir off a cached object can carry another worktree's build
-# directory in its debug info, which only matters when stepping through it in
-# a debugger.
-if command -v ccache >/dev/null 2>&1; then
-  ccache --set-config=base_dir="$(dirname "${CLAUDE_PROJECT_DIR:-$PWD}")"
-  ccache --set-config=hash_dir=false
+# Let worktrees share ccache hits. ccache hashes the absolute paths CMake
+# passes and, for a -g build, the working directory, so without this a worktree
+# would miss on everything a sibling had compiled. base_dir turns paths below it
+# into relative ones, the same in every worktree; it must not be above /opt/qt
+# or /usr, whose include paths would then differ with worktree depth. With
+# hash_dir off, an object's debug info can name a sibling's build directory.
+if command -v ccache >/dev/null 2>&1 && [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  ccache --set-config=base_dir="$(dirname "${CLAUDE_PROJECT_DIR}")" \
+    && ccache --set-config=hash_dir=false \
+    || echo "WARNING: could not configure ccache for sharing between worktrees"
 fi
 
 # PR-review tooling for the agent. Installed at user scope, so it lands in
