@@ -94,7 +94,16 @@ void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
     using namespace std::chrono_literals;
     QTimer::singleShot(0ms, dock, [dock]() {
         mudlet* window = mudlet::self();
-        if (!window || dock->isFloating() || !dock->isVisible() || !dock->widget()) {
+        if (!window || dock->isFloating() || !dock->widget()) {
+            return;
+        }
+        // Hidden before its first layout, as Geyser does to a window created hidden, it keeps no size of
+        // its own and is squeezed the same way when shown
+        if (!dock->isVisible()) {
+            const auto retry = [dock]() {
+                shareDockAreaIfSqueezed(dock);
+            };
+            QObject::connect(dock.data(), &QDockWidget::visibilityChanged, dock.data(), retry, Qt::SingleShotConnection);
             return;
         }
         const Qt::DockWidgetArea area = window->dockWidgetArea(dock);
