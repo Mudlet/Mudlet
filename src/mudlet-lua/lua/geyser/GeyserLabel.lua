@@ -1367,10 +1367,14 @@ if restyle then
   myMenu.MenuLabels[name].stylesheet = nil
 end
 
-local Style = configLabel["Style"..depth] or configLabel["Style"]
-local MenuStyle = myMenu.MenuLabels[name].stylesheet or configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
-MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
-myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+-- every addMenuLabel walks the whole menu again, and Qt restyles a label even
+-- when it is handed the sheet it already has, so only unstyled items get one
+if not myMenu.MenuLabels[name].stylesheet then
+  local Style = configLabel["Style"..depth] or configLabel["Style"]
+  local MenuStyle = configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
+  MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
+  myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+end
 end
 
 -- internal function to create the right click Menu Labels
