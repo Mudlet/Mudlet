@@ -265,9 +265,14 @@ bool MudletProxyStyleTest::roundTrip()
     return finished.wait();
 }
 
-// QSKIP returns from the function it is written in, so this cannot be a helper
+// QSKIP returns from the function it is written in, so this cannot be a helper.
+// CI sets MUDLET_TEST_REQUIRE_DBUS where dbus-daemon is installed, so a skip
+// there would be hiding these cases rather than reporting an environment.
 #define SKIP_WITHOUT_PRIVATE_BUS()                                                                                                                                                                     \
     if (!mpStandIn) {                                                                                                                                                                                  \
+        if (qEnvironmentVariableIsSet("MUDLET_TEST_REQUIRE_DBUS")) {                                                                                                                                   \
+            QFAIL("MUDLET_TEST_REQUIRE_DBUS is set, but dbus-daemon is not installed");                                                                                                                \
+        }                                                                                                                                                                                              \
         QSKIP("dbus-daemon is not installed, so there is no private session bus to detect a screen reader on");                                                                                        \
     }
 
