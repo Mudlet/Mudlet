@@ -4378,7 +4378,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_End:
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
             const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
-            newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
+            // A cleared buffer holds a single empty line, which is both the first and the trailing one
+            newCaretLine = std::max(0, static_cast<int>(mpBuffer->lineBuffer.length()) - 1 - emptyLastLine);
             newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
             if (auto* app = mudlet::self()) {
                 //: Screen-reader announcement when the user presses Ctrl+End in caret mode to jump to the latest (most recent) content in the buffer

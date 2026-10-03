@@ -1031,6 +1031,8 @@ void TConsole::clear()
     // no longer exist and the copy actions work on out of range indices
     clearSelection();
     buffer.clear();
+    // The caret indexes the buffer, and the caret keys read the line it is on
+    mUpperPane->initializeCaret();
     // --mirror's pending line went with the buffer.
     mpModel->mMirrorPendingLine.clear();
     clearSplit();
