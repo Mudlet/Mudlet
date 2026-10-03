@@ -66,6 +66,7 @@ private slots:
     void testOldFormatMigration();
     void testCollidingFormatRecovery();
     void testALookupAnswersWhenItsFirstReadStalls();
+    void testALookupWhoseKeychainStallsStillReadsTheEncryptedFile();
     void testALookupAnswersWhicheverLaterReadStalls_data();
     void testALookupAnswersWhicheverLaterReadStalls();
     void testALookupReadsEachPlaceOnceInOrder_data();
@@ -891,6 +892,32 @@ void CredentialManagerKeychainTest::testALookupAnswersWhenItsFirstReadStalls()
     QCOMPARE(staller.answersToOtherReceivers(), released);
     QVERIFY2(keychainQueueRuns(), "QtKeychain's queue did not move on once the stalled read answered");
     QTRY_VERIFY2(!staller.firstStalledAlive(), "a read that answered after its lookup gave up was never deleted");
+    QCOMPARE(answer->count, 1);
+}
+
+// Reading the file needs nothing from the keychain, and the next lookup would stall at the same read,
+// so a password kept only there was never found while the keychain did not answer
+void CredentialManagerKeychainTest::testALookupWhoseKeychainStallsStillReadsTheEncryptedFile()
+{
+    const QString secret = QStringLiteral("file-secret-behind-a-stall");
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, secret));
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    const bool answered = waitForAnswer(answer);
+    CredentialManager::removeCredential(mProfile, mKey);
+
+    QVERIFY2(answered, "a lookup whose keychain read never answers must still answer its caller");
+    QVERIFY2(staller.waitForAnyStalled(), "the read meant to stall was never started, so this run tested nothing");
+    QVERIFY2(answer->success, qPrintable(answer->error));
+    QCOMPARE(answer->password, secret);
+
+    staller.release();
+    QTRY_VERIFY2(!staller.firstStalledAlive(), "a read that answered after its lookup was answered was never deleted");
     QCOMPARE(answer->count, 1);
 }
 
