@@ -26,7 +26,8 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 {
     mLastCaption.clear();
     mCurrentTagContent.clear();
-    mInsideTag = true;
+    // <SEND .../> never gets an end tag, so must not start collecting
+    mInsideTag = !tag->isEmpty();
 
     QString href = extractHref(tag);
     QString hint = extractHint(tag);

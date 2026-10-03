@@ -35,6 +35,12 @@ private slots:
     tagHandler.handleContent("plain game text");
     tagHandler.handleTag(ctx, stub, &endTag);
     QCOMPARE(sendTagHandler.currentCaption(), QString());
+
+    MxpStartTag selfClosing("SEND", {MxpTagAttribute("look")}, true);
+    tagHandler.handleTag(ctx, stub, &selfClosing);
+    tagHandler.handleContent("plain game text");
+    tagHandler.handleTag(ctx, stub, &endTag);
+    QCOMPARE(sendTagHandler.currentCaption(), QString());
   }
 
   void testSendHrefUTF8FromMxpProcessor() {
