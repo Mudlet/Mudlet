@@ -194,7 +194,7 @@ private slots:
 
         for (int width = 1150; width >= 900; width -= 50) {
             resizeWindow(width, 800);
-            QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize())));
+            QVERIFY2(mpHost->mainWindowSize().value_or(QSize()) == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainWindowSize().value_or(QSize()), measuredMainWindowSize())));
         }
     }
 
@@ -203,11 +203,11 @@ private slots:
     void test_aShrinkOfMoreThanHalfIsReported()
     {
         resizeWindow(2000, 1200);
-        QCOMPARE(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize());
+        QCOMPARE(mpHost->mainWindowSize().value_or(QSize()), measuredMainWindowSize());
 
         resizeWindow(800, 600);
 
-        QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize())));
+        QVERIFY2(mpHost->mainWindowSize().value_or(QSize()) == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainWindowSize().value_or(QSize()), measuredMainWindowSize())));
     }
 
     // a report that declined once must not go on measuring every later size
@@ -220,7 +220,7 @@ private slots:
 
         for (const QSize& size : {QSize(900, 650), QSize(1100, 700), QSize(1200, 800)}) {
             resizeWindow(size.width(), size.height());
-            QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize())));
+            QVERIFY2(mpHost->mainWindowSize().value_or(QSize()) == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainWindowSize().value_or(QSize()), measuredMainWindowSize())));
         }
     }
 
@@ -235,11 +235,11 @@ private slots:
 
         runLua(qsl("resizeWindow('%1', 600, 400)").arg(userWindow));
         settle();
-        QCOMPARE(mpHost->mainConsoleView()->getUserWindowSize(userWindow), dockSize(userWindow));
+        QCOMPARE(mpHost->userWindowSize(userWindow).value_or(QSize()), dockSize(userWindow));
 
         runLua(qsl("resizeWindow('%1', 200, 150)").arg(userWindow));
         settle();
-        QVERIFY2(mpHost->mainConsoleView()->getUserWindowSize(userWindow) == dockSize(userWindow), qPrintable(mismatch(mpHost->mainConsoleView()->getUserWindowSize(userWindow), dockSize(userWindow))));
+        QVERIFY2(mpHost->userWindowSize(userWindow).value_or(QSize()) == dockSize(userWindow), qPrintable(mismatch(mpHost->userWindowSize(userWindow).value_or(QSize()), dockSize(userWindow))));
 
         // a script may ask for a user window this short and Mudlet gives it one,
         // so a size below any "too small to be real" bar is still the size to
@@ -250,7 +250,7 @@ private slots:
         // that it ended up under the bar is pinned, not the exact height
         const QSize shortDock = dockSize(userWindow);
         QVERIFY2(shortDock.height() > 0 && shortDock.height() < 50, qPrintable(qsl("expected a positive height under 50 to test with, got %1").arg(shortDock.height())));
-        QVERIFY2(mpHost->mainConsoleView()->getUserWindowSize(userWindow) == shortDock, qPrintable(mismatch(mpHost->mainConsoleView()->getUserWindowSize(userWindow), shortDock)));
+        QVERIFY2(mpHost->userWindowSize(userWindow).value_or(QSize()) == shortDock, qPrintable(mismatch(mpHost->userWindowSize(userWindow).value_or(QSize()), shortDock)));
 
         runLua(qsl("hideWindow('%1')").arg(userWindow));
     }
@@ -272,7 +272,7 @@ private slots:
         if (measured.height() <= 0 || measured.height() >= 50) {
             QSKIP(qPrintable(qsl("the window would not go short enough to test with - %1 pixels inside").arg(measured.height())));
         }
-        QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measured, qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measured)));
+        QVERIFY2(mpHost->mainWindowSize().value_or(QSize()) == measured, qPrintable(mismatch(mpHost->mainWindowSize().value_or(QSize()), measured)));
     }
 
     // the shrink a player performs rather than one the test dials in: restoring a
@@ -290,7 +290,7 @@ private slots:
         if (maximisedWidth < 2 * mpHost->mainConsoleView()->width()) {
             QSKIP("no window manager here to maximise against, so this is not the shrink under test");
         }
-        QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize())));
+        QVERIFY2(mpHost->mainWindowSize().value_or(QSize()) == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainWindowSize().value_or(QSize()), measuredMainWindowSize())));
     }
 
     // the number Lua hands scripts is the same one, so a stale report is what

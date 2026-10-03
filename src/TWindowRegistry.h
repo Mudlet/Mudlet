@@ -23,6 +23,7 @@
 #include <QMap>
 #include <QRect>
 #include <QSet>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 
@@ -116,14 +117,35 @@ public:
     // A copy, so callers such as Host::closeChildren() can remove entries while walking it.
     QStringList subConsoleNames() const { return QStringList(mSubConsoles.keys()); }
 
-    // Name only: core just asks whether a name has a dock (a user window, not a miniconsole).
-    void registerDockWidget(const QString& name) { mDockWidgets.insert(name); }
+    // Core asks whether a name has a dock (a user window, not a miniconsole) and how big its console is.
+    void registerDockWidget(const QString& name) { mDockWidgets.insert(name, QSize()); }
 
     // Not identity-checked: nothing deregisters a dock from its destructor, so removal happens as the view
     // drops it from its own map and a stale deregistration can't evict a replacement.
     void deregisterDockWidget(const QString& name) { mDockWidgets.remove(name); }
 
     bool hasDockWidget(const QString& name) const { return mDockWidgets.contains(name); }
+
+    // Written by the view as Qt resizes the dock's console.
+    void setUserWindowSize(const QString& name, const QSize& size)
+    {
+        if (auto it = mDockWidgets.find(name); it != mDockWidgets.end()) {
+            *it = size;
+        }
+    }
+
+    std::optional<QSize> userWindowSize(const QString& name) const
+    {
+        const auto it = mDockWidgets.constFind(name);
+        if (it == mDockWidgets.constEnd()) {
+            return {};
+        }
+        return {*it};
+    }
+
+    // TConsole::getMainWindowSize()'s answer, written by the view as anything it depends on changes.
+    void setMainWindowSize(const QSize& size) { mMainWindowSize = size; }
+    QSize mainWindowSize() const { return mMainWindowSize; }
 
     // Name only, like docks: core asks just whether a name exists and its kind.
     // Three sets as the name spaces are independent; a name in several resolves in declaration order.
@@ -211,10 +233,11 @@ private:
 
     QMap<QString, TLabelModel*> mLabels;
     QMap<QString, SubConsoleEntry> mSubConsoles;
-    QSet<QString> mDockWidgets;
+    QMap<QString, QSize> mDockWidgets;
     QSet<QString> mScrollBoxes;
     QSet<QString> mCommandLines;
     QSet<QString> mTextBoxes;
+    QSize mMainWindowSize;
     QMap<QString, PlainWindowState> mPlainWindowStates;
 };
 
