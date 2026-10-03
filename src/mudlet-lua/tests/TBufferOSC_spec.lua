@@ -450,6 +450,28 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   end)
 
+  -- CUF (cursor forward) is emulated by writing spaces, as one game uses it
+  describe("Tests the CUF cursor forward sequence", function()
+
+    it("should move forward by the requested number of spaces", function()
+      assert.is_true(feedTriggers("CUF1(\027[3C)CUF1\n"))
+      assert.equals("CUF1(   )CUF1", findRecentLine("CUF1"))
+    end)
+
+    -- the count comes from the game, so it has to be clamped: this one
+    -- sequence would otherwise ask for about 24GB of spaces
+    it("should not move further than the wrap width", function()
+      local wrapAt = getWindowWrap("main")
+      local before = getLastLineNumber("main")
+      assert.is_true(feedTriggers("CUF2(\027[999999999C)CUF2\n"))
+      local text = table.concat(getLines("main", before, getLastLineNumber("main") + 1))
+      local spaces = text:match("CUF2%(( *)%)CUF2")
+      assert.is_truthy(spaces, text:sub(1, 200))
+      assert.is_true(#spaces <= wrapAt, "moved forward " .. #spaces .. " columns with a wrap of " .. wrapAt)
+    end)
+
+  end)
+
   -- A line written through TBuffer::appendLine() that holds the documentation
   -- phrase is dropped whole, and a banner of worked OSC 8 examples goes into
   -- the main console's buffer instead - whichever console the line was written

@@ -1348,7 +1348,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     // point it into localBuffer rather than at any temporary
                     const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
                     bool isOk = false;
-                    const int spacesNeeded = temp.toInt(&isOk);
+                    // The cursor cannot move past the right margin, and the count
+                    // comes from the game: unbounded, one sequence could ask for
+                    // gigabytes of spaces.
+                    constexpr int maxCursorForward = 1000;
+                    const int spacesNeeded = std::min({temp.toInt(&isOk), mWrapAt, maxCursorForward});
                     if (isOk && spacesNeeded > 0) {
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:
