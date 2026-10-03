@@ -8856,8 +8856,12 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
+            const int size = getVerifiedInt(L, __func__, 2, "value");
+            if (size < 1) {
+                return warnArgumentValue(L, __func__, qsl("mapRoomSize must be at least 1, got %1").arg(size));
+            }
             // Through float, as dlgMapper::slot_roomSize() rounds it:
-            host.mRoomSize = static_cast<float>(getVerifiedInt(L, __func__, 2, "value") / 10.0);
+            host.mRoomSize = static_cast<float>(size / 10.0);
             host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
             return success();
         }
