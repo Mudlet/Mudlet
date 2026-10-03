@@ -1096,11 +1096,34 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
 void TCommandLine::handleTabCompletion(bool direction)
 {
+    // At a password prompt the line holds the password, so completing it would
+    // search the game's own output with the password as the key and put a word
+    // from that output in its place. The line is painted as asterisks, so the
+    // player cannot see that happen and the next Return sends a credential they
+    // never typed - which reads as a mistyped password rather than as this.
+    // enterCommand() already keeps a masked line out of the history, on the
+    // remote-echo check there.
+    //
+    // This refuses while the prompt is open rather than while the text is hidden,
+    // so it still refuses when the player has revealed the line with the eye
+    // button: completing a credential against the game's buffer is wrong whether
+    // or not they can see it happen.
+    if (mIsEchoSuppressed && mType == MainCommandLine) {
+        return;
+    }
+
+    // Checked before the cycle is consulted, not inside the refresh below. A cycle
+    // is only meaningful while the line still holds what it completed, and the line
+    // can be emptied without the cycle being told: clearCmdLine() from a script
+    // does it, and so does the end of a password prompt. Asked to carry on from a
+    // prefix that is no longer on screen, this would put a word the player never
+    // typed onto an empty line, ready for Return to send.
+    if (toPlainText().isEmpty()) {
+        return;
+    }
+
     if ((mTabCompletionCount < 0) || (mUserKeptOnTyping)) {
         mTabCompletionTyped = toPlainText();
-        if (mTabCompletionTyped.isEmpty()) {
-            return;
-        }
         mUserKeptOnTyping = false;
         mTabCompletionCount = -1;
     }
