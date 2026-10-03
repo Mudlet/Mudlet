@@ -97,7 +97,17 @@ void TConsoleModel::moveCursorEnd()
 
 void TConsoleModel::deleteLineAtCursor()
 {
-    buffer.deleteLine(mUserCursor.y());
+    const int deletedLine = mUserCursor.y();
+    if (!buffer.deleteLine(deletedLine)) {
+        return;
+    }
+    // The selection is held by line number, so it moves up with its line or goes with it
+    if (P_begin.y() == deletedLine) {
+        deselect();
+    } else if (P_begin.y() > deletedLine) {
+        P_begin.ry()--;
+        P_end.ry()--;
+    }
 }
 
 void TConsoleModel::deselect()

@@ -134,6 +134,25 @@ describe("Tests selection against lines it does not fit", function()
       moveCursor(window, 0, 0)
       assert.are.same({"t gol", 6, 5}, {getSelection(window)})
     end)
+
+    it("keeps reading the selected text when a line above it is deleted", function()
+      moveCursor(window, 0, 3)
+      assert.is_true(selectSection(window, 6, 5))
+
+      moveCursor(window, 0, 0)
+      deleteLine(window)
+      assert.are.same({"t gol", 6, 5}, {getSelection(window)})
+    end)
+
+    it("drops the selection when its line is deleted", function()
+      moveCursor(window, 0, 2)
+      assert.is_true(selectSection(window, 0, 4))
+      assert.equals("echo", (getSelection(window)))
+
+      -- line 3 moves up into line 2, and has text at columns 0 to 4 as well
+      deleteLine(window)
+      assert.are.same({"", 0, 0}, {getSelection(window)})
+    end)
   end)
 
   describe("Tests attributes applied to part of a line", function()
