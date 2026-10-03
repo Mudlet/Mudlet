@@ -29,6 +29,23 @@ describe("Alias processing", function()
             assert.is_true(found, "the capture after the multi-byte character was dropped")
         end)
 
+        -- One character, so one empty match before it: stepping a byte at a time
+        -- after an empty match gave one more inside the character as well
+        it("finds the same matches around a multi-byte character as around a plain one", function()
+            local seen = {}
+            local id = tempAlias([[(\d*)]], function()
+                seen = {}
+                for i = 1, #matches do
+                    seen[i] = matches[i]
+                end
+            end)
+            expandAlias("cafe 9", false)
+            local plain = seen
+            expandAlias("caf\195\169 9", false)
+            assert.is_true(killAlias(id), "a temporary alias should be removable by id")
+            assert.are.same(plain, seen)
+        end)
+
     end)
 
     describe("runaway recursion", function()

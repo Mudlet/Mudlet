@@ -1514,6 +1514,27 @@ describe("Trigger processing", function()
             assert.is_true(found, "the capture after the multi-byte character was dropped")
         end)
 
+        -- One character, so one empty match before it: stepping a byte at a time
+        -- after an empty match gave one more inside the character as well
+        it("finds the same matches around a multi-byte character as around a plain one", function()
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed a multi-byte character")
+            _G.TrigSpec = {seen = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllSameCount", [[(\d*)]],
+                function()
+                    _G.TrigSpec.seen = {}
+                    for i = 1, #matches do
+                        _G.TrigSpec.seen[i] = matches[i]
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecComplexMatchAllSameCount") end)
+            feedTriggers("\ncafe 9\n")
+            local plain = _G.TrigSpec.seen
+            feedTriggers("caf\195\169 9\n")
+            assert.are.same(plain, _G.TrigSpec.seen)
+        end)
+
         -- Every capture a match-all fire collects at a non-empty match carries
         -- the position it sits at, and selectCaptureGroup() selects by that
         -- position, so a line that mixes plain text with characters taking more
