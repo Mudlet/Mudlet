@@ -46,6 +46,11 @@ TMxpTagHandlerResult TMxpVarTagHandler::handleEndTag(TMxpContext& ctx, TMxpClien
 {
     Q_UNUSED(ctx)
     Q_UNUSED(tag)
+    // An end tag with no start tag, or a <VAR> with no name, has nothing to set
+    if (mCurrentStartTag.getAttributesCount() == 0) {
+        return MXP_TAG_HANDLED;
+    }
+
     const QString& name = mCurrentStartTag.getAttrName(0);
     const QString& value = mCurrentVarContent;
 
@@ -53,6 +58,8 @@ TMxpTagHandlerResult TMxpVarTagHandler::handleEndTag(TMxpContext& ctx, TMxpClien
         client.setVariable(name, value);
     }
 
+    // Otherwise a later stray </VAR> would set this variable again
+    mCurrentStartTag = MxpStartTag(qsl("VAR"));
     return MXP_TAG_HANDLED;
 }
 
