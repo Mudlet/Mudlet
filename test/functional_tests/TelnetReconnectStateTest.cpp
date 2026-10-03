@@ -430,6 +430,26 @@ private slots:
         QVERIFY2(!mpServer->sawReply(kDont, kCompress), "Mudlet tried to decompress a game that had never negotiated MCCP v1");
     }
 
+    // A game can offer both MCCP versions, and the stream it then sends is v2. When that stream
+    // breaks, the refusal has to name v2: refusing v1 leaves the game compressing at a client that
+    // has stopped reading it.
+    void test_aBrokenMccpStreamIsRefusedAsTheVersionItUsed()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+
+        mpServer->setOffers({{kWill, kCompress}, {kWill, kCompress2}});
+        QVERIFY(reconnect(host));
+        QVERIFY2(waitForReply(kDo, kCompress) && waitForReply(kDo, kCompress2), "both MCCP versions were not negotiated, so this proves nothing");
+
+        QByteArray startSequence;
+        startSequence.append(TN_IAC).append(TN_SB).append(kCompress2).append(TN_IAC).append(TN_SE);
+        mpServer->sendRaw(startSequence + "this is not a compressed stream\r\n");
+
+        QVERIFY2(waitForReply(kDont, kCompress2), "the broken v2 stream was not refused as MCCP v2");
+        QVERIFY2(!mpServer->sawReply(kDont, kCompress), "MCCP v1 was refused for a v2 stream breaking");
+    }
+
     // MXP tags are built up across incoming bytes, and the tag builder is asked only whether the
     // MXP processor is on - not whether this game negotiated MXP. An unfinished tag left over from
     // the last game therefore gets flushed into the next game's output at the first escape code.
