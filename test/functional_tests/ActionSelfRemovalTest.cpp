@@ -42,6 +42,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // Regression tests for the self-uninstall use-after-free: a package toolbar
 // button whose Lua script calls uninstallPackage() on its own package used to
 // free the very TAction that TAction::execute() was running on, which then read
@@ -186,7 +188,7 @@ private slots:
         // block until the save has fully finished, so no background save thread is
         // still running when cleanup() destroys the host: tearing the host down
         // underneath an in-flight save corrupted the heap and crashed on Windows.
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         host->waitForProfileSave();
     }
 
@@ -198,7 +200,7 @@ private slots:
         // destruction never races a background save thread (a Windows crash).
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
@@ -425,7 +427,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

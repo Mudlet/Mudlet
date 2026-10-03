@@ -706,6 +706,33 @@ describe("Alias processing", function()
             assert.are.equal("sword", _G.AliasSpec.what)
         end)
 
+        it("gives a child alias the command and its captures when its parent does not match", function()
+            _G.AliasSpec = {}
+            -- permanent aliases cannot be killed, so a profile that has run this
+            -- before already has them and only needs them switched back on
+            if exists("SpecParentNeverMatches", "alias") == 0 then
+                permAlias("SpecParentNeverMatches", "", "^spec_parent_never_matches$", [[_G.AliasSpec.parent = true]])
+                permAlias("SpecChildOfNonMatching", "SpecParentNeverMatches", [[^spec_child (\w+) ü (\d+)$]], [==[
+                    _G.AliasSpec.whole = matches[1]
+                    _G.AliasSpec.word = matches[2]
+                    _G.AliasSpec.number = matches[3]
+                ]==])
+            end
+            enableAlias("SpecParentNeverMatches")
+            enableAlias("SpecChildOfNonMatching")
+            finally(function()
+                disableAlias("SpecChildOfNonMatching")
+                disableAlias("SpecParentNeverMatches")
+            end)
+
+            expandAlias("spec_child héllo ü 42", false)
+
+            assert.is_nil(_G.AliasSpec.parent)
+            assert.are.equal("spec_child héllo ü 42", _G.AliasSpec.whole)
+            assert.are.equal("héllo", _G.AliasSpec.word)
+            assert.are.equal("42", _G.AliasSpec.number)
+        end)
+
         it("leaves out a named group that took no part in the match", function()
             _G.AliasSpec = {}
             local id = tempAlias([[^named_alias_alt (?:(?<left>aaa)|(?<right>bbb))$]], [==[

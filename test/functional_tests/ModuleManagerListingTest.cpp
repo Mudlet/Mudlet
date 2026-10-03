@@ -34,6 +34,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // The Module Manager's table is rebuilt in place, and installPackage() and
 // uninstallPackage() rebuild it behind the user's back whenever a module goes
 // in or out while the dialog is open. What is listed afterwards has to be what
@@ -107,7 +109,7 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
@@ -217,7 +219,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             return nullptr;
         }
         return mudlet::self()->getActiveHost();
