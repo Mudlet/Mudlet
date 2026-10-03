@@ -3274,6 +3274,11 @@ void mudlet::slot_exportToMudletWeb()
 
 void mudlet::exportToMudletWeb(Host* pHost, QWidget* dialogParent)
 {
+    if (mpMudletWebExport) {
+        //: Title and text of the message shown when "Export to Mudlet Web" is chosen while an earlier export is still being written.
+        QMessageBox::information(dialogParent, tr("Export to Mudlet Web"), tr("An export to Mudlet Web is already being written. Please wait for it to finish."));
+        return;
+    }
     const QPointer<Host> host = pHost;
     const QString profileName = pHost->getName();
     QString downloads = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
@@ -3281,20 +3286,26 @@ void mudlet::exportToMudletWeb(Host* pHost, QWidget* dialogParent)
         downloads = QDir::homePath();
     }
     //: Title of the file dialog that picks where to save a profile exported for Mudlet Web, the browser version of Mudlet.
-    QString fileName =
-            QFileDialog::getSaveFileName(dialogParent, tr("Export profile to Mudlet Web"), QDir(downloads).filePath(MudletWebExport::suggestedFileName(profileName)), tr("Zip archives (*.zip)"));
+    const QString title = tr("Export profile to Mudlet Web");
+    //: File type filter in the dialog that picks where to save a profile exported for Mudlet Web.
+    const QString filter = tr("Zip archives (*.zip)");
+    QFileDialog dialog(dialogParent, title, QDir(downloads).filePath(MudletWebExport::suggestedFileName(profileName)), filter);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    // Added by the dialog rather than afterwards, so its "replace it?" check
+    // asks about the file that will really be written
+    dialog.setDefaultSuffix(qsl("zip"));
     // The dialog runs an event loop, and the profile can close while it is up
-    if (fileName.isEmpty() || !host) {
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty() || !host || mpMudletWebExport) {
         return;
     }
-    if (!fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive)) {
-        fileName.append(qsl(".zip"));
-    }
+    const QString fileName = dialog.selectedFiles().constFirst();
 
     auto exporter = new MudletWebExport(host, fileName, this);
+    mpMudletWebExport = exporter;
     QPointer<QWidget> parent = dialogParent;
     connect(exporter, &MudletWebExport::finished, this, [this, exporter, fileName, profileName, parent](bool ok, const QString& error, const QStringList& warnings) {
         exporter->deleteLater();
+        QApplication::restoreOverrideCursor();
         if (!ok) {
             //: Title of the message shown when exporting a profile for Mudlet Web fails.
             QMessageBox::warning(parent ? parent.data() : this, tr("Export to Mudlet Web failed"), error);
@@ -3324,6 +3335,8 @@ void mudlet::exportToMudletWeb(Host* pHost, QWidget* dialogParent)
             QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(fileName).absolutePath()));
         }
     });
+    // Saving and compressing a large profile takes a while with nothing else to show for it
+    QApplication::setOverrideCursor(Qt::BusyCursor);
     exporter->start();
 }
 

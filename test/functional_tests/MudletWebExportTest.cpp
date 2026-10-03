@@ -37,6 +37,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMap.h"
+#include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "mudlet.h"
 
@@ -209,6 +210,9 @@ private slots:
         QVERIFY(writeFile(qsl("%1/log/old-session.html").arg(profileHome()), QByteArrayLiteral("<html/>")));
         QVERIFY(writeFile(qsl("%1/media/cached.wav").arg(profileHome()), QByteArrayLiteral("RIFF")));
         QVERIFY(writeFile(qsl("%1/password").arg(profileHome()), QByteArrayLiteral("hunter2")));
+        QVERIFY(writeFile(qsl("%1/encryption_key").arg(profileHome()), QByteArrayLiteral("0123456789abcdef0123456789abcdef")));
+        QVERIFY(writeFile(qsl("%1/passwords/character_password.dat").arg(profileHome()), QByteArrayLiteral("sealed")));
+        QVERIFY(writeFile(qsl("%1/reconnect").arg(profileHome()), QByteArrayLiteral("account and provider")));
         QVERIFY(writeFile(qsl("%1/current/2001-01-01#00-00-00.xml").arg(profileHome()), QByteArrayLiteral("<an old save/>")));
         QVERIFY(writeFile(qsl("%1/map/2001-01-01#00-00-00map.dat").arg(profileHome()), QByteArrayLiteral("an old map")));
 
@@ -265,14 +269,17 @@ private slots:
 
         // The module from outside the profile, under its own name
         QCOMPARE(entries.value(root + qsl("xml-module/xml-module.xml")), readFile(xmlModulePath()));
-        // The archived one through desktop's unpacked copy, which already sits in
-        // the profile, rather than a second copy of the archive
-        QVERIFY2(entries.contains(root + qsl("archived-module/archived-module.xml")), "The archived module's unpacked XML is missing");
-        QVERIFY2(!entries.contains(root + qsl("archived-module/archived-module.mpackage")), "The archived module went in twice");
+        // The archived one as its archive, which desktop reinstalls it from, beside
+        // the folder desktop unpacked it into
+        QCOMPARE(entries.value(root + qsl("archived-module/archived-module.mpackage")), readFile(archivedModulePath()));
+        QVERIFY2(entries.contains(root + qsl("archived-module/archived-module.xml")), "The archived module's unpacked folder is missing");
 
         QCOMPARE(entries.value(root + qsl("notes/todo.txt")), QByteArrayLiteral("kill the dragon"));
-        QVERIFY2(!entries.contains(root + qsl("password")), "A password file must never leave the machine in an export");
+        for (const auto& secret : {qsl("password"), qsl("encryption_key"), qsl("reconnect")}) {
+            QVERIFY2(!entries.contains(root + secret), qPrintable(qsl("\"%1\" must never leave the machine in an export").arg(secret)));
+        }
         for (const auto& name : entries.keys()) {
+            QVERIFY2(!name.startsWith(root + qsl("passwords/")), qPrintable(qsl("The credential store went in: %1").arg(name)));
             QVERIFY2(!name.startsWith(root + qsl("log/")), qPrintable(qsl("Logs went in: %1").arg(name)));
             QVERIFY2(!name.startsWith(root + qsl("media/")), qPrintable(qsl("The media cache went in: %1").arg(name)));
         }
@@ -294,6 +301,21 @@ private slots:
         QFile::remove(archivePath);
     }
 
+    // An archive that has since gone leaves desktop's unpacked copy, which Mudlet
+    // Web reads in its place - so there is nothing to warn about
+    void test_anArchivedModuleWithoutItsArchiveComesThroughItsFolder()
+    {
+        QVERIFY(QFile::rename(archivedModulePath(), archivedModulePath() + qsl(".away")));
+        const QString archivePath = mOutputDir.filePath(qsl("archive-gone.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY(QFile::rename(archivedModulePath() + qsl(".away"), archivedModulePath()));
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(qsl("; "))));
+        const auto entries = readArchive(archivePath);
+        QVERIFY(entries.contains(mProfileName + qsl("/archived-module/archived-module.xml")));
+        QVERIFY(!entries.contains(mProfileName + qsl("/archived-module/archived-module.mpackage")));
+    }
+
     void test_aModuleWhoseFileIsGoneIsReportedNotFatal()
     {
         const QString path = mModuleDir.filePath(qsl("vanishing-module.xml"));
@@ -307,6 +329,32 @@ private slots:
         QCOMPARE(warnings.size(), 1);
         QVERIFY2(warnings.first().contains(qsl("vanishing-module")), qPrintable(warnings.first()));
         QVERIFY(readArchive(archivePath).contains(mProfileName + qsl("/xml-module/xml-module.xml")));
+    }
+
+    // A map that failed to load leaves nothing in memory, but the player's map is
+    // still the newest file on disk - which is what goes in then. Last, as it
+    // empties the map the other tests export.
+    void test_withNoMapInMemoryTheNewestFileGoesIn()
+    {
+        for (const int roomId : mpHost->mpMap->mpRoomDB->getRoomIDList()) {
+            QVERIFY(mpHost->mpMap->mpRoomDB->removeRoom(roomId));
+        }
+        const QFileInfoList onDisk = QDir(qsl("%1/map").arg(profileHome())).entryInfoList({qsl("*.dat")}, QDir::Files, QDir::Time);
+        QVERIFY(!onDisk.isEmpty());
+
+        const QString archivePath = mOutputDir.filePath(qsl("no-map-in-memory.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+
+        const auto entries = readArchive(archivePath);
+        QStringList maps;
+        for (const auto& name : entries.keys()) {
+            if (name.startsWith(mProfileName + qsl("/map/"))) {
+                maps << name;
+            }
+        }
+        QCOMPARE(maps, QStringList{qsl("%1/map/%2").arg(mProfileName, onDisk.first().fileName())});
+        QCOMPARE(entries.value(maps.first()), readFile(onDisk.first().absoluteFilePath()));
     }
 
     void test_theSuggestedFileNameIsSafeOnEveryPlatform()

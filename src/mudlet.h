@@ -89,6 +89,7 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+class MudletWebExport;
 class MudletInstanceCoordinator;
 class ShortcutManager;
 class SpeechRecognizer;
@@ -591,6 +592,8 @@ private slots:
 
 
 private:
+    // One at a time: a second would save the profile again and race the first for the file
+    QPointer<MudletWebExport> mpMudletWebExport;
     void assignKeySequences();
     QString autodetectPreferredLanguage();
     void showUiTour(const bool skipIntroStep);

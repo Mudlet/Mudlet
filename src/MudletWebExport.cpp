@@ -44,18 +44,43 @@ const QString MudletWebExport::scmMudletWebUrl = qsl("https://web.mudlet.org/");
 
 namespace {
 
-// Folders of the profile that stay behind: older saves and maps (a fresh one of
-// each goes in instead), logs and replays, and media the game sent, which it
-// will send again.
+// What stays behind: older saves and maps (a fresh one of each goes in
+// instead), logs and replays, media the game sent and will send again - and
+// every credential. A profile keeps those on disk when the system keychain is
+// off or unavailable ("password", the "passwords" store and the "encryption_key"
+// that unlocks it), plus "reconnect", the GMCP sign-in's account and provider,
+// which desktop narrows to its owner. A file bound for a browser's downloads
+// folder is no place for any of them.
 bool leftBehind(const QString& relativePath)
 {
     const QString top = relativePath.section(QLatin1Char('/'), 0, 0);
     if (relativePath == top) {
-        // Only there when the player opted out of the system keychain - and a
-        // file bound for a browser's downloads folder is no place for it.
-        return top == qsl("password");
+        return top == qsl("password") || top == qsl("encryption_key") || top == qsl("reconnect");
     }
-    return top == qsl("current") || top == qsl("map") || top == qsl("log") || top == qsl("media");
+    return top == qsl("current") || top == qsl("map") || top == qsl("log") || top == qsl("media") || top == qsl("passwords");
+}
+
+// Deflating these costs time and saves next to nothing, and sound packs are
+// most of a large profile
+bool alreadyCompressed(const QString& name)
+{
+    static const QStringList suffixes{qsl("mp3"),
+                                      qsl("ogg"),
+                                      qsl("opus"),
+                                      qsl("m4a"),
+                                      qsl("aac"),
+                                      qsl("flac"),
+                                      qsl("png"),
+                                      qsl("jpg"),
+                                      qsl("jpeg"),
+                                      qsl("gif"),
+                                      qsl("webp"),
+                                      qsl("mp4"),
+                                      qsl("webm"),
+                                      qsl("zip"),
+                                      qsl("mpackage"),
+                                      qsl("woff2")};
+    return suffixes.contains(QFileInfo(name).suffix(), Qt::CaseInsensitive);
 }
 
 bool isArchive(const QString& path)
@@ -83,12 +108,21 @@ QString MudletWebExport::suggestedFileName(const QString& profileName)
 void MudletWebExport::start()
 {
     if (!mpHost) {
+        //: Shown when exporting a profile for Mudlet Web is asked for after the profile has closed.
         finish(false, tr("The profile is no longer open."));
         return;
     }
-    mHostGone = connect(mpHost, &QObject::destroyed, this, [this]() {
-        finish(false, tr("The profile was closed before it could be exported."));
-    });
+    // Queued: destroyed() comes from inside ~QObject, while the profile's children
+    // are still alive, and whoever hears finished() may well open a dialog.
+    mHostGone = connect(
+            mpHost,
+            &QObject::destroyed,
+            this,
+            [this]() {
+                //: Shown when a profile being exported for Mudlet Web is closed before the export could finish.
+                finish(false, tr("The profile was closed before it could be exported."));
+            },
+            Qt::QueuedConnection);
 
     if (auto* dialogs = HostDialogs::find(mpHost); dialogs && dialogs->mpEditorDialog) {
         // An edit still sitting in the editor is the newest thing the player made
@@ -168,16 +202,17 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
     }
     files.insert(qsl("current/%1").arg(profileXml.fileName()), profileXml.absoluteFilePath());
 
-    // Mudlet Web reads a module from "<name>/<its file name>" first. A module
-    // installed from an archive needs nothing extra so long as desktop's unpacked
-    // copy of it is in the profile folder, which the walk above already took.
+    // Mudlet Web reads a module from "<name>/<its file name>" first. One installed
+    // from an archive is reinstalled from that archive at every profile load (a
+    // synced one has its archive rewritten by every save), so the archive is what
+    // goes; desktop's unpacked copy, already walked, stands in only for a missing one.
     for (const auto& [moduleName, entry] : mpHost->mInstalledModules.asKeyValueRange()) {
         const QString source = entry.value(0);
-        if (isArchive(source) && QFileInfo::exists(MudletApp::getMudletPath(enums::profilePackagePathFileName, profileName, moduleName))) {
-            continue;
-        }
         const QFileInfo sourceInfo(source);
         if (!sourceInfo.isFile()) {
+            if (isArchive(source) && QFileInfo::exists(MudletApp::getMudletPath(enums::profilePackagePathFileName, profileName, moduleName))) {
+                continue;
+            }
             //: Listed after exporting a profile for Mudlet Web. %1 is the module's name, %2 the file it is installed from.
             mWarnings << tr("Module \"%1\" was left out: its file \"%2\" could not be found.").arg(moduleName, source);
             continue;
@@ -185,20 +220,31 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
         if (included.contains(sourceInfo.canonicalFilePath())) {
             continue;
         }
+        // A walked file at the same path - a package of the module's name, which
+        // only a profile from before the two were kept apart can have - gives
+        // way: Mudlet Web keeps one of the two as well, and it keeps the module.
         files.insert(qsl("%1/%2").arg(moduleName, sourceInfo.fileName()), sourceInfo.absoluteFilePath());
     }
 
     // The map in memory, not the newest file: it carries whatever was mapped
-    // since the last autosave.
+    // since the last autosave. With nothing in memory - a map that failed to load,
+    // say - the newest file is still the player's map, and Mudlet Web takes it.
     QMap<QString, QByteArray> blobs;
-    if (mpHost->mpMap && mpHost->mpMap->mpRoomDB && mpHost->mpMap->mpRoomDB->size() > 0) {
+    const QString mapStamp = QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"));
+    if (!mpHost->mpMap || !mpHost->mpMap->mpRoomDB || mpHost->mpMap->mpRoomDB->size() == 0) {
+        const QDir mapDir(MudletApp::getMudletPath(enums::profileMapsPath, profileName));
+        const QFileInfoList maps = mapDir.entryInfoList({qsl("*.dat")}, QDir::Files, QDir::Time);
+        if (!maps.isEmpty()) {
+            files.insert(qsl("map/%1").arg(maps.first().fileName()), maps.first().absoluteFilePath());
+        }
+    } else {
         QByteArray mapBytes;
         QBuffer buffer(&mapBytes);
         buffer.open(QIODevice::WriteOnly);
         QDataStream out(&buffer);
         out.setVersion(QDataStream::Qt_5_12);
         if (mpHost->mpMap->serialize(out)) {
-            blobs.insert(qsl("map/%1map.dat").arg(QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"))), mapBytes);
+            blobs.insert(qsl("map/%1map.dat").arg(mapStamp), mapBytes);
         } else {
             //: Listed after exporting a profile for Mudlet Web.
             mWarnings << tr("The map could not be written, so it was left out.");
@@ -224,9 +270,13 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
         if (!source) {
             return QString::fromUtf8(zip_strerror(archive));
         }
-        if (zip_file_add(archive, (root + name).toUtf8().constData(), source, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE) < 0) {
+        const zip_int64_t index = zip_file_add(archive, (root + name).toUtf8().constData(), source, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
+        if (index < 0) {
             zip_source_free(source);
             return QString::fromUtf8(zip_strerror(archive));
+        }
+        if (alreadyCompressed(name)) {
+            zip_set_file_compression(archive, static_cast<zip_uint64_t>(index), ZIP_CM_STORE, 0);
         }
         return QString();
     };
@@ -241,6 +291,7 @@ void MudletWebExport::writeArchive(const QString& profileXmlPathFileName)
     for (const auto& [name, bytes] : blobs.asKeyValueRange()) {
         if (const QString error = addSource(name, zip_source_buffer(archive, bytes.constData(), static_cast<zip_uint64_t>(bytes.size()), 0)); !error.isEmpty()) {
             zip_discard(archive);
+            //: Shown when exporting a profile for Mudlet Web fails. %1 is the item that could not be added, %2 the reason.
             finish(false, tr("Could not add \"%1\" to the archive: %2").arg(name, error));
             return;
         }
