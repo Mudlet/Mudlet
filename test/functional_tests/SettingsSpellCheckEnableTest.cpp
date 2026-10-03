@@ -28,6 +28,7 @@
  */
 
 #include <QDir>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -155,45 +156,72 @@ private slots:
         QTRY_VERIFY2_WITH_TIMEOUT(dictionaryReads == 1, "turning spell check on left the dictionary unread, for the first word typed to pay for", 5s);
     }
 
-    // Words already in the input line are checked again, not only ones typed after
+    // Words already in the input lines are checked again, not only ones typed after
     void test_switchingSpellCheckRechecksTheInputLine()
     {
         QVERIFY2(mpPreferences && mpHost->getEnableSpellCheck(), "the case above left spell check off");
         TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
         QVERIFY(pCommandLine);
-        const auto marked = [pCommandLine](const QString& word) {
-            const QTextCursor found = pCommandLine->document()->find(word);
-            QTextCursor at(pCommandLine->document());
-            at.setPosition(found.selectionStart() + 1);
-            return !found.isNull() && at.charFormat().underlineStyle() == QTextCharFormat::SpellCheckUnderline;
-        };
+        const auto [created, message] = mpHost->mpConsole->createCommandLine(QString(), qsl("spellCheckLine"), 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(message));
+        TCommandLine* pSubCommandLine = mpHost->mpConsole->subCommandLineWidget(qsl("spellCheckLine"));
+        QVERIFY(pSubCommandLine);
+        const auto cleanup = qScopeGuard([this, pCommandLine]() {
+            pCommandLine->clear();
+            mpHost->mpConsole->deleteCommandLine(qsl("spellCheckLine"));
+        });
+
         pCommandLine->setPlainText(qsl("helo wrld "));
         pCommandLine->recheckWholeLine();
-        if (!marked(qsl("helo"))) {
+        pSubCommandLine->setPlainText(qsl("helo wrld "));
+        pSubCommandLine->recheckWholeLine();
+        if (!marked(pCommandLine, qsl("helo"))) {
             QSKIP("no dictionary here marks \"helo\" as misspelt");
         }
+        QVERIFY(marked(pSubCommandLine, qsl("helo")));
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         mpPreferences->checkBox_spellCheck->click();
         QVERIFY2(TestSettings::waitForApply(applySpy), "the untick never reached the Host");
-        QVERIFY2(!marked(qsl("helo")), "switching spell check off left the marks on the input line");
+        QVERIFY2(!marked(pCommandLine, qsl("helo")), "switching spell check off left the marks on the input line");
+        QVERIFY2(!marked(pSubCommandLine, qsl("helo")), "switching spell check off left the marks on a createCommandLine() line");
 
         applySpy.clear();
         mpPreferences->checkBox_spellCheck->click();
         QVERIFY2(TestSettings::waitForApply(applySpy), "the tick never reached the Host");
-        QVERIFY2(marked(qsl("helo")), "switching spell check back on did not mark the input line again");
+        QVERIFY2(marked(pCommandLine, qsl("helo")), "switching spell check back on did not mark the input line again");
+        QVERIFY2(marked(pSubCommandLine, qsl("helo")), "switching spell check back on did not mark a createCommandLine() line again");
+    }
 
-        // The case above picked British English
+    void test_pickingAnotherDictionaryRechecksTheInputLine()
+    {
+        QVERIFY2(mpHost->getEnableSpellCheck(), "the case above left spell check off");
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        QVERIFY(pCommandLine);
+        const auto cleanup = qScopeGuard([pCommandLine]() {
+            pCommandLine->clear();
+        });
+
+        // The first case picked British English
         pCommandLine->setPlainText(qsl("colour color "));
         pCommandLine->recheckWholeLine();
-        if (marked(qsl("color")) && !marked(qsl("colour"))) {
-            mpHost->setSpellDic(qsl("en_US"));
-            const bool rechecked = marked(qsl("colour")) && !marked(qsl("color"));
-            mpHost->setSpellDic(scmDictionary);
-            QVERIFY2(rechecked, "picking another dictionary did not check the input line again");
+        if (!marked(pCommandLine, qsl("color")) || marked(pCommandLine, qsl("colour"))) {
+            QSKIP("no en_GB dictionary here tells \"colour\" from \"color\"");
         }
 
-        pCommandLine->clear();
+        mpHost->setSpellDic(qsl("en_US"));
+        const bool rechecked = marked(pCommandLine, qsl("colour")) && !marked(pCommandLine, qsl("color"));
+        mpHost->setSpellDic(scmDictionary);
+        QVERIFY2(rechecked, "picking another dictionary did not check the input line again");
+    }
+
+private:
+    static bool marked(TCommandLine* pCommandLine, const QString& word)
+    {
+        const QTextCursor found = pCommandLine->document()->find(word);
+        QTextCursor at(pCommandLine->document());
+        at.setPosition(found.selectionStart() + 1);
+        return !found.isNull() && at.charFormat().underlineStyle() == QTextCharFormat::SpellCheckUnderline;
     }
 };
 

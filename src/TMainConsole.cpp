@@ -1520,10 +1520,14 @@ void TMainConsole::setCommandLinePlaceholderText(const QString& text)
 
 void TMainConsole::updateCommandLineSpellCheck(bool enabled)
 {
-    if (enabled) {
-        mpCommandLine->recheckWholeLine();
-    } else {
-        mpCommandLine->clearMarksOnWholeLine();
+    QList<TCommandLine*> commandLines = mSubCommandLineMap.values();
+    commandLines.prepend(mpCommandLine);
+    for (auto pCommandLine : commandLines) {
+        if (enabled) {
+            pCommandLine->recheckWholeLine();
+        } else {
+            pCommandLine->clearMarksOnWholeLine();
+        }
     }
 }
 
