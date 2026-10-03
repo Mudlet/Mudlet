@@ -280,6 +280,7 @@ bool TRoomDB::__removeRoom(int id)
             pA->removeRoom(id);
         }
         rooms.remove(id);
+        roomIdFreed(id);
         if (roomIDToHash.contains(id)) {
             const QString hash = roomIDToHash[id];
             roomIDToHash.remove(id);
@@ -546,7 +547,7 @@ bool TRoomDB::addArea(int id)
 // does: rescanning from 1 every call to find the lowest free ID made bulk
 // area creation quadratic in the area count (a script creating areas one at a
 // time was the common way to hit it). Unlike TMap::createNewRoomID(), which
-// does rescan from the lowest free ID on every call, mNextAreaIdHint resumes
+// always hands back the lowest free ID, mNextAreaIdHint resumes
 // from just past the last ID it handed out here, resetting to 1 whenever
 // clearMapDB() runs (map load or clear) - below the hint, within one loaded
 // map, an ID is not revisited by this function. Other paths that take an
@@ -560,6 +561,25 @@ int TRoomDB::createNewAreaID()
         ++mNextAreaIdHint;
     }
     return mNextAreaIdHint++;
+}
+
+int TRoomDB::lowestFreeRoomId(int minimumId)
+{
+    const bool searchFromHint = minimumId <= mLowestFreeRoomIdHint;
+    int id = searchFromHint ? mLowestFreeRoomIdHint : minimumId;
+    while (rooms.contains(id)) {
+        ++id;
+    }
+    if (searchFromHint) {
+        mLowestFreeRoomIdHint = id;
+    }
+    return id;
+}
+
+// IDs below one only exist mid-load, before the audit renumbers them
+void TRoomDB::roomIdFreed(int id)
+{
+    mLowestFreeRoomIdHint = std::clamp(id, 1, mLowestFreeRoomIdHint);
 }
 
 bool TRoomDB::hasAreaName(const QString& name) const
@@ -691,6 +711,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                              "  This suggests serious problems with the currently running version of Mudlet"
                                              " - is your system running out of memory?"),
                                           true);
+                roomIdFreed(itRoom.key());
                 itRoom.remove();
                 continue;
             }
@@ -960,6 +981,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                         roomIDToHash.insert(pR->getId(), hash);
                         hashToRoomID.insert(hash, pR->getId());
                     }
+                    roomIdFreed(itRoom.key());
                     itRoom.remove();
                     holdingSet.insert(pR);
                 }
@@ -1182,6 +1204,7 @@ void TRoomDB::clearMapDB()
     hashToRoomID.clear();
     roomIDToHash.clear();
     mNextAreaIdHint = 1;
+    mLowestFreeRoomIdHint = 1;
 
     // Now delete all objects - their destructors will see mBulkDeletionMode=true
     // and skip the expensive cleanup operations
