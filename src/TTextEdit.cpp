@@ -953,12 +953,14 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
             run.bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
         } else {
             // A transparent cell (e.g. a system message) has no colour of its own
-            // to swap in as the text pen - painting with alpha 0 would make the
-            // glyph invisible - so fall back to the console's real background.
+            // to swap in as the text pen, so fall back to the console's real
+            // background. Opaque either way, as a script can make the console
+            // background, and with it game text's, translucent or invisible.
             QColor background = charStyle.background();
             if (background.alpha() == 0) {
                 background = mpConsole->getConsoleBgColor();
             }
+            background.setAlpha(255);
             run.fgColor = background;
             run.bgColor = charStyle.foreground();
         }
