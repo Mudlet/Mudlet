@@ -1090,10 +1090,33 @@ void T2DMap::addTextLabelToCache(const QString& key, const TMapLabel& label, con
     }
 }
 
+// A label rendered whole at its zoomed size needs gigabytes once a big one is
+// zoomed in on, so past this QPainter scales only the part of it that is painted.
+// An area rather than a side, so a long thin title stays rendered crisply.
+static constexpr qint64 cMaxScaledLabelPixels = 4096 * 4096;
+
+static bool fitsScaledLabelLimit(const QSize& size)
+{
+    return qint64(size.width()) * size.height() <= cMaxScaledLabelPixels;
+}
+
+static void drawPixmapScaledTo(QPainter& painter, const QRectF& target, const QPixmap& pixmap)
+{
+    const QSize targetSize = target.size().toSize();
+    if (fitsScaledLabelLimit(targetSize)) {
+        painter.drawPixmap(target.topLeft(), pixmap.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        return;
+    }
+    painter.save();
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    painter.drawPixmap(target, pixmap, QRectF(pixmap.rect()));
+    painter.restore();
+}
+
 void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
 {
     const QSize targetSize = paintRect.size().toSize();
-    if (!label.text.isEmpty() && !label.font.family().isEmpty()) {
+    if (!label.text.isEmpty() && !label.font.family().isEmpty() && fitsScaledLabelLimit(targetSize)) {
         // Include the label's visual content in the cache key so that editing
         // a label's text, font or colours (e.g. live-previewing from the
         // create label dialog) invalidates the previously cached rendering:
@@ -1107,10 +1130,10 @@ void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLab
             painter.drawPixmap(position, *pix);
         } else {
             qWarning("T2DMap::drawScaledLabel() ALERT: Cache lookup failed for label %d in area %d, using fallback", labelKey, mAreaID);
-            painter.drawPixmap(position, label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+            drawPixmapScaledTo(painter, QRectF(position, QSizeF(targetSize)), label.pix);
         }
     } else {
-        painter.drawPixmap(position, label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        drawPixmapScaledTo(painter, QRectF(position, QSizeF(targetSize)), label.pix);
     }
     label.clickSize = QSizeF(paintRect.width(), paintRect.height());
 }
@@ -6741,7 +6764,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QRectF labelPaintRectangle = QRect(labelX, labelY, labelWidth, labelHeight);
         if (!mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                drawPixmapScaledTo(painter, QRectF(labelPosition, labelPaintRectangle.size()), mapLabel.pix);
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
@@ -7270,7 +7293,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         if (mapLabel.showOnTop) {
             QPointF labelPosition(labelX, labelY);
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                drawPixmapScaledTo(painter, QRectF(labelPosition, labelPaintRectangle.size()), mapLabel.pix);
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
