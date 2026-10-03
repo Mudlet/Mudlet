@@ -166,6 +166,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.are.equal(timestamp, getTimestamp("", 1))
       end)
 
+      it("should read the first line of a console as line 0", function()
+        local win = "getTimestampFirstLineConsole"
+        createMiniConsole(win, 0, 0, 100, 100)
+        finally(function() deleteMiniConsole(win) end)
+        clearWindow(win)
+        echo(win, "only line")
+        assert.are.equal(0, getLineNumber(win))
+        assert.is_string(getTimestamp(win, getLineNumber(win)))
+        assert.is_nil(getTimestamp(win, 1))
+      end)
+
+      it("should return nil+msg for a negative line number", function()
+        local timestamp, err = getTimestamp(-1)
+        assert.is_nil(timestamp)
+        assert.is_true(err:find("should not be negative", 1, true) ~= nil, err)
+      end)
+
       it("should return nil+msg for an out-of-range line number", function()
         local timestamp, err = getTimestamp(getLineCount() + 1000)
         assert.is_nil(timestamp)
