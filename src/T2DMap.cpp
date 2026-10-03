@@ -4854,8 +4854,12 @@ void T2DMap::slot_userAction(QString uniqueName)
     if (!mpMap) {
         return;
     }
-    TEvent event{};
+    // The menu stays open while scripts run, so removeMapEvent() may have taken the item away since
     const QStringList userEvent = mpMap->mUserActions.value(uniqueName);
+    if (userEvent.isEmpty()) {
+        return;
+    }
+    TEvent event{};
     event.mArgumentList.append(userEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(uniqueName);
