@@ -1207,6 +1207,21 @@ describe("Trigger processing", function()
             assert.are.same({"z"}, _G.TrigQuiet)
         end)
 
+        it("still hands the captures of every line of a multiline match to a filter child", function()
+            _G.TrigQuiet = {}
+            tempComplexRegexTrigger("SpecQuietMultiParent", [[^quietfirst (\w+)$]], "", 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecQuietMultiParent", [[^quietsecond (\w+)$]], "", 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            permRegexTrigger("SpecQuietMultiChild", "SpecQuietMultiParent", {[[^(\w+)$]]},
+                             [==[_G.TrigQuiet[#_G.TrigQuiet + 1] = matches[2] ]==])
+            finally(function()
+                killTrigger("SpecQuietMultiChild")
+                killTrigger("SpecQuietMultiParent")
+            end)
+            feedTriggers("quietfirst zebra\n")
+            feedTriggers("quietsecond wombat\n")
+            assert.are.same({"zebra", "wombat"}, _G.TrigQuiet)
+        end)
+
         it("leaves the matches table as the last script left it", function()
             _G.TrigQuiet = {}
             local quiet = tempRegexTrigger("^quietmatches$", "")
