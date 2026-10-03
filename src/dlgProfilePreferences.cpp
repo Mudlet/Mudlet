@@ -2792,8 +2792,17 @@ void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
         QDesktopServices::openUrl(QUrl(url));
         return;
     }
+    const QString key = pItem->data(scmRole_categoryKey).toString();
+    if (key.isEmpty()) {
+        return;
+    }
+    // A search keeps the sidebar's current row, so choosing that category again is no row change either
+    if (mSearchActive) {
+        slot_categorySelected(mpListWidget_categories->row(pItem));
+        return;
+    }
     // Choosing a subpage's own category is no row change, so the row-changed slot would not leave the subpage
-    if (const QString key = pItem->data(scmRole_categoryKey).toString(); !key.isEmpty() && mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
+    if (mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
         leaveSubpage();
     }
 }
