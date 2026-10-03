@@ -55,7 +55,7 @@
 #include "TTimer.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
@@ -1340,7 +1340,7 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
 int TLuaInterpreter::closeMudlet(lua_State* L)
 {
     Q_UNUSED(L)
-    mudlet::self()->armForceClose();
+    TAppFrontend::instance()->armForceClose();
     return 0;
 }
 
@@ -2667,7 +2667,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
 int TLuaInterpreter::openWebPage(lua_State* L)
 {
     const QString url = getVerifiedString(L, __func__, 1, "URL");
-    lua_pushboolean(L, mudlet::self()->openWebPage(url));
+    lua_pushboolean(L, TAppFrontend::instance()->openWebPage(url));
     return 1;
 }
 
@@ -8775,13 +8775,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     const QString title{lua_tostring(L, 1)};
     const QString text = (n >= 2) ? QString{lua_tostring(L, 2)} : title;
 
-    mudlet::self()->mTrayIcon.show();
-    if (notificationExpirationTime.has_value()) {
-        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime.value());
-    } else {
-        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon());
-    }
-    mudlet::self()->mTrayIcon.hide();
+    TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -8818,7 +8812,6 @@ int TLuaInterpreter::removeFileWatch(lua_State* L)
 int TLuaInterpreter::setConfig(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
     if (!checkStringArg(L, __func__, 1, "key")) {
         return lua_error(L);
     }
@@ -8913,7 +8906,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
-            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
+            TAppFrontend::instance()->setDrawUpperLowerLevels(getVerifiedBool(L, __func__, 2, "value"));
             host.mpMap->requestMapRepaint();
             return success();
         }
@@ -8987,7 +8980,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         } else {
             return warnArgumentChoice(L, __func__, qsl("mapperButton"), {qsl("default"), qsl("scripted"), qsl("disabled")}, value);
         }
-        mudlet::self()->updateMapActionAvailability();
+        TAppFrontend::instance()->updateMapActionAvailability();
         return success();
     }
     if (key == qsl("enableGMCP")) {
@@ -9193,11 +9186,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (key == qsl("compactInputLine")) {
         host.setCompactInputLine(getVerifiedBool(L, __func__, 2, "value"));
-        if (currentHost) {
-            // A handler of the event the setter raised may have written the
-            // opposite value back, so the menu item follows what is held now:
-            mudlet::self()->dactionInputLine->setChecked(host.getCompactInputLine());
-        }
+        // A handler of the event the setter raised may have written the
+        // opposite value back, so the menu item follows what is held now:
+        TAppFrontend::instance()->setCompactInputLineChecked(&host, host.getCompactInputLine());
 
         return success();
     }
@@ -9289,7 +9280,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     if (key == qsl("showTabConnectionIndicators")) {
-        mudlet::self()->setShowTabConnectionIndicators(getVerifiedBool(L, __func__, 2, "value"));
+        TAppFrontend::instance()->setShowTabConnectionIndicators(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("ambiguousEAsianWidthCharacters")) {
@@ -9401,7 +9392,7 @@ int TLuaInterpreter::announce(lua_State* L)
         return lua_error(L);
     }
 
-    mudlet::self()->announce(QString{lua_tostring(L, 1)}, (n > 1) ? QString{lua_tostring(L, 2)} : QString(), true);
+    TAppFrontend::instance()->announce(QString{lua_tostring(L, 1)}, (n > 1) ? QString{lua_tostring(L, 2)} : QString(), true);
     return 0;
 }
 
@@ -9716,7 +9707,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("showTabConnectionIndicators"),
              [&]() {
-                 lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators);
+                 lua_pushboolean(L, TAppFrontend::instance()->showTabConnectionIndicators());
              }},
             {qsl("advertiseScreenReader"),
              [&]() {
@@ -9746,7 +9737,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("showUpperLowerLevels"),
              [&]() {
-                 lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels);
+                 lua_pushboolean(L, TAppFrontend::instance()->drawUpperLowerLevels());
              }},
             {qsl("muteMediaAPI"),
              [&]() {
