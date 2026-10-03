@@ -104,6 +104,39 @@ describe("Tests functionality of Geyser.Label", function()
       assert.is_truthy(html:find('align="center"'))
       assert.is_truthy(html:find("font%-size: 50pt"))
     end)
+
+    -- echo() keeps the markup it puts around a message between calls, so every
+    -- way of changing the format has to show up in the very next echo
+    it('wraps each echo in the markup the current format asks for', function()
+      local function assertEchoes(expected, ...)
+        for _ = 1, 2 do
+          label:echo(...)
+          assert.are.equal(expected, globalEchoSpy.calls[#globalEchoSpy.calls].vals[2])
+        end
+      end
+      assertEchoes('<div  style="color: #102030; font-size: 50pt; ">HP</div>', "HP", "#102030")
+      label:setFormat("cb18")
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><b>HP</b></div>', "HP")
+      label:setItalics(true)
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><i><b>MP</b></i></div>', "MP")
+      label.formatTable.underline = true
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><u><i><b>MP</b></i></u></div>')
+      label:setStrikethrough(true)
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><s><u><i><b>MP</b></i></u></s></div>')
+      label:setBold(false)
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><s><u><i>MP</i></u></s></div>')
+      label:setFont("Bitstream Vera Sans Mono")
+      local face = '<font face ="' .. label.font .. '">'
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; ">' .. face .. '<s><u><i>MP</i></u></s></font></div>')
+      assertEchoes('<div align="center"  style="color: #405060; font-size: 18pt; ">' .. face .. '<s><u><i>MP</i></u></s></font></div>', "MP", "#405060")
+      label:setAlignment("right")
+      assertEchoes('<div align="right"  style="color: #405060; font-size: 18pt; ">' .. face .. '<s><u><i>MP</i></u></s></font></div>')
+      label:setFontSize(12)
+      assertEchoes('<div align="right"  style="color: #405060; font-size: 12pt; ">' .. face .. '<s><u><i>MP</i></u></s></font></div>')
+      label:setFont("")
+      assertEchoes('<div align="right"  style="color: #405060; font-size: 12pt; "><s><u><i>MP</i></u></s></div>')
+      assertEchoes('<div align="right"  style=" font-size: 12pt; "><s><u><i>MP</i></u></s></div>', "MP", "nocolor")
+    end)
   end)
 
   describe("Tests SVG transform functions", function()
