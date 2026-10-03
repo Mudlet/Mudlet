@@ -970,6 +970,31 @@ private slots:
         QVERIFY2(model->mHyperlinkSelectionManager.isSelected(qsl("modelgroup"), qsl("modelvalue")), "The link's selection never reached the model's selection manager.");
     }
 
+    // A transparent cell is exported with the console background, so a run of
+    // them is one span, not one per character
+    void test_htmlExportKeepsARunOfTransparentCellsInOneSpan()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+
+        host->mBgColor = QColor(12, 34, 56);
+        host->refreshMainConsoleColors();
+        const int line = appendModelLine(model->buffer, qsl("system"), QColorConstants::White, QColorConstants::Transparent);
+
+        const QString html = model->buffer.bufferToHtml(false, line);
+        QCOMPARE(html.count(qsl("<span")), 1);
+        QVERIFY2(html.contains(qsl("background: rgb(12,34,56);")), qPrintable(html));
+        QVERIFY2(html.contains(qsl(">system</span>")), qPrintable(html));
+
+        // a background of its own still starts a span
+        model->buffer.append(qsl("ab"), 0, 2, QColorConstants::White, QColorConstants::Transparent, TChar::None, 0);
+        const QString opaque = qsl("cd\n");
+        model->buffer.append(opaque, 0, opaque.size(), QColorConstants::White, QColorConstants::Red, TChar::None, 0);
+        QCOMPARE(model->buffer.bufferToHtml(false, model->buffer.getLastLineNumber() - 1).count(qsl("<span")), 2);
+    }
+
     // The format a short line is padded with and the background an HTML export
     // falls back to are the model's, so neither needs a view to be right.
     void test_paddingAndHtmlBackgroundComeFromTheModelWithNoView()
