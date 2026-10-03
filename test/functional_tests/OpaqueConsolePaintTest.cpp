@@ -203,7 +203,7 @@ private slots:
         });
         for (int before = -1; before != paints.count;) {
             before = paints.count;
-            QTest::qWait(500);
+            QTest::qWait(500ms);
         }
         pane->mFontHeight = 0;
         pane->repaint();
