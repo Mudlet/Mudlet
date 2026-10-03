@@ -28,7 +28,6 @@
 class QFrame;
 class QKeyEvent;
 class QLabel;
-class QMouseEvent;
 class QPaintEvent;
 class QPushButton;
 
@@ -41,7 +40,7 @@ class TUiTour : public QWidget
     Q_OBJECT
 
 public:
-    explicit TUiTour(mudlet* pMainWindow);
+    explicit TUiTour(mudlet* pMainWindow, const bool skipIntroStep = false);
 
     static bool shouldShowOnFirstProfile();
     static void rememberShown();
@@ -55,8 +54,6 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private slots:
@@ -77,6 +74,7 @@ private:
 
     void buildSteps();
     void createCard();
+    bool handleKey(const QKeyEvent* event);
     void setStep(int index, int direction);
     void updateCard();
     void positionCard();
@@ -84,6 +82,7 @@ private:
     void resizeToParent();
 
     mudlet* mpMainWindow = nullptr;
+    bool mSkipIntroStep = false;
     std::vector<TourStep> mSteps;
     int mCurrentStep = 0;
 

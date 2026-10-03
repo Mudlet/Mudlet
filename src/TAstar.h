@@ -64,10 +64,16 @@ class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    distance_heuristic(LocMap l, Vertex goal)
+    // Held by reference: a per-search copy (35MB on a 2.3M-room map) costs more than the search.
+    // Callers pass TMap::locations, which initGraph() only clear()s: it can't dangle, but goes stale
+    // across initGraph() (rooms renumbered), so never store a heuristic.
+    distance_heuristic(const LocMap& l, Vertex goal)
     : m_location(l)
     , m_goal(goal)
     {}
+
+    // A temporary would leave m_location dangling.
+    distance_heuristic(const LocMap&&, Vertex) = delete;
 
     CostType operator()(Vertex u)
     {
@@ -82,7 +88,7 @@ public:
     }
 
 private:
-    LocMap m_location;
+    const LocMap& m_location;
     Vertex m_goal;
 };
 

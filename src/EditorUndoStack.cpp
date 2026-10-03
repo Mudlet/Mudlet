@@ -60,6 +60,13 @@ EditorUndoStack::EditorUndoStack(QObject* parent)
     });
 }
 
+EditorUndoStack::~EditorUndoStack()
+{
+    // ~QUndoStack calls clear(), emitting indexChanged(), before ~QObject disconnects; by then
+    // this is only a QUndoStack, so the lambda above must not touch our members.
+    disconnect(this, &QUndoStack::indexChanged, this, nullptr);
+}
+
 void EditorUndoStack::emitChangesForCommand(const QUndoCommand* cmd)
 {
     if (!cmd) {

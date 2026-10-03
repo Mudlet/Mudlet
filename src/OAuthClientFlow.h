@@ -32,10 +32,12 @@ class QNetworkReply;
 class QTcpSocket;
 
 // Runs the client-driven GMCP Char.Login v2 OAuth flow: fetches the server's OpenID Connect
-// discovery document, opens the provider's authorization URL in the system browser with a PKCE
-// (S256) challenge, and captures the authorization code on a loopback (RFC 8252) redirect
-// listener. The token exchange itself stays on the game server - this class only produces the
-// {code, code_verifier, redirect_uri} triple that GMCPAuthenticator sends as Char.Login.AuthCode.
+// discovery document, builds the provider's authorization URL with a PKCE (S256) challenge, and
+// captures the authorization code on a loopback (RFC 8252) redirect listener. The token exchange
+// itself stays on the game server - this class only produces the {code, code_verifier,
+// redirect_uri, nonce} set that GMCPAuthenticator sends as Char.Login.AuthCode. Handing the
+// authorization URL to the system browser is the caller's job, so that the decision to launch a
+// browser at the player is made in one place for both this and the server-driven flow.
 class OAuthClientFlow : public QObject
 {
     Q_OBJECT
@@ -58,9 +60,8 @@ public:
                                       const QString& nonce);
 
 signals:
-    void authorizationCaptured(const QString& code, const QString& codeVerifier, const QString& redirectUri);
-    void browserOpened(const QString& url);
-    void browserOpenFailed(const QString& url);
+    void authorizationCaptured(const QString& code, const QString& codeVerifier, const QString& redirectUri, const QString& nonce);
+    void authorizationUrlReady(const QUrl& authorizationUrl);
     void flowFailed(const QString& logDetail);
 
 private:

@@ -1,0 +1,255 @@
+name: 📦 Build Linux packages
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag or branch to package'
+        required: true
+      publish:
+        description: 'Attach the packages to the Mudlet-X.Y.Z release and update the package repositories'
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - 'CI/linux-packages/**'
+      - '.github/workflows/build-linux-packages.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: ${{ matrix.base }}
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    timeout-minutes: 120
+    outputs:
+      sha: ${{ steps.build.outputs.sha }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - format: deb
+            base: ubuntu:26.04
+          - format: deb
+            base: debian:13
+          - format: rpm
+            base: fedora:44
+          - format: rpm
+            base: fedora:43
+    steps:
+      # Packaging scripts come from this workflow's commit, so tags predating them can still be packaged
+      - uses: actions/checkout@v7
+        with:
+          path: packaging
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.sha }}
+          path: source
+          submodules: recursive
+
+      - name: Build and install-test the package
+        id: build
+        env:
+          FORMAT: ${{ matrix.format }}
+          BASE: ${{ matrix.base }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          echo "sha=$(git -C source rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+          VERSION_ARGS=()
+          ASSET_VERSION=snapshot
+          if [[ "${TAG}" =~ ^Mudlet-([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VERSION_ARGS=(--version "${BASH_REMATCH[1]}")
+            ASSET_VERSION="${BASH_REMATCH[1]}"
+          fi
+          packaging/CI/linux-packages/build "${FORMAT}" --base "${BASE}" --source source --output out --plain "${VERSION_ARGS[@]}"
+
+          # GitHub rewrites the ~ in a Debian version when it names a release asset
+          shopt -s nullglob
+          mkdir -p assets
+          for f in out/*.deb; do
+            mv "$f" "assets/Mudlet-${ASSET_VERSION}-${BASE/:/-}-${f##*_}"
+          done
+          for f in out/*.rpm; do
+            arch="${f%.rpm}"
+            mv "$f" "assets/Mudlet-${ASSET_VERSION}-${BASE/:/-}-${arch##*.}.rpm"
+          done
+          ls -l assets
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-package-${{ matrix.format }}-${{ strategy.job-index }}
+          path: assets/
+          if-no-files-found: error
+
+  attach:
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # create-github-release.yml rewrites the same SHA256SUMS.txt in this group
+    concurrency:
+      group: create-github-release-${{ needs.build.outputs.sha }}
+      cancel-in-progress: false
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check the tag is a release
+        run: |
+          if [[ ! "${TAG}" =~ ^Mudlet-[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Only a Mudlet-X.Y.Z release tag can be published, not '${TAG}'"
+            exit 1
+          fi
+
+      # Signing trusts the checkout's mudlet.asc, so another branch could publish any key it carries
+      - name: Check the workflow runs from the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "${GITHUB_REF}" != "refs/heads/${DEFAULT_BRANCH}" ]]; then
+            echo "::error::Packages can only be published from ${DEFAULT_BRANCH}, not ${GITHUB_REF} - its CI/linux-packages/mudlet.asc is the key they are checked against"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: linux-package-*
+          merge-multiple: true
+          path: assets/
+
+      - name: Install rpm
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rpm
+
+      - name: Import the signing key
+        env:
+          SIGNING_KEY: ${{ secrets.LINUX_PACKAGES_SIGNING_KEY }}
+        run: |
+          export GNUPGHOME="${RUNNER_TEMP}/gnupg"
+          install -d -m 700 "${GNUPGHOME}"
+          printf '%s\n' "${SIGNING_KEY}" | gpg --batch --import
+          echo "GNUPGHOME=${GNUPGHOME}" >> "${GITHUB_ENV}"
+
+      - name: Sign the rpms
+        run: CI/linux-packages/publish sign assets
+
+      # Mudlet's updater refuses a release asset SHA256SUMS.txt does not list
+      - name: Attach the packages to the release
+        run: |
+          mapfile -t PACKAGES < <(find assets/ -type f \( -name '*.deb' -o -name '*.rpm' \))
+          for p in "${PACKAGES[@]}"; do
+            (cd "$(dirname "$p")" && sha256sum "$(basename "$p")" > "$(basename "$p").sha256")
+          done
+
+          mkdir -p published/
+          gh release download "${TAG}" --pattern SHA256SUMS.txt --dir published/
+          bash CI/assemble-release-checksums.sh assets/ published/SHA256SUMS.txt
+
+          gh release view "${TAG}" --json assets --jq '.assets[].name' > final-assets.txt
+          basename -a -- "${PACKAGES[@]}" >> final-assets.txt
+          bash CI/verify-release-checksums.sh assets/SHA256SUMS.txt final-assets.txt assets/
+
+          gh release upload "${TAG}" assets/SHA256SUMS.txt --clobber
+          gh release upload "${TAG}" "${PACKAGES[@]}" --clobber
+
+      - name: Verify published release checksums
+        run: |
+          for attempt in 1 2 3 4 5; do
+            rm -rf published-final/
+            mkdir -p published-final/
+            if gh release download "${TAG}" --pattern SHA256SUMS.txt --dir published-final/ \
+              && gh release view "${TAG}" --json assets --jq '.assets[].name' > published-final/assets.txt; then
+              break
+            fi
+            if [[ "${attempt}" -eq 5 ]]; then
+              echo "::error::Could not read back the published ${TAG} assets to verify them"
+              exit 1
+            fi
+            sleep 10
+          done
+          bash CI/verify-release-checksums.sh published-final/SHA256SUMS.txt published-final/assets.txt
+
+  publish:
+    needs: attach
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: linux-packages-publish
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BASE_URL: ${{ vars.LINUX_PACKAGES_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends apt-utils createrepo-c rpm
+
+      - name: Import the signing key
+        env:
+          SIGNING_KEY: ${{ secrets.LINUX_PACKAGES_SIGNING_KEY }}
+        run: |
+          export GNUPGHOME="${RUNNER_TEMP}/gnupg"
+          install -d -m 700 "${GNUPGHOME}"
+          printf '%s\n' "${SIGNING_KEY}" | gpg --batch --import
+          echo "GNUPGHOME=${GNUPGHOME}" >> "${GITHUB_ENV}"
+
+      # The repos are rebuilt from releases, keeping a few versions for downgrades. A gh failure
+      # must fail the step, as upload replaces the bucket with incoming/.
+      - name: Gather packages from the latest releases
+        run: |
+          mkdir -p incoming/
+          tags="$(gh release list --exclude-drafts --exclude-pre-releases --limit 50 --json tagName --jq '.[].tagName')"
+          mapfile -t release_tags < <(grep -E '^Mudlet-[0-9]+\.[0-9]+\.[0-9]+$' <<< "${tags}")
+          kept=0
+          for tag in "${release_tags[@]}"; do
+            assets="$(gh release view "${tag}" --json assets --jq '.assets[].name')"
+            if grep -qE '\.(deb|rpm)$' <<< "${assets}"; then
+              gh release download "${tag}" --pattern '*.deb' --pattern '*.rpm' --dir incoming/
+              kept=$((kept + 1))
+              if [[ "${kept}" -eq 3 ]]; then
+                break
+              fi
+            fi
+          done
+          ls -l incoming/
+
+      - name: Assemble the repositories
+        run: CI/linux-packages/publish assemble incoming site
+
+      - name: Upload the repositories
+        env:
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ vars.LINUX_PACKAGES_R2_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.LINUX_PACKAGES_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.LINUX_PACKAGES_R2_SECRET_ACCESS_KEY }}
+        run: CI/linux-packages/publish upload site
+
+      # publish already checked its signing key against git; this confirms the bucket serves those
+      # same bytes, which pinning the committed copy relies on. Retried: a read-back right after upload can be flaky.
+      - name: Check the served key against the one committed in git
+        run: |
+          curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors "${BASE_URL}/mudlet.asc" -o served.asc
+          if ! cmp -s served.asc CI/linux-packages/mudlet.asc; then
+            echo "::error::${BASE_URL}/mudlet.asc is not the key committed as CI/linux-packages/mudlet.asc, and is being served now - re-run this workflow once that is fixed"
+            exit 1
+          fi
+
+      - name: Install Mudlet from the live repositories
+        run: |
+          docker run --rm -e BASE_URL ubuntu:26.04 sh -euc \
+            'apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && curl -fsSL "$BASE_URL/install.sh" -o install.sh && sh install.sh'
+          docker run --rm -e BASE_URL fedora:44 sh -euc 'curl -fsSL "$BASE_URL/install.sh" -o install.sh && sh install.sh'

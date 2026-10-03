@@ -297,6 +297,72 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- The subject handed to PCRE is measured in UTF-8 bytes, not in the UTF-16
+    -- code units a QString counts: a length taken from the wrong one cuts a
+    -- multibyte line short and the end anchor then matches in the wrong place
+    it("matches a multibyte line right through to its end anchor", function()
+        local send = spy.on(_G, "send")
+        local snapshot = {}
+        local pattern = "^(\\w+) (\\w+) (\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            send("match")
+            snapshot = matches
+        end, 1)
+
+        feedTriggers("\nЗдравствуй уважаемый Mudlet\n")
+
+        assert.spy(send).was.called(1)
+        assert.are.equal("Здравствуй уважаемый Mudlet", snapshot[1])
+        assert.are.equal("Здравствуй", snapshot[2])
+        assert.are.equal("уважаемый", snapshot[3])
+        assert.are.equal("Mudlet", snapshot[4])
+        killTrigger(id)
+    end)
+
+    -- A capture's position comes back from PCRE as a byte offset and has to be
+    -- converted to the character position the console selects by. The dragon is
+    -- outside the BMP, so it is four UTF-8 bytes but two of those characters
+    it("selectCaptureGroup lands on the right characters after multibyte text", function()
+        local selection
+        local pattern = "^Цель: (\\S+) Оружие: (?<wpn>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("wpn")
+            selection = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nЦель: 🐉 Оружие: меч\n")
+
+        assert.are.equal("меч", selection)
+        killTrigger(id)
+    end)
+
+    -- PCRE2 returns the name table in alphabetical order, so the named-group
+    -- loop asks for positions in an order unrelated to where the groups sit in
+    -- the line: aaa is asked for first and zzz last. Converting zzz's offset
+    -- therefore walks back over the dragon - one character, four bytes, but two
+    -- UTF-16 code units - and over the sharp s. Selecting zzz, the furthest step
+    -- back, is what pins that walk; a rule that subtracted one code unit for the
+    -- dragon instead of two would select "ed " here and pass every other spec.
+    it("selectCaptureGroup lands on a named group asked for after a later one", function()
+        local selection
+        local pattern = "^(?<zzz>\\w+) (?<mmm>\\S+) (?<aaa>\\w+)$"
+
+        local id = tempRegexTrigger(pattern, function()
+            selectCaptureGroup("zzz")
+            selection = getSelection()
+            deselect()
+        end, 1)
+        finally(function() if type(id) == "number" and id > 0 then killTrigger(id) end end)
+
+        feedTriggers("\nzed 🐉ß alf\n")
+
+        assert.are.equal("zed", selection)
+        killTrigger(id)
+    end)
+
     -- selectCaptureGroup by name selects correct text
     it("selectCaptureGroup by name selects the right text", function()
         local selection_first, selection_second
@@ -315,6 +381,67 @@ describe("PCRE regex cases with tempRegexTrigger", function()
 
         assert.are.equal("Hello", selection_first)
         assert.are.equal("World", selection_second)
+        killTrigger(id)
+    end)
+
+    -- selecting a later group must leave the stored full match untouched
+    it("selectCaptureGroup by number leaves the other captures alone", function()
+        local later, full
+        local id = tempRegexTrigger("^(\\w+) (\\w+)$", function()
+            selectCaptureGroup(3)
+            later = getSelection()
+            deselect()
+            selectCaptureGroup(1)
+            full = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nHello World\n")
+
+        assert.are.equal("World", later)
+        assert.are.equal("Hello World", full)
+        killTrigger(id)
+    end)
+
+    it("a group number past the last capture returns -1 and keeps the selection", function()
+        local past, zero, still
+        local id = tempRegexTrigger("^(\\w+) (\\w+)$", function()
+            selectCaptureGroup(2)
+            past = selectCaptureGroup(4)
+            zero = selectCaptureGroup(0)
+            still = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nHello World\n")
+
+        assert.are.equal(-1, past)
+        assert.are.equal(-1, zero)
+        assert.are.equal("Hello", still)
+        killTrigger(id)
+    end)
+
+    -- a group that was captured answers whether it could be selected on the
+    -- line under the cursor: 1 on the trigger's line, 0 on a line too short for it
+    it("selectCaptureGroup answers 1 when it selects and 0 when the line under the cursor is too short", function()
+        local selected, selection, shortLine, refused
+        local id = tempRegexTrigger("^SpecSelectCaptureGroupAnswer (\\w+)$", function()
+            local line = getLineNumber()
+            selected = selectCaptureGroup(2)
+            selection = getSelection()
+            deselect()
+            moveCursor(0, line - 1)
+            shortLine = getCurrentLine()
+            refused = selectCaptureGroup(2)
+            moveCursor(0, line)
+        end, 1)
+
+        feedTriggers("\nx\nSpecSelectCaptureGroupAnswer payload\n")
+
+        assert.are.equal(1, selected)
+        assert.are.equal("payload", selection)
+        assert.are.equal("x", shortLine)
+        assert.are.equal(0, refused)
         killTrigger(id)
     end)
 
@@ -420,6 +547,27 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- a group on the branch the alternation did not take has no capture at all,
+    -- as opposed to an empty one
+    it("leaves out a named group that took no part in the match", function()
+        local snapshot = {}
+        local pattern = "^alt (?:(?<left>aaa)|(?<right>bbb))$"
+
+        local id = tempRegexTrigger(pattern, function()
+            snapshot = {left = matches["left"], right = matches["right"], whole = matches[1]}
+        end, 1)
+        -- killed from here rather than after the assertions: a trigger that
+        -- never fired is what the first of them catches, and a kill they skip
+        -- leaves it live for the specs that follow
+        finally(function() killTrigger(id) end)
+
+        feedTriggers("\nalt bbb\n")
+
+        assert.are.equal("alt bbb", snapshot.whole, "the trigger should have matched at all")
+        assert.are.equal("bbb", snapshot.right)
+        assert.is_nil(snapshot.left)
+    end)
+
     -- no match
     it("doesnt falsely match a non matching line", function()
         local send = spy.on(_G, "send")
@@ -435,5 +583,196 @@ describe("PCRE regex cases with tempRegexTrigger", function()
 
         assert.spy(send).was_not_called()
         killTrigger(id)
-    end)    
+    end)
+
+    -- Every match of a pattern holds the pattern's fixed text, which lets a
+    -- line without that text be dismissed before pcre2 is asked. The text is
+    -- searched for exactly as written, so what counts as fixed has to leave
+    -- out anything an inline option, a quantifier, an alternation or an escape
+    -- could make the match do without
+    describe("fixed text a match has to contain", function()
+        local ids
+
+        before_each(function()
+            ids = {}
+        end)
+
+        after_each(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+        end)
+
+        local function regexTrigger(pattern, fn)
+            local id = tempRegexTrigger(pattern, fn)
+            table.insert(ids, id)
+            return id
+        end
+
+        it("holds a case sensitive pattern to the case it was written in", function()
+            local fired = 0
+            regexTrigger("Mudlet rocks", function() fired = fired + 1 end)
+
+            feedTriggers("\nmudlet rocks\n")
+            assert.are.equal(0, fired)
+
+            feedTriggers("\nyes, Mudlet rocks\n")
+            assert.are.equal(1, fired)
+        end)
+
+        it("lets a caseless pattern match text in another case", function()
+            local fired = 0
+            regexTrigger("(?i)^mudlet rocks$", function() fired = fired + 1 end)
+
+            feedTriggers("\nMUDLET ROCKS\n")
+
+            assert.are.equal(1, fired)
+        end)
+
+        it("does not require the text of an optional group", function()
+            local seen = {}
+            regexTrigger("^HP:(?: critically low)? (\\d+)$", function() table.insert(seen, matches[2]) end)
+
+            feedTriggers("\nHP: 42\nHP: critically low 3\n")
+
+            assert.are.same({"42", "3"}, seen)
+        end)
+
+        it("does not require the text of one branch of an alternation", function()
+            local seen = {}
+            regexTrigger("(?:HP|MP): (\\d+)", function() table.insert(seen, matches[2]) end)
+
+            feedTriggers("\nMP: 7\nHP: 9\n")
+
+            assert.are.same({"7", "9"}, seen)
+        end)
+
+        it("does not require a character its quantifier lets the match leave out", function()
+            local seen = {}
+            regexTrigger("colou?r", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^ab{0}c$", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^(?:xy)*z$", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^(?:a(bcd))?qrs$", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^ab+c$", function() table.insert(seen, matches[1]) end)
+
+            feedTriggers("\ncolor\ncolour\nac\nz\nqrs\nabbbc\n")
+
+            assert.are.same({"color", "colour", "ac", "z", "qrs", "abbbc"}, seen)
+        end)
+
+        it("reads a POSIX class and an escaped dot for what they are", function()
+            local seen = {}
+            regexTrigger("^[[:alpha:]]+ tells you '(.+)'$", function() table.insert(seen, matches[2]) end)
+            regexTrigger("^a\\.b$", function() table.insert(seen, matches[1]) end)
+
+            feedTriggers("\nBob tells you 'hi'\na.b\naxb\n")
+
+            assert.are.same({"hi", "a.b"}, seen)
+        end)
+
+        it("does not mistake the argument of an escape for literal text", function()
+            local seen = {}
+            regexTrigger("\\x41 team (\\d+)", function() table.insert(seen, matches[2]) end)
+            regexTrigger("^(\\w+) and \\1$", function() table.insert(seen, matches[2]) end)
+            regexTrigger("^\\Qa.b\\E (\\d+)$", function() table.insert(seen, matches[2]) end)
+
+            feedTriggers("\nA team 5\nfoo and foo\na.b 6\n")
+
+            assert.are.same({"5", "foo", "6"}, seen)
+        end)
+
+        it("reads a brace that starts no quantifier as the brace itself", function()
+            local seen = {}
+            regexTrigger("^{OOC|IC} (\\w+) says", function() table.insert(seen, "alternation") end)
+            regexTrigger("^{(?i)x} hello world$", function() table.insert(seen, "caseless") end)
+            regexTrigger("a{[}]bc", function() table.insert(seen, "class") end)
+            regexTrigger("{[^}]}ab", function() table.insert(seen, "negated class") end)
+            regexTrigger("^ab{2}c$", function() table.insert(seen, "quantifier") end)
+            regexTrigger("^\\p{Lu}ello$", function() table.insert(seen, "property") end)
+
+            feedTriggers("\n{OOC Bob waves\n{X} HELLO WORLD\na{}bc\n{x}ab\nabbc\nHello\n")
+
+            assert.are.same({"alternation", "caseless", "class", "negated class", "quantifier", "property"}, seen)
+        end)
+
+        it("reads a class and an \\E the way pcre2 does", function()
+            local seen = {}
+            regexTrigger("^[\\Qa]\\E]bc$", function() table.insert(seen, "quoted") end)
+            regexTrigger("^xyz\\E?$", function() table.insert(seen, "stray end") end)
+
+            feedTriggers("\nabc\nxy\n")
+
+            assert.are.same({"quoted", "stray end"}, seen)
+        end)
+
+        -- pcre2 reads UTF-8 that leaves an unpaired surrogate out, which puts
+        -- the text on either side of it together
+        it("matches text an unpaired surrogate splits in the line", function()
+            local fired = false
+            regexTrigger("abcd", function() fired = true end)
+            setConfig("specialForceMXPProcessorOn", true)
+            finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+
+            feedTriggers("\nzqab&#xD800;cd\n")
+
+            assert.is_true(fired)
+        end)
+
+        it("matches a named group in each of its spellings", function()
+            local seen = {}
+            regexTrigger("^(?<who>\\w+) tells you$", function() table.insert(seen, matches.who) end)
+            regexTrigger("^(?P<who>\\w+) asks you$", function() table.insert(seen, matches.who) end)
+            regexTrigger("^(?'who'\\w+) shouts$", function() table.insert(seen, matches.who) end)
+
+            feedTriggers("\nAnn tells you\nBen asks you\nCal shouts\n")
+
+            assert.are.same({"Ann", "Ben", "Cal"}, seen)
+        end)
+
+        -- The named groups come out of pcre2 in alphabetical order, so their
+        -- positions are read out of order, after the numbered ones
+        it("places every capture of a multibyte match, in whichever order they are read", function()
+            local seen = {}
+            regexTrigger("^(?<zed>\\S+) (?<alpha>\\S+) (\\d+)$", function()
+                for _, group in ipairs({"alpha", "zed", 2, 3, 4}) do
+                    selectCaptureGroup(group)
+                    table.insert(seen, (getSelection()))
+                    deselect()
+                end
+            end)
+
+            feedTriggers("\nćevapi 🐉Ω 12\n")
+
+            assert.are.same({"🐉Ω", "ćevapi", "ćevapi", "🐉Ω", "12"}, seen)
+        end)
+
+        -- Below a few dozen triggers that can be ruled out by their text every
+        -- trigger sees every line; above it a line goes only to the ones whose
+        -- text it holds, and a regex has to stay among the ones that see it all
+        it("fires among enough triggers for lines to be filtered by their text", function()
+            for i = 1, 40 do
+                table.insert(ids, tempTrigger("prescan filler " .. i, function() end))
+            end
+            local seen = {}
+            regexTrigger("^prescan probe (\\d+)$", function() table.insert(seen, matches[2]) end)
+            regexTrigger("(?i)^prescan caseless (\\d+)$", function() table.insert(seen, matches[2]) end)
+
+            feedTriggers("\nprescan probe 1\nPRESCAN CASELESS 2\nprobe 3\n")
+
+            assert.are.same({"1", "2"}, seen)
+        end)
+    end)
+end)
+
+describe("the bundled PCRE binding", function()
+
+    -- Mudlet moved to lrexlib-pcre2, whose module is rex_pcre2; a script written
+    -- against the older binding still finds one because the same module is also
+    -- bound to the rex_pcre name
+    it("is reachable under the old rex_pcre name (#8599)", function()
+        assert.are.equal("table", type(rex_pcre))
+        assert.are.equal(package.loaded["rex_pcre2"], rex_pcre)
+        assert.are.equal("b", rex_pcre.match("abc", "b"))
+    end)
+
 end)

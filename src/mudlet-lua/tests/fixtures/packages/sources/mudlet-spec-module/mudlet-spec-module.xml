@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-module alias</name>
+			<script>echo("mudlet-spec-module alias fired\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-module$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>mudletSpecModuleScript</name>
+			<packageName></packageName>
+			<script>mudletSpecModuleRuns = (mudletSpecModuleRuns or 0) + 1</script>
+			<eventHandlerList />
+		</Script>
+	</ScriptPackage>
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

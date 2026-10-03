@@ -19,6 +19,7 @@
 
 #include <SecureStringUtils.h>
 #include <QtTest/QtTest>
+#include <QTemporaryDir>
 #include <QVersionNumber>
 #include <string>
 
@@ -43,10 +44,20 @@ private slots:
     void testXMLImportProxyPasswordLogic();
     void testConveniencePasswordMethods();
     void cleanupTestCase();
+
+private:
+    QTemporaryDir mConfigDir;
 };
 
 void SecureStringUtilsTest::initTestCase()
 {
+    // Per-profile encryption keys are filed under QStandardPaths::AppConfigLocation,
+    // which for a QTEST_MAIN program is $HOME/.config/SecureStringUtilsTest - so
+    // without this the suite leaves key material in the home directory of whoever
+    // runs it. Same recipe as CredentialManagerTest, and like it this only takes
+    // effect where QStandardPaths honours XDG.
+    QVERIFY(mConfigDir.isValid());
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 }
 
 void SecureStringUtilsTest::testProfileBasedEncryption()
@@ -143,22 +154,17 @@ void SecureStringUtilsTest::testSecureMemoryClearing()
     QString testString = "sensitive_data";
     QString originalContent = testString;
     
-    // Clear the string
     SecureStringUtils::secureStringClear(testString);
-    
-    // String should be empty after clearing
     QVERIFY(testString.isEmpty());
     QVERIFY(testString != originalContent);
-    
-    // Test QByteArray clearing
+
     QByteArray testArray = "sensitive_bytes";
     QByteArray originalArray = testArray;
-    
+
     SecureStringUtils::secureByteArrayClear(testArray);
     QVERIFY(testArray.isEmpty());
     QVERIFY(testArray != originalArray);
 
-    // Test std::string clearing
     std::string testStdString = "sensitive_std_data";
     std::string originalStdString = testStdString;
 

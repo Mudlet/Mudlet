@@ -38,8 +38,8 @@ class HostManager
     {
     public:
         Iter(HostManager* mgr, bool top);
-        bool operator!= (const Iter& other) const;
-        bool operator== (const Iter& other) const;
+        bool operator!=(const Iter& other) const;
+        bool operator==(const Iter& other) const;
         Iter& operator++();
         QSharedPointer<Host> operator*();
 
@@ -49,7 +49,13 @@ class HostManager
 
 
 public:
-    HostManager() = default;
+    Q_DISABLE_COPY(HostManager)
+    HostManager();
+    ~HostManager();
+
+    // A value member of the application object, so valid from that object's constructor body until its
+    // members are torn down; null outside that.
+    static HostManager* self() { return smpSelf; }
 
     Host* getHost(const QString& hostname);
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
@@ -61,8 +67,12 @@ public:
     Iter begin() { return Iter(this, true); }
     Iter end() { return Iter(this, false); }
     bool hostLoaded(const QString& hostname) const;
+    // A copy to walk while doing anything that may open or close a profile
+    QList<QSharedPointer<Host>> hostList() const { return mHostPool.values(); }
 
 private:
+    inline static HostManager* smpSelf = nullptr;
+
     HostMap mHostPool;
 };
 

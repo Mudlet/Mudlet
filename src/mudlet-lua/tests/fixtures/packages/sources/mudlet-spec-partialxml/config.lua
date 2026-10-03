@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-partialxml]]
+author = [[Mudlet test suite]]
+title = [[Fixture whose XML stops part-way through, for Package_spec.lua]]
+version = [[1.0]]
+description = [[A valid archive holding a Mudlet XML file that is complete up to one alias and one script and then stops mid-element, so those items are imported and the import still reports failure.]]

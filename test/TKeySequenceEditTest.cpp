@@ -20,10 +20,36 @@
 #include "TKeySequenceEdit.h"
 #include "utils.h"
 
+#include <QApplication>
 #include <QLineEdit>
 #include <QSignalSpy>
 #include <QVBoxLayout>
 #include <QtTest/QtTest>
+
+static constexpr const char* activationUnavailableMessage = "the window never became active, so focus traversal cannot be exercised - this "
+                                                            "display has no window manager. Run the suite through ctest, or set "
+                                                            "QT_QPA_PLATFORM=offscreen, or start a window manager such as openbox.";
+
+// Shared by the two traversal cases, because QSKIP and QFAIL only work from the
+// test function itself and the two must not drift apart. ctest sets
+// MUDLET_REQUIRE_WINDOW_ACTIVATION because every display it runs against can
+// activate a window, so a skip there would be hiding a regression rather than
+// reporting an environment - the same floor MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK
+// puts under the media tests. qWaitForWindowActive() only polls, so a transient
+// denial of activation timed the wait out on the macOS CI leg (#10116) - keep
+// asking, as DetachedWindowMenuShortcutsTest already does.
+#define REQUIRE_WINDOW_ACTIVATION(window)                                                                                                                                                              \
+    do {                                                                                                                                                                                               \
+        if (!QTest::qWaitFor([&]() {                                                                                                                                                                   \
+                (window).activateWindow();                                                                                                                                                             \
+                return QApplication::activeWindow() == &(window);                                                                                                                                      \
+            })) {                                                                                                                                                                                      \
+            if (qEnvironmentVariableIsSet("MUDLET_REQUIRE_WINDOW_ACTIVATION")) {                                                                                                                       \
+                QFAIL(activationUnavailableMessage);                                                                                                                                                   \
+            }                                                                                                                                                                                          \
+            QSKIP(activationUnavailableMessage);                                                                                                                                                       \
+        }                                                                                                                                                                                              \
+    } while (false)
 
 // Pins the accessibility behaviour that TKeySequenceEdit adds on top of the
 // stock QKeySequenceEdit (#8873). Key events are sent to the inner QLineEdit
@@ -155,7 +181,12 @@ private slots:
 
     // The traversal tests need real focus movement: the capture is committed
     // by the focus-out that the traversal causes, mirroring how the stock
-    // widget commits in focusOutEvent() when Tab moves focus away.
+    // widget commits in focusOutEvent() when Tab moves focus away. Qt only
+    // delivers those focus events while the window is active, and nothing
+    // activates a window on an X server without a window manager, so on such a
+    // display these two cases are skipped rather than failed (#9575). Under
+    // ctest they never get that far: the offscreen platform is pinned there,
+    // and it synthesises activation.
     void shiftBacktabCommitsCaptureAndMovesFocusBackwards()
     {
         QWidget window;
@@ -165,7 +196,7 @@ private slots:
         layout->addWidget(neighbour);
         layout->addWidget(edit);
         window.show();
-        QVERIFY(QTest::qWaitForWindowActive(&window));
+        REQUIRE_WINDOW_ACTIVATION(window);
 
         edit->setFocus();
         auto* lineEdit = edit->findChild<QLineEdit*>();
@@ -191,7 +222,7 @@ private slots:
         layout->addWidget(edit);
         layout->addWidget(neighbour);
         window.show();
-        QVERIFY(QTest::qWaitForWindowActive(&window));
+        REQUIRE_WINDOW_ACTIVATION(window);
 
         edit->setFocus();
         auto* lineEdit = edit->findChild<QLineEdit*>();

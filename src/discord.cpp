@@ -25,6 +25,9 @@
 
 #include <QtDebug>
 #include <QHash>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
@@ -59,6 +62,10 @@ Discord::Discord(QObject* parent)
           {"asteria", {"asteriamud.com"}},
   }
 {
+    // Before the library probe below, which returns early when the Discord RPC
+    // library is absent - self() must still answer in that case.
+    smpSelf = this;
+
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
     mpLibrary.reset(new QLibrary(qsl("discord-rpc64")));
@@ -109,12 +116,12 @@ Discord::Discord(QObject* parent)
     // call initializeRpc() on demand when there's an active host.
 
     // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         Q_ASSERT(mudlet::self());
         connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
 
         // process Discord callbacks every 50ms once we are all set up:
-        startTimer(50);
+        startTimer(50ms);
     });
 }
 
@@ -150,6 +157,8 @@ Discord::~Discord()
 
     // Clear out the localDiscordPresence collection:
     mPresencePtrs.clear();
+
+    smpSelf = nullptr;
 }
 
 // For all the setters below the caller is supposed to check that they have the
@@ -293,7 +302,7 @@ void Discord::handleDiscordReady(const DiscordUser* request)
     // Don't call UpdatePresence directly from here - re-entering the Discord
     // library from a callback freezes Mudlet. Instead, signal the timer to
     // pick it up on the next tick.
-    mudlet::self()->mDiscord.mPendingPresenceUpdate = true;
+    self()->mPendingPresenceUpdate = true;
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
@@ -520,8 +529,9 @@ QString Discord::deduceGameName(const QString& address)
             // WoTMUD type case - so take remaining term in the middle of original
             otherName = otherName.split(QChar('.')).last();
             break;
-        } else if (otherName.startsWith(QLatin1String("www."))) {
-            // Error(?) in entering details so that a web-server name was give:
+        }
+        if (otherName.startsWith(QLatin1String("www."))) {
+            // Error(?) in entering details so that a web-server name was given:
             otherName = otherName.split(QChar('.')).last();
             break;
         }
@@ -684,55 +694,55 @@ DiscordRichPresence localDiscordPresence::convert() const
 void localDiscordPresence::setDetailText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mDetails, sizeof(mDetails), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mDetails, sizeof(mDetails), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setStateText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mState, sizeof(mState), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mState, sizeof(mState), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mLargeImageText, sizeof(mLargeImageText), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mLargeImageText, sizeof(mLargeImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageKey(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mLargeImageKey, sizeof(mLargeImageKey), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mLargeImageKey, sizeof(mLargeImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSmallImageText, sizeof(mSmallImageText), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mSmallImageText, sizeof(mSmallImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageKey(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setJoinSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mJoinSecret, sizeof(mJoinSecret), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mJoinSecret, sizeof(mJoinSecret), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setMatchSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mMatchSecret, sizeof(mMatchSecret), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mMatchSecret, sizeof(mMatchSecret), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSpectateSecret(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSpectateSecret, sizeof(mSpectateSecret), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mSpectateSecret, sizeof(mSpectateSecret), utf8Data.constData(), utf8Data.size());
 }
 
 bool Discord::usingMudletsDiscordID(Host* pHost) const

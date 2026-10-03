@@ -25,6 +25,8 @@
 
 
 #include "TAreaGridIndex.h"
+#include "TAreaLodExitIndex.h"
+#include "TAreaSpanIndex.h"
 #include "TAreaZLevelIndex.h"
 #include "TMap.h"
 
@@ -34,6 +36,9 @@
 #include <QMap>
 #include <QPair>
 #include <QVector3D>
+
+class QJsonArray;
+class QJsonObject;
 
 class TRoomDB;
 
@@ -53,25 +58,69 @@ public:
     const QSet<int>& getAreaRooms() const { return rooms; }
     const QList<int> getAreaExitRoomIds() const { return mAreaExits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
-    // Atomically updates both the Z-level index and the grid index when a room
-    // moves to a new position.  All callers should use this instead of calling
-    // moveRoomZ and moveRoomInGridIndex separately.
-    void moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY)
-    {
-        mZLevelIndex.moveRoom(id, fromZ, toZ);
-        mGridIndex.moveRoom(id, fromZ, fromX, fromY, toZ, toX, toY);
-    }
+    // Keeps the Z-level index, the grid index and the area extremes in step
+    // when a room this area already holds moves to new coordinates; callers
+    // must use this rather than updating any of them on their own.  A room
+    // joining or leaving the area, including one being deleted, goes through
+    // addRoom()/removeRoom() instead.
+    void moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY);
     // Returns the set of room IDs on the given Z level.  The returned reference
     // is stable for the lifetime of the index (an internal empty set is used
     // for Z levels with no rooms), so it can be safely iterated immediately.
     const QSet<int>& getRoomsForZ(int z) const { return mZLevelIndex.roomsForZ(z); }
     // Returns a const reference to the grid index for read-only access by the renderer.
     const TAreaGridIndex& getGridIndex() const { return mGridIndex; }
+    // A custom line can cross the viewport from a room no viewport query returns.
+    // May be a superset: exit removals that skip calcRoomDimensions() leave the entry until
+    // removeRoom() or calcSpan(), costing a cull test rather than a missing line.
+    const QSet<int>& getCustomLineRoomsForZ(int z) const { return mCustomLineIndex.roomsForZ(z); }
+    // Rooms whose exits can still draw in the reduced-detail tier once exits spanning <= maxSkippableSpan
+    // (must be >= 1) room units per axis are dropped. Excludes custom lines: add getCustomLineRoomsForZ().
+    // May be a superset but never misses a room: see TAreaLodExitIndex.
+    QList<int> lodVisibleExitRooms(int z, int maxSkippableSpan) const;
+    // Lets the renderer compare against a viewport query without building the list.
+    qsizetype lodVisibleExitRoomCount(int z, int maxSkippableSpan) const;
+    // A rebuild is a pass over every room; callers that know which room changed use the ones below.
+    void markLodExitIndexDirty() { mLodExitIndex.markDirty(); }
+    // Bumped whenever a room joins or leaves this area (addRoom(), removeRoom(),
+    // and auditRooms() rewriting the set wholesale). Cheap enough for a caller
+    // to compare against a value it cached last time, rather than a query
+    // costing a scan of every room in the area - the renderer's room-ID digit
+    // count uses it this way rather than rescanning every rooms() every frame.
+    // Drawn from a counter shared by every TArea rather than restarting at 0
+    // per instance, so a cache keyed on this version alone cannot mistake a
+    // new TArea for the one a recycled area ID used to name: createNewAreaID()
+    // hands out the lowest free ID, so a deleted and remade area, or a second
+    // map loaded over the first, can otherwise reach the exact version a stale
+    // cache entry already holds.
+    // TArea::readJsonArea() and TMap::restore() fill rooms directly, without a
+    // bump - safe only because both run on a freshly constructed TArea whose
+    // seeded version (below) is itself already unused by anything a cache could
+    // be holding, so it still reads as "changed" the first time anyone compares
+    // against it.
+    quint32 getRoomsVersion() const { return mRoomsVersion; }
+    void bumpRoomsVersion() { mRoomsVersion = ++smRoomsVersionCounter; }
+    quint32 lodExitIndexRebuildCount() const { return mLodExitIndex.rebuildCount(); }
+    // After the room's own 2D-plane exits or exit stubs changed.
+    void updateLodExitRoom(int roomId);
+    // Also re-files rooms with exits to this one, whose spans change when it moves or joins this area.
+    void updateLodExitRoomAndEntrances(int roomId);
+    // Rooms whose exits to it now lead to another area are left to the caller: the room still
+    // claims this area when this runs.
+    void dropLodExitRoom(int roomId);
+    // Re-files rooms with exits to roomId. Call after moving a room or changing its area, once settled.
+    void refreshLodExitEntrances(int roomId);
+    void addRoomWithCustomLines(int id, int z);
+    // Not the counterpart of removeRoom(): the room stays in every other index.
+    void removeRoomWithCustomLines(int id, int z);
     void calcSpan();
-    void fast_calcSpan(int);
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
-    void removeRoom(int, bool deferAreaRecalculations = false);
+    // Recomputes the area exit records of this area's rooms that have an exit
+    // to the given room, which is what changes when that room joins or leaves
+    // this area.
+    void refreshAreaExitsToRoom(int);
+    void removeRoom(int);
     // List of coordinate triples (x,y,z) where there are multiple rooms
     QList<std::tuple<int, int, int>> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
@@ -108,7 +157,7 @@ public:
     QMap<int, int> xmaxForZ;
     QMap<int, int> yminForZ;
     QMap<int, int> ymaxForZ;
-    QList<int> zLevels; // The z-levels that ARE used, not guaranteed to be in order
+    QList<int> zLevels; // The z-levels that have rooms, in ascending order
     bool gridMode = false;
     bool isZone = false;
     int zoneAreaRef = 0;
@@ -139,6 +188,10 @@ private:
     QVector3D readJson3DCoordinates(const QJsonObject&, const QString&) const;
     void writeJson3DCoordinates(QJsonObject&, const QString&, const QVector3D&) const;
 
+    void publishSpan();
+    void publishSpanForZ(int z);
+    void publishOverallSpan();
+
     QList<QByteArray> convertImageToBase64Data(const QPixmap&) const;
     QPixmap convertBase64DataToImage(const QList<QByteArray>&) const;
 
@@ -156,6 +209,33 @@ private:
     TAreaZLevelIndex mZLevelIndex;
     // Per-(z,x,y) grid index for efficient viewport queries in grid mode.
     TAreaGridIndex mGridIndex;
+    // Rooms a viewport query can miss yet still owe pixels for.
+    TAreaZLevelIndex mCustomLineIndex;
+    // Source of truth for the public extremes above (min_x, xminForZ, zLevels
+    // and friends), which stay plain members because the map file format
+    // stores them and a lot of code reads them directly.
+    TAreaSpanIndex mSpanIndex;
+    // Rebuilt lazily in const queries: the renderer holds a const TArea*, and most maps never
+    // show the reduced-detail tier.
+    mutable TAreaLodExitIndex mLodExitIndex;
+    // See getRoomsVersion()/bumpRoomsVersion(). Seeded from the shared counter
+    // at construction too, not just on every bump, so two TArea objects are
+    // never even momentarily stamped with the same version - including the
+    // gap between a new TArea existing and its first bumpRoomsVersion() call.
+    quint32 mRoomsVersion = ++smRoomsVersionCounter;
+    static inline quint32 smRoomsVersionCounter = 0;
+
+    // 16 bytes, so a lookup costs one cache line where the room database costs several.
+    struct LodRoomPos
+    {
+        qint32 x = 0;
+        qint32 y = 0;
+        int area = 0;
+        bool present = false;
+    };
+
+    void rebuildLodExitIndex() const;
+    int lodExitSpanOfRoom(const TRoom*, const QList<LodRoomPos>*) const;
 
     // In use this has a minimum of 3.0 and a default of 20.0, the latter will
     // be applied in the constructor initialisation list:

@@ -87,24 +87,30 @@ set(mudlet_SRCS
     EditorMoveItemCommand.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
+    EventLoopPump.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
     Host.cpp
+    HostDialogs.cpp
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
     LabelInteractionHandler.cpp
     LuaInterface.cpp
+    LuaLiteral.cpp
     main.cpp
     mapInfoContributorManager.cpp
     MiddleMousePanHandler.cpp
     MMCPClient.cpp
     MMCPServer.cpp
     mudlet.cpp
+    MudletApp.cpp
     MudletInstanceCoordinator.cpp
+    MudletMedia.cpp
+    MudletReplay.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -116,19 +122,27 @@ set(mudlet_SRCS
     SecureStringUtils.cpp
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
+    SherpaRecognizer.cpp
     ShortcutsManager.cpp
+    SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
+    SpeechAudioCapture.cpp
+    SpeechRecognizerFactory.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
     TAreaGridIndex.cpp
+    TAreaLodExitIndex.cpp
+    TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
+    TConsoleModel.cpp
     TDebug.cpp
+    TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
@@ -139,13 +153,16 @@ set(mudlet_SRCS
     TFeatureCallout.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
+    TGlyphCache.cpp
     THyperlinkCompactManager.cpp
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIrcClient.cpp
     TKey.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
+    TLabelModel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TLuaInterpreterDiscord.cpp
@@ -155,6 +172,7 @@ set(mudlet_SRCS
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
+    TLuaInterpreterSpeechToText.cpp
     TLuaInterpreterUI.cpp
     TMainConsole.cpp
     TMap.cpp
@@ -175,6 +193,7 @@ set(mudlet_SRCS
     TMxpFormattingTagsHandler.cpp
     TMxpFrameManager.cpp
     TMxpFrameTagHandler.cpp
+    TMxpFrameWidgets.cpp
     TMxpHRTagHandler.cpp
     TMxpImageTagHandler.cpp
     TMxpLinkTagHandler.cpp
@@ -193,11 +212,14 @@ set(mudlet_SRCS
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
+    TriggerMatchPool.cpp
     TriggerUnit.cpp
+    TTriggerPrescan.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
     TStringUtils.cpp
@@ -211,7 +233,10 @@ set(mudlet_SRCS
     TTrigger.cpp
     TUiTour.cpp
     TVar.cpp
+    UntrustedText.cpp
+    utils.cpp
     VarUnit.cpp
+    VoskRecognizer.cpp
     WideComboBox.cpp
     XMLexport.cpp
     XMLimport.cpp)
@@ -229,6 +254,32 @@ if(APPLE)
       COMPILE_OPTIONS "-fobjc-arc"
   )
   endif()
+
+  # Native macOS microphone permission handling for speech recognition. Only
+  # the .mm is appended here: appending the header would achieve nothing, since
+  # the set(mudlet_HDRS ...) above already lists it and would overwrite this
+  # anyway. Only the .mm is compiled, so only it carries the language settings.
+  list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
+  set_source_files_properties(
+    MacMicrophonePermission.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
+
+  # The macOS speech recognition backend. Unlike MacMicrophonePermission its
+  # class declares Q_OBJECT, so AUTOMOC must see the header - but only where
+  # the .mm that defines the class is also built. Leaving it in the
+  # unconditional mudlet_HDRS set moc'd it on every platform and left Linux and
+  # Windows linking against a vtable nothing defined. The header is appended
+  # after that set() instead, since this block runs before it.
+  list(APPEND mudlet_SRCS AppleSpeechRecognizer.mm)
+  set_source_files_properties(
+    AppleSpeechRecognizer.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -315,24 +366,31 @@ set(mudlet_HDRS
     EditorToggleActiveCommand.h
     EditorUndoStack.h
     enums.h
+    EventLoopPump.h
     exitstreewidget.h
     FileOpenHandler.h
     FontManager.h
     GifTracker.h
     GMCPAuthenticator.h
     Host.h
+    HostDialogs.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
     LabelInteractionHandler.h
     LuaInterface.h
+    LuaLiteral.h
+    MacMicrophonePermission.h
     mapInfoContributorManager.h
     MiddleMousePanHandler.h
     MMCP.h
     MMCPClient.h
     MMCPServer.h
     mudlet.h
+    MudletApp.h
     MudletInstanceCoordinator.h
+    MudletMedia.h
+    MudletReplay.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -344,8 +402,13 @@ set(mudlet_HDRS
     SecureStringUtils.h
     SelectionRectangleHandler.h
     SentryWrapper.h
+    SherpaRecognizer.h
     ShortcutsManager.h
+    SignInStoreReconciler.h
     SingleLineTextEdit.h
+    SpeechAudioCapture.h
+    SpeechRecognizer.h
+    SpeechRecognizerFactory.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -353,12 +416,17 @@ set(mudlet_HDRS
     TAlias.h
     TArea.h
     TAreaGridIndex.h
+    TAreaLodExitIndex.h
+    TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
     TBuffer.h
     TCommandLine.h
     TConsole.h
+    TConsoleModel.h
+    TConsoleModelNotifier.h
     TDebug.h
+    TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h
@@ -371,14 +439,17 @@ set(mudlet_HDRS
     TFlipButton.h
     TForkedProcess.h
     TGameDetails.h
+    TGlyphCache.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TimerUnit.h
+    TIrcClient.h
     TKey.h
     TKeySequenceEdit.h
     TLabel.h
+    TLabelModel.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -405,6 +476,7 @@ set(mudlet_HDRS
     TMxpFormattingTagsHandler.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
+    TMxpFrameWidgets.h
     TMxpHRTagHandler.h
     TMxpImageTagHandler.h
     TMxpLinkTagHandler.h
@@ -422,14 +494,18 @@ set(mudlet_HDRS
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TPrintSink.h
     TrailingWhitespaceMarker.h
     Tree.h
     TriggerHighlighter.h
+    TriggerMatchPool.h
     TriggerUnit.h
+    TTriggerPrescan.h
     TRoom.h
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
     TStringUtils.h
@@ -444,12 +520,23 @@ set(mudlet_HDRS
     TTrigger.h
     TUiTour.h
     TVar.h
+    TWindowRegistry.h
+    UntrustedText.h
     utils.h
     VarUnit.h
+    VoskRecognizer.h
     widechar_width.h
     WideComboBox.h
+    widgetutils.h
     XMLexport.h
     XMLimport.h)
+
+if(APPLE)
+  # Appended rather than listed above: AUTOMOC generates a moc file for every
+  # Q_OBJECT header it is given, and AppleSpeechRecognizer is only compiled on
+  # Apple.
+  list(APPEND mudlet_HDRS AppleSpeechRecognizer.h)
+endif()
 
 
 if(USE_UPDATER)
@@ -489,28 +576,6 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
-# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
-macro(set_alternate_linker linker)
-  find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
-  if(LINKER_EXECUTABLE)
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.1.0 AND "${USE_ALTERNATE_LINKER}" STREQUAL "mold")
-      # LINKER_EXECUTABLE will be a full path to ld.mold, so we replace the end of the path, resulting in the relative
-      # libexec/mold dir, and tell GCC to look there first for an override version of executables, in this case, ld
-      string(REPLACE "bin/ld.mold" "libexec/mold" PATH_TO_LIBEXEC_MOLD ${LINKER_EXECUTABLE})
-      add_link_options("-B${PATH_TO_LIBEXEC_MOLD}")
-    else()
-      add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
-    endif()
-  else()
-    set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker" FORCE)
-  endif()
-endmacro()
-
-set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
-if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
-  set_alternate_linker(${USE_ALTERNATE_LINKER})
-endif()
-
 if(NOT WIN32)
   include(cmake/EnableSanitizers.cmake)
 else()
@@ -524,6 +589,7 @@ find_package(Qt6 6.8.2 REQUIRED
                MultimediaWidgets
                Network
                OpenGL
+               Svg
                UiTools
                Widgets
                Concurrent)
@@ -540,6 +606,7 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::Multimedia
               Qt6::MultimediaWidgets
               Qt6::OpenGL
+              Qt6::Svg
               Qt6::UiTools
               Qt6::Widgets
               qt6keychain)
@@ -554,7 +621,9 @@ message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(PCRE2 REQUIRED)
+# 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
+# fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
+find_package(PCRE2 10.36 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 CONFIG REQUIRED)
@@ -591,6 +660,20 @@ add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_HDRS}
     ${mudlet_UIS}
 )
+
+mudlet_precompile_headers(${LIB_MUDLET_TARGET})
+# Objective-C++ would need a precompiled header of its own for three files
+set_source_files_properties(AppleSpeechRecognizer.mm MacMicrophonePermission.mm sparkleupdater.mm
+  PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+if(USE_UPDATER)
+  # Its own target, so it keeps plain ccache: the precompiled-header launcher
+  # tells ccache to ignore __DATE__ and __TIME__, which this file embeds to order
+  # test builds
+  add_library(mudlet_build_time OBJECT updater/ReleaseBuildTime.cpp)
+  set_target_properties(mudlet_build_time PROPERTIES AUTOMOC OFF)
+  target_link_libraries(mudlet_build_time PRIVATE Qt6::Gui)
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE $<TARGET_OBJECTS:mudlet_build_time>)
+endif()
 
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
@@ -632,6 +715,11 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   the single bytes of pure ASCII text:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_EUC_KR_PROCESSING)
 #
+# * Produce qDebug() messages about private/reserved ANSI CSI sequences that
+#   Mudlet does not interpret, e.g. the `\x1b[?25l` a game may send around each
+#   prompt to hide the cursor - which is frequent enough to be noisy:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_CSI_PROCESSING)
+#
 # * Produce qDebug() messages about the decoding of ANSI SGR sequences:
 #   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
 #
@@ -662,6 +750,10 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about the GMCP Char.Login authentication flow:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GMCP_AUTHENTICATION)
 
+# * Produce qDebug() messages about speech-to-text recognition, including
+#   hallucination filtering, partial/final results, and audio level monitoring:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_STT)
+
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
@@ -671,6 +763,20 @@ set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
 
+# AUTOMOC concatenates every moc_*.cpp into one mocs_compilation.cpp whose
+# include order it controls. With GCC 16's -Wsfinae-incomplete that trips false
+# positives: qmetatype.h's is_complete SFINAE trait is instantiated from one
+# moc file while types defined in a later moc file are still incomplete, so
+# defining them later warns. The generated TU is not hand-written code, so
+# silence the warning there rather than rearranging includes across moc files.
+# Scoped to GCC: -Wsfinae-incomplete is a GCC-only flag (GCC 15+), and GCC
+# silently ignores unknown -Wno- options on older versions, but Clang/MSVC
+# would diagnose the unknown flag.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/mocs_compilation.cpp"
+               APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
+endif()
+
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
 endif()
@@ -679,25 +785,48 @@ if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
 
+# APP_VERSION is PUBLIC because the functional tests link ${LIB_MUDLET_TARGET}
+# and check the version identity it reports.
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSION}")
+
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
-    APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+# Only on the file that reads it: ccache's base_dir cannot rewrite a path in a
+# definition, so on every file it would stop worktrees sharing any cache hits.
+set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY
+  COMPILE_DEFINITIONS LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
     target_include_directories(${LIB_MUDLET_TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
 endif()
 
+if(DEFINED ENV{QT_NO_SSL})
+  message(STATUS "Not including OpenSSL 3.x licence details as that library has been explicitly excluded from the build")
+else()
+  if (DEFINED ENV{CI} AND "$ENV{CI}" STREQUAL "true" )
+    # This is ONLY used to include the Licence details for the OpenSSL 3
+    # library - as such it only needs to/should be present for builds that
+    # "package" Mudlet i.e. installer builds (for MacOS and Windows) and
+    # AppImages (for Linux) in our CI procees all other builds will use a
+    # "system-provided" libssl.so.3 library and we do not then NEED to mention
+    # them in the "Third-party" libraries.
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OPENSSL3)
+    message(STATUS "Including OpenSSL 3.x licence details for a package build")
+  else()
+    message(STATUS "Not including OpenSSL 3.x licence details as this seem to be a local build")
+  endif()
+endif()
+
 # Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
 # qtkeychain's own header is stale (hardcoded to 0x000100), so the CMake package version is
 # the only reliable signal. Relevant since qtkeychain 0.17.0 changed the Windows credential
-# naming scheme (see CredentialManager::attemptCompatNamingMigration).
+# naming scheme (see the "pre-0.17 qtkeychain naming" stage in CredentialManager::retrievePassword).
 if(USE_OWN_QTKEYCHAIN)
   get_directory_property(QTKEYCHAIN_LINKED_VERSION
     DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain
@@ -761,8 +890,28 @@ endif (SYSINFO_INCLUDE_DIR)
 
 if(USE_UPDATER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_UPDATER)
-  target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif(USE_UPDATER)
+
+# Embed the LeakSanitizer suppression list into the binary so that
+# sanitizer-enabled builds (PTBs, testing AppImages) filter third-party noise
+# out of leak reports without needing LSAN_OPTIONS set at runtime; picked up
+# by __lsan_default_suppressions() in LsanHooks.cpp
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${mudlet_SOURCE_DIR}/asan-suppressions.txt")
+file(READ "${mudlet_SOURCE_DIR}/asan-suppressions.txt" MUDLET_LSAN_SUPPRESSIONS_CONTENT)
+string(REPLACE "\\" "\\\\" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+string(REPLACE "\"" "\\\"" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+string(REPLACE "\n" "\\n" MUDLET_LSAN_SUPPRESSIONS_CONTENT "${MUDLET_LSAN_SUPPRESSIONS_CONTENT}")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/LsanSuppressions.h.in" "${CMAKE_CURRENT_BINARY_DIR}/LsanSuppressions.h" @ONLY)
+target_include_directories(${LIB_MUDLET_TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+# LeakSanitizer resolves its hooks as weak symbols and a weak reference never
+# pulls a member out of a static archive, so they cannot live in
+# ${LIB_MUDLET_TARGET}: binaries that bring their own main() (the Qt Test ones,
+# via QTEST_MAIN) would link no suppressions at all. An OBJECT library puts the
+# definitions on the link line of every target that links it.
+add_library(mudlet_lsan_hooks OBJECT LsanHooks.cpp)
+target_include_directories(mudlet_lsan_hooks PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+set_target_properties(mudlet_lsan_hooks PROPERTIES AUTOMOC OFF POSITION_INDEPENDENT_CODE ON)
 
 if(USE_3DMAPPER)
   target_link_libraries(${LIB_MUDLET_TARGET} OpenGL::GLU)
@@ -779,7 +928,7 @@ target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
 add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
-target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET})
+target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
@@ -818,6 +967,15 @@ endif()
 
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+  # A normal link, not a weak one: Speech.framework has shipped with every
+  # macOS Mudlet supports
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework Speech")
+
+  # Microphone permission and speech recognition sources are already added via
+  # mudlet_SRCS/mudlet_HDRS
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework Speech")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
@@ -876,8 +1034,11 @@ if(APPLE)
     endif()
   endif()
 
-  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
-  file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
+  # LIST_DIRECTORIES must stay false: globbing directories too makes CMake emit a
+  # copy_directory rule that races the per-file bundling rules under Ninja,
+  # failing with "Error copying ...: No such file or directory"
+  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES false "mudlet-lua/*")
+  file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES false "../translations/lua/*")
   file(GLOB DIC_FILES "*.dic")
   file(GLOB AFF_FILES "*.aff")
   target_sources(${EXE_MUDLET_TARGET} PUBLIC ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES} ${ICON_FILE})
@@ -910,7 +1071,14 @@ if(UNIX AND NOT APPLE)
     DIRECTORY "mudlet-lua/tests"
     DESTINATION "share/mudlet"
     FILES_MATCHING
-    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # the package specs install these fixtures, so they have to travel with them
+    PATTERN "*.mpackage" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+                                     WORLD_READ
+    PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
@@ -942,4 +1110,42 @@ if(UNIX AND NOT APPLE)
         GROUP_EXECUTE
         WORLD_READ
         WORLD_EXECUTE)
+endif()
+
+# `cmake --build <dir> --target run-mudlet` - build if needed, then launch.
+#
+# On macOS this goes through the bundle rather than the binary inside it. macOS
+# attributes a permission request to the responsible process, which for a binary
+# started from a shell is the application owning the terminal, not Mudlet: the
+# built-in speech backend then asks for speech recognition, the terminal's
+# application is required to carry the usage description, and TCC kills Mudlet
+# when it does not. See AppleSpeechRecognizer::doStartListening().
+#
+# `open` detaches, so qDebug() and qWarning() would go nowhere - hence the two
+# flags, which put both streams in a file beside the build.
+#
+# A sanitizer build is the exception, and runs the binary directly: ASAN_OPTIONS
+# and its siblings are read from the environment of the process, and `open`
+# hands the request to launchd rather than passing this shell's environment on,
+# so a sanitized run launched that way would silently ignore every option set
+# for it - and report to a terminal nothing is reading. That backend declines to
+# ask for permission rather than dying when it finds itself started this way, so
+# the trade is a message instead of a crash.
+if(APPLE AND NOT USE_SANITIZER)
+  add_custom_target(run-mudlet
+    # -n so a rebuild is actually what starts, rather than the running copy
+    # being brought to the front
+    COMMAND open -n "$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>"
+            --stdout "${CMAKE_BINARY_DIR}/mudlet-run.log"
+            --stderr "${CMAKE_BINARY_DIR}/mudlet-run.log"
+    COMMAND ${CMAKE_COMMAND} -E echo "Mudlet started; its output is in ${CMAKE_BINARY_DIR}/mudlet-run.log"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet as an application")
+else()
+  add_custom_target(run-mudlet
+    COMMAND "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet")
 endif()

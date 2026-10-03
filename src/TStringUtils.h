@@ -20,9 +20,11 @@
 #ifndef MUDLET_TSTRINGUTILS_H
 #define MUDLET_TSTRINGUTILS_H
 
+#include <QByteArray>
 #include <QString>
 #include <QStringList>
 #include <functional>
+#include <string>
 #include "utils.h"
 
 #define CHAR_NEW_LINE '\n'
@@ -40,6 +42,11 @@ class TStringUtils
 public:
     static bool isQuote(QChar ch);
     static bool isOneOf(QChar inputCharacter, const QString& characterSet);
+
+    // Decode raw MXP bytes into text using the active session encoding.
+    // Shared by the raw tag/content path and the attribute parser so both
+    // interpret non-ASCII bytes identically.
+    static QString decodeBytes(const std::string& bytes, const QByteArray& encoding);
 };
 
 #endif //MUDLET_TSTRINGUTILS_H

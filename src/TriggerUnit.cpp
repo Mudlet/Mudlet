@@ -25,10 +25,16 @@
 
 
 #include "Host.h"
-#include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TTrigger.h"
+#include "TriggerMatchPool.h"
 
+#include <QScopeGuard>
+
+#include <algorithm>
 #include <functional>
+#include <limits>
+#include <vector>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -49,7 +55,8 @@ TriggerUnit::~TriggerUnit()
         trigger->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TTrigger*)> nullifyChildren = [&nullifyChildren](TTrigger* t) {
-            for (auto child : *t->mpMyChildrenList) {
+            for (auto* childNode : *t->mpMyChildrenList) {
+                auto* child = static_cast<TTrigger*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -72,8 +79,9 @@ void TriggerUnit::resetStats()
 
 void TriggerUnit::_uninstall(TTrigger* pChild, const QString& packageName)
 {
-    std::list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
-    for (auto trigger : *childrenList) {
+    std::list<Tree<TTrigger>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* triggerNode : *childrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         _uninstall(trigger, packageName);
         uninstallList.append(trigger);
     }
@@ -103,6 +111,9 @@ void TriggerUnit::uninstall(const QString& packageName)
         return;
     }
     for (auto& trigger : uninstallList) {
+        // in case the trigger was also queued for the markCleanup()/doCleanup()
+        // path - deleting it here would otherwise leave a dangling pointer there:
+        mCleanupSet.remove(trigger);
         delete trigger;
     }
     uninstallList.clear();
@@ -128,7 +139,9 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     }
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
         mTriggerRootNodeList.push_back(pT);
+        markRootNodeAppended(pT);
     } else {
+        markRootNodeListReordered();
         // insert item at proper position
         int cnt = 0;
         for (auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++) {
@@ -156,9 +169,13 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
         return;
     }
 
+    // Changes the prescan list: a trigger under a chain matches its parent's capture, not the line
+    TTrigger::bumpStructureGeneration();
+
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
+        markRootNodeRemoved(pChild);
         mTriggerRootNodeList.remove(pChild);
     }
 
@@ -190,12 +207,15 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // Names are not unique - the lookup table is a QMultiMap - so drop this one
+    // trigger's entry rather than every entry filed under the name. The
+    // single-argument remove() used to be taken for temporary triggers, which
+    // evicted live same-named triggers and left them unreachable by name for the
+    // rest of the session (tempComplexRegexTrigger() takes a user-supplied name,
+    // so a collision needs no coincidence)
+    mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
+    markRootNodeRemoved(pT);
     mTriggerRootNodeList.remove(pT);
 }
 
@@ -224,10 +244,32 @@ bool TriggerUnit::registerTrigger(TTrigger* pT)
     if (pT->getParent()) {
         addTrigger(pT);
         return true;
-    } else {
-        addTriggerRootNode(pT);
-        return true;
     }
+    addTriggerRootNode(pT);
+    if (mProcessingDepth > 0) {
+        mRootNodesAddedWhileProcessing.append(pT);
+        startOrExtendSameLineChain(pT);
+    }
+    return true;
+}
+
+// A trigger created by a trigger that was itself created while this line was
+// being processed joins that trigger's lineage, one generation further down;
+// anything created from a script that predates the line starts a lineage of its
+// own at generation one. So a script arming a batch produces a generation of
+// one-deep lineages however big the batch, while a trigger that re-creates
+// itself keeps adding generations to a single lineage.
+void TriggerUnit::startOrExtendSameLineChain(TTrigger* pT)
+{
+    int chainId = mCurrentSameLineChainId;
+    if (!chainId) {
+        if (mLastSameLineChainId == std::numeric_limits<int>::max()) {
+            mLastSameLineChainId = 0;
+        }
+        chainId = ++mLastSameLineChainId;
+        mSameLineChainStarters.insert(chainId, mpCurrentExecutingTriggerName ? *mpCurrentExecutingTriggerName : QString());
+    }
+    pT->setSameLineChain(chainId, mCurrentSameLineGeneration + 1);
 }
 
 void TriggerUnit::unregisterTrigger(TTrigger* pT)
@@ -235,13 +277,23 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     if (!pT) {
         return;
     }
+    // A node can be removed and deleted mid-pass without going through the
+    // deferred-cleanup paths (e.g. XMLimport discarding its placeholder trigger
+    // when installPackage() runs from a trigger script), so it must not linger in
+    // the same-line match list. Done here rather than in removeTriggerRootNode()
+    // because a trigger that was a root node when it was added to that list can
+    // have been reparented since, which routes it to removeTrigger() instead.
+    // Null the slot instead of compacting: processDataStream() may be walking the
+    // list by index right now, and shifting entries under it would skip a
+    // trigger's same-line match. Nulling it also takes the trigger out of reach
+    // of the end-of-pass reset, so drop its lineage here instead.
+    std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
+    pT->setSameLineChain(0, 0);
     if (pT->getParent()) {
         removeTrigger(pT);
         return;
-    } else {
-        removeTriggerRootNode(pT);
-        return;
     }
+    removeTriggerRootNode(pT);
 }
 
 
@@ -263,11 +315,8 @@ void TriggerUnit::removeTrigger(TTrigger* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTemporary()) {
-        mLookupTable.remove(pT->mName, pT);
-    } else {
-        mLookupTable.remove(pT->getName());
-    }
+    // see removeTriggerRootNode(): one entry, not every same-named one
+    mLookupTable.remove(pT->getName(), pT);
 
     mTriggerMap.remove(pT->getID());
 }
@@ -282,6 +331,7 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
             tempList.push_back(trigger);
         }
     }
+    markRootNodeListReordered();
     for (auto& trigger : tempList) {
         mTriggerRootNodeList.remove(trigger);
     }
@@ -295,52 +345,404 @@ int TriggerUnit::getNewID()
     return ++mMaxID;
 }
 
+// Stopping the pass is not enough: what the lineage created is still live and
+// still matching, so the next line would start with a budget's worth of them and
+// each would spawn a budget's worth again, costing a multiple of the line before
+// it. Only the runaway lineage is disowned - a capture trigger an unrelated
+// script armed on the same line belongs to a lineage of its own and is left
+// alone. The whole list is scanned rather than the tail of this pass: a lineage
+// started in an outer pass can go on growing inside a nested feedTriggers() pass,
+// and when that nested pass is the one to trip, the earlier members sit below its
+// first-node index. Permanent triggers get deactivate() and not setIsActive(false),
+// which would clear the user-active state XMLexport saves and leave them switched
+// off after a restart.
+void TriggerUnit::stopSameLineCreationLoop(const int chainId)
+{
+    int killedCount = 0;
+    int deactivatedCount = 0;
+    for (auto trigger : std::as_const(mRootNodesAddedWhileProcessing)) {
+        if (!trigger || trigger->sameLineChainId() != chainId) {
+            continue;
+        }
+        if (trigger->isTemporary()) {
+            trigger->setIsActive(false);
+            markCleanup(trigger);
+            ++killedCount;
+        } else {
+            trigger->deactivate();
+            ++deactivatedCount;
+        }
+    }
+    const QString triggerName = mSameLineChainStarters.value(chainId);
+
+    qWarning().nospace() << "TriggerUnit::processDataStream(...) aborting: one lineage of triggers created while processing a line reached " << scmMaxSameLineGenerations
+                         << " generations - probably a trigger that re-creates itself. Profile: " << (mpHost ? mpHost->getName() : QString()) << ", triggers removed: " << killedCount
+                         << ", deactivated: " << deactivatedCount << ", lineage started by: " << triggerName;
+    if (!mpHost) {
+        return;
+    }
+    // A runaway whose creator outlives the line trips on every matching line and
+    // would bury the game text; the qWarning() above is not throttled.
+    constexpr qint64 reportIntervalMs = 10000;
+    if (mSameLineLoopReportTimer.isValid() && mSameLineLoopReportTimer.elapsed() < reportIntervalMs) {
+        return;
+    }
+    mSameLineLoopReportTimer.start();
+
+    //: %n is a count of triggers. Shown in the game window when a trigger keeps creating new triggers that match the same line, which would otherwise never end
+    const QString created = tr("%n trigger(s) created while processing this line have been stopped: temporary ones removed, permanent ones switched off until the profile is reloaded.",
+                               nullptr,
+                               killedCount + deactivatedCount);
+    if (triggerName.isEmpty()) {
+        //: %1 is the sentence above, about the triggers that were stopped
+        mpHost->postMessage(tr("[ ERROR ] - Trigger processing stopped to prevent a freeze: a trigger (or another trigger it creates) keeps creating new triggers that match the line being "
+                               "processed, so that line never finishes. %1 Create the trigger once, outside its own script, or give it a pattern that does not match the line it is created on.")
+                                    .arg(created));
+        return;
+    }
+    //: %1 is the name of a trigger - the name of a trigger made by tempTrigger() and friends is its id number - and %2 is the sentence above, about the triggers that were stopped
+    mpHost->postMessage(tr("[ ERROR ] - Trigger processing stopped to prevent a freeze: trigger '%1' (or another trigger it creates) keeps creating new triggers that match the line being "
+                           "processed, so that line never finishes. %2 Create the trigger once, outside its own script, or give it a pattern that does not match the line it is created on.")
+                                .arg(triggerName, created));
+}
+
+// Only Perl regex triggers are worth sending to the pool: the bigram filter dismisses a substring
+// pattern in a few instructions and a begin-of-line or exact pattern takes one comparison, cheaper
+// than the cross-thread traffic. The walk stops at a filter chain: ruling it out rules out its
+// children, which match against its captures, so a verdict against the line would not apply to them.
+void TriggerUnit::collectPrescanTasks(TTrigger* pT)
+{
+    if (pT->getRegexCodePropertyList().contains(REGEX_PERL)) {
+        mPrescanTasks.push_back(pT);
+    }
+    if (pT->isFilterChain()) {
+        return;
+    }
+    for (auto* childNode : *pT->mpMyChildrenList) {
+        collectPrescanTasks(static_cast<TTrigger*>(childNode));
+    }
+}
+
+// Must rebuild when the tree changed shape or a pattern was recompiled, or an entry could name a freed trigger
+void TriggerUnit::rebuildPrescanTasksIfStale()
+{
+    const quint64 generation = TTrigger::structureGeneration();
+    if (generation == mPrescanTasksGeneration) {
+        return;
+    }
+    mPrescanTasks.clear();
+    for (auto trigger : mTriggerRootNodeList) {
+        collectPrescanTasks(trigger);
+    }
+    mPrescanTasksGeneration = generation;
+}
+
+void TriggerUnit::markPrescanStale(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    // A null stands for a trigger there is nothing left to tell by, so it takes
+    // the reading that announces rather than the one that stays quiet.
+    const int position = pT ? pT->rootSnapshotPosition() : TTrigger::scmSnapshotPositionDropped;
+    // The epoch is what stops the rest of the line trusting the filter copies a
+    // pass pinned, so it only has to move for a trigger one of those copies
+    // could be of. A trigger no snapshot has ever filed is in none of them:
+    // rootFilter() reads nothing but the trigger's own patterns and flags, so
+    // not even its parent's copy can be of it. That is the common case of a
+    // script creating a trigger from inside a trigger - a one-shot, a prompt
+    // capture, a combat follow-up - which used to disable the pinned filters
+    // for every root trigger left on the line. Anything else, a position or a
+    // trigger that has since left the root list, still has to be announced:
+    // -1 alone could not tell those apart, and the filter check runs ahead of
+    // isActive(), so a removed trigger's stale copy would be trusted.
+    if (position != TTrigger::scmNeverSnapshotted) {
+        ++mRootFilterEpoch;
+    }
+    if (mRootNodeSnapshotNeedsRebuild || !pT) {
+        return;
+    }
+    // No position: a child, which the index never files, or a root queued for appending, which will be
+    // filed from its current state anyway
+    if (position >= 0) {
+        mRootNodesRefiled.push_back(position);
+    }
+}
+
+void TriggerUnit::markRootNodeAppended(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    if (!mRootNodeSnapshotNeedsRebuild) {
+        mRootNodesAppended.push_back(pT);
+    }
+}
+
+void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    const int position = pT->rootSnapshotPosition();
+    // Even when rebuilding: a stale position on a trigger registered again later would make its next
+    // removal empty another trigger's slot. The dropped sentinel, not the never-filed one, is how
+    // markPrescanStale() tells a pinned copy of it from no copy at all.
+    pT->setRootSnapshotPosition(TTrigger::scmSnapshotPositionDropped);
+    if (mRootNodeSnapshotNeedsRebuild) {
+        return;
+    }
+    if (position >= 0) {
+        mRootNodesRemoved.push_back(position);
+        return;
+    }
+    // Not filed yet, so at most queued for appending; if not queued either, it was never a root node
+    const auto queued = std::find(mRootNodesAppended.begin(), mRootNodesAppended.end(), pT);
+    if (queued != mRootNodesAppended.end()) {
+        mRootNodesAppended.erase(queued);
+    }
+}
+
+// Arming or killing a trigger only appends or empties a position, so is patched in place; a rebuild
+// is for changes that move existing triggers, and to reclaim the holes removals leave.
+void TriggerUnit::refreshRootNodeSnapshot()
+{
+    const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild && !mpRootNodeSnapshot->mPrescan.shouldRebuild();
+    if (canPatch) {
+        RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        // Removals first, so a refile queued for a since-freed trigger finds an empty slot and is skipped
+        // rather than dereferencing it
+        for (const int position : mRootNodesRemoved) {
+            snapshot.mNodes[position] = nullptr;
+            snapshot.mFilters[position] = TRootTriggerFilter();
+            snapshot.mPrescan.removeSlot(position);
+        }
+        if (mRootNodesRefiled.size() > 1) {
+            // The index counts every refile, duplicates included, towards the mutations that force a rebuild
+            std::sort(mRootNodesRefiled.begin(), mRootNodesRefiled.end());
+            mRootNodesRefiled.erase(std::unique(mRootNodesRefiled.begin(), mRootNodesRefiled.end()), mRootNodesRefiled.end());
+        }
+        for (const int position : mRootNodesRefiled) {
+            if (TTrigger* pT = snapshot.mNodes[position]) {
+                snapshot.mFilters[position] = pT->rootFilter();
+                snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
+            }
+        }
+        for (TTrigger* pT : mRootNodesAppended) {
+            pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
+            snapshot.mNodes.push_back(pT);
+            snapshot.mFilters.push_back(pT->rootFilter());
+            snapshot.mPrescan.appendSlot(pT->prescanGrams());
+        }
+    } else {
+        // Replace only a snapshot an outer pass has pinned; refilling an unpinned one avoids allocating
+        if (mpRootNodeSnapshot.use_count() != 1) {
+            mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
+        }
+        RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        snapshot.mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        const int rootCount = static_cast<int>(snapshot.mNodes.size());
+        snapshot.mFilters.resize(rootCount);
+        for (int position = 0; position < rootCount; ++position) {
+            snapshot.mNodes[position]->setRootSnapshotPosition(position);
+            snapshot.mFilters[position] = snapshot.mNodes[position]->rootFilter();
+        }
+        snapshot.mPrescan.rebuild(snapshot.mNodes);
+        ++mPrescanRebuilds;
+    }
+    mRootNodesAppended.clear();
+    mRootNodesRemoved.clear();
+    mRootNodesRefiled.clear();
+    mRootNodeSnapshotNeedsRebuild = false;
+    mRootNodeSnapshotStale = false;
+}
+
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
     if (data.isEmpty()) {
         return;
     }
 
-    const QByteArray utf8Data = data.toUtf8();
-    const char* utf8Ptr = utf8Data.constData();
-    const size_t utf8Length = utf8Data.size();
-
-    char* subject = static_cast<char*>(malloc(utf8Length + 1));
-    if (!subject) {
-        return;
-    }
-    memcpy(subject, utf8Ptr, utf8Length);
-    subject[utf8Length] = '\0';
+    // Encoded, when a perl pattern asks, into storage borrowed from the unit so only a line longer than
+    // any before allocates. Moved out rather than lent, so a nested pass finds the member empty and
+    // cannot resize the outer pass's buffer.
+    TUtf8Subject subject(data, std::move(mUtf8Scratch));
+    const auto utf8Guard = qScopeGuard([this, &subject] {
+        QByteArray scratch = subject.takeScratch();
+        if (scratch.capacity() > scmMaxRetainedUtf8Scratch) {
+            scratch = QByteArray();
+        }
+        mUtf8Scratch = std::move(scratch);
+    });
 
     mProcessingDepth++;
+    const auto processingGuard = qScopeGuard([this] {
+        mProcessingDepth--;
+        Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth == 0) {
+            // Deletion is deferred while any pass runs, so these pointers stayed
+            // valid; drop them before doCleanup() frees the underlying triggers.
+            // A trigger that outlives the line it was created on stops being part
+            // of a lineage, so its own creations start counting afresh.
+            for (auto trigger : std::as_const(mRootNodesAddedWhileProcessing)) {
+                if (trigger) {
+                    trigger->setSameLineChain(0, 0);
+                }
+            }
+            mRootNodesAddedWhileProcessing.clear();
+            mSameLineChainStarters.clear();
+            doCleanup();
+        }
+    });
 
     // Iterate a snapshot of the root list: a trigger's Lua script can call
     // uninstallPackage()/installPackage() and mutate mTriggerRootNodeList
     // mid-iteration (the underlying std::list::remove frees the iterator's
     // current node → use-after-free on the next ++). AliasUnit dodges the
     // same hazard for the same reason — see Mudlet issue #4297.
-    auto copyOfNodeList = mTriggerRootNodeList;
-    for (auto trigger : copyOfNodeList) {
-        if (!trigger->isActive()) {
+    // Pinned, not copied: a mutation replaces the shared snapshot rather than editing the pinned one.
+    if (mRootNodeSnapshotStale) {
+        refreshRootNodeSnapshot();
+    }
+    const auto pinnedSnapshot = mpRootNodeSnapshot;
+    const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
+    // Triggers registered by a script during this pass (tempTrigger() & Co.)
+    // are missing from the snapshot but must still match the current line:
+    // before the snapshot the loop walked the live std::list, which a push_back
+    // extends in front of end(), so a trigger created mid-pass was reached in
+    // the same iteration - long-standing behaviour capture scripts depend on.
+    // Entries below this index were added by outer (nested-feedTriggers) passes
+    // and are already part of this pass's snapshot.
+    const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
+    const TBigramFilter lineBigrams(data, mSubstringQuestionsOnTheLastLine);
+    // Helper threads only rule triggers out; every match is still found, run and ordered by the loop
+    // below, on this thread.
+    const quint32 previousPrescanPassId = TTrigger::prescanPassId();
+    TTrigger::setPrescanPassId(0);
+    const auto prescanGuard = qScopeGuard([previousPrescanPassId] {
+        TTrigger::setPrescanPassId(previousPrescanPassId);
+    });
+    // Only while behind, i.e. a chunk carries many lines: a wake-up is repaid only when the next line is
+    // already waiting, so at normal game speed it would spend CPU to save nothing perceptible.
+    TriggerMatchPool& pool = TriggerMatchPool::instance();
+    const bool inFlood = pool.workerCount() > 0 && mpHost && mpHost->mainConsoleModelOrNull() && mpHost->mainConsoleModel().buffer.pendingChunkLines() >= pool.floodChunkLines();
+    const quint64 regexSearchesBefore = TTrigger::regexSearches();
+    int prescanRegexSearches = 0;
+    if (inFlood && mRegexSearchesOnTheLastLine >= pool.threshold()) {
+        rebuildPrescanTasksIfStale();
+        const quint32 passId = TTrigger::nextPrescanPassId();
+        // The helper threads run perl patterns of their own, so the line is
+        // encoded here, on this thread, before any of them can ask for it -
+        // TUtf8Subject encodes on first use, which is not a helper's to do.
+        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject.data(), subject.length(), data, lineBigrams, subject.dropsText())) {
+            TTrigger::setPrescanPassId(passId);
+            prescanRegexSearches = pool.regexSearchesInLastBatch();
+        }
+    }
+
+    {
+        const std::vector<TRootTriggerFilter>& pinnedFilters = pinnedSnapshot->mFilters;
+        const bool prescanActive = pinnedSnapshot->mPrescan.active();
+        // Borrowed from the unit so that only a longer line than any before it
+        // allocates, and moved out so a nested pass grows its own.
+        std::vector<int> scratch;
+        std::vector<int> candidates;
+        if (prescanActive) {
+            scratch = std::move(mCandidateScratch);
+            candidates = std::move(mCandidates);
+            pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
+        }
+        const auto candidateGuard = qScopeGuard([this, prescanActive, &scratch, &candidates] {
+            if (prescanActive) {
+                mCandidateScratch = std::move(scratch);
+                mCandidates = std::move(candidates);
+            }
+        });
+        // A script can make a later trigger fire without matching (setTriggerStayOpen()) after the
+        // candidate list was settled; from then on the rest of the line goes to every remaining trigger.
+        const quint32 unfilterableEpochAtStart = mUnfilterableEpoch;
+        // The pinned filters are copies, and a firing script can change what they were copied from (a
+        // pattern, a stay-open count, a trigger made multiline); from then on the line asks the triggers.
+        const quint32 filterEpochAtStart = mRootFilterEpoch;
+        // Asked for only once a color trigger wants it, and again after any script has run, which can
+        // recolor, edit, delete or feed lines - too much to second-guess what match_color_pattern() reads.
+        bool lineColorsKnown = false;
+        bool lineColorsUniform = false;
+        QRgb lineForeground = 0;
+        QRgb lineBackground = 0;
+        const int rootCount = static_cast<int>(pinnedNodeList.size());
+        size_t nextCandidate = 0;
+        for (int position = 0; position < rootCount; ++position) {
+            if (prescanActive && mUnfilterableEpoch == unfilterableEpochAtStart) {
+                if (nextCandidate >= candidates.size()) {
+                    break;
+                }
+                position = candidates[nextCandidate++];
+            }
+            // Read before the trigger is, as most lines are over for most
+            // triggers right here and the trigger's own memory is never touched
+            bool textDecided = false;
+            if (mRootFilterEpoch == filterEpochAtStart) {
+                const TRootTriggerFilter& filter = pinnedFilters[position];
+                if (filter.mKind == TRootTriggerFilter::Kind::Text) {
+                    if (!lineBigrams.couldContain(data, filter.mText) && !subject.dropsText()) {
+                        continue;
+                    }
+                    textDecided = true;
+                } else if (filter.mKind == TRootTriggerFilter::Kind::Color) {
+                    if (!lineColorsKnown) {
+                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, static_cast<int>(data.length()), lineForeground, lineBackground);
+                        lineColorsKnown = true;
+                    }
+                    if (lineColorsUniform && filter.lacksColors(lineForeground, lineBackground)) {
+                        continue;
+                    }
+                }
+            }
+            // A hole is a trigger the snapshot has outlived - see
+            // refreshRootNodeSnapshot()
+            TTrigger* trigger = pinnedNodeList[position];
+            if (!trigger || !trigger->isActive() || (!textDecided && trigger->cannotMatch(lineBigrams, data) && !subject.dropsText())) {
+                continue;
+            }
+            trigger->match(subject, data, line, 0, &lineBigrams);
+            lineColorsKnown = false;
+        }
+    }
+    // A match here can register more triggers, which also get a shot at the
+    // current line - so the list grows in front of the loop, and a trigger that
+    // re-creates itself never lets the line finish. Nothing else catches that: no
+    // C++ frame recurses, so mProcessingDepth stays put and the feedTriggers()
+    // depth guard never sees it. Only the lineage that is extending itself gets
+    // stopped; every other lineage the line started carries on matching, which is
+    // the difference between a runaway and a script arming a batch of triggers.
+    for (qsizetype i = firstNodeAddedThisPass; i < mRootNodesAddedWhileProcessing.size(); ++i) {
+        if (i - firstNodeAddedThisPass >= scmMaxSameLineCreationsPerLine) {
+            qWarning().nospace() << "TriggerUnit::processDataStream(...) stopping: more than " << scmMaxSameLineCreationsPerLine
+                                 << " triggers were created while processing one line, so the rest are not being offered it. Profile: " << (mpHost ? mpHost->getName() : QString());
+            break;
+        }
+        auto trigger = mRootNodesAddedWhileProcessing.at(i);
+        if (!trigger || !trigger->isActive()) {
             continue;
         }
-        trigger->match(subject, data, line);
+        // stopSameLineCreationLoop() deactivates the whole lineage, so the check
+        // above skips its remaining members and this loop reaches a lineage once
+        if (trigger->sameLineGeneration() > scmMaxSameLineGenerations) {
+            stopSameLineCreationLoop(trigger->sameLineChainId());
+            continue;
+        }
+        if (trigger->cannotMatch(lineBigrams, data) && !subject.dropsText()) {
+            continue;
+        }
+        trigger->match(subject, data, line, 0, &lineBigrams);
     }
-    free(subject);
-
-    mProcessingDepth--;
-    Q_ASSERT(mProcessingDepth >= 0);
-    if (mProcessingDepth == 0) {
-        doCleanup();
-    }
+    mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
+    // Includes nested passes' searches, which is fine: the count only steers the next line
+    mRegexSearchesOnTheLastLine = prescanRegexSearches + static_cast<int>(TTrigger::regexSearches() - regexSearchesBefore);
 }
 
 void TriggerUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto trigger : mTriggerRootNodeList) {
-        if (trigger->isActive()) {
-            trigger->compileAll();
-        }
+        trigger->compileAll();
     }
 }
 
@@ -395,8 +797,16 @@ bool TriggerUnit::enableTrigger(const QString& name)
     // start mid-run and skip duplicates on some QMultiMap implementations
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
+        // A trigger queued for deletion stays in the lookup table until
+        // doCleanup() frees it, which cannot run mid-pass - re-activating one
+        // resurrects a spent one-shot, a killTrigger()ed trigger, or a trigger
+        // whose package was uninstalled mid-pass.
+        if (mCleanupSet.contains(it.value()) || uninstallList.contains(it.value())) {
+            continue;
+        }
         it.value()->setIsActive(true);
         found = true;
+        emit mpHost->signal_triggerToggled(it.value()->getID());
     }
     return found;
 }
@@ -410,6 +820,7 @@ bool TriggerUnit::disableTrigger(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
+        emit mpHost->signal_triggerToggled(it.value()->getID());
     }
     return found;
 }
@@ -420,30 +831,62 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     // start mid-run and skip duplicates on some QMultiMap implementations
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
-        it.value()->mKeepFiring = lines;
+        TTrigger* pT = it.value();
+        const bool wasOpen = pT->mKeepFiring > 0;
+        pT->mKeepFiring = lines;
+        const bool nowOpen = pT->mKeepFiring > 0;
+        if (wasOpen == nowOpen) {
+            // Staying open or shut changes nothing the trigger is filtered by, and scripts often set the
+            // same count every line: refiling would spend a mutation per call towards a rebuild. Not keyed
+            // on grams: a regex or colour trigger has none, yet can be ruled out of a line while shut.
+            continue;
+        }
+        if (nowOpen) {
+            // It now fires without matching, so can't be filtered out of any line, this one included
+            markPrescanStaleForLineInFlight(pT);
+        } else {
+            // Filterable again; the line in flight can ignore that, as it was already offered the trigger
+            markPrescanStale(pT);
+        }
     }
 }
 
 bool TriggerUnit::killTrigger(const QString& name)
 {
-    auto it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
+    // equal_range visits every same-named trigger; constFind() + (++it) can
+    // start mid-run and skip duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
         TTrigger* pT = it.value();
-        if (pT->isTemporary()) //this function is only defined for tempTriggers, permanent objects cannot be removed
-        {
-            // there can only be a single tempTrigger by this name and this function ignores non-tempTriggers by definition
-            markCleanup(pT);
-            return true;
+        if (!pT->isTemporary()) {
+            // this function is only defined for tempTriggers, permanent objects cannot be removed
+            continue;
         }
-        it++;
+        // An already killed trigger is only unlinked from the lookup table once
+        // doCleanup() gets to free it, which cannot happen while a trigger script
+        // is on the call stack - so until then it is still findable by name.
+        // tempComplexRegexTrigger() replaces a temporary trigger under the name it
+        // was given, so a corpse and a live trigger can share one: keep looking
+        // rather than report a kill that would achieve nothing.
+        if (mCleanupSet.contains(pT)) {
+            continue;
+        }
+        // Deactivating matters as much as queueing the delete: the trigger stays
+        // in the list processDataStream() is walking until that deferred cleanup,
+        // and a killed trigger must no more fire on the rest of the line than a
+        // disabled one does
+        pT->setIsActive(false);
+        markCleanup(pT);
+        return true;
     }
     return false;
 }
 
 void TriggerUnit::assembleReport(TTrigger* pItem)
 {
-    std::list<TTrigger*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TTrigger>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TTrigger*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
@@ -485,17 +928,29 @@ void TriggerUnit::doCleanup()
         return;
     }
 
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
+    QSet<TTrigger*> deletedTriggers;
     QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
     while (itTrigger.hasNext()) {
         auto pTrigger = itTrigger.next();
         itTrigger.remove();
+        deletedTriggers.insert(pTrigger);
         delete pTrigger;
     }
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
-    // set guards a node queued twice by re-entrant uninstalls.
-    QSet<TTrigger*> deletedTriggers;
+    // set guards a node queued twice by re-entrant uninstalls and is shared with
+    // the mCleanupSet loop above so an object that ended up in both containers is
+    // freed once. It matches on pointer identity only: a node freed indirectly, as
+    // a child of a queued parent, is not in the set (not reachable today - only
+    // temporary root nodes are ever queued, and those have no children).
     for (auto trigger : uninstallList) {
         if (!deletedTriggers.contains(trigger)) {
             deletedTriggers.insert(trigger);

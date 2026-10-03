@@ -29,6 +29,7 @@
 #include <QButtonGroup>
 #include <QDialog>
 #include <QJsonArray>
+#include <QJsonObject>
 #include <QListWidget>
 #include <QTextBrowser>
 
@@ -46,6 +47,7 @@ public:
     explicit dlgPackageManager(QWidget* parent, Host*);
     bool readPackageRepositoryFile();
     void resetPackageList();
+    QString removePackages(const QStringList& packageNames);
 
 signals:
     void packageManagerClosing(const QString& profileName);
@@ -70,8 +72,11 @@ private:
     void closeEvent(QCloseEvent* event) override;
     void downloadIcon(const QString& packageName);
     void downloadRepositoryIndex();
+    void elidePackageName();
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override;
     void fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version);
     bool hasNewerVersion(const QString& installed, const QString& repo) const;
+    QString packageHelpUrl(const QString& packageName) const;
     void populatePackagesWithUpdates();
     void setupNavigationButtons();
     void showImportStatus(const QString& message);
@@ -80,6 +85,7 @@ private:
     Host* mpHost = nullptr;
     QButtonGroup* mpNavigationGroup = nullptr;
     NavigationView mCurrentView = NavigationView::Installed;
+    QString mPackageName;
     QList<QString> mPackagesWithUpdates;
     PackageItemDelegate* mpPackageItemDelegate = nullptr;
     QHash<QString, QJsonObject> packageLookup;

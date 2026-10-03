@@ -39,6 +39,7 @@ public:
     ~dlgModuleManager() override;
 
     void layoutModules();
+    void showModuleSync(const QString& module, const bool sync);
 
 private slots:
     void slot_installModule();
@@ -55,6 +56,7 @@ protected:
 
 private:
     void showImportStatus(const QString& message);
+    QString moduleHelpUrl(const QString& moduleName) const;
 
     Host* mpHost = nullptr;
 };

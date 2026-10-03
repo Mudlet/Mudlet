@@ -131,7 +131,7 @@ public:
 
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result, TMxpContext& context) override;
 
-    void enqueueMxpEvent(MxpStartTag* tag);
+    void enqueueMxpEvent(MxpStartTag* tag, const TMxpElement& element);
     TLinkStore& getLinkStore();
 
     QList<QColor> fgColors;

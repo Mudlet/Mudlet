@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>mudletSpecSelfUninstallHandler</name>
+			<packageName></packageName>
+			<script>function mudletSpecSelfUninstallHandler()
+  mudletSpecSelfUninstallRan = true
+  uninstallPackage("mudlet-spec-selfuninstall")
+end</script>
+			<eventHandlerList>
+				<string>mudletSpecSelfUninstall</string>
+			</eventHandlerList>
+		</Script>
+		<Script isActive="yes" isFolder="no">
+			<name>mudletSpecSelfUninstallSecondHandler</name>
+			<packageName></packageName>
+			<script>function mudletSpecSelfUninstallSecondHandler()
+  mudletSpecSelfUninstallSecondRan = true
+end</script>
+			<eventHandlerList>
+				<string>mudletSpecSelfUninstall</string>
+			</eventHandlerList>
+		</Script>
+	</ScriptPackage>
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

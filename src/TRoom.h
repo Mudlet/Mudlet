@@ -52,7 +52,7 @@ public:
     QHash<int, int> getExits() const;
     bool hasExit(const int) const;
     void setWeight(int);
-    void setExitLock(const int, const bool);
+    bool setExitLock(const int, const bool);
     bool setSpecialExitLock(const QString&, const bool);
     bool hasExitLock(const int to) const;
     bool hasSpecialExitLock(const QString&) const;
@@ -69,41 +69,41 @@ public:
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
     void calcRoomDimensions();
-    bool setArea(int, bool deferAreaRecalculations = false);
+    // The area's index lets the renderer find lines reaching the viewport from an off-screen room.
+    // calcRoomDimensions() calls this, so only code adding a custom line without it needs to.
+    void indexCustomLines();
+    bool setArea(int);
     int getExitWeight(const QString& cmd);
 
     inline int x() const { return mX; }
     inline int y() const { return mY; }
     inline int z() const { return mZ; }
-    inline void setCoordinates(const int x, const int y, const int z) {
+    inline void setCoordinates(const int x, const int y, const int z)
+    {
         mX = x;
         mY = y;
         mZ = z;
     }
-    inline void offset(const int deltaX, const int deltaY, const int deltaZ) {
-        mX += deltaX;
-        mY += deltaY;
-        mZ += deltaZ;
-    }
+    void offset(int deltaX, int deltaY, int deltaZ);
     int getWeight() const { return weight; }
     bool isHidden() const { return hidden; }
     void setHidden(const bool);
     int getNorth() const { return north; }
-    void setNorth(int id) { north = id; }
+    void setNorth(int id) { setPlanarExit(north, id); }
     int getNorthwest() const { return northwest; }
-    void setNorthwest(int id) { northwest = id; }
+    void setNorthwest(int id) { setPlanarExit(northwest, id); }
     int getNortheast() const { return northeast; }
-    void setNortheast(int id) { northeast = id; }
+    void setNortheast(int id) { setPlanarExit(northeast, id); }
     int getSouth() const { return south; }
-    void setSouth(int id) { south = id; }
+    void setSouth(int id) { setPlanarExit(south, id); }
     int getSouthwest() const { return southwest; }
-    void setSouthwest(int id) { southwest = id; }
+    void setSouthwest(int id) { setPlanarExit(southwest, id); }
     int getSoutheast() const { return southeast; }
-    void setSoutheast(int id) { southeast = id; }
+    void setSoutheast(int id) { setPlanarExit(southeast, id); }
     int getWest() const { return west; }
-    void setWest(int id) { west = id; }
+    void setWest(int id) { setPlanarExit(west, id); }
     int getEast() const { return east; }
-    void setEast(int id) { east = id; }
+    void setEast(int id) { setPlanarExit(east, id); }
     int getUp() const { return up; }
     void setUp(int id) { up = id; }
     int getDown() const { return down; }
@@ -120,7 +120,6 @@ public:
     void auditExit(int&,
                    int,
                    QString,
-                   QString,
                    QMap<QString, int>&,
                    QSet<int>&,
                    QSet<int>&,
@@ -131,6 +130,10 @@ public:
                    QMap<QString, bool>&,
                    QHash<int, int>);
     QString dirCodeToDisplayName(int) const;
+    // As above but for auditExit()'s messages specifically, which predate
+    // dirCodeToDisplayName() and spell the diagonals without a hyphen -
+    // separate translatable strings, so this is not just a style choice.
+    QString auditExitDisplayName(int) const;
     static QString dirCodeToShortString(const int);
     static QString dirCodeToString(const int);
     inline int stringToDirCode(const QString&) const;
@@ -138,10 +141,27 @@ public:
     void writeJsonRoom(QJsonArray&) const;
     int readJsonRoom(const QJsonArray&, const int, const int);
 
+    // The members from mX to highlight are declared first, and must stay
+    // within the first 16 bytes of the object: T2DMap::drawNonGridModeRoomsLod()
+    // reads them for every room on screen and prefetches one cache line per
+    // room, and at any 16-byte-aligned address - what operator new gives on
+    // the 64-bit platforms - those 16 bytes never straddle two lines.
+private:
+    // Made private so we can catch all cases where they are to be modified.
+    int mX = 0;
+    int mY = 0;
+
+public:
     int environment = -1;
 
     bool isLocked = false;
     bool hidden = false;
+    bool highlight = false;
+
+private:
+    int mZ = 0;
+
+public:
     qreal min_x = 0.0;
     qreal min_y = 0.0;
     qreal max_x = 0.0;
@@ -161,7 +181,6 @@ public:
     QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
 
-    bool highlight = false;
     QColor highlightColor;
     QColor highlightColor2;
     float highlightRadius = 0.0f;
@@ -171,6 +190,9 @@ public:
 
 
 private:
+    void setPlanarExit(int&, const int);
+    void refreshLodExitIndex();
+
     bool readJsonExits(const QJsonObject&);
     void readJsonExitStubs(const QJsonObject&);
     bool readJsonNormalExit(const QJsonObject&, const int);
@@ -197,10 +219,6 @@ private:
     int id = 0;
     int area = -1;
     int weight = 1;
-    // Made private so we can catch all cases where they are to be modified:
-    int mX = 0;
-    int mY = 0;
-    int mZ = 0;
     // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
     int north = -1;
@@ -220,6 +238,10 @@ private:
     QSet<QString> mSpecialExitLocks;
 
     TRoomDB* mpRoomDB = nullptr;
+    // The room DB owns every TRoom, so it has to be able to unhook one it is
+    // about to delete - ~TRoom() otherwise reaches back into it with an id that
+    // may belong to a different room by then. See TRoomDB::restoreSingleRoom().
+    friend class TRoomDB;
     friend class XMLimport;
     friend class XMLexport;
 };
@@ -292,8 +314,8 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     if (!customLines.isEmpty()) {
         debug.nospace() << ", customlines=(";
         for (auto it = customLines.constBegin(); it != customLines.constEnd(); ++it) {
-            debug.nospace() << it.key() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower()
-                            << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no") << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
+            debug.nospace() << it.key() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower() << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no")
+                            << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
         }
         debug.nospace() << ")";
     }

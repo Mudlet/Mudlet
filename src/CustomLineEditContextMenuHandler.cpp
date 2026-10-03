@@ -72,7 +72,7 @@ bool CustomLineEditContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     mMapWidget.registerContextMenu(popup);
 
     //: 2D Mapper context menu (custom line editing) item
-    auto addPoint = new QAction(T2DMap::tr("Add point"), &mMapWidget);
+    auto addPoint = new QAction(T2DMap::tr("Add point"), popup);
     if (mMapWidget.mCustomLineSelectedPoint > -1) {
         QObject::connect(addPoint, &QAction::triggered, &mMapWidget, &T2DMap::slot_customLineAddPoint);
         //: 2D Mapper context menu (custom line editing) item tooltip (enabled state)
@@ -84,7 +84,7 @@ bool CustomLineEditContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     }
 
     //: 2D Mapper context menu (custom line editing) item
-    auto removePoint = new QAction(T2DMap::tr("Remove point"), &mMapWidget);
+    auto removePoint = new QAction(T2DMap::tr("Remove point"), popup);
     if (mMapWidget.mCustomLineSelectedPoint > -1) {
         if (room->customLines.value(mMapWidget.mCustomLineSelectedExit).count() > 1) {
             QObject::connect(removePoint, &QAction::triggered, &mMapWidget, &T2DMap::slot_customLineRemovePoint);
@@ -107,7 +107,7 @@ bool CustomLineEditContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     }
 
     //: 2D Mapper context menu (custom line editing) item
-    auto snapToGrid = new QAction(T2DMap::tr("Snap points to grid"), &mMapWidget);
+    auto snapToGrid = new QAction(T2DMap::tr("Snap points to grid"), popup);
     snapToGrid->setCheckable(true);
     snapToGrid->setChecked(mMapWidget.isSnapCustomLinePointsToGridEnabled());
     QObject::connect(snapToGrid, &QAction::toggled, &mMapWidget, &T2DMap::slot_setSnapCustomLinePointsToGrid);
@@ -115,7 +115,7 @@ bool CustomLineEditContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     snapToGrid->setToolTip(utils::richText(T2DMap::tr("Snap current points and keep custom line edits aligned to the map grid")));
 
     //: 2D Mapper context menu (custom line editing) item
-    auto moveLastPoint = new QAction(T2DMap::tr("Move last point to target room"), &mMapWidget);
+    auto moveLastPoint = new QAction(T2DMap::tr("Move last point to target room"), popup);
     if (mMapWidget.canMoveSelectedCustomLineLastPointToTargetRoom()) {
         QObject::connect(moveLastPoint, &QAction::triggered, &mMapWidget, &T2DMap::slot_moveCustomLineLastPointToTargetRoom);
         //: 2D Mapper context menu (custom line editing) item tooltip (enabled state)
@@ -127,14 +127,14 @@ bool CustomLineEditContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     }
 
     //: 2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)
-    auto lineProperties = new QAction(T2DMap::tr("Properties"), &mMapWidget);
+    auto lineProperties = new QAction(T2DMap::tr("Properties"), popup);
     //: 2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise
     lineProperties->setText(T2DMap::tr("properties..."));
     lineProperties->setToolTip(utils::richText(T2DMap::tr("Change the properties of this custom line")));
     QObject::connect(lineProperties, &QAction::triggered, &mMapWidget, &T2DMap::slot_customLineProperties);
 
     //: 2D Mapper context menu (custom line editing) item
-    auto deleteLine = new QAction(T2DMap::tr("Delete line"), &mMapWidget);
+    auto deleteLine = new QAction(T2DMap::tr("Delete line"), popup);
     //: 2D Mapper context menu (custom line editing) item tooltip
     deleteLine->setToolTip(utils::richText(T2DMap::tr("Delete all of this custom line")));
     QObject::connect(deleteLine, &QAction::triggered, &mMapWidget, &T2DMap::slot_deleteCustomExitLine);

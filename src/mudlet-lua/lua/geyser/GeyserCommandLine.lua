@@ -81,11 +81,14 @@ function Geyser.CommandLine:new (cons, container)
   setmetatable(me, self)
   self.__index = self
   
-  createCommandLine(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+  local ok, err = createCommandLine(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+    printError(string.format("Geyser.CommandLine '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+  end
   if me.stylesheet then 
     me:setStyleSheet()
   end
-  -- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end

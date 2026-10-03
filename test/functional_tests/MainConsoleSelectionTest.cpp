@@ -17,10 +17,25 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QAccessible>
+#include <QAction>
+#include <QClipboard>
+#include <QFileInfo>
+#include <QMenu>
+#include <QPointer>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
+#include <algorithm>
+#include <chrono>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TAccessibleTextEdit.h"
+#include "TBuffer.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
@@ -28,12 +43,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // Regression test for #3922: left-clicking into the main console to give it
 // focus must not leave a one-character selection behind. Such a stray
@@ -44,9 +56,11 @@ class MainConsoleSelectionTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-Selection";
-    const QString mpPort = "4000";
+    QString mpPort; // assigned the stub's actual ephemeral port in init()
     const QString mpLocalhost = "localhost";
 
     // Send a screenful of text so a click in the middle of the upper pane lands
@@ -71,22 +85,164 @@ private:
         return host->mpConsole->mUpperPane;
     }
 
-    void sendMouse(QWidget* w, QEvent::Type type, Qt::MouseButton button, Qt::MouseButtons buttons, const QPointF& localPos)
+    void sendMouse(QWidget* w, QEvent::Type type, Qt::MouseButton button, Qt::MouseButtons buttons, const QPointF& localPos, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
     {
         const QPointF globalPos = w->mapToGlobal(localPos.toPoint());
-        QMouseEvent event(type, localPos, globalPos, button, buttons, Qt::NoModifier);
+        QMouseEvent event(type, localPos, globalPos, button, buttons, modifiers);
         QApplication::sendEvent(w, &event);
     }
 
+    // Prose rather than fillerText(), so a copy that stops at the pointer's
+    // column or at a word boundary shows up in the text, and numbered so a copy
+    // of the wrong line does too. Two digits throughout, so the columns the
+    // tests name hold on every line.
+    static constexpr int scmProseFirstNumber = 10;
+    static constexpr int scmProseLastNumber = 89;
+    QString proseLine(int number) const { return qsl("%1 way off in the distance you faintly hear a grandfather clock strike eleven").arg(number); }
+
+    TTextEdit* paneShowingProse()
+    {
+        QString message;
+        for (int number = scmProseFirstNumber; number <= scmProseLastNumber; ++number) {
+            message.append(proseLine(number));
+            message.append(qsl("\r\n"));
+        }
+        mpServer->setWelcomeMessage(message);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        // startProfile() can only fail the test, not stop it, from in here
+        if (QTest::currentTestFailed() || !waitForTextInBuffer(proseLine(scmProseLastNumber))) {
+            return nullptr;
+        }
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+        return upperPane();
+    }
+
+    // What "Analyse characters" reports is built from the selection's first
+    // line alone, so these print one of their own rather than using the prose.
+    // Every code point takes a different branch: one needing HTML escaping,
+    // whitespace and invisible formatting shown by name, two- and three-byte
+    // UTF-8, a surrogate pair, a surrogate pair shown by name, and a
+    // noncharacter - then enough plain letters to spill onto a second table.
+    static QString analysedLine() { return qsl("<\t  ‍é€") + QString::fromUcs4(U"\U0001F600\U0001F3FB") + qsl("﷐abcdefghij"); }
+
+    QString analysisOf(TTextEdit* pane, const QPoint& from, const QPoint& to)
+    {
+        pane->mPA = from;
+        pane->mPB = to;
+        pane->mpContextMenuAnalyser = new QAction(pane);
+        pane->slot_analyseSelection();
+        return pane->mpContextMenuAnalyser->toolTip();
+    }
+
+    int printedLineNumber(const QString& text)
+    {
+        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(text + QChar::LineFeed);
+        for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
+            if (console->buffer.line(i) == text) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    QPointF cellInMiddleRow(TTextEdit* pane, int column) const
+    {
+        const int row = (pane->height() / 2) / pane->mFontHeight;
+        return QPointF(column * pane->mFontWidth + pane->mFontWidth / 2.0, row * pane->mFontHeight + pane->mFontHeight / 2.0);
+    }
+
+    QString lineUnder(TTextEdit* pane, const QPointF& pos) const
+    {
+        return mudlet::self()->getActiveHost()->mpConsole->buffer.line(static_cast<int>(pos.y()) / pane->mFontHeight + pane->imageTopLine());
+    }
+
+    // Leaves the button held on the last press, which is where a word (2) or
+    // line (3) selection can still be dragged.
+    void pressLeftButton(TTextEdit* pane, const QPointF& pos, int count)
+    {
+        for (int i = 1; i < count; ++i) {
+            sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pos);
+            sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, pos);
+        }
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pos);
+    }
+
+    void moveAndReleaseLeftButton(TTextEdit* pane, const QPointF& pos, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+    {
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, pos, modifiers);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, pos, modifiers);
+    }
+
+    // What is on screen as highlighted, read from the per-character flags so it
+    // does not depend on the selection endpoints that a copy works from.
+    QString highlightedText() const
+    {
+        TBuffer& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        QStringList lines;
+        for (int y = 0; y <= buffer.getLastLineNumber(); ++y) {
+            QString selected;
+            const QString text = buffer.line(y);
+            for (int x = 0; x < static_cast<int>(text.size()); ++x) {
+                if (buffer.buffer.at(y).at(x).isSelected()) {
+                    selected.append(text.at(x));
+                }
+            }
+            if (!selected.isEmpty()) {
+                lines.append(selected);
+            }
+        }
+        return lines.join(QChar::LineFeed);
+    }
+
+    // Each copy starts from a marker, so a slot that returns early cannot pass
+    // on what an earlier copy left on the clipboard.
+    const QString mNothingCopied = qsl("nothing was copied");
+
+    QString copiedText(TTextEdit* pane) const
+    {
+        QApplication::clipboard()->setText(mNothingCopied);
+        pane->slot_copySelectionToClipboard();
+        return QApplication::clipboard()->text();
+    }
+
+    QString copiedHtml(TTextEdit* pane) const
+    {
+        QApplication::clipboard()->setText(mNothingCopied);
+        pane->slot_copySelectionToClipboardHTML();
+        return QApplication::clipboard()->text();
+    }
+
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mpPort.toUShort());
+        mpServer->start(mpLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -102,7 +258,7 @@ private slots:
         QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
 
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
 
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
@@ -132,7 +288,7 @@ private slots:
         QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
 
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
 
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
@@ -159,7 +315,7 @@ private slots:
         QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
 
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
 
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
@@ -179,13 +335,596 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, startPos);
 
         const QRect collapsedSelection = pane->mSelectedRegion.boundingRect();
-        QVERIFY2(collapsedSelection.width() < expandedSelection.width(),
-                 "Dragging back to the press cell left the earlier selection extent frozen");
+        QVERIFY2(collapsedSelection.width() < expandedSelection.width(), "Dragging back to the press cell left the earlier selection extent frozen");
+    }
+
+    // #10606: any pointer move while the last press of a triple-click is held,
+    // even within one cell, must not narrow a copy below the highlighted line.
+    void test_tripleClickThatMovesThePointerCopiesTheWholeLine()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        const QString line = lineUnder(pane, pressPos);
+        QVERIFY2(line.endsWith(qsl("eleven")), qPrintable(qsl("the press is not over a line of prose but over \"%1\"").arg(line)));
+
+        pressLeftButton(pane, pressPos, 3);
+        QVERIFY2(pane->mMouseTrackLevel == 3, "the three presses were too far apart to count as a triple-click");
+        moveAndReleaseLeftButton(pane, pressPos + QPointF(1, 0));
+
+        QCOMPARE(highlightedText(), line);
+        QCOMPARE(copiedText(pane), line);
+
+        const QString html = copiedHtml(pane);
+        QVERIFY2(html.startsWith(qsl("<!DOCTYPE")), "nothing was copied as HTML");
+        QVERIFY2(html.contains(line), "the copy as HTML lost part of the line");
+
+        // the image copy re-highlights from the endpoints it copied with, so a
+        // narrowed copy shows as a narrowed highlight
+        pane->slot_copySelectionToClipboardImage();
+        QCOMPARE(highlightedText(), line);
+
+        // slot_analyseSelection() reports through this action's tooltip and
+        // does nothing without one
+        pane->mpContextMenuAnalyser = new QAction(pane);
+        pane->slot_analyseSelection();
+        const QString lastCharacterHeading = qsl("<center>%1</center></th>").arg(line.size());
+        QVERIFY2(pane->mpContextMenuAnalyser->toolTip().contains(lastCharacterHeading), "the character analysis lost the end of the line");
+    }
+
+    void test_ctrlClickThatMovesThePointerCopiesTheWholeLine()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        const QString line = lineUnder(pane, pressPos);
+        QVERIFY2(line.endsWith(qsl("eleven")), qPrintable(qsl("the press is not over a line of prose but over \"%1\"").arg(line)));
+
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
+        moveAndReleaseLeftButton(pane, pressPos + QPointF(2, 0), Qt::ControlModifier);
+
+        QCOMPARE(highlightedText(), line);
+        QCOMPARE(copiedText(pane), line);
+    }
+
+    void test_characterAnalysisDescribesEveryCodePoint()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const int line = printedLineNumber(analysedLine());
+        QVERIFY2(line >= 0, "the line to analyse never reached the buffer");
+
+        const QString analysis = analysisOf(pane, QPoint(0, line), QPoint(analysedLine().size() - 1, line));
+
+        // '<' would otherwise open an HTML tag in the tooltip, both where it is
+        // drawn and where it is given as a Lua character
+        QVERIFY2(analysis.contains(qsl("<td colspan=\"1\"><center>&lt;</center></td>")), "'<' was not escaped where it is drawn");
+        QVERIFY2(analysis.contains(qsl("<td><center>&lt;</center></td>")), "'<' was not escaped where it is given as a Lua character");
+        for (const QString& name : {qsl("{tab}"), qsl("{space}"), qsl("{non-breaking space}"), qsl("{zero width joiner}"), qsl("{FitzPatrick modifier 1 or 2}"), qsl("{noncharacter}")}) {
+            QVERIFY2(analysis.contains(name), qPrintable(qsl("%1 is missing from the analysis").arg(name)));
+        }
+        QVERIFY2(analysis.contains(qsl("<td><center>\\009</center></td>")), "the tab is not given as the decimal escape Lua would use");
+
+        // U+20AC is three bytes of UTF-8, which is what a Lua string holds
+        QVERIFY2(analysis.contains(qsl("<td><center>0xe2</center></td><td><center>0x82</center></td><td><center>0xac</center></td>")), "the euro sign's UTF-8 bytes are wrong");
+        QVERIFY2(analysis.contains(qsl("<td><center>\\226</center></td><td><center>\\130</center></td><td><center>\\172</center></td>")), "the euro sign's Lua escapes are wrong");
+
+        // U+1F600 is a surrogate pair: two UTF-16 indexes, one code point, four bytes
+        QVERIFY2(analysis.contains(qsl("<center>8 & 9</center>")), "the surrogate pair was not given both of its UTF-16 indexes");
+        QVERIFY2(analysis.contains(qsl("<center>1F600</center>&#8232;<center>(0xd83d:0xde00)</center>")), "the surrogate pair was not reported as a single code point");
+        QVERIFY2(analysis.contains(qsl("<td><center>\\240</center></td><td><center>\\159</center></td><td><center>\\152</center></td><td><center>\\128</center></td>")),
+                 "the emoji's Lua escapes are wrong");
+
+        // UTF-8 indexes count bytes, so everything before the 'a' adds up to 24:
+        // 1 + 1 + 1 + 2 + 3 + 2 + 3 + 4 + 4 + 3
+        QVERIFY2(analysis.contains(qsl("<th><center>25</center></th>")), qPrintable(qsl("the UTF-8 index of the first letter does not count the bytes before it:\n%1").arg(analysis)));
+        // and the ten letters that follow end on 34, which pins the count from
+        // both sides - an undercount shifts some other letter onto 25
+        QVERIFY2(analysis.contains(qsl("<th><center>34</center></th>")), "the UTF-8 index of the last letter undercounts the bytes before it");
+        QVERIFY2(!analysis.contains(qsl("<th><center>35</center></th>")), "the UTF-8 index of the last letter overcounts the bytes before it");
+        QVERIFY2(analysis.contains(qsl("<td colspan=\"1\"><center>j</center></td>")), "the analysis lost the end of the line");
+        QVERIFY2(analysis.count(qsl("<table")) > 1, "a line of over 16 code points was not split into more than one table");
+    }
+
+    // Past the first line only the first line's tail counts, and indexes are
+    // still counted from the start of the line rather than of the selection.
+    void test_characterAnalysisOfAMultiLineSelectionCoversTheRestOfTheFirstLine()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const int line = printedLineNumber(analysedLine());
+        QVERIFY2(line >= 0, "the line to analyse never reached the buffer");
+        QVERIFY2(printedLineNumber(qsl("QQQ")) == line + 1, "the second line did not land straight after the first");
+
+        const int euroColumn = static_cast<int>(analysedLine().indexOf(QChar(0x20AC)));
+        const QString analysis = analysisOf(pane, QPoint(euroColumn, line), QPoint(1, line + 1));
+
+        QVERIFY2(analysis.contains(qsl("<th colspan=\"3\"><center>7</center></th>")), "the euro sign's UTF-16 index is not counted from the start of the line");
+        QVERIFY2(analysis.contains(qsl("<th><center>11</center></th>")), "the euro sign's UTF-8 index is not counted from the start of the line");
+        QVERIFY2(!analysis.contains(qsl("{tab}")), "a character before the selection was analysed");
+        QVERIFY2(analysis.contains(qsl("<td colspan=\"1\"><center>j</center></td>")), "the analysis stopped short of the end of the first line");
+        QVERIFY2(!analysis.contains(qsl("<center>Q</center>")), "the second line of the selection was analysed");
+    }
+
+    // Upwards as well as downwards: above the anchor line the pointer is the
+    // top-left end of the selection rather than the bottom-right.
+    void test_draggingALineSelectionCopiesWholeLines_data()
+    {
+        QTest::addColumn<int>("rowsDragged");
+        QTest::newRow("upwards") << -2;
+        QTest::newRow("downwards") << 2;
+    }
+
+    void test_draggingALineSelectionCopiesWholeLines()
+    {
+        QFETCH(int, rowsDragged);
+
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        const QPointF releasePos = pressPos + QPointF(0, rowsDragged * pane->mFontHeight);
+        QStringList lines;
+        for (int row = std::min(0, rowsDragged); row <= std::max(0, rowsDragged); ++row) {
+            lines.append(lineUnder(pane, pressPos + QPointF(0, row * pane->mFontHeight)));
+            QVERIFY2(lines.constLast().endsWith(qsl("eleven")), qPrintable(qsl("the drag crosses \"%1\", which is not a line of prose").arg(lines.constLast())));
+        }
+        const QString expected = lines.join(QChar::LineFeed);
+
+        pressLeftButton(pane, pressPos, 3);
+        QVERIFY2(pane->mMouseTrackLevel == 3, "the three presses were too far apart to count as a triple-click");
+        moveAndReleaseLeftButton(pane, releasePos);
+
+        QCOMPARE(highlightedText(), expected);
+        QCOMPARE(copiedText(pane), expected);
+
+        const QString html = copiedHtml(pane);
+        for (const QString& line : lines) {
+            QVERIFY2(html.contains(line), qPrintable(qsl("the copy as HTML lost part of \"%1\"").arg(line)));
+        }
+    }
+
+    // Dragged leftwards, the pointer's word is only the first of those
+    // highlighted.
+    void test_doubleClickDraggedLeftCopiesEveryHighlightedWord()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        // columns 31-37 are "faintly" and 18-25 are "distance"
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        const QString line = lineUnder(pane, pressPos);
+        QCOMPARE(line.mid(18, 20), qsl("distance you faintly"));
+
+        pressLeftButton(pane, pressPos, 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QCOMPARE(highlightedText(), qsl("faintly"));
+        QCOMPARE(copiedText(pane), qsl("faintly"));
+        // one move: over several, expandSelectionToWords() walks the anchor
+        // left with the pointer and "faintly" drops out of the highlight itself
+        moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 20));
+
+        QCOMPARE(highlightedText(), qsl("distance you faintly"));
+        QCOMPARE(copiedText(pane), qsl("distance you faintly"));
+    }
+
+    // A double-click on a space has no word to highlight, and leaves the
+    // selection's start one cell past its end.
+    void test_doubleClickOnASpaceCopiesNothing()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, 30);
+        QCOMPARE(lineUnder(pane, pressPos).at(30), QChar(QChar::Space));
+
+        pressLeftButton(pane, pressPos, 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, pressPos);
+
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(copiedText(pane), mNothingCopied);
+        QCOMPARE(copiedHtml(pane), mNothingCopied);
+    }
+
+    // Below the last line there is no line for a Ctrl+click to select, so it
+    // must not highlight from wherever the selection's endpoints were left.
+    void test_ctrlClickBelowTheTextSelectsNothing()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\necho('one two\\nthree four\\nfive six\\n')\n")), "the echo() call failed");
+        QTest::qWait(100ms);
+
+        const QPointF secondRow(pane->mFontWidth * 2.5, pane->mFontHeight * 1.5);
+        QCOMPARE(lineUnder(pane, secondRow), qsl("three four"));
+        pressLeftButton(pane, secondRow, 3);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, secondRow);
+        QCOMPARE(highlightedText(), qsl("three four"));
+
+        // long enough after the triple-click not to count as part of it
+        QTest::qWait(350ms);
+        const QPointF firstRow(pane->mFontWidth * 2.5, pane->mFontHeight * 0.5);
+        pressLeftButton(pane, firstRow, 1);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, firstRow);
+        QCOMPARE(highlightedText(), QString());
+
+        const QPointF belowTheText = cellInMiddleRow(pane, 2);
+        const int lineBelowTheText = static_cast<int>(belowTheText.y()) / pane->mFontHeight + pane->imageTopLine();
+        QVERIFY2(lineBelowTheText >= static_cast<int>(host->mpConsole->buffer.lineBuffer.size()), "the middle of the pane is not below the text");
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, belowTheText, Qt::ControlModifier);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, belowTheText, Qt::ControlModifier);
+
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(copiedText(pane), mNothingCopied);
+    }
+
+    // A plain drag has to order its two ends itself whichever way it runs, as
+    // the copy does not reorder them.
+    void test_plainDragCopiesWhatIsHighlighted_data()
+    {
+        QTest::addColumn<int>("pressColumn");
+        QTest::addColumn<int>("releaseColumn");
+        QTest::addColumn<int>("rowsDragged");
+        QTest::newRow("left to right") << 18 << 25 << 0;
+        QTest::newRow("right to left") << 37 << 31 << 0;
+        QTest::newRow("top to bottom") << 31 << 25 << 1;
+        QTest::newRow("bottom to top") << 25 << 31 << -1;
+    }
+
+    void test_plainDragCopiesWhatIsHighlighted()
+    {
+        QFETCH(int, pressColumn);
+        QFETCH(int, releaseColumn);
+        QFETCH(int, rowsDragged);
+
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, pressColumn);
+        const QPointF releasePos = cellInMiddleRow(pane, releaseColumn) + QPointF(0, rowsDragged * pane->mFontHeight);
+        const bool forwards = rowsDragged > 0 || (rowsDragged == 0 && pressColumn < releaseColumn);
+        const QString firstLine = lineUnder(pane, forwards ? pressPos : releasePos);
+        const QString lastLine = lineUnder(pane, forwards ? releasePos : pressPos);
+        const int firstColumn = forwards ? pressColumn : releaseColumn;
+        const int lastColumn = forwards ? releaseColumn : pressColumn;
+        QVERIFY2(firstLine.endsWith(qsl("eleven")) && lastLine.endsWith(qsl("eleven")), "the drag is not over lines of prose");
+        const QString expected = rowsDragged == 0 ? firstLine.mid(firstColumn, lastColumn - firstColumn + 1) : firstLine.mid(firstColumn) + QChar::LineFeed + lastLine.left(lastColumn + 1);
+
+        pressLeftButton(pane, pressPos, 1);
+        moveAndReleaseLeftButton(pane, releasePos);
+
+        QCOMPARE(highlightedText(), expected);
+        QCOMPARE(copiedText(pane), expected);
+    }
+
+    // A double-click leaves mMouseTrackLevel at 2, which must not widen a
+    // selection a screen reader makes afterwards.
+    void test_screenReaderSelectionAfterADoubleClickIsNotWidenedToWords()
+    {
+        QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        pressLeftButton(pane, pressPos, 2);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, pressPos);
+        QCOMPARE(highlightedText(), qsl("faintly"));
+        QCOMPARE(copiedText(pane), qsl("faintly"));
+
+        QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pane);
+        QVERIFY2(pInterface && pInterface->textInterface(), "no QAccessibleTextInterface for the console");
+
+        // columns 20-33 start inside "distance" and end inside "faintly"
+        const int y = static_cast<int>(pressPos.y()) / pane->mFontHeight + pane->imageTopLine();
+        pInterface->textInterface()->removeSelection(0);
+        pInterface->textInterface()->addSelection(pane->offsetForPosition(y, 20), pane->offsetForPosition(y, 34));
+
+        QCOMPARE(highlightedText(), qsl("stance you fai"));
+        QCOMPARE(copiedText(pane), qsl("stance you fai"));
+    }
+
+    // The mouse selection is a flag on each TChar, so whatever the line's
+    // characters are held in has to keep them where they are once a selection
+    // has been made over them. Text arriving on the line that is already under
+    // selection - a prompt, an echo - is how that gets tested in practice.
+    void test_appendingToASelectedLineKeepsItHighlighted()
+    {
+        mpServer->setWelcomeMessage(fillerText());
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(qsl("\nselected"));
+        const int y = console->buffer.getLastLineNumber();
+        QCOMPARE(console->buffer.line(y), qsl("selected"));
+
+        pane->slot_selectAll();
+        QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "selecting all did not mark the last line, so a dropped flag below could not be told from one that was never set");
+
+        // enough for the line to outgrow whatever it is held in, but short
+        // enough that it cannot wrap and move to a line of its own
+        console->print(QString(20, QLatin1Char('z')));
+        QCOMPARE(console->buffer.getLastLineNumber(), y);
+
+        QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
+    }
+
+    // #6363: the mouse cursor becomes a hand over a link, and the reset back to
+    // the I-beam lives inside two bounds checks in updateTextCursor(). Leaving
+    // the link sideways lands on a character that answers those checks, so the
+    // reset runs; leaving it downwards lands past the last line of the buffer,
+    // where neither check is satisfied and the hand is left on screen.
+    void test_theCursorStopsBeingAHandAfterTheMouseLeavesALinkDownwards()
+    {
+        mpServer->setWelcomeMessage(qsl("cursor test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("cursor test")), "the welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        auto host = mudlet::self()->getActiveHost();
+        // the profile's own startup output otherwise fills the pane, leaving no
+        // blank rows under the link for the mouse to move down into
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nechoLink('LinkForCursorTest', [[ ]], '', true)\n")), "the echoLink() call failed");
+        QVERIFY2(waitForTextInBuffer(qsl("LinkForCursorTest")), "the link text never reached the buffer");
+        QTest::qWait(100ms);
+
+        // the link's own pixel is found rather than calculated, so a timestamp
+        // gutter or a font of another size cannot put this on the wrong cell
+        QPoint overTheLink;
+        for (int y = pane->mFontHeight / 2; y < pane->height() && overTheLink.isNull(); y += pane->mFontHeight) {
+            for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
+                if (pane->cursor().shape() == Qt::PointingHandCursor) {
+                    overTheLink = QPoint(x, y);
+                    break;
+                }
+            }
+        }
+        QVERIFY2(!overTheLink.isNull(), "no pixel of the pane produced the hand cursor, so the move below proves nothing");
+        QCOMPARE(pane->cursor().shape(), Qt::PointingHandCursor);
+
+        // straight down from the link, into the empty part of the pane below
+        // every line the buffer holds
+        const int emptyRowY = pane->height() - (pane->mFontHeight / 2);
+        QVERIFY2((emptyRowY / pane->mFontHeight) + pane->imageTopLine() >= static_cast<int>(pane->mpBuffer->buffer.size()),
+                 "the chosen row still holds text, so it does not exercise the reported case");
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(overTheLink.x(), emptyRowY));
+
+        QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
+    }
+
+    // The same reset, reached by the other bounds check: an empty line inside
+    // the buffer answers the line check but has no character to look a link up
+    // on, so convertMouseXToBufferX() falls out of its loop and the reset has to
+    // come from the character check instead. That check also stands between the
+    // condition and its own at(tCharIndex) call, so losing it on this arm throws
+    // rather than merely stranding the hand.
+    void test_theCursorStopsBeingAHandOverAnEmptyLineInsideTheBuffer()
+    {
+        mpServer->setWelcomeMessage(qsl("cursor test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("cursor test")), "the welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        auto host = mudlet::self()->getActiveHost();
+        // Hide would keep the blank line out of the buffer and ReplaceWithSpace
+        // would give it a character to find, either of which leaves this
+        // exercising the same arm as the test above
+        host->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nechoLink('LinkAboveEmptyRow', [[ ]], '', true)\necho('\\n\\nrowBelowTheBlankOne\\n')\n")),
+                 "the echoLink() call failed");
+        QVERIFY2(waitForTextInBuffer(qsl("rowBelowTheBlankOne")), "the text under the blank line never reached the buffer");
+        QTest::qWait(100ms);
+
+        QPoint overTheLink;
+        for (int y = pane->mFontHeight / 2; y < pane->height() && overTheLink.isNull(); y += pane->mFontHeight) {
+            for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
+                if (pane->cursor().shape() == Qt::PointingHandCursor) {
+                    overTheLink = QPoint(x, y);
+                    break;
+                }
+            }
+        }
+        QVERIFY2(!overTheLink.isNull(), "no pixel of the pane produced the hand cursor, so the move below proves nothing");
+        QCOMPARE(pane->cursor().shape(), Qt::PointingHandCursor);
+
+        // straight down onto the blank line, which the row under it keeps inside
+        // the buffer
+        const int blankRowY = overTheLink.y() + pane->mFontHeight;
+        const int blankRowLine = (blankRowY / pane->mFontHeight) + pane->imageTopLine();
+        QVERIFY2(blankRowLine < static_cast<int>(pane->mpBuffer->buffer.size()),
+                 "the row below the link is past the buffer, which is the case the test above covers rather than this one");
+        QVERIFY2(pane->mpBuffer->buffer.at(blankRowLine).empty(),
+                 qPrintable(qsl("the row below the link holds %1 characters rather than none, so the character check is not what has to reject it")
+                                    .arg(pane->mpBuffer->buffer.at(blankRowLine).size())));
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(overTheLink.x(), blankRowY));
+
+        QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
+    }
+
+    // #3031: the timestamp sits in a gutter to the left of the line's own text,
+    // so a click there is taken to mean the line as a whole and selects all of
+    // it the way a Ctrl+click does. Without that, the click lands on the line's
+    // first character and a press and release in one place select nothing.
+    void test_clickingOnATimestampSelectsTheWholeLine()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->slot_toggleTimeStamps(true);
+        QVERIFY2(console->showTimeStamps(), "the timestamp gutter never came on, so the click has nothing to land in");
+
+        // The gutter is as wide as the timestamp format, so the first column of
+        // the row is inside it
+        const QPointF gutter = cellInMiddleRow(pane, 0);
+        const QString line = lineUnder(pane, gutter);
+        QVERIFY2(line.endsWith(qsl("eleven")), qPrintable(qsl("the row clicked on holds \"%1\" rather than one of the prose lines").arg(line)));
+
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, gutter);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, gutter);
+
+        QCOMPARE(highlightedText(), line);
+        QCOMPARE(copiedText(pane), line);
+    }
+
+    // #6476: a right-click builds a menu of its own every time, so the one the
+    // click before put up has to be gone - otherwise each right-click of the
+    // session leaves another menu parented on the pane.
+    void test_theRightClickMenuIsDestroyedWhenItCloses()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        const QPointF pos = cellInMiddleRow(pane, 5);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+        QVERIFY2(menu->findChild<QAction*>(qsl("consoleCopy")), "the menu is not the console's own");
+
+        menu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
+    }
+
+    // #6351: the console actions are keyed on the unique name while the menu
+    // entry is labelled with the display name. An entry that handed its label
+    // back missed the map, indexed the empty list that left behind and took the
+    // client down with it, so it has to carry the unique name through instead.
+    // A regression here therefore aborts the run rather than failing this case.
+    void test_aMouseEventEntryRaisesItsEventUnderTheUniqueName()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("mouseEventRanFor = ''\n"
+                                                                        "function mouseEventTestHandler(_, uniqueName) mouseEventRanFor = uniqueName end\n"
+                                                                        "registerAnonymousEventHandler('testMouseEventName', 'mouseEventTestHandler')\n"
+                                                                        "addMouseEvent('testMouseUniqueName', 'testMouseEventName', 'A display name of its own', 'tooltip')\n")),
+                 "the addMouseEvent() call failed");
+
+        const QPointF pos = cellInMiddleRow(pane, 5);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+
+        QAction* entry = nullptr;
+        for (QAction* pAction : menu->actions()) {
+            if (pAction->text() == qsl("A display name of its own")) {
+                entry = pAction;
+                break;
+            }
+        }
+        QVERIFY2(entry, "the mouse event got no entry in the console's right-click menu");
+        entry->trigger();
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "mouseEventRanFor");
+        const QString ranFor = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 1);
+        QCOMPARE(ranFor, qsl("testMouseUniqueName"));
+
+        menu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // TConsoleModel::selectSection() refuses a length that would put a selection's
+    // end before its start, but TBuffer::replaceInLine() takes the two points
+    // as it is given them, and its own bounds checks only ask that each column
+    // is on the line. A reversed pair walked erase() over a range of negative
+    // length, which moves memory backwards out of the vector's allocation - so
+    // the guard inside replaceInLine() is what stands behind the Lua one, and
+    // no spec can reach it once selectSection() refuses first.
+    //
+    // Declared last of the slots: without the guard this corrupts the heap, and
+    // the abort that follows lands wherever the next allocation happens to be,
+    // taking the rest of the run with it.
+    void test_replaceInLineRefusesARangeThatRunsBackwards()
+    {
+        mpServer->setWelcomeMessage(qsl("selection test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
+
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(qsl("\nbackwards selection"));
+        const int y = console->buffer.getLastLineNumber();
+        QCOMPARE(console->buffer.line(y), qsl("backwards selection"));
+
+        // both columns are on the line, so only their order can reject this
+        QPoint begin(12, y);
+        QPoint end(4, y);
+        TChar format;
+        QVERIFY2(!console->buffer.replaceInLine(begin, end, qsl("XXXX"), format), "a range whose start is past its end was accepted");
+        QCOMPARE(console->buffer.line(y), qsl("backwards selection"));
+    }
+
+    // The same reversal, one line at a time rather than over the range as a
+    // whole: a range that starts at the very end of its first line leaves that
+    // line's start past the end the loop computes for it, and an empty line
+    // inside a multi-line range has an end of -1 with a start of 0. Nothing in
+    // the codebase builds a P_begin/P_end pair spanning two lines today, so
+    // this drives the buffer directly.
+    void test_replaceInLineSkipsALineWhoseStartIsPastItsOwnEnd()
+    {
+        mpServer->setWelcomeMessage(qsl("selection test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
+
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(qsl("\nfirst\nsecond"));
+        const int lastLine = console->buffer.getLastLineNumber();
+        const int firstLine = lastLine - 1;
+        QCOMPARE(console->buffer.line(firstLine), qsl("first"));
+        QCOMPARE(console->buffer.line(lastLine), qsl("second"));
+
+        // starting at the column after the last character of "first" - which
+        // the bounds check above permits - leaves nothing of that line in range
+        QPoint begin(static_cast<int>(console->buffer.line(firstLine).size()), firstLine);
+        QPoint end(3, lastLine);
+        TChar format;
+        // an empty replacement, the way TBuffer::cut() calls this, so what the
+        // lines lose is only what the range covered
+        QVERIFY(console->buffer.replaceInLine(begin, end, QString(), format));
+
+        QCOMPARE(console->buffer.line(firstLine), qsl("first"));
+        QCOMPARE(console->buffer.line(lastLine), qsl("ond"));
+
+        // the text and the TChar that carries each character's formatting are
+        // held apart, and a reversed erase() grows the vector rather than
+        // shortening it - which the text above cannot show, since it comes from
+        // the QString side alone
+        QCOMPARE(static_cast<int>(console->buffer.buffer.at(firstLine).size()), static_cast<int>(console->buffer.line(firstLine).size()));
+        QCOMPARE(static_cast<int>(console->buffer.buffer.at(lastLine).size()), static_cast<int>(console->buffer.line(lastLine).size()));
     }
 
     void cleanup()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mpHostname);
 
         // Tear down Mudlet (and with it the live cTelnet connection) before the
         // stub server it is talking to, so the socket is closed from the client
@@ -200,35 +939,13 @@ private slots:
 private:
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -250,7 +967,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         deleteDirectory(path);
     }
 
@@ -264,20 +981,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "MainConsoleSelectionTest.moc"
-QTEST_MAIN(MainConsoleSelectionTest)
+MUDLET_GROUPED_TEST_MAIN(MainConsoleSelectionTest)

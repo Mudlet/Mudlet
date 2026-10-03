@@ -22,9 +22,15 @@
 #include "MxpTag.h"
 #include "TStringUtils.h"
 
+#include <QByteArray>
+
 class TMxpNodeBuilder
 {
     bool mOptionIgnoreText;
+
+    // Session encoding used to decode attribute bytes; defaults to UTF-8 for
+    // callers (e.g. re-parsing already-decoded definitions) that don't set it.
+    QByteArray mEncoding{QByteArrayLiteral("UTF-8")};
 
     // current tag attrs
     std::string mCurrentTagName;
@@ -82,6 +88,8 @@ public:
 
     void reset();
     void resetForNewTag();
+
+    void setEncoding(const QByteArray& encoding) { mEncoding = encoding; }
 
     inline bool hasTag() const { return isTag() && hasNode(); }
 

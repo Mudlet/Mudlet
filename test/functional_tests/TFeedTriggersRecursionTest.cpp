@@ -17,8 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
+#include <chrono>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -29,12 +35,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // Validates the guards that stop a self-feeding trigger (one whose action calls
 // feedTriggers() or feedTelnet() with text that re-matches it) from recursing the
@@ -46,20 +49,42 @@ class TFeedTriggersRecursionTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mpHostname = "Test-FeedTriggersRecursion";
-    const QString mpPort = "4000";
+    QString mpPort; // assigned the stub's actual ephemeral port in init()
     const QString mpLocalhost = "localhost";
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, mpPort.toUShort());
+        mpServer->start(mpLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -72,6 +97,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("loopCount = 0\n"
@@ -92,7 +118,6 @@ private slots:
         lua_pop(L, 1);
         QVERIFY2(bufferContains(qsl("trigger '%1'").arg(loopTriggerId)), "Expected the abort message to name the offending trigger by its id");
 
-        // The trigger should have fired exactly up to the limit and no further.
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('LOOPCOUNT='..loopCount..'\\n')"));
         QVERIFY2(bufferContains(qsl("LOOPCOUNT=%1").arg(TriggerUnit::scmMaxProcessingDepth)), qPrintable(qsl("Expected the trigger to fire exactly %1 times").arg(TriggerUnit::scmMaxProcessingDepth)));
     }
@@ -103,6 +128,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("normalCount = 0\n"
@@ -122,6 +148,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         // feedTelnet() refuses to work unless the profile is offline
@@ -160,6 +187,7 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->mEchoLuaErrors = true;
 
         host->mTelnet.disconnectIt();
@@ -179,43 +207,20 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
-    // Starts a profile the way a user would via the GUI (mirrors the helper in
-    // TelnetTextDisplayedTest).
+    // Starts a profile the way a user would via the GUI.
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -238,29 +243,9 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
-        QDir dir(path);
-        if (!dir.exists()) {
-            return;
-        }
-        dir.removeRecursively();
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TFeedTriggersRecursionTest.moc"
-QTEST_MAIN(TFeedTriggersRecursionTest)
+MUDLET_GROUPED_TEST_MAIN(TFeedTriggersRecursionTest)
