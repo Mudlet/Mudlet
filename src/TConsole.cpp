@@ -458,9 +458,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     } else if (mType & (UserWindow | SubConsole)) {
         // These will need to be changed when the built in TCommandLine is
         // enabled or an additional one is added to them:
-        setFocusProxy(mpHost->mpConsole->mpCommandLine);
-        mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-        mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+        mUpperPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+        mLowerPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
     }
 
     splitter->addWidget(mUpperPane);
@@ -940,8 +940,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
         if (app && !app->getDetachedWindows().contains(mpHost->getName())) {
             for (const auto& otherHostPtr : *HostManager::self()) {
                 Host* otherHost = otherHostPtr.data();
-                if (otherHost && otherHost != mpHost.data() && otherHost->mpConsole) {
-                    otherHost->mpConsole->syncHiddenScreenDimensions();
+                if (otherHost && otherHost != mpHost.data() && otherHost->mainConsoleView()) {
+                    otherHost->mainConsoleView()->syncHiddenScreenDimensions();
                 }
             }
         }
@@ -1096,7 +1096,7 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType & (SubConsole | Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            auto pC = mpHost->mpConsole->deregisterSubConsole(mConsoleName);
+            auto pC = mpHost->mainConsoleView()->deregisterSubConsole(mConsoleName);
             if (pC) {
                 // As it happens pC will be identical to 'this' it is just that
                 // we will have removed it from the main TConsole's
@@ -1116,8 +1116,8 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType == UserWindow) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            auto pC = mpHost->mpConsole->deregisterSubConsole(mConsoleName);
-            auto pD = mpHost->mpConsole->deregisterDockWidget(mConsoleName);
+            auto pC = mpHost->mainConsoleView()->deregisterSubConsole(mConsoleName);
+            auto pD = mpHost->mainConsoleView()->deregisterDockWidget(mConsoleName);
             if (pC) {
                 // As it happens pC will be identical to 'this' it is just that
                 // we will have removed it from the main TConsole's
@@ -1160,7 +1160,7 @@ void TConsole::slot_toggleLogging()
         return;
         // We don't support logging anything other than main console (at present?)
     }
-    mpHost->mpConsole->toggleLogging(true);
+    mpHost->mainConsoleView()->toggleLogging(true);
 }
 
 // FIXME: This needs to move to the TMainConsole class but the button handling
@@ -1657,7 +1657,7 @@ void TConsole::setCmdVisible(bool isVisible)
         mpCommandLine->setFont(font());
         // put this CommandLine in the mainConsoles SubCommandLineMap
         // name is the console name
-        mpHost->mpConsole->registerSubCommandLine(mConsoleName, mpCommandLine);
+        mpHost->mainConsoleView()->registerSubCommandLine(mConsoleName, mpCommandLine);
         layoutLayer2->addWidget(mpCommandLine);
     }
     if (mType == MainConsole) {
@@ -1679,8 +1679,8 @@ void TConsole::setCmdVisible(bool isVisible)
     setProxyForFocus(isVisible ? mpCommandLine : nullptr);
     // Need to remove the TCommandLine from the last used stack
     // if it has been explicitly hidden:
-    if (!isVisible && mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->forgetCommandLine(mpCommandLine);
+    if (!isVisible && mpHost && mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->forgetCommandLine(mpCommandLine);
     }
 }
 
@@ -1723,8 +1723,8 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
         if (mType & (MainConsole | SubConsole | UserWindow)) {
-            if (mpHost && mpHost->mpConsole) {
-                for (auto commandLine : mpHost->mpConsole->subCommandLineWidgets()) {
+            if (mpHost && mpHost->mainConsoleView()) {
+                for (auto commandLine : mpHost->mainConsoleView()->subCommandLineWidgets()) {
                     auto pConsole = commandLine->console();
                     if (pConsole && (pConsole == this)) {
                         commandLine->setFont(font());
@@ -2206,8 +2206,8 @@ void TConsole::syncHiddenScreenDimensions()
     }
     syncHostScreenDimensions(upperPaneWidthFor(container->width()), upperPaneHeightFor(container->height()));
     // so that an MXP frame opened meanwhile is placed in the window it comes back to
-    if (mpHost->mpConsole) {
-        mpHost->mpConsole->mxpFrameWidgets().reportSize();
+    if (mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->mxpFrameWidgets().reportSize();
     }
 }
 
@@ -2448,13 +2448,13 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     // This ensures clicking on a console focuses its own command line
     if (mpCommandLine && mpCommandLine->isVisible()) {
         mpCommandLine->setFocus(Qt::MouseFocusReason);
-        if (mpHost->mpConsole) {
-            mpHost->mpConsole->recordActiveCommandLine(mpCommandLine);
+        if (mpHost->mainConsoleView()) {
+            mpHost->mainConsoleView()->recordActiveCommandLine(mpCommandLine);
         }
     } else if (mType == MainConsole) {
         // Main console always has its command line
-        mpHost->mpConsole->mpCommandLine->setFocus(Qt::MouseFocusReason);
-        mpHost->mpConsole->recordActiveCommandLine(mpHost->mpConsole->mpCommandLine);
+        mpHost->mainConsoleView()->mpCommandLine->setFocus(Qt::MouseFocusReason);
+        mpHost->mainConsoleView()->recordActiveCommandLine(mpHost->mainConsoleView()->mpCommandLine);
     } else {
         // Fallback to the old behavior for other cases
         mpHost->setFocusOnHostActiveCommandLine();
@@ -2644,10 +2644,10 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
             QAccessible::updateAccessibility(&event);
         } else {
             // Revert to main console's command line
-            setFocusProxy(mpHost->mpConsole->mpCommandLine);
-            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-            mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+            setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+            mUpperPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+            mLowerPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+            QAccessibleEvent event(mpHost->mainConsoleView()->mpCommandLine, QAccessible::Focus);
             QAccessible::updateAccessibility(&event);
         }
     } else if (mType == SubConsole) {
@@ -2672,10 +2672,10 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
                 QAccessible::updateAccessibility(&event);
             } else {
                 // Somehow that has failed so fall back to the main console
-                setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+                setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+                mUpperPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+                mLowerPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+                QAccessibleEvent event(mpHost->mainConsoleView()->mpCommandLine, QAccessible::Focus);
                 QAccessible::updateAccessibility(&event);
             }
         }

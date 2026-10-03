@@ -648,8 +648,8 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost->mpConsole) {
-        mpHost->mpConsole->recordActiveCommandLine(this);
+    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->recordActiveCommandLine(this);
     }
 
     QPlainTextEdit::focusInEvent(event);
@@ -670,8 +670,8 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::hideEvent(QHideEvent* event)
 {
     // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
-    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
-        mpHost->mpConsole->mpCommandLine->setFocus();
+    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
+        mpHost->mainConsoleView()->mpCommandLine->setFocus();
     }
 
     QPlainTextEdit::hideEvent(event);
@@ -1104,12 +1104,12 @@ void TCommandLine::handleTabCompletion(bool direction)
         mUserKeptOnTyping = false;
         mTabCompletionCount = -1;
     }
-    int amount = mpHost->mpConsole->buffer.size();
+    int amount = mpHost->mainConsoleView()->buffer.size();
     if (amount > 500) {
         amount = 500;
     }
 
-    const QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
+    const QStringList bufferList = mpHost->mainConsoleView()->buffer.getEndLines(amount);
     QString buffer = bufferList.join(QChar::Space);
 
     buffer.replace(QChar(0x21af), QChar::LineFeed);

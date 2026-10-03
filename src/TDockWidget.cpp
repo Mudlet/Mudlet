@@ -73,7 +73,7 @@ void TDockWidget::moveEvent(QMoveEvent* event)
 
 void TDockWidget::setVisible(bool visible)
 {
-    auto pC = (mpHost && mpHost->mpConsole) ? mpHost->mpConsole->subConsoleWidget(mWidgetConsoleName) : nullptr;
+    auto pC = (mpHost && mpHost->mainConsoleView()) ? mpHost->mainConsoleView()->subConsoleWidget(mWidgetConsoleName) : nullptr;
     if (!pC) {
         // During shutdown / profile closure TDockWidgets will get a hide event
         // as part of the underlying Qt class's built in handling of a close
@@ -91,7 +91,7 @@ void TDockWidget::setVisible(bool visible)
     if (visible) {
         pC->show();
         QWidget::setVisible(true);
-        mpHost->mpConsole->showWindow(mWidgetConsoleName);
+        mpHost->mainConsoleView()->showWindow(mWidgetConsoleName);
     } else {
         QWidget::setVisible(false);
     }

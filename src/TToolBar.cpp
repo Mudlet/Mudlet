@@ -64,10 +64,10 @@ TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e)
-    if (mpHost.isNull() || !mpHost->mpConsole) {
+    if (mpHost.isNull() || !mpHost->mainConsoleView()) {
         return;
     }
-    mpHost->mpConsole->setToolBarLayoutChanged(this);
+    mpHost->mainConsoleView()->setToolBarLayoutChanged(this);
 }
 
 void TToolBar::setName(const QString& name)
@@ -86,8 +86,8 @@ void TToolBar::moveEvent(QMoveEvent* e)
         return;
     }
 
-    if (mpHost->mpConsole) {
-        mpHost->mpConsole->setToolBarLayoutChanged(this);
+    if (mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->setToolBarLayoutChanged(this);
     }
 
     if (mRecordMove) {
@@ -210,7 +210,7 @@ void TToolBar::addActionButtons(TAction* pAction)
             pTFlipButton->setMenu(pNewMenu);
         }
 
-        mpHost->mpConsole->replaceActionButton(pTAction, pTFlipButton);
+        mpHost->mainConsoleView()->replaceActionButton(pTAction, pTFlipButton);
 
         // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
         // add the button to the toolbar AFTER any menu (children) items have
@@ -225,11 +225,11 @@ void TToolBar::addActionButtons(TAction* pAction)
 // item to which the sub-menu is added.
 void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
 {
-    mpHost->mpConsole->setActionToolBar(pAction, this);
+    mpHost->mainConsoleView()->setActionToolBar(pAction, this);
     auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
     pEAction->setCheckable(pAction->isPushDownButton());
     pEAction->setStatusTip(pAction->getName());
-    mpHost->mpConsole->replaceActionMenuEntry(pAction, pEAction);
+    mpHost->mainConsoleView()->replaceActionMenuEntry(pAction, pEAction);
     pMenu->addAction(pEAction);
 
     if (pAction->isFolder()) {
@@ -302,11 +302,11 @@ void TToolBar::slot_pressed(const bool isChecked)
 
     if (pA->isPushDownButton()) {
         pA->mButtonState = isChecked;
-        mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
+        mpHost->mainConsoleView()->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
     } else {
         pA->mButtonState = false;
-        pB->setChecked(false);               // This does NOT invoke the clicked()!
-        mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
+        pB->setChecked(false);                       // This does NOT invoke the clicked()!
+        mpHost->mainConsoleView()->mButtonState = 1; // Was effectively 0 but that is wrong
     }
 
     pA->execute();

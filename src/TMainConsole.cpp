@@ -279,7 +279,7 @@ std::optional<QString> TMainConsole::getUserWindowStyleSheet(const QString& name
 std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
 {
     if (name.isEmpty() || !name.compare(qsl("main"))) {
-        mpHost->mpConsole->mpCommandLine->setStyleSheet(styleSheet);
+        mpHost->mainConsoleView()->mpCommandLine->setStyleSheet(styleSheet);
         return {true, QString()};
     }
 
@@ -294,7 +294,7 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
 std::optional<QString> TMainConsole::getCmdLineStyleSheet(const QString& name) const
 {
     if (name.isEmpty() || !name.compare(qsl("main"))) {
-        if (auto pMain = mpHost->mpConsole->mpCommandLine) {
+        if (auto pMain = mpHost->mainConsoleView()->mpCommandLine) {
             return {pMain->styleSheet()};
         }
         return {};
@@ -3854,11 +3854,11 @@ void TMainConsole::showStatistics()
 
     // Footer for the system's statistics information displayed in the console, it should be 64 'narrow' characters wide
     const QString footer = qsl("\n+--------------------------------------------------------------+\n");
-    mpHost->mpConsole->print(footer, QColor(150, 120, 0), Qt::black);
+    mpHost->mainConsoleView()->print(footer, QColor(150, 120, 0), Qt::black);
 
     mpHost->mLuaInterpreter.compileAndExecuteScript(QLatin1String("resetFormat();"));
 
-    mpHost->mpConsole->raise();
+    mpHost->mainConsoleView()->raise();
 }
 
 void TMainConsole::closeEvent(QCloseEvent* event)
