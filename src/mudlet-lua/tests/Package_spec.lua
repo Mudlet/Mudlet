@@ -2187,6 +2187,8 @@ describe("Tests the functionality of verboseModuleInstall", function()
     assert.is_true(moduleInstalled(name), "the module was not installed")
     assert.is_true(containsWrapped(text, "Module '" .. path .. "' was installed, but not everything in it is working:"), text)
     assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
   end)
 end)
 
