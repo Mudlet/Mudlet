@@ -91,7 +91,6 @@
 #include <QUuid>
 #include <zip.h>
 #include <memory>
-#include <vector>
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -3599,34 +3598,41 @@ QSet<QString> Host::packagesOwningChunk(const QString& chunkName)
     QSet<QString> owners;
     // Disabled items count: their code may already have run, and permScript()
     // makes them disabled. Items with no code, like a package's folder, do not.
-    auto collectOwners = [&name, &owners](const auto& roots) {
-        for (auto* root : roots) {
-            std::vector<decltype(root)> pending{root};
-            while (!pending.empty()) {
-                auto* item = pending.back();
-                pending.pop_back();
-                if (!item->isTemporary() && item->getName() == name && !item->getScript().isEmpty()) {
-                    owners.insert(root->mPackageName);
-                }
-                for (auto* child : *item->getChildrenList()) {
-                    pending.push_back(static_cast<decltype(root)>(child));
-                }
-            }
+    auto addOwner = [&owners](auto* item) {
+        if (!item || item->isTemporary() || item->getScript().isEmpty()) {
+            return;
         }
+        auto* root = item;
+        while (root->getParent()) {
+            root = root->getParent();
+        }
+        owners.insert(root->mPackageName);
     };
 
     if (kind == u"Script") {
-        collectOwners(mScriptUnit.getScriptRootNodeList());
+        for (const int id : mScriptUnit.findItems(name)) {
+            addOwner(mScriptUnit.getScript(id));
+        }
     } else if (kind == u"Trigger") {
-        collectOwners(mTriggerUnit.getTriggerRootNodeList());
+        for (const int id : mTriggerUnit.findItems(name)) {
+            addOwner(mTriggerUnit.getTrigger(id));
+        }
     } else if (kind == u"Alias") {
-        collectOwners(mAliasUnit.getAliasRootNodeList());
+        for (const int id : mAliasUnit.findItems(name, true, true)) {
+            addOwner(mAliasUnit.getAlias(id));
+        }
     } else if (kind == u"Timer") {
-        collectOwners(mTimerUnit.getTimerRootNodeList());
+        for (const int id : mTimerUnit.findItems(name)) {
+            addOwner(mTimerUnit.getTimer(id));
+        }
     } else if (kind == u"Key") {
-        collectOwners(mKeyUnit.getKeyRootNodeList());
+        for (const int id : mKeyUnit.findItems(name, true, true)) {
+            addOwner(mKeyUnit.getKey(id));
+        }
     } else if (kind == u"Button") {
-        collectOwners(mActionUnit.getActionRootNodeList());
+        for (const int id : mActionUnit.findItems(name)) {
+            addOwner(mActionUnit.getAction(id));
+        }
     }
     return owners;
 }
