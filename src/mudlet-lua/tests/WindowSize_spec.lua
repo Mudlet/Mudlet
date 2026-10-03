@@ -75,22 +75,60 @@ describe("window sizes", function()
       -- No check that hiding it gives the room back: toolbars other specs leave
       -- along the top can keep that area at the height it grew to
     end)
+
+    -- tempButtonToolbar()'s location 1 is the left side
+    it("follows a button bar shown along its left side", function()
+      local toolbar = "wsLeftToolbar"
+      finally(function()
+        hideToolBar(toolbar)
+        pumpEvents(100)
+      end)
+      if exists(toolbar, "button") == 0 then
+        assert.is_true(tempButtonToolbar(toolbar, 1, 1) > 0)
+      end
+      local buttonId = findItems("wsLeftButton", "button")[1] or tempButton(toolbar, "wsLeftButton", 1)
+      assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+      hideToolBar(toolbar)
+      pumpEvents(100)
+      local width, height = getMainWindowSize()
+
+      showToolBar(toolbar)
+      pumpEvents(100)
+
+      local shownWidth, shownHeight = getMainWindowSize()
+      assert.equals(height, shownHeight)
+      assert.is_true(shownWidth < width,
+        ("the main window stayed %d wide with a button bar along its left side"):format(shownWidth))
+    end)
   end)
 
   describe("getUserWindowSize", function()
+    -- Geyser reads the size back from inside the resize event
     it("follows a floating user window as it is resized", function()
       local name = uniqueName("wsFloatingUserWindow")
-      finally(function() deleteMiniConsole(name) end)
+      local seen
+      local handler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, width, height, windowName)
+        if windowName == name then
+          seen = {{width, height}, {getUserWindowSize(name)}}
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        deleteMiniConsole(name)
+      end)
       assert.is_true(openUserWindow(name, false, false, "f"), "the user window did not open")
       resizeWindow(name, 300, 200)
       pumpEvents(100)
       local width, height = getUserWindowSize(name)
 
+      seen = nil
       resizeWindow(name, 400, 260)
       pumpEvents(100)
 
       -- The dock's title bar and frame take a fixed number of pixels of what resizeWindow() asks for
       assert.are.same({width + 100, height + 60}, {getUserWindowSize(name)})
+      assert.is_truthy(seen, "resizing the window raised no sysUserWindowResizeEvent")
+      assert.are.same(seen[1], seen[2])
     end)
 
     it("is the main window's size for a name with no user window", function()
