@@ -299,10 +299,12 @@ bool TMxpFrameWidgets::removeFromParentTabs(const QString& name, const QString& 
 
 void TMxpFrameWidgets::destroyFrame(const QString& name)
 {
-    mpMainConsole->deregisterSubConsole(name);
-    mpMainConsole->deregisterDockWidget(name);
-
     const Widgets widgets = mFrames.take(name);
+    // No dock to deregister: frames never make one, and a dock of this name is a script's user window.
+    // A script can also delete the frame's console and reuse its name for a window of its own
+    if (mpMainConsole->subConsoleWidget(name) == widgets.console.data()) {
+        mpMainConsole->deregisterSubConsole(name);
+    }
     delete widgets.widget.data();
 }
 
