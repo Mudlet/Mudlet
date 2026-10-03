@@ -302,6 +302,11 @@ public:
     // code that can run that early has to be able to see "not there yet"
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
+    // The concrete main console widget, or nullptr while this profile has none.
+    // Widget-side code uses these rather than mpConsole, so that mpConsole's type
+    // can change without touching widget code.
+    TMainConsole* mainConsoleView() const { return mpConsole.data(); }
+    void setMainConsoleView(TMainConsole* view) { mpConsole = view; }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // Colorizer triggers: select a run of the current line, paint it, restore the format. Model state
     // only, so these run with no view; the two colour ones repaint the

@@ -1791,7 +1791,7 @@ void TDetachedWindow::updateWindowMenu()
         QStringList mainWindowProfiles;
 
         for (const auto& host : *HostManager::self()) {
-            if (host && host->mpConsole) {
+            if (host && host->mainConsoleView()) {
                 const QString profileName = host->getName();
                 // Only include profiles that are in the main window (not detached)
                 if (!detachedWindows.contains(profileName)) {
@@ -2830,7 +2830,7 @@ void TDetachedWindow::slot_showMapperDialog()
 
     // Store the main window's mapper temporarily so we can restore it later
     QPointer<dlgMapper> mainMapper = pMap->mpMapper;
-    QPointer<QDockWidget> mainDockWidget = (pHost->mpConsole ? pHost->mpConsole->mpDockableMapWidget : nullptr);
+    QPointer<QDockWidget> mainDockWidget = (pHost->mainConsoleView() ? pHost->mainConsoleView()->mpDockableMapWidget : nullptr);
 
     // Create a new mapper instance for the detached window
     // We need to copy player room style details first
@@ -3322,7 +3322,7 @@ void TDetachedWindow::slot_updateShowMapActionText()
     }
     bool willHide = false;
     if (pHost) {
-        if (pHost->mpConsole && pHost->mpConsole->mpMapper) {
+        if (pHost->mainConsoleView() && pHost->mainConsoleView()->mpMapper) {
             willHide = pHost->mapperShown();
         } else {
             auto mainMapDock = pMudlet->getMainWindowDockWidget(qsl("map_%1").arg(mCurrentProfileName));
