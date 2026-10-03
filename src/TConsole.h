@@ -185,6 +185,9 @@ public:
     const TConsoleModel& model() const { return *mpModel; }
     void insertText(const QString&);
     void clear();
+    // The view's half of clear(), for a buffer something else has already cleared: drops the selection,
+    // split and horizontal scroll, which index lines that are gone.
+    void bufferCleared();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void clearSelection() const;
@@ -249,7 +252,6 @@ public:
     void markLinesDirty(int firstLine, int lastLine);
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     void setFontSize(int);
-    void setFontName(const QString& fontName);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
     bool setWindowBackgroundImage(const QString&, int);
@@ -290,8 +292,8 @@ public:
     void applyTimeStamps();
     // This hides QWidget::setFont(const QFont&) rather than overriding it
     // (QWidget::setFont is non-virtual). The forceChange parameter is needed
-    // when calling from setFontName(...) or setFontSize(...) because those
-    // modify mDisplayFontDetails before calling this, and the TFontAttributes
+    // when calling from setFontSize(...) because that modifies
+    // mDisplayFontDetails before calling this, and the TFontAttributes
     // comparison would otherwise see no change:
     void setFont(const QFont&, const bool forceChange = false);
 

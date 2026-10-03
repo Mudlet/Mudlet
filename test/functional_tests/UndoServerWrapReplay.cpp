@@ -46,6 +46,8 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+using namespace std::chrono_literals;
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
@@ -145,7 +147,7 @@ private slots:
                 [&]() {
                     return mpServer->clientConnected();
                 },
-                3000));
+                3s));
 
         double previous = chunks.first().at;
         for (const auto& chunk : chunks) {
@@ -157,7 +159,7 @@ private slots:
             mpServer->sendRaw(chunk.data);
         }
         // Give held lines, posting timers and the flush timer time to settle:
-        QTest::qWait(900);
+        QTest::qWait(900ms);
 
         QFile out(outPath);
         QVERIFY2(out.open(QIODevice::WriteOnly | QIODevice::Truncate), "cannot open output file");
@@ -187,7 +189,7 @@ private:
             QFAIL("No active host available.");
         }
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

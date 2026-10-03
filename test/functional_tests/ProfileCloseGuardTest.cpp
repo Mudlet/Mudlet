@@ -91,7 +91,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after creating the profile");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(2000), "could not connect the profile to the stub server");
+        QVERIFY2(connected.wait(2s), "could not connect the profile to the stub server");
         // otherwise closing the profile asks whether to save it, and the modal
         // question would hang the test
         QVERIFY2(mpHost->mFORCE_SAVE_ON_EXIT, "profiles must save without asking, or a close puts up a modal question");
@@ -162,7 +162,7 @@ private slots:
                          [this]() {
                              return !profileIsStillOpen();
                          },
-                         10000),
+                         10s),
                  "the profile never closed once the event loop got a turn");
     }
 };

@@ -109,7 +109,7 @@ private:
     }
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(1000)) {
+    if (!spy2.wait(1s)) {
       QFAIL("Could not connect with the host.");
     }
   }

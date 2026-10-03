@@ -39,6 +39,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // TTextEdit lays text out in cells of QFontMetrics::height(), which is a
 // typographic measure rather than the glyph ink box. At a good number of font
 // sizes the ink of a glyph such as "_" reaches a pixel past the bottom of its
@@ -670,7 +672,7 @@ private:
                 pollsUnchanged = 0;
                 previousLastLine = lastLine;
             }
-            QTest::qWait(50);
+            QTest::qWait(50ms);
         }
     }
 
@@ -763,7 +765,7 @@ private:
                     [host]() {
                         return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                     },
-                    5000)) {
+                    5s)) {
             qWarning() << "Profile did not go offline in time; stub traffic may interleave with the printed lines";
         }
         return host;
@@ -777,7 +779,7 @@ private:
         }
 
         QSignalSpy spy2(&(mudlet::self()->getActiveHost()->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

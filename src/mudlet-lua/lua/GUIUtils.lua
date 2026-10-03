@@ -1400,7 +1400,7 @@ end
 --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
 ---
 --- @param style Hex, Decimal or Color
---- @param insert boolean flag to determine echo/insert behaviour
+--- @param func name of the function to write with: echo, insertText, echoLink, insertLink, echoPopup or insertPopup
 --- @param win windowName optional
 --- @param str text with embedded color information
 ---
@@ -1411,14 +1411,16 @@ end
 --- @see dinsertText
 --- @see hinsertText
 function xEcho(style, func, ...)
+  local arg1, arg2 = ...
+  if type(arg1) ~= 'string' then
+    error(style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(arg1)..'!)')
+  end
+
   local win, str, cmd, hint, fmt
-  local out
-  local args = { ... }
-  local n = #args
-
-  assert(type(args[1]) == 'string', style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(args[1])..'!)')
-
-  if string.find(func, "Link") then
+  local plain = func == "echo" or func == "insertText"
+  if not plain and string.find(func, "Link") then
+    local args = { ... }
+    local n = #args
     if n < 3 then
       error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
     elseif n == 3 then
@@ -1430,7 +1432,9 @@ function xEcho(style, func, ...)
     else
       error 'Improper arguments, usage: ([window, ] string, command, hint)'
     end
-  elseif string.find(func, "Popup") then
+  elseif not plain and string.find(func, "Popup") then
+    local args = { ... }
+    local n = #args
     if n < 3 then
       error 'Insufficient arguments, usage: ([window, ] string, {commands}, {hints})'
     elseif n == 3 then
@@ -1444,21 +1448,17 @@ function xEcho(style, func, ...)
     end
 
   else
-    if args[1] and args[2] and args[1] ~= "main" then
-      win, str = args[1], args[2]
-    elseif args[1] and args[2] and args[1] == "main" then
-      str = args[2]
+    if arg1 and arg2 and arg1 ~= "main" then
+      win, str = arg1, arg2
+    elseif arg1 and arg2 and arg1 == "main" then
+      str = arg2
     else
-      str = args[1]
+      str = arg1
     end
   end
   win = win or "main"
 
-  out = function(...)
-    _G[func](...)
-  end
-
-  if windowType(win) == "label" and win ~= "main" then
+  if win ~= "main" and windowType(win) == "label" then
     str = str:gsub("\n", "<br>")
     local t = _Echos.Process(str, style)
     if func ~= "echo" then
@@ -1469,7 +1469,6 @@ function xEcho(style, func, ...)
     echo(win, result)
   else
     local t = _Echos.Process(str, style)
-    deselect(win)
     resetFormat(win)
     for _, v in ipairs(t) do
       if type(v) == 'table' then
@@ -1505,14 +1504,14 @@ function xEcho(style, func, ...)
       elseif v == "\27reset" then
         resetFormat(win)
       else
-        if func == 'echo' or func == 'insertText' then
-          out(win, v)
+        if plain then
+          _G[func](win, v)
           if func == 'insertText' then
             moveCursor(win, getColumnNumber(win) + string.len(v), getLineNumber(win))
           end
         else
           -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
-          out(win, v, cmd, hint, (fmt == true and true or false))
+          _G[func](win, v, cmd, hint, fmt == true)
         end
       end
     end
@@ -1963,8 +1962,8 @@ do
       text = arg1
     end
 
-    local selection = {getSelection(windowname)}
-    if _comp(selection, {"", 0, 0}) then
+    local selected, start, length = getSelection(windowname)
+    if selected == "" and start == 0 and length == 0 then
       return nil, "replace: nothing is selected to be replaced. Did selectString return -1?"
     end
     text = text or ""

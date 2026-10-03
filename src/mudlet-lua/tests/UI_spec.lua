@@ -7759,7 +7759,7 @@ describe("Colour getters and setTextFormat by window name", function()
     local result
     result, err = setTextFormat(unknown, 0, 0, 0, 0, 0, 0, false, false, false, false, false, false, "sometimes")
     assert.is_nil(result)
-    assert.are.equal('blink mode must be "none", "slow", or "fast", got "sometimes"', err)
+    assert.are.equal('blink mode must be "none", "slow" or "fast", got "sometimes"', err)
     result, err = setTextFormat(unknown, 0, 0, 0, 0, 0, 0, false, false, false)
     assert.is_false(result)
     assert.are.equal(("window '%s' does not exist"):format(unknown), err)

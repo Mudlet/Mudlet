@@ -28,9 +28,13 @@
 #include "Host.h"
 #include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TMainConsole.h"
+#include "T2DMap.h"
 #include "TMap.h"
+#include "TRoomDB.h"
 #include "HostManager.h"
+#include "TTabBar.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "TelnetServerStub.h"
@@ -50,6 +54,8 @@
 #include <QDialog>
 #include <QDockWidget>
 #include <QLabel>
+#include <QMenuBar>
+#include <QToolBar>
 #include <QTemporaryDir>
 
 #include <zip.h>
@@ -73,8 +79,11 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-Host-Widget-Decoupling";
+    const QString mSecondHostname = "Test-Host-Widget-Decoupling-Second";
     const QString mLocalhost = "localhost";
     QString mPort;
+    const QString mFirstAreaName = qsl("AAArea");
+    const QString mPlayerAreaName = qsl("QAArea");
 
 private slots:
     void initTestCase()
@@ -111,6 +120,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mSecondHostname);
     }
 
     // The dockable map widget used to be a QDockWidget member of Host; it now
@@ -508,6 +518,92 @@ private slots:
         QCOMPARE(note->styleSheet(), styleSheet);
     }
 
+    // The main window's own bars take the style sheet of the profile on show,
+    // which mudlet hears over the same signal.
+    void test_profileStyleSheetReachesTheMainWindow()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QMenuBar* menuBar = mudlet::self()->menuBar();
+        QToolBar* toolBar = mudlet::self()->mpMainToolBar;
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+
+        const QString styleSheet = qsl("QWidget { color: #123456; }");
+        QVERIFY2(menuBar->styleSheet() != styleSheet && toolBar->styleSheet() != styleSheet && tabBar->styleSheet() != styleSheet,
+                 "SETUP: a bar already carries the style sheet, so the assertions below cannot fail.");
+
+        QVERIFY(host->setProfileStyleSheet(styleSheet));
+
+        QCOMPARE(menuBar->styleSheet(), styleSheet);
+        QCOMPARE(toolBar->styleSheet(), styleSheet);
+        QCOMPARE(tabBar->styleSheet(), styleSheet);
+    }
+
+    // The main window's bars are shared by every profile, so only the active
+    // one may restyle them.
+    void test_onlyTheActiveProfileStyleSheetReachesTheMainWindow()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        Host* first = mudlet::self()->getActiveHost();
+        QVERIFY2(first, "No active host after starting the first profile.");
+        startProfile(mSecondHostname, mLocalhost, mPort);
+        Host* second = mudlet::self()->getActiveHost();
+        QVERIFY2(second && second != first, "Starting the second profile did not make it the active one.");
+        QMenuBar* menuBar = mudlet::self()->menuBar();
+        QToolBar* toolBar = mudlet::self()->mpMainToolBar;
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+
+        const QString firstStyleSheet = qsl("QWidget { color: #111111; }");
+        QVERIFY(first->setProfileStyleSheet(firstStyleSheet));
+        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() != firstStyleSheet && tabBar->styleSheet() != firstStyleSheet,
+                 "A profile that is not the active one restyled the main window.");
+
+        const QString secondStyleSheet = qsl("QWidget { color: #222222; }");
+        QVERIFY(second->setProfileStyleSheet(secondStyleSheet));
+        QCOMPARE(menuBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(tabBar->styleSheet(), secondStyleSheet);
+
+        tabBar->setCurrentIndex(tabBar->tabIndex(first->getName()));
+        QCOMPARE(mudlet::self()->getActiveHost(), first);
+
+        QVERIFY(second->setProfileStyleSheet(qsl("QWidget { color: #333333; }")));
+        QCOMPARE(menuBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(tabBar->styleSheet(), firstStyleSheet);
+    }
+
+    // The central debug console follows the display font of a profile that
+    // changes it, over signal_consoleFontChanged which mudlet connects.
+    void test_consoleFontReachesTheCentralDebugConsole()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        mudlet::self()->attachDebugArea(host->getName());
+        // Only closing the profile or the application takes the parentless debug area
+        // down, and cleanup() does neither, so it would outlive this Host into the next method.
+        const auto tidyUp = qScopeGuard([]() {
+            delete mudlet::smpDebugArea.data();
+        });
+        const QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
+        QVERIFY2(debugConsole, "The central debug console was not created.");
+
+        QFont font = host->getDisplayFont();
+        QVERIFY2(font.pointSize() > 0, "The display font is not sized in points, so a point size cannot be compared.");
+        font.setPointSize(font.pointSize() + 3);
+        QVERIFY2(debugConsole->font().pointSize() != font.pointSize(), "SETUP: the debug console already uses the new size, so the assertion below cannot fail.");
+
+        const auto [applied, error] = host->setDisplayFont(font);
+        QVERIFY2(applied, qPrintable(error));
+
+        QCOMPARE(debugConsole->font().pointSize(), font.pointSize());
+    }
+
     // The same seam for the display font: Host::updateConsolesFont() raises
     // signal_consoleFontChanged and the editor's source pane and the notepad's
     // tabs follow the main console.
@@ -609,7 +705,7 @@ private slots:
         host->mInstalledPackages << qsl("reset-probe");
         QVERIFY2(host->uninstallPackage(qsl("reset-probe"), enums::PackageModuleType::Package), "The seeded package could not be uninstalled");
         // doCleanReset() defers the rebuild to the next event loop turn
-        QTest::qWait(50);
+        QTest::qWait(50ms);
 
         QVERIFY2(editor->mpTriggerBaseItem, "The rebuilt editor has no trigger tree root.");
         QCOMPARE(editor->mpTriggerBaseItem->childCount(), shown + 1);
@@ -665,12 +761,214 @@ private slots:
                  "A released editor still printed to its error console.");
     }
 
+    // The toolbar's first map button press makes the profile's map dock,
+    // restores the last saved map into it while the map is empty, shows that
+    // map at the player's area and docks it on the right.
+    void test_toolbarMapperLoadsTheSavedMapAndDocksItOnTheRight()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        mudlet::self()->show();
+        buildMapWithPlayerArea(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(host->saveMapFile(QString()), "The map could not be saved for the mapper to restore.");
+        host->mpMap->mapClear();
+        QVERIFY2(host->mpMap->mpRoomDB->isEmpty(), "SETUP: the map was not cleared, so nothing would be restored.");
+        watchMapOpenEvent(host);
+
+        host->showHideOrCreateMapper(true);
+
+        QDockWidget* dock = host->mpConsole->mpDockableMapWidget;
+        QVERIFY2(dock, "The mapper dock was not created.");
+        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY2(mapper, "The map was left with no mapper.");
+        QCOMPARE(dock->widget(), mapper);
+        QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "Making the mapper did not restore the saved map.");
+        QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
+        QVERIFY2(!dock->isHidden(), "The new map dock was left hidden.");
+        QVERIFY2(!mapper->isHidden(), "The new mapper was left hidden inside its dock.");
+        QCOMPARE(mudlet::self()->dockWidgetArea(dock), Qt::RightDockWidgetArea);
+        QVERIFY(host->mapperShown());
+        QVERIFY2(mapOpenEventCountIs(host, 1), "Making the mapper did not raise mapOpenEvent exactly once.");
+    }
+
+    // A map that is already loaded is not restored over, but the new mapper
+    // still opens on the player's area rather than on the first area it lists.
+    void test_toolbarMapperShowsAnAlreadyLoadedMapAtThePlayersArea()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        buildMapWithPlayerArea(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        host->showHideOrCreateMapper(true);
+
+        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY2(mapper, "The mapper was not created.");
+        QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
+    }
+
+    // Once made, the map dock is shown and hidden as a whole: hiding the
+    // mapper inside it instead shrinks it to nothing, and a dock closed by its
+    // own button counts as not shown even though the mapper in it never was
+    // hidden.
+    void test_toolbarMapperTogglesItsDock()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        mudlet::self()->show();
+        QVERIFY2(!host->mapperShown(), "A profile with no mapper counted its mapper as shown.");
+
+        host->showHideOrCreateMapper(true);
+        QPointer<QDockWidget> dock = host->mpConsole->mpDockableMapWidget;
+        QVERIFY2(dock, "The mapper dock was not created.");
+        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY(host->mapperShown());
+
+        host->showHideOrCreateMapper(true);
+        QVERIFY2(dock->isHidden(), "Toggling a shown mapper did not hide its dock.");
+        QVERIFY2(!mapper->isHidden(), "Toggling hid the mapper inside the dock rather than the dock.");
+        QVERIFY(!host->mapperShown());
+
+        // A mapper hidden on its own comes back with its dock
+        mapper->hide();
+        host->showHideOrCreateMapper(true);
+        QVERIFY2(!dock->isHidden(), "Toggling a hidden mapper did not show its dock.");
+        QVERIFY2(!mapper->isHidden(), "Toggling the dock back left the mapper inside it hidden.");
+        QVERIFY(host->mapperShown());
+
+        // The dock is what counts, not the mapper in it
+        mapper->hide();
+        QVERIFY2(host->mapperShown(), "A mapper hidden inside a dock that is showing counted as not shown.");
+        mapper->show();
+
+        dock->close();
+        QVERIFY2(!host->mapperShown(), "A map dock closed by its own button counted as shown.");
+        host->showHideOrCreateMapper(true);
+        QCOMPARE(host->mpConsole->mpDockableMapWidget.data(), dock.data());
+        QVERIFY2(!dock->isHidden(), "Toggling did not bring back a map dock closed by its own button.");
+        QVERIFY(host->mapperShown());
+    }
+
+    // A mapper embedded by a script has no dock of its own, so the toolbar
+    // shows and hides the mapper itself instead of making a dock.
+    void test_toolbarMapperTogglesAnEmbeddedMapperItself()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        mudlet::self()->show();
+        auto [created, message] = host->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY2(mapper, "The embedded mapper was not made the map's mapper.");
+        QVERIFY(host->mapperShown());
+
+        host->showHideOrCreateMapper(true);
+        QVERIFY2(mapper->isHidden(), "Toggling a shown embedded mapper did not hide it.");
+        QVERIFY(!host->mapperShown());
+        QVERIFY2(!host->mpConsole->mpDockableMapWidget, "Toggling an embedded mapper made a map dock.");
+
+        host->showHideOrCreateMapper(true);
+        QVERIFY2(!mapper->isHidden(), "Toggling a hidden embedded mapper did not show it.");
+        QVERIFY(host->mapperShown());
+    }
+
+    // Loading a map redraws the mapper from the profile's settings, shows it
+    // and moves it to the player's area; a load that fails leaves the mapper
+    // showing what is left, which is an empty map. loadMapFile() makes the
+    // mapper itself when there is none.
+    void test_loadingAMapRedrawsAndShowsTheMapper()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        const QString mapFileName = qsl("hostWidgetDecoupling.dat");
+        buildMapWithPlayerArea(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(host->saveMapFile(mapFileName), "The map could not be saved under a name.");
+        QVERIFY2(host->saveMapFile(QString()), "The map could not be saved as the profile's latest.");
+        host->mpMap->mapClear();
+        QVERIFY2(host->mpMap->mpMapper.isNull(), "SETUP: the profile already has a mapper.");
+
+        QVERIFY2(host->loadMapFile(mapFileName), "Loading the saved map failed.");
+        QVERIFY2(host->mpConsole->mpDockableMapWidget, "Loading a map with no mapper did not make one.");
+        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY2(mapper, "Loading a map left the map with no mapper.");
+        QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
+
+        // T2DMap::init() is what copies the room size across from the profile
+        mapper->comboBox_showArea->setCurrentIndex(mapper->comboBox_showArea->findText(mFirstAreaName));
+        host->mRoomSize = 4.5;
+        mapper->hide();
+        QVERIFY2(host->loadMapFile(mapFileName), "Loading the saved map again failed.");
+        QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
+        QCOMPARE(mapper->mp2dMap->rSize, 4.5);
+        QVERIFY2(!mapper->isHidden(), "Loading a map left the mapper hidden.");
+
+        host->mRoomSize = 5.5;
+        mapper->hide();
+        QVERIFY2(!host->loadMapFile(qsl("noSuchMap.dat")), "Loading a map that does not exist succeeded.");
+        QVERIFY(host->mpMap->mpRoomDB->isEmpty());
+        QCOMPARE(mapper->mp2dMap->rSize, 5.5);
+        QVERIFY2(!mapper->isHidden(), "A failed load left the mapper hidden.");
+        QCOMPARE(mapper->comboBox_showArea->findText(mPlayerAreaName), -1);
+
+        // Host::loadMap() is what a profile runs as it starts
+        host->mRoomSize = 6.5;
+        mapper->hide();
+        host->loadMap();
+        QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "loadMap() did not restore the profile's latest map.");
+        QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
+        QCOMPARE(mapper->mp2dMap->rSize, 6.5);
+        QVERIFY2(!mapper->isHidden(), "loadMap() left the mapper hidden.");
+    }
+
+    // The map settings reach whichever mapper is drawing the map, which is not
+    // always one in the profile's map dock: here a script embedded it.
+    void test_mapSettingsReachTheMapperDrawingTheMap()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        host->setLargeAreaExitArrows(true);
+        host->setMapperPanelVisible(false);
+        QVERIFY(host->getLargeAreaExitArrows());
+
+        auto [created, message] = host->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        QVERIFY2(!host->mpConsole->mpDockableMapWidget, "SETUP: the profile has a map dock, so its mapper could be reached without going through the map.");
+        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY2(mapper, "The embedded mapper was not made the map's mapper.");
+        QVERIFY(mapper->mp2dMap->mLargeAreaExitArrows);
+
+        host->setLargeAreaExitArrows(false);
+        QVERIFY2(!mapper->mp2dMap->mLargeAreaExitArrows, "Turning the large area exit arrows off did not reach the mapper drawing the map.");
+        host->setLargeAreaExitArrows(true);
+        QVERIFY2(mapper->mp2dMap->mLargeAreaExitArrows, "Turning the large area exit arrows on did not reach the mapper drawing the map.");
+        host->setMapperPanelVisible(true);
+        QVERIFY2(!mapper->widget_panel->isHidden(), "Showing the mapper panel did not reach the mapper drawing the map.");
+        host->setMapperPanelVisible(false);
+        QVERIFY2(mapper->widget_panel->isHidden(), "Hiding the mapper panel did not reach the mapper drawing the map.");
+    }
+
     void cleanup()
     {
         delete mpServer;
         mpServer = nullptr;
         delete mudlet::self();
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mSecondHostname);
     }
 
     // Utility function to manually start a profile like a user would do via the
@@ -731,10 +1029,33 @@ private slots:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
+
+private:
+    // The player's area sorts after the other one, which is what the mapper
+    // lists first, so showing it is a choice the mapper had to make.
+    // A failed check here returns only from this helper, so callers must stop
+    // on QTest::currentTestFailed() before using the map.
+    void buildMapWithPlayerArea(Host* host) const
     {
-        TestProfile::removeProfileDirectory(profileName);
+        TMap* map = host->mpMap.data();
+        TRoomDB* roomDB = map->mpRoomDB.get();
+        QVERIFY(roomDB->addArea(mFirstAreaName) > 0);
+        const int playerAreaId = roomDB->addArea(mPlayerAreaName);
+        QVERIFY(playerAreaId > 0);
+        QVERIFY(map->addRoom(1));
+        QVERIFY(map->setRoomArea(1, playerAreaId));
+        map->mRoomIdHash[map->mProfileName] = 1;
+        map->setDefaultAreaShown(false);
     }
+
+    void watchMapOpenEvent(Host* host) const
+    {
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("mapOpenSeen = 0\n"
+                                                               "registerAnonymousEventHandler('mapOpenEvent', function() mapOpenSeen = mapOpenSeen + 1 end)"));
+    }
+
+    bool mapOpenEventCountIs(Host* host, const int expected) const { return host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(mapOpenSeen == %1)").arg(expected)); }
 };
 
 #include "HostWidgetDecouplingTest.moc"

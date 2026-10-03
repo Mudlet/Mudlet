@@ -106,9 +106,14 @@ end
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.trim
 function string:trim()
   if self then
-    -- return only the trimmed string, and not the # of replacements done as well
-    local trimmed = string.gsub(self, "^%s*(.-)%s*$", "%1")
-    return trimmed
+    -- Not "^%s*(.-)%s*$", which retries the trailing %s*$ at every space of
+    -- every run inside the line - quadratic on the long runs that tabular game
+    -- output is full of. An all-space string is answered first, as the second
+    -- pattern would backtrack through it the same way.
+    if string.match(self, "^%s*$") then
+      return ""
+    end
+    return string.match(self, "^%s*(.*%S)")
   else
     return self
   end
