@@ -3281,7 +3281,8 @@ describe("Tests that uninstalling takes the addon commands it made", function()
         'mudletSpecHandler = registerAnonymousEventHandler("mudletSpecMakeCommand", function() '
           .. placeCommand("mudletSpecHandlerCommand", "mudlet-spec handler command") .. " end)",
         'mudletSpecPcallCommand = select(2, pcall(addCommand, {name = "mudlet-spec pcall command", menuPath = "MudletSpec"}))',
-        "function mudletSpecRunTyped(code) return assert(loadstring(code))() end",
+        -- not a tail call, which would take this function's own frame off the stack
+        "function mudletSpecRunTyped(code) local typed = assert(loadstring(code)) typed() end",
       }, "\n")),
       "</ScriptPackage>",
     }, "\n"))
