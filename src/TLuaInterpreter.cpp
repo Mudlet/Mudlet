@@ -128,6 +128,7 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
 
 TLuaInterpreter::~TLuaInterpreter()
 {
+    stopSpawnedProcesses();
     lua_close(pGlobalLua);
 }
 
@@ -618,6 +619,17 @@ void TLuaInterpreter::slot_purge()
     while (!objectsToDelete.isEmpty()) {
         delete objectsToDelete.takeFirst();
     }
+}
+
+// No documentation available in wiki - internal function
+// A spawn()ed process calls back into, and holds a reference in, the Lua state
+// that started it, so it cannot outlive that state: each one is ended before
+// the state is closed. The finished ones still waiting for slot_purge() go
+// first so that list holds nothing deleted here.
+void TLuaInterpreter::stopSpawnedProcesses()
+{
+    slot_purge();
+    qDeleteAll(findChildren<TForkedProcess*>(Qt::FindDirectChildrenOnly));
 }
 
 // No documentation available in wiki - internal function
@@ -6322,6 +6334,7 @@ void TLuaInterpreter::initLuaGlobals()
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
         mEventHandlerLookupRefs.clear();
+        stopSpawnedProcesses();
         lua_close(pGlobalLua);
         forgetLazyGlobals();
     }
