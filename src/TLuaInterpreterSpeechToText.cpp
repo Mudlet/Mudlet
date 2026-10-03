@@ -232,8 +232,11 @@ static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(mudlet* pMudle
         return SpeechRecognizerFactory::Backend::Vosk;
     }
 
-    const auto backends = SpeechRecognizerFactory::availableBackends();
-    return backends.isEmpty() ? SpeechRecognizerFactory::Backend::Vosk : backends.first();
+    // Not availableBackends(), which loads every engine and latches the answer:
+    // a package asking where to install one, before installing it, would then
+    // be told by stt.init() that it is not installed. Sherpa leads that list,
+    // so whether it is there is the whole choice.
+    return SherpaRecognizer::libraryPresent() ? SpeechRecognizerFactory::Backend::Sherpa : SpeechRecognizerFactory::Backend::Vosk;
 }
 
 // The directory stt.getModelPath() answers with: the same engine choice, so a

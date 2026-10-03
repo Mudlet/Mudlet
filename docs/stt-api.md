@@ -54,7 +54,7 @@ returning `false` with a message, `listModels` returning `{}`.
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
-| `stt.getModelPath()` | string | Directory models are installed into, for whichever model-based engine (Vosk or sherpa-onnx) is actually loaded — falling back to the install-preference order, then Vosk's own directory, before anything is loaded. The built-in macOS backend never answers for this: it has no models directory of its own. |
+| `stt.getModelPath()` | string | Directory models are installed into, for whichever model-based engine (Vosk or sherpa-onnx) is actually loaded — falling back to sherpa-onnx's directory when its library file is on its search paths, then Vosk's own directory, before anything is loaded. Asking loads nothing, so asking before installing an engine does not stop `stt.init()` finding it. The built-in macOS backend never answers for this: it has no models directory of its own. |
 | `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into, resolved the same way as `stt.getModelPath()`. |
 | `stt.listModels()` | table | Array of `{name, path}` for installed models, across **every** model-based engine at once — not only whichever is currently loaded. Deliberately works without the engine library, so downloaded models stay visible. |
 | `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
